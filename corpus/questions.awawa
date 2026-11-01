@@ -178,3 +178,21 @@ OPEN_QUESTION TheRebaseOfAMilestoneBranchUnderItsOpenWaves
 		+ "by the session that wrote"
 		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce"
 		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+
+OPEN_QUESTION WhereTheMilestonesAndTasksOfAProjectWithoutAwawaLive
+	QUESTION "where, and in what form, do the MILESTONE and TASK entities of a project in MODE none"
+		+ "live, its repository going through no awawa corpus: today the tick reads TASK on the"
+		+ "integration branch of the repository, brigade/tick/build_snapshot.py:858 and"
+		+ "brigade/waves/read_project_tasks.py:52-53, and the ledger holds no task"
+	STATUS open
+	BLOCKS @TASK.B230
+	RATIONALE "@DECISION.AProjectChoosesHowBrigadeUsesItsCorpus rejected the three modes delivered"
+		+ "together, the none mode not being designed; on 2026-11-01 the user ruled it out of"
+		+ "@MILESTONE.M7 and into a task of its own, @TASK.B230, that this question blocks"
+		REF @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus
+		REF @MILESTONE.M7
+		REF @TASK.B230
+	SOURCE "the user's ruling of 2026-11-01 in the refinement of M7: « Hors de M7, question ouverte"
+		+ "(Recommandé) », the option « B140 livre control et area dans M7. Le mode none devient"
+		+ "une OPEN_QUESTION qui bloque une tâche à part en ADD0 : la sortie de M7 n'en a pas"
+		+ "besoin, et c'est tout un stockage à concevoir. »"

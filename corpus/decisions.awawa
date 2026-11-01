@@ -2308,20 +2308,31 @@ DECISION AProjectChoosesHowBrigadeUsesItsCorpus
 	CLOSES @OPEN_QUESTION.HowBrigadeJoinsAProjectWhoseCorpusAlreadyExists
 	DESC "control: brigade writes its MILESTONE and TASK entities in the project's corpus and"
 		+ "refuses, naming them, the types and fields its schema does not declare"
-	DESC "area: brigade keeps to an area of its own in the repository; none: the project's waves"
-		+ "and tasks do not go through awawa, brigade itself still requiring it"
-	DESC "brigade project add, finding a corpus in the repository, asks the user which mode to set;"
+	DESC "area: brigade keeps to a folder of its own in the repository, brigade/ at its root by"
+		+ "default, holding brigade's own schema and read as the awawa workspace root, the"
+		+ "project's own corpus never read; none: the project's waves and tasks do not go through"
+		+ "awawa, brigade itself still requiring it"
+	DESC "brigade project add, finding a corpus in the repository, takes the mode from"
+		+ "--corpus-mode; without the option it asks when stdin is a terminal and exits 2 naming"
+		+ "the option when it is not; it confirms the folder the same way, --corpus overriding it;"
 		+ "a project without a corpus is in control, brigade creating its corpus"
-	DESC "the mode is a field of the PROJECT entity of projects.awawa, beside CORPUS"
-	DESC "control is delivered first, by @TASK.B10 and @TASK.B139; area and none by @TASK.B140"
+	DESC "the mode is the field MODE control|area|none of the PROJECT entity of projects.awawa,"
+		+ "beside CORPUS, control when absent"
+	DESC "control is delivered first, by @TASK.B10 and @TASK.B139; area by @TASK.B140; none by"
+		+ "@TASK.B230, once @OPEN_QUESTION.WhereTheMilestonesAndTasksOfAProjectWithoutAwawaLive is"
+		+ "ruled"
 		REF @TASK.B10
 		REF @TASK.B139
 		REF @TASK.B140
+		REF @TASK.B230
+		REF @OPEN_QUESTION.WhereTheMilestonesAndTasksOfAProjectWithoutAwawaLive
 	REJECTED "a single answer for every project, shared or separate: the user wants the choice"
 	REJECTED "the mode in config.toml: the PROJECT entity already holds the corpus folder of the"
 		+ "project"
 	REJECTED "the three modes delivered together by the first planning task: the none mode is not"
 		+ "designed yet"
+	REJECTED "project add asking the mode whatever its stdin: unattended, the question has no"
+		+ "answerer, so the option carries the answer and a missing one exits 2"
 	RATIONALE "awawa stays a prerequisite of brigade, by"
 		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites; the none mode concerns a"
 		+ "project's waves and tasks, not brigade's own corpus"
@@ -2330,6 +2341,10 @@ DECISION AProjectChoosesHowBrigadeUsesItsCorpus
 		+ "préexistant, on doit poser la question à l'utilisateur: soit il veut que brigade"
 		+ "contrôle le corpus, soit il veut que brigade se confine dans une aire, soit il ne veut"
 		+ "pas que brigade passer par awawa. Le tout rendu configurable dans le fichier de config\""
+	SOURCE "the user's rulings of 2026-11-01 in the refinement of M7: « MODE, aire brigade/ », «"
+		+ "Hors de M7, question ouverte (Recommandé) » and « Prompt si TTY, sinon exit 2"
+		+ "(Recommandé) », quoted in @TASK.B140"
+		REF @TASK.B140
 
 DECISION ThePlannerWritesEveryOverlapRulingAsAnAfterEdge
 	TITLE "two tasks of a wave that touch the same files are ordered by an AFTER edge the planner"
@@ -5031,3 +5046,45 @@ DECISION APatternAnswerIsCheckedAgainstTheFingerprintsTheCollectorsOfItsStudyCol
 		+ "collectors of the study keeps one check for every study answering PATTERN"
 	SOURCE "the user's ruling of 2026-11-01 in the refinement of M5: \"From the study's collectors"
 		+ "(Recommended)\""
+
+DECISION AProjectOfForgeNoneMergesATaskOnItsAcceptanceAndItsVerdictAndTheUserMergesItsMilestoneByHand
+	TITLE "on a project of FORGE none a task is ready to merge once the ACCEPTANCE commands of the"
+		+ "project pass on the head of its branch and the prudence verdict kept in the ledger"
+		+ "passes at that head; the tick merges the task into the wave branch and the wave into the"
+		+ "milestone branch with git merge, and the user merges the milestone branch into main with"
+		+ "the command brigade names"
+	STATUS active
+	DESC "the readiness of a task of FORGE none is its preflight, the acceptance commands run on"
+		+ "the head of its branch in place of the check runs, then its task.verdict at that head;"
+		+ "no pull request exists, so no review thread and no approval is awaited"
+	DESC "the verdict is a task.verdict event of the ledger, as on GitHub, with no pull request,"
+		+ "and is posted nowhere"
+	DESC "a wave of FORGE none is merged into the branch of its milestone once every task of it is"
+		+ "merged into the wave branch, by git merge with PROJECT.MERGE; DESC 9 of"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce reads so"
+		+ "without a forge"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+	DESC "the merge of the milestone branch into main stays the user's,"
+		+ "@DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate; brigade names the command, git"
+		+ "-C <PATH> merge integration/<slug>, and runs it never"
+		REF @DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate
+	DESC "binds @TASK.B46"
+		REF @TASK.B46
+	REJECTED "the acceptance commands alone, « Acceptance seule »: a task would merge with no"
+		+ "judgment of its diff, where every change passes one prudence run before its merge into"
+		+ "integration"
+	REJECTED "the verdict alone, « Verdict seul »: the ACCEPTANCE commands of the project, which"
+		+ "the check runs run on GitHub, would run nowhere on a project without a forge"
+	REJECTED "brigade merging the milestone branch into main on a project without a forge: the user"
+		+ "keeps that merge on every forge"
+	RATIONALE "on GitHub the tick reads the readiness of a task from the check runs of its pull"
+		+ "request and its verdict, brigade/tick/plan.py:428-449 and 470-476, and merges through"
+		+ "the forge, brigade/commands/tick.py:28-49; without a forge the acceptance commands of"
+		+ "brigade task check, brigade/tasks/check_task.py:95-99, are what the check runs run, and"
+		+ "the ledger already holds the verdict event"
+	SOURCE "the user's ruling of 2026-11-01 in the refinement of M7: « Acceptance + verdict au"
+		+ "ledger (Recommandé) », the option « Le tick lance les commandes ACCEPTANCE de task check"
+		+ "sur la branche de la tâche, puis le verdict de prudence est enregistré dans le ledger ;"
+		+ "ensuite git merge vers la wave, puis vers le jalon. Le merge du jalon dans main reste à"
+		+ "l'utilisateur, et brigade lui indique la commande. », against « Acceptance seule » and «"
+		+ "Verdict seul »"
