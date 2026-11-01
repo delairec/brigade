@@ -3,6 +3,7 @@ import dataclasses
 import functools
 import sys
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
@@ -11,17 +12,20 @@ from brigade.collecting.collector_environment import CollectorInputs
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.command import Argument, Command, ExclusiveArguments
 from brigade.commands._launch_branch_rebase import launch_branch_rebase
+from brigade.commands._read_attribution import read_attribution
 from brigade.commands._read_cli_login import read_cli_login
 from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME, read_forge_environment
 from brigade.commands.run import run
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import read_entities
-from brigade.corpus.read_entity import read_entity
+from brigade.corpus.read_entity import Entity, read_entity
 from brigade.errors import StandingDown, UsageError
+from brigade.git.resolve_commit import resolve_commit
 from brigade.inbox.record_check_runs import CheckRunsRecording, record_check_runs
 from brigade.ledger.append_event import append_event
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.milestone_closed import MilestoneClosed
+from brigade.ledger.milestone_pr_described import MilestonePrDescribed
 from brigade.ledger.milestone_pr_opened import MilestonePrOpened
 from brigade.ledger.pr_merged import PrMerged
 from brigade.ledger.read_ledger import read_ledger
@@ -34,6 +38,7 @@ from brigade.ledger.tick_action_failed import TickActionFailed
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_merged import WaveMerged
 from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_pr_described import WavePrDescribed
 from brigade.ledger.wave_pr_opened import WavePrOpened
 from brigade.ledger.wave_pr_retargeted import WavePrRetargeted
 from brigade.ledger.wave_reported import WaveReported
@@ -57,6 +62,7 @@ from brigade.studies.start_study_run import start_study_run
 from brigade.system.ask_check_logs import CheckLogsQuery, ask_check_logs
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
+from brigade.system.ask_pull_request_details import PullRequestDetailsQuery, ask_pull_request_details
 from brigade.system.ask_review_threads import ReviewThreadsQuery, ask_review_threads
 from brigade.system.collector_places import locate_collectors
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
@@ -75,6 +81,8 @@ from brigade.tick.actions import (
     CollectReviewThreads,
     CutMilestoneBranch,
     CutWaveBranch,
+    DescribeMilestonePullRequest,
+    DescribeWavePullRequest,
     LaunchCheckRepair,
     LaunchRemediation,
     LaunchStudy,
@@ -113,12 +121,19 @@ from brigade.tick.write_repair_brief import write_repair_brief
 from brigade.triage.deliver_patterns import WaveDelivery, deliver_patterns
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
 from brigade.verify.record_verdict import REVIEW_SLOT
+from brigade.waves.compose_delivery_body import compose_delivery_body
+from brigade.waves.compose_delivery_title import compose_delivery_title
 from brigade.waves.cut_milestone_branch import MilestoneBranchDemand, cut_milestone_branch
 from brigade.waves.cut_wave_branch import WaveBranchCut, cut_wave_branch
 from brigade.waves.find_wave_started import find_wave_started
+from brigade.waves.list_merged_waves import list_merged_waves
+from brigade.waves.locate_forge_branch import locate_forge_branch
 from brigade.waves.locate_project_main import locate_project_main
 from brigade.waves.locate_wave_base import WaveBaseDemand, locate_wave_base
+from brigade.waves.locate_wave_report import locate_wave_report
+from brigade.waves.merged_wave import MergedWave
 from brigade.waves.prepare_wave_tree import prepare_wave_tree
+from brigade.waves.read_delivery import DeliveryDemand, read_delivery
 from brigade.waves.read_wave_milestone import read_wave_milestone
 from brigade.waves.rebase_milestone_branches import MilestoneBranchesRebase, rebase_milestone_branches
 from brigade.waves.rebase_wave_branch import WaveBranchRebase, rebase_wave_branch
@@ -455,11 +470,15 @@ def _find_started_wave(runtime: Runtime, wave: str) -> WaveStarted:
     return find_wave_started(tuple(entry.event for entry in read_ledger(runtime.paths.state_root).entries), wave)
 
 
-def _locate_wave_base(runtime: Runtime, configuration: Configuration, started: WaveStarted, root: Path) -> str:
+def _read_wave_milestone(runtime: Runtime, started: WaveStarted, root: Path) -> str | None:
     tasks = {task.name: task for task in read_entities(runtime.run_process, root, TASK_TYPE)}
+    return read_wave_milestone(started.wave, (tasks[task] for task in started.tasks))
+
+
+def _locate_wave_base(runtime: Runtime, configuration: Configuration, started: WaveStarted, root: Path) -> str:
     demand = WaveBaseDemand(
         project=find_project(read_projects(runtime), started.project),
-        milestone=read_wave_milestone(started.wave, (tasks[task] for task in started.tasks)),
+        milestone=_read_wave_milestone(runtime, started, root),
         root=root,
         read_environment=_cache_forge_environment(runtime, configuration),
         read_login=functools.cache(lambda: read_cli_login(configuration, runtime)),
@@ -481,6 +500,131 @@ def _locate_missing_wave_base(runtime: Runtime, configuration: Configuration, wa
     return _locate_wave_base(runtime, configuration, started, prepare_project_tree(query, configuration, runtime).root)
 
 
+@dataclass(frozen=True)
+class _DescribedBranch:
+    project: Entity
+    wave: str | None
+    milestone: str | None
+    base: str
+    head: str
+    merged_waves: tuple[MergedWave, ...]
+
+
+def _read_branch_head(runtime: Runtime, configuration: Configuration, project: Entity, branch: str) -> str:
+    ref = locate_forge_branch(runtime.run_process, project, branch, _cache_forge_environment(runtime, configuration))
+    return resolve_commit(runtime.run_process, Path(read_project_field(project, PATH_FIELD)), ref)
+
+
+def _compose_description(
+    runtime: Runtime, configuration: Configuration, described: _DescribedBranch
+) -> tuple[str, str]:
+    forge = runtime.resolve_plugin("forge", FORGE_NAME)
+    read_environment = _cache_forge_environment(runtime, configuration)
+    repository = read_project_field(described.project, PATH_FIELD)
+    demand = DeliveryDemand(
+        wave=described.wave,
+        milestone=described.milestone,
+        base=described.base,
+        base_ref=locate_forge_branch(runtime.run_process, described.project, described.base, read_environment),
+        head=described.head,
+        report=None if described.wave is None else locate_wave_report(described.project, described.wave),
+        merged_waves=described.merged_waves,
+        attribution=tuple(read_attribution(configuration, runtime)),
+        repository=Path(repository),
+        read_tree=lambda ref: (
+            prepare_project_tree(
+                argparse.Namespace(project=described.project.name, ref=ref, worktree=None), configuration, runtime
+            ).root
+        ),
+        read_pull_request=lambda number: ask_pull_request_details(
+            forge,
+            FORGE_NAME,
+            PullRequestDetailsQuery(repository=repository, number=number, environment=read_environment(CLI_KEY)),
+            runtime,
+        ),
+    )
+    delivery = read_delivery(runtime.run_process, demand)
+    return compose_delivery_title(delivery), compose_delivery_body(delivery)
+
+
+def _compose_wave_description(
+    runtime: Runtime, configuration: Configuration, started: WaveStarted, head: str
+) -> tuple[str, str]:
+    root = prepare_wave_tree(runtime, configuration, started).root
+    described = _DescribedBranch(
+        project=find_project(read_projects(runtime), started.project),
+        wave=started.wave,
+        milestone=_read_wave_milestone(runtime, started, root),
+        base=_locate_wave_base(runtime, configuration, started, root),
+        head=head,
+        merged_waves=(),
+    )
+    return _compose_description(runtime, configuration, described)
+
+
+def _rewrite_pull_request(
+    runtime: Runtime, configuration: Configuration, project: Entity, pr: int, description: tuple[str, str]
+) -> str:
+    forge = runtime.resolve_plugin("forge", FORGE_NAME)
+    environment = read_forge_environment(configuration, CLI_KEY, runtime)
+    repository = read_project_field(project, PATH_FIELD)
+    query = PullRequestDetailsQuery(repository=repository, number=pr, environment=environment)
+    read = ask_pull_request_details(forge, FORGE_NAME, query, runtime)
+    if (read["title"], read["body"]) != description:
+        title, body = description
+        forge.edit_pull_request(
+            {"repository": repository, "number": pr, "title": title, "body": body, "environment": environment},
+            runtime,
+        )
+    return ask_forge_account(forge, FORGE_NAME, environment, runtime).login
+
+
+def _describe_wave_pull_request(
+    runtime: Runtime, configuration: Configuration, action: DescribeWavePullRequest
+) -> None:
+    project = find_project(read_projects(runtime), action.project)
+    _read_branch_head(runtime, configuration, project, action.branch)
+    description = _compose_wave_description(
+        runtime, configuration, _find_started_wave(runtime, action.wave), action.head
+    )
+    login = _rewrite_pull_request(runtime, configuration, project, action.pr, description)
+    append_event(
+        runtime.paths, runtime.now, WavePrDescribed(wave=action.wave, pr=action.pr, head=action.head, login=login)
+    )
+
+
+def _list_milestone_merged_waves(runtime: Runtime, root: Path, project: str, milestone: str) -> tuple[MergedWave, ...]:
+    tasks = read_entities(runtime.run_process, root, TASK_TYPE, f"MILESTONE==@MILESTONE.{milestone}")
+    events = tuple(entry.event for entry in read_ledger(runtime.paths.state_root).entries)
+    return list_merged_waves(events, project, {task.name for task in tasks})
+
+
+def _describe_milestone_pull_request(
+    runtime: Runtime, configuration: Configuration, action: DescribeMilestonePullRequest
+) -> None:
+    project = find_project(read_projects(runtime), action.project)
+    _read_branch_head(runtime, configuration, project, action.branch)
+    query = argparse.Namespace(project=project.name, ref=action.head, worktree=None)
+    root = prepare_project_tree(query, configuration, runtime).root
+    described = _DescribedBranch(
+        project=project,
+        wave=None,
+        milestone=action.milestone,
+        base=read_project_field(project, MAIN_FIELD),
+        head=action.head,
+        merged_waves=_list_milestone_merged_waves(runtime, root, action.project, action.milestone),
+    )
+    description = _compose_description(runtime, configuration, described)
+    login = _rewrite_pull_request(runtime, configuration, project, action.pr, description)
+    append_event(
+        runtime.paths,
+        runtime.now,
+        MilestonePrDescribed(
+            project=action.project, milestone=action.milestone, pr=action.pr, head=action.head, login=login
+        ),
+    )
+
+
 def _open_integration_pull_request(
     runtime: Runtime, configuration: Configuration, action: OpenIntegrationPullRequest
 ) -> None:
@@ -495,20 +639,24 @@ def _open_integration_pull_request(
         append_event(runtime.paths, runtime.now, WavePrOpened(wave=action.wave, pr=found.number, login=UNKNOWN_OPENER))
         return
     login = ask_forge_account(forge, FORGE_NAME, environment, runtime).login
-    tasks = ", ".join(f"@TASK.{task}" for task in action.tasks)
+    head = _read_branch_head(runtime, configuration, project, action.branch)
+    title, body = _compose_wave_description(runtime, configuration, _find_started_wave(runtime, action.wave), head)
     opened = forge.open_pull_request(
         {
             "repository": repository,
             "base": base,
             "branch": action.branch,
-            "title": f"chore(wave): merge the wave {action.wave} into {base}",
-            "body": f"Integrates the wave {action.wave} of @PROJECT.{action.project} into {base}: {tasks}.",
+            "title": title,
+            "body": body,
             "milestone": NO_MILESTONE,
             "environment": environment,
         },
         runtime,
     )
     append_event(runtime.paths, runtime.now, WavePrOpened(wave=action.wave, pr=opened["number"], login=login))
+    append_event(
+        runtime.paths, runtime.now, WavePrDescribed(wave=action.wave, pr=opened["number"], head=head, login=login)
+    )
 
 
 def _open_milestone_pull_request(
@@ -519,15 +667,18 @@ def _open_milestone_pull_request(
     project = find_project(read_projects(runtime), action.project)
     main = read_project_field(project, MAIN_FIELD)
     login = ask_forge_account(forge, FORGE_NAME, environment, runtime).login
-    waves = ", ".join(f"{merged.wave} #{merged.pr}" for merged in action.waves)
+    head = _read_branch_head(runtime, configuration, project, action.branch)
+    described = _DescribedBranch(
+        project=project, wave=None, milestone=action.milestone, base=main, head=head, merged_waves=action.waves
+    )
+    title, body = _compose_description(runtime, configuration, described)
     opened = forge.open_pull_request(
         {
             "repository": read_project_field(project, PATH_FIELD),
             "base": main,
             "branch": action.branch,
-            "title": f"chore(milestone): merge the milestone {action.milestone} into {main}",
-            "body": f"Merges the milestone {action.milestone} of @PROJECT.{action.project} into {main},"
-            f" its waves merged: {waves}.",
+            "title": title,
+            "body": body,
             "milestone": NO_MILESTONE,
             "environment": environment,
         },
@@ -537,6 +688,13 @@ def _open_milestone_pull_request(
         runtime.paths,
         runtime.now,
         MilestonePrOpened(project=action.project, milestone=action.milestone, pr=opened["number"], login=login),
+    )
+    append_event(
+        runtime.paths,
+        runtime.now,
+        MilestonePrDescribed(
+            project=action.project, milestone=action.milestone, pr=opened["number"], head=head, login=login
+        ),
     )
 
 
@@ -704,6 +862,8 @@ def _list_wave_executors(runtime: Runtime, configuration: Configuration) -> dict
         CutWaveBranch: lambda action: _cut_wave_branch(runtime, configuration, action),
         CutMilestoneBranch: lambda action: _cut_milestone_branch(runtime, configuration, action),
         RetargetWavePullRequest: lambda action: _retarget_wave_pull_request(runtime, configuration, action),
+        DescribeWavePullRequest: lambda action: _describe_wave_pull_request(runtime, configuration, action),
+        DescribeMilestonePullRequest: lambda action: _describe_milestone_pull_request(runtime, configuration, action),
         OpenIntegrationPullRequest: lambda action: _open_integration_pull_request(runtime, configuration, action),
         ReportWave: lambda action: _report_wave(runtime, action),
         CloseWave: lambda action: _close_wave(runtime, action),
