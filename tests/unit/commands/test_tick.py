@@ -3981,14 +3981,15 @@ class TickDescribingAPullRequestWhoseHeadMovedTest(unittest.TestCase):
     def _create_runtime(self, forge: OpeningForgeDouble) -> Runtime:
         corpus = {
             "STUDY": {"triage": PAUSED_TRIAGE},
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"), ("CORPUS", "corpus"))},
             "TASK": {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST},
             "MILESTONE": {"M4": MILESTONE_M4},
         }
         answers = {**MACHINE_ANSWERS, **describe_t7_delivered_at_the_wave_head(self.root)}
+        self.machine = ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus))
         return create_test_runtime(
             create_test_paths(self.root),
-            run_process=ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus)).run,
+            run_process=self.machine.run,
             spawn_process=SpawnRecorderDouble().spawn,
             resolve_plugin=_resolve_the_collectors_beside(
                 create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
@@ -4062,6 +4063,43 @@ class TickDescribingAPullRequestWhoseHeadMovedTest(unittest.TestCase):
         # Assert
         self.assertEqual(forge.edited, [])
         self.assertEqual(self._read_last_event()["head"], "8885daa")
+
+    def test_should_fetch_the_wave_branch_to_compose_its_description_at_its_head(self):
+        # Arrange
+        write_ledger(self.root, [*EVENTS_OF_A_WAVE_WHOSE_PULL_REQUEST_IS_OPEN[:-1], WAVE_PR_DESCRIBED_AT_AN_EARLIER_HEAD])
+        forge = OpeningForgeDouble({WAVE_BRANCH: INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH})
+        runtime = self._create_runtime(forge)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertIn(("git", "fetch", "--quiet", "origin", "integration/M4"), self.machine.argvs)
+
+    def test_should_rewrite_the_body_of_the_wave_pull_request_as_the_report_its_head_holds(self):
+        # Arrange
+        write_ledger(self.root, [*EVENTS_OF_A_WAVE_WHOSE_PULL_REQUEST_IS_OPEN[:-1], WAVE_PR_DESCRIBED_AT_AN_EARLIER_HEAD])
+        report = self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD / "corpus" / "waves" / "16-report.md"
+        report.parent.mkdir(parents=True)
+        report.write_text("# The wave tidepool_w16\n\nOne task merged, none parked.\n", encoding="utf-8")
+        forge = OpeningForgeDouble({WAVE_BRANCH: INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH})
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+
+        # Assert
+        self.assertEqual(
+            forge.edited,
+            [
+                {
+                    "repository": str(self.repository),
+                    "number": 206,
+                    "title": "fix(waves): keep the cut branch (@TASK.T7)",
+                    "body": "# The wave tidepool_w16\n\nOne task merged, none parked.\n",
+                    "environment": {},
+                }
+            ],
+        )
 
     def test_should_rewrite_the_title_and_the_body_of_the_milestone_pull_request_by_what_its_head_delivers(self):
         # Arrange
