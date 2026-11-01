@@ -1,6 +1,7 @@
 import argparse
 
 from brigade.command import Command
+from brigade.ledger.read_ledger import read_ledger
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runtime import Runtime
 from brigade.studies.describe_study_row import describe_study_row
@@ -27,7 +28,7 @@ def _render_text(document: dict) -> str:
 
 def study_list(request: argparse.Namespace, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
-    last_orders = read_last_study_orders(runtime.paths.state_root)
+    last_orders = read_last_study_orders(read_ledger(runtime.paths.state_root).entries)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "studies": [describe_study_row(study, last_orders.get(study.name)) for study in read_studies(runtime)],

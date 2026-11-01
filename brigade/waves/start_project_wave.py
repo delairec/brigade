@@ -8,7 +8,7 @@ from brigade.errors import BrigadeError
 from brigade.git.find_branch import find_branch
 from brigade.git.find_remote_branch import RemoteBranch, find_remote_branch
 from brigade.ledger.append_derived_event import append_derived_event
-from brigade.ledger.read_ledger import LedgerReading, read_ledger
+from brigade.ledger.read_ledger import LedgerReading
 from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.find_project import find_project
 from brigade.registry.is_on_github import is_on_github
@@ -64,7 +64,7 @@ def _compose_tasks(runtime: Runtime, start: WaveStart, tasks: ProjectTasks, read
     if start.tasks:
         chosen = _take_named_tasks(start, tasks, open_tasks)
     else:
-        chosen = admit_candidates(runtime.run_process, tasks, open_tasks)
+        chosen = admit_candidates(runtime, tasks, open_tasks)
     if not chosen:
         raise BrigadeError(f"@PROJECT.{start.project} has no task to start")
     return tuple(sorted(chosen, key=find_task_number))
@@ -102,7 +102,7 @@ def _cut_missing_branches(
     runtime: Runtime, start: WaveStart, tasks: ProjectTasks, reading: ProjectTasksReading
 ) -> None:
     read_main_tasks = functools.cache(lambda: read_project_tasks(runtime, reading, NO_MILESTONE))
-    for wave in list_open_waves(read_ledger(runtime.paths.state_root).entries, start.project):
+    for wave in list_open_waves(runtime.read_ledger(runtime.paths.state_root).entries, start.project):
         cut = WaveBranchCut(project=reading.project, branch=wave.branch, read_environment=start.read_environment)
         if is_wave_branch_missing(runtime.run_process, cut):
             wave_tasks = _select_wave_tasks(wave, tasks, read_main_tasks)
@@ -117,7 +117,7 @@ def start_project_wave(runtime: Runtime, start: WaveStart, milestone: str | None
         configuration=start.configuration,
         project=project,
         read_environment=start.read_environment,
-        entries=read_ledger(runtime.paths.state_root).entries,
+        entries=runtime.read_ledger(runtime.paths.state_root).entries,
     )
     tasks = read_project_tasks(runtime, tasks_reading, milestone)
 

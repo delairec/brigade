@@ -5116,3 +5116,31 @@ DECISION DoctorChecksABindingWhereTheRunResolvesIt
 		REF @TASK.B173
 	SOURCE "the delivery of @TASK.B173 in the wave brigade_w19"
 		REF @TASK.B173
+
+DECISION TheTickExtendsItsLedgerReadingWithTheBytesAppendedPastEachMonthlyFile
+	TITLE "the tick reads the ledger once through a LedgerReadingKeeper, which extends that reading"
+		+ "with read_ledger since it: the lines past the end of each monthly file it read, so the"
+		+ "extension holds the events the tick appended and those another process appended"
+		+ "meanwhile; append_derived_event keeps its own reading under the ledger lock: the wave it"
+		+ "derives must see every wave.started, a brigade wave start run by hand included"
+	STATUS active
+	REJECTED "the appended events added to the reading in memory at each append_event of the tick:"
+		+ "every writer reached by an executor passes Paths, not the runtime, and the reads under a"
+		+ "worktrees lock would miss what another process recorded"
+	RATIONALE "@TASK.B174 bounds the reads of a tick to one; a read past the known ends costs a"
+		+ "seek per monthly file, where brigade/ledger/read_ledger.py read every line of every file"
+		REF @TASK.B174
+	SOURCE "the build run of @TASK.B174 of 2026-11-01"
+		REF @TASK.B174
+
+DECISION TheTickRemembersTheLiveBlockersOfATaskByTheTreeItReadThemOn
+	TITLE "the tick caches read_live_blockers by its tree root, which names a commit: a task whose"
+		+ "branch did not move is read once per tick, and again on the tree of a branch the tick"
+		+ "moved"
+	STATUS active
+	REJECTED "the blockers cached by task alone: a merge or a rebase the tick applies changes the"
+		+ "corpus the task is read on, and its blockers would stay those of the branch before"
+	RATIONALE "brigade/corpus/prepare_tree.py extracts an archive tree under the SHA of its ref, so"
+		+ "the root of a tree changes exactly when its branch moved"
+	SOURCE "the build run of @TASK.B174 of 2026-11-01"
+		REF @TASK.B174

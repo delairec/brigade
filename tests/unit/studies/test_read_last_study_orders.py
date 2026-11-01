@@ -7,6 +7,7 @@ from brigade.ledger.append_event import append_event
 from brigade.ledger.order_done import OrderDone
 from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.order_started import OrderStarted
+from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.step_done import StepDone
 from brigade.studies.read_last_study_orders import LastStudyOrder, read_last_study_orders
 from tests.unit.commands.command_runtime import write_operational_corpus
@@ -50,7 +51,7 @@ class ReadLastStudyOrdersTest(unittest.TestCase):
         )
 
         # Act
-        last_orders = read_last_study_orders(paths.state_root)
+        last_orders = read_last_study_orders(read_ledger(paths.state_root).entries)
 
         # Assert
         self.assertEqual(
@@ -74,7 +75,7 @@ class ReadLastStudyOrdersTest(unittest.TestCase):
         )
 
         # Act
-        last_orders = read_last_study_orders(paths.state_root)
+        last_orders = read_last_study_orders(read_ledger(paths.state_root).entries)
 
         # Assert
         self.assertEqual(last_orders, {"ash": LastStudyOrder(run="r2", outcome="done", started=None)})

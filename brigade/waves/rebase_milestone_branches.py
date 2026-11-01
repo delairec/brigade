@@ -12,7 +12,6 @@ from brigade.git.read_head import read_head
 from brigade.git.rebase_onto import rebase_onto
 from brigade.git.reset_worktree import reset_worktree
 from brigade.ledger.milestone_rebased import MilestoneRebased
-from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.is_on_github import is_on_github
 from brigade.registry.read_project_field import read_project_field
@@ -128,7 +127,7 @@ def _rebase_wave(runtime: Runtime, rebase: MilestoneBranchesRebase, wave: WaveSt
 
 
 def rebase_milestone_branches(runtime: Runtime, rebase: MilestoneBranchesRebase) -> MilestoneRebased | None:
-    entries = read_ledger(runtime.paths.state_root).entries
+    entries = runtime.read_ledger(runtime.paths.state_root).entries
     project = rebase.project.name
     with hold_lock(locate_worktrees_lock(runtime.paths.lock_directory, project)):
         main_branch = read_project_field(rebase.project, MAIN_FIELD)

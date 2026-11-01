@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from brigade.ledger.read_ledger import LedgerReading, read_ledger
 from brigade.system.paths import Paths, build_paths
 from brigade.system.poll_until_signalled import poll_until_signalled
 from brigade.system.process_trace import ProcessTrace
@@ -14,6 +15,7 @@ from brigade.system.resolve_plugin import PluginSources, resolve_plugin
 from brigade.system.run_process import ProcessRecord, ProcessRequest, run_process
 from brigade.system.spawn_process import SpawnRequest, spawn_process
 from brigade.system.trail_writer import TrailWriter
+from brigade.tick.read_live_blockers import read_live_blockers
 
 
 @dataclass(frozen=True)
@@ -34,6 +36,8 @@ class Runtime:
     trail: TrailWriter
     resolve_plugin: Callable[..., object]
     poll_until_signalled: Callable[[Callable[[], bool], float], bool]
+    read_ledger: Callable[[Path], LedgerReading]
+    read_live_blockers: Callable[[Callable[[ProcessRequest], ProcessRecord], Path, str], tuple[str, ...]]
 
 
 def _report_nothing(trace: ProcessTrace) -> None:
@@ -62,4 +66,6 @@ def build_runtime(invocation: Invocation, environment: Mapping[str, str]) -> Run
         trail=trail,
         resolve_plugin=functools.partial(resolve_plugin, sources=sources),
         poll_until_signalled=poll_until_signalled,
+        read_ledger=read_ledger,
+        read_live_blockers=read_live_blockers,
     )
