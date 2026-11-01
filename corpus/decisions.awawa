@@ -4888,3 +4888,28 @@ DECISION TheWaveViewRunsItsShowAndItsLedgerAsOneViewUnderTheStatusOfItsShow
 		+ "merge of @TASK.B31"
 		REF @TASK.B28
 		REF @TASK.B31
+
+DECISION AScanRecordsOneSignalPerItemFingerprintedByTheItemAndEachBuiltInScanRunsPerProject
+	TITLE "a scan records one inbox signal of kind scan per item its collectors print,"
+		+ "fingerprinted <study>:<project>:<the item's fingerprint>, and brigade ships each"
+		+ "built-in scan once per registered project, named <scan>-<project>"
+	STATUS active
+	DESC "an item of a scan's collector carries a fingerprint key naming the fact it reports; an"
+		+ "item without one fails the run; no item, no signal"
+	DESC "binds @TASK.B33 and @TASK.B34"
+		REF @TASK.B33
+		REF @TASK.B34
+	REJECTED "one signal per run fingerprinted by the hash of the answer, as the inbox output does"
+		+ "for a study with a judging run: the answer carries the run id, so every run records a"
+		+ "new signal and a dismissal never holds"
+	REJECTED "one signal per run fingerprinted by the hash of its items: one new fact among ten"
+		+ "known ones makes the whole a new signal"
+	REJECTED "one built-in per scan collecting over every registered project: a failing project"
+		+ "parks the scan of every other"
+	RATIONALE "a fingerprint is the fact, as"
+		+ "@DECISION.TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint sets, and a scan finds"
+		+ "several facts at once"
+		REF @DECISION.TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint
+	SOURCE "the user's rulings of 2026-11-01 in the refinement of @TASK.B33 and @TASK.B34"
+		REF @TASK.B33
+		REF @TASK.B34
