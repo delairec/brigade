@@ -82,6 +82,18 @@ class WikiLinksGuardTest(unittest.TestCase):
         # Assert
         self.assertEqual(defects, ["Runs.md is not linked from _Sidebar.md"])
 
+    def test_should_flag_a_missing_entry_page(self):
+        for missing, pages, expected in [
+            ("Home.md", {"_Sidebar.md": "- [Runs](Runs.md)\n", "Runs.md": RUNS_PAGE}, ["wiki/ has no Home.md"]),
+            ("_Sidebar.md", {"Home.md": HOME_LINKING_RUNS, "Runs.md": RUNS_PAGE}, ["wiki/ has no _Sidebar.md"]),
+        ]:
+            with self.subTest(missing=missing):
+                # Act
+                defects = self.inspect(pages)
+
+                # Assert
+                self.assertEqual(defects, expected)
+
     def test_should_accept_links_to_pages_to_anchors_and_to_absolute_addresses(self):
         # Arrange
         runs_page_with_every_accepted_link = "See [the trail](Runs.md#trail), [above](#runs) and [the handoff](https://github.com/delairec/brigade/blob/main/HANDOFF.md).\n"
