@@ -9,6 +9,7 @@ from brigade.git.find_merge_base import find_merge_base
 from brigade.git.list_added_lines import list_added_lines
 from brigade.git.resolve_commit import resolve_commit
 from brigade.registry.read_project_field import read_project_field
+from brigade.registry.read_project_forge import read_project_forge
 from brigade.runtime import Runtime
 from brigade.system.ask_pull_request_details import PullRequestDetailsQuery, ask_pull_request_details
 from brigade.system.parse_configuration import Configuration
@@ -23,7 +24,6 @@ from brigade.verify.measure_size import measure_size
 from brigade.verify.read_privacy_patterns import read_privacy_patterns
 
 DOCUMENT_SCHEMA_VERSION = 1
-FORGE_NAME = "github"
 REMOTE_BRANCH_PREFIX = "refs/remotes/origin/"
 
 
@@ -56,7 +56,7 @@ class _ComparedCommits:
 def _fetch_pull_request(runtime: Runtime, demand: PreflightDemand, repository: Path) -> dict:
     pull_request = ask_pull_request_details(
         demand.forge,
-        FORGE_NAME,
+        read_project_forge(demand.project),
         PullRequestDetailsQuery(repository=str(repository), number=demand.pr, environment=demand.environment),
         runtime,
     )

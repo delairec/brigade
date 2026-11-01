@@ -1,6 +1,7 @@
 import unittest
 from pathlib import Path
 
+from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRequest
 from brigade.verify.check_acceptance import AcceptanceFacts, check_acceptance
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
@@ -63,6 +64,13 @@ class CheckAcceptanceTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            [(request.argv, request.cwd) for request in runner.requests],
-            [(("python3", "-m", "unittest"), "/cache/shop/2222222")],
+            runner.requests,
+            [
+                ProcessRequest(
+                    argv=("python3", "-m", "unittest"),
+                    cwd="/cache/shop/2222222",
+                    timeout_s=1800.0,
+                    acceptable_exit_codes=EVERY_EXIT_CODE,
+                )
+            ],
         )

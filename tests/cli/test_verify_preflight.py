@@ -73,6 +73,8 @@ class VerifyPreflightTestCase(TaskContextTestCase):
         self.project.run_git("init", "--quiet", "--bare", str(self.remote))
         self.project.run_git("remote", "add", "origin", str(self.remote))
         self.project.run_git("push", "--quiet", "origin", MILESTONE_BRANCH, TASK_BRANCH)
+        projects = self.machine.corpus / "projects.awawa"
+        projects.write_text(projects.read_text().replace('\tFORGE "none"\n', '\tFORGE "github"\n'))
         ledger = self.state / "ledger" / "2026-10.jsonl"
         ledger.parent.mkdir(parents=True, exist_ok=True)
         ledger.write_text(LEDGER_LINES)

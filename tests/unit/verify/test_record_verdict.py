@@ -57,6 +57,7 @@ class RecordVerdictTestCase(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         self.forge = create_review_forge()
+        self.forge_name = "github"
 
     def record(self, policies: dict, verdict: dict) -> dict:
         runtime = create_test_runtime(
@@ -69,6 +70,7 @@ class RecordVerdictTestCase(unittest.TestCase):
                 opened=OPENED,
                 verdict=verdict,
                 forge=self.forge,
+                forge_name=self.forge_name,
                 configuration=REVIEW_ACCOUNTS,
             ),
         )
@@ -258,3 +260,18 @@ class RecordVerdictOfAHeadNoLongerTheHeadTest(RecordVerdictTestCase):
         # Assert
         self.assertEqual(self.list_posted_reviews(), [])
         self.assertFalse((self.root / "state" / "ledger" / "2026-10.jsonl").exists())
+
+
+class RecordVerdictThroughTheForgeOfTheProjectTest(RecordVerdictTestCase):
+    def test_should_name_the_forge_of_the_project_when_it_answers_out_of_shape(self):
+        # Arrange
+        self.forge = create_review_forge(read_pull_request=lambda request: {"schema_version": 1})
+        self.forge_name = "gitlab"
+        no_policy = {}
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            self.record(no_policy, CHANGES)
+
+        # Assert
+        self.assertRegex(str(raised.exception), "^forge plugin gitlab answered read_pull_request")
