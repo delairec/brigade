@@ -1,6 +1,5 @@
 ---
 capabilities: read, write, shell
-budget: 30
 ---
 # Procedure — put the branch of one task, wave or milestone back on its base
 

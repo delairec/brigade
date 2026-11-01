@@ -96,7 +96,7 @@ def _describe_role(plan: RunPlan) -> ClientRole:
         package_file=str(plan.run_directory / ROLE_FILE),
         capabilities=plan.capabilities,
         reasoning=plan.role.front_matter["reasoning"],
-        budget=plan.procedure.budget,
+        budget=plan.budget.applied,
     )
 
 
