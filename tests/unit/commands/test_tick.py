@@ -5038,7 +5038,7 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
 
 SHA_OF_THE_PULL_REQUEST_HEAD = "a3e4d5f"
 TASK_DELIVERED_TO_ITS_FIRST_WORDING = (*TASK_DELIVERED, ("SPEC", "the tide table lists the low tides"))
-TASK_AMENDED_ON_THE_WAVE_BRANCH = (*TASK_DELIVERED, ("SPEC", "the tide table lists the low and the high tides"))
+TASK_AMENDED_ON_THE_WAVE_BRANCH = (*TASK_TO_DELIVER, ("SPEC", "the tide table lists the low and the high tides"))
 OUTPUTS_OF_AN_AMENDED_TASK = {
     **MACHINE_ANSWERS,
     ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "8885daa^{commit}"): ProcessAnswer(
@@ -5159,8 +5159,7 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
                             "name": "T7",
                             "fields": (
                                 {"name": "MILESTONE", "value": "@MILESTONE.M4"},
-                                {"name": "STATUS", "value": "implemented"},
-                                {"name": "DELIVERED_BY", "value": "42"},
+                                {"name": "STATUS", "value": "todo"},
                                 {"name": "SPEC", "value": "the tide table lists the low and the high tides"},
                             ),
                         },
