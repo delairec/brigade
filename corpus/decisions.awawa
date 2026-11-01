@@ -5134,21 +5134,18 @@ DECISION TheVibeAdapterPinsTheRustCliOfVibeAndAnswersNoResume
 		+ "brigade_w20, on @TASK.B108: « (b) VIBE_CLI=rust, sans resume (Recommandé) »"
 		REF @TASK.B108
 
-DECISION TheVibeAdapterReadsAFailureOtherThanItsTurnCapFromStderrAlone
-	TITLE "the vibe adapter reads the session, the steps and the duration of a segment from its"
-		+ "stream only when the segment exits 0 with an entry or is cut by its turn cap; any other"
-		+ "exit is classified by the last line of stderr alone"
+DECISION TheVibeAdapterClassifiesAStreamWithoutEntryByStderrEvenOnExitZero
+	TITLE "the vibe adapter classifies a stream holding no entry by the last line of stderr, even"
+		+ "on exit 0, and takes the message of a cut segment from stderr and that of a blocked"
+		+ "segment from its final message"
 	STATUS active
 	DESC "binds @TASK.B108"
 		REF @TASK.B108
 	DESC "a stream holding no entry names no session: with exit 0 it is classified as any other"
 		+ "exit, by the last line of stderr, unreadable_output when stderr holds none"
-	DESC "a cut by the turn cap is told by exit 1 and a last entry of type effect; its message is"
-		+ "the last line of stderr, and the message of a blocked segment is the text of its final"
-		+ "message"
-	REJECTED "the session and the steps of every failed segment read from its entries: the SPEC of"
-		+ "the task reads them for the ended and the cut segments only, and a failure answered as"
-		+ "describe_unreadable_output answers it keeps one shape of failure for both built-in"
-		+ "clients"
+	DESC "the message of a segment cut by its turn cap is the last line of stderr"
+	DESC "the message of a blocked segment is the text of its final message"
+	REJECTED "a stream holding no entry on exit 0 read as an ended segment, undeclared: it names no"
+		+ "session and no final message, so nothing shows the client ran the brief"
 	SOURCE "run 20261101T213054Z-33f56c of wave brigade_w20, delivering @TASK.B108"
 		REF @TASK.B108
