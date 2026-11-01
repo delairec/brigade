@@ -2919,7 +2919,7 @@ LOG_OF_THE_WAVE_BRANCH = (
     "fix(waves): keep the cut branch\ndocs(corpus): mark @TASK.T7 implemented, delivered by #42\nchore: bump the lock\n"
 )
 ATTRIBUTED_CONFIGURATION = (
-    CLIENT_AND_DOCUMENT_CONFIGURATION + 'attribution = ["Co-Authored-By: Tidepool CLI <cli@tidepool.test>"]\n'
+    CLIENT_AND_DOCUMENT_CONFIGURATION + 'attribution = ["Co-Authored-By: Tidepool CLI <cli@example.org>"]\n'
 )
 WAVE_TITLE = "fix(waves): keep the cut branch (@TASK.T7)"
 PULL_REQUEST_OF_THE_WAVE_TITLED_BY_HAND = {
@@ -2937,7 +2937,7 @@ WAVE_BODY_INTO_THE_MILESTONE_BRANCH = (
     "- @TASK.T7 — The cut branch is kept (#42)\n"
     "- chore: bump the lock\n"
     "\n"
-    "Co-Authored-By: Tidepool CLI <cli@tidepool.test>"
+    "Co-Authored-By: Tidepool CLI <cli@example.org>"
 )
 
 
@@ -3313,7 +3313,7 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
                     "- @TASK.T7 — The cut branch is kept (#42)\n"
                     "- chore: bump the lock\n"
                     "\n"
-                    "Co-Authored-By: Tidepool CLI <cli@tidepool.test>",
+                    "Co-Authored-By: Tidepool CLI <cli@example.org>",
                     "milestone": None,
                     "environment": {},
                 }
@@ -3930,7 +3930,7 @@ WAVE_PULL_REQUEST_DESCRIBED_AT_ITS_HEAD = {
         "- @TASK.T7 — The cut branch is kept (#42)\n"
         "- chore: bump the lock\n"
         "\n"
-        "Co-Authored-By: Tidepool CLI <cli@tidepool.test>"
+        "Co-Authored-By: Tidepool CLI <cli@example.org>"
     ),
 }
 MILESTONE_PULL_REQUEST_OPEN = {**INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN, "number": 77, "checks": []}
@@ -3981,7 +3981,14 @@ class TickDescribingAPullRequestWhoseHeadMovedTest(unittest.TestCase):
     def _create_runtime(self, forge: OpeningForgeDouble) -> Runtime:
         corpus = {
             "STUDY": {"triage": PAUSED_TRIAGE},
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"), ("CORPUS", "corpus"))},
+            "PROJECT": {
+                "tidepool": (
+                    ("PATH", str(self.repository)),
+                    ("MAIN", "main"),
+                    ("FORGE", "github"),
+                    ("CORPUS", "corpus"),
+                )
+            },
             "TASK": {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST},
             "MILESTONE": {"M4": MILESTONE_M4},
         }
@@ -3997,11 +4004,15 @@ class TickDescribingAPullRequestWhoseHeadMovedTest(unittest.TestCase):
         )
 
     def _read_last_event(self) -> dict:
-        return json.loads((self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()[-1])
+        return json.loads(
+            (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()[-1]
+        )
 
     def test_should_rewrite_the_title_and_the_body_of_the_wave_pull_request_by_what_its_head_delivers(self):
         # Arrange
-        write_ledger(self.root, [*EVENTS_OF_A_WAVE_WHOSE_PULL_REQUEST_IS_OPEN[:-1], WAVE_PR_DESCRIBED_AT_AN_EARLIER_HEAD])
+        write_ledger(
+            self.root, [*EVENTS_OF_A_WAVE_WHOSE_PULL_REQUEST_IS_OPEN[:-1], WAVE_PR_DESCRIBED_AT_AN_EARLIER_HEAD]
+        )
         forge = OpeningForgeDouble({WAVE_BRANCH: INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH})
 
         # Act
@@ -4021,7 +4032,7 @@ class TickDescribingAPullRequestWhoseHeadMovedTest(unittest.TestCase):
                     "- @TASK.T7 — The cut branch is kept (#42)\n"
                     "- chore: bump the lock\n"
                     "\n"
-                    "Co-Authored-By: Tidepool CLI <cli@tidepool.test>",
+                    "Co-Authored-By: Tidepool CLI <cli@example.org>",
                     "environment": {},
                 }
             ],
@@ -4029,7 +4040,9 @@ class TickDescribingAPullRequestWhoseHeadMovedTest(unittest.TestCase):
 
     def test_should_record_the_head_the_wave_pull_request_is_described_at(self):
         # Arrange
-        write_ledger(self.root, [*EVENTS_OF_A_WAVE_WHOSE_PULL_REQUEST_IS_OPEN[:-1], WAVE_PR_DESCRIBED_AT_AN_EARLIER_HEAD])
+        write_ledger(
+            self.root, [*EVENTS_OF_A_WAVE_WHOSE_PULL_REQUEST_IS_OPEN[:-1], WAVE_PR_DESCRIBED_AT_AN_EARLIER_HEAD]
+        )
         forge = OpeningForgeDouble({WAVE_BRANCH: INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH})
 
         # Act
@@ -4051,7 +4064,9 @@ class TickDescribingAPullRequestWhoseHeadMovedTest(unittest.TestCase):
 
     def test_should_record_the_head_alone_when_the_wave_pull_request_already_describes_it(self):
         # Arrange
-        write_ledger(self.root, [*EVENTS_OF_A_WAVE_WHOSE_PULL_REQUEST_IS_OPEN[:-1], WAVE_PR_DESCRIBED_AT_AN_EARLIER_HEAD])
+        write_ledger(
+            self.root, [*EVENTS_OF_A_WAVE_WHOSE_PULL_REQUEST_IS_OPEN[:-1], WAVE_PR_DESCRIBED_AT_AN_EARLIER_HEAD]
+        )
         forge = OpeningForgeDouble(
             {WAVE_BRANCH: INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH},
             {206: WAVE_PULL_REQUEST_DESCRIBED_AT_ITS_HEAD},
@@ -4066,7 +4081,9 @@ class TickDescribingAPullRequestWhoseHeadMovedTest(unittest.TestCase):
 
     def test_should_fetch_the_wave_branch_to_compose_its_description_at_its_head(self):
         # Arrange
-        write_ledger(self.root, [*EVENTS_OF_A_WAVE_WHOSE_PULL_REQUEST_IS_OPEN[:-1], WAVE_PR_DESCRIBED_AT_AN_EARLIER_HEAD])
+        write_ledger(
+            self.root, [*EVENTS_OF_A_WAVE_WHOSE_PULL_REQUEST_IS_OPEN[:-1], WAVE_PR_DESCRIBED_AT_AN_EARLIER_HEAD]
+        )
         forge = OpeningForgeDouble({WAVE_BRANCH: INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH})
         runtime = self._create_runtime(forge)
 
@@ -4078,7 +4095,9 @@ class TickDescribingAPullRequestWhoseHeadMovedTest(unittest.TestCase):
 
     def test_should_rewrite_the_body_of_the_wave_pull_request_as_the_report_its_head_holds(self):
         # Arrange
-        write_ledger(self.root, [*EVENTS_OF_A_WAVE_WHOSE_PULL_REQUEST_IS_OPEN[:-1], WAVE_PR_DESCRIBED_AT_AN_EARLIER_HEAD])
+        write_ledger(
+            self.root, [*EVENTS_OF_A_WAVE_WHOSE_PULL_REQUEST_IS_OPEN[:-1], WAVE_PR_DESCRIBED_AT_AN_EARLIER_HEAD]
+        )
         report = self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD / "corpus" / "waves" / "16-report.md"
         report.parent.mkdir(parents=True)
         report.write_text("# The wave tidepool_w16\n\nOne task merged, none parked.\n", encoding="utf-8")
@@ -4124,7 +4143,7 @@ class TickDescribingAPullRequestWhoseHeadMovedTest(unittest.TestCase):
                     "- @TASK.T7 — The cut branch is kept (#42)\n"
                     "- chore: bump the lock\n"
                     "\n"
-                    "Co-Authored-By: Tidepool CLI <cli@tidepool.test>",
+                    "Co-Authored-By: Tidepool CLI <cli@example.org>",
                     "environment": {},
                 }
             ],
@@ -4157,7 +4176,9 @@ class TickDescribingAPullRequestWhoseHeadMovedTest(unittest.TestCase):
 
     def test_should_print_the_describe_of_the_wave_with_its_pull_request_and_its_head_on_a_dry_run(self):
         # Arrange
-        write_ledger(self.root, [*EVENTS_OF_A_WAVE_WHOSE_PULL_REQUEST_IS_OPEN[:-1], WAVE_PR_DESCRIBED_AT_AN_EARLIER_HEAD])
+        write_ledger(
+            self.root, [*EVENTS_OF_A_WAVE_WHOSE_PULL_REQUEST_IS_OPEN[:-1], WAVE_PR_DESCRIBED_AT_AN_EARLIER_HEAD]
+        )
         forge = OpeningForgeDouble({WAVE_BRANCH: INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH})
 
         # Act
@@ -5627,7 +5648,9 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
 
     def test_should_open_the_pull_request_of_the_milestone_branch_into_main_once_its_last_wave_is_closed(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST}))
+        COMMAND.run(
+            Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST})
+        )
 
         # Assert
         self.assertEqual(
@@ -5647,7 +5670,9 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
 
     def test_should_record_the_opening_with_the_login_of_the_cli(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST}))
+        COMMAND.run(
+            Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST})
+        )
 
         # Assert
         self.assertEqual(
@@ -5709,7 +5734,9 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
                 forge = OpeningForgeDouble(NO_PULL_REQUEST_FROM_ANY_BRANCH)
 
                 # Act
-                COMMAND.run(Namespace(mode="once"), self._create_runtime(forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST}))
+                COMMAND.run(
+                    Namespace(mode="once"), self._create_runtime(forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST})
+                )
 
                 # Assert
                 self.assertEqual(
@@ -5732,7 +5759,9 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
         write_ledger(self.root, [CUT_OF_M4, WAVE_OF_ANOTHER_PROJECT_STARTED, WAVE_OF_ANOTHER_PROJECT_CLOSED])
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST}))
+        COMMAND.run(
+            Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST})
+        )
 
         # Assert
         self.assertEqual(self.forge.opened, [])
@@ -5818,7 +5847,9 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
                     ("git", "push", "--quiet", "origin", open_wave["branch"]): ProcessAnswer(),
                 }
                 forge = OpeningForgeDouble(NO_PULL_REQUEST_FROM_ANY_BRANCH)
-                runtime = self._create_runtime(forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST, **tasks}, answers, projects)
+                runtime = self._create_runtime(
+                    forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST, **tasks}, answers, projects
+                )
 
                 # Act
                 with contextlib.redirect_stderr(io.StringIO()):
@@ -5876,7 +5907,9 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(io.StringIO()):
-            COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST}))
+            COMMAND.run(
+                Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST})
+            )
 
         # Assert
         self.assertEqual(
@@ -5965,7 +5998,8 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
             ],
         )
         runtime = self._create_runtime(
-            OpeningForgeDouble({MILESTONE_BRANCH: MILESTONE_PULL_REQUEST_MERGED}), {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST}
+            OpeningForgeDouble({MILESTONE_BRANCH: MILESTONE_PULL_REQUEST_MERGED}),
+            {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST},
         )
         COMMAND.run(Namespace(mode="once"), runtime)
 
@@ -6008,7 +6042,9 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
             ("git", "fetch", "--quiet", "origin", MILESTONE_BRANCH): MILESTONE_BRANCH_DELETED_FROM_THE_FORGE,
         }
         runtime = self._create_runtime(
-            OpeningForgeDouble({MILESTONE_BRANCH: MILESTONE_PULL_REQUEST_MERGED}), {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST}, answers
+            OpeningForgeDouble({MILESTONE_BRANCH: MILESTONE_PULL_REQUEST_MERGED}),
+            {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST},
+            answers,
         )
 
         # Act
