@@ -13870,7 +13870,8 @@ TASK B224
 TASK B225
 	TITLE "The tick rebases the branch of an open wave onto the branch of its milestone when its"
 		+ "pull request is behind it, and merges no wave pull request that is behind"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 281
 	TYPE fix
 	MILESTONE @MILESTONE.M9
 	COMPONENT "the tick"
