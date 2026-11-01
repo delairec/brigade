@@ -308,10 +308,7 @@ def _decide_catch_up(
         or (wave.wave, task.name) in occupancy.tasks
     ):
         return None
-    if task.holds_uncommitted_changes:
-        parking_reason = _describe_spent_rounds(task, project)
-        if parking_reason is not None:
-            return ParkTask(wave=wave.wave, task=task.name, reason=parking_reason, blockers=())
+    if task.holds_uncommitted_changes and _describe_spent_rounds(task, project) is None:
         return _launch_repair(wave, task)
     return RebaseTask(
         project=wave.project,
@@ -321,7 +318,7 @@ def _decide_catch_up(
         pr=task.pull_request.number,
         worktree=task.worktree,
         head=task.pull_request.head,
-        parking_reason=_describe_spent_rounds(task, project),
+        holds_uncommitted_changes=task.holds_uncommitted_changes,
     )
 
 

@@ -300,12 +300,6 @@ def _rebase_task(runtime: Runtime, configuration: Configuration, action: RebaseT
         _record_task_state(
             runtime, RecordTaskState(wave=action.wave, task=action.task, state=PR_OPEN_STATE, reason=None)
         )
-    elif action.parking_reason is not None:
-        append_event(
-            runtime.paths,
-            runtime.now,
-            TaskParked(wave=action.wave, task=action.task, reason=action.parking_reason, blockers=()),
-        )
     else:
         _launch_rebase(runtime, configuration, action)
 
