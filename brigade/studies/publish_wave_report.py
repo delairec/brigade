@@ -6,7 +6,6 @@ from brigade.git.remove_worktree import remove_worktree
 from brigade.git.reset_branch import reset_branch
 from brigade.ledger.read_ledger import read_ledger
 from brigade.registry.find_project import find_project
-from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.studies.locate_study_project import locate_study_project
 from brigade.studies.present_answer import present_answer
@@ -16,18 +15,11 @@ from brigade.system.create_directory import create_directory
 from brigade.system.write_text_file import write_text_file
 from brigade.waves.find_integration_pull_request import find_integration_pull_request
 from brigade.waves.find_wave_started import find_wave_started
+from brigade.waves.locate_wave_report import locate_wave_report
 
-CORPUS_FIELD = "CORPUS"
-WAVE_NUMBER_SEPARATOR = "_w"
 CHECKOUT_DIRECTORY = "checkout"
 REMOTE_PREFIX = "origin/"
 NO_PULL_REQUEST = None
-
-
-def _locate_report(context: StudyRunContext) -> str:
-    project = find_project(read_projects(context.runtime), context.study.project)
-    wave_number = context.study.wave.rsplit(WAVE_NUMBER_SEPARATOR, 1)[1]
-    return f"{read_project_field(project, CORPUS_FIELD)}/waves/{wave_number}-report.md"
 
 
 def publish_wave_report(context: StudyRunContext) -> dict:
@@ -37,7 +29,7 @@ def publish_wave_report(context: StudyRunContext) -> dict:
     wave = context.study.wave
     events = tuple(entry.event for entry in read_ledger(context.runtime.paths.state_root).entries)
     branch = find_wave_started(events, wave).branch
-    report = _locate_report(context)
+    report = locate_wave_report(find_project(read_projects(context.runtime), context.study.project), wave)
     markdown = present_answer(context).markdown
     pull_request = find_integration_pull_request(events, wave) if project.forge is not None else NO_PULL_REQUEST
     checkout = context.run_directory / CHECKOUT_DIRECTORY

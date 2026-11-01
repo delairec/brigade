@@ -1,7 +1,8 @@
 import unittest
 
 from brigade.waves.compose_delivery_body import compose_delivery_body
-from brigade.waves.delivery import DeliveredMilestone, DeliveredTask, DeliveredWave, Delivery
+from brigade.waves.delivery import DeliveredMilestone, DeliveredTask, Delivery
+from brigade.waves.merged_wave import MergedWave
 
 NO_MERGED_WAVE = ()
 NO_COMMIT = ()
@@ -145,7 +146,7 @@ class ComposeDeliveryBodyOfAMilestoneTest(unittest.TestCase):
             wave=NO_WAVE,
             milestone=TIDES,
             base="main",
-            merged_waves=(DeliveredWave(wave="tidepool_w16", pr=57), DeliveredWave(wave="tidepool_w17", pr=63)),
+            merged_waves=(MergedWave(wave="tidepool_w16", pr=57), MergedWave(wave="tidepool_w17", pr=63)),
             tasks=(NAME_THE_BASE,),
             commits=("fix(waves): name the base (@TASK.T9)",),
             attribution=NO_ATTRIBUTION,
