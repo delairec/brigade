@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
-from brigade.tick.build_snapshot import MergedWave, PreflightFailure
+from brigade.tick.build_snapshot import PreflightFailure
+from brigade.waves.merged_wave import MergedWave
 
 
 @dataclass(frozen=True)

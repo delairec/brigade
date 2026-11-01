@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from brigade.waves.merged_wave import MergedWave
+
 
 @dataclass(frozen=True)
 class DeliveredTask:
@@ -19,17 +21,11 @@ class DeliveredMilestone:
 
 
 @dataclass(frozen=True)
-class DeliveredWave:
-    wave: str
-    pr: int
-
-
-@dataclass(frozen=True)
 class Delivery:
     wave: str | None
     milestone: DeliveredMilestone | None
     base: str
-    merged_waves: tuple[DeliveredWave, ...]
+    merged_waves: tuple[MergedWave, ...]
     tasks: tuple[DeliveredTask, ...]
     commits: tuple[str, ...]
     attribution: tuple[str, ...]

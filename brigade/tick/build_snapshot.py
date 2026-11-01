@@ -24,7 +24,6 @@ from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_state import REQUEUE_REASON, TaskState
 from brigade.ledger.task_verdict import TaskVerdict
-from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
@@ -59,9 +58,11 @@ from brigade.waves.find_integration_pull_request import find_integration_pull_re
 from brigade.waves.find_milestone_branch import find_milestone_branch
 from brigade.waves.is_wave_branch_missing import is_wave_branch_missing
 from brigade.waves.list_candidate_waves import CandidateWave, list_candidate_waves
+from brigade.waves.list_merged_waves import list_merged_waves
 from brigade.waves.locate_branch_worktree import locate_branch_worktree
 from brigade.waves.locate_forge_branch import locate_forge_branch
 from brigade.waves.locate_project_main import locate_project_main
+from brigade.waves.merged_wave import MergedWave
 from brigade.waves.name_milestone_branch import name_milestone_branch
 from brigade.waves.prepare_wave_tree import prepare_wave_tree
 from brigade.waves.read_active_milestones import read_active_milestones
@@ -292,12 +293,6 @@ class ProjectFacts:
                 for uncut in self.uncut_milestones
             ],
         }
-
-
-@dataclass(frozen=True)
-class MergedWave:
-    wave: str
-    pr: int
 
 
 @dataclass(frozen=True)
@@ -923,18 +918,6 @@ def _find_milestone_pull_request(reading: WaveReading, project: str, milestone: 
     return opened[-1] if opened else None
 
 
-def _list_merged_waves(reading: WaveReading, project: str, of_milestone: set[str]) -> tuple[MergedWave, ...]:
-    closed = {event.wave: event.pr for event in reading.events if isinstance(event, WaveClosed)}
-    return tuple(
-        MergedWave(wave=event.wave, pr=closed[event.wave])
-        for event in reading.events
-        if isinstance(event, WaveStarted)
-        and event.project == project
-        and event.wave in closed
-        and of_milestone.intersection(event.tasks)
-    )
-
-
 def _list_open_waves(reading: WaveReading, project: str, of_milestone: set[str]) -> tuple[str, ...]:
     return tuple(
         summary.started.wave
@@ -987,7 +970,7 @@ def _read_milestone_facts(runtime: Runtime, reading: WaveReading, cut: Milestone
         project=cut.project,
         milestone=cut.milestone,
         branch=cut.branch,
-        merged_waves=_list_merged_waves(reading, cut.project, names),
+        merged_waves=list_merged_waves(reading.events, cut.project, names),
         open_waves=_list_open_waves(reading, cut.project, names),
         todo=tuple(task.name for task in of_milestone if read_task_field(task, STATUS_FIELD) == (TODO_STATUS,)),
         behind_main=_is_behind_main(runtime, reading, cut, ref),
