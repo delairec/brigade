@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
+from brigade.ledger.omit_absent_pull_request import omit_absent_pull_request
+
 
 @dataclass(frozen=True)
 class PrMerged:
@@ -8,7 +10,7 @@ class PrMerged:
     project: str
     wave: str
     task: str
-    pr: int
+    pr: int | None
     rounds: int
     login: str | None
 
@@ -18,7 +20,7 @@ class PrMerged:
             project=document["project"],
             wave=document["wave"],
             task=document["task"],
-            pr=document["pr"],
+            pr=document.get("pr"),
             rounds=document["rounds"],
             login=document["login"],
         )
@@ -28,7 +30,7 @@ class PrMerged:
             "project": self.project,
             "wave": self.wave,
             "task": self.task,
-            "pr": self.pr,
+            **omit_absent_pull_request(self.pr),
             "rounds": self.rounds,
             "login": self.login,
         }
