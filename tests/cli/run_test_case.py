@@ -5,6 +5,7 @@ import time
 import unittest
 from pathlib import Path
 
+from tests.cli.read_ledger_events import read_ledger_events
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 
 PROCEDURE = "---\ncapabilities: read, write, shell\nbudget: 75\n---\nDeliver the task the brief names.\n"
@@ -81,8 +82,7 @@ class RunTestCase(FileWaitingTestCase):
         (self.recordings / f"{role}.json").write_text(recording)
 
     def read_events(self) -> list:
-        lines = "".join(path.read_text() for path in sorted(self.ledger.glob("*.jsonl"))).splitlines()
-        return list(map(json.loads, lines))
+        return read_ledger_events(self.ledger)
 
     def wait_for_exit(self, pid: int) -> None:
         deadline = time.monotonic() + FILE_WAIT_S
