@@ -12155,7 +12155,8 @@ TASK B173
 TASK B174
 	TITLE "The read cost of a tick is bounded: the ledger read once per tick, awawa refs once per"
 		+ "task per tick"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 299
 	TYPE perf
 	MILESTONE @MILESTONE.M6
 	COMPONENT "tick"
