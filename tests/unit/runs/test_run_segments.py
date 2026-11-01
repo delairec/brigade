@@ -30,6 +30,10 @@ REPORTED_USAGE = {
     "cache_creation_input_tokens": 16778,
     "cache_read_input_tokens": 98000,
 }
+ROLE_DIGEST = "da7cc724d530669664decd8af3f657fc15665691731442c3be1776eb13e2c510"
+PROCEDURE_DIGEST = "e395b77e8ab7354e4418d2e1bb9d6f5c5b4de99c417c8b5ac1bc588d5d5c4151"
+ONE_DOT_PROCEDURE_DIGEST = "cdb4ee2aea69cc6a83331bbe96dc2caa9a299d21329efb0336fc02a82e1839a8"
+NO_EDIT_TOOL = "the client names no edit tool"
 PROCEDURE_OF_FIVE_STEPS = Procedure(
     name="build-task", location="built-in", argument="build-task", capabilities=("read",), budget=5, body="."
 )
@@ -156,7 +160,11 @@ class RunSegmentsOfARunDoneInOneSegmentTest(RunSegmentsTestCase):
                 "exit": 0,
                 "wave": None,
                 "task": None,
+                "role_digest": ROLE_DIGEST,
+                "procedure_digest": PROCEDURE_DIGEST,
                 "nulls": {
+                    "steps_to_first_edit": NO_EDIT_TOOL,
+                    "tokens_to_first_edit": NO_EDIT_TOOL,
                     "project": "no project given",
                     "wave": "not launched by a wave",
                     "task": "not launched for a task",
@@ -222,7 +230,11 @@ class RunSegmentsOfARunHandedOverTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": PROCEDURE_DIGEST,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -594,7 +606,11 @@ class RunSegmentsCutOnTheClockTest(RunSegmentsTestCase):
                     "exit": None,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": PROCEDURE_DIGEST,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -720,7 +736,11 @@ class RunSegmentsStoppedAtTheSoftLimitTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": PROCEDURE_DIGEST,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -824,7 +844,11 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -880,7 +904,11 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -924,7 +952,11 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -1033,7 +1065,11 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
                     "wave": None,
                     "task": None,
                     "duration_ms": 0,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": PROCEDURE_DIGEST,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -1080,7 +1116,11 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
                 "exit": 0,
                 "wave": None,
                 "task": None,
+                "role_digest": ROLE_DIGEST,
+                "procedure_digest": PROCEDURE_DIGEST,
                 "nulls": {
+                    "steps_to_first_edit": NO_EDIT_TOOL,
+                    "tokens_to_first_edit": NO_EDIT_TOOL,
                     "project": "no project given",
                     "wave": "not launched by a wave",
                     "task": "not launched for a task",
@@ -1117,7 +1157,11 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
                 "exit": 0,
                 "wave": None,
                 "task": None,
+                "role_digest": ROLE_DIGEST,
+                "procedure_digest": PROCEDURE_DIGEST,
                 "nulls": {
+                    "steps_to_first_edit": NO_EDIT_TOOL,
+                    "tokens_to_first_edit": NO_EDIT_TOOL,
                     "project": "no project given",
                     "wave": "not launched by a wave",
                     "task": "not launched for a task",
@@ -1233,7 +1277,11 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": PROCEDURE_DIGEST,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -1273,7 +1321,11 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": PROCEDURE_DIGEST,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -1313,7 +1365,11 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": PROCEDURE_DIGEST,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -1399,7 +1455,11 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -1464,7 +1524,11 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                 "exit": 0,
                 "wave": None,
                 "task": None,
+                "role_digest": ROLE_DIGEST,
+                "procedure_digest": PROCEDURE_DIGEST,
                 "nulls": {
+                    "steps_to_first_edit": NO_EDIT_TOOL,
+                    "tokens_to_first_edit": NO_EDIT_TOOL,
                     "project": "no project given",
                     "wave": "not launched by a wave",
                     "task": "not launched for a task",
@@ -1700,7 +1764,11 @@ class RunSegmentsOfASegmentEndedWithoutDeclarationTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": PROCEDURE_DIGEST,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",

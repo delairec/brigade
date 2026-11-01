@@ -14,6 +14,7 @@ from brigade.adapters.documents import markdown
 from brigade.errors import BrigadeError, CannotWrite
 from brigade.roles.resolve_role import ResolvedRole
 from brigade.runs.count_session_steps import SessionSteps
+from brigade.runs.locate_first_edit import FirstEdit
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
 from brigade.runs.run_segment import run_segment
@@ -54,6 +55,7 @@ TRANSCRIPTS_ANSWER = {
             "timestamp": None,
             "content": [],
             "tool_calls": 2,
+            "tools": [{"name": "Read", "target": "/srv/b73/README.md"}, {"name": "Edit", "target": "/srv/b73/cli.py"}],
             "id": "msg_main",
             "usage": {
                 "input_tokens": 1,
@@ -71,6 +73,7 @@ TRANSCRIPTS_ANSWER = {
                     "timestamp": None,
                     "content": [],
                     "tool_calls": 1,
+                    "tools": [],
                     "id": "msg_sub",
                     "usage": {
                         "input_tokens": 2,
@@ -475,6 +478,17 @@ class RunSegmentStepsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
+
+    def test_should_locate_the_first_edit_of_the_session_among_the_edit_tools_of_the_client(self):
+        # Arrange
+        plan = _create_plan(self.root, reads_transcripts=True)
+        plan = dataclasses.replace(plan, edit_tools=("Edit", "Write"))
+
+        # Act
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(record.first_edit, FirstEdit(steps=2, tokens=1111))
 
     def test_should_leave_the_steps_uncounted_with_their_reason(self):
         # Arrange
