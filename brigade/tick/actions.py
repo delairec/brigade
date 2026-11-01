@@ -118,6 +118,14 @@ class RebaseMilestone:
 
 
 @dataclass(frozen=True)
+class RebaseWave:
+    project: str
+    wave: str
+    branch: str
+    base: str
+
+
+@dataclass(frozen=True)
 class CutMilestoneBranch:
     project: str
     milestone: str

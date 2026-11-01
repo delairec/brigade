@@ -3,7 +3,7 @@ import argparse
 from brigade.commands.run import run
 from brigade.runtime import Runtime
 from brigade.system.parse_configuration import Configuration
-from brigade.waves.rebase_milestone_branches import BranchRebaseRun
+from brigade.waves.branch_rebase_run import BranchRebaseRun
 
 REBASE_PROCEDURE = "rebase-on-base"
 REBASE_SLOT = "rebase"

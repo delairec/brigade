@@ -212,6 +212,7 @@ class WaveFacts:
     milestone_branch: str | None = None
     unresolved_threads: int = 0
     blocked_rebase: BlockedRun | None = None
+    rebase_run_live: bool = False
 
     def to_document(self) -> dict:
         return {
@@ -236,6 +237,7 @@ class WaveFacts:
                 if self.blocked_rebase is None
                 else {"run": self.blocked_rebase.run, "question": self.blocked_rebase.question}
             ),
+            "rebase_run_live": self.rebase_run_live,
         }
 
 
@@ -599,8 +601,12 @@ def _read_blocked_run(reading: WaveReading, run: str) -> BlockedRun | None:
     return BlockedRun(run=run, question=read_run_question(finished[-1].message))
 
 
+def _list_wave_branch_rebase_runs(reading: WaveReading, wave: str) -> list[dict]:
+    return [run for run in reading.runs if run["wave"] == wave and run["task"] is None and run["slot"] == REBASE_SLOT]
+
+
 def _read_blocked_rebase(reading: WaveReading, wave: str) -> BlockedRun | None:
-    naming = [run for run in reading.runs if run["wave"] == wave and run["task"] is None and run["slot"] == REBASE_SLOT]
+    naming = _list_wave_branch_rebase_runs(reading, wave)
     if not naming:
         return None
     run = naming[-1]["run"]
@@ -768,6 +774,9 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveSta
         milestone_branch=pull_request.milestone_branch,
         unresolved_threads=pull_request.unresolved_threads,
         blocked_rebase=_read_blocked_rebase(reading, started.wave),
+        rebase_run_live=any(
+            run["state"] == LIVE_RUN_STATE for run in _list_wave_branch_rebase_runs(reading, started.wave)
+        ),
     )
 
 

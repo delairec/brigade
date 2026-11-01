@@ -223,6 +223,7 @@ class SnapshotTest(unittest.TestCase):
                     "milestone_branch": None,
                     "unresolved_threads": 0,
                     "blocked_rebase": None,
+                    "rebase_run_live": False,
                 }
             ],
         )

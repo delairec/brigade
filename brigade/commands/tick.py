@@ -88,6 +88,7 @@ from brigade.tick.actions import (
     PauseWave,
     RebaseMilestone,
     RebaseTask,
+    RebaseWave,
     RecordTaskState,
     RemoveTaskWorktree,
     ReportWave,
@@ -120,6 +121,7 @@ from brigade.waves.locate_wave_base import WaveBaseDemand, locate_wave_base
 from brigade.waves.prepare_wave_tree import prepare_wave_tree
 from brigade.waves.read_wave_milestone import read_wave_milestone
 from brigade.waves.rebase_milestone_branches import MilestoneBranchesRebase, rebase_milestone_branches
+from brigade.waves.rebase_wave_branch import WaveBranchRebase, rebase_wave_branch
 from brigade.waves.start_project_wave import WaveStart, start_project_wave
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -577,6 +579,23 @@ def _rebase_milestone(runtime: Runtime, configuration: Configuration, action: Re
         append_event(runtime.paths, runtime.now, rebased)
 
 
+def _rebase_wave(runtime: Runtime, configuration: Configuration, action: RebaseWave) -> None:
+    rebase = WaveBranchRebase(
+        project=find_project(read_projects(runtime), action.project),
+        wave=action.wave,
+        branch=action.branch,
+        base=action.base,
+        worktree_root=configuration.worktree_root,
+        read_environment=_cache_forge_environment(runtime, configuration),
+        is_run_live_on=lambda worktree: is_run_live_on(runtime.paths.state_root, worktree, is_recorded_process_alive),
+        launch_rebase_run=lambda run: launch_branch_rebase(runtime, configuration, run),
+        read_login=lambda: read_cli_login(configuration, runtime),
+    )
+    rebased = rebase_wave_branch(runtime, rebase)
+    if rebased is not None:
+        append_event(runtime.paths, runtime.now, rebased)
+
+
 def _cut_milestone_branch(runtime: Runtime, configuration: Configuration, action: CutMilestoneBranch) -> None:
     read_environment = _cache_forge_environment(runtime, configuration)
     project = find_project(read_projects(runtime), action.project)
@@ -674,24 +693,13 @@ def _resume_wave(runtime: Runtime, action: ResumeWave) -> None:
     append_event(runtime.paths, runtime.now, WaveResumed(wave=action.wave, reason=action.reason))
 
 
-def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
+def _list_wave_executors(runtime: Runtime, configuration: Configuration) -> dict:
     return {
-        RecordTaskState: lambda action: _record_task_state(runtime, action),
-        ParkTask: lambda action: _park_task(runtime, action),
-        RemoveTaskWorktree: lambda action: remove_task_worktree(runtime, action),
-        RunPreflight: lambda action: _run_preflight(runtime, configuration, action),
-        MergePullRequest: lambda action: _merge_pull_request(runtime, configuration, action),
         MergeWavePullRequest: lambda action: _merge_wave_pull_request(runtime, configuration, action),
-        LaunchTask: lambda action: _launch_task(runtime, configuration, action),
-        LaunchVerification: lambda action: _launch_verification(runtime, configuration, action),
-        LaunchRemediation: lambda action: _launch_remediation(runtime, configuration, action),
-        LaunchCheckRepair: lambda action: _launch_check_repair(runtime, configuration, action),
-        RebaseTask: lambda action: _rebase_task(runtime, configuration, action),
-        LaunchStudy: lambda action: _launch_study(runtime, action),
         PauseWave: lambda action: _pause_wave(runtime, action),
         ResumeWave: lambda action: _resume_wave(runtime, action),
-        ResumeTaskRun: lambda action: _resume_task_run(runtime, action),
         RebaseMilestone: lambda action: _rebase_milestone(runtime, configuration, action),
+        RebaseWave: lambda action: _rebase_wave(runtime, configuration, action),
         StartWave: lambda action: _start_wave(runtime, configuration, action),
         CutWaveBranch: lambda action: _cut_wave_branch(runtime, configuration, action),
         CutMilestoneBranch: lambda action: _cut_milestone_branch(runtime, configuration, action),
@@ -701,8 +709,26 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         CloseWave: lambda action: _close_wave(runtime, action),
         OpenMilestonePullRequest: lambda action: _open_milestone_pull_request(runtime, configuration, action),
         CloseMilestone: lambda action: _close_milestone(runtime, action),
+    }
+
+
+def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
+    return {
+        RecordTaskState: lambda action: _record_task_state(runtime, action),
+        ParkTask: lambda action: _park_task(runtime, action),
+        RemoveTaskWorktree: lambda action: remove_task_worktree(runtime, action),
+        RunPreflight: lambda action: _run_preflight(runtime, configuration, action),
+        MergePullRequest: lambda action: _merge_pull_request(runtime, configuration, action),
+        LaunchTask: lambda action: _launch_task(runtime, configuration, action),
+        LaunchVerification: lambda action: _launch_verification(runtime, configuration, action),
+        LaunchRemediation: lambda action: _launch_remediation(runtime, configuration, action),
+        LaunchCheckRepair: lambda action: _launch_check_repair(runtime, configuration, action),
+        RebaseTask: lambda action: _rebase_task(runtime, configuration, action),
+        LaunchStudy: lambda action: _launch_study(runtime, action),
+        ResumeTaskRun: lambda action: _resume_task_run(runtime, action),
         CollectCheckRuns: lambda action: _collect_check_runs(runtime, configuration, action),
         CollectReviewThreads: lambda action: _collect_review_threads(runtime, configuration, action),
+        **_list_wave_executors(runtime, configuration),
     }
 
 
