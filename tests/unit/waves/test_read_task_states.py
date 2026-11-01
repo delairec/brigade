@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.ledger.append_event import append_event
+from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_state import TaskState
 from brigade.waves.read_task_states import read_task_states
@@ -31,7 +32,7 @@ class ReadTaskStatesTest(unittest.TestCase):
         )
 
         # Act
-        states = read_task_states(self.root / "state", "shop_w1")
+        states = read_task_states(read_ledger(self.root / "state").entries, "shop_w1")
 
         # Assert
         self.assertEqual(states, {"S3": "parked"})
@@ -46,7 +47,7 @@ class ReadTaskStatesTest(unittest.TestCase):
         append_event(self.paths, INSTANT, TaskState(wave="shop_w1", task="S3", state="queued"))
 
         # Act
-        states = read_task_states(self.root / "state", "shop_w1")
+        states = read_task_states(read_ledger(self.root / "state").entries, "shop_w1")
 
         # Assert
         self.assertEqual(states, {"S3": "queued"})
