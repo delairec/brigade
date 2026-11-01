@@ -89,6 +89,6 @@ class StaleWorktreesCollectorTest(ScanCollectorTestCase):
 
         # Assert
         self.assertEqual(
-            (self.processes.list_argvs()[-3:], forge.list_operations()),
-            ([WORKTREE_LISTING, LOCAL_BRANCHES_LISTING, LOCAL_BRANCHES_LISTING], ["list_pull_requests"]),
+            self.processes.list_argvs()[-3:], [WORKTREE_LISTING, LOCAL_BRANCHES_LISTING, LOCAL_BRANCHES_LISTING]
         )
+        self.assertEqual(forge.list_operations(), ["list_pull_requests"])

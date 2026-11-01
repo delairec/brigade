@@ -47,7 +47,5 @@ class StaleBranchesCollectorTest(ScanCollectorTestCase):
         collect(ENVIRONMENT_OF_OAK, self.runtime, create_equipment(forge))
 
         # Assert
-        self.assertEqual(
-            (self.processes.list_argvs()[-1], forge.list_operations()),
-            (LOCAL_BRANCHES_LISTING, ["list_pull_requests"]),
-        )
+        self.assertEqual(self.processes.list_argvs()[-1], LOCAL_BRANCHES_LISTING)
+        self.assertEqual(forge.list_operations(), ["list_pull_requests"])
