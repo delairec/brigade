@@ -79,7 +79,9 @@ class WriteAnswerToFileTest(unittest.TestCase):
             self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("FORGE", forge))}
         )
         equipment = create_study_equipment(
-            collector_equipment=CollectorEquipment(configuration=configuration, forge=None, forge_name="github", resolve_client=None),
+            collector_equipment=CollectorEquipment(
+                configuration=configuration, forge=None, forge_name="github", resolve_client=None
+            ),
             resolve_forge={"github": self.forge}.__getitem__,
         )
         return StudyRunContext(

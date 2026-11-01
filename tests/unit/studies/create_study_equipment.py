@@ -35,7 +35,9 @@ def _refuse_holding(run_directory: Path) -> None:
 
 def create_study_equipment(**changes) -> StudyEquipment:
     refusing_equipment = StudyEquipment(
-        collector_equipment=CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github", resolve_client=None),
+        collector_equipment=CollectorEquipment(
+            configuration=Configuration(), forge=None, forge_name="github", resolve_client=None
+        ),
         resolve_collector=_refuse_collector,
         document=None,
         resolve_forge=_refuse_forge,

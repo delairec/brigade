@@ -71,7 +71,8 @@ def collect(request: argparse.Namespace, runtime: Runtime) -> dict:
             equipment=CollectorEquipment(
                 configuration=read_configuration(runtime, CONFIGURATION_OPTIONAL),
                 forge=runtime.resolve_plugin(FORGE_KIND, FORGE_NAME),
-                forge_name=FORGE_NAME, resolve_client=lambda name: runtime.resolve_plugin(CLIENT_KIND, name)
+                forge_name=FORGE_NAME,
+                resolve_client=lambda name: runtime.resolve_plugin(CLIENT_KIND, name),
             ),
         ),
         runtime,
