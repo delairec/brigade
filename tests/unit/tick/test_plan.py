@@ -24,6 +24,7 @@ from brigade.tick.actions import (
     PauseWave,
     RebaseMilestone,
     RebaseTask,
+    RebaseWave,
     RecordTaskState,
     RemoveTaskWorktree,
     ReportWave,
@@ -1245,6 +1246,114 @@ class PlanWaveMergeTest(unittest.TestCase):
         for case, pull_request, milestone_branch, expected in rows:
             with self.subTest(case=case):
                 # Arrange
+                wave = create_reported_wave(pull_request, milestone_branch, NO_UNRESOLVED_THREAD)
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+
+BEHIND_THE_MILESTONE_BRANCH = True
+LEVEL_WITH_THE_MILESTONE_BRANCH = False
+NO_REBASE_RUN_LIVE = False
+REBASE_RUN_LIVE = True
+NO_BLOCKED_REBASE_OF_THE_WAVE_BRANCH = None
+UNPAUSED = None
+REBASE_THE_WAVE_BRANCH = RebaseWave(project="shop", wave="shop_w1", branch=WAVE_BRANCH, base=MILESTONE_BRANCH)
+BLOCKED_REBASE_OF_THE_WAVE_BRANCH_OF_SHOP_W1 = BlockedRun(
+    run="20261031T121500Z-7c2e19", question="Keep the dry-run line or drop it?"
+)
+PAUSE_ON_THE_BLOCKED_REBASE_OF_SHOP_W1 = PauseWave(
+    wave="shop_w1", reason="run 20261031T121500Z-7c2e19 blocked: Keep the dry-run line or drop it?", resume_at=None
+)
+PAUSED_ON_THE_BLOCKED_REBASE_OF_SHOP_W1 = WavePause(
+    reason="run 20261031T121500Z-7c2e19 blocked: Keep the dry-run line or drop it?", resume_at=None
+)
+
+
+class PlanWaveRebaseTest(unittest.TestCase):
+    def test_should_rebase_the_branch_of_a_wave_its_milestone_branch_has_outrun_and_merge_none_behind(self):
+        for case, behind, rebase_run_live, blocked_rebase, pause, expected in [
+            (
+                "behind the milestone branch",
+                BEHIND_THE_MILESTONE_BRANCH,
+                NO_REBASE_RUN_LIVE,
+                NO_BLOCKED_REBASE_OF_THE_WAVE_BRANCH,
+                UNPAUSED,
+                (REBASE_THE_WAVE_BRANCH,),
+            ),
+            (
+                "level with the milestone branch",
+                LEVEL_WITH_THE_MILESTONE_BRANCH,
+                NO_REBASE_RUN_LIVE,
+                NO_BLOCKED_REBASE_OF_THE_WAVE_BRANCH,
+                UNPAUSED,
+                (MERGE_THE_WAVE_PULL_REQUEST,),
+            ),
+            (
+                "behind with a rebase run live",
+                BEHIND_THE_MILESTONE_BRANCH,
+                REBASE_RUN_LIVE,
+                NO_BLOCKED_REBASE_OF_THE_WAVE_BRANCH,
+                UNPAUSED,
+                (),
+            ),
+            (
+                "behind with its last rebase run ended blocked",
+                BEHIND_THE_MILESTONE_BRANCH,
+                NO_REBASE_RUN_LIVE,
+                BLOCKED_REBASE_OF_THE_WAVE_BRANCH_OF_SHOP_W1,
+                UNPAUSED,
+                (PAUSE_ON_THE_BLOCKED_REBASE_OF_SHOP_W1,),
+            ),
+            (
+                "behind and paused on the question of its blocked rebase run",
+                BEHIND_THE_MILESTONE_BRANCH,
+                NO_REBASE_RUN_LIVE,
+                NO_BLOCKED_REBASE_OF_THE_WAVE_BRANCH,
+                PAUSED_ON_THE_BLOCKED_REBASE_OF_SHOP_W1,
+                (),
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                pull_request = dataclasses.replace(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, behind=behind)
+                wave = dataclasses.replace(
+                    create_reported_wave(pull_request, MILESTONE_BRANCH, NO_UNRESOLVED_THREAD),
+                    rebase_run_live=rebase_run_live,
+                    blocked_rebase=blocked_rebase,
+                    pause=pause,
+                )
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_rebase_no_wave_branch_whose_pull_request_is_not_open_into_its_milestone_branch(self):
+        for case, state, base, milestone_branch, expected in [
+            ("a wave of tasks naming no milestone", "open", "main", NO_MILESTONE_BRANCH, ()),
+            (
+                "a merged pull request",
+                "merged",
+                MILESTONE_BRANCH,
+                MILESTONE_BRANCH,
+                (CloseWave(wave="shop_w1", pr=77, project="shop", milestones=()),),
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                pull_request = dataclasses.replace(
+                    WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH,
+                    state=state,
+                    base=base,
+                    behind=BEHIND_THE_MILESTONE_BRANCH,
+                )
                 wave = create_reported_wave(pull_request, milestone_branch, NO_UNRESOLVED_THREAD)
                 snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 

@@ -4684,3 +4684,26 @@ DECISION TheSnapshotListsEveryUncutActiveMilestoneWithItsTodoTasksAndThePlanCuts
 		+ "where SPEC 5 of TASK B224 proves it on literal rows"
 	SOURCE "the delivery of @TASK.B224"
 		REF @TASK.B224
+
+DECISION TheBranchOfAPausedWaveIsNotRebasedAndItsResumePlansTheRebaseAgain
+	TITLE "the tick rebases the branch of a wave behind its milestone branch only while the wave is"
+		+ "not paused; the resume of a wave paused on a blocked rebase run plans the rebase again"
+	STATUS active
+	DESC "brigade/tick/plan.py plans no RebaseWave for a wave paused in the snapshot or by a"
+		+ "PauseWave of the same round: the rebase run of a wave branch that ends blocked pauses"
+		+ "the wave on its question, SPEC 5 of @TASK.B214, and that pause holds its rebase off"
+		REF @TASK.B214
+	DESC "the resume of the wave is the ruling on that question: the next tick plans the rebase"
+		+ "again while the branch is behind"
+	DESC "a wave paused on its quota or on an unavailable forge account is not rebased until its"
+		+ "resume either, so that a conflict launches no rebase run while the wave waits"
+	DESC "binds @TASK.B225"
+		REF @TASK.B225
+	REJECTED "a fact of the snapshot naming the last rebase run of the wave branch blocked whatever"
+		+ "the pauses of the wave: a wave the user resumed would never be rebased again by the tick"
+	RATIONALE "SPEC 2 of @TASK.B225 leaves out a wave whose last rebase run ended blocked and"
+		+ "leaves open what follows the resume of the wave; the pause is the fact the blocked run"
+		+ "already writes in the ledger"
+		REF @TASK.B225
+	SOURCE "taken in the delivery of @TASK.B225"
+		REF @TASK.B225

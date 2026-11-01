@@ -24,6 +24,7 @@ from brigade.tick.actions import (
     PauseWave,
     RebaseMilestone,
     RebaseTask,
+    RebaseWave,
     RecordTaskState,
     RemoveTaskWorktree,
     ReportWave,
@@ -101,6 +102,7 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_milestone_branch_cuts(snapshot)
         + _plan_wave_pull_request_retargets(snapshot)
         + _plan_reports(snapshot)
+        + _plan_wave_rebases(snapshot, paused)
         + _plan_wave_merges(snapshot)
         + _plan_closes(snapshot)
         + _plan_integration_pull_requests(snapshot)
@@ -564,10 +566,31 @@ def _is_wave_pull_request_ready(wave: WaveFacts, project: ProjectFacts, now: dat
         pull_request is not None
         and pull_request.state == OPEN_PULL_REQUEST
         and pull_request.base == wave.milestone_branch
+        and not pull_request.behind
         and project.auto_merge != NO_AUTO_MERGE
         and _are_checks_passed(pull_request, project, now)
         and wave.unresolved_threads == 0
         and (project.review != APPROVAL_REVIEW or pull_request.review == APPROVED_REVIEW)
+    )
+
+
+def _is_wave_rebase_due(wave: WaveFacts, paused: set) -> bool:
+    pull_request = wave.integration_pull_request
+    return (
+        pull_request is not None
+        and pull_request.state == OPEN_PULL_REQUEST
+        and pull_request.base == wave.milestone_branch
+        and pull_request.behind
+        and not wave.rebase_run_live
+        and wave.wave not in paused
+    )
+
+
+def _plan_wave_rebases(snapshot: Snapshot, paused: set) -> tuple:
+    return tuple(
+        RebaseWave(project=wave.project, wave=wave.wave, branch=wave.branch, base=wave.milestone_branch)
+        for wave in snapshot.waves
+        if _is_wave_rebase_due(wave, paused)
     )
 
 

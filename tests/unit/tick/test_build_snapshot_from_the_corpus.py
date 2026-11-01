@@ -1970,3 +1970,33 @@ class BuildSnapshotOfTheUncutMilestonesTest(BuildSnapshotTestCase):
 
         # Assert
         self.assertEqual(snapshot.projects[0].uncut_milestones, ())
+
+
+class BuildSnapshotOfALiveRebaseRunOfAWaveBranchTest(BuildSnapshotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_operational_corpus()
+        self.record(60, WaveStarted(wave="w1", project="shop", branch="integration/w1", tasks=("B1",)))
+
+    def test_should_note_a_rebase_run_of_the_wave_branch_that_lives(self):
+        for case, task, result, expected in [
+            ("a rebase run of the wave branch living", WAVE_BRANCH_RUN, None, True),
+            (
+                "a rebase run of the wave branch finished",
+                WAVE_BRANCH_RUN,
+                create_run_result("20261019T083000Z-4eba5e", "done", "2026-10-19T08:40:00Z"),
+                False,
+            ),
+            ("a rebase run of a task of the wave living", "B1", None, False),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                run = {**create_run_record("20261019T083000Z-4eba5e", "w1", task), "slot": "rebase", "project": "shop"}
+                record_run_pid(write_run(self.paths.state_root, run, result), os.getpid())
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].rebase_run_live, expected)
