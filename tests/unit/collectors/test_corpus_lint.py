@@ -69,7 +69,7 @@ class CorpusLintCollectorTest(ScanCollectorTestCase):
     def test_should_lint_the_checkout_of_the_main_branch_and_change_nothing(self):
         # Arrange
         self.register_oak(("CORPUS", "corpus"))
-        tree = self.create_cached_tree_of_main()
+        self.create_cached_tree_of_main()
         self.processes.answer(LINT, stdout=json.dumps({"diagnostics": []}))
 
         # Act
@@ -77,10 +77,10 @@ class CorpusLintCollectorTest(ScanCollectorTestCase):
 
         # Assert
         self.assertEqual(
-            [(request.argv, request.cwd) for request in self.processes.requests][-2:],
+            self.processes.list_argvs()[-2:],
             [
-                (("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "main^{commit}"), "/srv/oak"),
-                (LINT, str(tree)),
+                ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "main^{commit}"),
+                LINT,
             ],
         )
 
@@ -92,4 +92,14 @@ class CorpusLintCollectorTest(ScanCollectorTestCase):
         document = collect(ENVIRONMENT_OF_OAK, self.runtime, create_equipment(None))
 
         # Assert
-        self.assertEqual((document["summary"], document["items"]), ({"diagnostics": 0}, []))
+        self.assertEqual(
+            document,
+            {
+                "schema_version": 1,
+                "collector": "corpus-lint",
+                "collected_at": "2026-10-19T09:00:00Z",
+                "cache": False,
+                "summary": {"diagnostics": 0},
+                "items": [],
+            },
+        )
