@@ -103,9 +103,9 @@ class BrigadeProjectListTest(ProjectTestCase):
         self.assertEqual(
             completed.stdout.splitlines(),
             [
-                "name      status  path",
-                f"alpha     active  {self.alpha.path}",
-                f"the_beta  active  {self.beta.path}",
+                "name      status  forge  path",
+                f"alpha     active  none   {self.alpha.path}",
+                f"the_beta  active  none   {self.beta.path}",
             ],
         )
 
