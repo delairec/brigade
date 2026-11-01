@@ -2941,6 +2941,29 @@ WAVE_BODY_INTO_THE_MILESTONE_BRANCH = (
 )
 
 
+def describe_t7_delivered_at_the_wave_head(root: Path) -> dict:
+    (root / "cache" / "refs" / "tidepool" / MAIN_HEAD).mkdir(parents=True, exist_ok=True)
+    implemented_at_the_head = (
+        "awawa",
+        "status",
+        "TASK",
+        "--where",
+        "STATUS==implemented",
+        "--json",
+        str(root / "cache" / "refs" / "tidepool" / WAVE_HEAD),
+    )
+    return {
+        ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "origin/integration/tides^{commit}"): MAIN_HEAD,
+        ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "origin/main^{commit}"): MAIN_HEAD,
+        implemented_at_the_head: '{"entities": [{"type": "TASK", "name": "T7"}]}',
+        ("git", "log", "--reverse"): LOG_OF_THE_WAVE_BRANCH,
+    }
+
+
+def answer_with(outputs: dict) -> dict:
+    return {prefix: ProcessAnswer(stdout=stdout) for prefix, stdout in outputs.items()}
+
+
 class OpeningForgeDouble:
     def __init__(self, found_by_branch: dict, read_by_number: dict | None = None):
         self.found_by_branch = found_by_branch
@@ -3023,30 +3046,7 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
         )
 
     def _describe_the_wave_branch(self) -> dict:
-        implemented_at_the_head = (
-            "awawa",
-            "status",
-            "TASK",
-            "--where",
-            "STATUS==implemented",
-            "--json",
-            str(self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD),
-        )
-        return {
-            **MACHINE_OUTPUTS,
-            ("git", "ls-remote"): "",
-            (
-                "git",
-                "rev-parse",
-                "--verify",
-                "--quiet",
-                "--end-of-options",
-                "origin/integration/tides^{commit}",
-            ): MAIN_HEAD,
-            ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "origin/main^{commit}"): MAIN_HEAD,
-            implemented_at_the_head: '{"entities": [{"type": "TASK", "name": "T7"}]}',
-            ("git", "log", "--reverse"): LOG_OF_THE_WAVE_BRANCH,
-        }
+        return {**MACHINE_OUTPUTS, ("git", "ls-remote"): "", **describe_t7_delivered_at_the_wave_head(self.root)}
 
     def _read_events(self) -> list[dict]:
         return list(
@@ -3322,7 +3322,7 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
         wave_corpus = create_corpus_double(
             {
                 "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
-                "TASK": {"T7": TASK_DELIVERED},
+                "TASK": {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST},
                 "MILESTONE": {"M4": MILESTONE_M4},
             }
         )
@@ -3342,9 +3342,7 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
         answers = {
             **MACHINE_ANSWERS,
             ("git", "ls-remote"): ProcessAnswer(stdout=""),
-            ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "origin/main^{commit}"): ProcessAnswer(
-                stdout=f"{MAIN_HEAD}\n"
-            ),
+            **answer_with(describe_t7_delivered_at_the_wave_head(self.root)),
         }
         runtime = create_test_runtime(
             create_test_paths(self.root),
@@ -3367,11 +3365,12 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
         corpus = {
             "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
-            "TASK": {"T7": TASK_DELIVERED},
+            "TASK": {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST},
             "MILESTONE": {"M4": MILESTONE_M4},
         }
         answers = {
             **MACHINE_ANSWERS,
+            **answer_with(describe_t7_delivered_at_the_wave_head(self.root)),
             ("git", "ls-remote"): ProcessAnswer(stdout=""),
             ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/tides"): ProcessAnswer(exit_code=1),
             ("git", "ls-remote", "--quiet", "--exit-code", "--heads", "origin", "refs/heads/integration/tides"): (
@@ -3486,12 +3485,13 @@ class TickMergingThePullRequestOfAWaveTest(unittest.TestCase):
         corpus = {
             "STUDY": {"triage": PAUSED_TRIAGE},
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
-            "TASK": {"T7": TASK_DELIVERED},
+            "TASK": {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST},
             "MILESTONE": {"M4": MILESTONE_M4},
         }
+        outputs = {**MACHINE_OUTPUTS, ("git", "ls-remote"): "", **describe_t7_delivered_at_the_wave_head(self.root)}
         return create_test_runtime(
             create_test_paths(self.root),
-            run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, ("git", "ls-remote"): ""}),
+            run_process=create_machine_double(corpus, outputs),
             spawn_process=SpawnRecorderDouble().spawn,
             resolve_plugin=_resolve_the_collectors_beside(
                 create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
@@ -4504,6 +4504,8 @@ class RebasingForgeDouble:
         self.found = found
 
     def find_pull_request(self, request: dict, runtime) -> dict:
+        if request["branch"] == WAVE_BRANCH:
+            return {"schema_version": 1, "pull_request": None}
         pull_request = self.found[0] if len(self.found) == 1 else self.found.pop(0)
         return {"schema_version": 1, "pull_request": pull_request}
 
@@ -5300,6 +5302,15 @@ MILESTONE_BRANCH_DELETED_FROM_THE_FORGE = CommandFailed(
 )
 
 
+MILESTONE_TITLE = "fix(waves): keep the cut branch (M4, @TASK.T7)"
+MILESTONE_BODY = (
+    "Delivers the milestone M4 (Tides) into main: its waves tidepool_w16 (#206).\n"
+    "\n"
+    "- @TASK.T7 — The cut branch is kept (#42)\n"
+    "- chore: bump the lock"
+)
+
+
 class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
@@ -5328,7 +5339,12 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
         return create_test_runtime(
             create_test_paths(self.root),
             run_process=ScriptedProcessRunner(
-                {**answers, ("git", "ls-remote"): ProcessAnswer(stdout="")}, fallback=create_corpus_double(corpus)
+                {
+                    **answer_with(describe_t7_delivered_at_the_wave_head(self.root)),
+                    **answers,
+                    ("git", "ls-remote"): ProcessAnswer(stdout=""),
+                },
+                fallback=create_corpus_double(corpus),
             ).run,
             spawn_process=SpawnRecorderDouble().spawn,
             resolve_plugin=_resolve_the_collectors_beside(
@@ -5343,7 +5359,7 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
 
     def test_should_open_the_pull_request_of_the_milestone_branch_into_main_once_its_last_wave_is_closed(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST}))
 
         # Assert
         self.assertEqual(
@@ -5353,9 +5369,8 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
                     "repository": str(self.repository),
                     "base": "main",
                     "branch": "integration/tides",
-                    "title": "chore(milestone): merge the milestone M4 into main",
-                    "body": "Merges the milestone M4 of @PROJECT.tidepool into main, its waves merged:"
-                    " tidepool_w16 #206.",
+                    "title": MILESTONE_TITLE,
+                    "body": MILESTONE_BODY,
                     "milestone": None,
                     "environment": {},
                 }
@@ -5364,7 +5379,7 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
 
     def test_should_record_the_opening_with_the_login_of_the_cli(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST}))
 
         # Assert
         self.assertEqual(
@@ -5380,12 +5395,22 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
                     "pr": 77,
                     "login": "tidepool-cli",
                 },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "milestone.pr_described",
+                    "project": "tidepool",
+                    "milestone": "M4",
+                    "pr": 77,
+                    "head": "4c1d2e0",
+                    "login": "tidepool-cli",
+                },
             ],
         )
 
     def test_should_open_none_at_a_second_tick(self):
         # Arrange
-        runtime = self._create_runtime(self.forge, {"T7": TASK_DELIVERED})
+        runtime = self._create_runtime(self.forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST})
         COMMAND.run(Namespace(mode="once"), runtime)
 
         # Act
@@ -5416,7 +5441,7 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
                 forge = OpeningForgeDouble(NO_PULL_REQUEST_FROM_ANY_BRANCH)
 
                 # Act
-                COMMAND.run(Namespace(mode="once"), self._create_runtime(forge, {"T7": TASK_DELIVERED}))
+                COMMAND.run(Namespace(mode="once"), self._create_runtime(forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST}))
 
                 # Assert
                 self.assertEqual(
@@ -5426,9 +5451,8 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
                             "repository": str(self.repository),
                             "base": "main",
                             "branch": "integration/tides",
-                            "title": "chore(milestone): merge the milestone M4 into main",
-                            "body": "Merges the milestone M4 of @PROJECT.tidepool into main, its waves merged:"
-                            " tidepool_w16 #206.",
+                            "title": MILESTONE_TITLE,
+                            "body": MILESTONE_BODY,
                             "milestone": None,
                             "environment": {},
                         }
@@ -5440,7 +5464,7 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
         write_ledger(self.root, [CUT_OF_M4, WAVE_OF_ANOTHER_PROJECT_STARTED, WAVE_OF_ANOTHER_PROJECT_CLOSED])
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST}))
 
         # Assert
         self.assertEqual(self.forge.opened, [])
@@ -5499,6 +5523,7 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
             with self.subTest(case=case):
                 # Arrange
                 (self.root / "cache" / "refs" / "reef" / WAVE_HEAD).mkdir(parents=True, exist_ok=True)
+                (self.root / "cache" / "refs" / "reef" / MAIN_HEAD).mkdir(parents=True, exist_ok=True)
                 write_ledger(
                     self.root,
                     [
@@ -5525,7 +5550,7 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
                     ("git", "push", "--quiet", "origin", open_wave["branch"]): ProcessAnswer(),
                 }
                 forge = OpeningForgeDouble(NO_PULL_REQUEST_FROM_ANY_BRANCH)
-                runtime = self._create_runtime(forge, {"T7": TASK_DELIVERED, **tasks}, answers, projects)
+                runtime = self._create_runtime(forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST, **tasks}, answers, projects)
 
                 # Act
                 with contextlib.redirect_stderr(io.StringIO()):
@@ -5539,9 +5564,8 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
                             "repository": str(self.repository),
                             "base": "main",
                             "branch": "integration/tides",
-                            "title": "chore(milestone): merge the milestone M4 into main",
-                            "body": "Merges the milestone M4 of @PROJECT.tidepool into main, its waves merged:"
-                            " tidepool_w16 #206.",
+                            "title": MILESTONE_TITLE,
+                            "body": MILESTONE_BODY,
                             "milestone": None,
                             "environment": {},
                         }
@@ -5554,7 +5578,7 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
             **MACHINE_ANSWERS,
             ("git", "fetch", "--quiet", "origin", MILESTONE_BRANCH): MILESTONE_BRANCH_DELETED_FROM_THE_FORGE,
         }
-        runtime = self._create_runtime(self.forge, {"T7": TASK_DELIVERED}, answers)
+        runtime = self._create_runtime(self.forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST}, answers)
         reported = io.StringIO()
 
         # Act
@@ -5584,7 +5608,7 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(io.StringIO()):
-            COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
+            COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST}))
 
         # Assert
         self.assertEqual(
@@ -5594,9 +5618,8 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
                     "repository": str(self.repository),
                     "base": "main",
                     "branch": "integration/tides",
-                    "title": "chore(milestone): merge the milestone M4 into main",
-                    "body": "Merges the milestone M4 of @PROJECT.tidepool into main, its waves merged:"
-                    " tidepool_w16 #206.",
+                    "title": MILESTONE_TITLE,
+                    "body": MILESTONE_BODY,
                     "milestone": None,
                     "environment": {},
                 }
@@ -5640,7 +5663,7 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
         forge = OpeningForgeDouble({MILESTONE_BRANCH: MILESTONE_PULL_REQUEST_MERGED})
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge, {"T7": TASK_DELIVERED}))
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge, {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST}))
 
         # Assert
         self.assertEqual(
@@ -5674,7 +5697,7 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
             ],
         )
         runtime = self._create_runtime(
-            OpeningForgeDouble({MILESTONE_BRANCH: MILESTONE_PULL_REQUEST_MERGED}), {"T7": TASK_DELIVERED}
+            OpeningForgeDouble({MILESTONE_BRANCH: MILESTONE_PULL_REQUEST_MERGED}), {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST}
         )
         COMMAND.run(Namespace(mode="once"), runtime)
 
@@ -5717,7 +5740,7 @@ class TickOpeningThePullRequestOfAMilestoneTest(unittest.TestCase):
             ("git", "fetch", "--quiet", "origin", MILESTONE_BRANCH): MILESTONE_BRANCH_DELETED_FROM_THE_FORGE,
         }
         runtime = self._create_runtime(
-            OpeningForgeDouble({MILESTONE_BRANCH: MILESTONE_PULL_REQUEST_MERGED}), {"T7": TASK_DELIVERED}, answers
+            OpeningForgeDouble({MILESTONE_BRANCH: MILESTONE_PULL_REQUEST_MERGED}), {"T7": TASK_DELIVERED_BY_ITS_PULL_REQUEST}, answers
         )
 
         # Act
