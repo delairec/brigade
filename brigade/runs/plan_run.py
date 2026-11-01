@@ -6,6 +6,10 @@ from pathlib import Path
 
 from brigade.corpus.read_entities import Entity
 from brigade.errors import BrigadeError, UsageError
+from brigade.ledger.budget_applied import BudgetApplied
+from brigade.ledger.describe_role_budget import CurrentDigests, RoleBudget, describe_role_budget
+from brigade.ledger.read_ledger import read_ledger
+from brigade.ledger.run_finished import RunFinished
 from brigade.registry.read_project_field import read_project_field
 from brigade.roles.resolve_role import NO_PROJECT_BINDINGS, ResolvedRole, RoleBindings, resolve_role
 from brigade.runs.create_run_id import create_run_id
@@ -23,6 +27,7 @@ from brigade.runs.run_locations import (
 from brigade.runtime import Runtime
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_question import ClientQuestion
+from brigade.system.digest_text import digest_text
 from brigade.system.name_document_plugin import EXTENSIONS_BY_DOCUMENT_PLUGIN
 from brigade.system.parse_configuration import Configuration
 from brigade.system.probe_answer import ProbeAnswer
@@ -75,6 +80,7 @@ class RunPlan:
     disposable_worktree: bool
     capabilities: tuple[str, ...]
     wall_limit_s: float
+    budget: RoleBudget
     arguments: dict
     wave: str | None
     task: str | None
@@ -90,6 +96,7 @@ class RunPlan:
     resumed_session: str | None = None
     forge_environment: dict = field(default_factory=dict, repr=False)
     edit_tools: tuple[str, ...] = ()
+    budget_applied: BudgetApplied | None = None
 
 
 def _read_values(project: Entity, field_name: str) -> list[str]:
@@ -178,17 +185,40 @@ class RunPlugins:
     document: object
 
 
+def _plan_budget(role: ResolvedRole, procedure: Procedure, runtime: Runtime) -> dict:
+    events = [entry.event for entry in read_ledger(runtime.paths.state_root).entries]
+    segments = tuple(event for event in events if isinstance(event, RunFinished) and event.role == role.role)
+    current = CurrentDigests(role=digest_text(role.body), procedures={procedure.name: digest_text(procedure.body)})
+    budget = describe_role_budget(segments, int(role.front_matter["budget"]), current)
+    last_applied = next(
+        (event.after for event in reversed(events) if isinstance(event, BudgetApplied) and event.role == role.role),
+        budget.shipped,
+    )
+    change = BudgetApplied(
+        role=role.role,
+        before=last_applied,
+        after=budget.applied,
+        segments=budget.segments,
+        restarts=budget.restarts,
+        growth=budget.growth,
+        restart_tokens=budget.restart_tokens,
+    )
+    return {"budget": budget, "budget_applied": None if budget.applied == last_applied else change}
+
+
 def _plan_work(request: RunRequest, setting: RunSetting, runtime: Runtime) -> dict:
     configuration = setting.configuration
     directories = ProcedureDirectories(shipped=SHIPPED_PROCEDURES, instructions=configuration.instructions)
     procedure = resolve_procedure(request.procedure, directories)
     role = resolve_role(request.slot, runtime, _read_bindings(setting.project), configuration)
     role_capabilities = _read_role_capabilities(role)
+    budget = _plan_budget(role, procedure, runtime)
     return {
+        **budget,
         "procedure": procedure,
         "role": role,
         "capabilities": tuple(capability for capability in procedure.capabilities if capability in role_capabilities),
-        "wall_limit_s": math.ceil(procedure.budget * CAP_MARGIN) * configuration.seconds_per_step,
+        "wall_limit_s": math.ceil(budget["budget"].applied * CAP_MARGIN) * configuration.seconds_per_step,
     }
 
 
@@ -238,8 +268,7 @@ def plan_run(request: RunRequest, setting: RunSetting, plugins: RunPlugins, runt
     cwd = _locate_cwd(request.cwd, setting.project)
     identity = _plan_identity(request, setting, plugins, runtime)
     disposable_worktree = TOOL_GRANTS_FEATURE not in probe.features and WRITE_CAPABILITY not in work["capabilities"]
-    budget = work["procedure"].budget
-    clock_warnings = (_describe_clock_warning(setting.client, budget, work["wall_limit_s"]),)
+    clock_warnings = (_describe_clock_warning(setting.client, work["budget"].applied, work["wall_limit_s"]),)
     return RunPlan(
         **work,
         **identity,

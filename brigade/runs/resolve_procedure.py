@@ -8,7 +8,7 @@ from brigade.roles.parse_role_file import RoleFileUnreadable, parse_role_file
 INSTRUCTIONS_PROCEDURES_DIRECTORY = "procedures"
 PROCEDURE_SUFFIX = ".md"
 PATH_SEPARATOR = "/"
-DECLARED_KEYS = ("capabilities", "budget")
+DECLARED_KEYS = ("capabilities",)
 CAPABILITIES = ("read", "write", "shell", "net")
 CAPABILITY_SEPARATOR = ","
 
@@ -19,7 +19,6 @@ class Procedure:
     location: str
     argument: str
     capabilities: tuple[str, ...]
-    budget: int
     body: str
 
 
@@ -81,12 +80,6 @@ def _read_capabilities(value: str, location: str) -> tuple[str, ...]:
     return capabilities
 
 
-def _read_budget(value: str, location: str) -> int:
-    if not (value.isascii() and value.isdigit() and int(value) > 0):
-        raise BrigadeError(f"the procedure {location} has the budget {value}, not a positive integer")
-    return int(value)
-
-
 def resolve_procedure(argument: str, directories: ProcedureDirectories) -> Procedure:
     source = _read_path(argument) if _is_path(argument) else _find_named(argument, directories)
     try:
@@ -101,6 +94,5 @@ def resolve_procedure(argument: str, directories: ProcedureDirectories) -> Proce
         location=source.location,
         argument=source.argument,
         capabilities=_read_capabilities(procedure_file.front_matter["capabilities"], source.location),
-        budget=_read_budget(procedure_file.front_matter["budget"], source.location),
         body=procedure_file.body,
     )
