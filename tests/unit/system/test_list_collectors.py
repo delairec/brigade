@@ -54,6 +54,8 @@ class ListCollectorsTest(unittest.TestCase):
             [
                 {"name": "check-runs", "source": "built-in"},
                 {"name": "corpus", "source": "built-in"},
+                {"name": "corpus-fmt", "source": "built-in"},
+                {"name": "corpus-lint", "source": "built-in"},
                 {"name": "git-diff-stat", "source": "built-in"},
                 {"name": "git-log", "source": "built-in"},
                 {"name": "inbox-families", "source": "built-in"},
@@ -61,6 +63,8 @@ class ListCollectorsTest(unittest.TestCase):
                 {"name": "pr-list", "source": "built-in"},
                 {"name": "pr-threads", "source": "built-in"},
                 {"name": "shell", "source": "built-in"},
+                {"name": "stale-branches", "source": "built-in"},
+                {"name": "stale-worktrees", "source": "built-in"},
                 {"name": "study", "source": "built-in"},
                 {"name": "worktrees", "source": "built-in"},
             ],

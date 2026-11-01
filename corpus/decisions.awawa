@@ -5088,3 +5088,22 @@ DECISION AProjectOfForgeNoneMergesATaskOnItsAcceptanceAndItsVerdictAndTheUserMer
 		+ "ensuite git merge vers la wave, puis vers le jalon. Le merge du jalon dans main reste à"
 		+ "l'utilisateur, et brigade lui indique la commande. », against « Acceptance seule » and «"
 		+ "Verdict seul »"
+
+DECISION AStaleBranchIsALocalBranchWhosePullRequestsAreAllMergedOrClosed
+	TITLE "a branch is stale when it is a local branch other than the main branch, the head of at"
+		+ "least one pull request on the forge, and the head of no open one"
+	STATUS active
+	DESC "the scans stale_branches and worktrees read it so: a branch with a merged pull request"
+		+ "and an open one is not stale, a branch with no pull request is not stale"
+	DESC "the pull requests are read in every state, as the login of the key cli of"
+		+ "[forge_accounts]"
+	DESC "binds @TASK.B33"
+		REF @TASK.B33
+	REJECTED "the state of the last pull request of the branch alone: a branch reopened in a new"
+		+ "pull request after a closed one would be reported while its work is under review"
+	RATIONALE "@TASK.B33 reads a stale branch from the state of its pull request without saying"
+		+ "which, when a branch heads several; a branch still under review is never a fact to"
+		+ "garden"
+		REF @TASK.B33
+	SOURCE "the build run of @TASK.B33 on 2026-11-01"
+		REF @TASK.B33
