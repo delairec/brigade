@@ -308,6 +308,92 @@ class ReadLedgerSinceAnEarlierReadingTest(ReadLedgerTestCase):
         # Assert
         self.assertEqual(reading.skipped, (SkippedLine(file=str(october), line=2, reason="not JSON"),))
 
+    def test_should_read_a_line_completed_since_as_one_entry(self):
+        # Arrange
+        october = self.write_ledger("2026-10.jsonl", WAVE_STARTED.encode() + WAVE_PAUSED.encode()[:40])
+        earlier = read_ledger(self.state_root)
+        october.write_bytes(WAVE_STARTED.encode() + WAVE_PAUSED.encode())
+
+        # Act
+        reading = read_ledger(self.state_root, earlier)
+
+        # Assert
+        self.assertEqual(
+            reading,
+            LedgerReading(
+                entries=(
+                    LedgerEntry(
+                        instant=datetime(2026, 9, 30, 22, 0, tzinfo=UTC),
+                        event=WaveStarted(
+                            wave="tidepool_w16", project="tidepool", branch="integration/M4-tides", tasks=("T7",)
+                        ),
+                    ),
+                    LedgerEntry(
+                        instant=datetime(2026, 10, 1, 0, 15, tzinfo=UTC),
+                        event=WavePaused(wave="tidepool_w16", reason="quota", resume_at=None),
+                    ),
+                ),
+                files=(str(october),),
+                skipped=(),
+            ),
+        )
+
+    def test_should_read_an_unended_last_line_once_after_it_was_ended(self):
+        # Arrange
+        october = self.write_ledger("2026-10.jsonl", WAVE_PAUSED.removesuffix("\n").encode())
+        earlier = read_ledger(self.state_root)
+        october.write_bytes(WAVE_PAUSED.encode() + b"not json\n")
+
+        # Act
+        reading = read_ledger(self.state_root, earlier)
+
+        # Assert
+        self.assertEqual(
+            reading,
+            LedgerReading(
+                entries=(
+                    LedgerEntry(
+                        instant=datetime(2026, 10, 1, 0, 15, tzinfo=UTC),
+                        event=WavePaused(wave="tidepool_w16", reason="quota", resume_at=None),
+                    ),
+                ),
+                files=(str(october),),
+                skipped=(SkippedLine(file=str(october), line=2, reason="not JSON"),),
+            ),
+        )
+
+    def test_should_read_each_appended_line_once_over_successive_extensions(self):
+        # Arrange
+        october = self.write_ledger("2026-10.jsonl", WAVE_STARTED.encode())
+        first = read_ledger(self.state_root)
+        october.write_bytes(WAVE_STARTED.encode() + WAVE_PAUSED.encode())
+        second = read_ledger(self.state_root, first)
+        october.write_bytes(WAVE_STARTED.encode() + WAVE_PAUSED.encode() + b"not json\n")
+
+        # Act
+        reading = read_ledger(self.state_root, second)
+
+        # Assert
+        self.assertEqual(
+            reading,
+            LedgerReading(
+                entries=(
+                    LedgerEntry(
+                        instant=datetime(2026, 9, 30, 22, 0, tzinfo=UTC),
+                        event=WaveStarted(
+                            wave="tidepool_w16", project="tidepool", branch="integration/M4-tides", tasks=("T7",)
+                        ),
+                    ),
+                    LedgerEntry(
+                        instant=datetime(2026, 10, 1, 0, 15, tzinfo=UTC),
+                        event=WavePaused(wave="tidepool_w16", reason="quota", resume_at=None),
+                    ),
+                ),
+                files=(str(october),),
+                skipped=(SkippedLine(file=str(october), line=3, reason="not JSON"),),
+            ),
+        )
+
     def test_should_read_a_monthly_file_written_since_from_its_start(self):
         # Arrange
         self.write_ledger("2026-09.jsonl", WAVE_STARTED.encode())
