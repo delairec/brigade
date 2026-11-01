@@ -2979,9 +2979,11 @@ TASK B31
 TASK B32
 	TITLE "Follow-up: the IntelliJ plugin reads /api/corpus"
 	STATUS archived
-	DESC "archived on 2026-11-01: delivered in the repository of the IntelliJ plugin, branch"
-		+ "feat/B32-ref-selector, a Brigade Corpus tool window that reads /api/corpus of brigade"
-		+ "serve at a ref; kept here for memory only, on the user's ruling of 2026-11-01"
+	DESC "archived on 2026-11-01: delivered in the repository of the awawa UI plugin, branch"
+		+ "feat/B32-ref-selector: Read at a Ref shows the four views of its tool window on the"
+		+ "checkout brigade serve answers at a branch, a SHA or a worktree, the refs offered listed"
+		+ "with git on the registered path; kept here for memory only, on the user's ruling of"
+		+ "2026-11-01"
 	MILESTONE @MILESTONE.M3
 	COMPONENT "dashboard"
 	ROLE none
