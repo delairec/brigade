@@ -3757,11 +3757,12 @@ STOPPED_ON_A_CONFLICT = 1
 
 
 class WaveBranchRebasingRunnerDouble(ScriptedProcessRunner):
-    def __init__(self, fallback, forge: WaveMergingForgeDouble, rebase_exit_code: int):
+    def __init__(self, fallback, forge: WaveMergingForgeDouble, rebase_exit_code: int, root: Path):
         super().__init__(
             {
                 **MACHINE_ANSWERS,
                 ("git", "ls-remote"): ProcessAnswer(),
+                **describe_t7_delivered_at_the_wave_head(root),
                 ("git", "reset"): ProcessAnswer(),
                 ("git", "rev-parse", "HEAD"): ProcessAnswer(stdout=f"{WAVE_HEAD}\n"),
                 FORGE_REBASE_OF_THE_WAVE_BRANCH: ProcessAnswer(exit_code=rebase_exit_code),
@@ -3803,7 +3804,7 @@ class TickRebasingAWaveBranchItsMilestoneBranchHasOutrunTest(unittest.TestCase):
             "TASK": {"T7": TASK_DELIVERED},
             "MILESTONE": {"M4": MILESTONE_M4},
         }
-        machine = WaveBranchRebasingRunnerDouble(create_corpus_double(corpus), self.forge, rebase_exit_code)
+        machine = WaveBranchRebasingRunnerDouble(create_corpus_double(corpus), self.forge, rebase_exit_code, self.root)
         runtime = create_test_runtime(
             create_test_paths(self.root),
             run_process=machine.run,
