@@ -89,6 +89,7 @@ class RunPlan:
     first_segment: int = FIRST_SEGMENT
     resumed_session: str | None = None
     forge_environment: dict = field(default_factory=dict, repr=False)
+    edit_tools: tuple[str, ...] = ()
 
 
 def _read_values(project: Entity, field_name: str) -> list[str]:
@@ -247,4 +248,5 @@ def plan_run(request: RunRequest, setting: RunSetting, plugins: RunPlugins, runt
         worktree=identity["run_directory"] / DISPOSABLE_WORKTREE_DIRECTORY if disposable_worktree else cwd,
         disposable_worktree=disposable_worktree,
         warnings=() if STEP_COUNT_FEATURE in probe.features else clock_warnings,
+        edit_tools=probe.edit_tools,
     )
