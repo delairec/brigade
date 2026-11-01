@@ -1,0 +1,24 @@
+{
+  "call": {
+    "arguments": [
+      "status",
+      "--json",
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>"
+    ],
+    "cwd": "<tmp:0>/cache/brigade/refs/app/<commit:1>",
+    "directories": [
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>"
+    ],
+    "inputs": {
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/tasks.awawa": "TASK B1\n\tTITLE \"the first task\"\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"statuses\": [], \"types\": [{\"type\": \"TASK\", \"counts\": {}, \"unset\": 1, \"total\": 1}], \"ignored\": {\"files\": 0, \"by_pattern\": [], \"not_understood\": []}, \"entities\": [{\"type\": \"TASK\", \"name\": \"B1\", \"target\": \"@TASK.B1\", \"file\": \"<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/tasks.awawa\", \"line\": 1, \"status\": null, \"incoming\": 0, \"incoming_by\": []}], \"references\": {\"sites\": 0, \"unresolved\": 0, \"by_file\": []}, \"diagnostics\": {\"errors\": 0, \"warnings\": 1, \"by_rule\": [{\"rule\": \"L002\", \"count\": 1}]}, \"summary\": {\"files\": 1, \"entities\": 1}}\n"
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}
