@@ -20,7 +20,15 @@ PROJECTS = json.dumps(
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
-APP = json.dumps({"fields": [{"name": "PATH", "atoms": ['"/srv/app"']}, {"name": "STATUS", "atoms": ["active"]}]})
+APP = json.dumps(
+    {
+        "fields": [
+            {"name": "PATH", "atoms": ['"/srv/app"']},
+            {"name": "STATUS", "atoms": ["active"]},
+            {"name": "FORGE", "atoms": ['"none"']},
+        ]
+    }
+)
 LIB = json.dumps({"fields": [{"name": "PATH", "atoms": ['"/srv/lib"']}]})
 
 
@@ -37,7 +45,7 @@ class ProjectListTest(unittest.TestCase):
         )
         self.runtime = create_test_runtime(create_test_paths(Path(self.root.name)), run_process=runner.run)
 
-    def test_should_list_each_project_with_its_status_and_path(self):
+    def test_should_list_each_project_with_its_status_its_path_and_its_forge(self):
         # Arrange
         self.runtime.paths.config_root.mkdir(parents=True)
         self.runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
@@ -52,8 +60,8 @@ class ProjectListTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "projects": [
-                    {"name": "app", "path": "/srv/app", "status": "active"},
-                    {"name": "lib", "path": "/srv/lib", "status": ""},
+                    {"name": "app", "path": "/srv/app", "status": "active", "forge": "none"},
+                    {"name": "lib", "path": "/srv/lib", "status": "", "forge": ""},
                 ],
             },
         )
@@ -99,8 +107,8 @@ class ProjectListTextTest(unittest.TestCase):
         # Arrange
         document = {
             "projects": [
-                {"name": "app", "path": "/srv/app", "status": "active"},
-                {"name": "library", "path": "/srv/lib", "status": ""},
+                {"name": "app", "path": "/srv/app", "status": "active", "forge": "none"},
+                {"name": "library", "path": "/srv/lib", "status": "", "forge": "github"},
             ]
         }
 
@@ -108,7 +116,10 @@ class ProjectListTextTest(unittest.TestCase):
         text = COMMAND.render_text(document)
 
         # Assert
-        self.assertEqual(text, "name     status  path\napp      active  /srv/app\nlibrary          /srv/lib")
+        self.assertEqual(
+            text,
+            "name     status  forge   path\napp      active  none    /srv/app\nlibrary          github  /srv/lib",
+        )
 
     def test_should_say_that_no_project_is_registered(self):
         # Arrange
