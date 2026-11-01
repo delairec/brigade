@@ -48,8 +48,18 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
             pull_request,
             {
                 "number": shown["pull_request"],
-                "title": "chore(wave): merge the wave shop_w1 into integration/empty-cart",
-                "body": "Integrates the wave shop_w1 of @PROJECT.shop into integration/empty-cart: @TASK.S1, @TASK.S2, @TASK.S3.",
+                "title": "feat: deliver S1; deliver S2; deliver S3 (@TASK.S1, @TASK.S2, @TASK.S3)",
+                "body": (
+                    "Delivers the wave shop_w1 of the milestone M1 (Empty cart) into integration/empty-cart:"
+                    " @TASK.S1, @TASK.S2, @TASK.S3.\n"
+                    "\n"
+                    "- @TASK.S1 — Empty the cart in one click (#2)\n"
+                    "- @TASK.S2 — Confirm before emptying the cart (#5)\n"
+                    "- @TASK.S3 — Count the emptied carts (#3)\n"
+                    "- feat: deliver S1\n"
+                    "- feat: deliver S2\n"
+                    "- a push between the read and the merge"
+                ),
                 "headRefName": "integration/shop_w1",
                 "baseRefName": "integration/empty-cart",
                 "state": "MERGED",
@@ -110,6 +120,7 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
                 "events": {
                     "milestone.branch_cut": 1,
                     "milestone.created": 3,
+                    "milestone.pr_described": 1,
                     "milestone.pr_opened": 1,
                     "order.parked": 1,
                     "order.started": 1,
@@ -125,6 +136,7 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
                     "tick.action_failed": 1,
                     "wave.closed": 1,
                     "wave.merged": 1,
+                    "wave.pr_described": 3,
                     "wave.pr_opened": 1,
                     "wave.reported": 1,
                     "wave.started": 1,

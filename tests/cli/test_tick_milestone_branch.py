@@ -18,6 +18,11 @@ PULL_REQUEST_OPEN_INTO_MAIN = (
     f' "headRefName": "{WAVE_BRANCH}", "baseRefName": "main", "state": "OPEN", "reviewDecision": null,'
     ' "author": "octo-build"}'
 )
+PULL_REQUEST_THAT_DELIVERED_THE_TASK = (
+    '{"number": 7, "title": "feat(cart): empty the cart in one click (@TASK.S1)", "body": "Delivers @TASK.S1.",'
+    ' "headRefName": "task/shop_w1/S1", "baseRefName": "main", "mergedHead": "main", "state": "MERGED",'
+    ' "reviewDecision": null, "author": "octo-build"}'
+)
 EVENTS_OF_A_WAVE_STARTED_BEFORE_ITS_MILESTONE_HAD_A_BRANCH = (
     '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
     f' "project": "shop", "branch": "{WAVE_BRANCH}", "tasks": ["S1"]}}\n'
@@ -43,6 +48,7 @@ def prepare_a_wave_of_an_uncut_milestone_open_into_main(rehearser: WaveRehearser
     project.run_git("checkout", "--quiet", "main")
     (rehearser.store / "pulls").mkdir(exist_ok=True)
     (rehearser.store / "pulls" / "1.json").write_text(PULL_REQUEST_OPEN_INTO_MAIN)
+    (rehearser.store / "pulls" / "7.json").write_text(PULL_REQUEST_THAT_DELIVERED_THE_TASK)
     (rehearser.state / "ledger").mkdir(parents=True, exist_ok=True)
     ledger = rehearser.state / "ledger" / "2026-10.jsonl"
     ledger.write_text(EVENTS_OF_A_WAVE_STARTED_BEFORE_ITS_MILESTONE_HAD_A_BRANCH)
