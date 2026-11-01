@@ -19,7 +19,8 @@ class BrigadeWaveResumeTest(WaveTickTestCase):
             ledger.write(PAUSED_ON_THE_FORGE_ACCOUNT)
 
     def read_events(self) -> list:
-        return list(map(json.loads, (self.state / "ledger" / "2026-10.jsonl").read_text().splitlines()))
+        lines = "".join(path.read_text() for path in sorted((self.state / "ledger").glob("*.jsonl"))).splitlines()
+        return list(map(json.loads, lines))
 
     def test_should_resume_the_wave_named(self):
         # Act
