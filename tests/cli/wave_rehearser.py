@@ -6,6 +6,7 @@ import time
 import unittest
 from pathlib import Path
 
+from tests.cli.read_ledger_events import read_ledger_events
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FILE_POLL_S, FILE_WAIT_S
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
@@ -134,8 +135,7 @@ class WaveRehearser:
         return self.machine.run_brigade(CLONE_ENTRY_POINT, *arguments, environment=self.describe_environment())
 
     def read_events(self) -> list:
-        lines = "".join(path.read_text() for path in sorted((self.state / "ledger").glob("*.jsonl"))).splitlines()
-        return list(map(json.loads, lines))
+        return read_ledger_events(self.state / "ledger")
 
     def is_wave_integrated(self) -> bool:
         events = self.read_events()
