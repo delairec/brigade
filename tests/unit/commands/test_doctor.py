@@ -7,7 +7,7 @@ from pathlib import Path
 
 from brigade.commands.doctor import COMMAND, doctor
 from brigade.corpus.shipped_data import SHIPPED_SCHEMA
-from brigade.errors import BrigadeError, ToolFailure, ToolNotFound
+from brigade.errors import BrigadeError, CommandFailed, ToolFailure, ToolNotFound
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_corpus_double
 from tests.unit.commands.create_plugin_resolver import ScriptedClient, create_plugin_resolver
 
@@ -1148,6 +1148,36 @@ class DoctorProjectsTest(DoctorTestCase):
             },
             document["items"],
         )
+
+    def test_should_find_a_project_whose_main_git_cannot_read(self):
+        # Arrange
+        self.entities["PROJECT"] = {"app": [("PATH", str(self.project)), ("MAIN", "main")]}
+        argv = ("git", "rev-parse", "--verify", "--quiet", "refs/heads/main")
+        rows = [
+            (
+                CommandFailed(argv, 128, "fatal: not a git repository\n"),
+                "git rev-parse --verify --quiet refs/heads/main exited 128: fatal: not a git repository",
+            ),
+            (ToolNotFound("git not on PATH"), "git not on PATH"),
+        ]
+        for failure, reason in rows:
+            with self.subTest(failure=type(failure).__name__):
+                self.answers[argv] = failure
+
+                # Act
+                document = doctor(self.no_option, self.runtime)
+
+                # Assert
+                self.assertIn(
+                    {
+                        "name": "project",
+                        "kind": "prerequisite",
+                        "state": "finding",
+                        "detail": f"@PROJECT.app: MAIN main cannot be read in {self.project}: {reason}",
+                        "fallback": None,
+                    },
+                    document["items"],
+                )
 
     def test_should_find_a_project_command_whose_first_word_is_no_executable(self):
         # Arrange

@@ -394,7 +394,11 @@ def _find_roleset_problems(roleset: str | None, checkout: Path) -> list[str]:
 
 
 def _find_main_problems(main: str, checkout: Path, runtime: Runtime) -> list[str]:
-    if find_branch(runtime.run_process, checkout, main):
+    try:
+        found = find_branch(runtime.run_process, checkout, main)
+    except ToolFailure as error:
+        return [f"MAIN {main} cannot be read in {checkout}: {error}"]
+    if found:
         return []
     return [f"MAIN {main} is not a branch of {checkout}"]
 
