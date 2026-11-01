@@ -2885,6 +2885,7 @@ INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN = {
     "updated_at": "2026-10-18T11:00:00Z",
 }
 INTEGRATION_PULL_REQUEST_CLOSED = {**INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN, "state": "closed"}
+INTEGRATION_PULL_REQUEST_OPEN_INTO_ANOTHER_BASE = {**INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN, "base": "develop"}
 
 
 INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH = INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN | {
@@ -3150,6 +3151,30 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
                     "branch": "integration/M4",
                     "title": "chore(wave): merge the wave tidepool_w16 into integration/tides",
                     "body": "Integrates the wave tidepool_w16 of @PROJECT.tidepool into integration/tides: @TASK.T7.",
+                    "milestone": None,
+                    "environment": {},
+                }
+            ],
+        )
+
+    def test_should_open_its_own_into_main_beside_a_pull_request_of_the_wave_branch_open_into_another_base(self):
+        # Arrange
+        forge = OpeningForgeDouble({"integration/M4": INTEGRATION_PULL_REQUEST_OPEN_INTO_ANOTHER_BASE})
+        runtime = self._create_runtime(forge, TASK_OF_NO_MILESTONE_DELIVERED)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            forge.opened,
+            [
+                {
+                    "repository": str(self.repository),
+                    "base": "main",
+                    "branch": "integration/M4",
+                    "title": "chore(wave): merge the wave tidepool_w16 into main",
+                    "body": "Integrates the wave tidepool_w16 of @PROJECT.tidepool into main: @TASK.T7.",
                     "milestone": None,
                     "environment": {},
                 }
