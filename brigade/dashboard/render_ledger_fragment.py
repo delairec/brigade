@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from html import escape
 from urllib.parse import quote
 
@@ -14,7 +15,8 @@ COMPARED_MEASURES = {
     "steps_to_first_edit": "steps to first edit",
     "oversized_output_steps": "oversized output steps",
 }
-PERIODS = ("before", "from")
+DAY_LENGTH = len("YYYY-MM-DD")
+PREVIOUS_DAY = timedelta(days=1)
 
 
 def _show(value: object) -> str:
@@ -38,18 +40,25 @@ def _render_budgets(document: dict) -> str:
     return render_html_table(("procedure", *STEPS_HEADER, "estimate"), rows, "no run finished")
 
 
-def _render_month(month: str, waves: list[str]) -> tuple[str, ...]:
+def _link_comparison(day: str, first_day: str, last_day: str) -> str:
+    day_before = (date.fromisoformat(day) - PREVIOUS_DAY).isoformat()
+    ranges = (f"{first_day}..{day_before}", f"{day}..{last_day}")
+    address = "#ledger?" + "&".join(f"range={quote(day_range, safe='')}" for day_range in ranges)
+    return f'<a href="{escape(address)}">{escape(f"compare before {day}")}</a>'
+
+
+def _render_month(month: str, waves: list[str], overview: dict) -> tuple[str, ...]:
     day = f"{month}-{FIRST_DAY}"
     return (
         escape(month),
         str(len(waves)),
         " ".join(_link("wave", wave, wave) for wave in waves),
-        _link("before", day, f"compare before {day}"),
+        _link_comparison(day, overview["first"][:DAY_LENGTH], overview["last"][:DAY_LENGTH]),
     )
 
 
 def _render_months(document: dict) -> str:
-    rows = [_render_month(month, waves) for month, waves in document["waves_started"].items()]
+    rows = [_render_month(month, waves, document) for month, waves in document["waves_started"].items()]
     return render_html_table(("month", "waves", "started", "baseline"), rows, "no wave started")
 
 
@@ -76,18 +85,22 @@ def _render_percentiles(summary: dict | None) -> tuple[str, str]:
     return (_show(summary["runs"]["p50"]), _show(summary["runs"]["p90"]))
 
 
+def _name_range(day_range: dict) -> str:
+    return f"{day_range['start']} to {day_range['end']}"
+
+
 def _render_comparison(document: dict) -> str:
-    day = escape(document["before"])
-    periods = document["periods"]
+    ranges = document["ranges"]
     rows = [
-        (label, *(cell for period in PERIODS for cell in _render_percentiles(periods[period][measure])))
+        (label, *(cell for day_range in ranges for cell in _render_percentiles(day_range[measure])))
         for measure, label in COMPARED_MEASURES.items()
     ]
-    header = ("measure", "p50 before", "p90 before", "p50 from", "p90 from")
-    return (
-        f"<p>{periods['before']['runs']} runs before {day}, {periods['from']['runs']} runs from it on</p>"
-        f"{render_html_table(header, rows, 'no measure')}"
+    header = (
+        "measure",
+        *(escape(f"{percentile} {_name_range(day_range)}") for day_range in ranges for percentile in ("p50", "p90")),
     )
+    counts = ", ".join(escape(f"{day_range['runs']} runs from {_name_range(day_range)}") for day_range in ranges)
+    return f"<p>{counts}</p>{render_html_table(header, rows, 'no measure')}"
 
 
 SECTIONS = (
