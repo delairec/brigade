@@ -3121,7 +3121,8 @@ TASK B33
 
 TASK B34
 	TITLE "Home lists the scans holding new signals, with their count and the age of the oldest"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 303
 	TYPE feat
 	MILESTONE @MILESTONE.M4
 	COMPONENT "dashboard"
