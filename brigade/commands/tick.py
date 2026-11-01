@@ -23,7 +23,6 @@ from brigade.ledger.format_instant import format_instant
 from brigade.ledger.milestone_closed import MilestoneClosed
 from brigade.ledger.milestone_pr_opened import MilestonePrOpened
 from brigade.ledger.pr_merged import PrMerged
-from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_rebased import TaskRebased
@@ -97,6 +96,7 @@ from brigade.tick.actions import (
 from brigade.tick.apply_actions import apply_actions
 from brigade.tick.build_snapshot import ForgeReaders, Snapshot, build_snapshot
 from brigade.tick.heartbeat import Heartbeat
+from brigade.tick.ledger_reading_keeper import LedgerReadingKeeper
 from brigade.tick.plan import plan
 from brigade.tick.plan_connectors import plan_connectors
 from brigade.tick.prepare_task_worktree import prepare_task_worktree
@@ -359,7 +359,7 @@ def _launch_study(runtime: Runtime, action: LaunchStudy) -> None:
 
 
 def _report_wave(runtime: Runtime, action: ReportWave) -> None:
-    events = tuple(entry.event for entry in read_ledger(runtime.paths.state_root).entries)
+    events = tuple(entry.event for entry in runtime.read_ledger(runtime.paths.state_root).entries)
     study = describe_wave_report(find_wave_started(events, action.wave))
     run_id = create_run_id(runtime.now)
     start_study_run(runtime, study, run_id)
@@ -414,7 +414,7 @@ def _run_preflight(runtime: Runtime, configuration: Configuration, action: RunPr
 def _count_review_rounds(runtime: Runtime, action: MergePullRequest) -> int:
     return sum(
         1
-        for entry in read_ledger(runtime.paths.state_root).entries
+        for entry in runtime.read_ledger(runtime.paths.state_root).entries
         if isinstance(entry.event, TaskVerdict) and entry.event.wave == action.wave and entry.event.task == action.task
     )
 
@@ -461,7 +461,9 @@ def _merge_pull_request(runtime: Runtime, configuration: Configuration, action: 
 
 
 def _find_started_wave(runtime: Runtime, wave: str) -> WaveStarted:
-    return find_wave_started(tuple(entry.event for entry in read_ledger(runtime.paths.state_root).entries), wave)
+    return find_wave_started(
+        tuple(entry.event for entry in runtime.read_ledger(runtime.paths.state_root).entries), wave
+    )
 
 
 def _locate_wave_base(runtime: Runtime, configuration: Configuration, started: WaveStarted, root: Path) -> str:
@@ -758,13 +760,23 @@ def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuratio
     )
 
 
+def _remember_the_readings_of_the_tick(runtime: Runtime) -> Runtime:
+    return dataclasses.replace(
+        runtime,
+        read_ledger=LedgerReadingKeeper(runtime.read_ledger).read,
+        read_live_blockers=functools.cache(runtime.read_live_blockers),
+    )
+
+
 def _tick(runtime: Runtime) -> Heartbeat | None:
     started = runtime.read_monotonic()
     with hold_lock_without_waiting(_locate_lock(runtime)) as acquired:
         if not acquired:
             return None
         runtime.trail.locate(_locate_trail(runtime))
-        outcome = _apply_the_actions_of_the_tick(runtime, read_configuration(runtime, CONFIGURATION_OPTIONAL))
+        outcome = _apply_the_actions_of_the_tick(
+            _remember_the_readings_of_the_tick(runtime), read_configuration(runtime, CONFIGURATION_OPTIONAL)
+        )
         heartbeat = Heartbeat(
             ts=format_instant(runtime.now),
             duration_ms=int((runtime.read_monotonic() - started) * 1000),
