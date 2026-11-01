@@ -4667,3 +4667,20 @@ DECISION ThePlanPullRequestIsMergedAtTheHeadItsReviewRead
 		REF @TASK.B226
 	SOURCE "taken in the delivery of @TASK.B226"
 		REF @TASK.B226
+
+DECISION TheSnapshotListsEveryUncutActiveMilestoneWithItsTodoTasksAndThePlanCutsTheNamedOnes
+	TITLE "the snapshot lists every uncut active milestone of a project with its todo tasks, and"
+		+ "the plan cuts those a todo task or an open wave names"
+	STATUS active
+	DESC "brigade/tick/build_snapshot.py lists, for each registered project whose STATUS is not"
+		+ "paused, every active milestone at PROJECT.MAIN that no milestone.branch_cut records,"
+		+ "with the branch its TITLE names and the todo tasks naming it at PROJECT.MAIN"
+	DESC "brigade/tick/plan.py cuts a milestone so listed when one of its todo tasks or a task of"
+		+ "an open wave of the project names it, and none otherwise"
+	DESC "binds SPEC 1 and SPEC 2 of @TASK.B224"
+		REF @TASK.B224
+	REJECTED "the snapshot filtering out the milestones no open wave names: the open waves are"
+		+ "facts the snapshot already holds in its waves, and the selection belongs to the plan,"
+		+ "where SPEC 5 of TASK B224 proves it on literal rows"
+	SOURCE "the delivery of @TASK.B224"
+		REF @TASK.B224
