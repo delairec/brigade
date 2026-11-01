@@ -6501,3 +6501,24 @@ DECISION TheRunRepairingARedHeadIsNamedByItsBranchAndItsCommit
 		+ "red until that merge"
 	SOURCE "the build run of @TASK.B238 on 2026-11-08, wording SPEC 7 into arguments"
 		REF @TASK.B238
+
+DECISION AProjectOfForgeNoneTakesTheLocalPathAndResolvesNoForgePlugin
+	TITLE "the forge a command acts through is read from PROJECT.FORGE by"
+		+ "brigade/registry/read_project_forge.py, none when the field is absent; under github the"
+		+ "command resolves the forge plugin of that name and passes the name with it, under none"
+		+ "it resolves no forge plugin and takes the local path, branching on the forge of the"
+		+ "project as brigade/waves branches on is_on_github"
+	STATUS active
+	DESC "binds @TASK.B46"
+		REF @TASK.B46
+	REJECTED "a built-in forge plugin none answering read_pull_request and merge_pull_request from"
+		+ "the clone: no pull request exists under FORGE none and every event carries pr absent, so"
+		+ "the plugin would answer for objects that do not exist and add a second way to read the"
+		+ "branches of a task"
+	RATIONALE "@DECISION.AProjectOfForgeNoneMergesATaskOnItsAcceptanceAndItsVerdictAndTheUserMergesItsMilestoneByHand"
+		+ "sets what the local mode does; this ruling sets where it lives: the git operations of"
+		+ "the local mode are those brigade/waves already runs under FORGE none"
+		REF @DECISION.AProjectOfForgeNoneMergesATaskOnItsAcceptanceAndItsVerdictAndTheUserMergesItsMilestoneByHand
+	SOURCE "the build run of @TASK.B46, step 3, on 2026-11-01, the design left open by its"
+		+ "RATIONALE"
+		REF @TASK.B46
