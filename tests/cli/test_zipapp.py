@@ -117,6 +117,7 @@ class BrigadeZipappTest(unittest.TestCase):
             "| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour | Graceful stop |\n"
             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
             "| claude-code | full | full | full | full | full | full | full | full | full |\n"
+            "| vibe | full | full | fallback | full | fallback | full | full | fallback | fallback |\n"
             "\n"
             "| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour | Graceful stop |\n"
             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"

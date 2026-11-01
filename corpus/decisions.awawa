@@ -5133,3 +5133,19 @@ DECISION TheVibeAdapterPinsTheRustCliOfVibeAndAnswersNoResume
 	SOURCE "the user's ruling of 2026-11-01 on the question of run 20261101T185054Z-d8a913 of wave"
 		+ "brigade_w20, on @TASK.B108: « (b) VIBE_CLI=rust, sans resume (Recommandé) »"
 		REF @TASK.B108
+
+DECISION TheVibeAdapterClassifiesAStreamWithoutEntryByStderrEvenOnExitZero
+	TITLE "the vibe adapter classifies a stream holding no entry by the last line of stderr, even"
+		+ "on exit 0, and takes the message of a cut segment from stderr and that of a blocked"
+		+ "segment from its final message"
+	STATUS active
+	DESC "binds @TASK.B108"
+		REF @TASK.B108
+	DESC "a stream holding no entry names no session: with exit 0 it is classified as any other"
+		+ "exit, by the last line of stderr, unreadable_output when stderr holds none"
+	DESC "the message of a segment cut by its turn cap is the last line of stderr"
+	DESC "the message of a blocked segment is the text of its final message"
+	REJECTED "a stream holding no entry on exit 0 read as an ended segment, undeclared: it names no"
+		+ "session and no final message, so nothing shows the client ran the brief"
+	SOURCE "run 20261101T213054Z-33f56c of wave brigade_w20, delivering @TASK.B108"
+		REF @TASK.B108
