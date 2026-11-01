@@ -1,0 +1,27 @@
+{
+  "call": {
+    "arguments": [
+      "refs",
+      "@TASK.S1",
+      "--json",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>"
+    ],
+    "cwd": "<tmp:0>/cache/brigade/refs/shop/<commit:1>",
+    "directories": [
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>"
+    ],
+    "inputs": {
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/_schema.awawa": "SCHEMA TASK\n\tDESC \"a change delivered by one pull request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS todo|implemented\n\t\tREQUIRED\n\tFIELD TYPE feat|fix|test|docs\n\t\tREQUIRED\n\tFIELD MILESTONE @MILESTONE\n\tFIELD AFTER @TASK\n\t\tREPEATABLE\n\tFIELD DELIVERED_BY uint\n\nSCHEMA MILESTONE\n\tDESC \"the tasks planned for one request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS planned|active|reached\n\t\tREQUIRED\n",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/milestones.awawa": "MILESTONE M1\n\tTITLE \"Empty cart\"\n\tSTATUS active\n",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa": "TASK S1\n\tTITLE \"Empty the cart in one click\"\n\tSTATUS implemented\n\tTYPE feat\n\tMILESTONE @MILESTONE.M1\n\tDELIVERED_BY 7\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"incoming\": [], \"outgoing\": [{\"file\": \"<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/tasks.awawa\", \"line\": 5, \"col\": 12, \"from\": {\"type\": \"TASK\", \"name\": \"S1\", \"status\": \"implemented\"}, \"field_path\": [\"MILESTONE\"], \"target\": {\"type\": \"MILESTONE\", \"name\": \"M1\"}, \"resolved\": true}]}\n"
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}
