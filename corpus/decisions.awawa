@@ -6522,3 +6522,24 @@ DECISION AProjectOfForgeNoneTakesTheLocalPathAndResolvesNoForgePlugin
 	SOURCE "the build run of @TASK.B46, step 3, on 2026-11-01, the design left open by its"
 		+ "RATIONALE"
 		REF @TASK.B46
+
+DECISION DoctorChecksTheForgesTheRegisteredProjectsName
+	TITLE "brigade doctor checks each forge the registered projects name in their FORGE, none"
+		+ "excluded, once per forge, and the logins of the configuration through it; when no"
+		+ "registered project names a forge, it resolves no forge plugin, starts no subprocess of"
+		+ "one, and reports the item forge ok, no registered project on a forge, with its fallback,"
+		+ "local mode without a forge"
+	STATUS active
+	DESC "binds @TASK.B46"
+		REF @TASK.B46
+	REJECTED "checking every built-in forge plugin whatever the projects name: a machine whose"
+		+ "projects are all of FORGE none would still start gh, which SPEC 1 of the task forbids"
+		+ "for a project of FORGE none"
+	RATIONALE "doctor acts on no single project, so the forge it checks can only come from the"
+		+ "PROJECT entities, as"
+		+ "@DECISION.AProjectOfForgeNoneTakesTheLocalPathAndResolvesNoForgePlugin reads it for a"
+		+ "command acting on one"
+		REF @DECISION.AProjectOfForgeNoneTakesTheLocalPathAndResolvesNoForgePlugin
+	SOURCE "the build run of @TASK.B46, step 3, on 2026-11-01: brigade/commands/doctor.py:40 names"
+		+ "github, which SPEC 1 of the task forbids"
+		REF @TASK.B46
