@@ -3658,6 +3658,21 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
         # Assert
         self.assertIn({"project": "tidepool", "milestone": "M4", "branch": "integration/tides"}, document["plan"])
 
+    def test_should_name_on_stderr_the_milestone_whose_branch_exists_unrecorded(self):
+        # Arrange
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertIn(
+            "brigade tick: CutMilestoneBranch failed: @MILESTONE.M4: the branch integration/tides exists and no"
+            " milestone.branch_cut records it\n",
+            errors.getvalue(),
+        )
+
     def test_should_cut_the_missing_branch_of_an_open_wave(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED])
