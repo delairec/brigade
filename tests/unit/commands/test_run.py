@@ -285,7 +285,7 @@ class RunDetachedTest(unittest.TestCase):
         self.assertEqual(
             document["warnings"],
             [
-                "double counts no steps: the budget of 30 steps is held on the clock and the run cut at its limit of 1140 s"
+                "double counts no steps: the budget of 50 steps is held on the clock and the run cut at its limit of 1890 s"
             ],
         )
 

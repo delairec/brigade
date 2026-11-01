@@ -150,7 +150,13 @@ class DescribeRoleBudgetTest(unittest.TestCase):
             _create_segment("r3", 1, 50, 50000, TURN_LIMIT),
             _create_segment("r3", 2, 10, 10000, DONE, tokens_to_first_edit=200000),
         )
-        same_length = tuple(_create_segment(f"r{n}", 1, 20, 40000, DONE) for n in range(1, 6))
+        same_length = (
+            _create_segment("r1", 1, 20, 40000, DONE),
+            _create_segment("r2", 1, 20, 40000, DONE),
+            _create_segment("r3", 1, 20, 40000, DONE),
+            _create_segment("r4", 1, 20, 40000, DONE),
+            _create_segment("r5", 1, 20, 40000, DONE),
+        )
         no_restart = (
             _create_segment("r1", 1, 10, 15000, DONE),
             _create_segment("r2", 1, 20, 40000, DONE),
