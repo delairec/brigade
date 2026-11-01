@@ -9,6 +9,7 @@ from brigade.git.delete_branch import delete_branch
 from brigade.git.find_branch import find_branch
 from brigade.git.find_remote_branch import RemoteBranch, find_remote_branch
 from brigade.git.push_branch import BranchPush, push_branch
+from brigade.git.push_ref_to_branch import RefPush, push_ref_to_branch
 from brigade.ledger.append_event import append_event
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.read_ledger import read_ledger
@@ -19,6 +20,7 @@ from brigade.system.hold_lock import hold_lock
 from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.system.parse_configuration import CLI_KEY
 from brigade.waves.find_milestone_branch import find_milestone_branch
+from brigade.waves.is_milestone_branch_off_the_forge import RecordedMilestoneBranch, is_milestone_branch_off_the_forge
 from brigade.waves.locate_project_main import locate_project_main
 from brigade.waves.name_milestone_branch import name_milestone_branch
 
@@ -72,11 +74,30 @@ def _cut_and_record(runtime: Runtime, demand: MilestoneBranchDemand, branch: str
     append_event(runtime.paths, runtime.now, cut)
 
 
+def _cut_again_and_record(runtime: Runtime, demand: MilestoneBranchDemand, branch: str) -> None:
+    start = locate_project_main(runtime.run_process, demand.project, demand.read_environment)
+    login = demand.read_login()
+    push = RefPush(
+        repository=Path(read_project_field(demand.project, "PATH")),
+        ref=start,
+        branch=branch,
+        environment=demand.read_environment(CLI_KEY),
+    )
+    push_ref_to_branch(runtime.run_process, push)
+    cut = MilestoneBranchCut(project=demand.project.name, milestone=demand.milestone.name, branch=branch, login=login)
+    append_event(runtime.paths, runtime.now, cut)
+
+
 def cut_milestone_branch(runtime: Runtime, demand: MilestoneBranchDemand) -> str:
     with hold_lock(locate_worktrees_lock(runtime.paths.lock_directory, demand.project.name)):
         entries = read_ledger(runtime.paths.state_root).entries
         recorded = find_milestone_branch(entries, demand.project.name, demand.milestone.name)
         if recorded is not None:
+            recorded_branch = RecordedMilestoneBranch(
+                project=demand.project, branch=recorded, read_environment=demand.read_environment
+            )
+            if is_milestone_branch_off_the_forge(runtime.run_process, recorded_branch):
+                _cut_again_and_record(runtime, demand, recorded)
             return recorded
         branch = name_milestone_branch(read_project_field(demand.milestone, "TITLE"))
         owner = _find_owner(entries, demand.project.name, branch)
