@@ -7,7 +7,7 @@ budgets and a comparison of two periods.
 brigade ledger                                        # events by name, first and last instant, runs and segments by outcome
 brigade ledger --wave <id>                            # tasks, pull requests, steps per slot and role, pauses
 brigade ledger --project <name> [--since <n>d|<YYYY-MM-DD>]
-brigade ledger budgets [--last N]                     # p50 and p90 steps per procedure, 20 runs by default
+brigade ledger budgets [--last N] [--client <name>]   # p50 and p90 steps per procedure, 20 runs by default, every client by default
 brigade ledger compare --before <YYYY-MM-DD>          # the runs before that day against the runs from it on
 ```
 

@@ -430,7 +430,7 @@ TASK B05
 		+ "over the last N run.finished events of each, by nearest rank; runs with null steps are"
 		+ "left out and counted; a procedure with fewer than five runs is marked as an estimate"
 		IMPL "brigade/ledger/describe_budgets.py::def describe_budgets(reading: LedgerReading,"
-			+ "last: int) -> dict:"
+			+ "last: int, client: str | None) -> dict:"
 		IMPL "brigade/ledger/summarize_steps.py::def summarize_steps("
 		IMPL "tests/unit/ledger/test_summarize_steps.py::def"
 			+ "test_should_give_the_p50_and_p90_by_nearest_rank_and_count_the_runs_without_steps"

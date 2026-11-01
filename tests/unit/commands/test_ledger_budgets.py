@@ -27,7 +27,7 @@ class LedgerBudgetsTest(unittest.TestCase):
 
     def test_should_give_the_steps_of_each_procedure_and_the_lines_skipped(self):
         # Arrange
-        request = argparse.Namespace(last=20)
+        request = argparse.Namespace(last=20, client=None)
 
         # Act
         document = ledger_budgets(request, self.runtime)
@@ -48,6 +48,16 @@ class LedgerBudgetsTest(unittest.TestCase):
                 "skipped": [{"file": str(self.ledger_file), "line": 2, "reason": "not JSON"}],
             },
         )
+
+    def test_should_give_no_procedure_when_no_run_of_the_client_named_finished(self):
+        # Arrange
+        request = argparse.Namespace(last=20, client="vibe")
+
+        # Act
+        document = ledger_budgets(request, self.runtime)
+
+        # Assert
+        self.assertEqual(document["procedures"], {})
 
 
 class LedgerBudgetsRequestTest(unittest.TestCase):
