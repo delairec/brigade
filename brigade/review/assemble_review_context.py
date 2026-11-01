@@ -9,7 +9,6 @@ from brigade.system.ask_pull_request_details import PullRequestDetailsQuery, ask
 from brigade.system.ask_review_threads import ReviewThreadsQuery, ask_review_threads
 from brigade.verify.read_review_mode import APPROVAL_REVIEW, read_review_mode
 
-FORGE_NAME = "github"
 CHANGES_REQUESTED_STATE = "changes_requested"
 
 
@@ -18,6 +17,7 @@ class ReviewDemand:
     opened: TaskPrOpened
     project_path: str
     forge: object
+    forge_name: str
     environment: dict
 
 
@@ -36,7 +36,7 @@ def _read_findings(runtime: Runtime, demand: ReviewDemand, review: str, events: 
     if review == APPROVAL_REVIEW:
         return ask_review_threads(
             demand.forge,
-            FORGE_NAME,
+            demand.forge_name,
             ReviewThreadsQuery(repository=demand.project_path, number=demand.opened.pr, environment=demand.environment),
             runtime,
         )
@@ -47,7 +47,7 @@ def assemble_review_context(runtime: Runtime, demand: ReviewDemand) -> dict:
     opened = demand.opened
     pull_request = ask_pull_request_details(
         demand.forge,
-        FORGE_NAME,
+        demand.forge_name,
         PullRequestDetailsQuery(repository=demand.project_path, number=opened.pr, environment=demand.environment),
         runtime,
     )

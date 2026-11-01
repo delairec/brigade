@@ -36,6 +36,7 @@ class RecordReviewAnswersTestCase(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         self.forge = create_replying_forge()
+        self.forge_name = "github"
         write_ledger(self.root, [CHANGES_REQUESTED, VERDICT_CHANGES])
 
     def record(self, policies: dict, answers: dict) -> dict:
@@ -49,6 +50,7 @@ class RecordReviewAnswersTestCase(unittest.TestCase):
                 project_path="/home/user/tidepool",
                 answers=answers,
                 forge=self.forge,
+                forge_name=self.forge_name,
                 configuration=REMEDIATE_ACCOUNTS,
             ),
         )
@@ -243,3 +245,18 @@ class RecordReviewAnswersUnderTheApprovalModeTest(RecordReviewAnswersTestCase):
 
         # Assert
         self.assertEqual(document["login"], "tidepool-review")
+
+
+class RecordReviewAnswersThroughTheForgeOfTheProjectTest(RecordReviewAnswersTestCase):
+    def test_should_name_the_forge_of_the_project_when_it_answers_a_reply_out_of_shape(self):
+        # Arrange
+        self.forge = create_thread_listing_forge(reply_review_thread=lambda request: {"schema_version": 2})
+        self.forge_name = "gitlab"
+        answers = {"answers": [{"finding": "PRRT_kwDOA1", "answer": "read once since 8885daa"}]}
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            self.record(POLICY_UNDER_APPROVAL, answers)
+
+        # Assert
+        self.assertRegex(str(raised.exception), "^forge plugin gitlab answered reply_review_thread")
