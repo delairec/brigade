@@ -13,7 +13,6 @@ from brigade.verify.read_review_mode import APPROVAL_REVIEW, read_review_mode
 from brigade.verify.validate_verdict import PASSING_VERDICT
 
 DOCUMENT_SCHEMA_VERSION = 1
-FORGE_NAME = "github"
 CLI_KEY = "cli"
 REVIEW_SLOT = "review"
 APPROVING_REVIEW = "approve"
@@ -26,11 +25,12 @@ class VerdictDemand:
     opened: TaskPrOpened
     verdict: dict
     forge: object
+    forge_name: str
     configuration: Configuration
 
 
 def _read_environment(runtime: Runtime, demand: VerdictDemand, key: str) -> dict:
-    account = ForgeAccount(forge=demand.forge, forge_name=FORGE_NAME, key=key)
+    account = ForgeAccount(forge=demand.forge, forge_name=demand.forge_name, key=key)
     return read_account_environment(account, demand.configuration, runtime)
 
 
@@ -56,14 +56,14 @@ def _post_review(runtime: Runtime, demand: VerdictDemand, head: str) -> str | No
         },
         runtime,
     )
-    return ask_forge_account(demand.forge, FORGE_NAME, environment, runtime).login
+    return ask_forge_account(demand.forge, demand.forge_name, environment, runtime).login
 
 
 def record_verdict(runtime: Runtime, demand: VerdictDemand) -> dict:
     opened = demand.opened
     pull_request = ask_pull_request_details(
         demand.forge,
-        FORGE_NAME,
+        demand.forge_name,
         PullRequestDetailsQuery(
             repository=demand.project_path,
             number=opened.pr,
