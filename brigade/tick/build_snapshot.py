@@ -618,13 +618,18 @@ def _follow_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, s
     )
 
 
-def _note_amendment(runtime: Runtime, reading: WaveReading, open_wave: _OpenWave, task: TaskFacts, on_wave: Entity):
+def _read_task_on_its_pull_request(
+    runtime: Runtime, reading: WaveReading, open_wave: _OpenWave, task: TaskFacts
+) -> Entity | None:
     if task.pull_request is None or task.pull_request.state != OPEN_PULL_REQUEST:
-        return task
+        return None
     query = argparse.Namespace(project=open_wave.started.project, ref=task.pull_request.head, worktree=None)
     tree = prepare_project_tree(query, reading.configuration, runtime)
-    on_pull_request = read_entity(runtime.run_process, tree.root, TASK_TYPE, task.name)
-    if on_pull_request == on_wave:
+    return read_entity(runtime.run_process, tree.root, TASK_TYPE, task.name)
+
+
+def _note_amendment(task: TaskFacts, on_pull_request: Entity | None, on_wave: Entity) -> TaskFacts:
+    if on_pull_request is None or on_pull_request == on_wave:
         return task
     return dataclasses.replace(task, amendment=TaskAmendment(on_pull_request=on_pull_request, on_wave=on_wave))
 
@@ -634,7 +639,7 @@ def _read_wave_task(runtime: Runtime, reading: WaveReading, open_wave: _OpenWave
     followed = _follow_task(
         _read_task_facts(runtime, open_wave.tree_root, task), open_wave.followed, open_wave.implemented
     )
-    amended = _note_amendment(runtime, reading, open_wave, followed, task)
+    amended = _note_amendment(followed, _read_task_on_its_pull_request(runtime, reading, open_wave, followed), task)
     return _note_last_run(_note_quota(amended, reading, wave, open_wave.followed.states), reading, wave)
 
 
