@@ -167,6 +167,7 @@ class RunSegmentsOfARunDoneInOneSegmentTest(RunSegmentsTestCase):
                 "task": None,
                 "role_digest": ROLE_DIGEST,
                 "procedure_digest": PROCEDURE_DIGEST,
+                "shipped_budget": 40,
                 "nulls": {
                     "steps_to_first_edit": NO_EDIT_TOOL,
                     "tokens_to_first_edit": NO_EDIT_TOOL,
@@ -237,6 +238,7 @@ class RunSegmentsOfARunHandedOverTest(RunSegmentsTestCase):
                     "task": None,
                     "role_digest": ROLE_DIGEST,
                     "procedure_digest": PROCEDURE_DIGEST,
+                    "shipped_budget": 40,
                     "nulls": {
                         "steps_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
@@ -405,6 +407,10 @@ class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
                     "earlier entry holds\n"
                     "- a handover entry holds what remains, one line per step not done, and the next step\n"
                     "\n"
+                    "# Budget\n"
+                    "\n"
+                    "40 steps, the cap of your role for this segment.\n"
+                    "\n"
                     "# End of segment\n"
                     "\n"
                     "End your final message on one of these lines: brigade-end: done once the work is delivered, "
@@ -451,6 +457,10 @@ class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
                     "- never command output, a diff, the course of the step, a restatement of the brief or a fact an "
                     "earlier entry holds\n"
                     "- a handover entry holds what remains, one line per step not done, and the next step\n"
+                    "\n"
+                    "# Budget\n"
+                    "\n"
+                    "40 steps, the cap of your role for this segment.\n"
                     "\n"
                     "# End of segment\n"
                     "\n"
@@ -535,6 +545,10 @@ class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
                     "earlier entry holds\n"
                     "- a handover entry holds what remains, one line per step not done, and the next step\n"
                     "\n"
+                    "# Budget\n"
+                    "\n"
+                    "40 steps, the cap of your role for this segment.\n"
+                    "\n"
                     "# End of segment\n"
                     "\n"
                     "End your final message on one of these lines: brigade-end: done once the work is delivered, "
@@ -613,6 +627,7 @@ class RunSegmentsCutOnTheClockTest(RunSegmentsTestCase):
                     "task": None,
                     "role_digest": ROLE_DIGEST,
                     "procedure_digest": PROCEDURE_DIGEST,
+                    "shipped_budget": 40,
                     "nulls": {
                         "steps_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
@@ -743,6 +758,7 @@ class RunSegmentsStoppedAtTheSoftLimitTest(RunSegmentsTestCase):
                     "task": None,
                     "role_digest": ROLE_DIGEST,
                     "procedure_digest": PROCEDURE_DIGEST,
+                    "shipped_budget": 40,
                     "nulls": {
                         "steps_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
@@ -880,6 +896,7 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "task": None,
                     "role_digest": ROLE_DIGEST,
                     "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
+                    "shipped_budget": 10,
                     "nulls": {
                         "steps_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
@@ -940,6 +957,7 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "task": None,
                     "role_digest": ROLE_DIGEST,
                     "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
+                    "shipped_budget": 12,
                     "nulls": {
                         "steps_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
@@ -988,6 +1006,7 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "task": None,
                     "role_digest": ROLE_DIGEST,
                     "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
+                    "shipped_budget": 10,
                     "nulls": {
                         "steps_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
@@ -1101,6 +1120,7 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
                     "duration_ms": 0,
                     "role_digest": ROLE_DIGEST,
                     "procedure_digest": PROCEDURE_DIGEST,
+                    "shipped_budget": 40,
                     "nulls": {
                         "steps_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
@@ -1152,6 +1172,7 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
                 "task": None,
                 "role_digest": ROLE_DIGEST,
                 "procedure_digest": PROCEDURE_DIGEST,
+                "shipped_budget": 40,
                 "nulls": {
                     "steps_to_first_edit": NO_EDIT_TOOL,
                     "tokens_to_first_edit": NO_EDIT_TOOL,
@@ -1193,6 +1214,7 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
                 "task": None,
                 "role_digest": ROLE_DIGEST,
                 "procedure_digest": PROCEDURE_DIGEST,
+                "shipped_budget": 40,
                 "nulls": {
                     "steps_to_first_edit": NO_EDIT_TOOL,
                     "tokens_to_first_edit": NO_EDIT_TOOL,
@@ -1313,6 +1335,7 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "task": None,
                     "role_digest": ROLE_DIGEST,
                     "procedure_digest": PROCEDURE_DIGEST,
+                    "shipped_budget": 40,
                     "nulls": {
                         "steps_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
@@ -1357,6 +1380,7 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "task": None,
                     "role_digest": ROLE_DIGEST,
                     "procedure_digest": PROCEDURE_DIGEST,
+                    "shipped_budget": 40,
                     "nulls": {
                         "steps_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
@@ -1401,6 +1425,7 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "task": None,
                     "role_digest": ROLE_DIGEST,
                     "procedure_digest": PROCEDURE_DIGEST,
+                    "shipped_budget": 40,
                     "nulls": {
                         "steps_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
@@ -1494,6 +1519,7 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "task": None,
                     "role_digest": ROLE_DIGEST,
                     "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
+                    "shipped_budget": 10,
                     "nulls": {
                         "steps_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
@@ -1563,6 +1589,7 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                 "task": None,
                 "role_digest": ROLE_DIGEST,
                 "procedure_digest": PROCEDURE_DIGEST,
+                "shipped_budget": 40,
                 "nulls": {
                     "steps_to_first_edit": NO_EDIT_TOOL,
                     "tokens_to_first_edit": NO_EDIT_TOOL,
@@ -1667,6 +1694,8 @@ class RunSegmentsOfARunHandedOverAtEverySegmentTest(RunSegmentsTestCase):
             "- never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier"
             " entry holds\n"
             "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
+            "# Budget\n\n"
+            "40 steps, the cap of your role for this segment.\n\n"
             "# End of segment\n\n"
             "End your final message on one of these lines: brigade-end: done once the work is delivered,"
             " brigade-end: handed_over when a next segment resumes it from the progress file,"
@@ -1803,6 +1832,7 @@ class RunSegmentsOfASegmentEndedWithoutDeclarationTest(RunSegmentsTestCase):
                     "task": None,
                     "role_digest": ROLE_DIGEST,
                     "procedure_digest": PROCEDURE_DIGEST,
+                    "shipped_budget": 40,
                     "nulls": {
                         "steps_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
