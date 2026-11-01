@@ -21,7 +21,7 @@ RUNS_VIEW = "runs"
 CORPUS_VIEW = "corpus"
 DOCUMENT = "document"
 WAVE_LEDGER = "ledger"
-OPTIONAL_LEDGER_SECTIONS = {"wave": ("wave", ("ledger",)), "before": ("comparison", ("ledger", "compare"))}
+OPTIONAL_LEDGER_SECTIONS = {"wave": ("wave", ("ledger",), 1), "range": ("comparison", ("ledger", "compare"), 2)}
 
 
 @dataclass(frozen=True)
@@ -58,9 +58,11 @@ def _route_ledger(query: dict) -> ViewRoute:
         "overview": CommandRoute(arguments=("ledger", "--json")),
         "budgets": CommandRoute(arguments=("ledger", "budgets", "--json")),
     }
-    for parameter, (section, command) in OPTIONAL_LEDGER_SECTIONS.items():
-        for value in query.get(parameter, ())[:1]:
-            routes[section] = CommandRoute(arguments=(*command, f"--{parameter}={value}", "--json"))
+    for parameter, (section, command, count) in OPTIONAL_LEDGER_SECTIONS.items():
+        values = query.get(parameter, ())[:count]
+        if values:
+            options = tuple(f"--{parameter}={value}" for value in values)
+            routes[section] = CommandRoute(arguments=(*command, *options, "--json"))
     return ViewRoute(routes=routes, render=render_ledger_fragment)
 
 

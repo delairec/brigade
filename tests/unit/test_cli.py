@@ -95,7 +95,7 @@ class MainGroupHelpTest(MainTestCase):
             ("adapter", "resume-argv", "answer resume-argv, the request read on stdin"),
             ("adapter", "transcripts", "answer transcripts, the request read on stdin"),
             ("ledger", "budgets", "p50 and p90 steps per procedure over its last runs"),
-            ("ledger", "compare", "the runs before a day against the runs from that day on"),
+            ("ledger", "compare", "two ranges of days against each other, or one range against reference figures"),
             ("project", "add", "register a git repository in the operational corpus"),
             ("project", "list", "list every registered project"),
             ("project", "pause", "pause a project"),
@@ -184,11 +184,11 @@ class MainOfACommandWithDiagnosticsTest(MainTestCase):
 class MainOfAMisusedCommandTest(MainTestCase):
     def test_should_answer_the_usage_exit_code(self):
         # Act
-        exit_code, _, stderr = self.run_main(["ledger", "--since", "2026-10-01"])
+        exit_code, _, stderr = self.run_main(["ledger", "compare", "--range", "2026-10-01..2026-10-02"])
 
         # Assert
         self.assertEqual(exit_code, 2)
-        self.assertEqual(stderr, "brigade ledger: --since needs --project\n")
+        self.assertEqual(stderr, "brigade ledger compare: compare takes two --range, or one --range and --reference\n")
 
 
 class MainOfACommandFailingUnexpectedlyTest(MainTestCase):
@@ -271,11 +271,21 @@ class MainRefusalTest(MainTestCase):
             ),
             (
                 ["ledger", "compare"],
-                r"\nbrigade ledger compare: error: the following arguments are required: --before\n$",
+                r"\nbrigade ledger compare: error: the following arguments are required: --range\n$",
             ),
             (
-                ["ledger", "compare", "--before", "2026-13-01"],
-                r"\nbrigade ledger compare: error: argument --before: '2026-13-01' is not a day YYYY-MM-DD\n$",
+                ["ledger", "compare", "--range", "2026-13-01..2026-13-02"],
+                (
+                    r"\nbrigade ledger compare: error: argument --range: '2026-13-01\.\.2026-13-02' is not a range"
+                    r" START\.\.END of days YYYY-MM-DD\n$"
+                ),
+            ),
+            (
+                ["ledger", "compare", "--range", "2026-10-01..2026-10-02", "--reference", "steps=1"],
+                (
+                    r"\nbrigade ledger compare: error: argument --reference: 'steps' is not a reference measure:"
+                    r" steps_to_first_edit_p50, task_run_steps_p50, oversized_output_steps_per_launch\n$"
+                ),
             ),
         ]
         for arguments, expected_error in rows:

@@ -8,6 +8,8 @@ from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.pr_merged import PrMerged
 from brigade.ledger.read_ledger import LedgerReading
 from brigade.ledger.run_finished import RunFinished
+from brigade.ledger.sum_reported import sum_reported
+from brigade.ledger.sum_token_usage import sum_token_usage
 from brigade.ledger.summarize_measure import summarize_measure
 from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.wave_paused import WavePaused
@@ -84,6 +86,30 @@ def _sum_steps_by_task(events: list) -> dict:
     return steps
 
 
+def _cost_task(task: str, runs: list[RunFinished]) -> dict:
+    segments = [run for run in runs if run.task == task]
+    return {
+        "task": task,
+        "steps": sum_reported(segment.main_steps for segment in segments),
+        "duration_ms": sum_reported(segment.duration_ms for segment in segments),
+        "cost_usd": sum_reported(segment.cost_usd for segment in segments),
+    }
+
+
+def _sum_usage(runs: list[RunFinished]) -> dict | None:
+    usage = sum_token_usage(run.usage for run in runs)
+    return None if usage is None else usage.to_document()
+
+
+def _cost_wave(events: list, tasks: list[str]) -> dict:
+    finished = [event for event in events if isinstance(event, RunFinished)]
+    return {
+        "cost_usd": sum_reported(run.cost_usd for run in finished),
+        "usage": _sum_usage(finished),
+        "by_task": [_cost_task(task, finished) for task in tasks],
+    }
+
+
 def _date_entries(entries: list[LedgerEntry]) -> list[dict]:
     return [
         {"at": format_instant(entry.instant), "event": entry.event.name, "fields": entry.event.to_document()}
@@ -100,13 +126,15 @@ def describe_wave(reading: LedgerReading, wave: str) -> dict:
     last = max(entry.instant for entry in entries)
     runs = group_runs(entries)
     pauses = _pair_pauses(entries)
+    tasks = _list_tasks(events)
     return {
         "view": "wave",
         "wave": wave,
         "first": format_instant(first),
         "last": format_instant(last),
         "wall_time_ms": _measure_ms(first, last),
-        "tasks": _list_tasks(events),
+        "tasks": tasks,
+        **_cost_wave(events, tasks),
         "pull_requests": _list_merged_pull_requests(events),
         "steps": {"by_slot": _summarize_by(runs, "slot"), "by_role": _summarize_by(runs, "role")},
         "pauses": pauses,

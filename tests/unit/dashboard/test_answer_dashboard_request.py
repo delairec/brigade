@@ -556,7 +556,9 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
 class AnswerDashboardRequestOfTheLedgerViewTest(unittest.TestCase):
     def test_should_run_the_commands_of_the_sections_the_query_asks_for(self):
         # Arrange
-        overview = ProcessAnswer(stdout='{"schema_version": 1, "view": "overview", "waves_started": {}}')
+        overview = ProcessAnswer(
+            stdout='{"schema_version": 1, "view": "overview", "first": null, "last": null, "waves_started": {}}'
+        )
         budgets = ProcessAnswer(stdout='{"schema_version": 1, "last": 20, "procedures": {}}')
         refused = ProcessAnswer(exit_code=1, stderr="refused\n")
         rows = [
@@ -565,21 +567,40 @@ class AnswerDashboardRequestOfTheLedgerViewTest(unittest.TestCase):
                 [(PYTHON, ENTRY_POINT, "ledger", "--json"), (PYTHON, ENTRY_POINT, "ledger", "budgets", "--json")],
             ),
             (
-                "/views/ledger?wave=w4&before=2026-10-01",
+                "/views/ledger?wave=w4&range=2026-09-01..2026-09-30&range=2026-10-01..2026-10-31",
                 [
                     (PYTHON, ENTRY_POINT, "ledger", "--json"),
                     (PYTHON, ENTRY_POINT, "ledger", "budgets", "--json"),
                     (PYTHON, ENTRY_POINT, "ledger", "--wave=w4", "--json"),
-                    (PYTHON, ENTRY_POINT, "ledger", "compare", "--before=2026-10-01", "--json"),
+                    (
+                        PYTHON,
+                        ENTRY_POINT,
+                        "ledger",
+                        "compare",
+                        "--range=2026-09-01..2026-09-30",
+                        "--range=2026-10-01..2026-10-31",
+                        "--json",
+                    ),
                 ],
             ),
             (
-                "/views/ledger?wave=w4&wave=w5&before=2026-10-01&before=2026-11-01",
+                (
+                    "/views/ledger?wave=w4&wave=w5&range=2026-09-01..2026-09-30&range=2026-10-01..2026-10-31"
+                    "&range=2026-11-01..2026-11-30"
+                ),
                 [
                     (PYTHON, ENTRY_POINT, "ledger", "--json"),
                     (PYTHON, ENTRY_POINT, "ledger", "budgets", "--json"),
                     (PYTHON, ENTRY_POINT, "ledger", "--wave=w4", "--json"),
-                    (PYTHON, ENTRY_POINT, "ledger", "compare", "--before=2026-10-01", "--json"),
+                    (
+                        PYTHON,
+                        ENTRY_POINT,
+                        "ledger",
+                        "compare",
+                        "--range=2026-09-01..2026-09-30",
+                        "--range=2026-10-01..2026-10-31",
+                        "--json",
+                    ),
                 ],
             ),
         ]
