@@ -12117,7 +12117,8 @@ TASK B172
 TASK B173
 	TITLE "brigade doctor validates the agents of [slots], the CLIENT and ROLESET of each project,"
 		+ "and the path, MAIN and commands of each registered project"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 298
 	TYPE feat
 	MILESTONE @MILESTONE.M6
 	COMPONENT "doctor"
