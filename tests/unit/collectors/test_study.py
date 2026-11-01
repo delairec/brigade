@@ -14,7 +14,7 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
-EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github")
+EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github", resolve_client=None)
 STUDY_FIELDS = (("SLOT", "none"), ("OUTPUT", "entity:FINDING"), ("ANSWER", "FINDING"), ("STATUS", "active"))
 
 

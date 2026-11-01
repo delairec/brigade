@@ -89,7 +89,7 @@ class CheckRunsCollectorTest(unittest.TestCase):
         )
 
     def create_equipment(self, forge: ForgeDouble) -> CollectorEquipment:
-        return CollectorEquipment(configuration=Configuration(), forge=forge, forge_name="github")
+        return CollectorEquipment(configuration=Configuration(), forge=forge, forge_name="github", resolve_client=None)
 
     def test_should_list_the_failing_check_runs_with_their_first_failing_step(self):
         # Arrange

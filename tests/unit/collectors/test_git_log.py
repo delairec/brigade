@@ -7,7 +7,7 @@ from brigade.collectors.git_log import collect
 from brigade.system.parse_configuration import Configuration
 from tests.unit.scripted_processes import ScriptedProcesses
 
-EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github")
+EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github", resolve_client=None)
 LOG = (
     "\x1eabc1\x1fAda\x1f1760000000\x1fadd the parser\n\nREADME.md\nsrc/parse.py\n"
     "\x1edef2\x1fBob\x1f1760003600\x1ffix the parser\n\nsrc/parse.py\n"

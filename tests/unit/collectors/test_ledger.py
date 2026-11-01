@@ -15,7 +15,7 @@ from brigade.ledger.wave_started import WaveStarted
 from brigade.system.parse_configuration import Configuration
 from tests.unit.scripted_processes import ScriptedProcesses
 
-EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github")
+EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github", resolve_client=None)
 ENVIRONMENT = {"BRIGADE_PROJECT_PATH": "/srv/oak", "BRIGADE_SINCE": "2026-10-01", "BRIGADE_PARAMS": "{}"}
 FINISHED_RUN = RunFinished(
     run="20261003T100000Z-aaaaaa",
