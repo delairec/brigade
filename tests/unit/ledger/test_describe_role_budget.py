@@ -95,6 +95,15 @@ class DescribeRoleBudgetTest(unittest.TestCase):
                 ),
             ),
             (
+                "four segments and three restarts",
+                (
+                    _create_segment("r1", 1, 10, 15000, TURN_LIMIT),
+                    _create_segment("r1", 2, 20, 40000, TURN_LIMIT, tokens_to_first_edit=200000),
+                    _create_segment("r1", 3, 30, 75000, TURN_LIMIT, tokens_to_first_edit=200000),
+                    _create_segment("r1", 4, 40, 120000, DONE, tokens_to_first_edit=200000),
+                ),
+            ),
+            (
                 "two restarts",
                 (
                     _create_segment("r1", 1, 10, 15000, TURN_LIMIT),
@@ -112,6 +121,35 @@ class DescribeRoleBudgetTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(budget.applied, 75)
+
+    def test_should_round_the_cap_to_the_nearest_step(self):
+        # Arrange
+        segments = _create_three_restarted_runs(restart_tokens=184000)
+
+        # Act
+        budget = describe_role_budget(segments, SHIPPED_BUDGET, LATEST_RECORDED)
+
+        # Assert
+        self.assertEqual(budget.computed, 61)
+
+    def test_should_leave_a_restart_without_edit_out_of_the_cost_of_a_restart(self):
+        # Arrange
+        segments = (
+            *_create_three_restarted_runs(restart_tokens=200000),
+            _create_segment("r4", 1, 20, 40000, TURN_LIMIT),
+            _create_segment("r4", 2, 30, 75000, DONE),
+        )
+
+        # Act
+        budget = describe_role_budget(segments, SHIPPED_BUDGET, LATEST_RECORDED)
+
+        # Assert
+        self.assertEqual(
+            budget,
+            RoleBudget(
+                shipped=75, computed=63, applied=63, segments=8, restarts=3, growth=100.0, restart_tokens=200000.0
+            ),
+        )
 
     def test_should_measure_only_the_segments_at_the_current_digests(self):
         # Arrange
