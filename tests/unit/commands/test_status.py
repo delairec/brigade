@@ -85,6 +85,28 @@ HOME = {
             "due": False,
         },
         {"name": "triage", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True},
+        {"name": "corpus_lint_elm", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True},
+        {"name": "corpus_fmt_elm", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True},
+        {
+            "name": "stale_branches_elm",
+            "status": "active",
+            "every": "24h",
+            "last_run": None,
+            "outcome": None,
+            "due": True,
+        },
+        {"name": "worktrees_elm", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True},
+        {"name": "corpus_lint_oak", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True},
+        {"name": "corpus_fmt_oak", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True},
+        {
+            "name": "stale_branches_oak",
+            "status": "active",
+            "every": "24h",
+            "last_run": None,
+            "outcome": None,
+            "due": True,
+        },
+        {"name": "worktrees_oak", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True},
     ],
 }
 
@@ -170,7 +192,15 @@ class StatusTextTest(unittest.TestCase):
             " cache_read_input_tokens 40; 1 runs without usage\n"
             "last tick  2026-10-19T08:55:00Z, 2 actions applied in 120 ms\n"
             "study      debt, parked\n"
-            "study      triage, due",
+            "study      triage, due\n"
+            "study      corpus_lint_elm, due\n"
+            "study      corpus_fmt_elm, due\n"
+            "study      stale_branches_elm, due\n"
+            "study      worktrees_elm, due\n"
+            "study      corpus_lint_oak, due\n"
+            "study      corpus_fmt_oak, due\n"
+            "study      stale_branches_oak, due\n"
+            "study      worktrees_oak, due",
         )
 
     def test_should_say_that_no_tick_ran(self):

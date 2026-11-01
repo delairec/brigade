@@ -9,6 +9,7 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.built_in_triage import BUILT_IN_TRIAGE
+from tests.unit.studies.scans_of_oak import SCANS_OF_OAK
 
 
 class ReadStudiesTest(unittest.TestCase):
@@ -21,6 +22,7 @@ class ReadStudiesTest(unittest.TestCase):
 
     def test_should_read_every_study_of_the_operational_corpus_then_the_built_in_triage(self):
         # Arrange
+        self.processes.answer_entities(self.runtime.paths.config_root, "PROJECT", {})
         self.processes.answer_entities(
             self.runtime.paths.config_root,
             "STUDY",
@@ -49,8 +51,21 @@ class ReadStudiesTest(unittest.TestCase):
             ),
         )
 
+    def test_should_list_the_built_in_scans_of_each_registered_project(self):
+        # Arrange
+        no_recorded_study = {}
+        self.processes.answer_entities(self.runtime.paths.config_root, "STUDY", no_recorded_study)
+        self.processes.answer_entities(self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"),)})
+
+        # Act
+        studies = read_studies(self.runtime)
+
+        # Assert
+        self.assertEqual(studies, (BUILT_IN_TRIAGE, *SCANS_OF_OAK))
+
     def test_should_take_the_triage_the_operational_corpus_defines_over_the_built_in_one(self):
         # Arrange
+        self.processes.answer_entities(self.runtime.paths.config_root, "PROJECT", {})
         self.processes.answer_entities(
             self.runtime.paths.config_root,
             "STUDY",

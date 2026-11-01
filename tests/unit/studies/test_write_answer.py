@@ -1,3 +1,5 @@
+import dataclasses
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -95,8 +97,11 @@ class WriteAnswerTest(unittest.TestCase):
         )
 
     def test_should_record_the_answer_of_a_study_answering_into_the_inbox(self):
+        # Arrange
+        judged_study = dataclasses.replace(create_study("inbox"), slot="report")
+
         # Act
-        written = write_answer(self.create_context("inbox"))
+        written = write_answer(self.create_context("inbox", judged_study))
 
         # Assert
         self.assertEqual(
@@ -108,6 +113,21 @@ class WriteAnswerTest(unittest.TestCase):
                 "fingerprint": "study:trees:76c781bcf86d",
             },
         )
+
+    def test_should_record_the_items_of_a_scan_answering_into_the_inbox(self):
+        # Arrange
+        document = self.root / "collected.json"
+        document.write_text(json.dumps({"items": [{"fingerprint": "spike"}]}), encoding="utf-8")
+        (self.run_directory / "steps" / "collect.json").write_text(
+            json.dumps({"collected": [{"collector": "stale-branches", "summary": {}, "document": str(document)}]}),
+            encoding="utf-8",
+        )
+
+        # Act
+        written = write_answer(self.create_context("inbox"))
+
+        # Assert
+        self.assertEqual(written, {"output": "inbox", "answer": str(self.run_directory / "answer.awawa"), "signals": 1})
 
     def test_should_answer_where_the_answer_went(self):
         # Arrange

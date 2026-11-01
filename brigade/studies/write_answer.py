@@ -7,12 +7,14 @@ from brigade.studies.open_answer_issue import open_answer_issue
 from brigade.studies.present_answer import present_answer
 from brigade.studies.read_collected import read_collected
 from brigade.studies.record_answer_signal import record_answer_signal
+from brigade.studies.record_scan_signals import record_scan_signals
 from brigade.studies.render_answer import render_answer
 from brigade.studies.study_run_context import ANSWER_FILE, StudyRunContext
 from brigade.studies.write_answer_to_file import FILE_OUTPUT_PREFIX, write_answer_to_file
 from brigade.system.write_text_atomically import write_text_atomically
 
 ENTITY_OUTPUT_PREFIX = "entity:"
+SCAN = ("none", "inbox")
 PUBLISHERS_BY_OUTPUT = {"issue": open_answer_issue, "inbox": record_answer_signal}
 
 
@@ -56,6 +58,8 @@ def write_answer(context: StudyRunContext) -> dict:
     output = context.study.output
     answer = _read_answer(context)
     written = {"output": output, "answer": str(context.run_directory / ANSWER_FILE)}
+    if (context.study.slot, output) == SCAN:
+        return {**written, **record_scan_signals(context)}
     if output.startswith(ENTITY_OUTPUT_PREFIX):
         _write_entity(context, answer)
         return {**written, **choose_answer_form(context.study).publish(context)}

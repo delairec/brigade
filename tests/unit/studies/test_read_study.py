@@ -10,6 +10,7 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.built_in_triage import BUILT_IN_TRIAGE
+from tests.unit.studies.scans_of_oak import SCANS_OF_OAK
 
 
 class ReadStudyTest(unittest.TestCase):
@@ -50,6 +51,7 @@ class ReadStudyTest(unittest.TestCase):
 
     def test_should_refuse_a_study_the_operational_corpus_does_not_define(self):
         # Arrange
+        self.processes.answer_entities(self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"),)})
         self.processes.answer(
             ("awawa", "show", "@STUDY.ash", "--json", str(self.runtime.paths.config_root)),
             exit_code=1,
@@ -65,6 +67,7 @@ class ReadStudyTest(unittest.TestCase):
 
     def test_should_read_the_built_in_triage_the_operational_corpus_does_not_define(self):
         # Arrange
+        self.processes.answer_entities(self.runtime.paths.config_root, "PROJECT", {})
         self.processes.answer(
             ("awawa", "show", "@STUDY.triage", "--json", str(self.runtime.paths.config_root)),
             exit_code=1,
@@ -101,6 +104,49 @@ class ReadStudyTest(unittest.TestCase):
                 every=None,
                 output="entity:PATTERN",
                 answer_type="PATTERN",
+                status="paused",
+            ),
+        )
+
+    def test_should_read_the_built_in_scan_of_a_registered_project_the_operational_corpus_does_not_define(self):
+        # Arrange
+        self.processes.answer_entities(self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"),)})
+        self.processes.answer(
+            ("awawa", "show", "@STUDY.corpus_lint_oak", "--json", str(self.runtime.paths.config_root)),
+            exit_code=1,
+            stderr="awawa show: @STUDY.corpus_lint_oak is not defined in the workspace\n",
+        )
+
+        # Act
+        study = read_study(self.runtime, "corpus_lint_oak")
+
+        # Assert
+        self.assertEqual(study, SCANS_OF_OAK[0])
+
+    def test_should_take_the_scan_the_operational_corpus_defines_over_the_built_in_one(self):
+        # Arrange
+        self.processes.answer_entity(
+            self.runtime.paths.config_root,
+            "STUDY",
+            "corpus_lint_oak",
+            (("SLOT", "none"), ("OUTPUT", "inbox"), ("ANSWER", "ANSWER"), ("STATUS", "paused")),
+        )
+
+        # Act
+        study = read_study(self.runtime, "corpus_lint_oak")
+
+        # Assert
+        self.assertEqual(
+            study,
+            Study(
+                name="corpus_lint_oak",
+                project=None,
+                question=None,
+                collectors=(),
+                slot="none",
+                every=None,
+                output="inbox",
+                answer_type="ANSWER",
                 status="paused",
             ),
         )

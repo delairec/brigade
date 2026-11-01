@@ -63,7 +63,23 @@ Every output but `entity:` hands a person the Markdown rendered from the answer 
 > **Watch out:** a failed step parks the study, and a parked study is never due: its next `study run` resumes that run
 > at its first undone step.
 
-## Details and edge cases
+## Built-in scans
+
+A scan is a study with `SLOT none` whose output is `inbox`: it runs its collectors, no judging run, and records one
+signal of kind `scan` per item they print, so that the same fact found again raises the count of one signal and a
+dismissal holds. An item without a `fingerprint` key parks the run at its output step, naming the collector.
+
+For each registered project `P`, brigade ships four scans, due once a day and listed by `study list`; a `STUDY` of the
+same name in the operational corpus replaces the built-in one, `STATUS paused` included. They report and remove
+nothing.
+
+| Scan | Collector | One item per | Fingerprint of the item |
+|---|---|---|---|
+| `corpus_lint_P` | `corpus-lint` | diagnostic of `awawa lint --strict` on the corpus at `PROJECT.MAIN`, none without `CORPUS` | `<rule>:<file>:<TYPE.Name or none>` |
+| `corpus_fmt_P` | `corpus-fmt` | file `awawa fmt --check` would rewrite at `PROJECT.MAIN` | the file |
+| `stale_branches_P` | `stale-branches` | local branch, `MAIN` aside, heading at least one pull request and no open one | the branch |
+| `worktrees_P` | `stale-worktrees` | linked worktree on a stale branch, on a branch that no longer exists, or detached with no live run in it | the path |
+
 
 <details><summary>Steps, ledger events and resumption</summary>
 
