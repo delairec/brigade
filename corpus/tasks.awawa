@@ -3000,7 +3000,8 @@ TASK B32
 TASK B33
 	TITLE "Gardening scans: corpus_lint, corpus_fmt, stale_branches and worktrees record one inbox"
 		+ "signal per fact found"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 296
 	TYPE feat
 	MILESTONE @MILESTONE.M4
 	COMPONENT "studies"
