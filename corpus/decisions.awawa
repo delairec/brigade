@@ -4987,3 +4987,47 @@ DECISION TheDocumentationIsWrittenInWikiAndPublishedToTheGitHubWikiOnEachPushToM
 		+ "branche.\""
 	SOURCE "the user's rulings of 2026-11-01 on the three questions of the session: \"wiki/ +"
 		+ "publication auto\", \"Court + lien wiki\", \"README seulement\""
+
+DECISION TheMinerReadsTheSessionsOfBrigadeRunsFromTheLedger
+	TITLE "the miner reads the sessions the run.finished records of the ledger name, through the"
+		+ "transcripts operation of their client adapter, windowed by BRIGADE_SINCE"
+	STATUS active
+	DESC "a session is read when a run.finished names it and finished on or after BRIGADE_SINCE; a"
+		+ "session no run.finished names is never read"
+	DESC "BRIGADE_SINCE is the one window of the collection, as"
+		+ "@DECISION.CollectWithoutSinceCollectsFromTheBeginning sets"
+		REF @DECISION.CollectWithoutSinceCollectsFromTheBeginning
+	DESC "binds @TASK.B35"
+		REF @TASK.B35
+	REJECTED "every session of the client, the interactive ones included, by a list-sessions"
+		+ "operation of the adapter: one operation and one state more, and an interactive session"
+		+ "joins no run and no cost"
+	REJECTED "a watermark kept in the state directory: a second window convention beside"
+		+ "BRIGADE_SINCE, and a state the cache of brigade collect does not key"
+	REJECTED "brigade's run logs as a fallback: the journal of a run holds no message, and the"
+		+ "stdout of a segment is raw text no command returns whole"
+	RATIONALE "the transcripts operation reads one session by id and no operation lists the"
+		+ "sessions of a client; the ledger already names every session brigade launched, with its"
+		+ "run and its cost"
+	SOURCE "the user's ruling of 2026-11-01 in the refinement of M5: \"A. Runs de brigade"
+		+ "(Recommandé)\""
+
+DECISION APatternAnswerIsCheckedAgainstTheFingerprintsTheCollectorsOfItsStudyCollected
+	TITLE "an answer of type PATTERN is refused when an EVIDENCE opens on no fingerprint a"
+		+ "collector of the answering study collected"
+	STATUS active
+	DESC "the check reads the fingerprints of the collectors of the study that answers: the signals"
+		+ "of the families of inbox-families, the findings of transcript-findings"
+	DESC "it amends DESC 3 of"
+		+ "@DECISION.TheTriageGroupsSignalsByKeyAndAPatternCitesASignalByOpeningAnEvidenceOnItsFingerprint,"
+		+ "which names inbox-families alone; triage checks as before"
+		REF @DECISION.TheTriageGroupsSignalsByKeyAndAPatternCitesASignalByOpeningAnEvidenceOnItsFingerprint
+	DESC "binds @TASK.B35"
+		REF @TASK.B35
+	REJECTED "the findings recorded as inbox signals and grouped by the built-in triage:"
+		+ "mine-transcripts would duplicate triage, and the inbox would carry one line per"
+		+ "detection of every session"
+	RATIONALE "a mined pattern cites findings, not signals; reading the fingerprints from the"
+		+ "collectors of the study keeps one check for every study answering PATTERN"
+	SOURCE "the user's ruling of 2026-11-01 in the refinement of M5: \"From the study's collectors"
+		+ "(Recommended)\""

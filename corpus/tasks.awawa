@@ -3078,37 +3078,92 @@ TASK B34
 		+ "per scan, the inbox criterion dropped"
 
 TASK B35
-	TITLE "Collectors transcripts and transcript-findings, with the scrubber"
-	STATUS draft
+	TITLE "The miner: collectors transcripts and transcript-findings, scrubbed, judged each week by"
+		+ "the built-in study mine-transcripts"
+	STATUS todo
+	TYPE feat
 	MILESTONE @MILESTONE.M5
 	COMPONENT "studies"
 	ROLE ada
-	SPEC "transcripts reads sessions since a watermark through the client adapter's transcripts"
-		+ "operation, else brigade's own run logs"
-	SPEC "transcript-findings detects corrections, refusals, repeated commands and oversized-output"
-		+ "re-reads, each with its session and line"
-	SPEC "the scrubber runs inside both collectors before anything is written: the PRIVATE patterns"
-		+ "of every registered project and brigade's built-ins, e-mail addresses and home paths; a"
-		+ "set computed at run time is never stored"
-	SPEC "a fixture test proves no declared identifier survives"
-	SPEC "transcripts and transcript-findings are built-in collectors under the contract of B47,"
-		+ "listed by brigade collectors list and cached by brigade collect"
-	SPEC "a finding joins its session to the run.finished of the run that held it, so that the cost"
-		+ "of a repeated correction can be summed"
+	SPEC "the built-in collector transcripts prints, for every run.finished of the ledger naming a"
+		+ "session and finished on or after BRIGADE_SINCE, the messages of that session read"
+		+ "through the transcripts operation of the client adapter the run.finished names, each"
+		+ "message with its client, session, run, project, task and position in the session; a"
+		+ "session whose transcript cannot be read is listed with its run and the reason, and the"
+		+ "collection goes on"
+	SPEC "the transcripts answer marks a tool result the client refused by a permission, and a tool"
+		+ "output the client truncated with the location where it kept the whole output, each"
+		+ "adapter answering from its own format; an adapter that cannot tell answers neither mark"
+	SPEC "the built-in collector transcript-findings prints one finding per detection in the"
+		+ "sessions transcripts reads, with its detector, client, session, run, position and"
+		+ "fingerprint <detector>:<client>:<session>:<position>: a correction is a user message"
+		+ "after the first of its session; a refusal is a tool result marked refused; a repeated"
+		+ "command is the same command run three times or more in one session, found once at the"
+		+ "position of its third run; an oversized re-read is a tool output marked truncated"
+		+ "followed by a tool call of the same session whose input names the location of the mark"
+	SPEC "the scrubber runs inside both collectors before anything is printed or cached: it"
+		+ "replaces each match of the PRIVATE patterns of every registered project and of brigade's"
+		+ "built-ins, e-mail addresses and home paths, by a marker naming the kind of the pattern"
+		+ "and never by a value derived from the match, a match of a PUBLIC pattern of the same"
+		+ "project excepted; a set computed at run time is never stored"
+	SPEC "a fixture test proves that no identifier matching a declared PRIVATE pattern or a"
+		+ "built-in survives in the output of either collector"
+	SPEC "transcripts and transcript-findings are listed by brigade collectors list and declare"
+		+ "cache false"
+	SPEC "a finding carries the cost_usd and the usage of the run.finished of the run that held its"
+		+ "session, so that the cost of a repeated detection can be summed"
+	SPEC "the built-in study mine-transcripts, of the code beside triage, has COLLECTORS"
+		+ "transcript-findings, SLOT triage, OUTPUT entity:PATTERN and EVERY mon@09:00; a STUDY of"
+		+ "the operational corpus named mine-transcripts replaces it"
+	SPEC "an answer of mine-transcripts is refused when a PATTERN holds an EVIDENCE opening on no"
+		+ "fingerprint transcript-findings collected"
+	SPEC "a test proves that a PATTERN of mine-transcripts with ACTION constraint is ratified by"
+		+ "brigade inbox ratify --kind and delivered at wave.closed like a pattern of triage"
 	AFTER @TASK.B22
+	AFTER @TASK.B25
+	RATIONALE "the miner learns from the errors of brigade's own agents: the sessions are those the"
+		+ "ledger names, so a finding joins its run and its cost with no new state, and"
+		+ "BRIGADE_SINCE windows the reading as for every collector; the transcripts operation"
+		+ "reads one session by id and no operation lists the sessions of a client, as"
+		+ "@DECISION.TheMinerReadsTheSessionsOfBrigadeRunsFromTheLedger rules"
+		REF @DECISION.TheMinerReadsTheSessionsOfBrigadeRunsFromTheLedger
+		REF @DECISION.CollectWithoutSinceCollectsFromTheBeginning
+	RATIONALE "the scrubber is the one @DECISION.MinedConstraintsAreDeliveredAsWaves sets; the"
+		+ "PRIVATE and PUBLIC patterns and the built-ins are those the privacy check of the"
+		+ "verification already reads"
+		REF @DECISION.MinedConstraintsAreDeliveredAsWaves
+	RATIONALE "the refusal and truncation marks are answered by the adapter, so that no detector"
+		+ "names a client, as @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters requires"
+		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
+	RATIONALE "mine-transcripts is the built-in miner"
+		+ "@DECISION.AStudyIsDeterministicCollectorsThenOneJudgingRun names, shaped as the built-in"
+		+ "triage of @TASK.B25, and its patterns take the ratification path of"
+		+ "@DECISION.RatificationNamesItsEntitiesAfterThePatternAndTheClosedWaveDeliversThePattern"
+		REF @DECISION.AStudyIsDeterministicCollectorsThenOneJudgingRun
+		REF @TASK.B25
+		REF @DECISION.RatificationNamesItsEntitiesAfterThePatternAndTheClosedWaveDeliversThePattern
+	RATIONALE "the cache of both collectors and the check of the evidence of a mined pattern are"
+		+ "ruled by @DECISION.ACollectorDeclaresInItsDocumentWhetherItIsCached and"
+		+ "@DECISION.APatternAnswerIsCheckedAgainstTheFingerprintsTheCollectorsOfItsStudyCollected"
+		REF @DECISION.ACollectorDeclaresInItsDocumentWhetherItIsCached
+		REF @DECISION.APatternAnswerIsCheckedAgainstTheFingerprintsTheCollectorsOfItsStudyCollected
+	RATIONALE "@TASK.B36 is merged into this task: the study judges the shape the detectors print,"
+		+ "so both ship together"
+		REF @TASK.B36
 	SOURCE "use-case map of 2026-10-16, finding C20"
+	SOURCE "the user's rulings of 2026-11-01 in the refinement of M5: \"Merge into one\", \"A. Runs"
+		+ "de brigade (Recommandé)\", \"From the study's collectors (Recommended)\", \"Définitions"
+		+ "proposées (Recommandé)\""
 
 TASK B36
 	TITLE "Built-in study mine-transcripts"
-	STATUS draft
+	STATUS archived
+	DESC "archived on 2026-11-01: merged into @TASK.B35 by the user's ruling in the refinement of"
+		+ "M5, the study shipping with the detectors whose shape it judges"
+		REF @TASK.B35
 	MILESTONE @MILESTONE.M5
 	COMPONENT "studies"
 	ROLE ada
-	SPEC "SLOT triage, OUTPUT entity:PATTERN, scheduled weekly by default; the triage slot groups"
-		+ "the findings into patterns and constraint candidates"
-	SPEC "ratified constraints follow the ratification path"
-	AFTER @TASK.B35
-	AFTER @TASK.B25
 
 TASK B37
 	TITLE "Budgets from the ledger"
@@ -3144,7 +3199,7 @@ TASK B39
 	MILESTONE @MILESTONE.M6
 	COMPONENT "docs"
 	ROLE bilal
-	SPEC "README, brigade help and the handbook refreshed"
+	SPEC "the wiki pages and brigade help refreshed"
 	SPEC "a wave of about ten tasks delivered on a project of the user with its report"
 	SPEC "the ledger comparison against the baseline of 26/09 to 03/10"
 	AFTER @TASK.B37
@@ -3437,9 +3492,10 @@ TASK B44
 		REF @TASK.B145
 	RATIONALE "the second client is vibe, 2.26.1 on the reference machine, where codex, opencode"
 		+ "and gemini, the candidates read on 2026-10-05, are not installed; its adapter is"
-		+ "@TASK.B108, whose SPEC 1 adds the row of vibe to the README table through the generator,"
-		+ "so this task adds none; @TASK.B21 produces no rehearsal report, so this task writes its"
-		+ "own; in @MILESTONE.M7 with B108, the client of the Portability milestone"
+		+ "@TASK.B108, whose SPEC 1 adds the row of vibe to the table of the wiki page"
+		+ "Client-adapters through the generator, so this task adds none; @TASK.B21 produces no"
+		+ "rehearsal report, so this task writes its own; in @MILESTONE.M7 with B108, the client of"
+		+ "the Portability milestone"
 		REF @TASK.B108
 		REF @TASK.B21
 		REF @MILESTONE.M7
@@ -4066,7 +4122,7 @@ TASK B52
 		+ "template, an output file committed on the pull request's branch"
 	SPEC "brigade order new pr-usage-report pr=<n> runs on the sandbox repository to the committed"
 		+ "file; the ledger shows every collector at 0 AI steps and the judge run's steps"
-	SPEC "the README documents how to write a recipe from this example"
+	SPEC "a wiki page, named in wiki/Home.md, documents how to write a recipe from this example"
 	AFTER @TASK.B51
 
 TASK B53
@@ -7125,11 +7181,12 @@ TASK B93
 	MILESTONE @MILESTONE.ADD0
 	COMPONENT "install"
 	ROLE ada
-	SPEC "one command of brigade, or the install procedure of the README, brings the installed"
-		+ "brigade to the head of its upstream without an edit by hand; brigade doctor, run after"
-		+ "it, prints no warning of a stale checkout"
-	SPEC "the README names the install it recommends, the zipapp or the clone, both of which"
-		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites allows, and the way it updates"
+	SPEC "one command of brigade, or the install procedure of the wiki page Install, brings the"
+		+ "installed brigade to the head of its upstream without an edit by hand; brigade doctor,"
+		+ "run after it, prints no warning of a stale checkout"
+	SPEC "the wiki page Install names the install it recommends, the zipapp or the clone, both of"
+		+ "which @DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites allows, and the way it"
+		+ "updates"
 	RATIONALE "follows item 4, @TASK.B87: ~/.local/bin/brigade linked to a clone updates by a git"
 		+ "pull in that clone, done by hand and forgotten on 2026-10-07;"
 		+ "@DECISION.BrigadeInstallsFromOneFileWithFourPrerequisites allows the zipapp or the clone"
@@ -8287,8 +8344,7 @@ TASK B107
 		+ "naming the file; tests/cli gains at most one flow, brigade run launching a role in the"
 		+ "awawa form through the fake client, as DESC 4 of the decision"
 		+ "ThePortableContractIsTheCommandLineAndNeutralFiles sets"
-	SPEC "the README's Roles and Runs sections state the two forms, the extension and the schema of"
-		+ "each"
+	SPEC "the wiki pages Roles and Runs state the two forms, the extension and the schema of each"
 	RATIONALE "comfort, no quota gain: the body of a role and of a procedure is passed whole to the"
 		+ "client in either form, brigade/runs/run_segment.py:65-66 for the role, so the awawa form"
 		+ "saves no token; in @MILESTONE.ADD0 because the Markdown forms already work, @TASK.B43"
@@ -8336,10 +8392,10 @@ TASK B108
 		+ "launch-argv, parse-result and resume-argv in the shapes of"
 		+ "brigade/system/client_shapes.py; its probe names vibe as the client, vibe --version as"
 		+ "version_argv, the operations probe, launch, result and resume, and the features"
-		+ "step_count and tool_grants; brigade adapter matrix and the README table gain the row"
-		+ "vibe through the generator, transcripts and reset hour on their fallbacks, in the rows"
-		+ "of tests/cli/test_adapter_matrix.py and the table"
-		+ "tests/guards/test_readme_adapter_matrix.py checks"
+		+ "step_count and tool_grants; brigade adapter matrix and the table of the wiki page"
+		+ "Client-adapters gain the row vibe through the generator, transcripts and reset hour on"
+		+ "their fallbacks, in the rows of tests/cli/test_adapter_matrix.py and the table"
+		+ "tests/guards/test_wiki_adapter_matrix.py checks"
 	SPEC "launch-argv answers vibe -p --output json --trust --auto-approve --max-turns <n> and one"
 		+ "--enabled-tools per tool, <n> the budget plus a quarter rounded up as the Claude Code"
 		+ "adapter caps its turns; the tools are those of the role's capabilities, read_file and"
@@ -8378,8 +8434,8 @@ TASK B108
 		+ "probe, the launch argv, environment and stdin, the resume argv, a done result, a result"
 		+ "cut by --max-turns, an error on stderr, an output that is no array and the usage read"
 		+ "from a fixture of the session store captured from vibe 2.26.0"
-	SPEC "the README's Client adapters section names vibe beside claude-code, with the model"
-		+ "binding by the rows of [reasoning] and the table [clients.vibe]"
+	SPEC "the wiki page Client-adapters names vibe beside claude-code, with the model binding by"
+		+ "the rows of [reasoning] and the table [clients.vibe]"
 	AFTER @TASK.B84
 	RATIONALE "observed on 2026-10-08 on vibe 2.26.0, ~/.local/bin/vibe, package at"
 		+ "~/.local/share/uv/tools/mistral-vibe/lib/python3.13/site-packages/vibe, each fact by a"
@@ -8426,7 +8482,7 @@ TASK B108
 		+ "@DECISION.ClientAdaptersAnswerEveryOperationThroughOneFunction set; it reads the home"
 		+ "and the reasoning table from the request the core completes, binds the models of its"
 		+ "probe as @DECISION.TheProbeAnswersTheModelEachReasoningLevelBinds sets, and gains its"
-		+ "README row through the generator of"
+		+ "row on the wiki page Client-adapters through the generator of"
 		+ "@DECISION.TheSupportedClientsTableIsGeneratedFromTheProbes; the capability of"
 		+ "@DECISION.BrigadeNamesNoAiClientOutsideItsAdapters it lacks, transcripts, runs on the"
 		+ "recorded fallback until the refinement settles the journal"
@@ -8444,8 +8500,8 @@ TASK B108
 		REF @TASK.B102
 	RATIONALE "@TASK.B44 asked in its SPEC 1 for an adapter of the client the user names before its"
 		+ "ratification; vibe is that client and this task its adapter; refined on 2026-10-13 into"
-		+ "@MILESTONE.M7, B44 keeps the rehearsal on vibe, the README row is SPEC 1 of this task,"
-		+ "and the client per slot is @TASK.B145"
+		+ "@MILESTONE.M7, B44 keeps the rehearsal on vibe, the row of the adapter table is SPEC 1"
+		+ "of this task, and the client per slot is @TASK.B145"
 		REF @TASK.B44
 		REF @MILESTONE.M7
 		REF @TASK.B145
@@ -10979,7 +11035,7 @@ TASK B162
 
 TASK B163
 	TITLE "Audit and remediation: no command of brigade in a shell line, the project's commands as"
-		+ "argv steps, one sense per word, one command per thing, a README glossary with its guard,"
+		+ "argv steps, one sense per word, one command per thing, a wiki glossary with its guard,"
 		+ "the dead fields removed"
 	STATUS draft
 	MILESTONE @MILESTONE.M8
@@ -10995,16 +11051,16 @@ TASK B163
 		+ "@TASK.B51; no string field of brigade/corpus/data/schema.awawa.tpl holds a command, and"
 		+ "brigade project add writes none"
 	SPEC "no word of brigade carries two senses: for each word of the inventory in RATIONALE, one"
-		+ "sense is kept and every other use is renamed in the code, the corpus, the README and the"
+		+ "sense is kept and every other use is renamed in the code, the corpus, the wiki and the"
 		+ "Blueprint, or the coexistence is ruled by a DECISION naming both senses"
 	SPEC "no two commands of brigade do the same thing: the commands of one slot form one command"
 		+ "group, and a command whose work another command does is removed or merged, verify and"
 		+ "review among them"
-	SPEC "README.md carries a glossary table between two marker comments, one row per word, the"
-		+ "columns word, kind (command, argument, entity, field, concept), what it does and"
-		+ "milestone, each row citing the task that delivers it"
+	SPEC "the wiki page Glossary carries a glossary table between two marker comments, one row per"
+		+ "word, the columns word, kind (command, argument, entity, field, concept), what it does"
+		+ "and milestone, each row citing the task that delivers it"
 	SPEC "a guard of tests/guards checks the glossary against the corpus, as"
-		+ "tests/guards/test_readme_adapter_matrix.py checks the adapter matrix: it fails on a row"
+		+ "tests/guards/test_wiki_adapter_matrix.py checks the adapter matrix: it fails on a row"
 		+ "citing a task the corpus lacks, on a milestone that is not that task's MILESTONE, on a"
 		+ "command of brigade or an entity or field of the operational schema without a row, and on"
 		+ "a row naming a word the code and the corpus do not carry"
@@ -11075,7 +11131,7 @@ TASK B163
 	SOURCE "the user's « ok » of 2026-10-16 on the session's recommendation: the M8 task audits no"
 		+ "command in a string and moves the project's commands to exec steps, settles the"
 		+ "vocabulary overlaps, one command group per slot among them, removes dead fields, adds"
-		+ "the README glossary table with a guard, and plans the remediation of anything left"
+		+ "the wiki glossary table with a guard, and plans the remediation of anything left"
 
 TASK B164
 	TITLE "brigade run takes --wave and --task, run.json and every run.finished carry them, and"
