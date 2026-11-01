@@ -450,7 +450,12 @@ def _decide_merge(
     if task.pull_request.base != wave.branch:
         return ParkTask(wave=wave.wave, task=task.name, reason=OTHER_BASE_REASON, blockers=())
     return MergePullRequest(
-        project=wave.project, wave=wave.wave, task=task.name, pr=task.pull_request.number, method=project.merge
+        project=wave.project,
+        wave=wave.wave,
+        task=task.name,
+        pr=task.pull_request.number,
+        method=project.merge,
+        head=task.pull_request.head,
     )
 
 
@@ -537,6 +542,7 @@ def _plan_wave_merges(snapshot: Snapshot) -> tuple:
             wave=wave.wave,
             pr=wave.integration_pull_request.number,
             method=projects[wave.project].merge,
+            head=wave.integration_pull_request.head,
         )
         for wave in snapshot.waves
         if _is_wave_pull_request_ready(wave, projects[wave.project], snapshot.now)
