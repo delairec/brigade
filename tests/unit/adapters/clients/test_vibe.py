@@ -7,7 +7,7 @@ from brigade.adapters.clients.vibe import answer
 from brigade.errors import BrigadeError
 
 FIXTURES = Path(__file__).parent / "fixtures" / "vibe"
-DONE_SESSION = "07c22c12-2a67-4c18-3dfa-fb6379155664"
+DONE_SESSION = "371f67df-093f-dab2-01fa-38834689f662"
 CUT_SESSION = "50627de2-dcf5-d0d0-0d79-a612bb6f5ae8"
 
 
@@ -255,9 +255,10 @@ class VibeLaunchTest(unittest.TestCase):
                 ],
             ),
         ]
+        no_reasoning_row = {}
         for capabilities, expected_argv in rows:
             with self.subTest(capabilities=capabilities):
-                request = create_launch_request(self.package_file, capabilities, {})
+                request = create_launch_request(self.package_file, capabilities, no_reasoning_row)
 
                 # Act
                 launch = answer("launch-argv", request)
@@ -282,9 +283,11 @@ class VibeResultTest(VibeHomeTestCase):
         # Arrange
         self.install_captured_session(DONE_SESSION)
         stdout = (FIXTURES / "streams" / "done.jsonl").read_text(encoding="utf-8")
+        no_stderr = ""
+        success_exit_code = 0
 
         # Act
-        result = parse_vibe_output(stdout, "", 0, self.home.name)
+        result = parse_vibe_output(stdout, no_stderr, success_exit_code, self.home.name)
 
         # Assert
         self.assertEqual(
@@ -294,13 +297,13 @@ class VibeResultTest(VibeHomeTestCase):
                 "outcome": "done",
                 "steps": 1,
                 "usage": {
-                    "input_tokens": 21086,
-                    "output_tokens": 212,
+                    "input_tokens": 8181,
+                    "output_tokens": 180,
                     "cache_creation_input_tokens": 0,
-                    "cache_read_input_tokens": 11520,
+                    "cache_read_input_tokens": 13440,
                 },
-                "session_id": "07c22c12-2a67-4c18-3dfa-fb6379155664",
-                "duration_ms": 3667,
+                "session_id": "371f67df-093f-dab2-01fa-38834689f662",
+                "duration_ms": 3311,
                 "cost_usd": None,
                 "error_class": None,
                 "reset": None,
@@ -327,13 +330,15 @@ class VibeResultTest(VibeHomeTestCase):
                 '{"snapshot":{"session":{"tokenUsage":null}}}',
             ),
         ]
+        no_stderr = ""
+        success_exit_code = 0
         for store, current, projection_state in rows:
             with self.subTest(store=store):
                 (session / "CURRENT").write_text(current, encoding="utf-8")
                 (generation / "projection-state.json").write_text(projection_state, encoding="utf-8")
 
                 # Act
-                result = parse_vibe_output(stdout, "", 0, self.home.name)
+                result = parse_vibe_output(stdout, no_stderr, success_exit_code, self.home.name)
 
                 # Assert
                 self.assertIsNone(result["usage"])
@@ -342,9 +347,10 @@ class VibeResultTest(VibeHomeTestCase):
         # Arrange
         stdout = (FIXTURES / "streams" / "cut.jsonl").read_text(encoding="utf-8")
         stderr = "The configured conversation limit was reached\n"
+        turn_cap_exit_code = 1
 
         # Act
-        result = parse_vibe_output(stdout, stderr, 1, self.home.name)
+        result = parse_vibe_output(stdout, stderr, turn_cap_exit_code, self.home.name)
 
         # Assert
         self.assertEqual(
@@ -398,10 +404,11 @@ class VibeResultTest(VibeHomeTestCase):
     def test_should_report_an_output_whose_line_is_no_json_object(self):
         # Arrange
         rows = ["Error: session/start\n", '["message"]\n']
+        success_exit_code = 0
         for stdout in rows:
             with self.subTest(stdout=stdout):
                 # Act
-                result = parse_vibe_output(stdout, "Error: session/start\n", 0, self.home.name)
+                result = parse_vibe_output(stdout, "Error: session/start\n", success_exit_code, self.home.name)
 
                 # Assert
                 self.assertEqual(result["error_class"], "unreadable_output")
@@ -409,9 +416,11 @@ class VibeResultTest(VibeHomeTestCase):
     def test_should_report_an_output_that_holds_no_entry(self):
         # Arrange
         empty_stdout = ""
+        no_stderr = ""
+        success_exit_code = 0
 
         # Act
-        result = parse_vibe_output(empty_stdout, "", 0, self.home.name)
+        result = parse_vibe_output(empty_stdout, no_stderr, success_exit_code, self.home.name)
 
         # Assert
         self.assertEqual(result["error_class"], "unreadable_output")
@@ -448,10 +457,12 @@ class VibeEndDeclarationTest(VibeHomeTestCase):
                 None,
             ),
         ]
+        no_stderr = ""
+        success_exit_code = 0
         for stdout, expected_outcome, expected_message in rows:
             with self.subTest(expected_outcome=expected_outcome):
                 # Act
-                result = parse_vibe_output(stdout, "", 0, self.home.name)
+                result = parse_vibe_output(stdout, no_stderr, success_exit_code, self.home.name)
 
                 # Assert
                 self.assertEqual(result["outcome"], expected_outcome)
@@ -464,9 +475,11 @@ class VibeEndDeclarationTest(VibeHomeTestCase):
             '"content":[{"type":"text","text":"seven\\nbrigade-end: done"}],"createdAt":1000,"updatedAt":1500}\n'
             '{"id":"r1","sessionId":"s1","type":"reasoning","text":"Done.","createdAt":1600,"updatedAt":1700}\n'
         )
+        no_stderr = ""
+        success_exit_code = 0
 
         # Act
-        result = parse_vibe_output(stdout, "", 0, self.home.name)
+        result = parse_vibe_output(stdout, no_stderr, success_exit_code, self.home.name)
 
         # Assert
         self.assertEqual(result["outcome"], "undeclared")
@@ -479,9 +492,11 @@ class VibeEndDeclarationTest(VibeHomeTestCase):
             '{"id":"e1","sessionId":"s1","type":"effect","role":"assistant",'
             '"content":[{"type":"text","text":"brigade-end: done"}],"createdAt":1600,"updatedAt":1700}\n'
         )
+        no_stderr = ""
+        success_exit_code = 0
 
         # Act
-        result = parse_vibe_output(stdout, "", 0, self.home.name)
+        result = parse_vibe_output(stdout, no_stderr, success_exit_code, self.home.name)
 
         # Assert
         self.assertEqual(result["outcome"], "undeclared")
@@ -550,8 +565,8 @@ class VibeTranscriptsTest(VibeHomeTestCase):
                     "timestamp": None,
                     "content": [
                         {
-                            "text": "Now write that hour in digits. Answer in two lines: the hour in digits on the first"
-                            " line, and the text brigade-end: done alone on the second line.",
+                            "text": "Read the file notes.txt with read_file. Then answer in two lines: the hour the file"
+                            " names on the first line, and the text brigade-end: done alone on the second line.",
                             "type": "text",
                         }
                     ],
@@ -562,14 +577,27 @@ class VibeTranscriptsTest(VibeHomeTestCase):
                 {
                     "role": "assistant",
                     "timestamp": None,
-                    "content": "7\nbrigade-end: done",
+                    "content": "",
+                    "tool_calls": 1,
+                    "id": None,
+                    "usage": {
+                        "input_tokens": 10716,
+                        "output_tokens": 100,
+                        "cache_creation_input_tokens": 0,
+                        "cache_read_input_tokens": 2944,
+                    },
+                },
+                {
+                    "role": "assistant",
+                    "timestamp": None,
+                    "content": "seven\nbrigade-end: done",
                     "tool_calls": 0,
                     "id": None,
                     "usage": {
-                        "input_tokens": 11006,
-                        "output_tokens": 45,
+                        "input_tokens": 10905,
+                        "output_tokens": 80,
                         "cache_creation_input_tokens": 0,
-                        "cache_read_input_tokens": 512,
+                        "cache_read_input_tokens": 10496,
                     },
                 },
             ],
