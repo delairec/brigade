@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from brigade.ledger.budget_applied import BudgetApplied
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.inbox_dismissed import InboxDismissed
 from brigade.ledger.inbox_recorded import InboxRecorded
@@ -68,6 +69,7 @@ AppendedEvent = (
     | TickActionFailed
     | InboxRecorded
     | InboxDismissed
+    | BudgetApplied
 )
 
 
