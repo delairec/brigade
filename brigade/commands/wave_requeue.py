@@ -70,7 +70,7 @@ def wave_requeue(request: argparse.Namespace, runtime: Runtime) -> dict:
     summary = require_wave_summary(entries, request.wave)
     if request.task not in summary.started.tasks:
         raise BrigadeError(f"the task {request.task} is not a task of the wave {request.wave}")
-    state = read_task_states(runtime.paths.state_root, request.wave).get(request.task, QUEUED_STATE)
+    state = read_task_states(entries, request.wave).get(request.task, QUEUED_STATE)
     if state != PARKED_STATE:
         raise BrigadeError(f"the task {request.task} of the wave {request.wave} is {state}, not parked")
     configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
