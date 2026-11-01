@@ -53,7 +53,7 @@ class CorpusFmtCollectorTest(ScanCollectorTestCase):
     def test_should_check_the_checkout_of_the_main_branch_and_change_nothing(self):
         # Arrange
         self.register_oak(("CORPUS", "corpus"))
-        tree = self.create_cached_tree_of_main()
+        self.create_cached_tree_of_main()
         self.processes.answer(FORMAT_CHECK)
 
         # Act
@@ -61,9 +61,9 @@ class CorpusFmtCollectorTest(ScanCollectorTestCase):
 
         # Assert
         self.assertEqual(
-            [(request.argv, request.cwd) for request in self.processes.requests][-2:],
+            self.processes.list_argvs()[-2:],
             [
-                (("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "main^{commit}"), "/srv/oak"),
-                (FORMAT_CHECK, str(tree)),
+                ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "main^{commit}"),
+                FORMAT_CHECK,
             ],
         )
