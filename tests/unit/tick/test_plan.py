@@ -1560,9 +1560,9 @@ REBASE_S3 = RebaseTask(
     pr=42,
     worktree=WORKTREE_S3,
     head=HEAD,
-    parking_reason=None,
+    holds_uncommitted_changes=False,
 )
-REBASE_S3_PARKED_ON_A_CONFLICT = dataclasses.replace(REBASE_S3, parking_reason="past 2 repair rounds")
+REBASE_S3_TAKING_ITS_CHANGES_OVER = dataclasses.replace(REBASE_S3, holds_uncommitted_changes=True)
 BEHIND_ON_A_FAILED_CHECK = dataclasses.replace(FAILED_CHECK_RUN, behind=True)
 HOLDING_UNCOMMITTED_CHANGES = True
 
@@ -1650,10 +1650,10 @@ class PlanRebaseTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(actions, expected)
 
-    def test_should_park_on_a_conflict_a_task_whose_repair_rounds_are_spent(self):
-        for case, rounds, expected in [
-            ("a round left", ONE_ROUND_TAKEN, REBASE_S3),
-            ("no round left", TWO_ROUNDS_TAKEN, REBASE_S3_PARKED_ON_A_CONFLICT),
+    def test_should_rebase_a_task_behind_whatever_its_repair_rounds(self):
+        for case, rounds in [
+            ("a round left", ONE_ROUND_TAKEN),
+            ("no round left", TWO_ROUNDS_TAKEN),
         ]:
             with self.subTest(case=case):
                 # Arrange
@@ -1671,7 +1671,7 @@ class PlanRebaseTest(unittest.TestCase):
                 actions = plan(snapshot)
 
                 # Assert
-                self.assertEqual(actions, (expected,))
+                self.assertEqual(actions, (REBASE_S3,))
 
     def test_should_repair_rather_than_rebase_a_task_behind_whose_worktree_holds_uncommitted_changes(self):
         for state, case, pull_request, failures, expected in [
@@ -1706,7 +1706,7 @@ class PlanRebaseTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(actions, (expected,))
 
-    def test_should_park_a_task_behind_holding_uncommitted_changes_whose_repair_rounds_are_spent(self):
+    def test_should_rebase_a_task_behind_taking_over_its_uncommitted_changes_once_its_repair_rounds_are_spent(self):
         for state in ["pr_open", "fixing"]:
             with self.subTest(state=state):
                 # Arrange
@@ -1725,7 +1725,7 @@ class PlanRebaseTest(unittest.TestCase):
                 actions = plan(snapshot)
 
                 # Assert
-                self.assertEqual(actions, (PARK_S3_PAST_ITS_ROUNDS,))
+                self.assertEqual(actions, (REBASE_S3_TAKING_ITS_CHANGES_OVER,))
 
 
 BLOCKED_ON_A_RULING = BlockedRun(run="20261006T110000Z-b10c4d", question="Keep the guard or drop it?")
