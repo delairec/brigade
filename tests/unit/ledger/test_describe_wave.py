@@ -12,6 +12,7 @@ from brigade.ledger.task_state import TaskState
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
+from brigade.system.token_usage import TokenUsage
 from tests.unit.ledger.create_run_finished import create_run_finished
 
 
@@ -223,3 +224,80 @@ class DescribeWaveOfEachTaskTest(unittest.TestCase):
                 },
             ],
         )
+
+
+class DescribeWaveCostTest(unittest.TestCase):
+    def setUp(self):
+        self.reading = LedgerReading(
+            entries=(
+                LedgerEntry(at_minute(0), WaveStarted(wave="w3", project="tidepool", branch="main", tasks=("TP5",))),
+                LedgerEntry(
+                    at_minute(1),
+                    create_run_finished(
+                        "r5",
+                        main_steps=30,
+                        wave="w3",
+                        task="TP5",
+                        duration_ms=60000,
+                        usage=TokenUsage(
+                            input_tokens=1, output_tokens=2, cache_creation_input_tokens=3, cache_read_input_tokens=4
+                        ),
+                        cost_usd=3.5,
+                    ),
+                ),
+                LedgerEntry(
+                    at_minute(2), create_run_finished("r6", wave="w3", task="TP5", duration_ms=None, cost_usd=1.25)
+                ),
+                LedgerEntry(
+                    at_minute(3),
+                    create_run_finished(
+                        "r7",
+                        main_steps=8,
+                        wave="w3",
+                        task="TP6",
+                        duration_ms=30000,
+                        usage=TokenUsage(
+                            input_tokens=10,
+                            output_tokens=20,
+                            cache_creation_input_tokens=30,
+                            cache_read_input_tokens=40,
+                        ),
+                    ),
+                ),
+                LedgerEntry(at_minute(4), create_run_finished("r8", wave="w4", task="TP9", cost_usd=9.0)),
+            ),
+            files=(),
+            skipped=(),
+        )
+
+    def test_should_sum_the_cost_and_the_tokens_of_the_runs_that_carry_them(self):
+        # Act
+        wave = describe_wave(self.reading, "w3")
+
+        # Assert
+        self.assertEqual(wave["cost_usd"], 4.75)
+        self.assertEqual(
+            wave["usage"],
+            {"input_tokens": 11, "output_tokens": 22, "cache_creation_input_tokens": 33, "cache_read_input_tokens": 44},
+        )
+
+    def test_should_give_the_steps_duration_and_cost_of_each_task(self):
+        # Act
+        wave = describe_wave(self.reading, "w3")
+
+        # Assert
+        self.assertEqual(
+            wave["by_task"],
+            [
+                {"task": "TP5", "steps": 30, "duration_ms": 60000, "cost_usd": 4.75},
+                {"task": "TP6", "steps": 8, "duration_ms": 30000, "cost_usd": None},
+            ],
+        )
+
+    def test_should_give_no_cost_and_no_tokens_when_no_run_carries_them(self):
+        # Act
+        wave = describe_wave(WAVE_W1, "w1")
+
+        # Assert
+        self.assertIsNone(wave["cost_usd"])
+        self.assertIsNone(wave["usage"])
