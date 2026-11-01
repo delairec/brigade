@@ -1274,7 +1274,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
     def test_should_launch_the_procedure_the_key_build_of_procedures_names_in_place_of_build_task(self):
         # Arrange
         deliver = self.root / "deliver.md"
-        deliver.write_text("---\ncapabilities: read\nbudget: 40\n---\nDeliver the task.\n", encoding="utf-8")
+        deliver.write_text("---\ncapabilities: read\n---\nDeliver the task.\n", encoding="utf-8")
         (self.root / "config" / "config.toml").write_text(
             f'{CLIENT_AND_DOCUMENT_CONFIGURATION}[procedures]\nbuild = "{deliver}"\n', encoding="utf-8"
         )

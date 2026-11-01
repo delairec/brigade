@@ -1,6 +1,5 @@
 ---
 capabilities: read, write, shell
-budget: 30
 ---
 # Procedure — cut one request into a plan
 

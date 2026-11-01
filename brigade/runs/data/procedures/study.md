@@ -1,6 +1,5 @@
 ---
 capabilities: read, shell
-budget: 20
 ---
 # Procedure — judge one run of a study
 

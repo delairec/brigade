@@ -26,7 +26,7 @@ def _describe_run(plan: RunPlan) -> RunRecord:
         cwd=str(plan.cwd),
         worktree=str(plan.worktree),
         capabilities=plan.capabilities,
-        budget=plan.procedure.budget,
+        budget=plan.budget.applied,
         wall_limit_s=plan.wall_limit_s,
         arguments=plan.arguments,
         wave=plan.wave,

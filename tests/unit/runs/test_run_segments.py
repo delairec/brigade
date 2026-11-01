@@ -5,6 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.ledger.budget_applied import BudgetApplied
+from brigade.ledger.describe_role_budget import RoleBudget
 from brigade.runs.ask_progress import ask_progress
 from brigade.runs.resolve_procedure import Procedure
 from brigade.runs.run_segment import SegmentRecord
@@ -34,11 +36,14 @@ ROLE_DIGEST = "da7cc724d530669664decd8af3f657fc15665691731442c3be1776eb13e2c510"
 PROCEDURE_DIGEST = "e395b77e8ab7354e4418d2e1bb9d6f5c5b4de99c417c8b5ac1bc588d5d5c4151"
 ONE_DOT_PROCEDURE_DIGEST = "cdb4ee2aea69cc6a83331bbe96dc2caa9a299d21329efb0336fc02a82e1839a8"
 NO_EDIT_TOOL = "the client names no edit tool"
-PROCEDURE_OF_FIVE_STEPS = Procedure(
-    name="build-task", location="built-in", argument="build-task", capabilities=("read",), budget=5, body="."
+ONE_DOT_PROCEDURE = Procedure(
+    name="build-task", location="built-in", argument="build-task", capabilities=("read",), body="."
 )
-PROCEDURE_OF_TWELVE_STEPS = Procedure(
-    name="build-task", location="built-in", argument="build-task", capabilities=("read",), budget=12, body="."
+CAP_OF_FIVE_STEPS = RoleBudget(
+    shipped=10, computed=5, applied=5, segments=6, restarts=3, growth=8000.0, restart_tokens=100000.0
+)
+CAP_OF_TWELVE_STEPS = RoleBudget(
+    shipped=12, computed=None, applied=12, segments=0, restarts=0, growth=None, restart_tokens=None
 )
 LAUNCH = {
     "schema_version": 1,
@@ -811,10 +816,39 @@ class RunSegmentsStoppedAtTheSoftLimitTest(RunSegmentsTestCase):
         )
 
 
+class RunSegmentsOfARoleWhoseCapChangedTest(RunSegmentsTestCase):
+    def test_should_record_the_change_of_the_applied_cap_before_its_first_segment(self):
+        # Arrange
+        change = BudgetApplied(
+            role="builder", before=10, after=5, segments=6, restarts=3, growth=8000.0, restart_tokens=100000.0
+        )
+        plan = self.create_plan(["done"], budget=CAP_OF_FIVE_STEPS, budget_applied=change)
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            self.read_events()[0],
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "budget.applied",
+                "role": "builder",
+                "before": 10,
+                "after": 5,
+                "segments": 6,
+                "restarts": 3,
+                "growth": 8000.0,
+                "restart_tokens": 100000.0,
+            },
+        )
+
+
 class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
     def test_should_record_the_steps_beyond_the_budget(self):
         # Arrange
-        plan = self.create_plan(["done"], procedure=PROCEDURE_OF_FIVE_STEPS)
+        plan = self.create_plan(["done"], procedure=ONE_DOT_PROCEDURE, budget=CAP_OF_FIVE_STEPS)
 
         # Act
         run_segments(plan, self.runtime, StopSignalReceiver())
@@ -874,7 +908,7 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
 
     def test_should_record_no_signal_for_a_segment_at_exactly_its_budget(self):
         # Arrange
-        plan = self.create_plan(["done"], procedure=PROCEDURE_OF_TWELVE_STEPS)
+        plan = self.create_plan(["done"], procedure=ONE_DOT_PROCEDURE, budget=CAP_OF_TWELVE_STEPS)
 
         # Act
         run_segments(plan, self.runtime, StopSignalReceiver())
@@ -922,7 +956,7 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
 
     def test_should_record_no_signal_for_the_steps_of_a_client_that_counts_none(self):
         # Arrange
-        plan = self.create_plan(["done"], procedure=PROCEDURE_OF_FIVE_STEPS, counts_steps=False)
+        plan = self.create_plan(["done"], procedure=ONE_DOT_PROCEDURE, budget=CAP_OF_FIVE_STEPS, counts_steps=False)
 
         # Act
         run_segments(plan, self.runtime, StopSignalReceiver())
@@ -1424,7 +1458,10 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
     def test_should_record_the_budget_exceeded_then_the_step_cap_reached(self):
         # Arrange
         plan = self.create_plan(
-            ["turn_limit"], procedure=PROCEDURE_OF_FIVE_STEPS, client_double=ClientFailingOnAnErrorClassDouble
+            ["turn_limit"],
+            procedure=ONE_DOT_PROCEDURE,
+            budget=CAP_OF_FIVE_STEPS,
+            client_double=ClientFailingOnAnErrorClassDouble,
         )
 
         # Act

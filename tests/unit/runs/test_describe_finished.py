@@ -13,6 +13,7 @@ from brigade.runs.run_segment import SegmentRecord
 from brigade.system.parse_configuration import Configuration
 from brigade.system.reset_hour import ResetHour
 from brigade.system.token_usage import TokenUsage
+from tests.unit.runs.create_run_plan import CAP_OF_FORTY_STEPS
 
 ROOT = Path("/state/brigade")
 NO_ARGUMENTS = {}
@@ -40,7 +41,6 @@ def _create_plan(*, counts_steps: bool = True, edit_tools: tuple[str, ...] = ())
             location="built-in",
             argument="awawa-task",
             capabilities=("read", "write", "shell"),
-            budget=75,
             body="Deliver the task.",
         ),
         slot="build",
@@ -56,6 +56,7 @@ def _create_plan(*, counts_steps: bool = True, edit_tools: tuple[str, ...] = ())
         disposable_worktree=False,
         capabilities=("read", "write", "shell"),
         wall_limit_s=2820.0,
+        budget=CAP_OF_FORTY_STEPS,
         arguments=NO_ARGUMENTS,
         wave=NO_WAVE,
         task=NO_TASK,

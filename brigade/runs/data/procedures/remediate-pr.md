@@ -1,6 +1,5 @@
 ---
 capabilities: read, write, shell
-budget: 50
 ---
 # Procedure — answer the review of one pull request of a wave
 

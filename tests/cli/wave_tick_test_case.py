@@ -52,7 +52,7 @@ WAVE_EVENTS = (
     '{"schema_version": 1, "ts": "2026-10-13T10:30:00Z", "event": "task.state", "wave": "cafe_w1", "task": "S6",'
     ' "state": "running"}\n'
 )
-REPLACING_PROCEDURE = "---\ncapabilities: read, shell\nbudget: 40\n---\nDeliver the task another way.\n"
+REPLACING_PROCEDURE = "---\ncapabilities: read, shell\n---\nDeliver the task another way.\n"
 TOKENLESS_LOGIN = "octo-tokenless"
 FAKE_GH = (
     "#!/bin/sh\n"

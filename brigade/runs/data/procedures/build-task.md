@@ -1,6 +1,5 @@
 ---
 capabilities: read, write, shell
-budget: 75
 ---
 # Procedure — deliver one task, test first, up to its pull request
 

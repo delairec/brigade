@@ -1,6 +1,5 @@
 ---
 capabilities: read, shell
-budget: 40
 ---
 # Procedure — verify one pull request of a wave
 

@@ -27,6 +27,7 @@ from brigade.system.trail_writer import TrailWriter
 from tests.process_launcher import ProcessLauncher
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.runs.create_run_plan import CAP_OF_FORTY_STEPS
 
 FIRST_SEGMENT = 1
 NO_ARGUMENTS = {}
@@ -369,7 +370,6 @@ def _create_plan(
             location="built-in",
             argument="deliver",
             capabilities=("read", "write"),
-            budget=40,
             body="Deliver the task.",
         ),
         slot="build",
@@ -391,6 +391,7 @@ def _create_plan(
         disposable_worktree=False,
         capabilities=("read", "write"),
         wall_limit_s=wall_limit_s,
+        budget=CAP_OF_FORTY_STEPS,
         arguments=NO_ARGUMENTS,
         wave=NO_WAVE,
         task=NO_TASK,

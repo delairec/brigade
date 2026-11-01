@@ -21,7 +21,7 @@ NOT_FOR_A_TASK = "not launched for a task"
 CUT = "cut at the wall-time limit"
 STOPPED = "stopped by a signal"
 UUID_PATTERN = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-QUICK_PROCEDURE = "---\ncapabilities: read, write, shell\nbudget: 1\n---\nAnswer at once.\n"
+QUICK_PROCEDURE = "---\ncapabilities: read, write, shell\n---\nAnswer at once.\n"
 
 
 class BrigadeRunOfAProcedureGivenByPathTest(RunTestCase):
@@ -295,7 +295,7 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
 class BrigadeRunOnTheClockTest(RunTestCase):
     def setUp(self):
         super().setUp()
-        self.configure_fake(COUNTING_CLIENT + self.hold_the_client(), keys="seconds_per_step = 0.2\n")
+        self.configure_fake(COUNTING_CLIENT + self.hold_the_client(), keys="seconds_per_step = 0.004\n")
         self.record("builder", DONE_RESULT)
         self.quick = self.procedure.with_name("quick.md")
         self.quick.write_text(QUICK_PROCEDURE)
@@ -346,7 +346,7 @@ class BrigadeRunOnTheClockTest(RunTestCase):
                         "error_class": CUT,
                         "exit": CUT,
                     },
-                    "message": "cut at the wall-time limit of 0.4 s",
+                    "message": "cut at the wall-time limit of 0.376 s",
                 },
                 {
                     "schema_version": 1,
@@ -357,8 +357,8 @@ class BrigadeRunOnTheClockTest(RunTestCase):
                     "procedure": "quick",
                     "run": json.loads(completed.stdout)["run"],
                     "segment": 1,
-                    "budget": 1,
-                    "wall_limit_s": 0.4,
+                    "budget": 75,
+                    "wall_limit_s": 0.376,
                 },
             ],
         )
