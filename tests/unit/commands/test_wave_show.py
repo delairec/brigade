@@ -197,6 +197,43 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
             document["tasks"][1], {"task": "T8", "state": "queued", "pull_request": None, "run": None, "reason": None}
         )
 
+    def test_should_name_the_amendment_of_its_entity_as_the_reason_a_task_is_fixing(self):
+        # Arrange
+        rebuilt = {
+            **T7_PR_OPEN,
+            "state": "fixing",
+            "reason": "the entity of the task amended on integration/tidepool_w16",
+        }
+        write_ledger(self.root, [WAVE_STARTED, T7_PR_OPEN, rebuilt])
+
+        # Act
+        document = COMMAND.run(Namespace(wave="tidepool_w16"), create_test_runtime(create_test_paths(self.root)))
+
+        # Assert
+        self.assertEqual(
+            document["tasks"][0],
+            {
+                "task": "T7",
+                "state": "fixing",
+                "pull_request": None,
+                "run": None,
+                "reason": "the entity of the task amended on integration/tidepool_w16",
+            },
+        )
+
+    def test_should_show_no_reason_for_a_task_sent_back_to_its_preflight_by_a_requeue(self):
+        # Arrange
+        requeued = {**T7_PR_OPEN, "ts": "2026-10-02T11:00:00Z", "reason": "brigade wave requeue"}
+        write_ledger(self.root, [WAVE_STARTED, T7_PR_OPEN, requeued])
+
+        # Act
+        document = COMMAND.run(Namespace(wave="tidepool_w16"), create_test_runtime(create_test_paths(self.root)))
+
+        # Assert
+        self.assertEqual(
+            document["tasks"][0], {"task": "T7", "state": "pr_open", "pull_request": None, "run": None, "reason": None}
+        )
+
     def test_should_refuse_a_wave_no_wave_started_names(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED])

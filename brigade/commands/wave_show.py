@@ -6,6 +6,7 @@ from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_pr_opened import TaskPrOpened
+from brigade.ledger.task_state import TaskState
 from brigade.runtime import Runtime
 from brigade.system.render_table import render_table
 from brigade.waves.find_integration_pull_request import find_integration_pull_request
@@ -18,6 +19,7 @@ DOCUMENT_SCHEMA_VERSION = 1
 ABSENT = "-"
 TASK_HEADER = ("task", "state", "pull request", "run", "reason")
 TASK_COLUMNS = ("task", "state", "pull_request", "run", "reason")
+FIXING_STATE = "fixing"
 
 
 def _show(value) -> str:
@@ -34,6 +36,10 @@ def _render_text(document: dict) -> str:
     return "\n".join([heading, render_table(TASK_HEADER, rows)])
 
 
+def _is_explained(event) -> bool:
+    return isinstance(event, TaskParked) or (isinstance(event, TaskState) and event.state == FIXING_STATE)
+
+
 def _describe_task(events: tuple, states: dict[str, str], wave: str, task: str) -> dict:
     opened = find_last_task_event(events, TaskPrOpened, wave, task)
     finished = find_last_task_event(events, RunFinished, wave, task)
@@ -43,7 +49,7 @@ def _describe_task(events: tuple, states: dict[str, str], wave: str, task: str) 
         "state": states.get(task),
         "pull_request": None if opened is None else opened.pr,
         "run": None if finished is None else finished.run,
-        "reason": last_state.reason if isinstance(last_state, TaskParked) else None,
+        "reason": last_state.reason if _is_explained(last_state) else None,
     }
 
 
