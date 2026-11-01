@@ -656,6 +656,21 @@ def _record_milestone_pull_request_opened(runtime: Runtime, described: Milestone
     append_event(runtime.paths, runtime.now, described)
 
 
+@dataclass(frozen=True)
+class _PullRequestOpening:
+    repository: str
+    base: str
+    branch: str
+    title: str
+    body: str
+    environment: dict
+
+
+def _open_pull_request(runtime: Runtime, opening: _PullRequestOpening) -> int:
+    forge = runtime.resolve_plugin("forge", FORGE_NAME)
+    return forge.open_pull_request({**dataclasses.asdict(opening), "milestone": NO_MILESTONE}, runtime)["number"]
+
+
 def _open_integration_pull_request(
     runtime: Runtime, configuration: Configuration, action: OpenIntegrationPullRequest
 ) -> None:
@@ -672,21 +687,9 @@ def _open_integration_pull_request(
     login = ask_forge_account(forge, FORGE_NAME, environment, runtime).login
     head = _read_branch_head(runtime, configuration, project, action.branch)
     title, body = _compose_wave_description(runtime, configuration, _find_started_wave(runtime, action.wave), head)
-    opened = forge.open_pull_request(
-        {
-            "repository": repository,
-            "base": base,
-            "branch": action.branch,
-            "title": title,
-            "body": body,
-            "milestone": NO_MILESTONE,
-            "environment": environment,
-        },
-        runtime,
-    )
-    _record_wave_pull_request_opened(
-        runtime, WavePrDescribed(wave=action.wave, pr=opened["number"], head=head, login=login)
-    )
+    opening = _PullRequestOpening(repository, base, action.branch, title, body, environment)
+    number = _open_pull_request(runtime, opening)
+    _record_wave_pull_request_opened(runtime, WavePrDescribed(wave=action.wave, pr=number, head=head, login=login))
 
 
 def _open_milestone_pull_request(
@@ -708,20 +711,12 @@ def _open_milestone_pull_request(
         report=None,
     )
     title, body = _compose_description(runtime, configuration, branch)
-    opened = forge.open_pull_request(
-        {
-            "repository": read_project_field(project, PATH_FIELD),
-            "base": main,
-            "branch": action.branch,
-            "title": title,
-            "body": body,
-            "milestone": NO_MILESTONE,
-            "environment": environment,
-        },
-        runtime,
+    opening = _PullRequestOpening(
+        read_project_field(project, PATH_FIELD), main, action.branch, title, body, environment
     )
+    number = _open_pull_request(runtime, opening)
     _record_milestone_pull_request_opened(
-        runtime, MilestonePrDescribed(action.project, action.milestone, opened["number"], head, login)
+        runtime, MilestonePrDescribed(action.project, action.milestone, number, head, login)
     )
 
 
