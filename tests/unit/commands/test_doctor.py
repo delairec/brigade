@@ -7,8 +7,8 @@ from pathlib import Path
 
 from brigade.commands.doctor import COMMAND, doctor
 from brigade.corpus.shipped_data import SHIPPED_SCHEMA
-from brigade.errors import ToolFailure, ToolNotFound
-from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
+from brigade.errors import BrigadeError, ToolFailure, ToolNotFound
+from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_corpus_double
 from tests.unit.commands.create_plugin_resolver import ScriptedClient, create_plugin_resolver
 
 GIT_ANSWERS = {
@@ -40,6 +40,8 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
 TOKEN = {"GH_TOKEN": "t0k3n"}
+NO_GHOST_ADAPTER = BrigadeError("no client adapter ghost: no built-in module and no brigade-client-ghost on PATH")
+EXECUTABLE = 0o755
 
 
 class ScriptedForgeDouble:
@@ -85,10 +87,16 @@ class DoctorTestCase(unittest.TestCase):
         self.answers = _create_doctor_answers()
         self.probe = dict(PROBE)
         self.forge = ScriptedForgeDouble({"ada-bot": TOKEN, "rev-bot": TOKEN}, "ada-bot")
-        plugins = {("client", "scripted"): ScriptedClient({"probe": self.probe}), ("forge", "github"): self.forge}
+        self.entities = {}
+        plugins = {
+            ("client", "scripted"): ScriptedClient({"probe": self.probe}),
+            ("client", "other"): ScriptedClient({}),
+            ("client", "ghost"): NO_GHOST_ADAPTER,
+            ("forge", "github"): self.forge,
+        }
         self.runtime = create_test_runtime(
             create_test_paths(Path(self.root.name)),
-            run_process=ScriptedProcessRunner(self.answers).run,
+            run_process=ScriptedProcessRunner(self.answers, fallback=create_corpus_double(self.entities)).run,
             resolve_plugin=create_plugin_resolver(plugins),
         )
         self.runtime.paths.config_root.mkdir(parents=True)
@@ -925,6 +933,359 @@ class DoctorCheckOfACheckoutTest(DoctorTestCase):
                 "detail": "lint --strict clean in /srv/instructions",
                 "fallback": "built-in roles and no instructions package",
             },
+        )
+
+
+class DoctorSlotsTest(DoctorTestCase):
+    def test_should_find_a_slot_bound_to_an_agent_the_instructions_do_not_declare(self):
+        # Arrange
+        self.configure(CONFIGURATION + '[slots]\nbuild = "ada"\n')
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "slots",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": "slots.build: @AGENT.ada is not defined in /srv/instructions",
+                "fallback": None,
+            },
+            document["items"],
+        )
+
+    def test_should_not_find_a_slot_bound_to_an_agent_the_instructions_declare(self):
+        # Arrange
+        self.configure(CONFIGURATION + '[slots]\nbuild = "ada"\n')
+        self.entities["AGENT"] = {"ada": [("WORK", "the delivery of a task")]}
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertNotIn(
+            {
+                "name": "slots",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": "slots.build: @AGENT.ada is not defined in /srv/instructions",
+                "fallback": None,
+            },
+            document["items"],
+        )
+
+    def test_should_find_a_slot_bound_without_an_instructions_corpus(self):
+        # Arrange
+        self.configure('client = "scripted"\n[slots]\nbuild = "ada"\n')
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "slots",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": f"slots.build binds ada but no instructions corpus is set in "
+                f"{self.runtime.paths.configuration_file}",
+                "fallback": None,
+            },
+            document["items"],
+        )
+
+
+class DoctorSlotClientsTest(DoctorTestCase):
+    def test_should_find_a_slot_bound_to_a_client_no_adapter_answers(self):
+        # Arrange
+        self.configure('client = "scripted"\ninstructions = "/srv/instructions"\n[slot_clients]\nreview = "ghost"\n')
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "slot_clients",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": "slot_clients.review: no client adapter ghost: no built-in module and no "
+                "brigade-client-ghost on PATH",
+                "fallback": None,
+            },
+            document["items"],
+        )
+
+
+class DoctorProjectsTest(DoctorTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure(CONFIGURATION)
+        self.runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
+        self.project = Path(self.root.name) / "app"
+        self.project.mkdir()
+        tools = Path(self.root.name) / "tools"
+        tools.mkdir()
+        (tools / "make").write_text("#!/bin/sh\n")
+        (tools / "make").chmod(EXECUTABLE)
+        paths = dataclasses.replace(self.runtime.paths, executable_search_path=str(tools))
+        self.runtime = dataclasses.replace(self.runtime, paths=paths)
+        self.answers["git", "rev-parse", "--verify", "--quiet", "refs/heads/main"] = ProcessAnswer()
+        self.answers["git", "rev-parse", "--verify", "--quiet", "refs/heads/trunk"] = ProcessAnswer(exit_code=1)
+
+    def register(self, *fields):
+        self.entities["PROJECT"] = {"app": [("PATH", str(self.project)), ("MAIN", "main"), *fields]}
+
+    def test_should_find_a_project_whose_client_no_adapter_answers(self):
+        # Arrange
+        self.register(("CLIENT", "ghost"))
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "project",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": "@PROJECT.app: no client adapter ghost: no built-in module and no brigade-client-ghost on "
+                "PATH",
+                "fallback": None,
+            },
+            document["items"],
+        )
+
+    def test_should_find_a_project_whose_roleset_holds_no_role_file(self):
+        # Arrange
+        self.register(("ROLESET", "roles"))
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "project",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": f"@PROJECT.app: ROLESET roles holds no role file in {self.project / 'roles'}",
+                "fallback": None,
+            },
+            document["items"],
+        )
+
+    def test_should_not_find_a_project_whose_roleset_resolves(self):
+        # Arrange
+        (self.project / "roles").mkdir()
+        (self.project / "roles" / "builder.md").write_text("---\nname: builder\n---\n")
+        shared = Path(self.root.name) / "shared-roles"
+        shared.mkdir()
+        (shared / "builder.md").write_text("---\nname: builder\n---\n")
+        rows = [
+            ("builtin", self.project / "builtin"),
+            ("corpus", self.project / "corpus"),
+            ("roles", self.project / "roles"),
+            (str(shared), shared),
+        ]
+        for roleset, location in rows:
+            with self.subTest(roleset=roleset):
+                self.register(("ROLESET", roleset))
+
+                # Act
+                document = doctor(self.no_option, self.runtime)
+
+                # Assert
+                self.assertNotIn(
+                    {
+                        "name": "project",
+                        "kind": "prerequisite",
+                        "state": "finding",
+                        "detail": f"@PROJECT.app: ROLESET {roleset} holds no role file in {location}",
+                        "fallback": None,
+                    },
+                    document["items"],
+                )
+
+    def test_should_find_a_project_whose_path_does_not_exist_and_check_nothing_inside_it(self):
+        # Arrange
+        gone = Path(self.root.name) / "gone"
+        self.entities["PROJECT"] = {"app": [("PATH", str(gone)), ("MAIN", "main")]}
+        self.answers["git", "rev-parse", "--verify", "--quiet", "refs/heads/main"] = ToolNotFound("git not on PATH")
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "project",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": f"@PROJECT.app: PATH {gone} does not exist",
+                "fallback": None,
+            },
+            document["items"],
+        )
+
+    def test_should_find_a_project_whose_main_is_not_a_branch_of_its_repository(self):
+        # Arrange
+        self.entities["PROJECT"] = {"app": [("PATH", str(self.project)), ("MAIN", "trunk")]}
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "project",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": f"@PROJECT.app: MAIN trunk is not a branch of {self.project}",
+                "fallback": None,
+            },
+            document["items"],
+        )
+
+    def test_should_find_a_project_command_whose_first_word_is_no_executable(self):
+        # Arrange
+        for field_name in ["SETUP", "ACCEPTANCE", "HEAVY"]:
+            with self.subTest(field=field_name):
+                self.register((field_name, "ghost --check"))
+
+                # Act
+                document = doctor(self.no_option, self.runtime)
+
+                # Assert
+                self.assertIn(
+                    {
+                        "name": "project",
+                        "kind": "prerequisite",
+                        "state": "finding",
+                        "detail": f"@PROJECT.app: {field_name} ghost --check: no executable ghost",
+                        "fallback": None,
+                    },
+                    document["items"],
+                )
+
+    def test_should_not_find_a_project_command_whose_first_word_is_an_executable_on_path(self):
+        # Arrange
+        self.register(("ACCEPTANCE", "make check"))
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertNotIn(
+            {
+                "name": "project",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": "@PROJECT.app: ACCEPTANCE make check: no executable make",
+                "fallback": None,
+            },
+            document["items"],
+        )
+
+    def test_should_not_find_a_project_command_running_a_script_the_project_versions(self):
+        # Arrange
+        (self.project / "scripts").mkdir()
+        (self.project / "scripts" / "check").write_text("#!/bin/sh\n")
+        (self.project / "scripts" / "check").chmod(EXECUTABLE)
+        self.register(("ACCEPTANCE", "scripts/check --fast"))
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertNotIn(
+            {
+                "name": "project",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": "@PROJECT.app: ACCEPTANCE scripts/check --fast: no executable scripts/check",
+                "fallback": None,
+            },
+            document["items"],
+        )
+
+    def test_should_find_a_project_command_shlex_refuses(self):
+        # Arrange
+        self.register(("ACCEPTANCE", 'make "check'))
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "project",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": '@PROJECT.app: ACCEPTANCE make "check: shlex.split refuses it, No closing quotation',
+                "fallback": None,
+            },
+            document["items"],
+        )
+
+    def test_should_find_an_empty_project_command(self):
+        # Arrange
+        self.register(("SETUP", ""))
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "project",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": "@PROJECT.app: SETUP is an empty line",
+                "fallback": None,
+            },
+            document["items"],
+        )
+
+    def test_should_find_the_registry_unreadable(self):
+        # Arrange
+        self.answers["awawa", "status", "PROJECT"] = ToolFailure("awawa status PROJECT timed out after 30 s")
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "project",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": "PROJECT unreadable: awawa status PROJECT timed out after 30 s",
+                "fallback": None,
+            },
+            document["items"],
+        )
+
+    def test_should_not_read_the_registry_without_the_operational_corpus(self):
+        # Arrange
+        self.runtime.paths.schema_file.unlink()
+        self.answers["awawa", "status", "PROJECT"] = ToolFailure("awawa status PROJECT timed out after 30 s")
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertNotIn(
+            {
+                "name": "project",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": "PROJECT unreadable: awawa status PROJECT timed out after 30 s",
+                "fallback": None,
+            },
+            document["items"],
         )
 
 
