@@ -1,9 +1,12 @@
-Answers which deterministic checks `brigade verify preflight` runs on the pull request of a task before any judgment, and when each fails.
+Which deterministic checks `brigade verify preflight` runs on the pull request of a task before any judgment, and when
+each fails.
 
-`brigade verify preflight <pr>` runs, from a checkout of a registered project, the deterministic checks of the pull
-request a task opened, before any judgment: it reads the pull request as the login of `forge_accounts.cli`, fetches its
-head and the wave's branch, and prints one entry per check, its verdict `pass`, `fail` or `info` and its findings, text
-or, with `--json`, a JSON document; it exits 1 when a check fails.
+```
+brigade verify preflight <pr> [--json]    # exit 1 when a check fails
+```
+
+It runs from a checkout of a registered project. It prints one entry per check, its verdict `pass`, `fail` or `info`
+and its findings, as text or, with `--json`, a JSON document.
 
 ## The checks
 
@@ -17,3 +20,10 @@ or, with `--json`, a JSON document; it exits 1 when a check fails.
 | `privacy`         | an added line matches a `PRIVATE` pattern of the project, an e-mail address or a home path, where no `PUBLIC` pattern of the project matches the whole of it |
 | `body`            | the body keeps a placeholder of its template                                                    |
 | `size`            | never: it reports the files, lines, packages and layers the diff touches                        |
+
+<details><summary>What it reads</summary>
+
+It reads the pull request a task opened as the login of `forge_accounts.cli`, and fetches its head and the wave's
+branch.
+
+</details>

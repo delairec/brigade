@@ -4593,7 +4593,7 @@ TASK B62
 		+ "what covers the case"
 		IMPL ".github/workflows/ci.yml::persist-credentials: false"
 	SPEC "the sentence of README.md on the CI names the zizmor audit"
-		IMPL "wiki/Develop.md::and audits its workflows"
+		IMPL "wiki/Develop.md::audits its workflows with zizmor"
 	RATIONALE "the hardening and the audit are one task: zizmor's excessive-permissions and"
 		+ "artipacked audits flag the missing permissions block and the persisted credentials, so"
 		+ "the audit would fail on the workflow it joins; the missing block was the one security"
@@ -4651,7 +4651,7 @@ TASK B63
 		+ "check to run when ruff is installed, and the sentence on the CI names ruff"
 		IMPL "wiki/Develop.md::ruff check . && ruff format --check .          # the lint and the"
 			+ "format"
-		IMPL "wiki/Develop.md::with ruff, configured by `ruff.toml`"
+		IMPL "wiki/Develop.md::| ruff, configured by `ruff.toml` | lints and checks the format |"
 	AFTER @TASK.B62
 	RATIONALE "the user ruled the rule sets: S the bandit equivalent, B bugbear, C901 complexity,"
 		+ "UP with the 3.11 target; ruff.toml because the repository has no pyproject.toml; ruff"

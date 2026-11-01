@@ -1,55 +1,33 @@
-Answers which AI clients brigade runs its agents through, how a client is chosen per machine, project and slot, which operations an adapter answers, what each supported client can do, and the fallbacks brigade puts in place of what it cannot.
+Which AI clients brigade runs its agents through, how a client is chosen per machine, project and slot, what each
+supported client can do, and the fallbacks brigade puts in place of what it cannot.
 
 ## Choosing the client
 
-brigade runs its agents through a client adapter, selected by the `client` key of `config.toml`: `claude-code` for
-Claude Code, `fake` for the adapter that replays recorded result documents, or any name `<name>` for which an
-executable `brigade-client-<name>` is on your `PATH`. The table `[clients.<name>]` of `config.toml` holds the settings
-of that adapter; the fake reads `recordings`, the directory whose `<role>.json` it replays, or `<role>.resumed.json`
-when that file exists and its brief opens on the `Progress so far` section, `features`, the
-comma-separated features its probe declares (`step_count`, `tool_grants`, `reset_hour`, `graceful_stop`; none by
-default), and, for
-tests of the clock and of the hand-over, `hold`, a file whose presence it waits out before answering, `progress`, a text it
-appends as it is to the progress file of the run, in either form, and `interval`, the seconds it waits after each line of its recording;
-`operations`, comma-separated, adds operations to its probe: with `actions`, a line of its recording that is a result
-document is a result and any other line a text; with `transcripts`, it answers the document
-`<session_id>.transcripts.json` of `recordings`.
+The `client` key of `config.toml` selects the client adapter:
+
+| `client` | Adapter |
+|---|---|
+| `claude-code` | Claude Code |
+| `fake` | the adapter that replays recorded result documents |
+| any name `<name>` | an executable `brigade-client-<name>` on your `PATH` |
+
+The table `[clients.<name>]` of `config.toml` holds the settings of that adapter.
 
 ## A client per slot
 
-The table `[slot_clients]` of `config.toml` binds a slot to another client adapter, `review = "vibe"`, one key per
-slot among the nine; a slot it binds runs on that client, any other on the `CLIENT` of its project, else on the
-`client` key. `brigade roles list`, `brigade doctor` and `brigade adapter <operation>` answer for the `client` key and
-name every slot the table binds to another client, `slot <slot> runs on <client>`. `brigade roles list` and `brigade
-adapter` state that key as `answers for <client>`, `brigade adapter` on stderr, its stdout holding the adapter's answer
-alone; `brigade doctor` names it on its `client` line. `brigade roles list` probes the client of each such slot too,
-its model column showing the model that client binds, and exits 1 naming an adapter it finds nowhere.
+```toml
+[slot_clients]
+review = "vibe"
+```
 
-## Operations
+The table `[slot_clients]` of `config.toml` binds a slot to another client adapter, one key per slot among the nine.
+A slot runs on the client `[slot_clients]` binds to it, else on the `CLIENT` of its project, else on the `client` key.
 
-`brigade adapter <operation>` (or with `--json`) answers one operation of the configured adapter, the request read as
-a JSON document on stdin: `probe`, `launch-argv`, `parse-result`, `resume-argv`, `transcripts` and `actions`. An external adapter
-answers the same operations as `brigade-client-<name> <operation>`, the request on stdin and its answer, a JSON
-document, on stdout; brigade checks every answer against the shape of its operation and names the adapter, the
-operation and the key of an answer that departs from it. The probe answers `models`, the model the adapter binds to
-each reasoning level.
+## What each client can do
 
-## The outcome of a run
-
-The `outcome` of a `parse-result` answer is `done`, `handed_over` or `blocked` as the run declares it on the last line
-of its final message, `brigade-end: <outcome>`, which the brief of every segment asks for; `undeclared` when that line
-is missing or names another value; `failed` on an error of the client; `soft_limit` when the client ended the session
-itself once the `stop_at` of its request had passed.
-
-## The adapter matrix
-
-`brigade adapter matrix` prints one row per client adapter, built-in or `brigade-client-<name>` on your `PATH`, and one
-column per capability, read from its probe with the settings of `config.toml`: `full` when the probe declares it,
-`fallback` when brigade replaces it, `absent` for a launch or a result it cannot do; the legend names each fallback.
-Every row carries its audience, a supported client or an adapter of the test suite, the modules of
-`brigade/adapters/test_clients/`. An adapter whose probe fails gets a row naming the error, and the command exits 1.
-`--json` prints the document, `--markdown` the two tables below, which are its output for the built-in adapters; a
-test of `tests/guards/` fails when they drift.
+`brigade adapter matrix` prints one row per client adapter and one column per capability: `full` when the probe
+declares it, `fallback` when brigade replaces it, `absent` for a launch or a result it cannot do; the legend names
+each fallback. For the built-in adapters, `brigade adapter matrix --markdown` prints:
 
 <!-- adapter matrix: begin -->
 | Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour | Graceful stop |
@@ -71,7 +49,7 @@ Fallbacks:
 - no graceful stop: the hard cut at the wall-time limit
 <!-- adapter matrix: end -->
 
-## The external vibe adapter
+### The external vibe adapter
 
 An external adapter for Mistral Vibe, `brigade-client-vibe`, runs Vibe 2.26.0 unattended with `client = "vibe"`. It is
 not shipped in this repository: it lives on the `PATH` of the machine that installed it, until a built-in `vibe`
@@ -84,3 +62,71 @@ clients:
 
 Its probe binds `mistral-large` to the levels deepest, deep and standard, and `mistral-medium-3.5` to light; it reads
 the usage of a session from Vibe's session store, `~/.vibe/logs/session/unified`.
+
+## Adapter operations
+
+```
+brigade adapter <operation> [--json] < request.json    # the configured adapter
+brigade-client-<name> <operation> < request.json       # an external adapter
+```
+
+`<operation>` is one of `probe`, `launch-argv`, `parse-result`, `resume-argv`, `transcripts` and `actions`. The request
+is a JSON document on stdin, and the answer a JSON document on stdout. The probe answers `models`, the model the
+adapter binds to each reasoning level.
+
+> **Watch out:** brigade checks every answer against the shape of its operation and names the adapter, the operation
+> and the key of an answer that departs from it.
+
+## Details and edge cases
+
+<details><summary>The outcome of a run, as <code>parse-result</code> answers it</summary>
+
+The `outcome` of a `parse-result` answer is `done`, `handed_over`, `blocked`, `undeclared`, `failed` or `soft_limit`:
+
+| `outcome` | When |
+|---|---|
+| `done`, `handed_over`, `blocked` | the run declares it on the last line of its final message, `brigade-end: <outcome>`, which the brief of every segment asks for |
+| `undeclared` | that line is missing or names another value |
+| `failed` | an error of the client |
+| `soft_limit` | the client ended the session itself once the `stop_at` of its request had passed |
+
+</details>
+
+<details><summary>How the commands report a slot bound to another client</summary>
+
+- `brigade roles list`, `brigade doctor` and `brigade adapter <operation>` answer for the `client` key, and name every
+  slot the table binds to another client: `slot <slot> runs on <client>`.
+- `brigade roles list` and `brigade adapter` state that key as `answers for <client>`; `brigade adapter` writes it on
+  stderr, its stdout holding the adapter's answer alone.
+- `brigade doctor` names it on its `client` line.
+- `brigade roles list` probes the client of each such slot too, its model column showing the model that client binds,
+  and exits 1 naming an adapter it finds nowhere.
+
+</details>
+
+<details><summary>More on <code>brigade adapter matrix</code></summary>
+
+- Its rows cover every client adapter, built-in or `brigade-client-<name>` on your `PATH`; its columns are read from
+  the probe with the settings of `config.toml`.
+- Every row carries its audience: a supported client, or an adapter of the test suite, the modules of
+  `brigade/adapters/test_clients/`.
+- An adapter whose probe fails gets a row naming the error, and the command exits 1.
+- `--json` prints the document; `--markdown` the two tables above, which are its output for the built-in adapters. A
+  test of `tests/guards/` fails when they drift.
+
+</details>
+
+<details><summary>Settings of the <code>fake</code> adapter</summary>
+
+The fake reads these keys of `[clients.fake]`:
+
+| Key | What it does |
+|---|---|
+| `recordings` | the directory whose `<role>.json` it replays, or `<role>.resumed.json` when that file exists and its brief opens on the `Progress so far` section |
+| `features` | the comma-separated features its probe declares: `step_count`, `tool_grants`, `reset_hour`, `graceful_stop`; none by default |
+| `hold` | for tests of the clock and of the hand-over: a file whose presence it waits out before answering |
+| `progress` | for those tests: a text it appends as it is to the progress file of the run, in either form |
+| `interval` | for those tests: the seconds it waits after each line of its recording |
+| `operations` | comma-separated, adds operations to its probe: with `actions`, a line of its recording that is a result document is a result and any other line a text; with `transcripts`, it answers the document `<session_id>.transcripts.json` of `recordings` |
+
+</details>

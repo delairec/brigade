@@ -1,9 +1,10 @@
-Answers which commands brigade has, what each does in one line, and which page documents it: the lines are those of
-`brigade --help` and of `brigade <command> --help`.
+Every command of brigade, what it does in one line, and the page that documents it. The lines come from
+`brigade --help` and `brigade <command> --help`, with the departures listed at the end of the page.
 
-Every command accepts `--json`, which prints the output as a JSON document, and `--verbose`, which prints every
-subprocess the command runs on stderr ([Trails](Trails.md)); `brigade --version` prints the version of brigade. A
-command this page does not list is a task of the corpus, not delivered yet.
+- Every command accepts `--json`, which prints the output as a JSON document, and `--verbose`, which prints every
+  subprocess the command runs on stderr ([Trails](Trails.md)).
+- `brigade --version` prints the version of brigade.
+- A command this page does not list is a task of the corpus, not delivered yet.
 
 ## Setting up
 
@@ -51,3 +52,13 @@ command this page does not list is a task of the corpus, not delivered yet.
 | `brigade processes list\|show` | list the subprocesses brigade started and show those of one run, tick or command | [Trails](Trails.md) |
 | `brigade corpus <project>` | read a registered project's tree at a branch, a SHA or a worktree; `-- <awawa args>` runs awawa there | [Project tree at a ref](Project-tree-at-a-ref.md) |
 | `brigade serve` | serve the dashboard on the loopback address until SIGINT or SIGTERM | [Dashboard](Dashboard.md) |
+
+<details><summary>Lines that depart from the help</summary>
+
+- `brigade adapter <operation>`: the line names the six operations in place of the help line of `brigade adapter`,
+  which covers `matrix` too.
+- `brigade verify context|verdict` and `brigade reports list|show`: each line joins the help lines of its two
+  subcommands, `verify context` and `verify verdict`, `reports list` and `reports show`.
+- `brigade reports`: `brigade --help` prints an empty line for it; its line comes from its two subcommands.
+
+</details>
