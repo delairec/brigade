@@ -5,6 +5,13 @@ from unittest.mock import ANY
 
 from tests.cli.run_test_case import DONE_RESULT
 from tests.cli.wave_tick_test_case import WAVE_BRANCH, LaunchingTickTestCase
+from tests.value_matchers import PatternMatcher
+
+SHA256_DIGEST = PatternMatcher("^[0-9a-f]{64}$")
+NO_EDIT_TOOL_NAMED = {
+    "steps_to_first_edit": "the client names no edit tool",
+    "tokens_to_first_edit": "the client names no edit tool",
+}
 
 TASK_BRANCH = "task/M1-empty-cart/S3"
 SUCCESSFUL_CHECK_RUN = {"__typename": "CheckRun", "name": "tests", "status": "COMPLETED", "conclusion": "SUCCESS"}
@@ -127,6 +134,8 @@ class BrigadeTickOfARemediationCutByARateLimitTest(LaunchingTickTestCase):
                     "exit": 0,
                     "wave": "shop_w1",
                     "task": "S3",
+                    "role_digest": SHA256_DIGEST,
+                    "procedure_digest": SHA256_DIGEST,
                     "nulls": ANY,
                     "cost_usd": 0.42,
                 },
