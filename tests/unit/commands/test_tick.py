@@ -3508,6 +3508,18 @@ class TickMergingThePullRequestOfAWaveTest(unittest.TestCase):
                     ],
                 )
 
+    def test_should_print_the_retarget_with_its_wave_its_pull_request_and_its_base_on_a_dry_run(self):
+        # Arrange
+        forge = RetargetingForgeDouble({WAVE_BRANCH: WAVE_PULL_REQUEST_READY | {"base": "main"}}, NO_REVIEW_THREAD)
+
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), self._create_runtime(forge))
+
+        # Assert
+        self.assertIn(
+            {"project": "tidepool", "wave": "tidepool_w16", "pr": 206, "base": "integration/tides"}, document["plan"]
+        )
+
     def test_should_record_the_retarget_then_merge_the_pull_request_on_its_new_base_at_the_next_round(self):
         # Arrange
         forge = RetargetingForgeDouble({WAVE_BRANCH: WAVE_PULL_REQUEST_READY | {"base": "main"}}, NO_REVIEW_THREAD)
@@ -3638,6 +3650,13 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
                 },
             ],
         )
+
+    def test_should_print_the_cut_with_its_project_its_milestone_and_its_branch_on_a_dry_run(self):
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+
+        # Assert
+        self.assertIn({"project": "tidepool", "milestone": "M4", "branch": "integration/tides"}, document["plan"])
 
     def test_should_cut_the_missing_branch_of_an_open_wave(self):
         # Arrange
