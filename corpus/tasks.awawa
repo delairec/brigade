@@ -13922,7 +13922,8 @@ TASK B226
 	TITLE "The tick merges a pull request only at the head its snapshot read, gh pr merge"
 		+ "--match-head-commit, so that a head pushed since the read is judged again before any"
 		+ "merge"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 276
 	TYPE fix
 	MILESTONE @MILESTONE.M9
 	COMPONENT "the tick"
