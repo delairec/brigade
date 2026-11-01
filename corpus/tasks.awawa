@@ -13898,7 +13898,8 @@ TASK B221
 TASK B222
 	TITLE "A task whose entity was amended after its pull request opened is rebuilt to the amended"
 		+ "entity by a run of the build slot on that pull request, never sent to the rebase slot"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 285
 	TYPE fix
 	MILESTONE @MILESTONE.M10
 	COMPONENT "the tick"
