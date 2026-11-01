@@ -44,7 +44,7 @@ def list_candidate_waves(runtime: Runtime, reading: ProjectTasksReading) -> tupl
     )
     open_tasks = map_open_tasks(reading.entries, reading.project.name)
     waves = (
-        CandidateWave(milestone=tasks.milestone, tasks=admit_candidates(runtime.run_process, tasks, open_tasks))
+        CandidateWave(milestone=tasks.milestone, tasks=admit_candidates(runtime, tasks, open_tasks))
         for tasks in readings
     )
     return tuple(wave for wave in waves if wave.tasks)
