@@ -1786,13 +1786,13 @@ DECISION APreflightIsANamedSetOfCollectorsAndChecks
 		+ "nommés\""
 
 DECISION APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob
-	TITLE "a pull request touching only corpus/, docs/, artifact/, wiki/ or Markdown at the root"
-		+ "starts no job of ci.yml; a push to main runs them all"
+	TITLE "a pull request touching only corpus/, docs/, artifact/ or Markdown at the root starts no"
+		+ "job of ci.yml; a push to main runs them all"
 	STATUS active
 	DESC "the pull_request trigger of .github/workflows/ci.yml carries paths-ignore corpus/**,"
-		+ "docs/**, artifact/**, wiki/** and *.md, the Markdown at the root alone: a pull request"
-		+ "changing only those files starts none of its jobs, a pull request changing one other"
-		+ "file starts them all"
+		+ "docs/**, artifact/** and *.md, the Markdown at the root alone: a pull request changing"
+		+ "only those files starts none of its jobs, a pull request changing one other file starts"
+		+ "them all"
 	DESC "the push trigger on main carries no filter: every merge runs the whole suite"
 	DESC "no job of ci.yml reads those paths: the tests write their own corpora in temporary"
 		+ "directories, and no .awawa file lies outside corpus/"
@@ -4947,9 +4947,14 @@ DECISION TheDocumentationIsWrittenInWikiAndPublishedToTheGitHubWikiOnEachPushToM
 		REF @DECISION.TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
 	DESC "an IMPL anchor of the corpus into README.md names the wiki page that holds its text"
-	DESC "wiki/** joins the paths-ignore of the pull_request trigger of ci.yml; it amends DESC 1 of"
-		+ "@DECISION.APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob"
+	DESC "wiki/ stays out of the paths-ignore of the pull_request trigger of ci.yml, unlike the"
+		+ "documentation paths of"
+		+ "@DECISION.APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob: the guards of"
+		+ "tests/guards read its pages, so a pull request changing wiki/ alone runs the tests"
 		REF @DECISION.APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob
+	REJECTED "wiki/** in the paths-ignore of ci.yml: a pull request changing wiki/ alone would"
+		+ "start no guard, and the publication on the push to main would put a broken link or a"
+		+ "drifted adapter matrix on the wiki unchecked"
 	DESC "binds the draft tasks whose SPEC writes in the README, @TASK.B39, @TASK.B52, @TASK.B93,"
 		+ "@TASK.B107, @TASK.B108 and @TASK.B163: what they document lands on the wiki page of"
 		+ "their subject; the SPEC of an implemented task naming the README stays as it was"

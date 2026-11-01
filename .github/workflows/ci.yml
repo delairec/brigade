@@ -6,7 +6,6 @@ on:
       - "corpus/**"
       - "docs/**"
       - "artifact/**"
-      - "wiki/**"
       - "*.md"
   push:
     branches: [main]
