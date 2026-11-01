@@ -4,6 +4,12 @@ from tests.cli.temporary_machine import CLONE_ENTRY_POINT
 from tests.cli.wave_tick_test_case import WAVE_BRANCH, LaunchingTickTestCase
 from tests.value_matchers import PatternMatcher
 
+SHA256_DIGEST = PatternMatcher("^[0-9a-f]{64}$")
+NO_EDIT_TOOL_NAMED = {
+    "steps_to_first_edit": "the client names no edit tool",
+    "tokens_to_first_edit": "the client names no edit tool",
+}
+
 RUN_ID_PATTERN = r"^\d{8}T\d{6}Z-[0-9a-f]{6}$"
 CONVENTIONAL_COMMITS_HOOK = (
     "#!/bin/sh\n"
@@ -42,6 +48,8 @@ BUILD_RUN_OF_THE_NEW_WAVE = {
     "exit": 0,
     "wave": "shop_w2",
     "task": "S3",
+    "role_digest": SHA256_DIGEST,
+    "procedure_digest": SHA256_DIGEST,
     "nulls": ANY,
     "cost_usd": 0.42,
 }

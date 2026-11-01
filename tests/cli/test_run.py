@@ -8,6 +8,12 @@ from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, RunTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
 from tests.value_matchers import DurationUnderMatcher, PatternMatcher
 
+SHA256_DIGEST = PatternMatcher("^[0-9a-f]{64}$")
+NO_EDIT_TOOL_NAMED = {
+    "steps_to_first_edit": "the client names no edit tool",
+    "tokens_to_first_edit": "the client names no edit tool",
+}
+
 RUN_ID_PATTERN = r"^\d{8}T\d{6}Z-[0-9a-f]{6}$"
 INSTANT_PATTERN = r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$"
 NOT_IN_A_WAVE = "not launched by a wave"
@@ -154,7 +160,10 @@ class BrigadeRunDetachedTest(RunTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": SHA256_DIGEST,
+                    "procedure_digest": SHA256_DIGEST,
                     "nulls": {
+                        **NO_EDIT_TOOL_NAMED,
                         "project": "no project given",
                         "wave": NOT_IN_A_WAVE,
                         "task": NOT_FOR_A_TASK,
@@ -217,7 +226,10 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
                     "exit": None,
                     "wave": None,
                     "task": None,
+                    "role_digest": SHA256_DIGEST,
+                    "procedure_digest": SHA256_DIGEST,
                     "nulls": {
+                        **NO_EDIT_TOOL_NAMED,
                         "project": "no project given",
                         "wave": NOT_IN_A_WAVE,
                         "task": NOT_FOR_A_TASK,
@@ -321,7 +333,10 @@ class BrigadeRunOnTheClockTest(RunTestCase):
                     "exit": None,
                     "wave": None,
                     "task": None,
+                    "role_digest": SHA256_DIGEST,
+                    "procedure_digest": SHA256_DIGEST,
                     "nulls": {
+                        **NO_EDIT_TOOL_NAMED,
                         "project": "no project given",
                         "wave": NOT_IN_A_WAVE,
                         "task": NOT_FOR_A_TASK,

@@ -25,11 +25,28 @@ class CountSessionStepsTest(unittest.TestCase):
                         "timestamp": None,
                         "content": "Deliver the task.",
                         "tool_calls": 0,
+                        "tools": [],
                         "id": None,
                         "usage": None,
                     },
-                    {"role": "assistant", "timestamp": None, "content": [], "tool_calls": 2, "id": None, "usage": None},
-                    {"role": "assistant", "timestamp": None, "content": [], "tool_calls": 3, "id": None, "usage": None},
+                    {
+                        "role": "assistant",
+                        "timestamp": None,
+                        "content": [],
+                        "tool_calls": 2,
+                        "tools": [],
+                        "id": None,
+                        "usage": None,
+                    },
+                    {
+                        "role": "assistant",
+                        "timestamp": None,
+                        "content": [],
+                        "tool_calls": 3,
+                        "tools": [],
+                        "id": None,
+                        "usage": None,
+                    },
                 ],
                 "subagents": [],
             }
@@ -47,7 +64,15 @@ class CountSessionStepsTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "messages": [
-                    {"role": "assistant", "timestamp": None, "content": [], "tool_calls": 1, "id": None, "usage": None}
+                    {
+                        "role": "assistant",
+                        "timestamp": None,
+                        "content": [],
+                        "tool_calls": 1,
+                        "tools": [],
+                        "id": None,
+                        "usage": None,
+                    }
                 ],
                 "subagents": [
                     {
@@ -57,6 +82,7 @@ class CountSessionStepsTest(unittest.TestCase):
                                 "timestamp": None,
                                 "content": [],
                                 "tool_calls": 4,
+                                "tools": [],
                                 "id": None,
                                 "usage": None,
                             }
@@ -69,6 +95,7 @@ class CountSessionStepsTest(unittest.TestCase):
                                 "timestamp": None,
                                 "content": "Read it.",
                                 "tool_calls": 0,
+                                "tools": [],
                                 "id": None,
                                 "usage": None,
                             }

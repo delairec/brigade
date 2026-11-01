@@ -10,6 +10,13 @@ from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
 from tests.cli.test_collect import install_executable
 from tests.list_entry_names import list_entry_names
+from tests.value_matchers import PatternMatcher
+
+SHA256_DIGEST = PatternMatcher("^[0-9a-f]{64}$")
+NO_EDIT_TOOL_NAMED = {
+    "steps_to_first_edit": "the client names no edit tool",
+    "tokens_to_first_edit": "the client names no edit tool",
+}
 
 PINNED_COMMIT_DATES = {"GIT_AUTHOR_DATE": "2026-10-12T09:00:00Z", "GIT_COMMITTER_DATE": "2026-10-12T09:00:00Z"}
 QUESTION = "what changed in the shop this week?"
@@ -254,7 +261,10 @@ class BrigadeStudyRunTest(StudyRunTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": SHA256_DIGEST,
+                    "procedure_digest": SHA256_DIGEST,
                     "nulls": {
+                        **NO_EDIT_TOOL_NAMED,
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
                         "total_steps": "the client reads no transcript",

@@ -19,6 +19,7 @@ TRANSCRIPTS_ANSWER = {
             "timestamp": "2026-10-06T10:00:00.000Z",
             "content": "Deliver the task B42.",
             "tool_calls": 0,
+            "tools": [],
             "id": None,
             "usage": None,
         }

@@ -6,6 +6,7 @@ from brigade.ledger.run_finished import RunFinished
 from brigade.roles.resolve_role import ResolvedRole
 from brigade.runs.count_session_steps import SessionSteps
 from brigade.runs.describe_finished import describe_finished
+from brigade.runs.locate_first_edit import FirstEdit
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
 from brigade.runs.run_segment import SegmentRecord
@@ -22,9 +23,15 @@ NOT_IN_A_WAVE = "not launched by a wave"
 NOT_FOR_A_TASK = "not launched for a task"
 CUT = "cut at the wall-time limit"
 STOPPED = "stopped by a signal"
+NO_EDIT_TOOL_NAMED = {
+    "steps_to_first_edit": "the client names no edit tool",
+    "tokens_to_first_edit": "the client names no edit tool",
+}
+EMPTY_ROLE_DIGEST = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+PROCEDURE_DIGEST = "e395b77e8ab7354e4418d2e1bb9d6f5c5b4de99c417c8b5ac1bc588d5d5c4151"
 
 
-def _create_plan(*, counts_steps: bool = True) -> RunPlan:
+def _create_plan(*, counts_steps: bool = True, edit_tools: tuple[str, ...] = ()) -> RunPlan:
     return RunPlan(
         run_id="20261007T101817Z-2ee96f",
         run_directory=ROOT / "runs" / "20261007T101817Z-2ee96f",
@@ -59,6 +66,7 @@ def _create_plan(*, counts_steps: bool = True) -> RunPlan:
         reads_transcripts=True,
         handovers=1,
         warnings=NO_WARNINGS,
+        edit_tools=edit_tools,
     )
 
 
@@ -112,7 +120,10 @@ class DescribeFinishedTest(unittest.TestCase):
                 exit=0,
                 wave=None,
                 task=None,
+                role_digest=EMPTY_ROLE_DIGEST,
+                procedure_digest=PROCEDURE_DIGEST,
                 nulls={
+                    **NO_EDIT_TOOL_NAMED,
                     "wave": NOT_IN_A_WAVE,
                     "task": NOT_FOR_A_TASK,
                     "usage": "the client reported no usage",
@@ -238,7 +249,15 @@ class DescribeFinishedOfACutSegmentTest(unittest.TestCase):
                 exit=None,
                 wave=None,
                 task=None,
-                nulls={"wave": NOT_IN_A_WAVE, "task": NOT_FOR_A_TASK, "error_class": CUT, "exit": CUT},
+                role_digest=EMPTY_ROLE_DIGEST,
+                procedure_digest=PROCEDURE_DIGEST,
+                nulls={
+                    **NO_EDIT_TOOL_NAMED,
+                    "wave": NOT_IN_A_WAVE,
+                    "task": NOT_FOR_A_TASK,
+                    "error_class": CUT,
+                    "exit": CUT,
+                },
                 cost_usd=None,
                 message="cut at the wall-time limit of 2820 s",
             ),
@@ -252,6 +271,7 @@ class DescribeFinishedOfACutSegmentTest(unittest.TestCase):
                 None,
                 "the client names no session at launch",
                 {
+                    **NO_EDIT_TOOL_NAMED,
                     "wave": NOT_IN_A_WAVE,
                     "task": NOT_FOR_A_TASK,
                     "session": "the client names no session at launch",
@@ -267,6 +287,7 @@ class DescribeFinishedOfACutSegmentTest(unittest.TestCase):
                 None,
                 "the client reads no transcript",
                 {
+                    **NO_EDIT_TOOL_NAMED,
                     "wave": NOT_IN_A_WAVE,
                     "task": NOT_FOR_A_TASK,
                     "session": "the client names no session at launch",
@@ -282,6 +303,7 @@ class DescribeFinishedOfACutSegmentTest(unittest.TestCase):
                 "a47607d0-5a3d-4910-8978-9aad5d0e7796",
                 "the transcript could not be read: no transcript of session a47607d0",
                 {
+                    **NO_EDIT_TOOL_NAMED,
                     "wave": NOT_IN_A_WAVE,
                     "task": NOT_FOR_A_TASK,
                     "main_steps": "the transcript could not be read: no transcript of session a47607d0",
@@ -322,6 +344,7 @@ class DescribeFinishedOfAStoppedSegmentTest(unittest.TestCase):
                 None,
                 "the client names no session at launch",
                 {
+                    **NO_EDIT_TOOL_NAMED,
                     "wave": NOT_IN_A_WAVE,
                     "task": NOT_FOR_A_TASK,
                     "session": "the client names no session at launch",
@@ -337,6 +360,7 @@ class DescribeFinishedOfAStoppedSegmentTest(unittest.TestCase):
                 "a47607d0-5a3d-4910-8978-9aad5d0e7796",
                 "the client was never launched",
                 {
+                    **NO_EDIT_TOOL_NAMED,
                     "wave": NOT_IN_A_WAVE,
                     "task": NOT_FOR_A_TASK,
                     "main_steps": "the client was never launched",
@@ -401,6 +425,7 @@ class DescribeFinishedOfASegmentWhoseAdapterFailedToLaunchItsClientTest(unittest
         self.assertEqual(
             finished.nulls,
             {
+                **NO_EDIT_TOOL_NAMED,
                 "wave": NOT_IN_A_WAVE,
                 "task": NOT_FOR_A_TASK,
                 "session": "the client names no session at launch",
@@ -437,7 +462,7 @@ class DescribeFinishedOfASegmentWhoseAdapterFailedToParseTheResultOfItsClientTes
                 usage,
                 SessionSteps(main_steps=3, total_steps=5),
                 None,
-                {"wave": NOT_IN_A_WAVE, "task": NOT_FOR_A_TASK, "error_class": parse_failure},
+                {**NO_EDIT_TOOL_NAMED, "wave": NOT_IN_A_WAVE, "task": NOT_FOR_A_TASK, "error_class": parse_failure},
             ),
             (
                 "no transcript read",
@@ -446,6 +471,7 @@ class DescribeFinishedOfASegmentWhoseAdapterFailedToParseTheResultOfItsClientTes
                 None,
                 "the client reads no transcript",
                 {
+                    **NO_EDIT_TOOL_NAMED,
                     "wave": NOT_IN_A_WAVE,
                     "task": NOT_FOR_A_TASK,
                     "main_steps": "the client reads no transcript",
@@ -461,6 +487,7 @@ class DescribeFinishedOfASegmentWhoseAdapterFailedToParseTheResultOfItsClientTes
                 None,
                 "the client names no session at launch",
                 {
+                    **NO_EDIT_TOOL_NAMED,
                     "wave": NOT_IN_A_WAVE,
                     "task": NOT_FOR_A_TASK,
                     "session": "the client names no session at launch",
@@ -511,6 +538,7 @@ class DescribeFinishedOfASegmentWhoseAdapterFailedToParseTheResultOfItsClientTes
         self.assertEqual(
             finished.nulls,
             {
+                **NO_EDIT_TOOL_NAMED,
                 "wave": NOT_IN_A_WAVE,
                 "task": NOT_FOR_A_TASK,
                 "main_steps": "the client reported no step count and the client reads no transcript",
@@ -573,8 +601,77 @@ class DescribeFinishedOfARunOfNoProjectInAWaveTest(unittest.TestCase):
         self.assertEqual(
             finished.nulls,
             {
+                **NO_EDIT_TOOL_NAMED,
                 "project": "no project given",
                 "usage": "the client reported no usage",
                 "error_class": "the run did not fail",
             },
         )
+
+
+EDIT_TOOLS = ("Edit", "Write", "NotebookEdit")
+NO_EDIT_TOOL = ()
+
+
+def _create_counted_record(*, counted_steps: SessionSteps | None, uncounted: str | None, first_edit: FirstEdit | None):
+    return SegmentRecord(
+        number=1,
+        **_create_result(steps=None),
+        exit_code=0,
+        measured_ms=900000,
+        cost_usd=None,
+        counted_steps=counted_steps,
+        uncounted=uncounted,
+        adapter_failure=None,
+        first_edit=first_edit,
+    )
+
+
+class DescribeFinishedFirstEditTest(unittest.TestCase):
+    def test_should_record_the_step_and_the_tokens_of_the_first_edit(self):
+        # Arrange
+        record = _create_counted_record(
+            counted_steps=SessionSteps(main_steps=42, total_steps=54),
+            uncounted=None,
+            first_edit=FirstEdit(steps=7, tokens=48000),
+        )
+
+        # Act
+        finished = describe_finished(_create_plan(edit_tools=EDIT_TOOLS), record)
+
+        # Assert
+        self.assertEqual(finished.steps_to_first_edit, 7)
+        self.assertEqual(finished.tokens_to_first_edit, 48000)
+        self.assertNotIn("steps_to_first_edit", finished.nulls)
+
+    def test_should_name_the_reason_the_first_edit_is_left_unmeasured(self):
+        # Arrange
+        counted = SessionSteps(main_steps=42, total_steps=54)
+        rows = [
+            ("no edit tool", NO_EDIT_TOOL, counted, None, "the client names no edit tool"),
+            ("no transcript", EDIT_TOOLS, None, "the client reads no transcript", "the client reads no transcript"),
+            ("no edit", EDIT_TOOLS, counted, None, "the segment made no edit outside the progress file"),
+        ]
+        for case, edit_tools, counted_steps, uncounted, reason in rows:
+            with self.subTest(case=case):
+                record = _create_counted_record(counted_steps=counted_steps, uncounted=uncounted, first_edit=None)
+
+                # Act
+                finished = describe_finished(_create_plan(edit_tools=edit_tools), record)
+
+                # Assert
+                self.assertEqual(finished.nulls["steps_to_first_edit"], reason)
+                self.assertEqual(finished.nulls["tokens_to_first_edit"], reason)
+
+
+class DescribeFinishedDigestsTest(unittest.TestCase):
+    def test_should_record_the_digest_of_the_role_package_and_of_the_procedure(self):
+        # Arrange
+        record = _create_counted_record(counted_steps=None, uncounted="the client reads no transcript", first_edit=None)
+
+        # Act
+        finished = describe_finished(_create_plan(), record)
+
+        # Assert
+        self.assertEqual(finished.role_digest, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+        self.assertEqual(finished.procedure_digest, "e395b77e8ab7354e4418d2e1bb9d6f5c5b4de99c417c8b5ac1bc588d5d5c4151")
