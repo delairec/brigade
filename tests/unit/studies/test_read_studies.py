@@ -63,7 +63,7 @@ class ReadStudiesTest(unittest.TestCase):
         studies = read_studies(self.runtime)
 
         # Assert
-        self.assertEqual(studies, (BUILT_IN_TRIAGE, *SCANS_OF_OAK))
+        self.assertEqual(studies, (BUILT_IN_TRIAGE, BUILT_IN_MINE_TRANSCRIPTS, *SCANS_OF_OAK))
 
     def test_should_take_the_triage_the_operational_corpus_defines_over_the_built_in_one(self):
         # Arrange

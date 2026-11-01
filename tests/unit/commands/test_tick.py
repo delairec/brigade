@@ -3897,7 +3897,7 @@ class TickLaunchingAStudyTest(unittest.TestCase):
         runtime = create_test_runtime(
             create_test_paths(root),
             run_process=create_machine_double(
-                {"PROJECT": {"oak": oak}, "STUDY": {"triage": PAUSED_TRIAGE}}, MACHINE_OUTPUTS
+                {"PROJECT": {"oak": oak}, "STUDY": {"triage": PAUSED_TRIAGE, "mine-transcripts": PAUSED_TRIAGE}}, MACHINE_OUTPUTS
             ),
             spawn_process=spawn.spawn,
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),

@@ -19,7 +19,7 @@ def create_forge(pull_requests: list[dict]) -> ForgeDouble:
 
 
 def create_equipment(forge: ForgeDouble | None) -> CollectorEquipment:
-    return CollectorEquipment(configuration=Configuration(), forge=forge, forge_name="github")
+    return CollectorEquipment(configuration=Configuration(), forge=forge, forge_name="github", resolve_client=None)
 
 
 class ScanCollectorTestCase(unittest.TestCase):
