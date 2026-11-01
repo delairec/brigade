@@ -416,22 +416,8 @@ class DoctorLingerTest(DoctorTestCase):
                             "name": "forge",
                             "kind": "optional",
                             "state": "ok",
-                            "detail": "gh as ada-bot",
+                            "detail": "no registered project on a forge",
                             "fallback": "local mode without a forge",
-                        },
-                        {
-                            "name": "forge login",
-                            "kind": "optional",
-                            "state": "ok",
-                            "detail": "ada-bot for cli, build",
-                            "fallback": "the commands acting as it stop",
-                        },
-                        {
-                            "name": "forge login",
-                            "kind": "optional",
-                            "state": "ok",
-                            "detail": "rev-bot for review",
-                            "fallback": "the commands acting as it stop",
                         },
                         {
                             "name": "awawa-web",
@@ -575,6 +561,39 @@ class DoctorForgeTest(DoctorTestCase):
             self.forge.questions,
             [("read_login_environment", "ada-bot"), ("read_login_environment", "rev-bot"), ("describe_account",)],
         )
+
+
+class DoctorWithoutAProjectOnAForgeTest(DoctorTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure(CONFIGURATION)
+        self.runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
+        self.answers["awawa", "status", "PROJECT"] = ProcessAnswer(
+            stdout=json.dumps({"entities": [{"type": "PROJECT", "name": "lib"}]})
+        )
+
+    def test_should_report_the_local_mode_as_the_forge(self):
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "forge",
+                "kind": "optional",
+                "state": "ok",
+                "detail": "no registered project on a forge",
+                "fallback": "local mode without a forge",
+            },
+            document["items"],
+        )
+
+    def test_should_ask_the_forge_nothing(self):
+        # Act
+        doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(self.forge.questions, [])
 
 
 class DoctorOfAnUnreadableConfigurationTest(DoctorTestCase):
