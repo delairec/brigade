@@ -14048,7 +14048,8 @@ TASK B227
 	TITLE "The tick titles the pull request of a wave and of a milestone by what their head"
 		+ "delivers, in Conventional Commits form, writes their body from it, and rewrites both"
 		+ "when the head moves"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 293
 	TYPE fix
 	MILESTONE @MILESTONE.M9
 	COMPONENT "the tick"
