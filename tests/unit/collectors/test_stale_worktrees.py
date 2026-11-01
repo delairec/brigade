@@ -92,3 +92,33 @@ class StaleWorktreesCollectorTest(ScanCollectorTestCase):
             self.processes.list_argvs()[-3:], [WORKTREE_LISTING, LOCAL_BRANCHES_LISTING, LOCAL_BRANCHES_LISTING]
         )
         self.assertEqual(forge.list_operations(), ["list_pull_requests"])
+
+    def test_should_print_the_missing_and_detached_worktrees_of_a_project_off_the_forge(self):
+        # Arrange
+        self.register_oak(("FORGE", "none"))
+        forge = create_forge(PULL_REQUESTS)
+
+        # Act
+        document = collect(ENVIRONMENT_OF_OAK, self.runtime, create_equipment(forge))
+
+        # Assert
+        self.assertEqual(
+            document["items"],
+            [
+                {
+                    "path": "/srv/oak/.brigade/worktrees/B3",
+                    "branch": "task/w1/B3",
+                    "head": "b3",
+                    "reason": "missing branch",
+                    "fingerprint": "/srv/oak/.brigade/worktrees/B3",
+                },
+                {
+                    "path": "/srv/oak/.brigade/worktrees/B5",
+                    "branch": None,
+                    "head": "b5",
+                    "reason": "detached with no live run",
+                    "fingerprint": "/srv/oak/.brigade/worktrees/B5",
+                },
+            ],
+        )
+        self.assertEqual(forge.list_operations(), [])
