@@ -41,12 +41,15 @@ def _read_messages(finished: RunFinished, runtime: Runtime, equipment: Collector
 
 def read_sessions(environment: dict, runtime: Runtime, equipment: CollectorEquipment) -> SessionsRead:
     start = datetime.combine(read_collector_environment(environment).since, time(), tzinfo=UTC)
-    sessions = []
-    unreadable = []
+    last_finished = {}
     for entry in read_ledger(runtime.paths.state_root).entries:
         finished = entry.event
         if entry.instant < start or finished.name != RunFinished.name or finished.session is None:
             continue
+        last_finished[(finished.client, finished.session)] = finished
+    sessions = []
+    unreadable = []
+    for finished in last_finished.values():
         try:
             sessions.append(SessionRead(finished, _read_messages(finished, runtime, equipment)))
         except BrigadeError as error:
