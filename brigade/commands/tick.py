@@ -413,6 +413,7 @@ def _merge_on_the_forge(
             "repository": read_project_field(project, PATH_FIELD),
             "number": action.pr,
             "method": action.method,
+            "head": action.head,
             "environment": environment,
         },
         runtime,

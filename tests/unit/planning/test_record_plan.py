@@ -253,7 +253,7 @@ class RecordPlanTest(RecordPlanTestCase):
             ),
         )
 
-    def test_should_merge_the_plan_pull_request_itself_under_the_automatic_review(self):
+    def test_should_merge_the_plan_pull_request_itself_at_the_head_its_review_read_under_the_automatic_review(self):
         # Arrange
         self.script_recording()
 
@@ -269,6 +269,7 @@ class RecordPlanTest(RecordPlanTestCase):
                     "repository": "/srv/oak",
                     "number": 42,
                     "method": "squash",
+                    "head": "c0ffee",
                     "environment": {"GH_TOKEN": "token-of-cli"},
                 },
             ),
@@ -317,6 +318,7 @@ class RecordPlanTest(RecordPlanTestCase):
                         "repository": "/srv/oak",
                         "number": 42,
                         "method": "squash",
+                        "head": "c0ffee",
                         "environment": {"GH_TOKEN": "token-of-cli"},
                     },
                 ),
@@ -477,6 +479,7 @@ class RecordPlanReplayTest(RecordPlanTestCase):
                     "repository": "/srv/oak",
                     "number": 42,
                     "method": "squash",
+                    "head": "c0ffee",
                     "environment": {"GH_TOKEN": "token-of-cli"},
                 },
             ),

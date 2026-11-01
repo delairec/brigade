@@ -14,6 +14,7 @@ from tests.cli.test_collect import install_executable
 FORGE = REPOSITORY_ROOT / "tests" / "cli" / "fixtures" / "executables" / "github-over-a-bare-remote"
 REMOTE_URL = "https://github.com/sandbox/shop.git"
 REHEARSAL_WAIT_S = 120
+HEAD_MOVING_AT_MERGE = "head-moving-at-merge"
 SANDBOX_SCHEMA = (
     "SCHEMA TASK\n"
     '\tDESC "a change delivered by one pull request"\n'
@@ -143,6 +144,15 @@ class WaveRehearser:
         opened = [event for event in events if event["event"] == "wave.pr_opened"]
         reported = [event for event in events if event["event"] == "wave.reported"]
         return len(merged) == 3 and bool(opened) and bool(reported)
+
+    def move_the_head_of_a_branch_at_its_first_merge(self, branch: str) -> None:
+        (self.store / HEAD_MOVING_AT_MERGE).write_text(branch)
+
+    def read_events_named(self, name: str) -> list[dict]:
+        return [event for event in self.read_events() if event["event"] == name]
+
+    def read_branch_head(self, branch: str) -> str:
+        return self.project.run_git("-C", str(self.remote), "rev-parse", branch).strip()
 
     def has_the_report_ended(self) -> bool:
         events = self.read_events()
