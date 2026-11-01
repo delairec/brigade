@@ -53,7 +53,7 @@ class PrThreadsCollectorTest(unittest.TestCase):
         )
 
     def create_equipment(self, forge: ForgeDouble) -> CollectorEquipment:
-        return CollectorEquipment(configuration=Configuration(), forge=forge, forge_name="github")
+        return CollectorEquipment(configuration=Configuration(), forge=forge, forge_name="github", resolve_client=None)
 
     def test_should_list_the_unresolved_review_threads_of_the_open_pull_requests_counted_per_pull_request(self):
         # Arrange

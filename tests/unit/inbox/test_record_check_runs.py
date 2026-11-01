@@ -65,7 +65,7 @@ class RecordCheckRunsTest(unittest.TestCase):
             project="oak",
             path=Path("/srv/oak"),
             collector=CollectorDouble(items),
-            equipment=CollectorEquipment(configuration=Configuration(), forge=NO_FORGE_NEEDED, forge_name="github"),
+            equipment=CollectorEquipment(configuration=Configuration(), forge=NO_FORGE_NEEDED, forge_name="github", resolve_client=None),
         )
 
     def read_signal_lines(self) -> list[dict]:

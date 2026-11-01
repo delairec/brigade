@@ -21,6 +21,7 @@ from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_confi
 
 DOCUMENT_SCHEMA_VERSION = 1
 PARKED_EXIT_CODE = 1
+CLIENT_KIND = "client"
 COLLECTOR_KIND = "collector"
 DOCUMENT_KIND = "document"
 ANSWER_DOCUMENT = "awawa"
@@ -49,7 +50,7 @@ def study_run(request: argparse.Namespace, runtime: Runtime) -> dict:
         collector_equipment=CollectorEquipment(
             configuration=read_configuration(runtime, CONFIGURATION_OPTIONAL),
             forge=runtime.resolve_plugin(FORGE_KIND, FORGE_NAME),
-            forge_name=FORGE_NAME,
+            forge_name=FORGE_NAME, resolve_client=lambda name: runtime.resolve_plugin(CLIENT_KIND, name)
         ),
         resolve_collector=lambda name, project: runtime.resolve_plugin(
             COLLECTOR_KIND, name, places=locate_collectors(project, runtime.paths)
