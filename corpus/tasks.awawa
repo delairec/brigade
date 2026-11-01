@@ -12029,7 +12029,8 @@ TASK B174
 TASK B175
 	TITLE "The ledger views give the cost by wave and by task, a --task view, --since on every"
 		+ "view, and a comparison over ranges or against reference figures"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 300
 	TYPE feat
 	MILESTONE @MILESTONE.M6
 	COMPONENT "ledger"
