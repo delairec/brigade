@@ -29,7 +29,7 @@ def create_launch_request(package_file: Path, capabilities: list[str], reasoning
         },
         "reasoning_table": reasoning_table,
         "settings": {},
-        "home": "/home/ada",
+        "home": "/srv/homes/ada",
     }
 
 
@@ -77,7 +77,7 @@ class VibeHomeTestCase(unittest.TestCase):
 class VibeProbeTest(unittest.TestCase):
     def test_should_declare_the_operations_and_the_features_of_vibe(self):
         # Act
-        probe = answer("probe", {"schema_version": 1, "reasoning_table": {}, "settings": {}, "home": "/home/ada"})
+        probe = answer("probe", {"schema_version": 1, "reasoning_table": {}, "settings": {}, "home": "/srv/homes/ada"})
 
         # Assert
         self.assertEqual(
@@ -103,7 +103,7 @@ class VibeProbeTest(unittest.TestCase):
 
         # Act
         probe = answer(
-            "probe", {"schema_version": 1, "reasoning_table": deep_row_set, "settings": {}, "home": "/home/ada"}
+            "probe", {"schema_version": 1, "reasoning_table": deep_row_set, "settings": {}, "home": "/srv/homes/ada"}
         )
 
         # Assert
