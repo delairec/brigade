@@ -1133,6 +1133,7 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                     "tool_calls": 2,
                     "id": None,
                     "usage": None,
+                    "calls": ["Read", "Grep"],
                 },
             ],
         )
@@ -1160,8 +1161,92 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                             "tool_calls": 1,
                             "id": None,
                             "usage": None,
+                            "calls": ["Bash"],
                         },
                     ]
+                },
+            ],
+        )
+
+    def test_should_mark_the_refused_tool_results_and_the_truncated_outputs_with_the_place_of_the_whole_output(self):
+        # Arrange
+        projects = Path(self.home.name) / ".claude" / "projects" / "-srv-b42"
+        projects.mkdir(parents=True)
+        (projects / "ada28962.jsonl").write_text(
+            '{"type":"assistant","timestamp":"2026-10-06T10:00:09.000Z","message":{"role":"assistant",'
+            '"content":[{"type":"tool_use","name":"Bash","input":{"command":"rm -rf build"}},'
+            '{"type":"tool_use","name":"Edit","input":{"file_path":"/srv/b42/cli.py"}},'
+            '{"type":"tool_use","name":"Bash","input":{"command":"git log"}},'
+            '{"type":"tool_use","name":"Bash","input":{"command":"git status"}}]}}\n'
+            '{"type":"user","timestamp":"2026-10-06T10:00:10.000Z","message":{"role":"user","content":['
+            '{"type":"tool_result","is_error":true,'
+            '"content":"Permission to use Bash with command rm -rf build has been denied."},'
+            '{"type":"tool_result","is_error":true,'
+            '"content":"Claude requested permissions to use Edit, but you haven\'t granted it yet."},'
+            '{"type":"tool_result","content":"<persisted-output>\\nOutput too large (58.7KB).'
+            ' Full output saved to: /srv/state/tool-results/b1.txt\\n\\nPreview (first 2KB):\\ncommit 1\\n"},'
+            '{"type":"tool_result","content":"On branch main"}]}}\n'
+        )
+        request = {
+            "schema_version": 1,
+            "session_id": "ada28962",
+            "worktree": "/srv/b42",
+            "reasoning_table": {},
+            "settings": {},
+            "home": self.home.name,
+        }
+
+        # Act
+        transcripts = answer("transcripts", request)
+
+        # Assert
+        self.assertEqual(
+            transcripts["messages"],
+            [
+                {
+                    "role": "assistant",
+                    "timestamp": "2026-10-06T10:00:09.000Z",
+                    "content": [
+                        {"type": "tool_use", "name": "Bash", "input": {"command": "rm -rf build"}},
+                        {"type": "tool_use", "name": "Edit", "input": {"file_path": "/srv/b42/cli.py"}},
+                        {"type": "tool_use", "name": "Bash", "input": {"command": "git log"}},
+                        {"type": "tool_use", "name": "Bash", "input": {"command": "git status"}},
+                    ],
+                    "tool_calls": 4,
+                    "id": None,
+                    "usage": None,
+                    "calls": ["Bash rm -rf build", "Edit /srv/b42/cli.py", "Bash git log", "Bash git status"],
+                },
+                {
+                    "role": "user",
+                    "timestamp": "2026-10-06T10:00:10.000Z",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "is_error": True,
+                            "content": "Permission to use Bash with command rm -rf build has been denied.",
+                        },
+                        {
+                            "type": "tool_result",
+                            "is_error": True,
+                            "content": "Claude requested permissions to use Edit, but you haven't granted it yet.",
+                        },
+                        {
+                            "type": "tool_result",
+                            "content": "<persisted-output>\nOutput too large (58.7KB)."
+                            " Full output saved to: /srv/state/tool-results/b1.txt\n\nPreview (first 2KB):\ncommit 1\n",
+                        },
+                        {"type": "tool_result", "content": "On branch main"},
+                    ],
+                    "tool_calls": 0,
+                    "id": None,
+                    "usage": None,
+                    "results": [
+                        {"refused": True, "truncated": None},
+                        {"refused": True, "truncated": None},
+                        {"refused": False, "truncated": "/srv/state/tool-results/b1.txt"},
+                        {"refused": False, "truncated": None},
+                    ],
                 },
             ],
         )
