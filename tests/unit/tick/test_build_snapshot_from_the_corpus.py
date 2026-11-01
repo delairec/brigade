@@ -55,6 +55,7 @@ from tests.unit.registry_answers import create_registry_answers
 WAVE_SHA = "abc123"
 MAIN_SHA = "def456"
 PULL_REQUEST_HEAD = "4f2a9c1"
+DELIVERED_BY_THE_PULL_REQUEST = {"name": "DELIVERED_BY", "atoms": ["7"]}
 FORGE_ENVIRONMENT = {"GH_TOKEN": "token-of-the-build-slot"}
 PULL_REQUEST = PullRequestFacts(
     number=7,
@@ -358,12 +359,18 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         self,
     ):
         for case, fields_on_the_pull_request, expected in [
-            ("unchanged", AWAWA_ANSWERS.describe_task("todo", "B0"), None),
+            ("unchanged", [*AWAWA_ANSWERS.describe_task("implemented", "B0"), DELIVERED_BY_THE_PULL_REQUEST], None),
             (
                 "amended",
-                AWAWA_ANSWERS.describe_task("todo"),
+                [*AWAWA_ANSWERS.describe_task("implemented"), DELIVERED_BY_THE_PULL_REQUEST],
                 TaskAmendment(
-                    on_pull_request=Entity(name="B1", fields=(EntityField(name="STATUS", value="todo"),)),
+                    on_pull_request=Entity(
+                        name="B1",
+                        fields=(
+                            EntityField(name="STATUS", value="implemented"),
+                            EntityField(name="DELIVERED_BY", value="7"),
+                        ),
+                    ),
                     on_wave=Entity(
                         name="B1",
                         fields=(EntityField(name="STATUS", value="todo"), EntityField(name="AFTER", value="@TASK.B0")),
