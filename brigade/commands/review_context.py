@@ -44,6 +44,7 @@ def review_context(request: argparse.Namespace, runtime: Runtime) -> dict:
         opened=find_opened_task(runtime, project.name, request.pr).opened,
         project_path=read_project_field(project, PATH_FIELD),
         forge=runtime.resolve_plugin("forge", FORGE_NAME),
+        forge_name=FORGE_NAME,
         environment=read_forge_environment(configuration, CLI_KEY, runtime),
     )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, **assemble_review_context(runtime, demand)}
