@@ -33,7 +33,7 @@ class BrigadeHelpTest(HelpTestCase):
             ),
             ("doctor", "check the prerequisites and report the optional items with their fallback"),
             ("init", "create the operational corpus repository, its schema and config.toml"),
-            ("ledger", "read the event journal: an overview, a wave or a project"),
+            ("ledger", "read the event journal: an overview, a wave, a task or a project"),
             ("project", "register the projects brigade works on, list and show them"),
             ("roles", "list, show and lint the roles each slot resolves to"),
             ("run", "run a procedure as a slot through the client adapter"),

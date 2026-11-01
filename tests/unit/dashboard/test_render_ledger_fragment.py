@@ -4,7 +4,13 @@ import unittest
 from brigade.dashboard.render_ledger_fragment import render_ledger_fragment
 from brigade.dashboard.run_routed_command import CommandAnswer
 
-OVERVIEW = {"schema_version": 1, "view": "overview", "waves_started": {"2026-10": ["w1", "<b>w2</b>"]}}
+OVERVIEW = {
+    "schema_version": 1,
+    "view": "overview",
+    "first": "2026-09-30T22:00:00Z",
+    "last": "2026-10-20T09:00:00Z",
+    "waves_started": {"2026-10": ["w1", "<b>w2</b>"]},
+}
 BUDGETS = {
     "schema_version": 1,
     "last": 20,
@@ -32,7 +38,8 @@ MONTHS_SECTION = (
     "<table><thead><tr><th>month</th><th>waves</th><th>started</th><th>baseline</th></tr></thead>"
     "<tbody><tr><td>2026-10</td><td>2</td>"
     '<td><a href="#ledger?wave=w1">w1</a> <a href="#ledger?wave=%3Cb%3Ew2%3C%2Fb%3E">&lt;b&gt;w2&lt;/b&gt;</a></td>'
-    '<td><a href="#ledger?before=2026-10-01">compare before 2026-10-01</a></td></tr></tbody></table></section>'
+    '<td><a href="#ledger?range=2026-09-30..2026-09-30&amp;range=2026-10-01..2026-10-20">compare before 2026-10-01</a>'
+    "</td></tr></tbody></table></section>"
 )
 
 
@@ -91,27 +98,31 @@ class RenderLedgerFragmentTest(unittest.TestCase):
             "<tr><td>&lt;i&gt;2026-10-03T10:00:00Z&lt;/i&gt;</td><td>still paused</td><td>-</td></tr></tbody></table></section>",
         )
 
-    def test_should_render_the_baseline_comparison_of_the_day_asked(self):
+    def test_should_render_the_comparison_of_the_two_ranges_asked(self):
         # Arrange
         comparison = {
             "schema_version": 1,
-            "before": "<i>2026-10-01</i>",
-            "periods": {
-                "before": {
+            "ranges": [
+                {
+                    "start": "<i>2026-09-01</i>",
+                    "end": "2026-09-30",
                     "runs": 4,
                     "segments": 5,
                     "steps": {"runs": {"p50": 40, "p90": 80}},
                     "steps_to_first_edit": {"runs": {"p50": 6, "p90": 9}},
                     "oversized_output_steps": None,
                 },
-                "from": {
+                {
+                    "start": "2026-10-01",
+                    "end": "2026-10-31",
                     "runs": 2,
                     "segments": 2,
                     "steps": {"runs": {"p50": 30, "p90": 45}},
                     "steps_to_first_edit": None,
                     "oversized_output_steps": None,
                 },
-            },
+            ],
+            "reference": {},
         }
         answers = {
             "overview": answer_with(OVERVIEW),
@@ -125,11 +136,11 @@ class RenderLedgerFragmentTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             fragment,
-            STEPS_SECTION
-            + MONTHS_SECTION
-            + "<section><h2>Baseline comparison</h2><p>4 runs before &lt;i&gt;2026-10-01&lt;/i&gt;, 2 runs from it on</p>"
-            "<table><thead><tr><th>measure</th><th>p50 before</th><th>p90 before</th>"
-            "<th>p50 from</th><th>p90 from</th></tr></thead><tbody>"
+            STEPS_SECTION + MONTHS_SECTION + "<section><h2>Baseline comparison</h2>"
+            "<p>4 runs from &lt;i&gt;2026-09-01&lt;/i&gt; to 2026-09-30, 2 runs from 2026-10-01 to 2026-10-31</p>"
+            "<table><thead><tr><th>measure</th>"
+            "<th>p50 &lt;i&gt;2026-09-01&lt;/i&gt; to 2026-09-30</th><th>p90 &lt;i&gt;2026-09-01&lt;/i&gt; to 2026-09-30</th>"
+            "<th>p50 2026-10-01 to 2026-10-31</th><th>p90 2026-10-01 to 2026-10-31</th></tr></thead><tbody>"
             "<tr><td>steps</td><td>40</td><td>80</td><td>30</td><td>45</td></tr>"
             "<tr><td>steps to first edit</td><td>6</td><td>9</td><td>-</td><td>-</td></tr>"
             "<tr><td>oversized output steps</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>"
@@ -138,7 +149,7 @@ class RenderLedgerFragmentTest(unittest.TestCase):
 
     def test_should_render_the_error_of_a_comparison_the_ledger_refused(self):
         # Arrange
-        refused = CommandAnswer(status=500, document='{"error": "no run finished before 2026-10-01\\n"}')
+        refused = CommandAnswer(status=500, document='{"error": "no run finished from 2026-09-30 to 2026-09-30\\n"}')
         answers = {"overview": answer_with(OVERVIEW), "budgets": answer_with(BUDGETS), "comparison": refused}
 
         # Act
@@ -148,5 +159,5 @@ class RenderLedgerFragmentTest(unittest.TestCase):
         self.assertEqual(
             fragment,
             STEPS_SECTION + MONTHS_SECTION + "<section><h2>Baseline comparison</h2>"
-            "<dl><dt>error</dt><dd>no run finished before 2026-10-01\n</dd></dl></section>",
+            "<dl><dt>error</dt><dd>no run finished from 2026-09-30 to 2026-09-30\n</dd></dl></section>",
         )

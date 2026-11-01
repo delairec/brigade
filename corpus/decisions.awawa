@@ -5144,3 +5144,49 @@ DECISION TheTickRemembersTheLiveBlockersOfATaskByTheTreeItReadThemOn
 		+ "the root of a tree changes exactly when its branch moved"
 	SOURCE "the build run of @TASK.B174 of 2026-11-01"
 		REF @TASK.B174
+
+DECISION ALedgerComparisonSetsTwoRangesOfDaysOrOneRangeAgainstReferenceFigures
+	TITLE "brigade ledger compare takes two ranges of days, the end day included, or one range and"
+		+ "the reference figures it is set against"
+	STATUS active
+	DESC "a range is --range START..END, two days YYYY-MM-DD in UTC, the end day included: a run"
+		+ "belongs to it when its last segment finished from START at 00:00 to the day after END at"
+		+ "00:00 excluded"
+	DESC "compare takes two --range, or one --range and one --reference <measure>=<value> per"
+		+ "measure, and refuses any other count as a usage error; --before leaves the command"
+	DESC "the reference measures and what a range gives for each: steps_to_first_edit_p50, the runs"
+		+ "p50 of the steps to the first edit; task_run_steps_p50, the runs p50 of the steps of the"
+		+ "runs whose last segment names a task; oversized_output_steps_per_launch, the oversized"
+		+ "output steps per segment reporting them, rounded to two decimals"
+	DESC "the link compare before <day> of the ledger page of the dashboard passes ?range=<first"
+		+ "day of the ledger>..<the day before>&range=<day>..<last day of the ledger>, so it still"
+		+ "sets every run before the day against every run from it on"
+	REJECTED "--before kept beside --range: two ways to read one window, against the rule"
+		+ "specific_isolated_one_path of the instructions corpus"
+	REJECTED "the end day excluded: the baseline of the user's notes is named from 26/09 to 03/10,"
+		+ "both days in"
+	REJECTED "the steps per task run read from every run: a study or a verification naming no task"
+		+ "would weigh in a figure the baseline measured on task agents"
+	REJECTED "the oversized output steps per launch over every segment: a segment whose client"
+		+ "reports no transcript would count as zero"
+	RATIONALE "the reference figures carry the baseline of the user's notes, which predates the"
+		+ "ledger, as the comparison of @TASK.B39 needs"
+		REF @TASK.B39
+	SOURCE "the build run of @TASK.B175 of 2026-11-01"
+		REF @TASK.B175
+
+DECISION TheViewsOfBrigadeLedgerTakeSinceAndSumOnlyTheCostsTheRunsCarry
+	TITLE "--since narrows the overview, --wave, --task and --project of brigade ledger, and a"
+		+ "cost, a token count or a duration of a view is the sum of the run.finished events that"
+		+ "carry it, none when no event does"
+	STATUS active
+	DESC "--since filters the entries of the ledger once, before the view reads them; ledger"
+		+ "budgets keeps --last and ledger compare its ranges"
+	DESC "the cost in USD, the tokens and the duration of a wave, of a task of a wave and of a run"
+		+ "of brigade ledger --task sum the run.finished events that carry them, and are none when"
+		+ "no event of the view carries one"
+	REJECTED "--since on ledger compare and ledger budgets: a second window beside the ranges and"
+		+ "--last"
+	REJECTED "a cost of zero when no event carries one: it would read as a wave that cost nothing"
+	SOURCE "the build run of @TASK.B175 of 2026-11-01"
+		REF @TASK.B175
