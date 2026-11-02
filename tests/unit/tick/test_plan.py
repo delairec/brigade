@@ -10,6 +10,7 @@ from brigade.system.reset_hour import ResetHour
 from brigade.tick.actions import (
     CloseMilestone,
     CloseWave,
+    CutMilestoneBranch,
     CutWaveBranch,
     LaunchCheckRepair,
     LaunchRemediation,
@@ -46,6 +47,7 @@ from brigade.tick.build_snapshot import (
     StudyFacts,
     TaskAmendment,
     TaskFacts,
+    UncutMilestone,
     WaveFacts,
     WavePause,
 )
@@ -2451,6 +2453,81 @@ class PlanMilestoneRebaseTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, expected)
+
+
+NO_UNCUT_MILESTONE = ()
+NO_RECORDED_MILESTONE = ()
+NAMED_BY_NO_WAVE = ()
+NAMED_BY_NO_TODO_TASK = ()
+CUT_OF_M11 = CutMilestoneBranch(project="shop", milestone="M11", branch="integration/returns")
+
+
+class PlanMilestoneBranchCutTest(unittest.TestCase):
+    def test_should_cut_the_branch_of_an_uncut_milestone_only_when_an_open_wave_or_a_todo_task_names_it(self):
+        for case, uncut_milestones, milestones, expected in [
+            (
+                "named by an open wave",
+                (
+                    UncutMilestone(
+                        project="shop", milestone="M11", branch="integration/returns", open_waves=("shop_w5",)
+                    ),
+                ),
+                NO_RECORDED_MILESTONE,
+                (CUT_OF_M11,),
+            ),
+            (
+                "named by a todo task alone",
+                (UncutMilestone(project="shop", milestone="M11", branch="integration/returns", todo=("S11",)),),
+                NO_RECORDED_MILESTONE,
+                (CUT_OF_M11,),
+            ),
+            (
+                "named by neither",
+                (
+                    UncutMilestone(
+                        project="shop",
+                        milestone="M11",
+                        branch="integration/returns",
+                        open_waves=NAMED_BY_NO_WAVE,
+                        todo=NAMED_BY_NO_TODO_TASK,
+                    ),
+                ),
+                NO_RECORDED_MILESTONE,
+                (),
+            ),
+            (
+                "whose branch is recorded",
+                NO_UNCUT_MILESTONE,
+                (MilestoneFacts(project="shop", milestone="M11", branch="integration/returns", todo=("S11",)),),
+                (),
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                snapshot = Snapshot(now=NOW, projects=(SHOP,), milestones=milestones, uncut_milestones=uncut_milestones)
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_start_no_wave_of_the_milestone_whose_branch_it_cuts_in_that_round(self):
+        # Arrange
+        uncut = UncutMilestone(project="shop", milestone="M9", branch="integration/delivery", todo=("S7",))
+        snapshot = Snapshot(now=NOW, projects=(PROJECT_WITH_CANDIDATES,), uncut_milestones=(uncut,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                CutMilestoneBranch(project="shop", milestone="M9", branch="integration/delivery"),
+                *START_OF_M10_AND_NO_MILESTONE,
+            ),
+        )
 
 
 class PlanQuotaOfATaskInRepairTest(unittest.TestCase):
