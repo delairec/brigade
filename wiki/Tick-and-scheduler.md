@@ -33,7 +33,7 @@ plan is empty or ten rounds have passed. Among those actions, it:
 | preflight | once every check run completed, runs `brigade verify preflight`; no failing check moves the task on | `verifying` |
 | review | starts a detached run of the slot `review`, of `verify-pr`; its `task.verdict` decides | `verified` on `pass`, `changes_requested` on `changes` |
 | repair | starts a detached run of the slot `remediate`, of `remediate-pr`, or of the slot `build` for a failing check | `fixing`, back to `pr_open` on a push |
-| rebase | rebases a pull request behind the wave branch; a conflict starts a run of the slot `rebase` | back to `pr_open`, or `fixing` |
+| rebase | rebases a pull request behind the wave branch once its check runs all passed; a conflict starts a run of the slot `rebase` | back to `pr_open`, or `fixing` |
 | merge | removes the task's worktree once its pull request is merged or closed | `merged` |
 
 The procedure of each run is the one brigade ships, or the one the key of its slot (`build`, `review`, `remediate`,
@@ -92,10 +92,14 @@ The tick launches no run of a paused wave.
 - On a project of `FORGE github`, the launch fetches the wave branch and cuts the task branch from `origin/<branch>`,
   its setup checking that `origin/<branch>` is an ancestor of `HEAD`. A project of `FORGE none` keeps its local wave
   branch.
-- An existing task branch that does not descend from that wave branch is rebased onto it before the setup. A rebase
-  stopped on a conflict is aborted, and the tick starts a detached run of the slot `rebase` in the worktree of the
-  task, with the arguments `task` and `base` and no `pr`, the task staying `running`. Once that run ends done, the next
-  tick launches the build run; a run that ends blocked parks the task on its question.
+- An existing task branch that does not descend from that wave branch is rebased onto it before the setup only when
+  its pull request is open and its check runs all passed. A rebase stopped on a conflict is aborted, and the tick
+  starts a detached run of the slot `rebase` in the worktree of the task, with the arguments `task` and `base`, the
+  task staying `running`. Once that run ends done, the next tick launches the build run; a run that ends blocked parks
+  the task on its question.
+- Any other such branch is built as it stands: the tick rebases nothing, its setup checks no ancestry, and the brief
+  tells the build not to rebase it. The build opens its pull request behind the wave branch, and the tick rebases it
+  once its check runs pass.
 - The tick follows the pull request of each task past its launch, read as the login of the key `cli` of
   `[forge_accounts]`. The worktree of a task is never removed while a run holds it.
 

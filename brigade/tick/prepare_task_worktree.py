@@ -48,6 +48,7 @@ WHOLE_WORKTREE = "."
 class PreparedWorktree:
     worktree: BranchWorktree
     conflicted: bool
+    on_start: bool
 
 
 def _split_line(line: str) -> tuple[str, ...]:
@@ -57,13 +58,15 @@ def _split_line(line: str) -> tuple[str, ...]:
         raise ToolFailure(f"the line {line} splits into no argv: {error}") from None
 
 
-def _set_up(runtime: Runtime, setup: tuple[str, ...], worktree: BranchWorktree, log: Path) -> None:
+def _set_up(runtime: Runtime, setup: tuple[str, ...], prepared: PreparedWorktree, log: Path) -> None:
+    worktree = prepared.worktree
     transcript = []
     for line, argv in tuple((line, _split_line(line)) for line in setup):
         record = runtime.run_process(ProcessRequest(argv=argv, cwd=str(worktree.path), timeout_s=SETUP_TIMEOUT_S))
         transcript.append(f"{SETUP_PROMPT}{line}\n{record.stdout}{record.stderr}")
     write_text_atomically(log, "".join(transcript))
-    require_ancestor(runtime.run_process, worktree.path, worktree.start)
+    if prepared.on_start:
+        require_ancestor(runtime.run_process, worktree.path, worktree.start)
 
 
 def _keep_uncommitted_changes(runtime: Runtime, worktree: BranchWorktree, task: str) -> None:
@@ -94,17 +97,22 @@ def _open_worktree(runtime: Runtime, repository: Path, worktree: BranchWorktree,
     return found
 
 
-def _put_on_start(runtime: Runtime, worktree: BranchWorktree) -> bool:
+def _put_on_start(runtime: Runtime, worktree: BranchWorktree, action: LaunchTask) -> PreparedWorktree:
     descent = check_ancestor(runtime.run_process, worktree.path, worktree.start, worktree.branch)
-    return descent.exit_code == DESCENDING or rebase_onto(runtime.run_process, worktree.path, worktree.start)
+    if descent.exit_code == DESCENDING:
+        return PreparedWorktree(worktree=worktree, conflicted=False, on_start=True)
+    if not action.checks_passed:
+        return PreparedWorktree(worktree=worktree, conflicted=False, on_start=False)
+    rebased = rebase_onto(runtime.run_process, worktree.path, worktree.start)
+    return PreparedWorktree(worktree=worktree, conflicted=not rebased, on_start=rebased)
 
 
-def _set_up_or_park(runtime: Runtime, project: Entity, action: LaunchTask, worktree: BranchWorktree) -> None:
+def _set_up_or_park(runtime: Runtime, project: Entity, action: LaunchTask, prepared: PreparedWorktree) -> None:
     try:
         _set_up(
             runtime,
             tuple(field.value for field in project.fields if field.name == SETUP_FIELD),
-            worktree,
+            prepared,
             locate_setup_log(runtime.paths.setup_directory, action.project, action.task),
         )
     except ToolFailure as failure:
@@ -130,7 +138,12 @@ def prepare_task_worktree(
         )
         if configuration.worktree_root is None:
             ignore_worktrees(runtime.run_process, repository, action.branch)
-        if _open_worktree(runtime, repository, worktree, action) and not _put_on_start(runtime, worktree):
-            return PreparedWorktree(worktree=worktree, conflicted=True)
-    _set_up_or_park(runtime, project, action, worktree)
-    return PreparedWorktree(worktree=worktree, conflicted=False)
+        prepared = (
+            _put_on_start(runtime, worktree, action)
+            if _open_worktree(runtime, repository, worktree, action)
+            else PreparedWorktree(worktree=worktree, conflicted=False, on_start=True)
+        )
+        if prepared.conflicted:
+            return prepared
+    _set_up_or_park(runtime, project, action, prepared)
+    return prepared

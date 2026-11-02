@@ -23,7 +23,8 @@ from tests.unit.lock_observing_runner import LockObservingRunner
 from tests.unit.recording_process_runner import SILENT_SUCCESS, ProcessAnswer, RecordingProcessRunner
 from tests.unit.registry_answers import create_registry_answers
 
-ACTION = LaunchTask(project="shop", wave="w1", branch="integration/w1", task="B1")
+ACTION = LaunchTask(project="shop", wave="w1", branch="integration/w1", task="B1", checks_passed=False)
+ACTION_ON_PASSED_CHECKS = LaunchTask(project="shop", wave="w1", branch="integration/w1", task="B1", checks_passed=True)
 WORKTREE = Path("/srv/shop/.brigade/worktrees/B1")
 ADD_TASK_WORKTREE = ("git", "worktree", "add", "--quiet", "-b", "task/w1/B1", str(WORKTREE), "integration/w1")
 REQUIRE_THE_WAVE_BRANCH = ("git", "merge-base", "--is-ancestor", "integration/w1", "HEAD")
@@ -445,6 +446,7 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
             PreparedWorktree(
                 worktree=BranchWorktree(path=WORKTREE, branch="task/w1/B1", start="origin/integration/w1"),
                 conflicted=False,
+                on_start=True,
             ),
         )
         self.assertEqual(
@@ -477,7 +479,7 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
             runner.requests,
         )
 
-    def test_should_rebase_an_existing_branch_onto_the_wave_branch_of_the_forge(self):
+    def test_should_rebase_an_existing_branch_whose_checks_passed_onto_the_wave_branch_of_the_forge(self):
         # Arrange
         runner = self.create_runner(
             MAKE_DEPS,
@@ -492,7 +494,10 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
 
         # Act
         prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_cli_environment
+            create_test_runtime(self.paths, run_process=runner),
+            Configuration(),
+            ACTION_ON_PASSED_CHECKS,
+            read_cli_environment,
         )
 
         # Assert
@@ -500,13 +505,16 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
 
 
 class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCase):
-    def test_should_rebase_the_branch_onto_the_wave_branch_before_the_setup(self):
+    def test_should_rebase_the_branch_whose_checks_passed_onto_the_wave_branch_before_the_setup(self):
         # Arrange
         runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
 
         # Act
         prepared = prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            create_test_runtime(self.paths, run_process=runner),
+            Configuration(),
+            ACTION_ON_PASSED_CHECKS,
+            read_no_environment,
         )
 
         # Assert
@@ -539,12 +547,58 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
 
         # Act
         prepared = prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            create_test_runtime(self.paths, run_process=runner),
+            Configuration(),
+            ACTION_ON_PASSED_CHECKS,
+            read_no_environment,
         )
 
         # Assert
         self.assertTrue(prepared.conflicted)
         self.assertEqual(runner.commands[-1], (str(WORKTREE), ("git", "rebase", "--abort")))
+
+
+class PrepareTaskWorktreeOfABranchOffTheWaveBranchWhoseChecksHaveNotPassedTest(PrepareTaskWorktreeTestCase):
+    def test_should_run_the_setup_on_the_branch_as_it_stands_without_rebasing_it_or_requiring_the_wave_branch(self):
+        # Arrange
+        runner = self.create_runner(
+            MAKE_DEPS,
+            branch=TASK_BRANCH_FOUND,
+            answers={**OFF_THE_WAVE_BRANCH, REQUIRE_THE_WAVE_BRANCH: HEAD_OFF_THE_WAVE_BRANCH},
+        )
+
+        # Act
+        prepare_task_worktree(
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+        )
+
+        # Assert
+        self.assertEqual(
+            runner.commands[-2:],
+            [
+                (str(WORKTREE), TASK_BRANCH_DESCENDS),
+                (str(WORKTREE), ("make", "deps")),
+            ],
+        )
+
+    def test_should_hand_over_the_worktree_off_its_start(self):
+        # Arrange
+        runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
+
+        # Act
+        prepared = prepare_task_worktree(
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+        )
+
+        # Assert
+        self.assertEqual(
+            prepared,
+            PreparedWorktree(
+                worktree=BranchWorktree(path=WORKTREE, branch="task/w1/B1", start="integration/w1"),
+                conflicted=False,
+                on_start=False,
+            ),
+        )
 
 
 CANCELLATION_INSTANT = datetime(2026, 10, 28, 19, 40, tzinfo=UTC)
@@ -587,7 +641,9 @@ class PrepareTaskWorktreeLeftInACancelledWaveTest(PrepareTaskWorktreeTestCase):
         self.assertEqual(
             prepared,
             PreparedWorktree(
-                worktree=BranchWorktree(path=WORKTREE, branch="task/w1/B1", start="integration/w1"), conflicted=False
+                worktree=BranchWorktree(path=WORKTREE, branch="task/w1/B1", start="integration/w1"),
+                conflicted=False,
+                on_start=True,
             ),
         )
         self.assertEqual(

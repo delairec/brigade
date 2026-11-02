@@ -194,7 +194,7 @@ def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchT
         slot=BUILD_SLOT,
         project=action.project,
         cwd=str(worktree.path),
-        brief=str(write_build_brief(runtime.paths.state_root, action, worktree)),
+        brief=str(write_build_brief(runtime.paths.state_root, action, prepared)),
         arguments=(f"task=@TASK.{action.task}", f"base={action.branch}"),
         run_id=None,
         wave=action.wave,

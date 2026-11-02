@@ -74,9 +74,9 @@ BLOCKED = (TaskFacts(name="S3", blocked_by=("OPEN_QUESTION.Undecided",)),)
 ALONE_S9 = (TaskFacts(name="S9"),)
 
 
-LAUNCH_S3 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S3")
-LAUNCH_S9 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S9")
-LAUNCH_S10 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S10")
+LAUNCH_S3 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S3", checks_passed=False)
+LAUNCH_S9 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S9", checks_passed=False)
+LAUNCH_S10 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S10", checks_passed=False)
 REPORT_SHOP_W1 = ReportWave(wave="shop_w1")
 PARK_BLOCKED_S3 = ParkTask(wave="shop_w1", task="S3", reason="blocked", blockers=("OPEN_QUESTION.Undecided",))
 
@@ -94,6 +94,30 @@ class PlanTest(unittest.TestCase):
 
 
 class PlanStartableTasksTest(unittest.TestCase):
+    def test_should_launch_a_queued_task_telling_whether_the_checks_of_its_open_pull_request_passed(self):
+        for case, pull_request, checks_passed in [
+            ("without a pull request", None, False),
+            ("its checks passed", create_pull_request("open"), True),
+            ("a check failed", create_pull_request("open", "failure"), False),
+            ("a check pending", create_pull_request("open", "pending"), False),
+            ("its pull request closed", create_pull_request("closed"), False),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(name="S3", pull_request=pull_request)
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "queued"}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertIn(
+                    LaunchTask(
+                        project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S3", checks_passed=checks_passed
+                    ),
+                    actions,
+                )
+
     def test_should_launch_a_task_only_when_it_is_startable(self):
         for case, tasks, states, implemented, expected in [
             ("with no state yet", ALONE, {}, (), (LAUNCH_S3,)),
@@ -1026,7 +1050,7 @@ class PlanWaveReportTest(unittest.TestCase):
                 "a task still queued",
                 {"S3": "merged", "S4": "queued"},
                 False,
-                (LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S4"),),
+                (LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S4", checks_passed=False),),
             ),
             ("a task in repair", {"S3": "merged", "S4": "fixing"}, False, ()),
             ("a task with its pull request open", {"S3": "parked", "S4": "pr_open"}, False, ()),
@@ -1571,6 +1595,29 @@ HOLDING_UNCOMMITTED_CHANGES = True
 
 
 class PlanRebaseTest(unittest.TestCase):
+    def test_should_rebase_no_task_behind_until_the_checks_of_its_pull_request_pass(self):
+        for case, pull_request, failures, expected in [
+            ("a check pending", dataclasses.replace(PENDING, behind=True), NO_PREFLIGHT_FAILURE, ()),
+            ("a check failed", BEHIND_ON_A_FAILED_CHECK, (CHECKS_FAILURE,), (REPAIR_CHECKS_OF_S3,)),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=pull_request,
+                    worktree=WORKTREE_S3,
+                    opened_pull_request=OPENED_BY_THE_TASK,
+                    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+                    preflight_failures=failures,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "pr_open"}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
     def test_should_rebase_a_task_whose_pull_request_is_behind_the_wave_branch_before_anything_else(self):
         for state in ["pr_open", "verifying", "verified", "changes_requested", "fixing"]:
             with self.subTest(state=state):
@@ -2074,12 +2121,16 @@ class PlanRunningTaskWithoutALiveRunTest(unittest.TestCase):
 
 
 LAST_RUN_A_REBASE = "20261006T110000Z-4eba5e"
-LAUNCH_S3 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S3")
+LAUNCH_S3 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S3", checks_passed=False)
+LAUNCH_S3_ON_PASSED_CHECKS = dataclasses.replace(LAUNCH_S3, checks_passed=True)
 
 
 class PlanRunningTaskRebasedByItsLastRunTest(unittest.TestCase):
     def test_should_launch_the_build_run_once_the_rebase_run_has_put_the_branch_on_the_wave_branch(self):
-        for case, pull_request in [("without a pull request", NO_PULL_REQUEST), ("with its pull request open", OPEN)]:
+        for case, pull_request, expected in [
+            ("without a pull request", NO_PULL_REQUEST, LAUNCH_S3),
+            ("with its pull request open", OPEN, LAUNCH_S3_ON_PASSED_CHECKS),
+        ]:
             with self.subTest(case=case):
                 # Arrange
                 task = TaskFacts(
@@ -2095,7 +2146,7 @@ class PlanRunningTaskRebasedByItsLastRunTest(unittest.TestCase):
                 actions = plan(snapshot)
 
                 # Assert
-                self.assertEqual(actions, (LAUNCH_S3,))
+                self.assertEqual(actions, (expected,))
 
     def test_should_park_the_task_on_the_question_of_a_rebase_run_that_ended_blocked(self):
         for case, pull_request in [("without a pull request", NO_PULL_REQUEST), ("with its pull request open", OPEN)]:

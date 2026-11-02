@@ -4345,7 +4345,12 @@ DECISION ARebaseRunOfATaskWithoutAPullRequestEndsDoneAndTheTickLaunchesItsBuild
 	TITLE "a rebase run launched at the launch of a task with no pull request takes the arguments"
 		+ "task and base, reads its task from the branch of the worktree, pushes nothing, and the"
 		+ "next tick launches the build run once that run ended done"
-	STATUS active
+	STATUS archived
+	DESC "archived on the user's ruling of 2026-11-02, « L'archiver dans #323 (Recommended) »:"
+		+ "@DECISION.ATaskBranchIsRebasedOntoItsBaseOnlyOnceItsChecksPassed rebases no task branch"
+		+ "at its launch before the checks of its open pull request pass, so no rebase run starts"
+		+ "at the launch of a task without a pull request"
+		REF @DECISION.ATaskBranchIsRebasedOntoItsBaseOnlyOnceItsChecksPassed
 	DESC "binds @TASK.B210"
 		REF @TASK.B210
 	DESC "brigade rebase context without a pull request reads the task from the branch"
@@ -5503,3 +5508,40 @@ DECISION AMilestoneIsReachedByTheMergeOfItsPullRequestAndHoldsNoOpenTask
 		+ "(Recommended) », « Refus du tick seul (Recommended) », « reached + tâches vers m6 dans"
 		+ "la même PR que celle de ce refinement », « M6 + AFTER B232 (Recommended) »"
 		REF @TASK.B233
+
+DECISION ATaskBranchIsRebasedOntoItsBaseOnlyOnceItsChecksPassed
+	TITLE "a task branch is rebased onto the branch of its wave only once the check runs of its"
+		+ "open pull request have all passed; a branch with none is built as it stands"
+	STATUS active
+	DESC "a task branch is rebased onto the branch of its wave, by git or by a run of the rebase"
+		+ "slot, only once the check runs of its open pull request have all passed"
+	DESC "a task launched again on an existing branch that does not descend from the branch of its"
+		+ "wave, with no open pull request whose check runs all passed, is built on that branch as"
+		+ "it stands: the tick rebases nothing, its setup asserts no ancestry, and the brief of its"
+		+ "build tells the run not to rebase it"
+	DESC "such a branch reaches the branch of its wave through the catch-up of its pull request:"
+		+ "the build opens it behind, and the tick rebases it once its check runs pass"
+	DESC "the catch-up of a task whose pull request is behind plans no rebase while a check run of"
+		+ "it is pending or failed; the repair of its checks comes first"
+	DESC "narrows SPEC 2 and SPEC 3 of @TASK.B210 and SPEC 1 of @TASK.B143: no rebase run starts"
+		+ "any more at the launch of a task without a pull request, the case"
+		+ "@DECISION.ARebaseRunOfATaskWithoutAPullRequestEndsDoneAndTheTickLaunchesItsBuild ruled,"
+		+ "archived by this ruling"
+		REF @TASK.B210
+		REF @TASK.B143
+		REF @DECISION.ARebaseRunOfATaskWithoutAPullRequestEndsDoneAndTheTickLaunchesItsBuild
+	REJECTED "the rebase at the launch whatever the checks, a run of the rebase slot judging the"
+		+ "result: the run meets the failures the branch held before the rebase and ends blocked,"
+		+ "which parks a build still in progress"
+	REJECTED "the build rebasing its own branch before it opens its pull request: the same rebase"
+		+ "on failing tests, with no check run to tell a failure of the rebase from one of the work"
+	RATIONALE "run 20261102T193007Z-6cde94 of wave brigade_w22: @TASK.B232, requeued once the"
+		+ "branch of its wave had moved, held a build in progress whose own tests failed, about 138"
+		+ "of them; the tick rebased its branch at the launch, the rebase conflicted, the run of"
+		+ "the rebase slot rebased it, met the failures that preceded the rebase, and ended"
+		+ "blocked, which parked the task"
+		REF @TASK.B232
+	SOURCE "the user's ruling of 2026-11-02 on the question of run 20261102T193007Z-6cde94 of wave"
+		+ "brigade_w22, on @TASK.B232: « Non la règle serait plutôt qu'on doit avoir une ci verte"
+		+ "avant de passer au rebase. Fix en mode quick fix sans tâche, puis requeue. »"
+		REF @TASK.B232
