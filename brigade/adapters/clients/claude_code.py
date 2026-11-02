@@ -279,6 +279,10 @@ def _list_content_items(content, item_type: str) -> list[dict]:
     return [item for item in content if item.get("type") == item_type]
 
 
+def _list_tool_uses(content) -> list[dict]:
+    return _list_content_items(content, "tool_use")
+
+
 def _mark_tool_result(item: dict) -> dict:
     output = item.get("content")
     text = output if isinstance(output, str) else ""
@@ -291,7 +295,7 @@ def _mark_tool_result(item: dict) -> dict:
 
 def _describe_tool_exchanges(content) -> dict:
     calls = [
-        {"tool": item["name"], "input": item.get("input", {})} for item in _list_content_items(content, "tool_use")
+        {"tool": item["name"], "input": item.get("input", {})} for item in _list_tool_uses(content)
     ]
     results = [_mark_tool_result(item) for item in _list_content_items(content, "tool_result")]
     return {**({"calls": calls} if calls else {}), **({"results": results} if results else {})}
@@ -304,10 +308,9 @@ def _describe_message(entry: dict) -> dict:
         "role": message["role"],
         "timestamp": entry.get("timestamp"),
         "content": content,
-        "tool_calls": len(_list_content_items(content, "tool_use")),
+        "tool_calls": len(_list_tool_uses(content)),
         "tools": [
-            {"name": item["name"], "target": _read_identifying_argument(item)}
-            for item in _list_content_items(content, "tool_use")
+            {"name": item["name"], "target": _read_identifying_argument(item)} for item in _list_tool_uses(content)
         ],
         "id": message.get("id"),
         "usage": _read_message_usage(message),
