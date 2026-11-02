@@ -29,6 +29,8 @@ class SessionsRead:
 
 def _read_worktree(runtime: Runtime, run: str) -> str:
     record = runtime.paths.state_root / RUNS_DIRECTORY / run / RUN_RECORD_FILE
+    if not record.is_file():
+        raise BrigadeError(f"run {run}: no run record, its directory was pruned")
     return json.loads(record.read_text(encoding="utf-8"))["worktree"]
 
 
@@ -36,7 +38,10 @@ def _read_messages(finished: RunFinished, runtime: Runtime, equipment: Collector
     request = TranscriptsRequest(session_id=finished.session, worktree=_read_worktree(runtime, finished.run))
     question = ClientQuestion(finished.client, request)
     client = equipment.resolve_client(finished.client)
-    return ask_named_client(client, question, equipment.configuration, runtime).messages
+    try:
+        return ask_named_client(client, question, equipment.configuration, runtime).messages
+    except BrigadeError as error:
+        raise BrigadeError(f"client adapter {finished.client}: {error}") from None
 
 
 def read_sessions(environment: dict, runtime: Runtime, equipment: CollectorEquipment) -> SessionsRead:
@@ -53,6 +58,5 @@ def read_sessions(environment: dict, runtime: Runtime, equipment: CollectorEquip
         try:
             sessions.append(SessionRead(finished, _read_messages(finished, runtime, equipment)))
         except BrigadeError as error:
-            reason = f"client adapter {finished.client}: {error}"
-            unreadable.append({"run": finished.run, "session": finished.session, "reason": reason})
+            unreadable.append({"run": finished.run, "session": finished.session, "reason": str(error)})
     return SessionsRead(sessions=tuple(sessions), unreadable=tuple(unreadable))
