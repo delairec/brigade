@@ -93,6 +93,63 @@ class DeliverPatternsTest(unittest.TestCase):
             "\tSTATUS delivered\n",
         )
 
+    def test_should_deliver_a_constraint_mine_transcripts_proposed_as_one_the_triage_proposed(self):
+        # Arrange
+        (self.config / "patterns.awawa").write_text(
+            "PATTERN StatusReadAgain\n"
+            '\tTITLE "git status is run again and again"\n'
+            "\tSTATUS ratified\n"
+            '\tEVIDENCE "repeated_command:vibe:s-built:5 git status run three times"\n'
+            "\tACTION constraint\n"
+            '\tTARGET "shop"\n',
+            encoding="utf-8",
+        )
+        (self.config / "constraints.awawa").write_text(
+            "CONSTRAINT StatusReadAgain\n"
+            '\tTITLE "git status is run again and again"\n'
+            "\tKIND guard\n"
+            "\tFROM @PATTERN.StatusReadAgain\n"
+            '\tTARGET "shop"\n'
+            "\tSTATUS proposed\n",
+            encoding="utf-8",
+        )
+        runtime = self._create_runtime(
+            {
+                "REQUEST": {
+                    "shop_r1": (
+                        ("PROJECT", "@PROJECT.shop"),
+                        ("STATUS", "planned"),
+                        ("MILESTONE", "M4"),
+                        ("FROM", "@PATTERN.StatusReadAgain"),
+                    )
+                },
+                "CONSTRAINT": {"StatusReadAgain": (("FROM", "@PATTERN.StatusReadAgain"), ("STATUS", "proposed"))},
+            }
+        )
+
+        # Act
+        deliver_patterns(runtime, WaveDelivery(project="shop", milestones=("M4",)))
+
+        # Assert
+        self.assertEqual(
+            self._read_corpus_file("patterns.awawa"),
+            "PATTERN StatusReadAgain\n"
+            '\tTITLE "git status is run again and again"\n'
+            "\tSTATUS delivered\n"
+            '\tEVIDENCE "repeated_command:vibe:s-built:5 git status run three times"\n'
+            "\tACTION constraint\n"
+            '\tTARGET "shop"\n',
+        )
+        self.assertEqual(
+            self._read_corpus_file("constraints.awawa"),
+            "CONSTRAINT StatusReadAgain\n"
+            '\tTITLE "git status is run again and again"\n'
+            "\tKIND guard\n"
+            "\tFROM @PATTERN.StatusReadAgain\n"
+            '\tTARGET "shop"\n'
+            "\tSTATUS delivered\n",
+        )
+
     def test_should_record_each_constraint_delivered_in_the_ledger(self):
         # Arrange
         (self.config / "constraints.awawa").write_text(CONSTRAINTS_TEXT, encoding="utf-8")
