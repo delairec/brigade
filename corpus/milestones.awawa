@@ -33,7 +33,9 @@ MILESTONE M4
 
 MILESTONE M5
 	TITLE "Miner"
-	STATUS active
+	STATUS reached
+	SOURCE "the user's ruling of 2026-11-02: « marque m5 en reached »; task B35 implemented, B36"
+		+ "archived into it, delivered on main by pull request 326 (merge commit f092543b)"
 
 MILESTONE M6
 	TITLE "Hardening"
