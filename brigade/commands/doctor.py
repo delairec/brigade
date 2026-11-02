@@ -192,13 +192,15 @@ def _read_login_environment(forge, forge_name: str, login: str, runtime: Runtime
         return error
 
 
-def _check_forge(
-    forge, forge_name: str, login: str | None, environment: dict | ToolNotFound | None, runtime: Runtime
-) -> dict:
+def _check_cli_environment(login: str | None, environment: dict | ToolNotFound | None) -> dict | None:
     if isinstance(environment, ToolNotFound):
         return _create_optional("forge", "warning", "gh not on PATH", FORGE_FALLBACK)
     if environment is None:
         return _create_optional("forge", "warning", f"gh printed no token for {login}", FORGE_FALLBACK)
+    return None
+
+
+def _check_forge(forge, forge_name: str, environment: dict, runtime: Runtime) -> dict:
     try:
         account = ask_forge_account(forge, forge_name, environment, runtime)
     except ToolNotFound:
@@ -253,8 +255,9 @@ def _check_one_forge(reading: Configuration | BrigadeError, forge_name: str, run
     environments = {login: _read_login_environment(forge, forge_name, login, runtime) for login in keys_by_login}
     cli_login = forge_accounts.get(CLI_KEY)
     cli_environment = UNBOUND_ENVIRONMENT if cli_login is None else environments[cli_login]
+    cli_warning = _check_cli_environment(cli_login, cli_environment)
     return [
-        _check_forge(forge, forge_name, cli_login, cli_environment, runtime),
+        cli_warning or _check_forge(forge, forge_name, cli_environment, runtime),
         *(_check_forge_login(login, keys, environments[login]) for login, keys in keys_by_login.items()),
     ]
 
