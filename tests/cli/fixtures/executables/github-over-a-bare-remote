@@ -68,9 +68,11 @@ class Forge:
         found = [self.describe(pull) for pull in reversed(self.read_pulls()) if pull["headRefName"] == head]
         return json.dumps(found[:1])
 
-    def merge(self, number: str, method: str) -> str:
+    def merge(self, number: str, method: str, expected_head: str) -> str:
         pull = self.read_pull(number)
         head = self.read_head(pull)
+        if head != expected_head:
+            raise SystemExit(f"Head branch was modified: {head} is not {expected_head}. Review and try the merge again.")
         with tempfile.TemporaryDirectory() as clone:
             run_git("clone", "--quiet", "--branch", pull["baseRefName"], str(self.remote), clone)
             run_git("fetch", "--quiet", "origin", pull["headRefName"], cwd=Path(clone))
@@ -124,7 +126,7 @@ class Forge:
         if command == "pr view":
             return json.dumps(self.describe(self.read_pull(arguments[2])))
         if command == "pr merge":
-            return self.merge(arguments[2], arguments[3])
+            return self.merge(arguments[2], arguments[3], read_option(arguments, "--match-head-commit"))
         if command == "pr review":
             self.write_pull({**self.read_pull(arguments[2]), "reviewDecision": "APPROVED"})
             return ""
