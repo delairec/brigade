@@ -30,6 +30,7 @@ def create_launch_request(package_file: Path, capabilities: list[str], reasoning
         "reasoning_table": reasoning_table,
         "settings": {},
         "home": "/srv/homes/ada",
+        "session_bus_address": None,
     }
 
 
@@ -276,6 +277,27 @@ class VibeLaunchTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(launch["environment"], {"VIBE_CLI": "rust", "VIBE_ACTIVE_MODEL": "mistral-large"})
+
+    def test_should_hand_the_session_bus_of_the_machine_to_the_cli_for_its_keyring(self):
+        # Arrange
+        unbound_levels = {}
+        request = {
+            **create_launch_request(self.package_file, ["read"], unbound_levels),
+            "session_bus_address": "unix:path=/run/user/1000/bus",
+        }
+
+        # Act
+        launch = answer("launch-argv", request)
+
+        # Assert
+        self.assertEqual(
+            launch["environment"],
+            {
+                "VIBE_CLI": "rust",
+                "VIBE_ACTIVE_MODEL": "mistral-medium-3.5",
+                "DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/1000/bus",
+            },
+        )
 
 
 class VibeResultTest(VibeHomeTestCase):

@@ -13,6 +13,8 @@ UNATTENDED_OPTIONS = ("-p", "--output", "streaming", "--trust", "--auto-approve"
 REASONING_LEVELS = ("deepest", "deep", "standard", "light")
 UNBOUND_LEVEL_ROW = {"model": "mistral-medium-3.5"}
 RUST_CLI = {"VIBE_CLI": "rust"}
+SESSION_BUS_VARIABLE = "DBUS_SESSION_BUS_ADDRESS"
+NO_SESSION_BUS = None
 CAPABILITY_TOOLS = {
     "read": ("read_file", "grep"),
     "write": ("edit", "write_file"),
@@ -53,6 +55,12 @@ def _grant_tools(capabilities: list[str]) -> list[str]:
     return [option for tool in granted for option in ("--enabled-tools", tool)]
 
 
+def _reach_session_bus(session_bus_address: str | None) -> dict:
+    if session_bus_address is NO_SESSION_BUS:
+        return {}
+    return {SESSION_BUS_VARIABLE: session_bus_address}
+
+
 def _build_launch(request: dict) -> dict:
     role = request["role"]
     max_turns = role["budget"] + math.ceil(role["budget"] / TURN_MARGIN_DIVISOR)
@@ -60,7 +68,11 @@ def _build_launch(request: dict) -> dict:
     return {
         "schema_version": SCHEMA_VERSION,
         "argv": [EXECUTABLE, *UNATTENDED_OPTIONS, "--max-turns", str(max_turns), *_grant_tools(role["capabilities"])],
-        "environment": {**RUST_CLI, "VIBE_ACTIVE_MODEL": _bind_model(request, role["reasoning"])},
+        "environment": {
+            **RUST_CLI,
+            "VIBE_ACTIVE_MODEL": _bind_model(request, role["reasoning"]),
+            **_reach_session_bus(request["session_bus_address"]),
+        },
         "stdin": f"{package}{PACKAGE_SEPARATOR}{request['brief']}",
         "session_id": None,
     }
