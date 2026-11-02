@@ -10,6 +10,7 @@ from tests.process_launcher import ProcessLauncher
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 CLONE_ENTRY_POINT = REPOSITORY_ROOT / "bin" / "brigade"
+SHIPPED_SCHEMA = REPOSITORY_ROOT / "brigade" / "corpus" / "data" / "schema.awawa.tpl"
 EXECUTABLES = Path(__file__).resolve().parent / "fixtures" / "executables"
 
 GIT = str(EXECUTABLES / "git-2.47.3")
@@ -67,6 +68,9 @@ class DoctorTestCase(unittest.TestCase):
         self.configuration.parent.mkdir(parents=True, exist_ok=True)
         self.configuration.write_text(content)
 
+    def register_the_project_on_github_the_awawa_fake_shows(self) -> None:
+        shutil.copy(SHIPPED_SCHEMA, self.configuration.parent / "_schema.awawa")
+
     def read_every_state_file(self) -> str:
         every_file = filter(Path.is_file, self.state_home.rglob("*"))
         return b"".join(map(Path.read_bytes, every_file)).decode("utf-8", errors="replace")
@@ -98,6 +102,7 @@ class BrigadeDoctorOnAMachineWithEveryItemTest(DoctorTestCase):
     def test_should_report_every_item_ok_in_the_versioned_document(self):
         # Arrange
         self.write_configuration(f'client = "claude-code"\ninstructions = "{self.instructions}"\n')
+        self.register_the_project_on_github_the_awawa_fake_shows()
         every_item = [GIT, AWAWA, CLAUDE, SYSTEMD_RUNNING, GH_ACTIVE, AWAWA_WEB]
 
         # Act
@@ -221,7 +226,7 @@ class BrigadeDoctorAsTextWithAFindingAndAWarningTest(DoctorTestCase):
                 "optional",
                 "ok       scheduler    user systemd instance running       else: a cron line, or brigade tick --loop",
                 "ok       linger       the user systemd instance lingers   else: the tick fires only while a session of the user is open",
-                "ok       forge        gh as octo-bot                      else: local mode without a forge",
+                "ok       forge        no registered project on a forge    else: local mode without a forge",
                 "warning  awawa-web    not on PATH                         fallback: the dashboard's corpus view only",
                 "warning  instructions none configured                     fallback: built-in roles and no instructions package",
                 "",
@@ -234,6 +239,7 @@ class BrigadeDoctorReportsTheForgeAccountsTest(DoctorTestCase):
     def test_should_write_the_token_nowhere(self):
         # Arrange
         self.write_configuration(CLAUDE_CODE_CONFIGURATION + FORGE_ACCOUNTS)
+        self.register_the_project_on_github_the_awawa_fake_shows()
 
         # Act
         completed = self.run_doctor(EVERY_TOOL_WITH_THE_ACCOUNTS_GH, "--verbose", "--json")
