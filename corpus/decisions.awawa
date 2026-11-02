@@ -4345,7 +4345,12 @@ DECISION ARebaseRunOfATaskWithoutAPullRequestEndsDoneAndTheTickLaunchesItsBuild
 	TITLE "a rebase run launched at the launch of a task with no pull request takes the arguments"
 		+ "task and base, reads its task from the branch of the worktree, pushes nothing, and the"
 		+ "next tick launches the build run once that run ended done"
-	STATUS active
+	STATUS archived
+	DESC "archived on the user's ruling of 2026-11-02, « L'archiver dans #323 (Recommended) »:"
+		+ "@DECISION.ATaskBranchIsRebasedOntoItsBaseOnlyOnceItsChecksPassed rebases no task branch"
+		+ "at its launch before the checks of its open pull request pass, so no rebase run starts"
+		+ "at the launch of a task without a pull request"
+		REF @DECISION.ATaskBranchIsRebasedOntoItsBaseOnlyOnceItsChecksPassed
 	DESC "binds @TASK.B210"
 		REF @TASK.B210
 	DESC "brigade rebase context without a pull request reads the task from the branch"
@@ -5520,7 +5525,8 @@ DECISION ATaskBranchIsRebasedOntoItsBaseOnlyOnceItsChecksPassed
 		+ "it is pending or failed; the repair of its checks comes first"
 	DESC "narrows SPEC 2 and SPEC 3 of @TASK.B210 and SPEC 1 of @TASK.B143: no rebase run starts"
 		+ "any more at the launch of a task without a pull request, the case"
-		+ "@DECISION.ARebaseRunOfATaskWithoutAPullRequestEndsDoneAndTheTickLaunchesItsBuild rules"
+		+ "@DECISION.ARebaseRunOfATaskWithoutAPullRequestEndsDoneAndTheTickLaunchesItsBuild ruled,"
+		+ "archived by this ruling"
 		REF @TASK.B210
 		REF @TASK.B143
 		REF @DECISION.ARebaseRunOfATaskWithoutAPullRequestEndsDoneAndTheTickLaunchesItsBuild

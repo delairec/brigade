@@ -14143,11 +14143,12 @@ TASK B214
 		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		REF @TASK.B27
 	RATIONALE "the rebase run of a wave or milestone branch pushes the branch itself, where"
-		+ "@DECISION.ARebaseRunOfATaskWithoutAPullRequestEndsDoneAndTheTickLaunchesItsBuild leaves"
-		+ "the push of a task branch to the build run that follows: no build run follows the rebase"
-		+ "of a wave or milestone branch; today brigade/tick/rebase_task.py rebases a task branch"
-		+ "under the worktrees lock and pushes it with lease, and"
-		+ "brigade/commands/rebase_context.py reads a task from the branch task/<slug>/<task> alone"
+		+ "@DECISION.ARebaseRunOfATaskWithoutAPullRequestEndsDoneAndTheTickLaunchesItsBuild,"
+		+ "archived on 2026-11-02, left the push of a task branch to the build run that followed:"
+		+ "no build run follows the rebase of a wave or milestone branch; today"
+		+ "brigade/tick/rebase_task.py rebases a task branch under the worktrees lock and pushes it"
+		+ "with lease, and brigade/commands/rebase_context.py reads a task from the branch"
+		+ "task/<slug>/<task> alone"
 		REF @DECISION.ARebaseRunOfATaskWithoutAPullRequestEndsDoneAndTheTickLaunchesItsBuild
 	RATIONALE "DESC 14 of"
 		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce puts the"
