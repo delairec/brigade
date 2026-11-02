@@ -5408,3 +5408,41 @@ DECISION AMilestoneReportIsBuiltOnceItsTasksAreMergedOrParkedAndIsTheBodyOfItsPu
 		+ "then, for the tasks naming no milestone, « Rapport par tâche », the option « L'étude"
 		+ "produit un rapport par tâche sans jalon, commité sur sa branche, qui remplace le corps"
 		+ "de sa PR. »"
+
+DECISION TheVibeAdapterAddsTheSessionBusAddressOfTheLaunchRequestToItsEnvironment
+	TITLE "the vibe adapter adds DBUS_SESSION_BUS_ADDRESS to the environment of its launch, from"
+		+ "the session_bus_address of the launch request; the whitelist of the process runner stays"
+	STATUS active
+	DESC "binds @TASK.B108 and @TASK.B44"
+		REF @TASK.B108
+		REF @TASK.B44
+	DESC "the request the core completes carries session_bus_address, the DBUS_SESSION_BUS_ADDRESS"
+		+ "of the environment brigade runs in, null when unset, read in brigade/system/paths.py"
+		+ "beside HOME; no adapter reads the environment"
+	REJECTED "DBUS_SESSION_BUS_ADDRESS in the whitelist of"
+		+ "brigade/system/build_process_environment.py, passed to every child process, the option"
+		+ "(a) the run recommended: the need is vibe's, so it is the adapter's, and every git,"
+		+ "awawa and gh call would carry the bus"
+	REJECTED "MISTRAL_API_KEY in ~/.vibe/.env of the reference machine, the option (c): no code"
+		+ "change, but a secret in a file beside the keyring, and unchecked by the run, which had"
+		+ "no key"
+	RATIONALE "on 2026-11-01 the run of @TASK.B44 found the Rust CLI of vibe 2.26.1 reaching its"
+		+ "credentials in the keyring over the D-Bus session bus, the reference machine holding no"
+		+ "~/.vibe/.env and no MISTRAL_API_KEY, while brigade passes a child process PATH, HOME,"
+		+ "LANG, LC_*, XDG_* and BRIGADE_* alone; with"
+		+ "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus the launch exited 0 and answered,"
+		+ "and the systemd user manager running the timer carries the variable; the address reaches"
+		+ "the adapter in the request rather than as a key of [clients.vibe] in config.toml, which"
+		+ "would write the path of one machine and one user where the environment of the session"
+		+ "already carries it, and rather than by a read of the environment in the adapter, which"
+		+ "@DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables and the guard"
+		+ "tests/guards/test_environment_reads.py refuse; what the adapter adds beside the"
+		+ "whitelist is what @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa already"
+		+ "allows"
+		REF @TASK.B44
+		REF @DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+	SOURCE "the user's ruling of 2026-11-02 on the question of run 20261101T222554Z-06d8ee of wave"
+		+ "brigade_w20, on @TASK.B44: « B44 c'est du spécifique donc c'est à l'adapter de"
+		+ "l'implémenter »"
+		REF @TASK.B44
