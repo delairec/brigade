@@ -3196,8 +3196,8 @@ TASK B35
 	SPEC "an answer of mine_transcripts is refused when a PATTERN holds an EVIDENCE opening on no"
 		+ "fingerprint transcript-findings collected"
 	SPEC "a test proves that a PATTERN of mine_transcripts with ACTION constraint is ratified by"
-		+ "brigade inbox ratify --kind and delivered at milestone.closed like a pattern of triage,"
-		+ "as SPEC 5 of TASK B232 delivers it"
+		+ "brigade inbox ratify --kind and delivered when the patterns of triage are delivered, by"
+		+ "the same path as a pattern of triage"
 	AFTER @TASK.B22
 	AFTER @TASK.B25
 	RATIONALE "the miner learns from the errors of brigade's own agents: the sessions are those the"
@@ -3250,6 +3250,11 @@ TASK B35
 	SOURCE "the user's ruling of 2026-11-02 carried by @TASK.B232, « À l'arrivée dans main"
 		+ "(Recommandé) »: SPEC 10 delivers the pattern at milestone.closed where it delivered it"
 		+ "at wave.closed"
+		REF @TASK.B232
+	SOURCE "the user's ruling of 2026-11-02 on the question of run 20261102T182054Z-934fed of wave"
+		+ "brigade_w18, « Reformuler SPEC 10 (Recommended) »: the pattern of mine_transcripts"
+		+ "follows the delivery of a pattern of triage wherever @TASK.B232 sets it, and B35 does"
+		+ "not wait for B232; rejected, AFTER @TASK.B232, which holds M5 on a task of M6"
 		REF @TASK.B232
 
 TASK B36
@@ -3809,6 +3814,7 @@ TASK B46
 	AFTER @TASK.B02
 	AFTER @TASK.B17
 	AFTER @TASK.B42
+	AFTER @TASK.B232
 	RATIONALE "read on 2026-11-01 at a5ea2ab3: a project of FORGE none keeps local branches,"
 		+ "brigade/registry/is_on_github.py:8 gating the pull requests and brigade/tick/plan.py:574"
 		+ "and 595 opening none, so its wave starts and never merges;"
@@ -3847,6 +3853,11 @@ TASK B46
 	SOURCE "the user's ruling of 2026-11-02 carried by @TASK.B232, no wave branch: the TITLE and"
 		+ "SPEC 3 to 6 and 8 amended, the task merged into the branch of its milestone and the wave"
 		+ "closed by wave.closed"
+		REF @TASK.B232
+	SOURCE "the user's ruling of 2026-11-02 on the question of run 20261102T191517Z-622890 of wave"
+		+ "brigade_w20, « AFTER @TASK.B232 (Recommended) »: B46 waits for B232 and resumes at SPEC"
+		+ "2 on its branch; rejected, a split keeping SPEC 1, 2 and 7, which would deliver a FORGE"
+		+ "none with no local path"
 		REF @TASK.B232
 
 TASK B47
