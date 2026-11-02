@@ -3252,6 +3252,10 @@ TASK B35
 	SPEC "a test proves that a PATTERN of mine_transcripts with ACTION constraint is ratified by"
 		+ "brigade inbox ratify --kind and delivered when the patterns of triage are delivered, by"
 		+ "the same path as a pattern of triage"
+		IMPL "tests/unit/commands/test_inbox_ratify.py::def"
+			+ "test_should_ratify_a_constraint_mine_transcripts_proposes_as_one_the_triage_proposes"
+		IMPL "tests/unit/triage/test_deliver_patterns.py::def"
+			+ "test_should_deliver_a_constraint_mine_transcripts_proposed_as_one_the_triage_proposed"
 	AFTER @TASK.B22
 	AFTER @TASK.B25
 	RATIONALE "the miner learns from the errors of brigade's own agents: the sessions are those the"
