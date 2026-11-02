@@ -2509,6 +2509,17 @@ class MergingForgeWithAnUnreadableAccountDouble(MergingForgeDouble):
         raise BrigadeError("gh api user failed")
 
 
+class MergingForgeRefusingAMovedHeadDouble(MergingForgeDouble):
+    def __init__(self, found_by_branch: dict, pushed_head: str):
+        super().__init__(found_by_branch)
+        self.pushed_head = pushed_head
+
+    def merge_pull_request(self, request: dict, runtime) -> dict:
+        if request["head"] != self.pushed_head:
+            raise BrigadeError("gh pr merge failed: Head branch was modified. Review and try the merge again.")
+        return super().merge_pull_request(request, runtime)
+
+
 class TickMergingAVerifiedTaskTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
@@ -2547,7 +2558,58 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             self.forge.merges,
-            [{"repository": str(self.repository), "number": 42, "method": "rebase", "environment": {}}],
+            [
+                {
+                    "repository": str(self.repository),
+                    "number": 42,
+                    "method": "rebase",
+                    "head": "8885daa",
+                    "environment": {},
+                }
+            ],
+        )
+
+    def test_should_record_a_merge_refused_because_the_head_moved_as_a_failed_action_and_no_merge(self):
+        # Arrange
+        forge = MergingForgeRefusingAMovedHeadDouble({"task/M4/T7": GREEN_PULL_REQUEST}, pushed_head="9010166")
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+
+        # Assert
+        self.assertEqual(
+            self._read_events()[len(LEDGER_OF_A_VERIFIED_TASK) :],
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "tick.action_failed",
+                    "action": "MergePullRequest",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "error": "gh pr merge failed: Head branch was modified. Review and try the merge again.",
+                },
+            ],
+        )
+
+    def test_should_print_the_merge_with_the_head_it_names_on_a_dry_run(self):
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["plan"],
+            [
+                {
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "method": "rebase",
+                    "head": "8885daa",
+                }
+            ],
         )
 
     def test_should_merge_nothing_when_the_login_the_merge_would_run_as_cannot_be_read(self):
@@ -3253,7 +3315,16 @@ class TickMergingThePullRequestOfAWaveTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            forge.merges, [{"repository": str(self.repository), "number": 206, "method": "rebase", "environment": {}}]
+            forge.merges,
+            [
+                {
+                    "repository": str(self.repository),
+                    "number": 206,
+                    "method": "rebase",
+                    "head": "8885daa",
+                    "environment": {},
+                }
+            ],
         )
 
     def test_should_record_the_merge_then_the_close_of_the_wave(self):
