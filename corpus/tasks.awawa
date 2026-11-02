@@ -15041,6 +15041,7 @@ TASK B227
 		+ "tests/cli/fixtures/executables/github-over-a-bare-remote serving pr edit with --title: a"
 		+ "milestone pull request whose branch gains a commit after it opened, retitled by brigade"
 		+ "tick --once"
+	AFTER @TASK.B232
 	RATIONALE "on 2026-10-31 the pull request #257 of the wave brigade_w9 reached main at 00:16:34Z"
 		+ "as the commit 75ceb888, titled « chore(wave): merge the wave brigade_w9 into main »; the"
 		+ "repository squash-merges with the title of the pull request as the whole message of the"
@@ -15111,6 +15112,11 @@ TASK B227
 	SOURCE "the user's rulings of 2026-11-02 carried by @TASK.B232, no wave pull request and the"
 		+ "report of the milestone as the body of its pull request: the TITLE and SPEC 1 to 7"
 		+ "amended, the pull request of a wave and compose_delivery_body dropped"
+		REF @TASK.B232
+	SOURCE "the user's ruling of 2026-11-02 on the question of run 20261102T195000Z-7c5377 of wave"
+		+ "brigade_w23, « AFTER @TASK.B232 (Recommended) »: B227 waits for B232, whose SPEC 8"
+		+ "commits the report SPEC 2 takes as the body; rejected, ruling now what the open does"
+		+ "when the report is missing, a fallback SPEC 2 refuses"
 		REF @TASK.B232
 
 TASK B228
