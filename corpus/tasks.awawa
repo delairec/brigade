@@ -3686,6 +3686,12 @@ TASK B44
 	SPEC "a rehearsal report, docs/<date>-rehearsal-vibe.md of the brigade repository committed by"
 		+ "the pull request of this task, lists per client and per run what the normalised results"
 		+ "lack, steps or usage null, with the output of brigade ledger budgets for each client"
+	SPEC "before the rehearsal, the pull request of this task brings the vibe adapter of B108 to"
+		+ "SPEC 4, 8 and 9 of B108 as reworded on 2026-11-02: the request the core completes"
+		+ "carries session_bus_address, the environment of a vibe launch carries"
+		+ "DBUS_SESSION_BUS_ADDRESS when the request carries one,"
+		+ "tests/unit/adapters/clients/test_vibe.py pins the environment with and without it, and"
+		+ "the wiki page Client-adapters names the session bus"
 	AFTER @TASK.B21
 	AFTER @TASK.B108
 	RATIONALE "the user asked on 2026-10-07 whether two AI providers can coexist; the session found"
@@ -3703,12 +3709,24 @@ TASK B44
 		REF @TASK.B108
 		REF @TASK.B21
 		REF @MILESTONE.M7
+	RATIONALE "run 20261101T222554Z-06d8ee of wave brigade_w20 parked on 2026-11-01: the Rust CLI"
+		+ "of vibe reaches its credentials in the keyring over the D-Bus session bus, which no"
+		+ "variable brigade passes a child names, and the launch answered once"
+		+ "DBUS_SESSION_BUS_ADDRESS reached it; @TASK.B108 is todo on main and merged on"
+		+ "integration/brigade_w20 by pull request #308, so the next run of this task, on that"
+		+ "branch, carries its adapter to the reworded SPEC,"
+		+ "@DECISION.TheVibeAdapterAddsTheSessionBusAddressOfTheLaunchRequestToItsEnvironment, then"
+		+ "redoes the rehearsal on both clients"
+		REF @TASK.B108
+		REF @DECISION.TheVibeAdapterAddsTheSessionBusAddressOfTheLaunchRequestToItsEnvironment
 	SOURCE "the user's words of 2026-10-07, « oui ajoute la mention au draft », on the session's"
 		+ "proposal of a client per slot or per role, to settle at the ratification of this task"
 	SOURCE "the user's rulings of 2026-10-13 in the refinement of B139, B44 and B47: « Le client"
 		+ "par slot part dans une nouvelle tâche (AFTER B42, B06, testable sur le fake) ; B44 ="
 		+ "répétition de B21 sur vibe + rapport des champs null, AFTER B21 et B108, déplacée en M7"
 		+ "avec B108. »; the task is ratified"
+	SOURCE "the user's ruling of 2026-11-02 on the question of run 20261101T222554Z-06d8ee of wave"
+		+ "brigade_w20: « B44 c'est du spécifique donc c'est à l'adapter de l'implémenter »"
 
 TASK B45
 	TITLE "Fresh-account install rehearsal"
@@ -8709,14 +8727,20 @@ TASK B108
 	SPEC "the stdin of a launch is the role package read from package_file, then the brief, the two"
 		+ "separated by a line ---; the argv carries no --agent and no file is written under the"
 		+ "client's configuration directory"
-	SPEC "the environment of a launch carries VIBE_CLI=rust and VIBE_ACTIVE_MODEL, nothing else:"
+	SPEC "the environment of a launch carries VIBE_CLI=rust, VIBE_ACTIVE_MODEL and, when the"
+		+ "request carries a session_bus_address, DBUS_SESSION_BUS_ADDRESS set to it, nothing else:"
 		+ "VIBE_CLI=rust pins the Rust CLI of vibe 2.26.1, which vibe/cli/launcher.py:21-25 runs"
 		+ "when VIBE_CLI is rust and otherwise picks by the cached GrowthBook rollout"
 		+ "vibe_cli_rust_tui_rollout, defaulting to the Python CLI; VIBE_ACTIVE_MODEL is set to the"
 		+ "model the row of [reasoning] binds to the role's level, else the adapter's default,"
 		+ "mistral-medium-3.5 for every level, the alias of the default configuration of vibe"
 		+ "2.26.1, vibe/core/config/vibe_schema.py:137; the effort of a row is not translated, vibe"
-		+ "taking no effort option; the probe answers models from the same binding"
+		+ "taking no effort option; DBUS_SESSION_BUS_ADDRESS lets the Rust CLI reach the keyring"
+		+ "holding its credentials over the D-Bus session bus, brigade passing a child process no"
+		+ "other variable naming it; session_bus_address is the DBUS_SESSION_BUS_ADDRESS of the"
+		+ "environment brigade runs in, null when unset, read in brigade/system/paths.py as HOME is"
+		+ "and put in the request by brigade/system/ask_named_client.py beside reasoning_table,"
+		+ "settings and home; the probe answers models from the same binding"
 	SPEC "parse-result reads stdout as one JSON entry per line, {id, sessionId, type"
 		+ "message|reasoning|effect, role, content, createdAt, updatedAt}: with exit 0 the segment"
 		+ "is done, its session_id the sessionId of the entries, its duration_ms the span from the"
@@ -8754,16 +8778,19 @@ TASK B108
 		+ "answers for Claude Code; the steps and the usage of a cut segment are counted by brigade"
 		+ "from that answer, BrigadeCountsStepsAndUsageFromTheTranscriptsAnswerForEveryClient"
 	SPEC "the adapter reads neither the environment nor the home of the process, as"
-		+ "tests/guards/test_environment_reads.py checks, and names the executable vibe on PATH,"
-		+ "never a path of the author's machine; tests/unit/adapters/clients/test_vibe.py pins the"
-		+ "probe, the launch argv, environment and stdin, a done result, a result cut by"
-		+ "--max-turns, an error on stderr, an output whose line is no JSON, the usage read from a"
-		+ "fixture of the session store and the transcripts read from a fixture of its journal,"
-		+ "both captured from the Rust CLI of vibe 2.26.1 by the run that delivers the task under"
+		+ "tests/guards/test_environment_reads.py checks, the home and the session bus address"
+		+ "reaching it in the request, and names the executable vibe on PATH, never a path of the"
+		+ "author's machine; tests/unit/adapters/clients/test_vibe.py pins the probe, the launch"
+		+ "argv, environment and stdin, the environment of a request whose session_bus_address is"
+		+ "null and of one carrying an address, a done result, a result cut by --max-turns, an"
+		+ "error on stderr, an output whose line is no JSON, the usage read from a fixture of the"
+		+ "session store and the transcripts read from a fixture of its journal, both captured from"
+		+ "the Rust CLI of vibe 2.26.1 by the run that delivers the task under"
 		+ "tests/unit/adapters/clients/fixtures/vibe/, where today the directory holds claude-code"
 		+ "alone"
 	SPEC "the wiki page Client-adapters names vibe beside claude-code, with the model binding by"
-		+ "the rows of [reasoning] and the table [clients.vibe]"
+		+ "the rows of [reasoning], the table [clients.vibe] and the session bus address a launch"
+		+ "passes to the Rust CLI for its keyring"
 	AFTER @TASK.B84
 	RATIONALE "observed on 2026-11-01 on the Rust CLI of vibe 2.26.1, ~/.local/bin/vibe, the CLI"
 		+ "the cached rollout runs on the author's machine, each fact by a real call: the"
@@ -8882,6 +8909,26 @@ TASK B108
 		REF @MILESTONE.ADD0
 		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
 		REF @TASK.B44
+	RATIONALE "the Rust CLI of vibe 2.26.1 reaches its credentials in the keyring over the D-Bus"
+		+ "session bus, the reference machine holding no ~/.vibe/.env and no MISTRAL_API_KEY, while"
+		+ "brigade passes a child process PATH, HOME, LANG, LC_*, XDG_* and BRIGADE_* alone,"
+		+ "brigade/system/build_process_environment.py:3-4; launched by brigade, vibe reached no"
+		+ "credentials, and with DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus the launch"
+		+ "exited 0 and answered, the systemd user manager running the timer carrying the variable;"
+		+ "found by run 20261101T222554Z-06d8ee of wave brigade_w20 on @TASK.B44 on 2026-11-01,"
+		+ "parked on its question; the need is vibe's, so the adapter adds the variable,"
+		+ "@DECISION.TheVibeAdapterAddsTheSessionBusAddressOfTheLaunchRequestToItsEnvironment, and"
+		+ "the whitelist of @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa stays;"
+		+ "the address reaches the adapter as the home does, read in brigade/system/paths.py, the"
+		+ "one reader of the environment"
+		+ "@DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables allows, and put in"
+		+ "the request by brigade/system/ask_named_client.py:15-22, which completes the validated"
+		+ "request with reasoning_table, settings and home; the next run of @TASK.B44 carries the"
+		+ "adapter to SPEC 4, 8 and 9, its SPEC 3"
+		REF @TASK.B44
+		REF @DECISION.TheVibeAdapterAddsTheSessionBusAddressOfTheLaunchRequestToItsEnvironment
+		REF @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa
+		REF @DECISION.PathsAndConfigurationAreResolvedInOnePlaceFromXdgVariables
 	SOURCE "the user's words of 2026-10-08, « ok bah les deux », on the offer of a draft task in"
 		+ "the corpus for a permanent vibe adapter beside the temporary trial; before it, « cette"
 		+ "tâche pourra être faite avant la suite de f0 ? », answered that the draft is written now"
@@ -8900,6 +8947,11 @@ TASK B108
 		+ "VIBE_CLI=rust. resume sort du probe et passe en fallback : relance fraîche depuis le"
 		+ "fichier de progression. Les SPEC 5 et 7 restent valides (une session = un journal"
 		+ "complet). Les SPEC 1, 2 et 3 sont à reformuler. »"
+	SOURCE "the user's ruling of 2026-11-02 on the question of run 20261101T222554Z-06d8ee of wave"
+		+ "brigade_w20, on @TASK.B44: « B44 c'est du spécifique donc c'est à l'adapter de"
+		+ "l'implémenter », the option (b) of the run, the vibe adapter adding the bus address from"
+		+ "a new field of the launch request"
+		REF @TASK.B44
 
 TASK B109
 	TITLE "A brigade run that receives SIGTERM or SIGINT, or that brigade runs stop names, stops"
