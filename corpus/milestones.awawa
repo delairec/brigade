@@ -19,7 +19,11 @@ MILESTONE M3
 
 MILESTONE M4
 	TITLE "Gardening scans"
-	STATUS active
+	STATUS reached
+	SOURCE "the user's ruling of 2026-11-02: « on passe les milestone livrées en reached (en"
+		+ "revérifiant bien que tout ce qui était attendu est livré, pas de tâche encore en draft"
+		+ "ou quoi) » and « livrée = sur main »; tasks B33 and B34 implemented, delivered on main"
+		+ "by pull request 305 (merge commit 59d50152)"
 
 MILESTONE M5
 	TITLE "Miner"
@@ -75,7 +79,7 @@ MILESTONE M9
 
 MILESTONE M10
 	TITLE "Repair rounds that converge"
-	STATUS active
+	STATUS reached
 	DESC "a milestone delivered alone, as DESC 5 of"
 		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce provides for"
 		+ "a change the tick itself needs: the fixes of the parks « past 2 repair rounds »"
@@ -83,3 +87,7 @@ MILESTONE M10
 	SOURCE "the user's ruling of 2026-10-29 on the milestone of the tasks B217 to B221: « Nouveau"
 		+ "milestone M10 », on the session's recommendation « livré seul comme M9 : le tick les"
 		+ "livre sans attendre les questions ouvertes de M9 ni le dashboard de M3 »"
+	SOURCE "the user's ruling of 2026-11-02: « on passe les milestone livrées en reached (en"
+		+ "revérifiant bien que tout ce qui était attendu est livré, pas de tâche encore en draft"
+		+ "ou quoi) » and « livrée = sur main »; tasks B217 to B222 implemented, delivered on main"
+		+ "by pull request 286 (merge commit 59bde2d7)"
