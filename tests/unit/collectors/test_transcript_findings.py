@@ -180,6 +180,17 @@ class TranscriptFindingsCollectorTest(unittest.TestCase):
         # Assert
         self.assertEqual(document["items"], [_find("oversized_re_read", 5)])
 
+    def test_should_count_the_findings_of_each_detector_in_its_summary(self):
+        # Act
+        document = self.collect(
+            [BRIEF, _call("Bash rm -rf build"), _result(refused=REFUSED, truncated=None), CORRECTION, CORRECTION]
+        )
+
+        # Assert
+        self.assertEqual(
+            document["summary"], {"sessions": 1, "findings": {"refusal": 1, "correction": 2}, "unreadable": []}
+        )
+
     def test_should_declare_its_document_not_cached(self):
         # Act
         document = self.collect([BRIEF])
