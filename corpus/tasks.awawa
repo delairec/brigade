@@ -3196,7 +3196,8 @@ TASK B35
 	SPEC "an answer of mine_transcripts is refused when a PATTERN holds an EVIDENCE opening on no"
 		+ "fingerprint transcript-findings collected"
 	SPEC "a test proves that a PATTERN of mine_transcripts with ACTION constraint is ratified by"
-		+ "brigade inbox ratify --kind and delivered at wave.closed like a pattern of triage"
+		+ "brigade inbox ratify --kind and delivered at milestone.closed like a pattern of triage,"
+		+ "as SPEC 5 of TASK B232 delivers it"
 	AFTER @TASK.B22
 	AFTER @TASK.B25
 	RATIONALE "the miner learns from the errors of brigade's own agents: the sessions are those the"
@@ -3219,7 +3220,7 @@ TASK B35
 		+ "@DECISION.RatificationNamesItsEntitiesAfterThePatternAndTheClosedWaveDeliversThePattern"
 		REF @DECISION.AStudyIsDeterministicCollectorsThenOneJudgingRun
 		REF @TASK.B25
-		REF @DECISION.RatificationNamesItsEntitiesAfterThePatternAndTheClosedWaveDeliversThePattern
+		REF @DECISION.RatificationNamesItsEntitiesAfterThePatternAndTheArrivalInMainDeliversThePattern
 	RATIONALE "the cache of both collectors and the check of the evidence of a mined pattern are"
 		+ "ruled by @DECISION.ACollectorDeclaresInItsDocumentWhetherItIsCached and"
 		+ "@DECISION.APatternAnswerIsCheckedAgainstTheFingerprintsTheCollectorsOfItsStudyCollected"
@@ -3246,6 +3247,10 @@ TASK B35
 		+ "mine_transcripts (Recommandé) », « Renommer la study dans le TITLE et les SPEC 8 à 10 de"
 		+ "B35. Le segment suivant renomme le code et les fixtures du commit d47f724b, puis finit"
 		+ "la SPEC 10. »"
+	SOURCE "the user's ruling of 2026-11-02 carried by @TASK.B232, « À l'arrivée dans main"
+		+ "(Recommandé) »: SPEC 10 delivers the pattern at milestone.closed where it delivered it"
+		+ "at wave.closed"
+		REF @TASK.B232
 
 TASK B36
 	TITLE "Built-in study mine-transcripts"
@@ -15125,7 +15130,7 @@ TASK B232
 		+ "and merged into it by its pull request; a wave is a batch of the ledger with no branch"
 		+ "and no pull request of its own; the report of a milestone, run before its pull request"
 		+ "opens, replaces the report of a wave"
-	STATUS draft
+	STATUS todo
 	TYPE feat
 	MILESTONE @MILESTONE.M6
 	COMPONENT "tick"
@@ -15159,10 +15164,13 @@ TASK B232
 	SPEC "the tick appends wave.closed, with no pr, once every task of the wave is merged or"
 		+ "parked, where today brigade/ledger/wave_closed.py:6-16 requires pr and the tick appends"
 		+ "it when the pull request of the wave is merged; a wave.closed carrying a pr is still"
-		+ "read; brigade waves lists a wave open or closed as today, and the patterns of DESC 5 of"
-		+ "the decision"
-		+ "RatificationNamesItsEntitiesAfterThePatternAndTheClosedWaveDeliversThePattern are"
-		+ "delivered at that wave.closed"
+		+ "read; brigade waves lists a wave open or closed as today; the patterns of DESC 5 of the"
+		+ "decision"
+		+ "RatificationNamesItsEntitiesAfterThePatternAndTheArrivalInMainDeliversThePattern go"
+		+ "delivered at milestone.closed of the milestone their request was planned into, and, for"
+		+ "a task naming no MILESTONE, when the pull request of the task is merged into"
+		+ "PROJECT.MAIN, no longer at wave.closed, where today brigade/commands/tick.py:_close_wave"
+		+ "delivers them"
 	SPEC "the built-in study milestone-report replaces wave-report: the tick runs it once every"
 		+ "task of the milestone at its branch is merged or parked and no wave of the milestone is"
 		+ "open, and appends milestone.reported with project, milestone, run and login, which the"
@@ -15236,9 +15244,11 @@ TASK B232
 		+ "opens, the task report run on a ready pull request, milestone.reported and task.reported"
 		+ "read, written and declared as tests/unit/ledger/test_wave_pr_opened.py proves"
 		+ "wave.pr_opened, and a wave.started with a branch, a wave.closed with a pr and a"
-		+ "wave.reported still read; the rehearsal of tests/cli replays with no wave branch and"
-		+ "ends on the report of its milestone; the 97 test files naming integration/ and the 22"
-		+ "naming task/<wave>/<task>, grep -rl of 2026-11-01 at 78a6e95f, follow"
+		+ "wave.reported still read, a pattern delivered at milestone.closed and at the merge into"
+		+ "PROJECT.MAIN of the pull request of a task naming none and not at wave.closed; the"
+		+ "rehearsal of tests/cli replays with no wave branch and ends on the report of its"
+		+ "milestone; the 97 test files naming integration/ and the 22 naming task/<wave>/<task>,"
+		+ "grep -rl of 2026-11-01 at 78a6e95f, follow"
 	RATIONALE "the user's words of 2026-11-01: « Y a un autre truc qui va pas c'est que les waves"
 		+ "créent des branches nommée integration alors que integration est censé être la branche"
 		+ "de travail qui vise main »; the wave branch integration/<project>_w<n> was left unruled"
@@ -15266,10 +15276,10 @@ TASK B232
 		+ "_plan_reports plans one report per wave, brigade/tick/build_snapshot.py:673 reads the"
 		+ "pull request of a wave once reported, SCHEMA REPORT of"
 		+ "brigade/corpus/data/schema.awawa.tpl carries WAVE alone"
-	RATIONALE "the moment of the task report, SPEC 9, and the head it moves are the session's"
-		+ "choice of 2026-11-02, not the user's words: the report must precede the user's merge to"
-		+ "be the body of the pull request, and a head moved by the report, judged again, would be"
-		+ "reported again"
+	RATIONALE "the moment of the task report, SPEC 9, and the head it moves are the user's ruling"
+		+ "of 2026-11-02, « Oui, avant ton merge (Recommandé) »: the report must precede the user's"
+		+ "merge to be the body of the pull request, and a commit touching the report file alone"
+		+ "needs no new verdict"
 	RATIONALE "the implemented tasks of SPEC 14 are archived at delivery and not in the"
 		+ "ratification, as SPEC 8 of @TASK.B212 archived B171 and B187: their SPECs stay true of"
 		+ "the code until this task is merged; @TASK.B46, @TASK.B177, @TASK.B224, @TASK.B226 and"
@@ -15307,8 +15317,21 @@ TASK B232
 		+ "every task of the wave is merged or parked, the pull request of the milestone opening"
 		+ "once every task of the milestone is merged or parked and no wave is open"
 		REF @TASK.B225
+		REF @TASK.B46
+		REF @TASK.B177
+		REF @TASK.B224
+		REF @TASK.B226
+		REF @TASK.B227
 	SOURCE "the user's rulings of 2026-11-02 on the report, recorded in"
 		+ "@DECISION.AMilestoneReportIsBuiltOnceItsTasksAreMergedOrParkedAndIsTheBodyOfItsPullRequest:"
 		+ "« on pourrait ne plus avoir de rapport de wave, mais un rapport plutôt de milestone »; «"
 		+ "Dans B232 (Recommandé) »; « Rapport par tâche »"
 		REF @DECISION.AMilestoneReportIsBuiltOnceItsTasksAreMergedOrParkedAndIsTheBodyOfItsPullRequest
+	SOURCE "the user's rulings of 2026-11-02 that ratify this task: on the moment of the task"
+		+ "report, « Oui, avant ton merge (Recommandé) », the option « Le rapport doit exister"
+		+ "avant ton merge pour être le corps de la PR ; un commit qui ne touche que le fichier de"
+		+ "rapport n'a pas besoin d'un nouveau verdict. »; on the delivery of a pattern, « À"
+		+ "l'arrivée dans main (Recommandé) », the option « Au milestone.closed (jalon mergé dans"
+		+ "main), ou au merge de la PR dans main pour une tâche sans jalon. Garde le sens d'origine"
+		+ ": livré = dans main. B35 et la décision amendés en conséquence. »; on the ratification,"
+		+ "« Oui, todo »"
