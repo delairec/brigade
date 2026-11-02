@@ -1,6 +1,6 @@
 # Rehearsal of B21 on claude-code and vibe (2026-11-02)
 
-Both clients delivered the three-task wave of B21 unattended, from `brigade request new` to the merged wave and milestone pull requests: 3 of 3 tasks merged on each client, every task verified on its first verdict.
+Both clients delivered the three-task wave of B21 unattended, from `brigade request new` to the merged wave pull request, #27 for vibe and #29 for claude-code, and the opened milestone pull request, #33 for vibe and #34 for claude-code, both open and awaiting the merge of the user: 3 of 3 tasks merged on each client, every task verified on its first verdict.
 The normalised results of claude-code lack `cost_usd` on one run and nothing else; those of vibe never carry `cost_usd`, with no reason in `nulls`, and the one vibe segment cut by its turn cap has `usage` null.
 
 | Client | Runs finished | Runs done | Tasks merged | Runs with `main_steps` null | Runs with `usage` null | Runs without `cost_usd` |
@@ -16,7 +16,7 @@ Perimeter: the sandbox ledger of the rehearsal, 18 runs finished between 18:56Z 
 - Two projects, `rehearsal3_claude_code` and `rehearsal3_vibe`, each `CLIENT` set on its PROJECT entity, `CHECK_RUNS none`, acceptance `python3 -m unittest`.
 - One request per project asking for the three cart changes of B21: remove one item, count the items, refuse an empty item name; each plan run wrote three tasks, S2, S3 and S4, chained by `AFTER`.
 - vibe 2.26.1, its Rust CLI, no `[reasoning]` row in `config.toml`, so every level ran on `mistral-medium-3.5`; claude-code on the built-in rows.
-- A brigade of the branch of B44, with an isolated `XDG_CONFIG_HOME`, `XDG_STATE_HOME` and `XDG_CACHE_HOME`, ticked once a minute until both milestones were integrated.
+- A brigade of the branch of B44, with an isolated `XDG_CONFIG_HOME`, `XDG_STATE_HOME` and `XDG_CACHE_HOME`, ticked once a minute until the wave of each milestone was merged and its milestone pull request opened.
 
 ## Runs and what their normalised results lack
 
@@ -50,7 +50,7 @@ One more claude-code segment is not in the table: build run 20261102T190058Z-3f2
 3. The first vibe plan run, 20261102T185619Z-de6fa0, failed in 1 918 ms on `Error: session/start`, written on stdout with exit 1, so classified `unreadable_output`: the run was detached through the whitelist of the process runner and its launch carried no D-Bus session bus. Fixed in this pull request by `@DECISION.ADetachedBrigadeCarriesTheSessionBusAddressOfTheBrigadeThatDetachesIt`; the replanned run 20261102T190006Z-3f0e05 and every later vibe run reached the keyring.
 4. vibe spends about twice the steps of claude-code on the same procedure: build-task p50 46 against 22, verify-pr p50 25 against 11; the S4 build took 76 steps, one above the budget of 75 of `build-task`, under its turn cap of 94.
 5. The wave-report study of `rehearsal3_vibe` parked on `the judging run 20261102T193315Z-645fee gave no answer`: the report procedure, budget 20, ran out of turns on vibe at 26 steps.
-6. The claude-code report study 20261102T193355Z-94b898 was stopped by a signal when the tick loop of the rehearsal ended on both milestones integrated: an artefact of the rehearsal harness, not of brigade.
+6. The claude-code report study 20261102T193355Z-94b898 was stopped by a signal when the tick loop of the rehearsal ended once both milestone pull requests were opened: an artefact of the rehearsal harness, not of brigade.
 
 ## `brigade ledger budgets --client claude-code`
 
