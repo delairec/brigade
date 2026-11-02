@@ -133,7 +133,7 @@ class ReadClientAnswerTest(unittest.TestCase):
                     "tool_calls": 1,
                     "id": None,
                     "usage": None,
-                    "calls": ["Bash git status"],
+                    "calls": [{"tool": "Bash", "input": {"command": "git status"}}],
                 },
                 {
                     "role": "user",
@@ -164,7 +164,7 @@ class ReadClientAnswerTest(unittest.TestCase):
                         "tool_calls": 1,
                         "id": None,
                         "usage": None,
-                        "calls": ["Bash git status"],
+                        "calls": [{"tool": "Bash", "input": {"command": "git status"}}],
                     },
                     {
                         "role": "user",

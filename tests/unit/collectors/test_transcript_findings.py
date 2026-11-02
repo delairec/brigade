@@ -72,7 +72,7 @@ class TranscriptsClientDouble:
         return {"schema_version": 1, "messages": self.transcripts[request["session_id"]], "subagents": []}
 
 
-def _call(command: str) -> dict:
+def _call(tool: str, tool_input: dict) -> dict:
     return {
         "role": "assistant",
         "timestamp": None,
@@ -80,7 +80,7 @@ def _call(command: str) -> dict:
         "tool_calls": 1,
         "id": None,
         "usage": None,
-        "calls": [command],
+        "calls": [{"tool": tool, "input": tool_input}],
     }
 
 
@@ -143,24 +143,28 @@ class TranscriptFindingsCollectorTest(unittest.TestCase):
 
     def test_should_find_each_user_message_after_the_first_of_its_session_as_a_correction(self):
         # Act
-        document = self.collect([BRIEF, _call("Bash ls"), _result(refused=not REFUSED, truncated=None), CORRECTION])
+        document = self.collect(
+            [BRIEF, _call("Bash", {"command": "ls"}), _result(refused=not REFUSED, truncated=None), CORRECTION]
+        )
 
         # Assert
         self.assertEqual(document["items"], [_find("correction", 4)])
 
     def test_should_find_each_tool_result_marked_refused_as_a_refusal(self):
         # Act
-        document = self.collect([BRIEF, _call("Bash rm -rf build"), _result(refused=REFUSED, truncated=None)])
+        document = self.collect(
+            [BRIEF, _call("Bash", {"command": "rm -rf build"}), _result(refused=REFUSED, truncated=None)]
+        )
 
         # Assert
         self.assertEqual(document["items"], [_find("refusal", 3)])
 
     def test_should_find_a_command_run_three_times_once_at_its_third_run(self):
         # Arrange
-        status = _call("Bash git status")
+        status = _call("Bash", {"command": "git status"})
 
         # Act
-        document = self.collect([BRIEF, status, _call("Bash git log"), status, status, status])
+        document = self.collect([BRIEF, status, _call("Bash", {"command": "git log"}), status, status, status])
 
         # Assert
         self.assertEqual(document["items"], [_find("repeated_command", 5)])
@@ -170,10 +174,10 @@ class TranscriptFindingsCollectorTest(unittest.TestCase):
         document = self.collect(
             [
                 BRIEF,
-                _call("Read /srv/state/tool-results/b0.txt"),
-                _call("Bash git log"),
+                _call("Read", {"file_path": "/srv/state/tool-results/b0.txt"}),
+                _call("Bash", {"command": "git log"}),
                 _result(refused=not REFUSED, truncated=TRUNCATED_TO_B1),
-                _call(f"Read {TRUNCATED_TO_B1}"),
+                _call("Read", {"file_path": TRUNCATED_TO_B1}),
             ]
         )
 
@@ -183,13 +187,48 @@ class TranscriptFindingsCollectorTest(unittest.TestCase):
     def test_should_count_the_findings_of_each_detector_in_its_summary(self):
         # Act
         document = self.collect(
-            [BRIEF, _call("Bash rm -rf build"), _result(refused=REFUSED, truncated=None), CORRECTION, CORRECTION]
+            [
+                BRIEF,
+                _call("Bash", {"command": "rm -rf build"}),
+                _result(refused=REFUSED, truncated=None),
+                CORRECTION,
+                CORRECTION,
+            ]
         )
 
         # Assert
         self.assertEqual(
             document["summary"], {"sessions": 1, "findings": {"refusal": 1, "correction": 2}, "unreadable": []}
         )
+
+    def test_should_find_no_repeated_command_in_three_different_edits_of_one_file(self):
+        # Act
+        document = self.collect(
+            [
+                BRIEF,
+                _call("Edit", {"file_path": "/srv/oak/cli.py", "old_string": "a", "new_string": "b"}),
+                _call("Edit", {"file_path": "/srv/oak/cli.py", "old_string": "c", "new_string": "d"}),
+                _call("Edit", {"file_path": "/srv/oak/cli.py", "old_string": "e", "new_string": "f"}),
+            ]
+        )
+
+        # Assert
+        no_findings = []
+        self.assertEqual(document["items"], no_findings)
+
+    def test_should_find_a_search_of_the_place_of_a_truncated_output_as_an_oversized_re_read(self):
+        # Act
+        document = self.collect(
+            [
+                BRIEF,
+                _call("Bash", {"command": "git log"}),
+                _result(refused=not REFUSED, truncated=TRUNCATED_TO_B1),
+                _call("Grep", {"pattern": "commit", "path": TRUNCATED_TO_B1}),
+            ]
+        )
+
+        # Assert
+        self.assertEqual(document["items"], [_find("oversized_re_read", 4)])
 
     def test_should_declare_its_document_not_cached(self):
         # Act
@@ -212,7 +251,9 @@ class TranscriptFindingsCollectorTest(unittest.TestCase):
 
     def test_should_find_no_re_read_after_a_tool_output_left_whole(self):
         # Act
-        document = self.collect([BRIEF, _result(refused=not REFUSED, truncated=None), _call("Bash git log")])
+        document = self.collect(
+            [BRIEF, _result(refused=not REFUSED, truncated=None), _call("Bash", {"command": "git log"})]
+        )
 
         # Assert
         no_findings = []

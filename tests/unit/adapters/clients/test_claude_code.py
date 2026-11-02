@@ -1133,7 +1133,7 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                     "tool_calls": 2,
                     "id": None,
                     "usage": None,
-                    "calls": ["Read", "Grep"],
+                    "calls": [{"tool": "Read", "input": {}}, {"tool": "Grep", "input": {}}],
                 },
             ],
         )
@@ -1161,7 +1161,7 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                             "tool_calls": 1,
                             "id": None,
                             "usage": None,
-                            "calls": ["Bash"],
+                            "calls": [{"tool": "Bash", "input": {}}],
                         },
                     ]
                 },
@@ -1215,7 +1215,12 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
                     "tool_calls": 4,
                     "id": None,
                     "usage": None,
-                    "calls": ["Bash rm -rf build", "Edit /srv/b42/cli.py", "Bash git log", "Bash git status"],
+                    "calls": [
+                        {"tool": "Bash", "input": {"command": "rm -rf build"}},
+                        {"tool": "Edit", "input": {"file_path": "/srv/b42/cli.py"}},
+                        {"tool": "Bash", "input": {"command": "git log"}},
+                        {"tool": "Bash", "input": {"command": "git status"}},
+                    ],
                 },
                 {
                     "role": "user",
