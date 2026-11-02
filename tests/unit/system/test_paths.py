@@ -118,8 +118,8 @@ class BuildPathsWithTheSessionBusTest(unittest.TestCase):
     def test_should_hold_the_address_of_the_session_bus_of_the_environment(self):
         # Arrange
         rows = [
-            ("set", {"HOME": "/home/ada", "DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/1000/bus"}),
-            ("unset", {"HOME": "/home/ada"}),
+            ("set", {"HOME": "/srv/homes/ada", "DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/1000/bus"}),
+            ("unset", {"HOME": "/srv/homes/ada"}),
         ]
         expected_addresses = {"set": "unix:path=/run/user/1000/bus", "unset": None}
         for case, environment in rows:
