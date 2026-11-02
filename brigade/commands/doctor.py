@@ -236,7 +236,10 @@ def _check_forge_and_its_logins(reading: Configuration | BrigadeError, runtime: 
             _create_optional("forge", "warning", str(reading), FORGE_FALLBACK),
             _describe_forge_login("warning", str(reading)),
         ]
-    forge_names = _read_project_forges(runtime)
+    try:
+        forge_names = _read_project_forges(runtime)
+    except ToolFailure as error:
+        return [_create_optional("forge", "warning", f"PROJECT unreadable: {error}", FORGE_FALLBACK)]
     if not forge_names:
         return [_create_optional("forge", "ok", NO_PROJECT_ON_A_FORGE, FORGE_FALLBACK)]
     return [item for forge_name in forge_names for item in _check_one_forge(reading, forge_name, runtime)]
