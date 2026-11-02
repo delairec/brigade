@@ -1,17 +1,34 @@
+import contextlib
+import json
 import tempfile
 import unittest
 from argparse import Namespace
+from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.commands.study_run import COMMAND
 from brigade.errors import BrigadeError
+from brigade.ledger.append_event import append_event
+from brigade.system.resolve_collector import resolve_collector
 from tests.unit.commands.command_runtime import create_corpus_double, write_ledger, write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.mining.create_run_finished import create_run_finished
+from tests.unit.mining.transcripts_client_double import TranscriptsClientDouble
 from tests.unit.plugin_double import PluginDouble
 
 RUN_ID = "20261019T090000Z-e10d04"
 NO_STUDY_RECORDED = {}
+IN_THE_WINDOW = datetime(2026, 10, 18, 8, 0, tzinfo=UTC)
+SESSION_BRIEF = {
+    "role": "user",
+    "timestamp": None,
+    "content": "Deliver B42.",
+    "tool_calls": 0,
+    "id": None,
+    "usage": None,
+}
+SESSION_CORRECTION = {**SESSION_BRIEF, "content": "Not that file: the spec."}
 
 
 def _resolve_any_plugin(kind: str, name: str, **places):
@@ -118,3 +135,40 @@ class StudyRunOfAStudyTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(ending, {"schema_version": 1, "study": "wave-report", "run": RUN_ID, "state": "done"})
+
+
+class StudyRunOfMineTranscriptsTest(unittest.TestCase):
+    def test_should_collect_the_findings_of_the_sessions_through_the_client_adapter_each_run_names(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        self.enterContext(contextlib.chdir(root))
+        write_operational_corpus(root)
+        processes = create_corpus_double(NO_STUDY_RECORDED)
+        plugins = {
+            ("client", "vibe"): TranscriptsClientDouble({"s-built": [SESSION_BRIEF, SESSION_CORRECTION]}),
+            ("forge", "github"): PluginDouble(kind="forge", name="github"),
+            ("document", "awawa"): PluginDouble(kind="document", name="awawa"),
+        }
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=processes,
+            resolve_plugin=lambda kind, name, **options: (
+                resolve_collector(name, options["places"]) if kind == "collector" else plugins[kind, name]
+            ),
+        )
+        run_directory = runtime.paths.state_root / "runs" / "r3"
+        run_directory.mkdir(parents=True)
+        (run_directory / "run.json").write_text('{"run": "r3", "worktree": "/srv/oak/.brigade/worktrees/B42"}')
+        append_event(runtime.paths, IN_THE_WINDOW, create_run_finished("r3", "s-built"))
+
+        # Act
+        ending = COMMAND.run(Namespace(name="mine_transcripts", run_id=None), runtime)
+
+        # Assert
+        collected = json.loads(
+            (runtime.paths.state_root / "runs" / ending["run"] / "steps" / "collect.json").read_text()
+        )
+        self.assertEqual(
+            collected["collected"][0]["summary"],
+            {"sessions": 1, "findings": {"correction": 1}, "unreadable": []},
+        )
