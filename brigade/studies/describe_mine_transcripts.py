@@ -1,6 +1,6 @@
 from brigade.studies.convert_study import Study
 
-NAME = "mine-transcripts"
+NAME = "mine_transcripts"
 EVERY_MONDAY_MORNING = "mon@09:00"
 
 

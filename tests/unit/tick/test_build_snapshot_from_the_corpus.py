@@ -949,7 +949,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 StudyFacts(name="flakes", slot="explore", every=None, status="active", last_started=None, parked=False),
                 StudyFacts(name="triage", slot="triage", every="24h", status="active", last_started=None, parked=False),
                 StudyFacts(
-                    name="mine-transcripts",
+                    name="mine_transcripts",
                     slot="triage",
                     every="mon@09:00",
                     status="active",

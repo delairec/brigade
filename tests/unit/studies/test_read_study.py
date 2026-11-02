@@ -157,13 +157,13 @@ class ReadStudyTest(unittest.TestCase):
         # Arrange
         self.processes.answer_entities(self.runtime.paths.config_root, "PROJECT", {})
         self.processes.answer(
-            ("awawa", "show", "@STUDY.mine-transcripts", "--json", str(self.runtime.paths.config_root)),
+            ("awawa", "show", "@STUDY.mine_transcripts", "--json", str(self.runtime.paths.config_root)),
             exit_code=1,
-            stderr="awawa show: @STUDY.mine-transcripts is not defined in the workspace\n",
+            stderr="awawa show: @STUDY.mine_transcripts is not defined in the workspace\n",
         )
 
         # Act
-        study = read_study(self.runtime, "mine-transcripts")
+        study = read_study(self.runtime, "mine_transcripts")
 
         # Assert
         self.assertEqual(study, BUILT_IN_MINE_TRANSCRIPTS)
@@ -173,18 +173,18 @@ class ReadStudyTest(unittest.TestCase):
         self.processes.answer_entity(
             self.runtime.paths.config_root,
             "STUDY",
-            "mine-transcripts",
+            "mine_transcripts",
             (("SLOT", "triage"), ("OUTPUT", "entity:PATTERN"), ("ANSWER", "PATTERN"), ("STATUS", "paused")),
         )
 
         # Act
-        study = read_study(self.runtime, "mine-transcripts")
+        study = read_study(self.runtime, "mine_transcripts")
 
         # Assert
         self.assertEqual(
             study,
             Study(
-                name="mine-transcripts",
+                name="mine_transcripts",
                 project=None,
                 question=None,
                 collectors=(),
