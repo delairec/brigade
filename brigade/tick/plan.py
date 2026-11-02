@@ -109,6 +109,7 @@ def plan(snapshot: Snapshot) -> tuple:
 
 def _plan_launches(snapshot: Snapshot, paused: set) -> tuple:
     free_slots = {project.name: _count_free_slots(project) for project in snapshot.projects}
+    projects = {project.name: project for project in snapshot.projects}
     live_tasks = _read_occupancy(snapshot).tasks
     launches = []
     for wave in (wave for wave in snapshot.waves if wave.wave not in paused):
@@ -119,8 +120,24 @@ def _plan_launches(snapshot: Snapshot, paused: set) -> tuple:
             if free_slots[wave.project] <= 0:
                 break
             free_slots[wave.project] -= 1
-            launches.append(LaunchTask(project=wave.project, wave=wave.wave, branch=wave.branch, task=task.name))
+            launches.append(
+                LaunchTask(
+                    project=wave.project,
+                    wave=wave.wave,
+                    branch=wave.branch,
+                    task=task.name,
+                    checks_passed=_are_open_pull_request_checks_passed(task, projects[wave.project], snapshot.now),
+                )
+            )
     return tuple(launches)
+
+
+def _are_open_pull_request_checks_passed(task: TaskFacts, project: ProjectFacts, now: datetime) -> bool:
+    return (
+        task.pull_request is not None
+        and task.pull_request.state == OPEN_PULL_REQUEST
+        and _are_checks_passed(task.pull_request, project, now)
+    )
 
 
 def _decide_quota_resume_at(snapshot: Snapshot) -> datetime | None:
@@ -254,7 +271,7 @@ def _plan_followed_task(wave: WaveFacts, task: TaskFacts, project: ProjectFacts,
     blocked_parking = _decide_blocked_parking(wave, task, reading.occupancy)
     if blocked_parking is not None:
         return (*recorded, blocked_parking)
-    catch_up = _decide_catch_up(wave, task, project, reading.occupancy)
+    catch_up = _decide_catch_up(wave, task, project, reading)
     if catch_up is not None:
         return (*recorded, catch_up)
     decided = (
@@ -314,21 +331,23 @@ def _decide_rebuild(wave: WaveFacts, task: TaskFacts, project: ProjectFacts) -> 
 
 
 def _decide_catch_up(
-    wave: WaveFacts, task: TaskFacts, project: ProjectFacts, occupancy: _Occupancy
+    wave: WaveFacts, task: TaskFacts, project: ProjectFacts, reading: _FollowedReading
 ) -> RebaseTask | RebuildTask | ParkTask | LaunchRemediation | LaunchCheckRepair | None:
     if (
         not task.pull_request.behind
         or task.pull_request.state != OPEN_PULL_REQUEST
         or wave.states.get(task.name) not in REBASED_STATES
         or task.worktree is None
-        or task.worktree in occupancy.worktrees
-        or (wave.wave, task.name) in occupancy.tasks
+        or task.worktree in reading.occupancy.worktrees
+        or (wave.wave, task.name) in reading.occupancy.tasks
     ):
         return None
     if task.amendment is not None:
         return _decide_rebuild(wave, task, project)
     if task.holds_uncommitted_changes and _describe_spent_rounds(task, project) is None:
         return _launch_repair(wave, task)
+    if not _are_checks_passed(task.pull_request, project, reading.now):
+        return None
     return RebaseTask(
         project=wave.project,
         wave=wave.wave,

@@ -3676,7 +3676,24 @@ OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT = {
 }
 
 
-class TickLaunchingATaskWhoseBranchConflictsWithTheWaveBranchTest(unittest.TestCase):
+REBASE_RUN_OF_T7 = "20261018T100000Z-5e6f70"
+T7_RUNNING = {
+    "schema_version": 1,
+    "ts": "2026-10-18T10:00:00Z",
+    "event": "task.state",
+    "wave": "tidepool_w16",
+    "task": "T7",
+    "state": "running",
+}
+REBASE_OF_T7_DONE = {
+    **create_run_result(REBASE_RUN_OF_T7, "done", "2026-10-18T10:30:00Z"),
+    "slot": "rebase",
+    "wave": "tidepool_w16",
+    "task": "T7",
+}
+
+
+class TickLaunchingATaskWhoseChecksPassedAndWhoseBranchConflictsWithTheWaveBranchTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(self.root)
@@ -3686,7 +3703,18 @@ class TickLaunchingATaskWhoseBranchConflictsWithTheWaveBranchTest(unittest.TestC
         self.worktree = self.repository / ".brigade" / "worktrees" / "T7"
         self.worktree.mkdir(parents=True)
         self.spawn = SpawnRecorderDouble()
-        write_ledger(self.root, [WAVE_STARTED])
+        write_ledger(self.root, [WAVE_STARTED, T7_RUNNING, REBASE_OF_T7_DONE])
+        write_run(
+            self.root / "state",
+            {
+                **create_run_record(REBASE_RUN_OF_T7, "tidepool_w16", "T7"),
+                "slot": "rebase",
+                "project": "tidepool",
+                "cwd": str(self.worktree),
+                "worktree": str(self.worktree),
+            },
+            REBASE_OF_T7_DONE,
+        )
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
@@ -3698,7 +3726,7 @@ class TickLaunchingATaskWhoseBranchConflictsWithTheWaveBranchTest(unittest.TestC
                 OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT, fallback=create_corpus_double(corpus)
             ).run,
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([None])),
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([GREEN_PULL_REQUEST])),
         )
 
     def test_should_launch_the_rebase_slot_on_the_worktree_of_the_task_instead_of_its_build(self):
@@ -3748,6 +3776,71 @@ class TickLaunchingATaskWhoseBranchConflictsWithTheWaveBranchTest(unittest.TestC
                 "task": "T7",
                 "state": "running",
             },
+        )
+
+
+class TickLaunchingATaskWhoseBranchIsOffTheWaveBranchWithoutPassedChecksTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.repository = self.root / "tidepool"
+        self.worktree = self.repository / ".brigade" / "worktrees" / "T7"
+        self.worktree.mkdir(parents=True)
+        self.spawn = SpawnRecorderDouble()
+        write_ledger(self.root, [WAVE_STARTED])
+        corpus = {
+            "STUDY": PAUSED_BUILT_IN_STUDIES,
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_TO_DELIVER},
+        }
+        self.machine = ScriptedProcessRunner(
+            OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT, fallback=create_corpus_double(corpus)
+        )
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=self.machine.run,
+            spawn_process=self.spawn.spawn,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([None])),
+        )
+
+    def test_should_rebase_nothing(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(select_argvs_opening_on(self.machine.argvs, GIT_REBASE), [])
+
+    def test_should_launch_the_build_slot_on_the_branch_as_it_stands(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "build-task",
+                    "task=@TASK.T7",
+                    "base=integration/M4",
+                    "--slot",
+                    "build",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--brief",
+                    str(self.root / "state" / "briefs" / "tidepool_w16-T7.md"),
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                )
+            ],
         )
 
 
@@ -3821,7 +3914,7 @@ class TickLaunchingAStudyTest(unittest.TestCase):
         )
 
 
-BEHIND_PULL_REQUEST = {**OPEN_PULL_REQUEST, "behind": True}
+BEHIND_PULL_REQUEST = {**GREEN_PULL_REQUEST, "behind": True}
 REBASED_HEAD = "9a9a9a9"
 REBASED_PULL_REQUEST = {**OPEN_PULL_REQUEST, "head": REBASED_HEAD, "checks": [{"name": "ci", "verdict": "pending"}]}
 REBASE_ONTO_THE_WAVE_BRANCH = ("git", "rebase", "origin/integration/M4")
@@ -4306,7 +4399,15 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             document["plan"],
-            [{"project": "tidepool", "wave": "tidepool_w16", "branch": "integration/M4", "task": "T7"}],
+            [
+                {
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "branch": "integration/M4",
+                    "task": "T7",
+                    "checks_passed": False,
+                }
+            ],
         )
 
 

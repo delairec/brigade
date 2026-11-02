@@ -9,6 +9,7 @@ class LaunchTask:
     wave: str
     branch: str
     task: str
+    checks_passed: bool
 
 
 @dataclass(frozen=True)
