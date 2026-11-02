@@ -1251,6 +1251,29 @@ class ClaudeCodeTranscriptsTest(unittest.TestCase):
             ],
         )
 
+    def test_should_not_mark_refused_a_tool_output_that_quotes_a_refusal_without_being_an_error(self):
+        # Arrange
+        projects = Path(self.home.name) / ".claude" / "projects" / "-srv-b42"
+        projects.mkdir(parents=True)
+        (projects / "ada28962.jsonl").write_text(
+            '{"type":"user","timestamp":"2026-10-06T10:00:10.000Z","message":{"role":"user","content":['
+            '{"type":"tool_result","content":"grep: the log reads: Permission to use Bash has been denied."}]}}\n'
+        )
+        request = {
+            "schema_version": 1,
+            "session_id": "ada28962",
+            "worktree": "/srv/b42",
+            "reasoning_table": {},
+            "settings": {},
+            "home": self.home.name,
+        }
+
+        # Act
+        transcripts = answer("transcripts", request)
+
+        # Assert
+        self.assertEqual(transcripts["messages"][0]["results"], [{"refused": False, "truncated": None}])
+
     def test_should_answer_the_id_and_the_four_usage_counters_of_each_message(self):
         # Arrange
         projects = Path(self.home.name) / ".claude" / "projects" / "-srv-b42"
