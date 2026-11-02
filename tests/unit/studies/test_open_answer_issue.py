@@ -58,7 +58,9 @@ class OpenAnswerIssueTest(unittest.TestCase):
 
     def create_context(self, project: str | None, configuration: Configuration = NOTHING_BOUND) -> StudyRunContext:
         equipment = create_study_equipment(
-            collector_equipment=CollectorEquipment(configuration=configuration, forge=None, forge_name="github"),
+            collector_equipment=CollectorEquipment(
+                configuration=configuration, forge=None, forge_name="github", resolve_client=None
+            ),
             resolve_forge=self.forges.__getitem__,
         )
         return StudyRunContext(

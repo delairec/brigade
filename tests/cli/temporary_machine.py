@@ -8,10 +8,18 @@ from tests.process_launcher import ProcessLauncher
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 CLONE_ENTRY_POINT = REPOSITORY_ROOT / "bin" / "brigade"
-PAUSED_TRIAGE = (
+PAUSED_BUILT_IN_STUDIES = (
     "STUDY triage\n"
     '\tTITLE "the triage, paused"\n'
     '\tCOLLECTOR "inbox-families"\n'
+    "\tSLOT triage\n"
+    '\tOUTPUT "entity:PATTERN"\n'
+    '\tANSWER "PATTERN"\n'
+    "\tSTATUS paused\n"
+    "\n"
+    "STUDY mine_transcripts\n"
+    '\tTITLE "the mining of the transcripts, paused"\n'
+    '\tCOLLECTOR "transcript-findings"\n'
     "\tSLOT triage\n"
     '\tOUTPUT "entity:PATTERN"\n'
     '\tANSWER "PATTERN"\n'
@@ -83,7 +91,7 @@ class TemporaryMachine:
         self.search_path = provide_awawa(test_case)
 
     def pause_the_built_in_studies_of_shop(self) -> None:
-        (self.corpus / "studies.awawa").write_text(PAUSED_TRIAGE + PAUSED_SCANS_OF_SHOP)
+        (self.corpus / "studies.awawa").write_text(PAUSED_BUILT_IN_STUDIES + PAUSED_SCANS_OF_SHOP)
 
     def write_configuration(self, content: str) -> Path:
         configuration = self.corpus / "config.toml"

@@ -9,6 +9,7 @@ from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
+from tests.unit.studies.built_in_mine_transcripts import BUILT_IN_MINE_TRANSCRIPTS
 from tests.unit.studies.built_in_triage import BUILT_IN_TRIAGE
 from tests.unit.studies.scans_of_oak import SCANS_OF_OAK
 
@@ -147,6 +148,49 @@ class ReadStudyTest(unittest.TestCase):
                 every=None,
                 output="inbox",
                 answer_type="ANSWER",
+                status="paused",
+            ),
+        )
+
+    def test_should_read_the_built_in_mine_transcripts_the_operational_corpus_does_not_define(self):
+        # Arrange
+        self.processes.answer_entities(self.runtime.paths.config_root, "PROJECT", {})
+        self.processes.answer(
+            ("awawa", "show", "@STUDY.mine_transcripts", "--json", str(self.runtime.paths.config_root)),
+            exit_code=1,
+            stderr="awawa show: @STUDY.mine_transcripts is not defined in the workspace\n",
+        )
+
+        # Act
+        study = read_study(self.runtime, "mine_transcripts")
+
+        # Assert
+        self.assertEqual(study, BUILT_IN_MINE_TRANSCRIPTS)
+
+    def test_should_take_the_mine_transcripts_the_operational_corpus_defines_over_the_built_in_one(self):
+        # Arrange
+        self.processes.answer_entity(
+            self.runtime.paths.config_root,
+            "STUDY",
+            "mine_transcripts",
+            (("SLOT", "triage"), ("OUTPUT", "entity:PATTERN"), ("ANSWER", "PATTERN"), ("STATUS", "paused")),
+        )
+
+        # Act
+        study = read_study(self.runtime, "mine_transcripts")
+
+        # Assert
+        self.assertEqual(
+            study,
+            Study(
+                name="mine_transcripts",
+                project=None,
+                question=None,
+                collectors=(),
+                slot="triage",
+                every=None,
+                output="entity:PATTERN",
+                answer_type="PATTERN",
                 status="paused",
             ),
         )

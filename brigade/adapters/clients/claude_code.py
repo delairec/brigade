@@ -43,6 +43,8 @@ TRANSCRIPT_MESSAGE_TYPES = ("user", "assistant")
 SUBAGENTS_DIRECTORY = "subagents"
 SUBAGENT_TRANSCRIPTS = "*.jsonl"
 IDENTIFYING_ARGUMENTS = ("file_path", "command", "pattern", "path", "url", "query")
+REFUSAL_PATTERN = re.compile(r"has been denied|haven't granted it")
+TRUNCATION_PATTERN = re.compile(r"^<persisted-output>\n.*?Full output saved to: (\S+)", re.DOTALL)
 BLOCKED_OUTCOME = "blocked"
 END_DECLARATIONS = {f"brigade-end: {outcome}": outcome for outcome in ("done", "handed_over", BLOCKED_OUTCOME)}
 UNDECLARED = "undeclared"
@@ -224,7 +226,7 @@ def _parse_result(request: dict) -> dict:
 
 
 def _summarise_tool_call(item: dict) -> str:
-    tool_input = item["input"]
+    tool_input = item.get("input", {})
     argument = next((tool_input[name] for name in IDENTIFYING_ARGUMENTS if name in tool_input), None)
     return item["name"] if argument is None else f"{item['name']} {argument}"
 
@@ -258,17 +260,35 @@ def _name_project_directory(worktree: str) -> str:
     return re.sub(r"[^A-Za-z0-9]", "-", worktree)
 
 
-def _count_tool_calls(content) -> int:
-    if isinstance(content, str):
-        return 0
-    return sum(1 for item in content if item.get("type") == "tool_use")
-
-
 def _read_message_usage(message: dict):
     usage = message.get("usage")
     if usage is None:
         return None
     return {counter: usage[counter] for counter in USAGE_COUNTERS}
+
+
+def _list_content_items(content, item_type: str) -> list[dict]:
+    if isinstance(content, str):
+        return []
+    return [item for item in content if item.get("type") == item_type]
+
+
+def _mark_tool_result(item: dict) -> dict:
+    output = item.get("content")
+    text = output if isinstance(output, str) else ""
+    truncation = TRUNCATION_PATTERN.match(text)
+    return {
+        "refused": bool(item.get("is_error")) and REFUSAL_PATTERN.search(text) is not None,
+        "truncated": None if truncation is None else truncation[1],
+    }
+
+
+def _describe_tool_exchanges(content) -> dict:
+    calls = [
+        {"tool": item["name"], "input": item.get("input", {})} for item in _list_content_items(content, "tool_use")
+    ]
+    results = [_mark_tool_result(item) for item in _list_content_items(content, "tool_result")]
+    return {**({"calls": calls} if calls else {}), **({"results": results} if results else {})}
 
 
 def _describe_message(entry: dict) -> dict:
@@ -278,9 +298,10 @@ def _describe_message(entry: dict) -> dict:
         "role": message["role"],
         "timestamp": entry.get("timestamp"),
         "content": content,
-        "tool_calls": _count_tool_calls(content),
+        "tool_calls": len(_list_content_items(content, "tool_use")),
         "id": message.get("id"),
         "usage": _read_message_usage(message),
+        **_describe_tool_exchanges(content),
     }
 
 

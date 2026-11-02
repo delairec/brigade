@@ -13,7 +13,7 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
-EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github")
+EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github", resolve_client=None)
 STATUS = {
     "types": [{"type": "TASK", "counts": {"todo": 1, "implemented": 2}}],
     "entities": [{"type": "TASK", "name": "B1", "status": "todo"}],

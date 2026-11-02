@@ -88,7 +88,9 @@ class PublishWaveReportTest(unittest.TestCase):
             {"oak": (("PATH", "/srv/oak"), ("FORGE", forge), ("CORPUS", "corpus"))},
         )
         equipment = create_study_equipment(
-            collector_equipment=CollectorEquipment(configuration=configuration, forge=None, forge_name="github"),
+            collector_equipment=CollectorEquipment(
+                configuration=configuration, forge=None, forge_name="github", resolve_client=None
+            ),
             document=DocumentDouble(),
             resolve_forge={"github": self.forge}.__getitem__,
         )

@@ -36,7 +36,7 @@ class PrListCollectorTest(unittest.TestCase):
         )
 
     def create_equipment(self, forge: ForgeDouble) -> CollectorEquipment:
-        return CollectorEquipment(configuration=Configuration(), forge=forge, forge_name="github")
+        return CollectorEquipment(configuration=Configuration(), forge=forge, forge_name="github", resolve_client=None)
 
     def test_should_list_the_pull_requests_with_the_task_their_branch_delivers(self):
         # Arrange

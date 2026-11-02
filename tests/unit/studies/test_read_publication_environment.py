@@ -54,7 +54,9 @@ class ReadPublicationEnvironmentTest(unittest.TestCase):
 
     def create_context(self, configuration: Configuration, forge: ForgeDouble) -> StudyRunContext:
         equipment = create_study_equipment(
-            collector_equipment=CollectorEquipment(configuration=configuration, forge=None, forge_name="github"),
+            collector_equipment=CollectorEquipment(
+                configuration=configuration, forge=None, forge_name="github", resolve_client=None
+            ),
             resolve_forge={"github": forge}.__getitem__,
         )
         return StudyRunContext(

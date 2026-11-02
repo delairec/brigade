@@ -54,7 +54,7 @@ MISSHAPEN_DOCUMENT = {
     "items": "sun",
 }
 INPUTS = CollectorInputs(project=Path("/srv/oak"), since=date(2026, 10, 1), parameters={"city": "Lyon"})
-EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github")
+EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github", resolve_client=None)
 
 COLLECTOR_DIRECTORY = "/srv/shop"
 

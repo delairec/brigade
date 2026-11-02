@@ -14,7 +14,7 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
-EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github")
+EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github", resolve_client=None)
 ENVIRONMENT = {"BRIGADE_PROJECT_PATH": "/srv/oak", "BRIGADE_SINCE": "1970-01-01", "BRIGADE_PARAMS": "{}"}
 RECORDED_AT = datetime(2026, 10, 24, 9, 0, tzinfo=UTC)
 NOW = datetime(2026, 10, 25, 9, 0, tzinfo=UTC)

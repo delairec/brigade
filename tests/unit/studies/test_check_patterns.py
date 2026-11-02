@@ -36,6 +36,26 @@ OTHER_COLLECTION = {
     "items": [{"signals": [{"fingerprint": "rt:102"}]}],
 }
 
+FINDINGS = {
+    "schema_version": 1,
+    "collector": "transcript-findings",
+    "collected_at": "2026-10-25T09:00:00Z",
+    "cache": False,
+    "summary": {"sessions": 1, "findings": {"repeated_command": 1}, "unreadable": []},
+    "items": [
+        {
+            "detector": "repeated_command",
+            "client": "vibe",
+            "session": "s-built",
+            "run": "r3",
+            "position": 5,
+            "fingerprint": "repeated_command:vibe:s-built:5",
+            "cost_usd": 0.42,
+            "usage": None,
+        }
+    ],
+}
+
 
 class CheckPatternsTest(unittest.TestCase):
     def setUp(self):
@@ -50,6 +70,11 @@ class CheckPatternsTest(unittest.TestCase):
         self.collected = [{"collector": "inbox-families", "summary": FAMILIES["summary"], "document": str(families)}]
         self.other_collection = root / "ledger.json"
         self.other_collection.write_text(json.dumps(OTHER_COLLECTION), encoding="utf-8")
+        findings = root / "findings.json"
+        findings.write_text(json.dumps(FINDINGS), encoding="utf-8")
+        self.collected_findings = [
+            {"collector": "transcript-findings", "summary": FINDINGS["summary"], "document": str(findings)}
+        ]
 
     def answer_patterns(self, patterns: dict) -> None:
         self.processes.answer_entities(self.answer, "PATTERN", patterns)
@@ -170,4 +195,47 @@ class CheckPatternsTest(unittest.TestCase):
             str(refusal.exception),
             "@PATTERN.planner_is_hard_to_read: the EVIDENCE 'rt:102' opens on the fingerprint of no signal"
             " inbox-families collected",
+        )
+
+    def test_should_accept_a_pattern_citing_the_findings_transcript_findings_collected(self):
+        # Arrange
+        self.answer_patterns(
+            {
+                "status_is_read_again": (
+                    ("TITLE", "the status of the worktree is read again and again"),
+                    ("STATUS", "new"),
+                    ("EVIDENCE", "repeated_command:vibe:s-built:5 git status run three times"),
+                    ("ACTION", "constraint"),
+                )
+            }
+        )
+
+        # Act
+        accepted = check_patterns(self.runtime, self.answer, self.collected_findings)
+
+        # Assert
+        self.assertIsNone(accepted)
+
+    def test_should_refuse_an_evidence_opening_on_the_fingerprint_of_no_finding_collected(self):
+        # Arrange
+        self.answer_patterns(
+            {
+                "status_is_read_again": (
+                    ("TITLE", "the status of the worktree is read again and again"),
+                    ("STATUS", "new"),
+                    ("EVIDENCE", "repeated_command:vibe:s-built:9"),
+                    ("ACTION", "constraint"),
+                )
+            }
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            check_patterns(self.runtime, self.answer, self.collected_findings)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "@PATTERN.status_is_read_again: the EVIDENCE 'repeated_command:vibe:s-built:9' opens on the fingerprint"
+            " of no finding transcript-findings collected",
         )

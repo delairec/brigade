@@ -7,7 +7,7 @@ from brigade.collectors.worktrees import collect
 from brigade.system.parse_configuration import Configuration
 from tests.unit.scripted_processes import ScriptedProcesses
 
-EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github")
+EQUIPMENT = CollectorEquipment(configuration=Configuration(), forge=None, forge_name="github", resolve_client=None)
 WORKTREE_LIST = (
     "worktree /srv/oak\0HEAD abc1\0branch refs/heads/main\0\0worktree /srv/oak-b12\0HEAD def2\0detached\0locked\0\0"
 )

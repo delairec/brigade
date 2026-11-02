@@ -8,6 +8,7 @@ from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
+from tests.unit.studies.built_in_mine_transcripts import BUILT_IN_MINE_TRANSCRIPTS
 from tests.unit.studies.built_in_triage import BUILT_IN_TRIAGE
 from tests.unit.studies.scans_of_oak import SCANS_OF_OAK
 
@@ -20,7 +21,7 @@ class ReadStudiesTest(unittest.TestCase):
         write_operational_corpus(Path(directory.name))
         self.runtime = create_test_runtime(create_test_paths(Path(directory.name)), run_process=self.processes)
 
-    def test_should_read_every_study_of_the_operational_corpus_then_the_built_in_triage(self):
+    def test_should_read_every_study_of_the_operational_corpus_then_the_built_in_ones(self):
         # Arrange
         self.processes.answer_entities(self.runtime.paths.config_root, "PROJECT", {})
         self.processes.answer_entities(
@@ -48,6 +49,7 @@ class ReadStudiesTest(unittest.TestCase):
                     status="active",
                 ),
                 BUILT_IN_TRIAGE,
+                BUILT_IN_MINE_TRANSCRIPTS,
             ),
         )
 
@@ -61,7 +63,7 @@ class ReadStudiesTest(unittest.TestCase):
         studies = read_studies(self.runtime)
 
         # Assert
-        self.assertEqual(studies, (BUILT_IN_TRIAGE, *SCANS_OF_OAK))
+        self.assertEqual(studies, (BUILT_IN_TRIAGE, BUILT_IN_MINE_TRANSCRIPTS, *SCANS_OF_OAK))
 
     def test_should_take_the_triage_the_operational_corpus_defines_over_the_built_in_one(self):
         # Arrange
@@ -99,5 +101,6 @@ class ReadStudiesTest(unittest.TestCase):
                     answer_type="PATTERN",
                     status="paused",
                 ),
+                BUILT_IN_MINE_TRANSCRIPTS,
             ),
         )

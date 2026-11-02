@@ -14,6 +14,7 @@ from brigade.system.read_since import read_since
 from brigade.system.render_inline_json import render_inline_json
 
 DOCUMENT_SCHEMA_VERSION = 1
+CLIENT_KIND = "client"
 COLLECTOR_KIND = "collector"
 PARAMETER_SEPARATOR = "="
 OPTION_PREFIX = "-"
@@ -71,6 +72,7 @@ def collect(request: argparse.Namespace, runtime: Runtime) -> dict:
                 configuration=read_configuration(runtime, CONFIGURATION_OPTIONAL),
                 forge=runtime.resolve_plugin(FORGE_KIND, FORGE_NAME),
                 forge_name=FORGE_NAME,
+                resolve_client=lambda name: runtime.resolve_plugin(CLIENT_KIND, name),
             ),
         ),
         runtime,
