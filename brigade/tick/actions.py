@@ -79,6 +79,7 @@ class MergePullRequest:
     task: str
     pr: int
     method: str
+    head: str
 
 
 @dataclass(frozen=True)
@@ -149,6 +150,7 @@ class MergeWavePullRequest:
     wave: str
     pr: int
     method: str
+    head: str
 
 
 @dataclass(frozen=True)
