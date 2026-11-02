@@ -1,7 +1,8 @@
+import json
 from collections import Counter
 
 from brigade.mining.read_sessions import SessionRead
-from brigade.system.transcripts_answer import TranscriptMessage
+from brigade.system.transcripts_answer import ToolCall, TranscriptMessage
 
 CORRECTION = "correction"
 REFUSAL = "refusal"
@@ -28,17 +29,22 @@ def _detect_repeated_commands(messages: Positioned) -> list[tuple[str, int]]:
     found = []
     for position, message in messages:
         for call in message.calls:
-            runs[call] += 1
-            if runs[call] == RUNS_OF_A_REPEATED_COMMAND:
+            command = (call.tool, json.dumps(call.input, sort_keys=True))
+            runs[command] += 1
+            if runs[command] == RUNS_OF_A_REPEATED_COMMAND:
                 found.append((REPEATED_COMMAND, position))
     return found
+
+
+def _names_a_place(call: ToolCall, places: set[str]) -> bool:
+    return any(place in value for value in call.input.values() if isinstance(value, str) for place in places)
 
 
 def _detect_oversized_re_reads(messages: Positioned) -> list[tuple[str, int]]:
     places = set()
     found = []
     for position, message in messages:
-        if any(place in call for call in message.calls for place in places):
+        if any(_names_a_place(call, places) for call in message.calls):
             found.append((OVERSIZED_RE_READ, position))
         places.update(marks.truncated for marks in message.results if marks.truncated is not None)
     return found

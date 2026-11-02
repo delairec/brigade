@@ -66,7 +66,11 @@ TRANSCRIPT_MESSAGES = Field(
             "tool_calls": COUNT,
             "id": OPTIONAL_TEXT,
             "usage": USAGE,
-            "calls": Field(kinds=(list,), items=TEXT, optional=True),
+            "calls": Field(
+                kinds=(list,),
+                optional=True,
+                items=Field(kinds=(dict,), fields={"tool": TEXT, "input": Field(kinds=(dict,))}),
+            ),
             "results": Field(
                 kinds=(list,),
                 optional=True,
