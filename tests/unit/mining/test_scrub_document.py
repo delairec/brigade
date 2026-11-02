@@ -28,7 +28,7 @@ class ScrubDocumentTest(unittest.TestCase):
     def test_should_replace_each_private_identifier_by_the_kind_of_its_pattern(self):
         # Arrange
         document = {
-            "summary": {"reason": "no transcript at /home/ada/.claude/projects/s1.jsonl"},
+            "summary": {"reason": "no transcript at /home/alice/.claude/projects/s1.jsonl"},
             "items": [
                 {"content": [{"type": "text", "text": "Ask ada@example.org about AcmeBilling and Zorg."}]},
                 {"content": "AcmeOpen stays public", "position": 3},

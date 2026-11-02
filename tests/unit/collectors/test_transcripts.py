@@ -150,9 +150,9 @@ class TranscriptsCollectorTest(unittest.TestCase):
         self.processes.answer_entities(
             self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("PRIVATE", r"Acme\w*"))}
         )
-        self.finish(IN_THE_WINDOW, _finish("r3", "s-lost"), "/home/ada/oak/.brigade/worktrees/B42")
-        self.finish(IN_THE_WINDOW, _finish("r4", "s-built"), "/home/ada/oak/.brigade/worktrees/B43")
-        leaking_brief = {**BRIEF, "content": "Mail ada@example.org the AcmeBilling report from /home/ada/oak."}
+        self.finish(IN_THE_WINDOW, _finish("r3", "s-lost"), "/home/alice/oak/.brigade/worktrees/B42")
+        self.finish(IN_THE_WINDOW, _finish("r4", "s-built"), "/home/alice/oak/.brigade/worktrees/B43")
+        leaking_brief = {**BRIEF, "content": "Mail ada@example.org the AcmeBilling report from /home/alice/oak."}
         client = TranscriptsClientDouble({"s-built": [leaking_brief]})
 
         # Act
