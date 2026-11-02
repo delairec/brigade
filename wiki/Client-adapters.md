@@ -31,7 +31,9 @@ level, whatever the client:
 
 The `vibe` adapter runs `vibe` from your `PATH` with `VIBE_CLI=rust`, Vibe's Rust CLI, and reads the usage and the
 transcript of a session from Vibe's session store, `.vibe/logs/session/unified` under your home. A session it ends at
-its turn cap is relaunched fresh from the progress file: it answers no resume.
+its turn cap is relaunched fresh from the progress file: it answers no resume. The Rust CLI reads its credentials from
+the keyring over the D-Bus session bus, so a launch passes it `DBUS_SESSION_BUS_ADDRESS` from the environment brigade
+runs in; the systemd user manager running the timer carries it, and a launch without it reaches no keyring.
 
 ## A client per slot
 
