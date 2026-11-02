@@ -22,12 +22,13 @@ BEFORE_THE_WINDOW = datetime(2026, 10, 19, 23, 0, tzinfo=UTC)
 IN_THE_WINDOW = datetime(2026, 10, 20, 8, 0, tzinfo=UTC)
 NOW = datetime(2026, 10, 25, 9, 0, tzinfo=UTC)
 NOT_CACHED = False
-BRIEF = {"role": "user", "timestamp": None, "content": "Deliver B42.", "tool_calls": 0, "id": None, "usage": None}
+BRIEF = {"role": "user", "timestamp": None, "content": "Deliver B42.", "tool_calls": 0, "tools": [], "id": None, "usage": None}
 ANSWER = {
     "role": "assistant",
     "timestamp": None,
     "content": [{"type": "text", "text": "Done."}],
     "tool_calls": 0,
+    "tools": [],
     "id": None,
     "usage": None,
 }
@@ -39,6 +40,7 @@ def _call(tool: str, tool_input: dict) -> dict:
         "timestamp": None,
         "content": [],
         "tool_calls": 1,
+        "tools": [{"name": tool, "target": None}],
         "id": None,
         "usage": None,
         "calls": [{"tool": tool, "input": tool_input}],
@@ -51,6 +53,7 @@ def _result(*, refused: bool, truncated: str | None) -> dict:
         "timestamp": None,
         "content": [],
         "tool_calls": 0,
+        "tools": [],
         "id": None,
         "usage": None,
         "results": [{"refused": refused, "truncated": truncated}],

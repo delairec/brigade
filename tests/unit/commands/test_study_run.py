@@ -25,6 +25,7 @@ SESSION_BRIEF = {
     "timestamp": None,
     "content": "Deliver B42.",
     "tool_calls": 0,
+    "tools": [],
     "id": None,
     "usage": None,
 }
