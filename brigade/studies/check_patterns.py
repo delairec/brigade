@@ -40,7 +40,9 @@ def _read_citable(collected: list[dict]) -> Citable:
         _, read_fingerprints = CITED_ITEMS_BY_COLLECTOR[entry["collector"]]
         items = json.loads(Path(entry["document"]).read_text(encoding="utf-8"))["items"]
         fingerprints.extend(read_fingerprints(items))
-    described = " or ".join(f"{CITED_ITEMS_BY_COLLECTOR[entry['collector']][0]} {entry['collector']}" for entry in cited)
+    described = " or ".join(
+        f"{CITED_ITEMS_BY_COLLECTOR[entry['collector']][0]} {entry['collector']}" for entry in cited
+    )
     return Citable(fingerprints=tuple(fingerprints), described=described)
 
 
