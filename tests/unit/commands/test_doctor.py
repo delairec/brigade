@@ -596,6 +596,29 @@ class DoctorWithoutAProjectOnAForgeTest(DoctorTestCase):
         self.assertEqual(self.forge.questions, [])
 
 
+class DoctorOfAnUnreadableRegistryTest(DoctorTestCase):
+    def test_should_warn_that_the_projects_are_unreadable(self):
+        # Arrange
+        self.configure(CONFIGURATION)
+        self.runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
+        self.answers["awawa", "status", "PROJECT"] = ToolFailure("awawa status PROJECT timed out after 30 s")
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "forge",
+                "kind": "optional",
+                "state": "warning",
+                "detail": "PROJECT unreadable: awawa status PROJECT timed out after 30 s",
+                "fallback": "local mode without a forge",
+            },
+            document["items"],
+        )
+
+
 class DoctorOfAnUnreadableConfigurationTest(DoctorTestCase):
     def test_should_warn_with_the_error_wherever_the_configuration_is_read(self):
         # Arrange
