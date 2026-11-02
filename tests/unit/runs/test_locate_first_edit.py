@@ -2,7 +2,7 @@ import unittest
 
 from brigade.runs.locate_first_edit import FirstEdit, locate_first_edit
 from brigade.system.token_usage import TokenUsage
-from brigade.system.transcripts_answer import ToolCall, TranscriptMessage
+from brigade.system.transcripts_answer import ToolTarget, TranscriptMessage
 
 EDIT_TOOLS = ("Edit", "Write", "NotebookEdit")
 PROGRESS_FILE = "/state/brigade/runs/r1/progress.awawa"
@@ -19,9 +19,19 @@ THIRD_USAGE = TokenUsage(
 )
 
 
-def _create_message(message_id: str | None, tools: tuple[ToolCall, ...], usage: TokenUsage | None) -> TranscriptMessage:
+def _create_message(
+    message_id: str | None, tools: tuple[ToolTarget, ...], usage: TokenUsage | None
+) -> TranscriptMessage:
     return TranscriptMessage(
-        role="assistant", timestamp=None, content=[], tool_calls=len(tools), id=message_id, usage=usage, tools=tools
+        role="assistant",
+        timestamp=None,
+        content=[],
+        tool_calls=len(tools),
+        id=message_id,
+        usage=usage,
+        tools=tools,
+        calls=(),
+        results=(),
     )
 
 
@@ -30,15 +40,26 @@ class LocateFirstEditTest(unittest.TestCase):
         # Arrange
         messages = (
             TranscriptMessage(
-                role="user", timestamp=None, content="Deliver.", tool_calls=0, id=None, usage=NO_USAGE, tools=NO_TOOLS
+                role="user",
+                timestamp=None,
+                content="Deliver.",
+                tool_calls=0,
+                id=None,
+                usage=NO_USAGE,
+                tools=NO_TOOLS,
+                calls=(),
+                results=(),
             ),
-            _create_message("msg_1", (ToolCall(name="Read", target="/srv/b42/README.md"),), FIRST_USAGE),
+            _create_message("msg_1", (ToolTarget(name="Read", target="/srv/b42/README.md"),), FIRST_USAGE),
             _create_message(
                 "msg_2",
-                (ToolCall(name="Bash", target="git status"), ToolCall(name="Edit", target="/srv/b42/brigade/cli.py")),
+                (
+                    ToolTarget(name="Bash", target="git status"),
+                    ToolTarget(name="Edit", target="/srv/b42/brigade/cli.py"),
+                ),
                 SECOND_USAGE,
             ),
-            _create_message("msg_3", (ToolCall(name="Edit", target="/srv/b42/brigade/cli.py"),), THIRD_USAGE),
+            _create_message("msg_3", (ToolTarget(name="Edit", target="/srv/b42/brigade/cli.py"),), THIRD_USAGE),
         )
 
         # Act
@@ -50,8 +71,8 @@ class LocateFirstEditTest(unittest.TestCase):
     def test_should_count_once_the_usage_of_a_message_its_transcript_splits_over_several_lines(self):
         # Arrange
         messages = (
-            _create_message("msg_1", (ToolCall(name="Read", target="/srv/b42/README.md"),), FIRST_USAGE),
-            _create_message("msg_1", (ToolCall(name="Write", target="/srv/b42/brigade/cli.py"),), FIRST_USAGE),
+            _create_message("msg_1", (ToolTarget(name="Read", target="/srv/b42/README.md"),), FIRST_USAGE),
+            _create_message("msg_1", (ToolTarget(name="Write", target="/srv/b42/brigade/cli.py"),), FIRST_USAGE),
         )
 
         # Act
@@ -63,8 +84,8 @@ class LocateFirstEditTest(unittest.TestCase):
     def test_should_pass_over_the_writes_of_the_progress_file(self):
         # Arrange
         messages = (
-            _create_message("msg_1", (ToolCall(name="Write", target=PROGRESS_FILE),), FIRST_USAGE),
-            _create_message("msg_2", (ToolCall(name="Edit", target="/srv/b42/brigade/cli.py"),), SECOND_USAGE),
+            _create_message("msg_1", (ToolTarget(name="Write", target=PROGRESS_FILE),), FIRST_USAGE),
+            _create_message("msg_2", (ToolTarget(name="Edit", target="/srv/b42/brigade/cli.py"),), SECOND_USAGE),
         )
 
         # Act
@@ -76,8 +97,11 @@ class LocateFirstEditTest(unittest.TestCase):
     def test_should_find_no_edit_in_a_session_that_wrote_only_its_progress_or_called_no_edit_tool(self):
         # Arrange
         rows = [
-            ("only the progress file", (ToolCall(name="Edit", target=PROGRESS_FILE),)),
-            ("no edit tool", (ToolCall(name="Bash", target="python3 -m unittest"), ToolCall(name="Grep", target=None))),
+            ("only the progress file", (ToolTarget(name="Edit", target=PROGRESS_FILE),)),
+            (
+                "no edit tool",
+                (ToolTarget(name="Bash", target="python3 -m unittest"), ToolTarget(name="Grep", target=None)),
+            ),
         ]
         for case, tools in rows:
             with self.subTest(case=case):
