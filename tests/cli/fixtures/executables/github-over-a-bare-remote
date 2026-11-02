@@ -76,8 +76,7 @@ class Forge:
         if not Path(worktree).exists():
             return
         race.unlink()
-        identity = ("-c", "user.name=octo-session", "-c", "user.email=octo-session@example.com")
-        run_git("-C", worktree, *identity, "commit", "--quiet", "--allow-empty", "-m", "chore: push during the merge")
+        run_git("-C", worktree, "commit", "--quiet", "--allow-empty", "-m", "chore: push during the merge")
         run_git("-C", worktree, "push", "--quiet", "origin", f"HEAD:{pull['headRefName']}")
 
     def merge(self, number: str, method: str, expected_head: str | None) -> str:
