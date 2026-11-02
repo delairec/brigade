@@ -15,7 +15,13 @@ MILESTONE M2
 
 MILESTONE M3
 	TITLE "Dashboard"
-	STATUS active
+	STATUS reached
+	SOURCE "the user's ruling of 2026-11-02 at the refinement of @TASK.B233: « reached + tâches"
+		+ "vers m6 dans la même PR que celle de ce refinement »; delivered on main by pull request"
+		+ "273, merged on 2026-11-01; @TASK.B228, attached after the merge, moved to @MILESTONE.M6"
+		REF @TASK.B233
+		REF @TASK.B228
+		REF @MILESTONE.M6
 
 MILESTONE M4
 	TITLE "Gardening scans"
@@ -68,7 +74,7 @@ MILESTONE ADD0
 
 MILESTONE M9
 	TITLE "Milestone integration branch"
-	STATUS active
+	STATUS reached
 	DESC "a milestone delivered alone, as DESC 5 of"
 		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce provides for"
 		+ "a change the tick itself needs; M3 keeps its dashboard perimeter"
@@ -76,6 +82,15 @@ MILESTONE M9
 	SOURCE "the user's ruling of 2026-10-28 on the milestone of the tasks B212 to B216: « Nouveau"
 		+ "milestone », on the session's recommendation « Un milestone à part, livré seul, comme la"
 		+ "règle 2 le prévoit pour les correctifs du tick. M3 garde son périmètre dashboard »"
+	SOURCE "the user's ruling of 2026-11-02 at the refinement of @TASK.B233: « reached + tâches"
+		+ "vers m6 dans la même PR que celle de ce refinement »; delivered on main by pull request"
+		+ "268, merged on 2026-10-31; @TASK.B224, @TASK.B226 and @TASK.B227, attached after the"
+		+ "merge, moved to @MILESTONE.M6"
+		REF @TASK.B233
+		REF @TASK.B224
+		REF @TASK.B226
+		REF @TASK.B227
+		REF @MILESTONE.M6
 
 MILESTONE M10
 	TITLE "Repair rounds that converge"

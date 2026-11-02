@@ -14746,7 +14746,7 @@ TASK B224
 		+ "names when the ledger records none"
 	STATUS todo
 	TYPE fix
-	MILESTONE @MILESTONE.M9
+	MILESTONE @MILESTONE.M6
 	COMPONENT "the tick"
 	ROLE ada
 	SPEC "the snapshot of the tick reads, for each registered project whose STATUS is not paused,"
@@ -14906,7 +14906,7 @@ TASK B226
 		+ "merge"
 	STATUS todo
 	TYPE fix
-	MILESTONE @MILESTONE.M9
+	MILESTONE @MILESTONE.M6
 	COMPONENT "the tick"
 	ROLE ada
 	SPEC "MergePullRequest of brigade/tick/actions.py carries the head of the pull request as the"
@@ -14975,7 +14975,7 @@ TASK B227
 		+ "rewrites the title when the head moves"
 	STATUS todo
 	TYPE fix
-	MILESTONE @MILESTONE.M9
+	MILESTONE @MILESTONE.M6
 	COMPONENT "the tick"
 	ROLE ada
 	SPEC "brigade/waves/compose_delivery_title.py composes the title of the pull request of a"
@@ -15107,7 +15107,7 @@ TASK B228
 		+ "and every reading lists the entity types of the corpus"
 	STATUS todo
 	TYPE fix
-	MILESTONE @MILESTONE.M3
+	MILESTONE @MILESTONE.M6
 	COMPONENT "dashboard"
 	ROLE ada
 	SPEC "brigade corpus <project> named with neither --ref nor --worktree reads the project at the"
@@ -15467,16 +15467,19 @@ TASK B233
 		+ "STATUS reached on the branch of the milestone before it opens the pull request, opens"
 		+ "none while a task of the milestone is draft or todo, and a reached milestone gains no"
 		+ "task"
-	STATUS draft
+	STATUS todo
 	TYPE feat
+	MILESTONE @MILESTONE.M6
 	COMPONENT "tick"
 	ROLE ada
 	SPEC "a milestone is reached when its pull request is merged into PROJECT.MAIN: before the tick"
 		+ "opens the pull request of a milestone, it commits STATUS reached on the MILESTONE entity"
-		+ "in the corpus at the branch of the milestone, fetched from origin and pushed without"
-		+ "force with the environment of the login forge_accounts binds to cli, as SPEC 8 of TASK"
-		+ "B232 pushes the report of the milestone; the pull request opens only once that commit is"
-		+ "on the branch, and the user's merge delivers the code and the status at once"
+		+ "in the corpus at the branch of the milestone, in a commit of its own written by brigade"
+		+ "with no run, apart from the commit of the report of SPEC 8 of TASK B232, the branch"
+		+ "fetched from origin and pushed without force with the environment of the login"
+		+ "forge_accounts binds to cli as that SPEC pushes the report; the pull request opens only"
+		+ "once both commits are on the branch, and the user's merge delivers the code and the"
+		+ "status at once"
 	SPEC "the tick sets STATUS reached nowhere else: not on PROJECT.MAIN, not at milestone.closed,"
 		+ "which keeps its writer and its fields of SPEC 2 of TASK B215; on a project of FORGE none"
 		+ "the status is committed on the branch the same way and no pull request opens, the user"
@@ -15499,6 +15502,7 @@ TASK B233
 		+ "never started and the task named on stderr; the rehearsal of tests/cli replays"
 		+ "unchanged, the corpus at its milestone branch holding STATUS reached once the pull"
 		+ "request of its milestone opens"
+	AFTER @TASK.B232
 	RATIONALE "nothing sets STATUS reached on a MILESTONE today, read on 2026-11-02 at 6719e09d: no"
 		+ "task or decision on main does; milestone.closed is a ledger event, SPEC 2 of @TASK.B215,"
 		+ "and the delivery moment of the patterns of DESC 5 of"
@@ -15508,7 +15512,7 @@ TASK B233
 		REF @DECISION.RatificationNamesItsEntitiesAfterThePatternAndTheArrivalInMainDeliversThePattern
 		REF @TASK.B232
 	RATIONALE "the code the SPECs rest on, read on 2026-11-02 at 6719e09d:"
-		+ "brigade/tick/plan.py:597-603 _is_milestone_pull_request_due opens the pull request on no"
+		+ "brigade/tick/plan.py:592-604 _is_milestone_pull_request_due opens the pull request on no"
 		+ "open wave, at least one merged wave, no todo task and no milestone.pr_opened;"
 		+ "brigade/tick/build_snapshot.py:890-896 _read_milestones skips a milestone the ledger"
 		+ "holds a milestone.closed for; brigade/corpus/set_entity_status.py rewrites the STATUS"
@@ -15518,16 +15522,18 @@ TASK B233
 		+ "brigade/git/commit_root_file_on_branch.py commits a file on a branch with no worktree;"
 		+ "brigade/verify/check_corpus_at_head.py runs awawa fmt --check and lint --strict at the"
 		+ "head of a task pull request; .github/workflows/ci.yml ignores corpus/**"
-	RATIONALE "the enforcement each SPEC chooses is what the code supports, an option for the"
-		+ "refinement and not a ruling: for ruling 1, the status commit stands in the commit of the"
-		+ "report of SPEC 8 of @TASK.B232 or in one of its own, SPEC 1 leaving the choice; for"
-		+ "ruling 2, the refusal of the tick, SPEC 4, is the one check the code can carry: the"
-		+ "schema of awawa gates the fields of one entity and judges no field of the entity a"
-		+ "reference names, so no lint rule reads the STATUS of the MILESTONE a TASK names, and a"
-		+ "check in the continuous integration would need ci.yml to stop ignoring corpus/**; for"
-		+ "ruling 3, the gate of the opening, SPEC 3, is where the tick already refuses a todo"
-		+ "task, and a check on the milestone pull request itself would need a verification run on"
-		+ "it, which the tick launches on the pull request of a task alone, SPEC 11 of @TASK.B232"
+	RATIONALE "the enforcement of each ruling, ruled on 2026-11-02 and recorded in"
+		+ "@DECISION.AMilestoneIsReachedByTheMergeOfItsPullRequestAndHoldsNoOpenTask: for ruling 1,"
+		+ "the status in a commit of its own, a mechanical write of brigade that does not hang on"
+		+ "the judging run of the report of SPEC 8 of @TASK.B232; for ruling 2, the refusal of the"
+		+ "tick alone, SPEC 4, the one check the code can carry: the schema of awawa gates the"
+		+ "fields of one entity and judges no field of the entity a reference names, so no lint"
+		+ "rule reads the STATUS of the MILESTONE a TASK names, and a check in the continuous"
+		+ "integration would need ci.yml to stop ignoring corpus/**; for ruling 3, the gate of the"
+		+ "opening, SPEC 3, is where the tick already refuses a todo task, and a check on the"
+		+ "milestone pull request itself would need a verification run on it, which the tick"
+		+ "launches on the pull request of a task alone, SPEC 11 of @TASK.B232"
+		REF @DECISION.AMilestoneIsReachedByTheMergeOfItsPullRequestAndHoldsNoOpenTask
 		REF @TASK.B232
 	RATIONALE "ruling 3 narrows DESC 2 of"
 		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce and SPEC 6"
@@ -15536,10 +15542,14 @@ TASK B233
 		+ "and build_snapshot.py:869 refuse already; under ruling 3 a parked task holds the"
 		+ "milestone until it is requeued and merged, moved to another milestone or archived; the"
 		+ "ratification amends that DESC and records the three rulings in a DECISION, as RATIONALE"
-		+ "3 of @TASK.B232 names its decisions"
+		+ "3 of @TASK.B232 names its decisions; done at the refinement of 2026-11-02, DESC 2 of"
+		+ "that decision and DESC 9 of"
+		+ "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch"
+		+ "amended in place"
 		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		REF @TASK.B232
 		REF @TASK.B215
+		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
 	RATIONALE "M3 and M9 under rulings 2 and 3, read on 2026-11-02: the ledger holds"
 		+ "milestone.closed of M9 with pr 268, merged on 2026-10-31, and of M3 with pr 273, merged"
 		+ "on 2026-11-01; both are STATUS active in the corpus, M3 holding @TASK.B228 todo and M9"
@@ -15547,16 +15557,13 @@ TASK B233
 		+ "ruling 1 both would be reached since their merge and under ruling 2 the four tasks would"
 		+ "not have been attached; today the tick serves them never: _read_milestones skips a"
 		+ "closed milestone, so its branch is rebased onto main no more and no second pull request"
-		+ "of it opens, while cut_milestone_branch.py:95-101 returns the recorded branch as long as"
-		+ "the forge holds it, origin/integration/dashboard and"
-		+ "origin/integration/milestone-integration-branch on 2026-11-02, so a wave of these tasks"
-		+ "would merge into a branch that reaches main never; the options for the refinement are,"
-		+ "first, M3 and M9 set reached by hand as M4 and M10 were by pull request 313 and the four"
-		+ "tasks moved to an active milestone, @MILESTONE.M6 or a new one, their branches cut from"
-		+ "its branch, the option the user's words on M4 point to, « en revérifiant bien que tout"
-		+ "ce qui était attendu est livré, pas de tâche encore en draft ou quoi »; second, M3 and"
-		+ "M9 kept active and delivered a second time, which needs a second milestone pull request"
-		+ "the tick opens never today and a ruling on it"
+		+ "of it opens, while cut_milestone_branch.py:95-101 returns the recorded branch, cut again"
+		+ "from PROJECT.MAIN when the forge no longer holds it, so a wave of these tasks would"
+		+ "merge into a branch that reaches main never; ruled at the refinement of 2026-11-02 and"
+		+ "done in its commit: M3 and M9 set reached by hand, as M4 and M10 were by pull request"
+		+ "313, and the four tasks moved to @MILESTONE.M6, their branches cut from its branch;"
+		+ "rejected, M3 and M9 kept active and delivered a second time, which needs a second"
+		+ "milestone pull request the tick opens never"
 		REF @TASK.B228
 		REF @TASK.B224
 		REF @TASK.B226
@@ -15564,7 +15571,11 @@ TASK B233
 		REF @MILESTONE.M6
 	RATIONALE "TYPE feat: the tick commits on the branch of a milestone, holds its pull request on"
 		+ "a draft task and refuses a task of a reached milestone, each observed by the user;"
-		+ "MILESTONE is set at the refinement"
+		+ "MILESTONE M6 with @TASK.B232, which this task follows: SPEC 1 rides the report of its"
+		+ "SPEC 8 and both change _is_milestone_pull_request_due; @MILESTONE.M9, the subject of"
+		+ "this task, is reached and takes no task under ruling 2"
+		REF @TASK.B232
+		REF @MILESTONE.M9
 	SOURCE "the user's rulings of 2026-11-02 on who sets reached: « Une milestone est reached quand"
 		+ "sa pr est mergée sur main »; between (a) « Before it opens the milestone pull request,"
 		+ "the tick commits STATUS reached on the milestone branch; the user's merge delivers code"
@@ -15574,3 +15585,7 @@ TASK B233
 		+ "devraient pas être ajoutée à une milestone déjà reached »"
 	SOURCE "the user's ruling of 2026-11-02 on the merge of a milestone: « une milestone ne devrait"
 		+ "pas être mergée si elle a encore des tâches ouvertes (draft ou todo) »"
+	SOURCE "the user's rulings of 2026-11-02 at the refinement: on the commit of the status, «"
+		+ "Commit à part (Recommended) »; on ruling 2, « Refus du tick seul (Recommended) »; on M3"
+		+ "and M9, « reached + tâches vers m6 dans la même PR que celle de ce refinement »; on the"
+		+ "milestone and the order, « M6 + AFTER B232 (Recommended) »"

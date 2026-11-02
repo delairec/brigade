@@ -4383,10 +4383,13 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
 	DESC "the integration pull request of @DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate"
 		+ "is the milestone's, from its integration branch into PROJECT.MAIN, opened once every"
-		+ "task of the milestone is merged or parked, no wave of it is open and the report of the"
-		+ "milestone is committed on the branch, its body that report, and merged by the user"
-		+ "alone; a task of a milestone is never merged into PROJECT.MAIN"
+		+ "task of the milestone is merged or parked, no task of it is draft or todo at the branch,"
+		+ "a parked task holding it, no wave of it is open, the report of the milestone and its"
+		+ "STATUS reached are committed on the branch, its body that report, and merged by the user"
+		+ "alone, as @DECISION.AMilestoneIsReachedByTheMergeOfItsPullRequestAndHoldsNoOpenTask"
+		+ "narrows it; a task of a milestone is never merged into PROJECT.MAIN"
 		REF @DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate
+		REF @DECISION.AMilestoneIsReachedByTheMergeOfItsPullRequestAndHoldsNoOpenTask
 	DESC "the candidates of a wave are read on the integration branch of the milestone, not on"
 		+ "PROJECT.MAIN: a task whose AFTER is implemented on that branch alone is startable"
 	DESC "before a wave starts, the integration branch of the milestone is rebased onto"
@@ -5254,9 +5257,12 @@ DECISION ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranc
 	DESC "a wave is closed by wave.closed, appended by the tick with no pull request once every"
 		+ "task of the wave is merged or parked; brigade lists a wave open or closed as before; the"
 		+ "pull request of a milestone opens once every task of the milestone is merged or parked,"
-		+ "no wave of it is open and its report is committed on its branch, as"
+		+ "none draft or todo at its branch as"
+		+ "@DECISION.AMilestoneIsReachedByTheMergeOfItsPullRequestAndHoldsNoOpenTask narrows it, no"
+		+ "wave of it is open and its report is committed on its branch, as"
 		+ "@DECISION.AMilestoneReportIsBuiltOnceItsTasksAreMergedOrParkedAndIsTheBodyOfItsPullRequest"
 		+ "sets"
+		REF @DECISION.AMilestoneIsReachedByTheMergeOfItsPullRequestAndHoldsNoOpenTask
 		REF @DECISION.AMilestoneReportIsBuiltOnceItsTasksAreMergedOrParkedAndIsTheBodyOfItsPullRequest
 	DESC "the waves open on a wave branch at the delivery of @TASK.B232 are cancelled, their task"
 		+ "branches renamed with git branch -m and their pull requests retargeted onto the branch"
@@ -5446,3 +5452,54 @@ DECISION TheVibeAdapterAddsTheSessionBusAddressOfTheLaunchRequestToItsEnvironmen
 		+ "brigade_w20, on @TASK.B44: « B44 c'est du spécifique donc c'est à l'adapter de"
 		+ "l'implémenter »"
 		REF @TASK.B44
+
+DECISION AMilestoneIsReachedByTheMergeOfItsPullRequestAndHoldsNoOpenTask
+	TITLE "a milestone is reached when its pull request is merged into main, the tick committing"
+		+ "STATUS reached on its branch before opening it; its pull request opens while no task of"
+		+ "it is draft or todo; a reached milestone takes no task"
+	STATUS active
+	DESC "a milestone is reached when its pull request is merged into PROJECT.MAIN: before the tick"
+		+ "opens it, brigade commits STATUS reached on the MILESTONE entity at the branch of the"
+		+ "milestone, in a commit of its own written with no run, so the user's merge delivers the"
+		+ "code and the status at once; STATUS reached is set nowhere else"
+	DESC "the pull request of a milestone opens while no task of the milestone is STATUS draft or"
+		+ "STATUS todo at its branch; a parked task, todo, holds it until it is requeued and"
+		+ "merged, moved to another milestone or archived"
+	DESC "a task whose MILESTONE is reached is served never: the tick starts no wave holding it and"
+		+ "names it at each tick; a task ratified for a reached milestone is moved to an active one"
+	DESC "narrows DESC 2 of"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce and DESC 9 of"
+		+ "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch,"
+		+ "amended in place: merged or parked becomes merged, none draft or todo"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
+	DESC "binds @TASK.B233; @MILESTONE.M3 and @MILESTONE.M9, merged before it, are set reached by"
+		+ "hand and their tasks attached after the merge moved to @MILESTONE.M6"
+		REF @TASK.B233
+		REF @MILESTONE.M3
+		REF @MILESTONE.M9
+		REF @MILESTONE.M6
+	REJECTED "at milestone.closed, the tick opening a pull request of the corpus into PROJECT.MAIN"
+		+ "that sets STATUS reached: one more pull request to merge, and PROJECT.MAIN carrying a"
+		+ "delivered milestone still active meanwhile; the user ruled « Ok pour A »"
+	REJECTED "STATUS reached committed in the commit of the report of the milestone: the status"
+		+ "would hang on the judging run of the report; the user ruled « Commit à part »"
+	REJECTED "a check in the continuous integration refusing a task attached to a reached"
+		+ "milestone, besides the refusal of the tick: .github/workflows/ci.yml ignores corpus/**,"
+		+ "and awawa lint judges no field of the entity a reference names; the user ruled « Refus"
+		+ "du tick seul »"
+	REJECTED "M3 and M9 kept active and delivered a second time: the tick opens no second pull"
+		+ "request of a milestone; the user ruled them reached, their tasks moved to M6"
+	RATIONALE "nothing set STATUS reached on a MILESTONE on 2026-11-02: M0, M1, M2 and F0 were set"
+		+ "by hand, M4 and M10 by pull request 313; M3 and M9 had their pull request merged, #273"
+		+ "and #268, and gained tasks afterwards, B228 and B224 to B227, which the tick then served"
+		+ "never, @TASK.B233"
+		REF @TASK.B233
+	SOURCE "the user's rulings of 2026-11-02: « Une milestone est reached quand sa pr est mergée"
+		+ "sur main », « Ok pour A », « Les tâches ne devraient pas être ajoutée à une milestone"
+		+ "déjà reached », « une milestone ne devrait pas être mergée si elle a encore des tâches"
+		+ "ouvertes (draft ou todo) »"
+	SOURCE "the user's rulings of 2026-11-02 at the refinement of @TASK.B233: « Commit à part"
+		+ "(Recommended) », « Refus du tick seul (Recommended) », « reached + tâches vers m6 dans"
+		+ "la même PR que celle de ce refinement », « M6 + AFTER B232 (Recommended) »"
+		REF @TASK.B233
