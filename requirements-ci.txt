@@ -1,5 +1,5 @@
 coverage==7.17.0
-pytest==9.1.1
+pytest==9.2.0
 pytest-xdist==3.8.0
 ruff==0.17.2
 semgrep==1.182.1
