@@ -52,7 +52,7 @@ VERIFYING_STATE = "verifying"
 VERIFIED_STATE = "verified"
 CHANGES_REQUESTED_STATE = "changes_requested"
 FIXING_STATE = "fixing"
-AWAITING_PUSH_STATES = (VERIFYING_STATE, CHANGES_REQUESTED_STATE, FIXING_STATE)
+STATES_LEFT_ON_A_PUSH = (VERIFYING_STATE, VERIFIED_STATE, CHANGES_REQUESTED_STATE, FIXING_STATE)
 REPAIRED_STATES = (PR_OPEN_STATE, CHANGES_REQUESTED_STATE, FIXING_STATE)
 REBASED_STATES = (PR_OPEN_STATE, VERIFYING_STATE, VERIFIED_STATE, CHANGES_REQUESTED_STATE, FIXING_STATE)
 CHECKS_FINDING = "checks"
@@ -205,7 +205,7 @@ def _decide_task_state(wave: WaveFacts, task: TaskFacts) -> RecordTaskState | No
 
 
 def _is_pushed_since_preflight(state: str, task: TaskFacts) -> bool:
-    return state in AWAITING_PUSH_STATES and task.preflighted_head != task.pull_request.head
+    return state in STATES_LEFT_ON_A_PUSH and task.preflighted_head != task.pull_request.head
 
 
 @dataclasses.dataclass(frozen=True)
@@ -455,6 +455,7 @@ def _decide_merge(
     if (
         wave.states.get(task.name) != VERIFIED_STATE
         or task.pull_request.state != OPEN_PULL_REQUEST
+        or task.preflighted_head != task.pull_request.head
         or project.auto_merge == NO_AUTO_MERGE
         or not _are_checks_passed(task.pull_request, project, now)
         or not _is_verdict_accepted(task, project)
@@ -463,7 +464,12 @@ def _decide_merge(
     if task.pull_request.base != wave.branch:
         return ParkTask(wave=wave.wave, task=task.name, reason=OTHER_BASE_REASON, blockers=())
     return MergePullRequest(
-        project=wave.project, wave=wave.wave, task=task.name, pr=task.pull_request.number, method=project.merge
+        project=wave.project,
+        wave=wave.wave,
+        task=task.name,
+        pr=task.pull_request.number,
+        method=project.merge,
+        head=task.pull_request.head,
     )
 
 
@@ -550,6 +556,7 @@ def _plan_wave_merges(snapshot: Snapshot) -> tuple:
             wave=wave.wave,
             pr=wave.integration_pull_request.number,
             method=projects[wave.project].merge,
+            head=wave.integration_pull_request.head,
         )
         for wave in snapshot.waves
         if _is_wave_pull_request_ready(wave, projects[wave.project], snapshot.now)

@@ -102,3 +102,44 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
                 "skipped": [],
             },
         )
+
+
+class BrigadeRehearsalOfAMergeRacedByAPushTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.rehearser = WaveRehearser(ClassCleanupRegistrar(cls))
+        cls.rehearser.race_the_merge_of("S1")
+        cls.rehearser.run_brigade("request", "new", "shop", "Let the customer empty the cart")
+        cls.rehearser.tick_until_the_wave_is_integrated()
+
+    def test_should_record_the_merge_refused_at_the_head_read_as_a_failed_action(self):
+        # Act
+        failed = self.rehearser.read_failed_actions()
+
+        # Assert
+        self.assertEqual(
+            failed,
+            [
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "tick.action_failed",
+                    "action": "MergePullRequest",
+                    "project": "shop",
+                    "wave": "shop_w1",
+                    "task": "S1",
+                    "error": ANY,
+                }
+            ],
+        )
+
+    def test_should_merge_the_pull_request_at_the_head_verified_again_after_the_refused_merge(self):
+        # Arrange
+        shown = json.loads(self.rehearser.run_brigade("wave", "show", "shop_w1", "--json").stdout)
+        pull_request = self.rehearser.read_pull_request(shown["tasks"][0]["pull_request"])
+
+        # Act
+        verified_heads = self.rehearser.read_verdict_heads("S1")
+
+        # Assert
+        self.assertEqual(verified_heads, [ANY, pull_request["mergedHead"]])

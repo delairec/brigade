@@ -319,7 +319,7 @@ DISPOSABLE_WORKTREE = "/state/brigade/runs/20261006T110000Z-d4e5f6/worktree"
 VERIFY_S3 = LaunchVerification(project="shop", wave="shop_w1", task="S3", pr=42, worktree=WORKTREE_S3)
 RECORD_VERIFIED = RecordTaskState(wave="shop_w1", task="S3", state="verified", reason=None)
 RECORD_CHANGES_REQUESTED = RecordTaskState(wave="shop_w1", task="S3", state="changes_requested", reason=None)
-MERGE_S3 = MergePullRequest(project="shop", wave="shop_w1", task="S3", pr=42, method="rebase")
+MERGE_S3 = MergePullRequest(project="shop", wave="shop_w1", task="S3", pr=42, method="rebase", head="0123abc")
 
 
 class PlanVerificationTest(unittest.TestCase):
@@ -452,7 +452,7 @@ SHOP_MERGING_BY_SQUASH = ProjectFacts(name="shop", slots=4, merge="squash")
 SHOP_WITHOUT_AUTO_MERGE = ProjectFacts(name="shop", slots=4, auto_merge="none")
 APPROVED = dataclasses.replace(OPEN, review="approved")
 OPEN_ON_MAIN = create_pull_request("open", base="main")
-MERGE_S3_BY_SQUASH = MergePullRequest(project="shop", wave="shop_w1", task="S3", pr=42, method="squash")
+MERGE_S3_BY_SQUASH = MergePullRequest(project="shop", wave="shop_w1", task="S3", pr=42, method="squash", head="0123abc")
 PARK_S3_ON_ANOTHER_BASE = ParkTask(
     wave="shop_w1", task="S3", reason="pull request base is not the wave branch", blockers=()
 )
@@ -494,7 +494,9 @@ class PlanMergeTest(unittest.TestCase):
         ]:
             with self.subTest(case=case):
                 # Arrange
-                task = TaskFacts(name="S3", pull_request=pull_request, verdict=verdict)
+                task = TaskFacts(
+                    name="S3", pull_request=pull_request, preflighted_head=PREFLIGHTED_AT_THE_HEAD, verdict=verdict
+                )
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(project,))
 
                 # Act
@@ -502,6 +504,27 @@ class PlanMergeTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, expected)
+
+    def test_should_send_back_to_its_preflight_rather_than_merge_a_verified_task_pushed_since(self):
+        for case, project, pull_request in [
+            ("under verdict", SHOP, OPEN),
+            ("under approval, approved", SHOP_UNDER_APPROVAL, APPROVED),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    pull_request=pull_request,
+                    preflighted_head=PREFLIGHTED_BEFORE_A_PUSH,
+                    verdict=PASS_BEFORE_A_PUSH,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, (RECORD_PR_OPEN,))
 
     def test_should_merge_no_task_short_of_verified(self):
         for state in ["pr_open", "verifying", "changes_requested"]:
@@ -520,7 +543,9 @@ class PlanMergeTest(unittest.TestCase):
 
     def test_should_park_rather_than_merge_a_task_whose_pull_request_is_based_on_another_branch(self):
         # Arrange
-        task = TaskFacts(name="S3", pull_request=OPEN_ON_MAIN, verdict=PASS_AT_THE_HEAD)
+        task = TaskFacts(
+            name="S3", pull_request=OPEN_ON_MAIN, preflighted_head=PREFLIGHTED_AT_THE_HEAD, verdict=PASS_AT_THE_HEAD
+        )
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP,))
 
         # Act
@@ -1119,7 +1144,9 @@ WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH = PullRequestFacts(
     base=MILESTONE_BRANCH,
     updated_at=PUSHED_WITHIN_THE_MINUTE,
 )
-MERGE_THE_WAVE_PULL_REQUEST = MergeWavePullRequest(project="shop", wave="shop_w1", pr=77, method="rebase")
+MERGE_THE_WAVE_PULL_REQUEST = MergeWavePullRequest(
+    project="shop", wave="shop_w1", pr=77, method="rebase", head="0123abc"
+)
 NO_MILESTONE_BRANCH = None
 NO_UNRESOLVED_THREAD = 0
 ONE_UNRESOLVED_THREAD = 1
@@ -1159,7 +1186,10 @@ class PlanWaveMergeTest(unittest.TestCase):
         actions = plan(snapshot)
 
         # Assert
-        self.assertEqual(actions, (MergeWavePullRequest(project="shop", wave="shop_w1", pr=77, method="squash"),))
+        self.assertEqual(
+            actions,
+            (MergeWavePullRequest(project="shop", wave="shop_w1", pr=77, method="squash", head="0123abc"),),
+        )
 
     def test_should_merge_none_short_of_the_gate(self):
         # Arrange
