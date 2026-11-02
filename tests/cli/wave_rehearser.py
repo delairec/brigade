@@ -40,6 +40,7 @@ PLAN = (
 )
 READ_THE_BRIEF = '#!/bin/sh\nbrief=$(cat)\nread_argument() { printf \'%s\\n\' "$brief" | sed -n "s/^$1=//p"; }\n'
 RELEASE_FILE = "released"
+RACE_FILE = "race"
 AWAIT_THE_RELEASE = f'until [ -e "$BRIGADE_RUN_DIR/{RELEASE_FILE}" ]; do sleep 0.1; done\n'
 PLANNER_PLAY = (
     READ_THE_BRIEF + 'plan="$BRIGADE_RUN_DIR/plan.awawa"\n'
@@ -160,6 +161,17 @@ class WaveRehearser:
                 self.registrar.fail(completed.stderr)
             self.list_finished_runs()
         self.wait_until(self.has_the_report_ended, "the report of the wave never ended")
+
+    def race_the_merge_of(self, task: str) -> None:
+        (self.store / RACE_FILE).write_text(str(self.project.path / ".brigade" / "worktrees" / task))
+
+    def read_verdict_heads(self, task: str) -> list[str]:
+        return [
+            event["head"] for event in self.read_events() if event["event"] == "task.verdict" and event["task"] == task
+        ]
+
+    def read_failed_actions(self) -> list:
+        return [event for event in self.read_events() if event["event"] == "tick.action_failed"]
 
     def read_pull_request(self, number: int) -> dict:
         return json.loads((self.store / "pulls" / f"{number}.json").read_text())
