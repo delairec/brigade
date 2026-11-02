@@ -3772,6 +3772,9 @@ TASK B44
 			+ "test_should_hand_the_session_bus_of_the_machine_to_the_cli_for_its_keyring(self):"
 		IMPL "wiki/Client-adapters.md::a launch passes it `DBUS_SESSION_BUS_ADDRESS` from the"
 			+ "environment brigade"
+		IMPL "brigade/runs/detach_brigade_command.py::environment=_carry_session_bus(runtime.paths.session_bus_address),"
+		IMPL "tests/unit/runs/test_detach_brigade_command.py::def"
+			+ "test_should_hand_the_session_bus_of_brigade_to_the_brigade_it_detaches(self):"
 	AFTER @TASK.B21
 	AFTER @TASK.B108
 	RATIONALE "the user asked on 2026-10-07 whether two AI providers can coexist; the session found"
