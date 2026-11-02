@@ -8,14 +8,13 @@ from pathlib import Path
 
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.collectors.transcript_findings import collect
-from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
-from brigade.ledger.run_finished import RunFinished
 from brigade.system.parse_configuration import Configuration
-from brigade.system.token_usage import TokenUsage
 from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.mining.create_run_finished import create_run_finished
+from tests.unit.mining.transcripts_client_double import TranscriptsClientDouble
 from tests.unit.scripted_processes import ScriptedProcesses
 
 ENVIRONMENT = {"BRIGADE_PROJECT_PATH": "/srv/oak", "BRIGADE_SINCE": "2026-10-20", "BRIGADE_PARAMS": "{}"}
@@ -32,44 +31,6 @@ ANSWER = {
     "id": None,
     "usage": None,
 }
-
-
-def _finish(run: str, session: str | None, task: str | None = "B42") -> RunFinished:
-    return RunFinished(
-        run=run,
-        segment=1,
-        procedure="build-task",
-        slot="build",
-        role="ada",
-        client="vibe",
-        project="oak",
-        session=session,
-        main_steps=12,
-        total_steps=12,
-        duration_ms=60000,
-        usage=TokenUsage(
-            input_tokens=10, output_tokens=200, cache_creation_input_tokens=0, cache_read_input_tokens=3000
-        ),
-        outcome="done",
-        error_class=None,
-        exit=0,
-        wave="oak_w3",
-        task=task,
-        nulls={},
-        cost_usd=0.42,
-    )
-
-
-class TranscriptsClientDouble:
-    def __init__(self, transcripts: dict):
-        self.transcripts = transcripts
-        self.worktrees = []
-
-    def answer(self, operation: str, request: dict) -> dict:
-        self.worktrees.append(request["worktree"])
-        if request["session_id"] not in self.transcripts:
-            raise BrigadeError(f"no transcript of session {request['session_id']}")
-        return {"schema_version": 1, "messages": self.transcripts[request["session_id"]], "subagents": []}
 
 
 def _call(tool: str, tool_input: dict) -> dict:
@@ -132,7 +93,7 @@ class TranscriptFindingsCollectorTest(unittest.TestCase):
         (run_directory / "run.json").write_text(
             json.dumps({"run": "r3", "worktree": "/srv/oak/.brigade/worktrees/B42"})
         )
-        append_event(self.runtime.paths, IN_THE_WINDOW, _finish("r3", "s-built"))
+        append_event(self.runtime.paths, IN_THE_WINDOW, create_run_finished("r3", "s-built"))
 
     def collect(self, messages: list) -> dict:
         client = TranscriptsClientDouble({"s-built": messages})
@@ -261,7 +222,7 @@ class TranscriptFindingsCollectorTest(unittest.TestCase):
 
     def test_should_carry_no_usage_for_a_run_whose_usage_was_not_measured(self):
         # Arrange
-        unmeasured = dataclasses.replace(_finish("r3", "s-built"), run="r5", usage=None)
+        unmeasured = dataclasses.replace(create_run_finished("r3", "s-built"), run="r5", usage=None)
         run_directory = self.runtime.paths.state_root / "runs" / "r5"
         run_directory.mkdir(parents=True)
         (run_directory / "run.json").write_text(
@@ -291,7 +252,7 @@ class TranscriptFindingsCollectorTest(unittest.TestCase):
 
     def test_should_read_a_session_once_from_the_last_run_finished_naming_it(self):
         # Arrange
-        second_segment = dataclasses.replace(_finish("r3", "s-built"), segment=2, cost_usd=0.3)
+        second_segment = dataclasses.replace(create_run_finished("r3", "s-built"), segment=2, cost_usd=0.3)
         append_event(self.runtime.paths, IN_THE_WINDOW, second_segment)
 
         # Act
