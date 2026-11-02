@@ -3681,7 +3681,8 @@ TASK B43
 TASK B44
 	TITLE "The sandbox rehearsal of B21 runs on vibe, and its report lists what the normalised"
 		+ "results of each client lack"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 317
 	TYPE test
 	MILESTONE @MILESTONE.M7
 	COMPONENT "validation"
