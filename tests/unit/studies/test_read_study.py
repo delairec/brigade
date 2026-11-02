@@ -152,7 +152,6 @@ class ReadStudyTest(unittest.TestCase):
             ),
         )
 
-
     def test_should_read_the_built_in_mine_transcripts_the_operational_corpus_does_not_define(self):
         # Arrange
         self.processes.answer_entities(self.runtime.paths.config_root, "PROJECT", {})
@@ -195,6 +194,7 @@ class ReadStudyTest(unittest.TestCase):
                 status="paused",
             ),
         )
+
 
 class ReadStudyWithoutOperationalCorpusTest(unittest.TestCase):
     def setUp(self):
