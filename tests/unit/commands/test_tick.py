@@ -621,7 +621,7 @@ PAUSED_TRIAGE = (
 PAUSED_SCAN = (("SLOT", "none"), ("OUTPUT", "inbox"), ("ANSWER", "ANSWER"), ("STATUS", "paused"))
 PAUSED_BUILT_IN_STUDIES = {
     "triage": PAUSED_TRIAGE,
-    "mine-transcripts": PAUSED_TRIAGE,
+    "mine_transcripts": PAUSED_TRIAGE,
     "corpus_lint_tidepool": PAUSED_SCAN,
     "corpus_fmt_tidepool": PAUSED_SCAN,
     "stale_branches_tidepool": PAUSED_SCAN,
@@ -3885,7 +3885,7 @@ class TickLaunchingAStudyTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             spawn.argvs,
-            [("study", "run", "mine-transcripts", "--run-id", ANY), ("study", "run", "triage", "--run-id", ANY)],
+            [("study", "run", "mine_transcripts", "--run-id", ANY), ("study", "run", "triage", "--run-id", ANY)],
         )
 
     def test_should_launch_the_built_in_scans_of_a_registered_project_on_a_machine_that_never_ran_them(self):
@@ -3897,7 +3897,7 @@ class TickLaunchingAStudyTest(unittest.TestCase):
         runtime = create_test_runtime(
             create_test_paths(root),
             run_process=create_machine_double(
-                {"PROJECT": {"oak": oak}, "STUDY": {"triage": PAUSED_TRIAGE, "mine-transcripts": PAUSED_TRIAGE}}, MACHINE_OUTPUTS
+                {"PROJECT": {"oak": oak}, "STUDY": {"triage": PAUSED_TRIAGE, "mine_transcripts": PAUSED_TRIAGE}}, MACHINE_OUTPUTS
             ),
             spawn_process=spawn.spawn,
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),

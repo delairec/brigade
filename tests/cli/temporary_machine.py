@@ -17,7 +17,7 @@ PAUSED_BUILT_IN_STUDIES = (
     '\tANSWER "PATTERN"\n'
     "\tSTATUS paused\n"
     "\n"
-    "STUDY mine-transcripts\n"
+    "STUDY mine_transcripts\n"
     '\tTITLE "the mining of the transcripts, paused"\n'
     '\tCOLLECTOR "transcript-findings"\n'
     "\tSLOT triage\n"

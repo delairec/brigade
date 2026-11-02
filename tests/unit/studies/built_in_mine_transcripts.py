@@ -1,7 +1,7 @@
 from brigade.studies.convert_study import Study
 
 BUILT_IN_MINE_TRANSCRIPTS = Study(
-    name="mine-transcripts",
+    name="mine_transcripts",
     project=None,
     question=(
         "Group the findings of the transcripts of the runs into patterns: one PATTERN entity per recurring"
