@@ -607,7 +607,7 @@ class BrigadeStudyListTest(StudyRunTestCase):
                     {"name": "weekly", "status": "active", "every": "mon@09:00", "last_run": None, "outcome": None},
                     {"name": "triage", "status": "active", "every": "24h", "last_run": None, "outcome": None},
                     {
-                        "name": "mine-transcripts",
+                        "name": "mine_transcripts",
                         "status": "active",
                         "every": "mon@09:00",
                         "last_run": None,

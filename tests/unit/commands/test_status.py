@@ -87,7 +87,7 @@ HOME = {
         },
         {"name": "triage", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True},
         {
-            "name": "mine-transcripts",
+            "name": "mine_transcripts",
             "status": "active",
             "every": "mon@09:00",
             "last_run": None,
@@ -277,7 +277,7 @@ class StatusTextTest(unittest.TestCase):
             "last tick  2026-10-19T08:55:00Z, 2 actions applied in 120 ms\n"
             "study      debt, parked\n"
             "study      triage, due\n"
-            "study      mine-transcripts, due\n"
+            "study      mine_transcripts, due\n"
             "study      corpus_lint_elm, due\n"
             "study      corpus_fmt_elm, due\n"
             "study      stale_branches_elm, due\n"
