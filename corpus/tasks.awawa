@@ -3158,7 +3158,8 @@ TASK B34
 TASK B35
 	TITLE "The miner: collectors transcripts and transcript-findings, scrubbed, judged each week by"
 		+ "the built-in study mine_transcripts"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 319
 	TYPE feat
 	MILESTONE @MILESTONE.M5
 	COMPONENT "studies"
