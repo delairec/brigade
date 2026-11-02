@@ -284,7 +284,9 @@ def _mark_tool_result(item: dict) -> dict:
 
 
 def _describe_tool_exchanges(content) -> dict:
-    calls = [_summarise_tool_call(item) for item in _list_content_items(content, "tool_use")]
+    calls = [
+        {"tool": item["name"], "input": item.get("input", {})} for item in _list_content_items(content, "tool_use")
+    ]
     results = [_mark_tool_result(item) for item in _list_content_items(content, "tool_result")]
     return {**({"calls": calls} if calls else {}), **({"results": results} if results else {})}
 

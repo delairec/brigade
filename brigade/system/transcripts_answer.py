@@ -12,6 +12,12 @@ class ToolResultMarks:
 
 
 @dataclass(frozen=True)
+class ToolCall:
+    tool: str
+    input: dict
+
+
+@dataclass(frozen=True)
 class TranscriptMessage:
     role: str
     timestamp: str | None
@@ -19,7 +25,7 @@ class TranscriptMessage:
     tool_calls: int
     id: str | None
     usage: TokenUsage | None
-    calls: tuple[str, ...]
+    calls: tuple[ToolCall, ...]
     results: tuple[ToolResultMarks, ...]
 
     @classmethod
@@ -32,13 +38,13 @@ class TranscriptMessage:
             tool_calls=document["tool_calls"],
             id=document["id"],
             usage=None if usage is None else TokenUsage.from_document(usage),
-            calls=tuple(document.get("calls", ())),
+            calls=tuple(ToolCall(**call) for call in document.get("calls", ())),
             results=tuple(ToolResultMarks(**marks) for marks in document.get("results", ())),
         )
 
     def to_document(self) -> dict:
         exchanges = {
-            "calls": list(self.calls),
+            "calls": [{"tool": call.tool, "input": call.input} for call in self.calls],
             "results": [{"refused": marks.refused, "truncated": marks.truncated} for marks in self.results],
         }
         return {
