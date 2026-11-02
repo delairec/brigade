@@ -5634,3 +5634,28 @@ DECISION TheStepCapOfARoleIsFittedOnItsSegmentsAtTheLatestDigests
 		+ "starts its own window at its first segment"
 	SOURCE "the delivery of @TASK.B37"
 		REF @TASK.B37
+
+DECISION EveryMergeNamesTheHeadItWasJudgedAtAndAVerifiedTaskPushedSinceGoesBackToPrOpen
+	TITLE "every merge brigade asks of the forge names the head it read, and a verified task whose"
+		+ "head moved since its preflight goes back to pr_open rather than being merged"
+	STATUS active
+	DESC "binds @TASK.B226"
+		REF @TASK.B226
+	DESC "the merge of a task pull request, of a wave pull request and of a plan pull request each"
+		+ "hand the forge the head they read; merge_pull_request of the forge has no form without a"
+		+ "head"
+	DESC "a verified task whose pull request head differs from its preflighted head is recorded"
+		+ "pr_open and no merge is planned for it, under the verdict review as under the approval"
+		+ "review, so that the new head goes through preflight and verification again"
+	REJECTED "the verified task kept verified at a moved head: under the verdict review its verdict"
+		+ "judged another head and it would never merge, under the approval review it would merge a"
+		+ "head no preflight ran on"
+	REJECTED "the head named only by the merge of a task pull request: the merges of a wave and of"
+		+ "a plan go through the same forge operation, and a second form of it would be a second"
+		+ "path"
+	RATIONALE "@DECISION.ACleanRebaseSendsTheTaskBackToItsPreflight binds every judgment of a task"
+		+ "to a head; a merge refused at a moved head leaves the task verified at a head no"
+		+ "judgment read, whoever pushed it"
+		REF @DECISION.ACleanRebaseSendsTheTaskBackToItsPreflight
+	SOURCE "the delivery of @TASK.B226"
+		REF @TASK.B226

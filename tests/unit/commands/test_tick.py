@@ -2501,6 +2501,11 @@ class MergingForgeDouble:
         return {"schema_version": 1, "login": "tidepool-cli"}
 
 
+class MergingForgeRefusingAMovedHeadDouble(MergingForgeDouble):
+    def merge_pull_request(self, request: dict, runtime) -> dict:
+        raise BrigadeError("gh pr merge 42 exited 1: Head branch was modified. Review and try the merge again.")
+
+
 class MergingForgeWithAnUnreadableAccountDouble(MergingForgeDouble):
     def describe_account(self, request: dict, runtime) -> dict:
         raise BrigadeError("gh api user failed")
@@ -2537,14 +2542,116 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
             map(json.loads, (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines())
         )
 
-    def test_should_merge_the_pull_request_by_the_method_of_the_project(self):
+    def test_should_merge_the_pull_request_at_the_head_read_by_the_method_of_the_project(self):
         # Act
         COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
             self.forge.merges,
-            [{"repository": str(self.repository), "number": 42, "method": "rebase", "environment": {}}],
+            [
+                {
+                    "repository": str(self.repository),
+                    "number": 42,
+                    "method": "rebase",
+                    "head": "8885daa",
+                    "environment": {},
+                }
+            ],
+        )
+
+    def test_should_record_a_merge_refused_on_a_moved_head_as_a_failed_action_and_no_merge(self):
+        # Arrange
+        forge = MergingForgeRefusingAMovedHeadDouble({"task/M4/T7": GREEN_PULL_REQUEST})
+        runtime = self._create_runtime(forge)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7", "T8"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:00:00Z",
+                    "event": "task.pr_opened",
+                    "project": "tidepool",
+                    "task": "T7",
+                    "wave": "tidepool_w16",
+                    "branch": "task/M4/T7",
+                    "pr": 42,
+                    "login": "tidepool-bot",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:30:00Z",
+                    "event": "task.preflighted",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "checks": [],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T11:45:00Z",
+                    "event": "task.verdict",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "pr": 42,
+                    "head": "8885daa",
+                    "verdict": "pass",
+                    "findings": [],
+                    "login": None,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "verified",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "tick.action_failed",
+                    "action": "MergePullRequest",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "error": "gh pr merge 42 exited 1: Head branch was modified. Review and try the merge again.",
+                },
+            ],
+        )
+
+    def test_should_print_the_head_with_the_merge_on_a_dry_run(self):
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "project": "tidepool",
+                "wave": "tidepool_w16",
+                "task": "T7",
+                "pr": 42,
+                "method": "rebase",
+                "head": "8885daa",
+            },
+            document["plan"],
         )
 
     def test_should_merge_nothing_when_the_login_the_merge_would_run_as_cannot_be_read(self):
@@ -3250,7 +3357,16 @@ class TickMergingThePullRequestOfAWaveTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            forge.merges, [{"repository": str(self.repository), "number": 206, "method": "rebase", "environment": {}}]
+            forge.merges,
+            [
+                {
+                    "repository": str(self.repository),
+                    "number": 206,
+                    "method": "rebase",
+                    "head": "8885daa",
+                    "environment": {},
+                }
+            ],
         )
 
     def test_should_record_the_merge_then_the_close_of_the_wave(self):

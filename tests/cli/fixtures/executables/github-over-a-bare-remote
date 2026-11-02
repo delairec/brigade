@@ -68,9 +68,24 @@ class Forge:
         found = [self.describe(pull) for pull in reversed(self.read_pulls()) if pull["headRefName"] == head]
         return json.dumps(found[:1])
 
-    def merge(self, number: str, method: str) -> str:
+    def race(self, pull: dict) -> None:
+        race = self.store / "race"
+        if not race.exists():
+            return
+        worktree = race.read_text()
+        if not Path(worktree).exists():
+            return
+        race.unlink()
+        identity = ("-c", "user.name=octo-session", "-c", "user.email=octo-session@example.com")
+        run_git("-C", worktree, *identity, "commit", "--quiet", "--allow-empty", "-m", "chore: push during the merge")
+        run_git("-C", worktree, "push", "--quiet", "origin", f"HEAD:{pull['headRefName']}")
+
+    def merge(self, number: str, method: str, expected_head: str | None) -> str:
         pull = self.read_pull(number)
+        self.race(pull)
         head = self.read_head(pull)
+        if expected_head != head:
+            raise SystemExit("GraphQL: Head branch was modified. Review and try the merge again. (mergePullRequest)")
         with tempfile.TemporaryDirectory() as clone:
             run_git("clone", "--quiet", "--branch", pull["baseRefName"], str(self.remote), clone)
             run_git("fetch", "--quiet", "origin", pull["headRefName"], cwd=Path(clone))
@@ -124,7 +139,7 @@ class Forge:
         if command == "pr view":
             return json.dumps(self.describe(self.read_pull(arguments[2])))
         if command == "pr merge":
-            return self.merge(arguments[2], arguments[3])
+            return self.merge(arguments[2], arguments[3], read_option(arguments, "--match-head-commit"))
         if command == "pr review":
             self.write_pull({**self.read_pull(arguments[2]), "reviewDecision": "APPROVED"})
             return ""
