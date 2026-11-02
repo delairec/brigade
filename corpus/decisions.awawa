@@ -5679,3 +5679,22 @@ DECISION TheStepCapOfARoleIsFittedOnItsSegmentsAtTheLatestDigests
 		+ "starts its own window at its first segment"
 	SOURCE "the delivery of @TASK.B37"
 		REF @TASK.B37
+
+DECISION EveryMergeBrigadeAsksOfTheForgeNamesTheHeadItRead
+	TITLE "every merge brigade asks of the forge names the head of the pull request it read, the"
+		+ "merge of a wave pull request and of a plan pull request as the merge of a task pull"
+		+ "request"
+	STATUS active
+	DESC "binds @TASK.B226"
+		REF @TASK.B226
+	DESC "the request of merge_pull_request to a forge plugin always carries the head; the github"
+		+ "adapter hands it to gh pr merge as --match-head-commit"
+	DESC "MergeWavePullRequest carries the head of the wave pull request as the snapshot read it;"
+		+ "review_plan_pull_request merges the plan pull request at the head of the pull request it"
+		+ "read for its review"
+	REJECTED "--match-head-commit passed only when the request carries a head: a second path in the"
+		+ "adapter, and the merge of a wave or a plan pull request left unbound to the head judged"
+	RATIONALE "B226 names the merge of a task pull request alone, while the adapter serves every"
+		+ "merge of brigade"
+	SOURCE "the build run of @TASK.B226 of 2026-11-02"
+		REF @TASK.B226
