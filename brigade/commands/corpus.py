@@ -4,6 +4,7 @@ from pathlib import Path
 from brigade.command import Argument, Command, ExclusiveArguments
 from brigade.corpus.describe_corpus_view import CorpusView, describe_corpus_view
 from brigade.corpus.prepare_project_tree import prepare_project_tree
+from brigade.corpus.read_awawa_document import read_awawa_document
 from brigade.errors import BrigadeError
 from brigade.runtime import Runtime
 from brigade.system.find_awawa_web import find_awawa_web
@@ -49,6 +50,11 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
+def _read_types(runtime: Runtime, root: Path) -> list[str]:
+    status = read_awawa_document(runtime.run_process, root, ("status",))
+    return [row["type"] for row in status["types"]]
+
+
 def corpus(request: argparse.Namespace, runtime: Runtime) -> dict:
     if request.type is None and (request.field is not None or request.entity is not None):
         raise BrigadeError("--field and --entity read the entities of --type")
@@ -63,7 +69,7 @@ def corpus(request: argparse.Namespace, runtime: Runtime) -> dict:
         "root": str(tree.root),
     }
     if request.type is None:
-        return document
+        return document | {"types": _read_types(runtime, tree.root)}
     view = CorpusView(
         entity_type=request.type, field=request.field, entity=request.entity, ide_link=configuration.ide_link
     )
@@ -89,7 +95,6 @@ COMMAND = Command(
                     ("--worktree",), {"type": Path, "help": "the path of a worktree of the project, read in place"}
                 ),
             ),
-            required=True,
         ),
         Argument(("--type",), {"help": "the entity type whose entities the document lists"}),
         Argument(("--field",), {"help": "with --type, the field whose values the board groups the entities by"}),

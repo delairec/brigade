@@ -4,6 +4,7 @@ its entities, and how the cache of extracted trees is bounded.
 ## Commands
 
 ```
+brigade corpus <project> [--json] [-- <awawa args>]
 brigade corpus <project> --ref <branch|sha> [--json] [-- <awawa args>]
 brigade corpus <project> --ref worktree:<branch> [--json] [-- <awawa args>]
 brigade corpus <project> --worktree <path> [--json] [-- <awawa args>]
@@ -12,12 +13,13 @@ brigade corpus <project> --ref <ref> --type <TYPE> [--field <FIELD>] [--entity @
 
 | Option | Reads |
 |---|---|
+| neither `--ref` nor `--worktree` | as `--ref`, the branch of the field `MAIN` of the project, which the document names as its ref |
 | `--ref <branch\|sha>` | `git archive` of that commit, the whole tree, extracted once into `$XDG_CACHE_HOME/brigade/refs/<project>/<sha>/` |
 | `--ref worktree:<branch>` | in place, the worktree where that branch is checked out; uncommitted edits are visible |
 | `--worktree <path>` | in place, the worktree at that path, a detached HEAD included; uncommitted edits are visible |
 
 The command prints the project, the ref, the SHA, the kind (`archive` or `worktree`) and the root of the tree, as text
-or, with `--json`, a JSON document.
+or, with `--json`, a JSON document that also carries `types`, the entity types of the corpus of that tree.
 
 ## Running awawa on the tree
 
@@ -32,7 +34,7 @@ brigade corpus <project> --ref main -- status .
 
 | Option | Adds to the document |
 |---|---|
-| `--type <TYPE>` | the entities of that type with their status, their file and their line, and the types of the corpus |
+| `--type <TYPE>` | the entities of that type with their status, their file and their line |
 | `--field <FIELD>` | the board: the entities grouped by the values of that field, those without it in a column of their own |
 | `--entity @TYPE.Name` | what that entity reaches and what references it |
 

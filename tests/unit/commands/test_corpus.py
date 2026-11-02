@@ -36,6 +36,7 @@ TASKS_OF_THE_WORKTREE = json.dumps(
         ],
     }
 )
+TYPES_OF_THE_MAIN_CHECKOUT = json.dumps({"types": [{"type": "DECISION"}, {"type": "TASK"}], "entities": []})
 
 
 class CorpusOfAWorktreeTest(unittest.TestCase):
@@ -47,6 +48,8 @@ class CorpusOfAWorktreeTest(unittest.TestCase):
                 ("awawa", "status", "PROJECT"): ProcessAnswer(stdout=PROJECTS),
                 ("awawa", "show", "@PROJECT.app"): ProcessAnswer(stdout=APP),
                 ("git", "worktree", "list"): ProcessAnswer(stdout=WORKTREES),
+                ("awawa", "status", "--json", "/srv/app-b42"): ProcessAnswer(stdout=TASKS_OF_THE_WORKTREE),
+                ("awawa", "status", "--json", "/srv/app"): ProcessAnswer(stdout=TYPES_OF_THE_MAIN_CHECKOUT),
             }
         )
         self.runtime = create_test_runtime(create_test_paths(Path(self.root.name)), run_process=runner.run)
@@ -70,6 +73,7 @@ class CorpusOfAWorktreeTest(unittest.TestCase):
                 "sha": "de446f3",
                 "kind": "worktree",
                 "root": "/srv/app-b42",
+                "types": ["TASK"],
             },
         )
 
@@ -90,6 +94,7 @@ class CorpusOfAWorktreeTest(unittest.TestCase):
                 "sha": "8885daa",
                 "kind": "worktree",
                 "root": "/srv/app",
+                "types": ["DECISION", "TASK"],
             },
         )
 
@@ -186,12 +191,18 @@ class CorpusArgumentsTest(unittest.TestCase):
         # Assert
         self.assertEqual(exit_code, 2)
 
-    def test_should_require_a_ref_or_a_worktree(self):
+    def test_should_take_a_project_named_with_neither_a_ref_nor_a_worktree(self):
+        # Arrange
+        parser = argparse.ArgumentParser(prog="brigade")
+        add_command_parsers(parser, [COMMAND], argparse.ArgumentParser(add_help=False))
+
         # Act
-        exit_code = self.parse()
+        with contextlib.redirect_stderr(io.StringIO()):
+            options = parser.parse_args(["corpus", "app"])
 
         # Assert
-        self.assertEqual(exit_code, 2)
+        self.assertIsNone(options.ref)
+        self.assertIsNone(options.worktree)
 
 
 class CorpusRequestTest(unittest.TestCase):
