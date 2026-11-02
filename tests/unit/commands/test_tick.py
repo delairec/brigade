@@ -227,6 +227,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
                     "study_runs": 2,
                     "rate_limits": [],
                     "milestones": [],
+                    "uncut_milestones": [],
                 },
                 "plan": [],
             },
@@ -3262,7 +3263,7 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
         }
         runtime = create_test_runtime(
             create_test_paths(self.root),
-            run_process=ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus)).run,
+            run_process=BranchOfM4PushingRunnerDouble(answers, fallback=create_corpus_double(corpus)).run,
             spawn_process=SpawnRecorderDouble().spawn,
             resolve_plugin=_resolve_the_collectors_beside(
                 create_plugin_resolution(STEP_COUNTING_PROBE, self.forge), self.root
@@ -3461,7 +3462,7 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
         # Assert
         ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
         self.assertEqual(
-            json.loads(ledger[0]),
+            json.loads(ledger[1]),
             {
                 "schema_version": 2,
                 "ts": ANY,
@@ -3499,6 +3500,210 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
         # Assert
         self.assertIn(
             "brigade tick: CutWaveBranch failed: @MILESTONE.M4: the branch integration/tides exists and no"
+            " milestone.branch_cut records it\n",
+            errors.getvalue(),
+        )
+
+
+REMOTE_LOOKUP_OF_THE_BRANCH_OF_M4 = (
+    "git",
+    "ls-remote",
+    "--quiet",
+    "--exit-code",
+    "--heads",
+    "origin",
+    "refs/heads/integration/tides",
+)
+PUSH_OF_THE_BRANCH_OF_M4 = ("git", "push", "--quiet", "origin", "integration/tides")
+
+
+class BranchOfM4PushingRunnerDouble(ScriptedProcessRunner):
+    def __init__(self, answers: dict, fallback):
+        super().__init__({**answers, REMOTE_LOOKUP_OF_THE_BRANCH_OF_M4: ProcessAnswer(exit_code=2)}, fallback)
+
+    def run(self, request):
+        record = super().run(request)
+        if request.argv == PUSH_OF_THE_BRANCH_OF_M4 and record.exit_code == 0:
+            self.answers[REMOTE_LOOKUP_OF_THE_BRANCH_OF_M4] = ProcessAnswer()
+        return record
+
+
+TIDEPOOL_ON_DISK = ()
+TIDEPOOL_PAUSED = (("STATUS", "paused"),)
+TIDEPOOL_ON_GITHUB = (("FORGE", "github"),)
+EMPTY_LEDGER = []
+NO_SCRIPTED_ANSWER = {}
+NO_LOGIN = None
+INACTIVE_MILESTONES = {("awawa", "status", "MILESTONE"): ProcessAnswer(stdout='{"entities": []}')}
+BRANCH_OF_M4_ON_GITHUB_ANSWERS = {
+    ("git", "ls-remote"): ProcessAnswer(exit_code=2),
+    ("git", "push", "--quiet", "origin"): ProcessAnswer(),
+}
+WAVE_OF_T7_STARTED = {
+    "schema_version": 2,
+    "ts": ANY,
+    "event": "wave.started",
+    "wave": "tidepool_w1",
+    "project": "tidepool",
+    "branch": "integration/tidepool_w1",
+    "tasks": ["T7"],
+}
+
+
+class TickCuttingTheBranchOfAnUncutMilestoneTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+
+    def _create_runtime(self, task: tuple, project: tuple = TIDEPOOL_ON_DISK, answers: dict = NO_SCRIPTED_ANSWER):
+        corpus = {
+            "STUDY": PAUSED_BUILT_IN_STUDIES,
+            "PROJECT": {"tidepool": (("PATH", str(self.root / "tidepool")), ("MAIN", "main"), *project)},
+            "TASK": {"T7": task},
+            "MILESTONE": {"M4": MILESTONE_M4},
+        }
+        missing = ProcessAnswer(exit_code=1)
+        self.machine = BranchOfM4PushingRunnerDouble(
+            {
+                **MACHINE_ANSWERS,
+                ("git", "branch", "--quiet"): ProcessAnswer(),
+                ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/M4"): missing,
+                ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/tides"): missing,
+                ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/tidepool_w1"): missing,
+                **answers,
+            },
+            fallback=create_corpus_double(corpus),
+        )
+        forge = OpeningForgeDouble(NO_PULL_REQUEST_FROM_ANY_BRANCH) if project == TIDEPOOL_ON_GITHUB else None
+        return create_test_runtime(
+            create_test_paths(self.root),
+            run_process=self.machine.run,
+            spawn_process=SpawnRecorderDouble().spawn,
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, forge or create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)),
+                self.root,
+            ),
+        )
+
+    def _read_ledger(self) -> list[dict]:
+        return list(
+            map(json.loads, (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines())
+        )
+
+    def test_should_list_the_active_milestones_no_cut_records_that_an_open_wave_or_a_todo_task_names(self):
+        for case, task, project, ledger, answers, expected in [
+            (
+                "named by a todo task",
+                TASK_TO_DELIVER,
+                TIDEPOOL_ON_DISK,
+                EMPTY_LEDGER,
+                NO_SCRIPTED_ANSWER,
+                [
+                    {
+                        "project": "tidepool",
+                        "milestone": "M4",
+                        "branch": "integration/tides",
+                        "open_waves": [],
+                        "todo": ["T7"],
+                    }
+                ],
+            ),
+            (
+                "named by an open wave",
+                TASK_DELIVERED,
+                TIDEPOOL_ON_DISK,
+                [WAVE_STARTED],
+                NO_SCRIPTED_ANSWER,
+                [
+                    {
+                        "project": "tidepool",
+                        "milestone": "M4",
+                        "branch": "integration/tides",
+                        "open_waves": ["tidepool_w16"],
+                        "todo": [],
+                    }
+                ],
+            ),
+            ("named by neither", TASK_DELIVERED, TIDEPOOL_ON_DISK, EMPTY_LEDGER, NO_SCRIPTED_ANSWER, []),
+            ("whose branch is recorded", TASK_TO_DELIVER, TIDEPOOL_ON_DISK, [CUT_OF_M4], NO_SCRIPTED_ANSWER, []),
+            ("no longer active", TASK_TO_DELIVER, TIDEPOOL_ON_DISK, EMPTY_LEDGER, INACTIVE_MILESTONES, []),
+            ("of a paused project", TASK_TO_DELIVER, TIDEPOOL_PAUSED, EMPTY_LEDGER, NO_SCRIPTED_ANSWER, []),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                write_ledger(self.root, ledger)
+                runtime = self._create_runtime(task, project, answers)
+
+                # Act
+                document = COMMAND.run(Namespace(mode="dry-run"), runtime)
+
+                # Assert
+                self.assertEqual(document["snapshot"]["uncut_milestones"], expected)
+
+    def test_should_print_on_a_dry_run_the_cut_with_its_project_its_milestone_and_its_branch(self):
+        # Arrange
+        write_ledger(self.root, EMPTY_LEDGER)
+        runtime = self._create_runtime(TASK_TO_DELIVER)
+
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), runtime)
+
+        # Assert
+        self.assertEqual(document["plan"], [{"project": "tidepool", "milestone": "M4", "branch": "integration/tides"}])
+
+    def test_should_cut_the_branch_of_the_milestone_from_main_before_the_wave_of_its_todo_task_starts(self):
+        # Arrange
+        runtime = self._create_runtime(TASK_TO_DELIVER)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self._read_ledger(), [{**CUT_OF_M4, "ts": ANY, "login": NO_LOGIN}, WAVE_OF_T7_STARTED])
+        self.assertIn(("git", "branch", "--quiet", "integration/tides", "main"), self.machine.argvs)
+
+    def test_should_push_the_branch_cut_on_github_and_record_the_login_of_the_cli(self):
+        # Arrange
+        runtime = self._create_runtime(TASK_TO_DELIVER, TIDEPOOL_ON_GITHUB, BRANCH_OF_M4_ON_GITHUB_ANSWERS)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_ledger(),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "milestone.branch_cut",
+                    "project": "tidepool",
+                    "milestone": "M4",
+                    "branch": "integration/tides",
+                    "login": "tidepool-cli",
+                },
+                WAVE_OF_T7_STARTED,
+            ],
+        )
+        self.assertIn(PUSH_OF_THE_BRANCH_OF_M4, self.machine.argvs)
+
+    def test_should_name_on_stderr_the_milestone_and_the_unrecorded_branch_it_refuses_to_cut(self):
+        # Arrange
+        branch_of_m4_unrecorded = {
+            ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/tides"): ProcessAnswer(),
+        }
+        runtime = self._create_runtime(TASK_TO_DELIVER, answers=branch_of_m4_unrecorded)
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertIn(
+            "brigade tick: CutMilestoneBranch failed: @MILESTONE.M4: the branch integration/tides exists and no"
             " milestone.branch_cut records it\n",
             errors.getvalue(),
         )

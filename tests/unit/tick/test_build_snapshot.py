@@ -42,6 +42,7 @@ class SnapshotTest(unittest.TestCase):
                 "study_runs": 2,
                 "rate_limits": [],
                 "milestones": [],
+                "uncut_milestones": [],
             },
         )
 

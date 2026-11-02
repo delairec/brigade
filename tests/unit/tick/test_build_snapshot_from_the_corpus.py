@@ -57,6 +57,7 @@ MAIN_SHA = "def456"
 PULL_REQUEST_HEAD = "4f2a9c1"
 DELIVERED_BY_THE_PULL_REQUEST = {"name": "DELIVERED_BY", "atoms": ["7"]}
 FORGE_ENVIRONMENT = {"GH_TOKEN": "token-of-the-build-slot"}
+NO_MILESTONE = {}
 PULL_REQUEST = PullRequestFacts(
     number=7,
     state="open",
@@ -233,6 +234,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
                     },
                 ),
                 **AWAWA_ANSWERS.answer_no_incoming_refs(self.main_tree, "B5"),
+                **AWAWA_ANSWERS.answer_entities(self.main_tree, "MILESTONE", NO_MILESTONE, "STATUS==active"),
                 **answer_tree(PULL_REQUEST_HEAD, PULL_REQUEST_HEAD),
                 **AWAWA_ANSWERS.answer_entities(
                     self.pull_request_tree,
@@ -886,7 +888,13 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     cwd=str(self.repository),
                     timeout_s=120.0,
                     environment=FORGE_ENVIRONMENT,
-                )
+                ),
+                ProcessRequest(
+                    argv=("git", "fetch", "--quiet", "origin", "main"),
+                    cwd=str(self.repository),
+                    timeout_s=120.0,
+                    environment=FORGE_ENVIRONMENT,
+                ),
             ],
         )
 

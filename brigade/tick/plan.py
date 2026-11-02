@@ -7,6 +7,7 @@ from brigade.tasks.read_task_number import read_task_number
 from brigade.tick.actions import (
     CloseMilestone,
     CloseWave,
+    CutMilestoneBranch,
     CutWaveBranch,
     LaunchCheckRepair,
     LaunchRemediation,
@@ -37,6 +38,7 @@ from brigade.tick.build_snapshot import (
     ProjectFacts,
     Snapshot,
     TaskFacts,
+    UncutMilestone,
     WaveFacts,
 )
 from brigade.tick.decide_resume_at import decide_resume_at
@@ -94,6 +96,7 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_blocked_task_parkings(snapshot)
         + _plan_dead_run_parkings(snapshot)
         + _plan_branch_cuts(snapshot)
+        + _plan_milestone_branch_cuts(snapshot)
         + _plan_reports(snapshot)
         + _plan_wave_merges(snapshot)
         + _plan_closes(snapshot)
@@ -527,6 +530,18 @@ def _plan_branch_cuts(snapshot: Snapshot) -> tuple:
     )
 
 
+def _is_named(milestone: UncutMilestone) -> bool:
+    return bool(milestone.open_waves or milestone.todo)
+
+
+def _plan_milestone_branch_cuts(snapshot: Snapshot) -> tuple:
+    return tuple(
+        CutMilestoneBranch(project=milestone.project, milestone=milestone.milestone, branch=milestone.branch)
+        for milestone in snapshot.uncut_milestones
+        if _is_named(milestone)
+    )
+
+
 def _is_settled(wave: WaveFacts) -> bool:
     return bool(wave.tasks) and all(wave.states.get(task.name) in SETTLED_STATES for task in wave.tasks)
 
@@ -653,12 +668,15 @@ def _plan_wave_starts(snapshot: Snapshot) -> tuple:
     rebasing = {
         (milestone.project, milestone.milestone) for milestone in snapshot.milestones if _is_rebase_due(milestone)
     }
+    cutting = {
+        (milestone.project, milestone.milestone) for milestone in snapshot.uncut_milestones if _is_named(milestone)
+    }
     return tuple(
         StartWave(project=project.name, milestone=wave.milestone)
         for project in snapshot.projects
         if project.wave_start == AUTOMATIC_WAVE_START
         for wave in project.candidates
-        if (project.name, wave.milestone) not in rebasing
+        if (project.name, wave.milestone) not in rebasing | cutting
     )
 
 

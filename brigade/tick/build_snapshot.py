@@ -61,6 +61,8 @@ from brigade.waves.is_wave_branch_missing import is_wave_branch_missing
 from brigade.waves.list_candidate_waves import CandidateWave, list_candidate_waves
 from brigade.waves.locate_branch_worktree import locate_branch_worktree
 from brigade.waves.locate_forge_branch import locate_forge_branch
+from brigade.waves.locate_project_main import locate_project_main
+from brigade.waves.name_milestone_branch import name_milestone_branch
 from brigade.waves.prepare_wave_tree import prepare_wave_tree
 from brigade.waves.read_active_milestones import read_active_milestones
 from brigade.waves.read_project_tasks import ProjectTasksReading
@@ -113,6 +115,8 @@ STATUS_FIELD = "STATUS"
 TODO_STATUS = "todo"
 OPEN_PULL_REQUEST = "open"
 PROMOTION_FIELDS = (STATUS_FIELD, "DELIVERED_BY")
+MILESTONE_TYPE = "MILESTONE"
+TITLE_FIELD = "TITLE"
 
 
 @dataclass(frozen=True)
@@ -323,6 +327,24 @@ class MilestoneFacts:
 
 
 @dataclass(frozen=True)
+class UncutMilestone:
+    project: str
+    milestone: str
+    branch: str
+    open_waves: tuple[str, ...] = ()
+    todo: tuple[str, ...] = ()
+
+    def to_document(self) -> dict:
+        return {
+            "project": self.project,
+            "milestone": self.milestone,
+            "branch": self.branch,
+            "open_waves": list(self.open_waves),
+            "todo": list(self.todo),
+        }
+
+
+@dataclass(frozen=True)
 class Snapshot:
     now: datetime
     waves: tuple[WaveFacts, ...] = ()
@@ -332,6 +354,7 @@ class Snapshot:
     study_runs: int = STUDY_RUNS_BY_DEFAULT
     rate_limits: tuple[RateLimit, ...] = ()
     milestones: tuple[MilestoneFacts, ...] = ()
+    uncut_milestones: tuple[UncutMilestone, ...] = ()
 
     def to_document(self) -> dict:
         return {
@@ -344,6 +367,7 @@ class Snapshot:
             "study_runs": self.study_runs,
             "rate_limits": [rate_limit.to_document() for rate_limit in self.rate_limits],
             "milestones": [milestone.to_document() for milestone in self.milestones],
+            "uncut_milestones": [milestone.to_document() for milestone in self.uncut_milestones],
         }
 
 
@@ -897,6 +921,75 @@ def _read_milestones(runtime: Runtime, reading: WaveReading, projects: frozenset
     )
 
 
+@dataclass(frozen=True)
+class _MainOfAProject:
+    project: Entity
+    root: Path
+    tasks: tuple[Entity, ...]
+
+
+def _read_main(runtime: Runtime, reading: WaveReading, project: Entity) -> _MainOfAProject:
+    main = locate_project_main(runtime.run_process, project, reading.forge.read_environment)
+    query = argparse.Namespace(project=project.name, ref=main, worktree=None)
+    root = prepare_project_tree(query, reading.configuration, runtime).root
+    return _MainOfAProject(project=project, root=root, tasks=read_entities(runtime.run_process, root, TASK_TYPE))
+
+
+def _list_waves_naming(reading: WaveReading, main: _MainOfAProject, milestone: str) -> tuple[str, ...]:
+    of_milestone = {task.name for task in main.tasks if _read_milestone(task) == milestone}
+    return _list_open_waves(reading, main.project.name, of_milestone)
+
+
+def _describe_uncut_milestone(
+    runtime: Runtime, reading: WaveReading, main: _MainOfAProject, milestone: str
+) -> UncutMilestone | None:
+    open_waves = _list_waves_naming(reading, main, milestone)
+    todo = tuple(
+        task.name
+        for task in main.tasks
+        if _read_milestone(task) == milestone and read_task_field(task, STATUS_FIELD) == (TODO_STATUS,)
+    )
+    if not open_waves and not todo:
+        return None
+    entity = read_entity(runtime.run_process, main.root, MILESTONE_TYPE, milestone)
+    return UncutMilestone(
+        project=main.project.name,
+        milestone=milestone,
+        branch=name_milestone_branch(read_project_field(entity, TITLE_FIELD)),
+        open_waves=open_waves,
+        todo=todo,
+    )
+
+
+def _read_uncut_milestones_of(runtime: Runtime, reading: WaveReading, project: Entity) -> tuple[UncutMilestone, ...]:
+    if read_project_field(project, PROJECT_STATUS_FIELD) == PAUSED_PROJECT_STATUS:
+        return ()
+    main = _read_main(runtime, reading, project)
+    cut = {
+        event.milestone
+        for event in reading.events
+        if isinstance(event, MilestoneBranchCut) and event.project == project.name
+    }
+    active = sorted(
+        name.removeprefix(MILESTONE_PREFIX) for name in read_active_milestones(runtime.run_process, main.root)
+    )
+    described = (
+        _describe_uncut_milestone(runtime, reading, main, milestone) for milestone in active if milestone not in cut
+    )
+    return tuple(milestone for milestone in described if milestone is not None)
+
+
+def _read_uncut_milestones(
+    runtime: Runtime, reading: WaveReading, projects: frozenset[str]
+) -> tuple[UncutMilestone, ...]:
+    return tuple(
+        milestone
+        for project in reading.projects
+        if project.name in projects
+        for milestone in _read_uncut_milestones_of(runtime, reading, project)
+    )
+
+
 def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeReaders) -> Snapshot:
     if not runtime.paths.schema_file.exists():
         return Snapshot(now=runtime.now)
@@ -913,4 +1006,5 @@ def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeR
         study_runs=configuration.study_runs,
         rate_limits=_read_rate_limits(reading, runtime.now),
         milestones=_read_milestones(runtime, reading, projects_read),
+        uncut_milestones=_read_uncut_milestones(runtime, reading, projects_read),
     )
