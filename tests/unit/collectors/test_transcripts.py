@@ -135,6 +135,27 @@ class TranscriptsCollectorTest(unittest.TestCase):
             },
         )
 
+    def test_should_list_a_session_whose_run_directory_was_pruned_with_its_run_and_the_reason(self):
+        # Arrange
+        append_event(self.runtime.paths, IN_THE_WINDOW, _finish("r2", "s-pruned"))
+        self.finish(IN_THE_WINDOW, _finish("r4", "s-built"), "/srv/oak/.brigade/worktrees/B43")
+        client = TranscriptsClientDouble({"s-pruned": [BRIEF], "s-built": [BRIEF]})
+
+        # Act
+        document = self.collect(client)
+
+        # Assert
+        self.assertEqual(
+            document["summary"],
+            {
+                "sessions": 1,
+                "messages": 1,
+                "unreadable": [
+                    {"run": "r2", "session": "s-pruned", "reason": "run r2: no run record, its directory was pruned"}
+                ],
+            },
+        )
+
     def test_should_declare_its_document_not_cached(self):
         # Arrange
         no_transcripts = {}
