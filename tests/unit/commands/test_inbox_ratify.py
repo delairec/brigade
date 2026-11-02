@@ -48,10 +48,10 @@ class InboxRatifyTest(unittest.TestCase):
         self.signals.parent.mkdir(parents=True)
         self.signals.write_text(NOTE_ON_OAK_RECORDED + THREAD_RECORDED, encoding="utf-8")
 
-    def _create_runtime(self, pattern_text: str, pattern_fields: tuple):
+    def _create_runtime(self, pattern_text: str, pattern_fields: tuple, pattern_name: str = "CartTimeouts"):
         (self.config / "patterns.awawa").write_text(pattern_text, encoding="utf-8")
         corpus = {
-            "PATTERN": {"CartTimeouts": pattern_fields},
+            "PATTERN": {pattern_name: pattern_fields},
             "PROJECT": {"shop": (("PATH", str(self.repository)),)},
         }
         runner = ScriptedProcessRunner(CORPUS_CHANGE_OUTPUTS, fallback=create_corpus_double(corpus))
@@ -96,6 +96,24 @@ class InboxRatifyTest(unittest.TestCase):
                 ("ACTION", "constraint"),
                 ("TARGET", "shop"),
             ),
+        )
+
+    def _create_mined_constraint_runtime(self):
+        return self._create_runtime(
+            "PATTERN StatusReadAgain\n"
+            '\tTITLE "git status is run again and again"\n'
+            "\tSTATUS new\n"
+            '\tEVIDENCE "repeated_command:vibe:s-built:5 git status run three times"\n'
+            "\tACTION constraint\n"
+            '\tTARGET "shop"\n',
+            (
+                ("TITLE", "git status is run again and again"),
+                ("STATUS", "new"),
+                ("EVIDENCE", "repeated_command:vibe:s-built:5 git status run three times"),
+                ("ACTION", "constraint"),
+                ("TARGET", "shop"),
+            ),
+            pattern_name="StatusReadAgain",
         )
 
     def _create_order_runtime(self):
@@ -182,6 +200,36 @@ class InboxRatifyTest(unittest.TestCase):
                 '\tCREATED_AT "2026-10-19T09:00:00Z"\n'
                 "\tSTATUS planning\n"
                 "\tFROM @PATTERN.CartTimeouts\n"
+            ),
+        )
+
+    def test_should_ratify_a_constraint_mine_transcripts_proposes_as_one_the_triage_proposes(self):
+        # Arrange
+        runtime = self._create_mined_constraint_runtime()
+
+        # Act
+        COMMAND.run(Namespace(pattern="StatusReadAgain", kind="guard"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_corpus_file("constraints.awawa"),
+            "CONSTRAINT StatusReadAgain\n"
+            '\tTITLE "git status is run again and again"\n'
+            "\tKIND guard\n"
+            "\tFROM @PATTERN.StatusReadAgain\n"
+            '\tTARGET "shop"\n'
+            "\tSTATUS proposed\n",
+        )
+        self.assertEqual(
+            self._read_corpus_file("requests.awawa"),
+            (
+                "REQUEST shop_r1\n"
+                "\tPROJECT @PROJECT.shop\n"
+                '\tTEXT "git status is run again and again. Evidence: repeated_command:vibe:s-built:5 git status run'
+                ' three times"\n'
+                '\tCREATED_AT "2026-10-19T09:00:00Z"\n'
+                "\tSTATUS planning\n"
+                "\tFROM @PATTERN.StatusReadAgain\n"
             ),
         )
 
