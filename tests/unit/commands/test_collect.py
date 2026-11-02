@@ -2,12 +2,18 @@ import argparse
 import contextlib
 import tempfile
 import unittest
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from brigade.commands.collect import COMMAND, collect
+from brigade.ledger.append_event import append_event
+from brigade.system.resolve_collector import resolve_collector
 from brigade.system.run_process import ProcessRecord
+from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.commands.create_plugin_resolver import create_plugin_resolver
+from tests.unit.mining.create_run_finished import create_run_finished
+from tests.unit.mining.transcripts_client_double import TranscriptsClientDouble
+from tests.unit.scripted_processes import ScriptedProcesses
 
 NOTES_DOCUMENT = (
     '{"schema_version": 1, "collector": "notes", "collected_at": "2026-10-19T09:00:00Z",'
@@ -17,6 +23,15 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
 COLLECTOR_DIRECTORY = "/srv/app"
+IN_THE_WINDOW = datetime(2026, 10, 18, 8, 0, tzinfo=UTC)
+SESSION_BRIEF = {
+    "role": "user",
+    "timestamp": None,
+    "content": "Deliver B42.",
+    "tool_calls": 0,
+    "id": None,
+    "usage": None,
+}
 
 
 class ScriptedCollectorDouble:
@@ -93,6 +108,38 @@ class CollectTest(unittest.TestCase):
                         "BRIGADE_PARAMS": '{"kind": "todo"}',
                     },
                 )
+
+
+class CollectTranscriptsTest(unittest.TestCase):
+    def setUp(self):
+        root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        self.enterContext(contextlib.chdir(root))
+        write_operational_corpus(root)
+        processes = ScriptedProcesses()
+        self.client = TranscriptsClientDouble({"s-built": [SESSION_BRIEF]})
+        plugins = {("client", "vibe"): self.client, ("forge", "github"): object()}
+        self.runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=processes,
+            resolve_plugin=lambda kind, name, **options: (
+                resolve_collector(name, options["places"]) if kind == "collector" else plugins[kind, name]
+            ),
+        )
+        processes.answer_entities(self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"),)})
+        run_directory = self.runtime.paths.state_root / "runs" / "r3"
+        run_directory.mkdir(parents=True)
+        (run_directory / "run.json").write_text('{"run": "r3", "worktree": "/srv/oak/.brigade/worktrees/B42"}')
+        append_event(self.runtime.paths, IN_THE_WINDOW, create_run_finished("r3", "s-built"))
+
+    def test_should_read_the_sessions_through_the_client_adapter_each_run_names(self):
+        # Arrange
+        request = argparse.Namespace(name="transcripts", since=None, refresh=False, extra_arguments=[])
+
+        # Act
+        document = collect(request, self.runtime)
+
+        # Assert
+        self.assertEqual(document["summary"], {"sessions": 1, "messages": 1, "unreadable": []})
 
 
 class CollectExtraArgumentTest(unittest.TestCase):
