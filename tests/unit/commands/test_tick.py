@@ -3535,6 +3535,15 @@ EMPTY_LEDGER = []
 NO_SCRIPTED_ANSWER = {}
 NO_LOGIN = None
 INACTIVE_MILESTONES = {("awawa", "status", "MILESTONE"): ProcessAnswer(stdout='{"entities": []}')}
+NOTHING_REPORTED = ""
+TASK_OUTSIDE_ANY_MILESTONE = (("STATUS", "implemented"), ("DELIVERED_BY", "42"))
+MILESTONES_WITHOUT_STATUS = {
+    ("awawa", "status", "MILESTONE"): CommandFailed(
+        ("awawa", "status", "MILESTONE"), 2, "`STATUS` is not a field of MILESTONE in this workspace"
+    )
+}
+MILESTONE_UNREADABLE = CommandFailed(("awawa", "show", "@MILESTONE.M4"), 2, "the corpus cannot be parsed")
+UNREADABLE_MILESTONE = {("awawa", "show", "@MILESTONE.M4"): MILESTONE_UNREADABLE}
 BRANCH_OF_M4_ON_GITHUB_ANSWERS = {
     ("git", "ls-remote"): ProcessAnswer(exit_code=2),
     ("git", "push", "--quiet", "origin"): ProcessAnswer(),
@@ -3630,17 +3639,47 @@ class TickCuttingTheBranchOfAnUncutMilestoneTest(unittest.TestCase):
             ("whose branch is recorded", TASK_TO_DELIVER, TIDEPOOL_ON_DISK, [CUT_OF_M4], NO_SCRIPTED_ANSWER, []),
             ("no longer active", TASK_TO_DELIVER, TIDEPOOL_ON_DISK, EMPTY_LEDGER, INACTIVE_MILESTONES, []),
             ("of a paused project", TASK_TO_DELIVER, TIDEPOOL_PAUSED, EMPTY_LEDGER, NO_SCRIPTED_ANSWER, []),
+            (
+                "of a project no task of which names a milestone, its MILESTONE without STATUS",
+                TASK_OUTSIDE_ANY_MILESTONE,
+                TIDEPOOL_ON_DISK,
+                EMPTY_LEDGER,
+                MILESTONES_WITHOUT_STATUS,
+                [],
+            ),
         ]:
             with self.subTest(case=case):
                 # Arrange
                 write_ledger(self.root, ledger)
                 runtime = self._create_runtime(task, project, answers)
+                reported = io.StringIO()
 
                 # Act
-                document = COMMAND.run(Namespace(mode="dry-run"), runtime)
+                with contextlib.redirect_stderr(reported):
+                    document = COMMAND.run(Namespace(mode="dry-run"), runtime)
 
                 # Assert
-                self.assertEqual(document["snapshot"]["uncut_milestones"], expected)
+                self.assertEqual(
+                    {"uncut_milestones": document["snapshot"]["uncut_milestones"], "reported": reported.getvalue()},
+                    {"uncut_milestones": expected, "reported": NOTHING_REPORTED},
+                )
+
+    def test_should_skip_with_a_line_on_stderr_the_milestones_of_a_project_it_cannot_read(self):
+        # Arrange
+        write_ledger(self.root, EMPTY_LEDGER)
+        runtime = self._create_runtime(TASK_TO_DELIVER, TIDEPOOL_ON_DISK, UNREADABLE_MILESTONE)
+        reported = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(reported):
+            document = COMMAND.run(Namespace(mode="dry-run"), runtime)
+
+        # Assert
+        self.assertEqual(document["snapshot"]["uncut_milestones"], [])
+        self.assertIn(
+            f"brigade tick: the uncut milestones of tidepool skipped: {MILESTONE_UNREADABLE}",
+            reported.getvalue().splitlines(),
+        )
 
     def test_should_print_on_a_dry_run_the_cut_with_its_project_its_milestone_and_its_branch(self):
         # Arrange

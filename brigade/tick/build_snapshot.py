@@ -965,6 +965,8 @@ def _read_uncut_milestones_of(runtime: Runtime, reading: WaveReading, project: E
     if read_project_field(project, PROJECT_STATUS_FIELD) == PAUSED_PROJECT_STATUS:
         return ()
     main = _read_main(runtime, reading, project)
+    if not any(_read_milestone(task) for task in main.tasks):
+        return ()
     cut = {
         event.milestone
         for event in reading.events
@@ -979,6 +981,16 @@ def _read_uncut_milestones_of(runtime: Runtime, reading: WaveReading, project: E
     return tuple(milestone for milestone in described if milestone is not None)
 
 
+def _read_readable_uncut_milestones_of(
+    runtime: Runtime, reading: WaveReading, project: Entity
+) -> tuple[UncutMilestone, ...]:
+    try:
+        return _read_uncut_milestones_of(runtime, reading, project)
+    except BrigadeError as failure:
+        sys.stderr.write(f"brigade tick: the uncut milestones of {project.name} skipped: {failure}\n")
+        return ()
+
+
 def _read_uncut_milestones(
     runtime: Runtime, reading: WaveReading, projects: frozenset[str]
 ) -> tuple[UncutMilestone, ...]:
@@ -986,7 +998,7 @@ def _read_uncut_milestones(
         milestone
         for project in reading.projects
         if project.name in projects
-        for milestone in _read_uncut_milestones_of(runtime, reading, project)
+        for milestone in _read_readable_uncut_milestones_of(runtime, reading, project)
     )
 
 
