@@ -343,14 +343,19 @@ DECISION AStudyIsDeterministicCollectorsThenOneJudgingRun
 		+ "evidence, the triage slot with patterns, the rules slot with rules"
 	DESC "a study with no judging slot is a scan: its non-empty output is the answer; the gardening"
 		+ "scans of M4 declare OUTPUT inbox"
-	DESC "the wave report, the triage and the miner are the built-in studies wave-report, triage"
-		+ "and mine_transcripts"
+	DESC "the milestone report, the task report, the triage and the miner are the built-in studies"
+		+ "milestone-report, task-report, triage and mine_transcripts; wave-report is a built-in no"
+		+ "more since @TASK.B232"
+		REF @TASK.B232
 	DESC "a study runs on demand with brigade study run, or when due, by the tick, within"
 		+ "study_runs of config.toml; a study that needs a second judgment is two studies, the"
 		+ "second reading the first's answer through the study collector"
 	DESC "study is the built-in recipe study, its ordered steps collect, judge and output written"
 		+ "under the recipe engine's contract; its collect steps come from the STUDY entity's"
 		+ "COLLECTOR lines"
+	SOURCE "the user's ruling of 2026-11-02 carried by @TASK.B232: DESC 8 names milestone-report"
+		+ "and task-report where it named wave-report"
+		REF @TASK.B232
 	REJECTED "a judging run that collects by itself: the two explorer runs the user saw spent"
 		+ "judgment on collection, the measured cost of discovery"
 	REJECTED "one entity per kind, routine, report, triage, miner: four schedulers, four context"
@@ -452,7 +457,9 @@ DECISION TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus
 		+ "the user names another folder"
 	DESC "an existing corpus is registered where awawa finds it: project add discovers the root and"
 		+ "writes CORPUS"
-	DESC "the wave reports go in waves/ under that corpus folder"
+	DESC "the milestone reports go in milestones/ and the task reports in tasks/ under that corpus"
+		+ "folder; the wave reports written before @TASK.B232 stay in waves/"
+		REF @TASK.B232
 	DESC "the corpus of the brigade repository is corpus/: _schema.awawa, project.awawa,"
 		+ "milestones.awawa, tasks.awawa, decisions.awawa"
 	REJECTED "docs/ as the fixed place of every corpus and docs/waves/ of its wave reports, the"
@@ -464,6 +471,9 @@ DECISION TheCorpusFolderIsDeclaredByTheProjectAndDefaultsToCorpus
 		+ "this repository, corpus/ is the name they gave it, brigade's convention for the projects"
 		+ "it manages is configurable, and its default is the same as this repository"
 	SOURCE "the user's rulings of 2026-10-05, pull request #7 of the brigade repository"
+	SOURCE "the user's ruling of 2026-11-02 carried by @TASK.B232, the report of a milestone"
+		+ "replacing the report of a wave: DESC 4 names milestones/ and tasks/"
+		REF @TASK.B232
 
 DECISION TheCodeIsOneFlatPackageWhoseSubpackagesFollowTheComponents
 	TITLE "brigade is one flat package at the repository root, a subpackage per component created"
@@ -3089,8 +3099,8 @@ DECISION ARunCarriesItsWaveAndItsTaskInRunJsonAndInEveryRunFinished
 		+ "launched by a wave, and a run launched for no task carries task null with the reason not"
 		+ "launched for a task"
 	DESC "the tick passes --wave and --task to every build run it launches"
-	DESC "run.json and every run.finished of the run carry wave and task; the cost views and the"
-		+ "wave report read them from run.finished"
+	DESC "run.json and every run.finished of the run carry wave and task; the cost views, the"
+		+ "milestone report and the task report read them from run.finished"
 	DESC "a run.json without the two keys is refused, naming the file and the key, its"
 		+ "schema_version unchanged; brigade runs list lists such a run under skipped and brigade"
 		+ "runs show fails on it; never upgraded"
@@ -3119,6 +3129,9 @@ DECISION ARunCarriesItsWaveAndItsTaskInRunJsonAndInEveryRunFinished
 		+ "(Recommended) »"
 		REF @TASK.B165
 	SOURCE "use-case map of 2026-10-16, findings X1 and G9"
+	SOURCE "the user's ruling of 2026-11-02 carried by @TASK.B232: DESC 3 reads the milestone"
+		+ "report and the task report where it read the wave report"
+		REF @TASK.B232
 
 DECISION EachStatusOfARequestHasAWriterAndPausedLeavesTheSchema
 	TITLE "each STATUS of a REQUEST has a writer, request new planning, plan record planned and"
@@ -3129,18 +3142,17 @@ DECISION EachStatusOfARequestHasAWriterAndPausedLeavesTheSchema
 		+ "brigade request new writes planning, brigade plan record writes planned, brigade request"
 		+ "cancel writes cancelled"
 	DESC "the states of a wave are ledger events, each with one writer: wave.started by brigade"
-		+ "wave start, wave.paused and wave.resumed by the tick as @TASK.B19 sets, wave.reported by"
-		+ "the tick when every task of the wave is merged or parked, the trigger of the wave-report"
-		+ "study of @TASK.B20, wave.closed by the tick when the integration pull request is merged,"
-		+ "wave.cancelled by brigade wave cancel <wave>, wave.pr_opened by the tick when it opens"
-		+ "the integration pull request at the first merged task of the wave, as @TASK.B171 sets"
+		+ "wave start, wave.paused and wave.resumed by the tick as @TASK.B19 sets, wave.closed by"
+		+ "the tick, with no pull request, once every task of the wave is merged or parked,"
+		+ "wave.cancelled by brigade wave cancel <wave>; wave.reported and wave.pr_opened are"
+		+ "written no more since @TASK.B232, a wave having no report and no pull request, and are"
+		+ "still read"
 		REF @TASK.B19
-		REF @TASK.B20
-		REF @TASK.B171
+		REF @TASK.B232
 	DESC "brigade wave cancel stops the live runs of the wave and undoes nothing else: worktrees,"
 		+ "branches and pull requests stay and are listed, the tasks becoming candidates again"
 	DESC "a queued task of an open wave that a live blocker cites is parked with the reason"
-		+ "blocked, so that every wave reaches wave.reported"
+		+ "blocked, so that every wave reaches wave.closed"
 	DESC "running, paused, reporting, delivered and closed leave REQUEST.STATUS: they are states of"
 		+ "a wave, read from the ledger, the pause being wave.paused without a wave.resumed after"
 		+ "it"
@@ -3158,6 +3170,10 @@ DECISION EachStatusOfARequestHasAWriterAndPausedLeavesTheSchema
 		+ "absorbed by @TASK.B187"
 		REF @TASK.B167
 		REF @TASK.B187
+	SOURCE "the user's ruling of 2026-11-02 carried by @TASK.B232, « oui on garde »: DESC 2 closes"
+		+ "a wave once every task of it is merged or parked and loses wave.reported and"
+		+ "wave.pr_opened; DESC 4 reads wave.closed"
+		REF @TASK.B232
 	REJECTED "wave cancel closing the pull requests and removing the worktrees and the branches: a"
 		+ "compensation, which the decision"
 		+ "TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction rejects"
@@ -3590,7 +3606,13 @@ DECISION TheWaveReportIsAStudyBuiltFromWaveStartedAndPublishedOnTheIntegrationBr
 	TITLE "wave-report is a study brigade builds from the wave.started of the wave, its REPORT"
 		+ "named after the wave, and its Markdown is committed on the integration branch and"
 		+ "becomes the body of the integration pull request"
-	STATUS active
+	STATUS archived
+	DESC "replaced by"
+		+ "@DECISION.AMilestoneReportIsBuiltOnceItsTasksAreMergedOrParkedAndIsTheBodyOfItsPullRequest"
+		+ "on the user's ruling of 2026-11-02, carried by @TASK.B232: a wave has no branch and no"
+		+ "pull request, so no report; the report is the milestone's"
+		REF @DECISION.AMilestoneReportIsBuiltOnceItsTasksAreMergedOrParkedAndIsTheBodyOfItsPullRequest
+		REF @TASK.B232
 	DESC "the study has no STUDY entity: slot report, output entity:REPORT, collectors ledger"
 		+ "wave=<wave>, pr-list state=all, corpus ref=<branch> entities=<the tasks of the wave>,"
 		+ "git-diff-stat to=<branch>; study.json records the wave and every command given the run"
@@ -3750,8 +3772,8 @@ DECISION ARehearsalReplaysItsWaveOnceForTheTestsThatReadIt
 		+ "its tests only read what the wave left"
 	STATUS active
 	DESC "WaveRehearser builds the machine, the sandbox and the client, then ticks until the three"
-		+ "tasks are merged and the report of the wave has ended; between two ticks it waits for"
-		+ "every run to hold its result.json, never on a delay"
+		+ "tasks are merged, the wave closed and the report of their milestone has ended; between"
+		+ "two ticks it waits for every run to hold its result.json, never on a delay"
 	DESC "a test of the rehearsal reads the ledger, the forge or brigade's output and writes"
 		+ "nothing the other tests read; ClassCleanupRegistrar gives the fixture the addCleanup and"
 		+ "fail the awawa replay needs, as class cleanups"
@@ -3773,6 +3795,9 @@ DECISION ARehearsalReplaysItsWaveOnceForTheTestsThatReadIt
 		+ "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch:"
 		+ "DESC 1 no longer waits for the pull request of the wave"
 		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
+	SOURCE "the user's ruling of 2026-11-02 carried by @TASK.B232: DESC 1 waits for the close of"
+		+ "the wave and for the report of the milestone of its tasks"
+		REF @TASK.B232
 
 DECISION AReaderOfATestDecodesEveryLineWholeAndFiltersNone
 	TITLE "a function of a test module that reads a JSON Lines output decodes every line whole,"
@@ -4232,9 +4257,9 @@ DECISION RatificationNamesItsEntitiesAfterThePatternAndTheClosedWaveDeliversTheP
 		+ "naming brigade inbox dismiss"
 	DESC "brigade inbox dismiss names a PATTERN when the operational corpus defines one by that"
 		+ "name, a signal otherwise"
-	DESC "a wave report row PATTERN_TASK reads <task> from @PATTERN.<name> with @CONSTRAINT.<name>:"
-		+ "<the TITLE of the pattern>, for each task whose MILESTONE is that of a REQUEST FROM a"
-		+ "pattern"
+	DESC "a milestone report row PATTERN_TASK reads <task> from @PATTERN.<name> with"
+		+ "@CONSTRAINT.<name>: <the TITLE of the pattern>, for each task whose MILESTONE is that of"
+		+ "a REQUEST FROM a pattern"
 	DESC "the tick delivers at wave.closed: every PATTERN a REQUEST of the project comes FROM,"
 		+ "whose MILESTONE a task of the closed wave carries, goes delivered with each CONSTRAINT"
 		+ "FROM it, and constraint.delivered is appended once per constraint"
@@ -4242,14 +4267,17 @@ DECISION RatificationNamesItsEntitiesAfterThePatternAndTheClosedWaveDeliversTheP
 		REF @TASK.B26
 	REJECTED "a KIND guessed from the pattern: the triage answer carries no KIND, and a wrong guess"
 		+ "would deliver the wrong kind of artefact"
-	REJECTED "delivery when the task pull requests merge into the integration branch: the wave is"
-		+ "delivered once its integration pull request reaches the main branch, which the tick"
-		+ "reads as wave.closed"
 	RATIONALE "the request of a pattern is planned into one MILESTONE, so the milestones the tasks"
 		+ "of a closed wave carry are what links the wave back to the patterns it delivers"
 	SOURCE "the user's rulings of 2026-10-24 in the refinement of B23 to B26, and the build run of"
 		+ "@TASK.B26"
 		REF @TASK.B26
+	SOURCE "the user's ruling of 2026-11-02 carried by @TASK.B232: wave.closed is appended once"
+		+ "every task of the wave is merged or parked into the branch of its milestone, so DESC 5"
+		+ "delivers the pattern at that moment and before the milestone reaches main; the"
+		+ "alternative refused on 2026-10-24, delivery when the task pull requests merge, is"
+		+ "removed, its reason gone; DESC 4 reads the milestone report"
+		REF @TASK.B232
 
 DECISION ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand
 	TITLE "a view of the dashboard is an HTML fragment the server renders in Python from the JSON"
@@ -4293,10 +4321,14 @@ DECISION ATaskBranchIsCutRebasedAndCheckedAgainstTheIntegrationBranchOfTheForge
 	REJECTED "the rebase alone on origin, the cut and the check kept local: two references for one"
 		+ "branch, the check failing whenever they differ"
 	RATIONALE "the integration branch moves on the forge, where the task pull requests merge and"
-		+ "where the wave report is pushed; one reference read after a fetch gives every launch the"
-		+ "same base, as @DECISION.AGithubProjectPlansAndStartsItsWavesFromTheMainBranchOfTheForge"
-		+ "does for MAIN"
+		+ "where the milestone report is pushed; one reference read after a fetch gives every"
+		+ "launch the same base, as"
+		+ "@DECISION.AGithubProjectPlansAndStartsItsWavesFromTheMainBranchOfTheForge does for MAIN"
 		REF @DECISION.AGithubProjectPlansAndStartsItsWavesFromTheMainBranchOfTheForge
+	SOURCE "the user's ruling of 2026-11-02 carried by @TASK.B232: the RATIONALE reads the"
+		+ "milestone report where it read the wave report; origin/<integration> is the branch of"
+		+ "the milestone"
+		REF @TASK.B232
 	SOURCE "the user's rulings of 2026-10-28 in the refinement of @TASK.B210,"
 		+ "\"origin/<integration>\" then \"Tout sur origin (Recommandé)\""
 		REF @TASK.B210
@@ -4343,8 +4375,9 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
 	DESC "the integration pull request of @DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate"
 		+ "is the milestone's, from its integration branch into PROJECT.MAIN, opened once every"
-		+ "task of the milestone is merged into that branch and no wave of it is open, and merged"
-		+ "by the user alone; a task of a milestone is never merged into PROJECT.MAIN"
+		+ "task of the milestone is merged or parked, no wave of it is open and the report of the"
+		+ "milestone is committed on the branch, its body that report, and merged by the user"
+		+ "alone; a task of a milestone is never merged into PROJECT.MAIN"
 		REF @DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate
 	DESC "the candidates of a wave are read on the integration branch of the milestone, not on"
 		+ "PROJECT.MAIN: a task whose AFTER is implemented on that branch alone is startable"
@@ -4380,14 +4413,16 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 	DESC "several milestones of a project may be active at once, each with its branch and its"
 		+ "waves, none before another: the tick serves their waves in the order of its slots, as it"
 		+ "serves the waves of a project today"
-	DESC "a task naming no MILESTONE runs in a wave of tasks naming none, cut from PROJECT.MAIN,"
-		+ "whose pull request is opened into PROJECT.MAIN and merged by the user alone: the model"
-		+ "this decision replaces stays the fallback; a wave holds the tasks of one milestone, or"
-		+ "tasks naming none"
-	DESC "the rebase of DESC 4 is followed by the rebase of every open wave branch of the milestone"
-		+ "onto the rebased milestone branch; a conflict of either rebase launches a run of the"
-		+ "rebase slot on a worktree of that branch, as @TASK.B210 does for a task branch; the new"
-		+ "wave starts at once, waiting for no rebase run"
+	DESC "a task naming no MILESTONE runs in a wave of tasks naming none; its branch is cut from"
+		+ "PROJECT.MAIN, its pull request opened into PROJECT.MAIN and merged by the user alone,"
+		+ "the tick merging no pull request whose base is PROJECT.MAIN; a wave holds the tasks of"
+		+ "one milestone, or tasks naming none"
+	DESC "the rebase of DESC 4 is followed by no rebase of the task branches of the milestone: a"
+		+ "task pull request behind its base is caught up as the plan catches up any task pull"
+		+ "request, and a task branch is rebased at its next launch; a conflict of the rebase of"
+		+ "DESC 4 launches a run of the rebase slot on a worktree of the milestone branch, as"
+		+ "@TASK.B210 does for a task branch; the new wave starts at once, waiting for no rebase"
+		+ "run"
 		REF @TASK.B210
 	DESC "M3, in flight on one branch per wave, moves to this model by hand once @MILESTONE.M9 is"
 		+ "merged into PROJECT.MAIN: the tick cuts integration/dashboard at its first need, the"
@@ -4432,10 +4467,6 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		+ "several, each on its own branch, « ça ne devait pas poser de problème »"
 	REJECTED "the user merging the pull request of a wave into the milestone branch: the user ruled"
 		+ "brigade, once the pull request is ready to merge, and keeps the merge into main alone"
-	REJECTED "a verification run on the pull request of a wave before its merge: each task of the"
-		+ "wave passed one before its merge into the wave branch, as the decision"
-		+ "AVerifierRunOnEveryPullRequestAndOneHumanGate sets, and the pull request of the wave"
-		+ "adds the wave report alone"
 	REJECTED "a task naming no MILESTONE run on the branch of an active milestone, or refused as a"
 		+ "candidate: the user ruled the model of today as the fallback, « Comme aujourd'hui »"
 	REJECTED "the open waves of M3 merged into the milestone branch by hand, or M3 delivered under"
@@ -4561,7 +4592,11 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 	SOURCE "the user's ruling of 2026-11-01,"
 		+ "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch:"
 		+ "the TITLE, DESC 1, DESC 2 and DESC 9 read the pull request of a task where they read the"
-		+ "pull request of a wave; DESC 11 and DESC 12 await the rulings @TASK.B232 carries"
+		+ "pull request of a wave; the user's rulings of 2026-11-02 carried by @TASK.B232: DESC 2"
+		+ "waits for every task merged or parked and for the report of the milestone, no wave being"
+		+ "merged; DESC 11 keeps the merge into PROJECT.MAIN the user's; DESC 12 rebases no task"
+		+ "branch; the alternative of a verification run on the pull request of a wave is removed,"
+		+ "no such pull request existing"
 		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
 		REF @TASK.B232
 
@@ -4618,7 +4653,10 @@ DECISION TheTickReadsTheWavesOfAMilestoneAtItsBranchAndACancelledWaveCountsNeith
 		+ "wave is one the tick follows on that branch, and a cancelled wave counts neither"
 	STATUS active
 	DESC "a closed wave belongs to a milestone when one of its tasks names that MILESTONE in the"
-		+ "corpus at the branch of the milestone; its pull request is the pr of its wave.closed"
+		+ "corpus at the branch of the milestone; it is closed by its wave.closed, appended once"
+		+ "every task of it is merged or parked, with no pull request since @TASK.B232; a"
+		+ "wave.closed carrying a pr is still read"
+		REF @TASK.B232
 	DESC "an open wave belongs to a milestone when one of its tasks names that MILESTONE in the"
 		+ "corpus at the branch of the milestone: the ledger holds it open even when its reading"
 		+ "failed"
@@ -4643,7 +4681,8 @@ DECISION TheTickReadsTheWavesOfAMilestoneAtItsBranchAndACancelledWaveCountsNeith
 	SOURCE "the user's ruling of 2026-11-01,"
 		+ "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch:"
 		+ "DESC 2 loses the branch of the milestone read to open the pull request of the wave; DESC"
-		+ "1 awaits the ruling @TASK.B232 carries on what closes a wave"
+		+ "1 follows the ruling of 2026-11-02 @TASK.B232 carries, « oui on garde »: wave.closed"
+		+ "once every task of the wave is merged or parked, with no pull request"
 		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
 		REF @TASK.B232
 
@@ -4820,9 +4859,11 @@ DECISION BrigadeReportsListsTheWaveReportsAndStudyAnswersTheOperationalCorpusKee
 		+ "the awawa document plugin; the outputs of an order join it with the engine that writes"
 		+ "them"
 	STATUS active
-	DESC "a wave report is a REPORT entity of reports.awawa, kind wave-report, its project its"
-		+ "PROJECT field; a study answer is an ANSWER entity of answers.awawa, kind study-answer,"
-		+ "its project that of the STUDY it answers; the id is the name of the entity"
+	DESC "a report is a REPORT entity of reports.awawa, its kind milestone-report, task-report or,"
+		+ "written before @TASK.B232, wave-report by the field it carries, MILESTONE, TASK or WAVE,"
+		+ "its project its PROJECT field; a study answer is an ANSWER entity of answers.awawa, kind"
+		+ "study-answer, its project that of the STUDY it answers; the id is the name of the entity"
+		REF @TASK.B232
 	DESC "an answer a study hands to a file, an issue, the inbox or an output on PATH is read where"
 		+ "it was handed: brigade reports lists what the operational corpus keeps"
 	DESC "no order output exists when @TASK.B31 is delivered: the engine of @TASK.B51 is a draft,"
@@ -4830,9 +4871,9 @@ DECISION BrigadeReportsListsTheWaveReportsAndStudyAnswersTheOperationalCorpusKee
 		+ "outputs to brigade reports"
 		REF @TASK.B31
 		REF @TASK.B51
-	DESC "the Markdown of a report, printed by brigade reports show and published by the wave"
-		+ "report, is rendered by one function, brigade/reports/render_report_markdown.py, its"
-		+ "manual tests and tester steps as tables"
+	DESC "the Markdown of a report, printed by brigade reports show and published by the milestone"
+		+ "report and the task report, is rendered by one function,"
+		+ "brigade/reports/render_report_markdown.py, its manual tests and tester steps as tables"
 	REJECTED "the answer.awawa of each run directory as the source: the retention of runs/ removes"
 		+ "a settled run, and its report would vanish with it"
 	RATIONALE "the SPEC of @TASK.B31 names the order outputs among the reports, after"
@@ -4843,6 +4884,9 @@ DECISION BrigadeReportsListsTheWaveReportsAndStudyAnswersTheOperationalCorpusKee
 		REF @TASK.B51
 	SOURCE "pull request #242 of the brigade repository, delivering @TASK.B31"
 		REF @TASK.B31
+	SOURCE "the user's ruling of 2026-11-02 carried by @TASK.B232: DESC 1 and DESC 4 read the"
+		+ "milestone report and the task report where they read the wave report"
+		REF @TASK.B232
 
 DECISION TheCorpusViewReadsBrigadeCorpusAndItsBoardReadsEachEntity
 	TITLE "the Corpus view reads brigade corpus --type, --field and --entity through"
@@ -5185,11 +5229,44 @@ DECISION ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranc
 	DESC "a wave is a batch of tasks of the ledger and nothing more: no branch is cut for a wave"
 		+ "and no pull request of a wave exists; the stage between a task and its milestone"
 		+ "disappears"
-	DESC "binds @TASK.B232, which carries to a ruling what this decision leaves open: the prefix of"
-		+ "the other TYPE values, the form of the slug, the open waves started on a wave branch,"
-		+ "what closes a wave, where the wave report is published, the rebase of a task branch"
-		+ "under a moved milestone branch, the base of a task naming no milestone"
+	DESC "the prefix is the TYPE as it is for every other value, fix/, docs/, refactor/, chore/,"
+		+ "test/; feat alone becomes feature/"
+	DESC "the slug is the TITLE lowercased, every run of characters other than ASCII letters and"
+		+ "digits replaced by one hyphen, none at either end, cut at the last hyphen at or before"
+		+ "its 40th character when longer, as integration/<slug> is derived from the TITLE of a"
+		+ "milestone; TASK carries no field for it"
+	DESC "a task naming no MILESTONE is cut from PROJECT.MAIN and its pull request opened into"
+		+ "PROJECT.MAIN, merged by the user alone; the tick merges no pull request whose base is"
+		+ "PROJECT.MAIN"
+	DESC "a task launched again after brigade wave cancel keeps the name of its branch, which names"
+		+ "the task and no wave"
+	DESC "a task branch under a milestone branch rebased onto PROJECT.MAIN is rebased by no action"
+		+ "of its own: a task pull request behind its base is caught up as the plan catches up any"
+		+ "task pull request, and a task branch is rebased at its next launch"
+	DESC "a wave is closed by wave.closed, appended by the tick with no pull request once every"
+		+ "task of the wave is merged or parked; brigade lists a wave open or closed as before; the"
+		+ "pull request of a milestone opens once every task of the milestone is merged or parked,"
+		+ "no wave of it is open and its report is committed on its branch, as"
+		+ "@DECISION.AMilestoneReportIsBuiltOnceItsTasksAreMergedOrParkedAndIsTheBodyOfItsPullRequest"
+		+ "sets"
+		REF @DECISION.AMilestoneReportIsBuiltOnceItsTasksAreMergedOrParkedAndIsTheBodyOfItsPullRequest
+	DESC "the waves open on a wave branch at the delivery of @TASK.B232 are cancelled, their task"
+		+ "branches renamed with git branch -m and their pull requests retargeted onto the branch"
+		+ "of their milestone, by hand, as DESC 13 of"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce moved M3; a"
+		+ "wave.started that carries a branch is still read"
 		REF @TASK.B232
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+	DESC "binds @TASK.B232; @TASK.B225 is archived and @TASK.B46, @TASK.B177, @TASK.B224,"
+		+ "@TASK.B226 and @TASK.B227 amended on 2026-11-02 where they name the wave branch or the"
+		+ "pull request of a wave"
+		REF @TASK.B232
+		REF @TASK.B225
+		REF @TASK.B46
+		REF @TASK.B177
+		REF @TASK.B224
+		REF @TASK.B226
+		REF @TASK.B227
 	REJECTED "the wave branch integration/<project>_w<n> kept, cut from the branch of its"
 		+ "milestone: the user ruled that integration/ names the working branch of a milestone, the"
 		+ "one aimed at main, and that a wave has no branch, « Plus de branche de wave »"
@@ -5197,6 +5274,24 @@ DECISION ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranc
 		+ "to a wave the user removed from the branch model"
 	REJECTED "the number alone after the prefix, feature/46-local-mode: the user chose the full id,"
 		+ "« feature/B46-<slug> »"
+	REJECTED "chore/ as the prefix of every TYPE the user had not named: the user chose the TYPE as"
+		+ "it is, feat alone becoming feature/"
+	REJECTED "a field of the task holding its slug, « local-mode » for B46 being no derivation of"
+		+ "its TITLE: the user chose the slug derived from the TITLE, bounded at about 40"
+		+ "characters, with no new field"
+	REJECTED "the open waves brigade_w18, brigade_w19 and brigade_w20 finished on the model they"
+		+ "started on, the tick reading the branch of their wave.started: the user chose the move"
+		+ "at delivery"
+	REJECTED "a task naming no milestone merged by the tick as any task pull request: the user kept"
+		+ "the merge into main as the one human gate"
+	REJECTED "a task branch rebased with the milestone branch, as the wave branches were: the user"
+		+ "ruled nothing new, the catch-up and the rebase at launch sufficing"
+	REJECTED "wave.reported as the last event of a wave, with no wave.closed: the user kept the"
+		+ "closing, « oui on garde »"
+	REJECTED "the ratified tasks naming the wave branch archived whole: the user chose B225"
+		+ "archived and the others amended"
+	REJECTED "a suffix per attempt on the branch of a task launched again after a cancel: the"
+		+ "branch names the task, and the same name is reused"
 	RATIONALE "the user's words of 2026-11-01: « Y a un autre truc qui va pas c'est que les waves"
 		+ "créent des branches nommée integration alors que integration est censé être la branche"
 		+ "de travail qui vise main »"
@@ -5209,3 +5304,97 @@ DECISION ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranc
 		+ "disparaît. »; then the format « feature/B46-<slug> »: « Le préfixe vient du TYPE de la"
 		+ "tâche (feat donne feature/, fix donne fix/, docs donne docs/…), suivi de l'id complet et"
 		+ "d'un slug tiré du TITLE. »"
+	SOURCE "the user's rulings of 2026-11-02 on the points left open on 2026-11-01, answers to the"
+		+ "recommendations of the session: the TYPE as is for the other prefixes, fix/B231-…,"
+		+ "docs/…, refactor/…, only feat becoming feature/; the slug derived from the TITLE,"
+		+ "lowercased, every run of non-[a-z0-9] to -, bounded at about 40 characters cut on a"
+		+ "hyphen, no new field on TASK; the open waves w18 to w20 switched at delivery, the"
+		+ "surviving waves cancelled, their task branches renamed with git branch -m, their pull"
+		+ "requests retargeted, the code not crashing on old wave.started entries carrying a"
+		+ "branch; a task naming no milestone with its pull request into main merged by the user,"
+		+ "the tick never merging a pull request whose base is main; the rebase, nothing new;"
+		+ "@TASK.B225 archived, @TASK.B46, @TASK.B177, @TASK.B224, @TASK.B226 and @TASK.B227"
+		+ "amended in the same change; the wave keeps its closing, « oui on garde »"
+		REF @TASK.B225
+		REF @TASK.B46
+		REF @TASK.B177
+		REF @TASK.B224
+		REF @TASK.B226
+		REF @TASK.B227
+
+DECISION AMilestoneReportIsBuiltOnceItsTasksAreMergedOrParkedAndIsTheBodyOfItsPullRequest
+	TITLE "milestone-report is a study brigade builds from the waves of a milestone once every task"
+		+ "of the milestone is merged or parked, its REPORT named after the milestone, its Markdown"
+		+ "committed on the branch of the milestone before its pull request opens and the body of"
+		+ "that pull request; a task naming no milestone has a report of its own on its branch; a"
+		+ "wave has no report"
+	STATUS active
+	DESC "the study has no STUDY entity: slot report, output entity:REPORT, its collectors the"
+		+ "union of the waves of the milestone and of its branch, ledger for each wave, pr-list"
+		+ "state=all, corpus ref=<the branch> entities=<the tasks of the milestone>, git-diff-stat"
+		+ "to=<the branch>; study.json records the milestone and every command given the run"
+		+ "rebuilds the study from it"
+	DESC "the tick runs it once every task of the milestone at its branch is merged or parked and"
+		+ "no wave of the milestone is open, and appends milestone.reported with the run; the pull"
+		+ "request of the milestone opens once the report is committed on the branch, so the report"
+		+ "precedes the one human gate"
+	DESC "the Markdown is <PROJECT.CORPUS>/milestones/<milestone>-report.md, committed on the"
+		+ "branch of the milestone fetched from origin and pushed without force with the"
+		+ "environment of the login bound to cli; it is the body of the pull request of the"
+		+ "milestone, whole; on a project of FORGE none the report is committed and no pull request"
+		+ "exists"
+	DESC "a task naming no MILESTONE is reported by the study task-report once its pull request is"
+		+ "ready to merge or the task is parked, task.reported appended with the run; its REPORT is"
+		+ "named after the task, its Markdown <PROJECT.CORPUS>/tasks/<task>-report.md committed on"
+		+ "the branch of the task, and the body of its pull request is replaced whole with it; the"
+		+ "head so moved is judged by no further preflight or verification"
+	DESC "a wave has no report: wave.reported is written no more; a wave.reported of the ledger and"
+		+ "a REPORT naming a WAVE are still read, brigade reports listing the latter as wave-report"
+	DESC "each field the CLI fills is one string brigade formats, as the wave report had them:"
+		+ "TASK_ROW, STATISTIC, GRAPH over every AFTER between two tasks of the milestone,"
+		+ "MANUAL_TEST, INSTRUCTIONS_CHANGE for each file under PROJECT.CORPUS the branch changed,"
+		+ "PARKED_QUESTION, PATTERN_TASK"
+	DESC "SCHEMA REPORT declares MILESTONE and TASK beside WAVE, none required: a report names its"
+		+ "milestone, its task or, written before @TASK.B232, its wave"
+		REF @TASK.B232
+	DESC "replaces"
+		+ "@DECISION.TheWaveReportIsAStudyBuiltFromWaveStartedAndPublishedOnTheIntegrationBranch,"
+		+ "archived; binds @TASK.B232"
+		REF @DECISION.TheWaveReportIsAStudyBuiltFromWaveStartedAndPublishedOnTheIntegrationBranch
+		REF @TASK.B232
+	REJECTED "the report kept per wave, published on the branch of the milestone and named by the"
+		+ "body of the pull request of the milestone: the user ruled a report of the milestone"
+		+ "instead, « on pourrait ne plus avoir de rapport de wave, mais un rapport plutôt de"
+		+ "milestone »"
+	REJECTED "the report kept as the REPORT entity alone, published nowhere: the body of the pull"
+		+ "request of the milestone describes what the user merges"
+	REJECTED "the report repaired in a task of its own after B232: the user chose « Dans B232 »,"
+		+ "B232 being undeliverable without a report"
+	REJECTED "no report, or the wave report kept, for the tasks naming no milestone: the user chose"
+		+ "« Rapport par tâche »"
+	REJECTED "the report posted as a comment of the pull request of the milestone: a run resumed or"
+		+ "redone would pile up comments, while the body describes the head of the branch"
+	REJECTED "the report run after the pull request of the milestone opens, replacing its body as"
+		+ "the wave report did: the user ruled it run before, so that the pull request opens with"
+		+ "its body"
+	RATIONALE "the ledger stays the one source of the waves of a milestone and the entity the one"
+		+ "source of its renderings, as"
+		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole"
+		+ "sets; a wave having no branch and no pull request since"
+		+ "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch,"
+		+ "its report had nowhere to publish"
+		REF @DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole
+		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
+	RATIONALE "the moment of the task report and the head it moves are the session's choice of"
+		+ "2026-11-02, not the user's words: the report must precede the user's merge to be the"
+		+ "body of the pull request, and a head moved by the report, judged again, would be"
+		+ "reported again"
+	SOURCE "the user's rulings of 2026-11-02: « on pourrait ne plus avoir de rapport de wave, mais"
+		+ "un rapport plutôt de milestone »; then « Dans B232 (Recommandé) », the option « B232 ne"
+		+ "peut pas être livrée sans réparer le rapport. Une seule PR : le rapport tourne quand"
+		+ "toutes les tâches du jalon sont mergées ou parquées, il est commité sur"
+		+ "integration/<slug> et devient le corps de la PR du jalon vers main. Un nouvel événement"
+		+ "milestone.reported remplace wave.reported, et les anciennes entrées restent lues. »;"
+		+ "then, for the tasks naming no milestone, « Rapport par tâche », the option « L'étude"
+		+ "produit un rapport par tâche sans jalon, commité sur sa branche, qui remplace le corps"
+		+ "de sa PR. »"
