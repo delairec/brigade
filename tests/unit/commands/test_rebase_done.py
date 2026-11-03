@@ -6,7 +6,13 @@ from pathlib import Path
 from brigade.commands.rebase_done import COMMAND
 from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_corpus_double, write_ledger
-from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TIDEPOOL_PROJECT, WAVE_STARTED
+from tests.unit.commands.test_verify_preflight import (
+    M4_BRANCH_CUT,
+    TASK_PR_OPENED,
+    TIDEPOOL_PROJECT,
+    TIDEPOOL_TASKS,
+    WAVE_STARTED,
+)
 
 DESCENDING = ProcessAnswer()
 NOT_DESCENDING = ProcessAnswer(exit_code=1)
@@ -48,7 +54,7 @@ class RebaseDoneOfAPullRequestTest(unittest.TestCase):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         (self.root / "config").mkdir()
         (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
-        write_ledger(self.root, [WAVE_STARTED, TASK_PR_OPENED])
+        write_ledger(self.root, [M4_BRANCH_CUT, WAVE_STARTED, TASK_PR_OPENED])
 
     def _create_runtime(self, ancestry: ProcessAnswer):
         answers = {
@@ -63,7 +69,7 @@ class RebaseDoneOfAPullRequestTest(unittest.TestCase):
             ("git", "push"): ProcessAnswer(),
         }
         self.machine = ScriptedProcessRunner(
-            answers, fallback=create_corpus_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}})
+            answers, fallback=create_corpus_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}, "TASK": TIDEPOOL_TASKS})
         )
         return create_test_runtime(create_test_paths(self.root), run_process=self.machine.run)
 

@@ -36,7 +36,6 @@ WAVE_OF_S1_STARTED = {
     "event": "wave.started",
     "wave": "shop_w1",
     "project": "shop",
-    "branch": "integration/shop_w1",
     "tasks": ["S1"],
 }
 

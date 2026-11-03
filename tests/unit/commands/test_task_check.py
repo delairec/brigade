@@ -81,4 +81,4 @@ class TaskCheckOutsideATaskTest(unittest.TestCase):
             COMMAND.run(Namespace(task=THE_TASK_OF_THE_BRANCH), runtime)
 
         # Assert
-        self.assertEqual(str(raised.exception), "the branch main is not a task/<slug>/<task> branch")
+        self.assertEqual(str(raised.exception), "the branch main is not a <prefix>/<task>-<slug> branch")

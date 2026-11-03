@@ -1580,7 +1580,7 @@ TASK B14
 	SPEC "an open wave whose forge read fails is named on stderr and skipped, and the tick serves"
 		+ "the other waves; a login of the key cli for which gh prints no token still stops the"
 		+ "tick"
-		IMPL "brigade/tick/build_snapshot.py::except CommandFailed as failure:"
+		IMPL "brigade/tick/build_snapshot.py::except (CommandFailed, TaskTypeMissing) as failure:"
 		IMPL "tests/unit/tick/test_build_snapshot_from_the_corpus.py::def"
 			+ "test_should_skip_a_wave_whose_pull_request_the_forge_refuses_to_read_and_follow_the_others(self):"
 		IMPL "tests/unit/commands/test_tick.py::def"
@@ -1834,13 +1834,14 @@ TASK B17
 			+ "test_should_merge_a_project_by_rebase_by_default(self):"
 	SPEC "under POLICY.AUTO_MERGE none the tick merges nothing and the task stays verified until it"
 		+ "sees the pull request merged"
-		IMPL "brigade/tick/plan.py::or project.auto_merge == NO_AUTO_MERGE"
+		IMPL "brigade/tick/plan.py::if project.auto_merge == NO_AUTO_MERGE or not"
+			+ "_is_on_merge_gate("
 		IMPL "tests/unit/tick/test_plan.py::def test_should_merge_no_task_short_of_verified(self):"
 		IMPL "tests/unit/tick/test_plan.py::def"
 			+ "test_should_record_the_merge_of_a_verified_task_whose_pull_request_was_merged_by_hand(self):"
 	SPEC "the tick merges no pull request whose base is not the branch the wave.started of its wave"
 		+ "names; it parks the task with that reason"
-		IMPL "brigade/tick/plan.py::if task.pull_request.base != wave.branch:"
+		IMPL "brigade/tick/plan.py::if task.pull_request.base != wave.base:"
 		IMPL "tests/unit/tick/test_plan.py::def"
 			+ "test_should_park_rather_than_merge_a_task_whose_pull_request_is_based_on_another_branch(self):"
 	SPEC "the ledger event of a merge carries the login the merge ran as"
@@ -2041,7 +2042,11 @@ TASK B19
 
 TASK B20
 	TITLE "Built-in study wave-report"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-11-02: @TASK.B232 replaces the report of a wave with the report of a"
+		+ "milestone, a wave having no branch and no pull request of its own; the study"
+		+ "milestone-report, published on the branch of the milestone before its pull request"
+		+ "opens, takes its place"
 	DELIVERED_BY 183
 	TYPE feat
 	MILESTONE @MILESTONE.M1
@@ -2054,26 +2059,11 @@ TASK B20
 		+ "NARRATIVE, REASON, TESTER_STEP and SAMPLING; brigade init installs it in a new"
 		+ "operational corpus and upgrades no installed schema, an operational corpus of an older"
 		+ "schema being thrown away"
-		IMPL "brigade/corpus/data/schema.awawa.tpl::SCHEMA REPORT"
-		IMPL "tests/integration/corpus/test_check_corpus.py::def"
-			+ "test_should_accept_the_report_of_a_wave(self):"
-		IMPL "tests/unit/commands/test_init.py::def"
-			+ "test_should_leave_the_file_as_it_is_and_report_it_differing(self):"
 	SPEC "the report of a wave is one REPORT entity of the operational corpus, written and read"
 		+ "through the document kind; the collectors ledger, pr-list, corpus and git-diff-stat fill"
 		+ "the CLI fields, the task table, the statistics, the dependency graph, the manual-test"
 		+ "table from SPEC lines, the instructions-corpus change list and the parked questions, one"
 		+ "field each"
-		IMPL "brigade/studies/describe_wave_report.py::def describe_wave_report("
-		IMPL "brigade/studies/render_wave_report.py::def render_wave_report("
-		IMPL "tests/unit/studies/test_describe_wave_report.py::def"
-			+ "test_should_collect_the_events_the_pull_requests_the_tasks_and_the_changes_of_the_wave(self):"
-		IMPL "tests/unit/studies/test_render_wave_report.py::def"
-			+ "test_should_fill_the_report_of_the_wave_with_what_the_collectors_gave(self):"
-		IMPL "tests/unit/collectors/test_ledger.py::def"
-			+ "test_should_keep_the_events_of_the_wave_it_names_whatever_their_project(self):"
-		IMPL "tests/unit/collectors/test_corpus.py::def"
-			+ "test_should_list_each_entity_it_is_given_whole(self):"
 	SPEC "the report slot completes the prose fields, the narrative, the reasons, the manual tests"
 		+ "in a tester's words and the sampling suggestions; study answer validates the answer by"
 		+ "awawa lint against the schema, refuses an answer that changed a field the CLI filled,"
@@ -2082,25 +2072,9 @@ TASK B20
 		+ "updates the integration pull request it reads from wave.pr_opened; the Markdown is"
 		+ "rendered from the entity for the person and for the dashboard, and brigade reads it back"
 		+ "nowhere"
-		IMPL "brigade/studies/choose_answer_form.py::REPORT_FIELDS_THE_CLI_FILLS = ("
-		IMPL "brigade/studies/publish_wave_report.py::def publish_wave_report("
-		IMPL "brigade/adapters/forges/github.py::def rewrite_pull_request_body("
-		IMPL "tests/unit/studies/test_build_study_context.py::def"
-			+ "test_should_package_the_report_of_the_wave_to_complete(self):"
-		IMPL "tests/unit/studies/test_validate_answer.py::def"
-			+ "test_should_refuse_a_report_that_changed_a_field_brigade_filled(self):"
-		IMPL "tests/unit/studies/test_publish_wave_report.py::def"
-			+ "test_should_rewrite_the_body_of_the_integration_pull_request_with_the_report(self):"
-		IMPL "tests/unit/studies/test_write_answer.py::def"
-			+ "test_should_publish_the_report_of_a_wave_on_its_integration_branch_once_its_entity_is_written(self):"
 	SPEC "the tick runs it when every task of the wave is merged or parked, and writes the run in"
 		+ "the wave.reported it records, where today brigade/commands/tick.py records wave.reported"
 		+ "with no run"
-		IMPL "brigade/commands/tick.py::def _report_wave("
-		IMPL "tests/unit/commands/test_tick.py::def"
-			+ "test_should_detach_the_wave_report_run_the_wave_reported_names(self):"
-		IMPL "tests/unit/commands/test_study_run.py::def"
-			+ "test_should_resume_the_run_of_a_wave_report_from_the_wave_its_run_records(self):"
 	AFTER @TASK.B17
 	AFTER @TASK.B146
 	RATIONALE "designed as entities from the start, as"
@@ -2136,7 +2110,10 @@ TASK B20
 
 TASK B21
 	TITLE "Rehearsal on a sandbox repository"
-	STATUS implemented
+	STATUS archived
+	DESC "archived by @TASK.B232: its SPEC, a three-task wave delivered to the integration pull"
+		+ "request read from wave.pr_opened and its tasks merged into its branch, is made false:"
+		+ "the rehearsal replays with no wave branch and ends on the report of its milestone"
 	TYPE test
 	MILESTONE @MILESTONE.M1
 	COMPONENT "validation"
@@ -2165,7 +2142,6 @@ TASK B21
 	DELIVERED_BY 187
 	AFTER @TASK.B18
 	AFTER @TASK.B143
-	AFTER @TASK.B20
 	AFTER @TASK.B71
 	AFTER @TASK.B141
 	RATIONALE "it follows @TASK.B71, the launch options and the real run rehearsed, F1 and F22 of"
@@ -2486,7 +2462,11 @@ TASK B25
 
 TASK B26
 	TITLE "Ratification into a wave"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-11-02: @TASK.B232 makes false its SPEC 4, the wave report listing the"
+		+ "tasks of a pattern and the pattern delivered once the wave is delivered: a wave has no"
+		+ "report and no pull request of its own, the milestone report lists them and the pattern"
+		+ "goes delivered at milestone.closed"
 	DELIVERED_BY 222
 	TYPE feat
 	MILESTONE @MILESTONE.M2
@@ -2963,7 +2943,6 @@ TASK B31
 		IMPL "tests/unit/dashboard/test_answer_dashboard_request.py::class"
 			+ "AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):"
 	AFTER @TASK.B27
-	AFTER @TASK.B20
 	RATIONALE "the views render the entities, as"
 		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole"
 		+ "sets, so that the dashboard shows no fact the entities lack; the document plugin was"
@@ -3406,7 +3385,6 @@ TASK B37
 		+ "transcripts brigade does not read leave both null, nulls naming the reason"
 		IMPL "brigade/runs/locate_first_edit.py::def locate_first_edit("
 		IMPL "brigade/runs/describe_finished.py::def _explain_missing_first_edit("
-	AFTER @TASK.B21
 	RATIONALE "the cap exists to restart a fresh session before the context makes every step too"
 		+ "costly: a step rereads the whole context, so a segment of L steps costs about L times"
 		+ "the base plus g L squared over 2, and each restart costs R; the cost per step is lowest"
@@ -3526,7 +3504,6 @@ TASK B40
 	SPEC "the ledger compares one wave with rtk and one without: agent steps, re-reads of oversized"
 		+ "output, findings missed by the verifier"
 	SPEC "a DECISION records the adoption or the rejection, with the measured comparison"
-	AFTER @TASK.B21
 	RATIONALE "moved out of M6 into the post-MVP milestone: an evaluation whose outcome is a"
 		+ "DECISION, not a delivery of the tick"
 	SOURCE "the user's rulings of 2026-11-01 in the refinement of M6: « Sortir de M6 »"
@@ -3793,7 +3770,6 @@ TASK B44
 		+ "DBUS_SESSION_BUS_ADDRESS when the request carries one,"
 		+ "tests/unit/adapters/clients/test_vibe.py pins the environment with and without it, and"
 		+ "the wiki page Client-adapters names the session bus"
-	AFTER @TASK.B21
 	AFTER @TASK.B108
 	RATIONALE "the user asked on 2026-10-07 whether two AI providers can coexist; the session found"
 		+ "one client per machine, the client key of config.toml, replaced per project by the"
@@ -3845,7 +3821,6 @@ TASK B45
 	SPEC "brigade init, project add on the sandbox repository and a one-task wave on the fake"
 		+ "adapter run to the end in that account"
 	SPEC "the cron line written by brigade scheduler install runs the tick"
-	AFTER @TASK.B21
 	AFTER @TASK.B42
 	AFTER @TASK.B43
 	SOURCE "the user's ruling of 2026-11-01 in the refinement of M7: « Test tests/cli dans B177"
@@ -4558,7 +4533,6 @@ TASK B53
 	SPEC "PATTERN.ACTION accepts order and PATTERN.RECIPE names the recipe; brigade inbox ratify"
 		+ "places the order with the pattern's evidence as parameters"
 	SPEC "the order's output names the pattern it came from"
-	AFTER @TASK.B26
 	AFTER @TASK.B51
 
 TASK B54
@@ -11039,7 +11013,6 @@ TASK B153
 	COMPONENT "brigade, tests"
 	ROLE ada
 	AFTER @TASK.B152
-	AFTER @TASK.B21
 	SPEC "P1, awawa through its gateway: every awawa argv is built in brigade/corpus/ by a named"
 		+ "operation on run_awawa, with the gateway's timeout; grep -rn 'argv=(\"awawa\"' brigade"
 		+ "--include='*.py' names modules of brigade/corpus/ alone, where origin/main at d64a7ad"
@@ -12051,7 +12024,7 @@ TASK B168
 	SPEC "the tick re-queues no task itself: a parked task stays parked until it is re-queued by"
 		+ "hand"
 		IMPL "tests/unit/tick/test_plan.py::(\"parked\", ALONE, {\"S3\": \"parked\"}, (),"
-			+ "(REPORT_SHOP_W1,)),"
+			+ "(CLOSE_SHOP_W1,)),"
 	SPEC "tests/unit prove the two reasons of the reconciliation, the requeue of a parked task and"
 		+ "each refusal; tests/cli gains one flow of brigade wave requeue, a parked task re-queued"
 		+ "through the fake adapter, as DESC 4 of the decision"
@@ -13536,7 +13509,10 @@ TASK B197
 TASK B205
 	TITLE "A study publishes on a private GitHub repository with the environment of the login bound"
 		+ "to cli"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-11-02: @TASK.B232 makes false its SPEC 1, the report of a wave pushed on"
+		+ "the integration branch: the report of a milestone is pushed on the branch of the"
+		+ "milestone with the environment of the login bound to cli"
 	DELIVERED_BY 191
 	TYPE fix
 	MILESTONE @MILESTONE.M1
@@ -13546,9 +13522,6 @@ TASK B205
 		+ "branch, pushes the commit of its report and rewrites the body of the integration pull"
 		+ "request with the environment of the login forge_accounts binds to cli, so that the"
 		+ "report of a wave reaches a private repository"
-		IMPL "brigade/studies/publish_wave_report.py::environment = read_publication_environment("
-		IMPL "tests/unit/studies/test_publish_wave_report.py::def"
-			+ "test_should_fetch_the_integration_branch_as_the_login_bound_to_cli"
 	SPEC "on a project of FORGE github, a study whose answer is written to a file pushes its branch"
 		+ "and opens its pull request with the environment of the login forge_accounts binds to cli"
 		IMPL "brigade/studies/write_answer_to_file.py::environment = read_publication_environment("
@@ -13843,7 +13816,7 @@ TASK B208
 		IMPL "brigade/verify/check_promotion.py::return decode_atom(atom)"
 		IMPL "brigade/adapters/documents/awawa.py::(name, decode_atom(description))"
 		IMPL "brigade/adapters/documents/awawa.py::map(decode_atom"
-		IMPL "brigade/studies/render_wave_report.py::map(decode_atom"
+		IMPL "brigade/studies/render_milestone_report.py::map(decode_atom"
 		IMPL "brigade/tasks/assemble_task_context.py::map(decode_atom"
 		IMPL "brigade/collectors/study.py::map(decode_atom"
 		IMPL "brigade/planning/assemble_plan_context.py::map(decode_atom"
@@ -13960,8 +13933,8 @@ TASK B210
 		IMPL "brigade/commands/tick.py::def _launch_rebase_of_the_branch("
 		IMPL "brigade/tick/plan.py::def _is_rebased(task: TaskFacts, wave: WaveFacts, live_tasks:"
 			+ "frozenset) -> bool:"
-		IMPL "brigade/commands/rebase_context.py::def _read_unopened_task(runtime: Runtime) ->"
-			+ "dict:"
+		IMPL "brigade/commands/rebase_context.py::def _read_unopened_task(runtime: Runtime, branch:"
+			+ "str) -> dict:"
 		IMPL "tests/unit/commands/test_tick.py::class"
 			+ "TickLaunchingATaskWhoseChecksPassedAndWhoseBranchConflictsWithTheWaveBranchTest"
 		IMPL "tests/unit/tick/test_plan.py::class PlanRunningTaskRebasedByItsLastRunTest"
@@ -14007,7 +13980,10 @@ TASK B210
 
 TASK B211
 	TITLE "A task of a new wave takes over the worktree its task left in a cancelled wave"
-	STATUS implemented
+	STATUS archived
+	DESC "archived by @TASK.B232: a task branch names the task and no wave, so a task launched"
+		+ "again after a cancel takes over its own branch and no branch of a cancelled wave is"
+		+ "switched from"
 	DELIVERED_BY 245
 	TYPE fix
 	MILESTONE @MILESTONE.M3
@@ -14058,7 +14034,10 @@ TASK B212
 	TITLE "A milestone has one integration branch named after its title, the branch of a wave is"
 		+ "cut from it, and the pull request of a wave is opened into it and merged by the tick,"
 		+ "never into main"
-	STATUS implemented
+	STATUS archived
+	DESC "archived by @TASK.B232: SPEC 5, 6 and 7, the wave branch, the pull request of a wave and"
+		+ "its merge, are made false, a task being cut from and merged into the branch of its"
+		+ "milestone and a wave having no branch"
 	DELIVERED_BY 255
 	TYPE feat
 	MILESTONE @MILESTONE.M9
@@ -14189,7 +14168,7 @@ TASK B213
 		IMPL "corpus/tasks.awawa::its SPEC 5, the candidates read at PROJECT.MAIN, made false by"
 	SPEC "the sentence of the Bootstrap section of AGENTS.md that this task makes false is"
 		+ "rewritten at delivery"
-		IMPL "AGENTS.md::it starts a wave of the ratified tasks read on that branch"
+		IMPL "AGENTS.md::A wave is a batch of the ratified"
 	SPEC "tests/unit prove a task admitted whose AFTER is implemented on the milestone branch and"
 		+ "not on PROJECT.MAIN, refused when it is implemented on neither, two active milestones"
 		+ "starting two waves in one tick, a task naming no MILESTONE in a wave of its own cut from"
@@ -14201,7 +14180,7 @@ TASK B213
 		IMPL "tests/unit/tick/test_plan.py::def"
 			+ "test_should_start_a_wave_per_milestone_only_under_auto_and_with_a_candidate("
 		IMPL "tests/unit/waves/test_start_project_waves.py::def"
-			+ "test_should_cut_the_wave_of_the_tasks_naming_no_milestone_from_the_main_branch("
+			+ "test_should_start_one_wave_per_milestone_with_a_candidate_then_one_of_the_tasks_naming_none("
 		IMPL "tests/unit/waves/test_start_project_waves.py::def"
 			+ "test_should_refuse_named_tasks_of_two_milestones_or_of_one_milestone_and_none_before_any_write("
 	RATIONALE "the ruling is"
@@ -14230,7 +14209,9 @@ TASK B213
 TASK B214
 	TITLE "The integration branch of a milestone is rebased onto the main branch before a wave"
 		+ "starts, and its open wave branches onto it"
-	STATUS implemented
+	STATUS archived
+	DESC "archived by @TASK.B232: SPEC 3, the rebase of the open wave branches onto the milestone"
+		+ "branch, is made false, a wave having no branch to rebase"
 	DELIVERED_BY 260
 	TYPE feat
 	MILESTONE @MILESTONE.M9
@@ -14297,8 +14278,8 @@ TASK B214
 		IMPL "brigade/waves/rebase_milestone_branches.py::with hold_lock(locate_worktrees_lock("
 	SPEC "the sentence of the Bootstrap section of AGENTS.md that this task makes false is"
 		+ "rewritten at delivery"
-		IMPL "AGENTS.md::rebases it onto `main` once `main` has moved, and each open wave branch of"
-			+ "the"
+		IMPL "AGENTS.md::rebases it onto `main` once `main` has moved, and the open wave branches"
+			+ "of the"
 	SPEC "tests/unit/tick/test_plan.py proves, on literal rows, a milestone whose branch does not"
 		+ "descend from PROJECT.MAIN planned its rebase and no StartWave, one whose branch descends"
 		+ "planned no rebase, and one whose rebase run lives or ended blocked planned no rebase and"
@@ -14350,7 +14331,10 @@ TASK B214
 TASK B215
 	TITLE "The tick opens the pull request of the integration branch of a milestone into main once"
 		+ "every wave of the milestone is merged, and merges it never"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-11-02: @TASK.B232 makes false its SPEC 1 and SPEC 5, the tick opening"
+		+ "the pull request of the milestone once its last wave is closed: the run of the report of"
+		+ "the milestone opens it once the report is pushed on the branch of the milestone"
 	DELIVERED_BY 258
 	TYPE feat
 	MILESTONE @MILESTONE.M9
@@ -14407,7 +14391,10 @@ TASK B215
 TASK B216
 	TITLE "The Bootstrap section of AGENTS.md describes the delivery of a milestone through its"
 		+ "integration branch"
-	STATUS implemented
+	STATUS archived
+	DESC "archived by @TASK.B232: the Bootstrap section it describes, a wave branch, the pull"
+		+ "request of a wave and its merge, is made false, a task being cut from and merged into"
+		+ "the branch of its milestone and a wave having no branch"
 	DELIVERED_BY 263
 	TYPE docs
 	MILESTONE @MILESTONE.M9
@@ -14416,7 +14403,6 @@ TASK B216
 	AFTER @TASK.B212
 	AFTER @TASK.B213
 	AFTER @TASK.B214
-	AFTER @TASK.B215
 	SPEC "the Bootstrap section of AGENTS.md says that the tick cuts the integration branch of a"
 		+ "milestone, integration/<slug of its TITLE>, rebases it onto main and its open wave"
 		+ "branches onto it, starts a wave of the ratified tasks read on that branch, on a wave"
@@ -15560,17 +15546,22 @@ TASK B232
 		+ "replaced by one hyphen, none at either end, and cut at the last hyphen at or before its"
 		+ "40th character when longer; TASK gains no field; where today"
 		+ "brigade/tick/name_task_branch.py:6 names it task/<wave>/<task>"
+		IMPL "brigade/tick/name_task_branch.py::def name_task_branch("
+		IMPL "tests/unit/tick/test_name_task_branch.py::class NameTaskBranchTest("
 	SPEC "the launch of a task cuts its branch from origin/<the recorded branch of its milestone>"
 		+ "and its run opens the pull request into that branch; a task naming no MILESTONE is cut"
 		+ "from origin/<PROJECT.MAIN> and its pull request opened into PROJECT.MAIN; where today"
 		+ "brigade/tick/prepare_task_worktree.py:128-129 cuts it from the wave branch and"
 		+ "brigade/tasks/open_task_pull_request.py:118,151 opens it into the wave branch"
+		IMPL "brigade/tick/prepare_task_worktree.py::start=locate_forge_branch("
+		IMPL "brigade/tasks/open_task_pull_request.py::def _open_on_forge("
 	SPEC "a task pull request whose base is the branch of its milestone is merged by the tick into"
 		+ "it on the gate of DESC 9 of the decision"
 		+ "AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce, where today"
 		+ "brigade/tick/plan.py:463 parks a pull request whose base is not the wave branch; the"
 		+ "tick merges no pull request whose base is PROJECT.MAIN, the user merges it, as SPEC 7 of"
 		+ "TASK B212 has it today for the pull request of a wave"
+		IMPL "brigade/tick/plan.py::def _decide_merge("
 	SPEC "a wave starts with no branch: brigade/waves/start_project_wave.py:127 names none and cuts"
 		+ "none, wave.started carries wave, project and tasks, brigade/ledger/wave_started.py:10,18"
 		+ "requires no branch, and the tick cuts no wave branch (brigade/tick/plan.py:516-521),"
@@ -15579,6 +15570,8 @@ TASK B232
 		+ "recorded with a branch is read by every reader,"
 		+ "brigade/studies/describe_wave_report.py:24-25 and"
 		+ "brigade/studies/publish_wave_report.py:39,44-45 reading its branch today"
+		IMPL "brigade/waves/start_project_wave.py::def start_project_wave("
+		IMPL "brigade/ledger/wave_started.py::class WaveStarted:"
 	SPEC "the tick appends wave.closed, with no pr, once every task of the wave is merged or"
 		+ "parked, where today brigade/ledger/wave_closed.py:6-16 requires pr and the tick appends"
 		+ "it when the pull request of the wave is merged; a wave.closed carrying a pr is still"
@@ -15587,6 +15580,8 @@ TASK B232
 		+ "RatificationNamesItsEntitiesAfterThePatternAndTheArrivalInMainDeliversThePattern go"
 		+ "delivered at milestone.closed of the milestone their request was planned into, no longer"
 		+ "at wave.closed, where today brigade/commands/tick.py:_close_wave delivers them"
+		IMPL "brigade/tick/plan.py::def _plan_closes("
+		IMPL "brigade/commands/tick.py::def _close_milestone("
 	SPEC "the built-in study milestone-report replaces wave-report: the tick runs it once every"
 		+ "task of the milestone at its branch is merged or parked and no wave of the milestone is"
 		+ "open, and appends milestone.reported with project, milestone, run and login, which the"
@@ -15598,12 +15593,16 @@ TASK B232
 		+ "to=<the branch>; its REPORT entity is named <project>_<milestone>, brigade_M6; its GRAPH"
 		+ "holds every AFTER between two tasks of the milestone, where today"
 		+ "brigade/studies/render_wave_report.py:82-86 keeps the edges inside one wave"
+		IMPL "brigade/tick/plan.py::def _is_milestone_report_due("
+		IMPL "brigade/studies/describe_milestone_report.py::def describe_milestone_report("
 	SPEC "SCHEMA REPORT of brigade/corpus/data/schema.awawa.tpl declares MILESTONE, the name of the"
 		+ "milestone, and TASK, the name of the task, beside WAVE, none of the three required: a"
 		+ "report names its milestone, its task or, written before this task, its wave; brigade"
 		+ "reports list prints the kind of a report, milestone-report, task-report or wave-report,"
 		+ "by the field it carries, where today the kind is wave-report alone; brigade init"
 		+ "installs the schema as SPEC 1 of TASK B20 has it"
+		IMPL "brigade/corpus/data/schema.awawa.tpl::FIELD TASK string"
+		IMPL "brigade/reports/read_reports.py::REPORT_KINDS_BY_FIELD"
 	SPEC "the Markdown of the report of a milestone is"
 		+ "<PROJECT.CORPUS>/milestones/<milestone>-report.md, committed on the branch of the"
 		+ "milestone fetched from origin and pushed without force with the environment of the login"
@@ -15614,6 +15613,7 @@ TASK B232
 		+ "_list_merged_waves listing them and build_snapshot.py:673 reading the pull request of a"
 		+ "wave once reported; on a project of FORGE none the report is committed on the branch and"
 		+ "no pull request opens"
+		IMPL "brigade/studies/publish_milestone_report.py::def publish_milestone_report("
 	SPEC "the built-in study task-report reports a task naming no MILESTONE: the tick runs it once"
 		+ "the pull request of the task is ready on the gate of SPEC 3 or the task is parked and"
 		+ "has a pull request, a task parked with no pull request getting no report, and appends"
@@ -15624,19 +15624,26 @@ TASK B232
 		+ "as SPEC 8 pushes, and the body of the pull request of the task is replaced whole with"
 		+ "it; the head the report moves is preflighted and verified by no further run, the verdict"
 		+ "of the head before it standing"
+		IMPL "brigade/tick/plan.py::def _is_task_report_due("
+		IMPL "brigade/studies/publish_task_report.py::def publish_task_report("
 	SPEC "brigade task context, task check, task pr, task promote and rebase context read the task"
 		+ "from a branch of the new form and its wave from the open wave of the ledger that holds"
 		+ "the task, where today brigade/tasks/locate_task_worktree.py:16,38-40 read both from"
 		+ "task/<wave>/<task>; the pr-list collector, brigade/collectors/pr_list.py:31, reads the"
 		+ "task of a head branch the same way"
+		IMPL "brigade/tasks/locate_task_worktree.py::def locate_task_worktree("
+		IMPL "brigade/collectors/pr_list.py::def _read_task("
 	SPEC "the preflight and the verification of a task pull request check its head against"
 		+ "origin/<the branch of its milestone>, origin/<PROJECT.MAIN> for a task naming none,"
 		+ "where today brigade/verify/find_opened_task.py:23-24 read the base from"
 		+ "wave.started.branch"
+		IMPL "brigade/tasks/find_task_base.py::def find_task_base("
 	SPEC "a task launched again after brigade wave cancel takes over its branch under the name of"
 		+ "SPEC 1, the same whatever the wave, where today"
 		+ "brigade/tick/name_ended_task_branches.py:8-10 names one branch per ended wave, closed or"
 		+ "cancelled"
+		IMPL "tests/cli/test_tick_after_a_cancelled_wave.py::class"
+			+ "TickAfterTheCancellationOfTheWaveOfAParkedTaskTest("
 	SPEC "once this task reaches PROJECT.MAIN, with the pull request of milestone M6 and by no pull"
 		+ "request of its own, the tick finds no open wave of the ledger carrying a branch: before"
 		+ "that, the pull request of each wave open on a wave branch and holding a merged task is"
@@ -15653,11 +15660,14 @@ TASK B232
 		+ "B20 whole, the report of a wave; B205 SPEC 1, the report of a wave pushed on the"
 		+ "integration branch; B212 SPEC 5, 6 and 7, the wave branch, the pull request of a wave"
 		+ "and its merge; B26 SPEC 4, the wave report listing the tasks of a pattern"
+		IMPL "corpus/tasks.awawa::SPEC 5, 6 and 7, the wave branch, the pull request of a wave"
 	SPEC "AGENTS.md, section Bootstrap, and wiki/Concepts.md, wiki/Waves.md, its line 42,"
 		+ "wiki/Tasks.md, wiki/Tick-and-scheduler.md, its lines 176-178, wiki/Studies.md and"
 		+ "wiki/Command-reference.md, its lines 50 and 60-62, read at 78a6e95f, describe the model:"
 		+ "the branch of a task, its base, no wave branch, no wave pull request, the report of a"
 		+ "milestone and the report of a task naming none"
+		IMPL "AGENTS.md::A wave is a batch of the ratified"
+		IMPL "wiki/Waves.md::with no branch and no pull"
 	SPEC "tests/unit prove the name of a task branch for every TYPE value of the schema and the"
 		+ "slug of a TITLE, a long one cut, the launch cutting from the milestone branch and from"
 		+ "PROJECT.MAIN for a task naming none, the merge into the milestone branch and none into"
@@ -15672,6 +15682,8 @@ TASK B232
 		+ "rehearsal of tests/cli replays with no wave branch and ends on the report of its"
 		+ "milestone; the 97 test files naming integration/ and the 22 naming task/<wave>/<task>,"
 		+ "grep -rl of 2026-11-01 at 78a6e95f, follow"
+		IMPL "tests/cli/test_rehearsal.py::def"
+			+ "test_should_open_the_pull_request_of_the_milestone_into_main_with_its_report_as_body("
 	RATIONALE "the user's words of 2026-11-01: « Y a un autre truc qui va pas c'est que les waves"
 		+ "créent des branches nommée integration alors que integration est censé être la branche"
 		+ "de travail qui vise main »; the wave branch integration/<project>_w<n> was left unruled"

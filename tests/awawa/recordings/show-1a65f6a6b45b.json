@@ -1,0 +1,25 @@
+{
+  "call": {
+    "arguments": [
+      "show",
+      "@REPORT.shop_M1",
+      "--json",
+      "<tmp:0>/state/brigade/runs/<run:1>/answer.awawa"
+    ],
+    "cwd": "<tmp:0>/state/brigade/runs/<run:1>",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/state/brigade/runs/<run:1>/answer.awawa": "REPORT shop_M1\n\tMILESTONE \"M1\"\n\tPROJECT \"shop\"\n\tTASK_ROW \"S1 merged #2\"\n\tTASK_ROW \"S2 merged #4\"\n\tTASK_ROW \"S3 merged #3\"\n\tSTATISTIC \"tasks 3\"\n\tSTATISTIC \"merged 3\"\n\tSTATISTIC \"parked 0\"\n\tSTATISTIC \"runs 6\"\n\tSTATISTIC \"files 3\"\n\tSTATISTIC \"insertions 23\"\n\tSTATISTIC \"deletions 0\"\n\tGRAPH \"S2 after S1\"\n\tINSTRUCTIONS_CHANGE \"corpus/milestones.awawa +3 -0\"\n\tINSTRUCTIONS_CHANGE \"corpus/tasks.awawa +19 -0\"\n\tNARRATIVE \"the customer empties the cart in one click\"\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"REPORT\", \"name\": \"shop_M1\", \"file\": \"<tmp:0>/state/brigade/runs/<run:1>/answer.awawa\", \"line\": 1, \"status\": null, \"fields\": [{\"name\": \"MILESTONE\", \"atoms\": [\"\\\"M1\\\"\"], \"fields\": []}, {\"name\": \"PROJECT\", \"atoms\": [\"\\\"shop\\\"\"], \"fields\": []}, {\"name\": \"TASK_ROW\", \"atoms\": [\"\\\"S1 merged #2\\\"\"], \"fields\": []}, {\"name\": \"TASK_ROW\", \"atoms\": [\"\\\"S2 merged #4\\\"\"], \"fields\": []}, {\"name\": \"TASK_ROW\", \"atoms\": [\"\\\"S3 merged #3\\\"\"], \"fields\": []}, {\"name\": \"STATISTIC\", \"atoms\": [\"\\\"tasks 3\\\"\"], \"fields\": []}, {\"name\": \"STATISTIC\", \"atoms\": [\"\\\"merged 3\\\"\"], \"fields\": []}, {\"name\": \"STATISTIC\", \"atoms\": [\"\\\"parked 0\\\"\"], \"fields\": []}, {\"name\": \"STATISTIC\", \"atoms\": [\"\\\"runs 6\\\"\"], \"fields\": []}, {\"name\": \"STATISTIC\", \"atoms\": [\"\\\"files 3\\\"\"], \"fields\": []}, {\"name\": \"STATISTIC\", \"atoms\": [\"\\\"insertions 23\\\"\"], \"fields\": []}, {\"name\": \"STATISTIC\", \"atoms\": [\"\\\"deletions 0\\\"\"], \"fields\": []}, {\"name\": \"GRAPH\", \"atoms\": [\"\\\"S2 after S1\\\"\"], \"fields\": []}, {\"name\": \"INSTRUCTIONS_CHANGE\", \"atoms\": [\"\\\"corpus/milestones.awawa +3 -0\\\"\"], \"fields\": []}, {\"name\": \"INSTRUCTIONS_CHANGE\", \"atoms\": [\"\\\"corpus/tasks.awawa +19 -0\\\"\"], \"fields\": []}, {\"name\": \"NARRATIVE\", \"atoms\": [\"\\\"the customer empties the cart in one click\\\"\"], \"fields\": []}], \"duplicates\": []}\n"
+  },
+  "run_order": [
+    "<run:1>"
+  ],
+  "version": "awawa 2.7.0"
+}

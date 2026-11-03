@@ -90,7 +90,7 @@ class PreflightPullRequestTest(unittest.TestCase):
         demand = PreflightDemand(
             project=Entity(name="shop", fields=(EntityField(name="PATH", value="/srv/shop"),)),
             task="B1",
-            wave_branch="integration/w1",
+            base_branch="integration/w1",
             pr=160,
             forge=ForgeDescribingThePullRequestDouble(),
             environment={"GH_TOKEN": "token-of-octo-builder"},

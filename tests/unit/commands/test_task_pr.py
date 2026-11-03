@@ -6,6 +6,7 @@ from pathlib import Path
 from brigade.commands.task_pr import COMMAND
 from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
+from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.wave_started import WaveStarted
 from tests.unit.commands.command_runtime import NOW, create_machine_double, write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
@@ -98,7 +99,7 @@ class TaskPrOutsideATaskTest(unittest.TestCase):
             COMMAND.run(Namespace(task=THE_TASK_OF_THE_BRANCH, subject=None), runtime)
 
         # Assert
-        self.assertEqual(str(raised.exception), "the branch main is not a task/<slug>/<task> branch")
+        self.assertEqual(str(raised.exception), "the branch main is not a <prefix>/<task>-<slug> branch")
 
 
 class TaskPrPushTest(unittest.TestCase):
@@ -122,23 +123,26 @@ class TaskPrPushTest(unittest.TestCase):
             create_test_paths(root), run_process=self.processes, resolve_plugin=lambda kind, name, **places: self.forge
         )
         self.processes.answer(("git", "rev-parse", "--show-toplevel"), stdout=f"{worktree}\n")
-        self.processes.answer(("git", "branch", "--show-current"), stdout="task/oak_w1/B12\n")
+        self.processes.answer(("git", "branch", "--show-current"), stdout="feature/B12-the-parser\n")
         self.processes.answer(
             ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"), stdout="/srv/oak/.git\n"
         )
-        self.processes.answer_entities(self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"),)})
+        self.processes.answer_entities(
+            self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("MAIN", "main"))}
+        )
         append_event(
             self.runtime.paths,
             NOW,
-            WaveStarted(wave="oak_w1", project="oak", branch="integration/oak_w1", tasks=("B12",)),
+            MilestoneBranchCut(project="oak", milestone="F0", branch="integration/parser", login=None),
         )
+        append_event(self.runtime.paths, NOW, WaveStarted(wave="oak_w1", project="oak", tasks=("B12",)))
         self.processes.answer(
             ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "HEAD^{commit}"), stdout="d00d\n"
         )
         self.processes.answer_entity(worktree, "TASK", "B12", TASK_FIELDS)
         self.processes.answer_entity(worktree, "MILESTONE", "F0", (("TITLE", "Parser"),))
         self.pushed_environments = []
-        self.processes.answer_by(("git", "push", "--quiet", "origin", "task/oak_w1/B12"), self.record_push)
+        self.processes.answer_by(("git", "push", "--quiet", "origin", "feature/B12-the-parser"), self.record_push)
 
     def record_push(self, request):
         self.pushed_environments.append(request.environment)
@@ -168,8 +172,8 @@ class TaskPrPushTest(unittest.TestCase):
             [
                 {
                     "repository": "/srv/oak-b12",
-                    "base": "integration/oak_w1",
-                    "branch": "task/oak_w1/B12",
+                    "base": "integration/parser",
+                    "branch": "feature/B12-the-parser",
                     "title": "feat(the-parser): add the parser (@TASK.B12)",
                     "body": "The parser\n"
                     "\n"

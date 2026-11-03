@@ -12,7 +12,7 @@ class VerifyContextTestCase(VerifyPreflightTestCase):
             "context",
             *arguments,
             environment=self.describe_environment(),
-            cwd=self.project.path,
+            cwd=self.worktree,
         )
 
 

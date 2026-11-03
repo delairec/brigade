@@ -6,6 +6,7 @@ from pathlib import Path
 
 from brigade.errors import BrigadeError
 from brigade.studies.convert_study import Study
+from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.validate_answer import validate_answer
 from tests.unit.scripted_processes import ScriptedProcesses
 
@@ -41,8 +42,16 @@ CHANGED_FIELDS = {
     ]
 }
 SUBMITTED = 'FINDING trees_20261019T090000Z_aaaaaa\n\tSTUDY "trees"\n\tRUN "20261019T090000Z-aaaaaa"\n\tVERDICT "two"\n'
-REPORT_STUDY = dataclasses.replace(STUDY, name="wave-report", project="oak", answer_type="REPORT", wave="oak_w2")
-REPORT_TARGET = "@REPORT.oak_w2"
+REPORT_STUDY = dataclasses.replace(
+    STUDY,
+    name="milestone-report",
+    project="oak",
+    answer_type="REPORT",
+    milestone=MilestoneReportOrder(
+        project="oak", milestone="M6", branch="integration/hardening", waves=("oak_w2",), tasks=("B17",)
+    ),
+)
+REPORT_TARGET = "@REPORT.oak_M6"
 LEDGER_ITEMS = [
     {"ts": "2026-10-04T08:00:00Z", "event": "wave.started", "wave": "oak_w2", "tasks": ["B17"]},
     {"ts": "2026-10-04T10:30:00Z", "event": "task.state", "wave": "oak_w2", "task": "B17", "state": "merged"},
@@ -186,7 +195,7 @@ class ValidateAnswerTest(unittest.TestCase):
 
     def test_should_refuse_a_report_that_changed_a_field_brigade_filled(self):
         for field, refusal_message in [
-            ("WAVE", "the answer changed WAVE, a field brigade filled"),
+            ("MILESTONE", "the answer changed MILESTONE, a field brigade filled"),
             ("PROJECT", "the answer changed PROJECT, a field brigade filled"),
             ("TASK_ROW", "the answer changed TASK_ROW, a field brigade filled"),
             ("STATISTIC", "the answer changed STATISTIC, a field brigade filled"),

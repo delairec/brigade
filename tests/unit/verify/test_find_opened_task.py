@@ -38,6 +38,5 @@ class FindOpenedTaskTest(unittest.TestCase):
                     pr=42,
                     login="tidepool-bot",
                 ),
-                wave_branch="integration/M5",
             ),
         )

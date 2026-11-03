@@ -13,6 +13,7 @@ ACTION = LaunchCheckRepair(
     wave="shop_w1",
     branch="integration/shop_w1",
     task="B1",
+    task_branch="feature/B1-task",
     pr=42,
     worktree="/srv/shop/.brigade/worktrees/B1",
     checks=("tests",),
@@ -22,7 +23,7 @@ BRIEF_HEAD = (
     "Repair the failing checks of the pull request #42, which delivers @TASK.B1 of @PROJECT.shop, in the wave shop_w1.\n"
     "\n"
     "- Base branch: integration/shop_w1.\n"
-    "- Worktree: /srv/shop/.brigade/worktrees/B1, on the branch task/shop_w1/B1.\n"
+    "- Worktree: /srv/shop/.brigade/worktrees/B1, on the branch feature/B1-task.\n"
     "\n"
     "The tail of the log of each failing check:\n"
     "\n"

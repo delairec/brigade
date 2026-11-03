@@ -19,6 +19,7 @@ class WriteRebuildBriefTest(unittest.TestCase):
             wave="shop_w1",
             base="integration/shop_w1",
             task="B1",
+            task_branch="feature/B1-task",
             pr=42,
             worktree="/srv/shop/.brigade/worktrees/B1",
             reason="the entity of the task amended on integration/shop_w1",
@@ -52,7 +53,7 @@ class WriteRebuildBriefTest(unittest.TestCase):
             "\n"
             "- Pull request: #42, kept: no second one is opened.\n"
             "- Base branch: integration/shop_w1.\n"
-            "- Worktree: /srv/shop/.brigade/worktrees/B1, on the branch task/shop_w1/B1, handed over as it stands,"
+            "- Worktree: /srv/shop/.brigade/worktrees/B1, on the branch feature/B1-task, handed over as it stands,"
             " uncommitted changes included.\n"
             "\n"
             "Put the branch on the head of integration/shop_w1, by a rebase or by a reset onto that head and a new"
