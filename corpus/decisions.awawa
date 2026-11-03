@@ -5700,8 +5700,8 @@ DECISION TheTraceOfAFailedProcessKeepsItsStderrMaskedOrWithheld
 	TITLE "the trace of a failed process keeps the tail of its stderr masked by patterns read once"
 		+ "per command, and withholds it when they cannot be read"
 	STATUS active
-	DESC "a process exited with a code other than 0, or timed out, keeps what it wrote on stderr; a"
-		+ "process exited 0 keeps none, whatever it wrote"
+	DESC "a process exited with a code other than 0, timed out, or a client cut or stopped keeps"
+		+ "what it wrote on stderr; a process exited 0 keeps none, whatever it wrote"
 	DESC "the whole stderr is masked before its last 2 KiB are cut, so that no token the cut splits"
 		+ "survives; a character the cut splits is dropped"
 	DESC "the PRIVATE patterns of the registered projects are read once per command, at the first"
