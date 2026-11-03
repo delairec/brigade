@@ -2491,6 +2491,13 @@ class PlanMilestoneRebaseTest(unittest.TestCase):
                 ),
             ),
             (
+                "outrun, paused on the question of its blocked rebase run",
+                M9_WITH_AN_OPEN_WAVE,
+                dataclasses.replace(SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH, pause=PAUSED_ON_THE_REBASE_QUESTION),
+                PROJECT_WITH_CANDIDATES,
+                ONE_START_PER_CANDIDATE_WAVE,
+            ),
+            (
                 "outrun with a rebase run of the milestone branch live",
                 dataclasses.replace(M9_WITH_AN_OPEN_WAVE, rebase_run_live=RUN_LIVE),
                 SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,

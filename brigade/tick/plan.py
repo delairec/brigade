@@ -654,6 +654,7 @@ def _is_wave_rebase_due(wave: WaveFacts, project: ProjectFacts) -> bool:
     return (
         wave.behind_milestone
         and wave.blocked_rebase is None
+        and wave.pause is None
         and not any(
             live.slot == REBASE_SLOT and live.wave == wave.wave and live.task is None for live in project.live_runs
         )
