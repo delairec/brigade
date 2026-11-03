@@ -14938,7 +14938,8 @@ TASK B223
 TASK B224
 	TITLE "The tick cuts the branch of an active milestone that an open wave or a ratified task"
 		+ "names when the ledger records none"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 332
 	TYPE fix
 	MILESTONE @MILESTONE.M6
 	COMPONENT "the tick"
