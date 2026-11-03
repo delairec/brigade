@@ -6135,5 +6135,4 @@ DECISION TheTraceOfAFailedProcessKeepsItsStderrMaskedOrWithheld
 	RATIONALE "a reading of the patterns runs awawa through the runner whose traces it masks, so a"
 		+ "failure of that reading would ask for the patterns again without end; withholding is the"
 		+ "one answer that writes nothing unmasked"
-	SOURCE "the run of build-task delivering @TASK.B176"
-		REF @TASK.B176
+	SOURCE "pull request #333 of the brigade repository"
