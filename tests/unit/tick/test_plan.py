@@ -10,6 +10,7 @@ from brigade.system.reset_hour import ResetHour
 from brigade.tick.actions import (
     CloseMilestone,
     CloseWave,
+    CutMilestoneBranch,
     CutWaveBranch,
     LaunchCheckRepair,
     LaunchRemediation,
@@ -46,6 +47,7 @@ from brigade.tick.build_snapshot import (
     StudyFacts,
     TaskAmendment,
     TaskFacts,
+    UncutMilestone,
     WaveFacts,
     WavePause,
 )
@@ -2646,6 +2648,63 @@ class PlanMilestoneRebaseTest(unittest.TestCase):
                 *START_OF_M10_AND_NO_MILESTONE,
             ),
         )
+
+
+CUT_OF_M6 = CutMilestoneBranch(project="shop", milestone="M6", branch="integration/hardening")
+NO_UNCUT_MILESTONE = ()
+NO_RECORDED_MILESTONE = ()
+M6_RECORDED = (MilestoneFacts(project="shop", milestone="M6", branch="integration/hardening"),)
+
+
+class PlanMilestoneCutTest(unittest.TestCase):
+    def test_should_cut_the_branch_of_an_uncut_active_milestone_an_open_wave_or_a_todo_task_names(self):
+        for case, uncut_milestones, recorded_milestones, expected in [
+            (
+                "named by an open wave",
+                (UncutMilestone(milestone="M6", branch="integration/hardening", open_waves=("shop_w4",)),),
+                NO_RECORDED_MILESTONE,
+                (CUT_OF_M6,),
+            ),
+            (
+                "named by a todo task alone",
+                (UncutMilestone(milestone="M6", branch="integration/hardening", todo=("S7",)),),
+                NO_RECORDED_MILESTONE,
+                (CUT_OF_M6,),
+            ),
+            (
+                "named by neither",
+                (UncutMilestone(milestone="M6", branch="integration/hardening"),),
+                NO_RECORDED_MILESTONE,
+                (),
+            ),
+            ("whose branch is recorded", NO_UNCUT_MILESTONE, M6_RECORDED, ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                project = ProjectFacts(name="shop", slots=4, uncut_milestones=uncut_milestones)
+                snapshot = Snapshot(now=NOW, projects=(project,), milestones=recorded_milestones)
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_start_no_wave_of_a_milestone_whose_branch_it_cuts_in_that_round(self):
+        # Arrange
+        project = ProjectFacts(
+            name="shop",
+            slots=4,
+            candidates=(CandidateWave(milestone="M6", tasks=("S7",)), CandidateWave(milestone=None, tasks=("S8",))),
+            uncut_milestones=(UncutMilestone(milestone="M6", branch="integration/hardening", todo=("S7",)),),
+        )
+        snapshot = Snapshot(now=NOW, projects=(project,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (CUT_OF_M6, StartWave(project="shop", milestone=None)))
 
 
 class PlanQuotaOfATaskInRepairTest(unittest.TestCase):

@@ -9,7 +9,7 @@ from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.wave_started import WaveStarted
 from brigade.system.parse_configuration import Configuration
 from brigade.waves.list_candidate_waves import CandidateWave, list_candidate_waves
-from brigade.waves.read_project_tasks import ProjectTasksReading
+from brigade.waves.read_project_tasks import ProjectTasksReading, read_project_tasks
 from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -44,6 +44,7 @@ TASKS_AT_MAIN = {
     "S5": (("STATUS", "todo"), ("MILESTONE", "@MILESTONE.M11")),
     "S6": (("STATUS", "draft"), ("MILESTONE", "@MILESTONE.M12")),
 }
+NO_MILESTONE = None
 TASKS_NAMING_NO_MILESTONE = {"S3": (("STATUS", "todo"),)}
 S1_IMPLEMENTED_ON_THE_MILESTONE_BRANCH = {
     "S1": (("STATUS", "implemented"), ("MILESTONE", "@MILESTONE.M9")),
@@ -87,7 +88,7 @@ class ListCandidateWavesTestCase(unittest.TestCase):
             read_environment=dict,
             entries=(CUT_OF_M9, *entries),
         )
-        return list_candidate_waves(self.runtime, reading)
+        return list_candidate_waves(self.runtime, reading, read_project_tasks(self.runtime, reading, NO_MILESTONE))
 
 
 class ListCandidateWavesOfTheActiveMilestonesTest(ListCandidateWavesTestCase):
