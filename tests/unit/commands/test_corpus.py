@@ -21,6 +21,7 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
 NO_VIEW = {"type": None, "field": None, "entity": None}
+TYPES_OF_THE_CORPUS = json.dumps({"types": [{"type": "DECISION"}, {"type": "TASK"}], "entities": []})
 TASKS_OF_THE_WORKTREE = json.dumps(
     {
         "types": [{"type": "TASK"}],
@@ -47,6 +48,7 @@ class CorpusOfAWorktreeTest(unittest.TestCase):
                 ("awawa", "status", "PROJECT"): ProcessAnswer(stdout=PROJECTS),
                 ("awawa", "show", "@PROJECT.app"): ProcessAnswer(stdout=APP),
                 ("git", "worktree", "list"): ProcessAnswer(stdout=WORKTREES),
+                ("awawa", "status", "--json"): ProcessAnswer(stdout=TYPES_OF_THE_CORPUS),
             }
         )
         self.runtime = create_test_runtime(create_test_paths(Path(self.root.name)), run_process=runner.run)
@@ -70,6 +72,7 @@ class CorpusOfAWorktreeTest(unittest.TestCase):
                 "sha": "de446f3",
                 "kind": "worktree",
                 "root": "/srv/app-b42",
+                "types": ["DECISION", "TASK"],
             },
         )
 
@@ -90,6 +93,7 @@ class CorpusOfAWorktreeTest(unittest.TestCase):
                 "sha": "8885daa",
                 "kind": "worktree",
                 "root": "/srv/app",
+                "types": ["DECISION", "TASK"],
             },
         )
 
@@ -104,6 +108,7 @@ class CorpusViewOfATypeTest(unittest.TestCase):
                 ("awawa", "show", "@PROJECT.app"): ProcessAnswer(stdout=APP),
                 ("git", "worktree", "list"): ProcessAnswer(stdout=WORKTREES),
                 ("awawa", "status", "TASK"): ProcessAnswer(stdout=TASKS_OF_THE_WORKTREE),
+                ("awawa", "status", "--json"): ProcessAnswer(stdout=TYPES_OF_THE_CORPUS),
                 ("awawa-web", "--help"): ProcessAnswer(),
             }
         )
@@ -125,6 +130,13 @@ class CorpusViewOfATypeTest(unittest.TestCase):
         self.assertEqual(
             document["entities"][0]["ide_link"], "idea://open?file=/srv/app-b42/corpus/tasks.awawa&line=40"
         )
+
+    def test_should_list_the_types_of_the_corpus_beside_the_entities_of_the_type(self):
+        # Act
+        document = corpus(self.request, self.runtime)
+
+        # Assert
+        self.assertEqual(document["types"], ["DECISION", "TASK"])
 
     def test_should_link_to_awawa_web_when_it_is_on_the_path(self):
         # Arrange
@@ -186,12 +198,17 @@ class CorpusArgumentsTest(unittest.TestCase):
         # Assert
         self.assertEqual(exit_code, 2)
 
-    def test_should_require_a_ref_or_a_worktree(self):
+    def test_should_take_neither_a_ref_nor_a_worktree(self):
+        # Arrange
+        parser = argparse.ArgumentParser(prog="brigade")
+        add_command_parsers(parser, [COMMAND], argparse.ArgumentParser(add_help=False))
+
         # Act
-        exit_code = self.parse()
+        options = parser.parse_args(["corpus", "app"])
 
         # Assert
-        self.assertEqual(exit_code, 2)
+        self.assertIsNone(options.ref)
+        self.assertIsNone(options.worktree)
 
 
 class CorpusRequestTest(unittest.TestCase):
