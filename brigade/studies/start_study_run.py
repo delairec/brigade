@@ -1,3 +1,5 @@
+import dataclasses
+
 from brigade.ledger.append_event import append_event
 from brigade.ledger.order_started import OrderStarted
 from brigade.runs.run_locations import RUNS_DIRECTORY
@@ -16,7 +18,8 @@ def start_study_run(runtime: Runtime, study: Study, run_id: str) -> None:
             "schema_version": STUDY_RECORD_SCHEMA_VERSION,
             "study": study.name,
             "project": study.project,
-            "wave": study.wave,
+            "milestone": None if study.milestone is None else dataclasses.asdict(study.milestone),
+            "task": None if study.task is None else dataclasses.asdict(study.task),
         },
     )
     append_event(

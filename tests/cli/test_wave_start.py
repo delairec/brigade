@@ -73,7 +73,7 @@ class WaveStartTestCase(FileWaitingTestCase):
 
 
 class BrigadeWaveStartOnAProjectOfTheGithubForgeTest(WaveStartTestCase):
-    def test_should_push_the_integration_branch(self):
+    def test_should_start_the_wave_and_push_no_branch_of_its_own(self):
         # Arrange
         self.use_a_github_remote()
 
@@ -82,8 +82,8 @@ class BrigadeWaveStartOnAProjectOfTheGithubForgeTest(WaveStartTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 0)
-        self.assertEqual(completed.stdout, "wave shop_w2 of @PROJECT.shop on integration/shop_w2: S3, S4, S10\n")
-        self.assertIn("refs/heads/integration/shop_w2", self.project.run_git("ls-remote", "--heads", "origin"))
+        self.assertEqual(completed.stdout, "wave shop_w2 of @PROJECT.shop: S3, S4, S10\n")
+        self.assertNotIn("refs/heads/integration/shop_w2", self.project.run_git("ls-remote", "--heads", "origin"))
 
 
 if __name__ == "__main__":

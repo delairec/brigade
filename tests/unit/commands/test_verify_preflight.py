@@ -14,13 +14,22 @@ TASK_WORKTREE = {
     ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): "/home/user/tidepool/.git\n",
 }
 TIDEPOOL_PROJECT = (("PATH", "/home/user/tidepool"),)
+TIDEPOOL_TASKS = {"T7": (("MILESTONE", "@MILESTONE.M4"),)}
+M4_BRANCH_CUT = {
+    "schema_version": 1,
+    "ts": "2026-09-29T22:00:00Z",
+    "event": "milestone.branch_cut",
+    "project": "tidepool",
+    "milestone": "M4",
+    "branch": "integration/M4-tides",
+    "login": None,
+}
 WAVE_STARTED = {
     "schema_version": 2,
     "ts": "2026-09-30T22:00:00Z",
     "event": "wave.started",
     "wave": "tidepool_w16",
     "project": "tidepool",
-    "branch": "integration/M4-tides",
     "tasks": ["T7"],
 }
 TASK_PR_OPENED = {
@@ -105,11 +114,13 @@ class VerifyPreflightOfAPullRequestTest(unittest.TestCase):
         self.root = Path(directory.name)
         (self.root / "config").mkdir()
         (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
-        write_ledger(self.root, [WAVE_STARTED, TASK_PR_OPENED])
+        write_ledger(self.root, [M4_BRANCH_CUT, WAVE_STARTED, TASK_PR_OPENED])
         self.forge = ForgeDeclineDouble()
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
-            run_process=create_machine_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}}, TASK_WORKTREE),
+            run_process=create_machine_double(
+                {"PROJECT": {"tidepool": TIDEPOOL_PROJECT}, "TASK": TIDEPOOL_TASKS}, TASK_WORKTREE
+            ),
             resolve_plugin=lambda kind, name, **places: self.forge,
         )
 
@@ -146,11 +157,13 @@ class VerifyPreflightAsTheLoginOfTheCliKeyTest(unittest.TestCase):
         (root / "config" / "config.toml").write_text(
             '[forge_accounts]\ncli = "octo-cli"\nbuild = "octo-bot"\n', encoding="utf-8"
         )
-        write_ledger(root, [WAVE_STARTED, TASK_PR_OPENED])
+        write_ledger(root, [M4_BRANCH_CUT, WAVE_STARTED, TASK_PR_OPENED])
         forge = ForgeBindingItsLoginsDouble()
         runtime = create_test_runtime(
             create_test_paths(root),
-            run_process=create_machine_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}}, TASK_WORKTREE),
+            run_process=create_machine_double(
+                {"PROJECT": {"tidepool": TIDEPOOL_PROJECT}, "TASK": TIDEPOOL_TASKS}, TASK_WORKTREE
+            ),
             resolve_plugin=lambda kind, name, **places: forge,
         )
 

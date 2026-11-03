@@ -31,6 +31,15 @@ class BrigadeWaveResumeTest(WaveTickTestCase):
             self.read_events(),
             [
                 {
+                    "schema_version": 1,
+                    "ts": "2026-10-13T08:00:00Z",
+                    "event": "milestone.branch_cut",
+                    "project": "shop",
+                    "milestone": "M1",
+                    "branch": "integration/M1-empty-cart",
+                    "login": "octo-cli",
+                },
+                {
                     "schema_version": 2,
                     "ts": "2026-10-13T09:00:00Z",
                     "event": "wave.started",

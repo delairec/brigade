@@ -25,13 +25,13 @@ NO_PROJECTS = {"PROJECT": {}}
 
 
 class WaveStartTextTest(unittest.TestCase):
-    def test_should_name_each_wave_its_project_its_branch_and_its_tasks(self):
+    def test_should_name_each_wave_its_project_and_its_tasks(self):
         # Arrange
         document = {
             "schema_version": 2,
             "waves": [
-                {"wave": "tidepool_w16", "project": "tidepool", "branch": "integration/tidepool_w16", "tasks": ["S3"]},
-                {"wave": "tidepool_w17", "project": "tidepool", "branch": "integration/tidepool_w17", "tasks": ["S6"]},
+                {"wave": "tidepool_w16", "project": "tidepool", "tasks": ["S3"]},
+                {"wave": "tidepool_w17", "project": "tidepool", "tasks": ["S6"]},
             ],
         }
 
@@ -39,11 +39,7 @@ class WaveStartTextTest(unittest.TestCase):
         text = COMMAND.render_text(document)
 
         # Assert
-        self.assertEqual(
-            text,
-            "wave tidepool_w16 of @PROJECT.tidepool on integration/tidepool_w16: S3\n"
-            "wave tidepool_w17 of @PROJECT.tidepool on integration/tidepool_w17: S6",
-        )
+        self.assertEqual(text, "wave tidepool_w16 of @PROJECT.tidepool: S3\nwave tidepool_w17 of @PROJECT.tidepool: S6")
 
 
 class WaveStartExitCodeTest(unittest.TestCase):
@@ -80,7 +76,7 @@ class WaveStartOfNamedTasksTest(StartProjectWaveTestCase):
             document,
             {
                 "schema_version": 2,
-                "waves": [{"wave": "shop_w2", "project": "shop", "branch": "integration/shop_w2", "tasks": ["S10"]}],
+                "waves": [{"wave": "shop_w2", "project": "shop", "tasks": ["S10"]}],
             },
         )
 
@@ -100,9 +96,6 @@ class WaveStartCuttingTheBranchOfAMilestoneOnTheGithubForgeTest(StartProjectWave
         for task in TASKS_OF_A_MILESTONE:
             self.processes.answer_json(("awawa", "refs", f"@TASK.{task}", "--json", str(tree)), NO_INCOMING_REFERENCE)
         self.processes.answer_entity(tree, "MILESTONE", "M9", (("TITLE", "Milestone integration branch"),))
-        self.answer_local_branch("shop_w1", 0)
-        self.answer_remote_branch("shop_w1", 0)
-        self.answer_remote_branch("shop_w2", REMOTE_BRANCH_NOT_FOUND)
         self.processes.answer(
             ("git", "rev-parse", "--verify", "--quiet", f"refs/heads/{MILESTONE_BRANCH}"), exit_code=1
         )
@@ -113,8 +106,6 @@ class WaveStartCuttingTheBranchOfAMilestoneOnTheGithubForgeTest(StartProjectWave
         self.processes.answer(("git", "branch", "--quiet", MILESTONE_BRANCH, "origin/main"))
         self.processes.answer(("git", "push", "--quiet", "origin", MILESTONE_BRANCH))
         self.processes.answer(("git", "fetch", "--quiet", "origin", MILESTONE_BRANCH))
-        self.processes.answer(("git", "branch", "--quiet", "integration/shop_w2", f"origin/{MILESTONE_BRANCH}"))
-        self.processes.answer(("git", "push", "--quiet", "origin", "integration/shop_w2"))
 
     def test_should_record_the_cut_of_the_branch_of_the_milestone_with_the_login_of_the_cli(self):
         # Act

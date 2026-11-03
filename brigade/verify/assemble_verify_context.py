@@ -29,17 +29,17 @@ TREE_ROOT = "."
 class Judged:
     head: str
     base: str
-    wave_head: str
+    base_head: str
     repository: Path
 
 
 def _locate_judged(runtime: Runtime, demand: PreflightDemand, head: str) -> Judged:
     repository = Path(read_project_field(demand.project, "PATH"))
-    wave_head = resolve_commit(runtime.run_process, repository, f"{REMOTE_BRANCH_PREFIX}{demand.wave_branch}")
+    base_head = resolve_commit(runtime.run_process, repository, f"{REMOTE_BRANCH_PREFIX}{demand.base_branch}")
     return Judged(
         head=head,
-        base=find_merge_base(runtime.run_process, repository, wave_head, head),
-        wave_head=wave_head,
+        base=find_merge_base(runtime.run_process, repository, base_head, head),
+        base_head=base_head,
         repository=repository,
     )
 
@@ -66,7 +66,7 @@ def _read_repair(runtime: Runtime, judged: Judged, previous: dict | None) -> dic
         return None
     span = RepairSpan(
         repository=judged.repository,
-        wave_head=judged.wave_head,
+        base_head=judged.base_head,
         judged_head=previous["head"],
         head=judged.head,
         base=judged.base,

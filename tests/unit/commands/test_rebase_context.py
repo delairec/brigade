@@ -6,7 +6,13 @@ from pathlib import Path
 from brigade.commands.rebase_context import COMMAND
 from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_corpus_double, write_ledger
-from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TIDEPOOL_PROJECT, WAVE_STARTED
+from tests.unit.commands.test_verify_preflight import (
+    M4_BRANCH_CUT,
+    TASK_PR_OPENED,
+    TIDEPOOL_PROJECT,
+    TIDEPOOL_TASKS,
+    WAVE_STARTED,
+)
 
 MERGE_TREE = (
     "git",
@@ -24,13 +30,18 @@ CONFLICTING_MERGE = ProcessAnswer(stdout="4b825dc\nsrc/tides.py\nREADME.md\n", e
 CLEAN_MERGE = ProcessAnswer(stdout="4b825dc\n")
 
 
+TASK_BRANCH = "feature/T7-chart-the-tides"
+TASK_PR_OPENED_ON_ITS_BRANCH = {**TASK_PR_OPENED, "branch": TASK_BRANCH}
+TASK_OF_NO_MILESTONE = {"T7": ()}
+
+
 def create_document(conflicts: list[str]) -> dict:
     return {
         "schema_version": 1,
         "project": "tidepool",
         "pr": 42,
         "task": "T7",
-        "branch": "task/M4-tides/T7",
+        "branch": "feature/T7-chart-the-tides",
         "base": "integration/M4-tides",
         "conflicts": conflicts,
     }
@@ -46,7 +57,8 @@ class RebaseContextTextTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            text, "# branch\ntask/M4-tides/T7\n\n# base\nintegration/M4-tides\n\n# conflicts\nsrc/tides.py\nREADME.md"
+            text,
+            "# branch\nfeature/T7-chart-the-tides\n\n# base\nintegration/M4-tides\n\n# conflicts\nsrc/tides.py\nREADME.md",
         )
 
 
@@ -55,19 +67,18 @@ class RebaseContextOfAPullRequestTest(unittest.TestCase):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         (self.root / "config").mkdir()
         (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
-        write_ledger(self.root, [WAVE_STARTED, TASK_PR_OPENED])
+        write_ledger(self.root, [M4_BRANCH_CUT, WAVE_STARTED, TASK_PR_OPENED_ON_ITS_BRANCH])
 
-    def _create_runtime(self, merge: ProcessAnswer):
+    def _create_runtime(self, merge: ProcessAnswer, tasks: dict = TIDEPOOL_TASKS, base: str = "integration/M4-tides"):
         answers = {
             ("git", "rev-parse", "--show-toplevel"): ProcessAnswer(stdout="/home/user/tidepool-T7\n"),
             ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): ProcessAnswer(
                 stdout="/home/user/tidepool/.git\n"
             ),
-            MERGE_TREE: merge,
+            (*MERGE_TREE[:-1], f"origin/{base}"): merge,
         }
-        machine = ScriptedProcessRunner(
-            answers, fallback=create_corpus_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}})
-        )
+        corpus = {"PROJECT": {"tidepool": (*TIDEPOOL_PROJECT, ("MAIN", "main"))}, "TASK": tasks}
+        machine = ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus))
         return create_test_runtime(create_test_paths(self.root), run_process=machine.run)
 
     def test_should_give_the_files_git_reports_in_conflict_between_the_branch_and_its_base(self):
@@ -85,6 +96,16 @@ class RebaseContextOfAPullRequestTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(document, create_document(conflicts))
 
+    def test_should_take_main_as_the_base_of_a_task_naming_no_milestone(self):
+        # Arrange
+        runtime = self._create_runtime(CLEAN_MERGE, tasks=TASK_OF_NO_MILESTONE, base="main")
+
+        # Act
+        document = COMMAND.run(Namespace(pr=42), runtime)
+
+        # Assert
+        self.assertEqual(document["base"], "main")
+
 
 WITHOUT_FORGE = (("PATH", "/srv/tidepool"),)
 ON_GITHUB = (("PATH", "/srv/tidepool"), ("FORGE", "github"))
@@ -96,7 +117,7 @@ class RebaseContextOfATaskWithoutAPullRequestTest(unittest.TestCase):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         (self.root / "config").mkdir()
         (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
-        write_ledger(self.root, [WAVE_STARTED])
+        write_ledger(self.root, [M4_BRANCH_CUT, WAVE_STARTED])
 
     def _create_runtime(self, project: tuple, base: str):
         answers = {
@@ -104,14 +125,15 @@ class RebaseContextOfATaskWithoutAPullRequestTest(unittest.TestCase):
             ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): ProcessAnswer(
                 stdout="/srv/tidepool/.git\n"
             ),
-            ("git", "branch", "--show-current"): ProcessAnswer(stdout="task/M4-tides/T7\n"),
+            ("git", "branch", "--show-current"): ProcessAnswer(stdout=f"{TASK_BRANCH}\n"),
             ("git", "fetch", "--quiet", "origin", "integration/M4-tides"): ProcessAnswer(),
             (*MERGE_TREE[:-1], base): CONFLICTING_MERGE,
         }
-        machine = ScriptedProcessRunner(answers, fallback=create_corpus_double({"PROJECT": {"tidepool": project}}))
+        corpus = {"PROJECT": {"tidepool": project}, "TASK": TIDEPOOL_TASKS}
+        machine = ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus))
         return create_test_runtime(create_test_paths(self.root), run_process=machine.run)
 
-    def test_should_read_the_task_from_the_branch_of_the_worktree_and_its_conflicts_with_the_wave_branch(self):
+    def test_should_read_the_task_from_the_branch_of_the_worktree_and_its_conflicts_with_its_milestone_branch(self):
         for case, project, base in [
             ("a project without a forge", WITHOUT_FORGE, "integration/M4-tides"),
             ("a project on GitHub", ON_GITHUB, "origin/integration/M4-tides"),
@@ -131,7 +153,7 @@ class RebaseContextOfATaskWithoutAPullRequestTest(unittest.TestCase):
                         "project": "tidepool",
                         "pr": None,
                         "task": "T7",
-                        "branch": "task/M4-tides/T7",
+                        "branch": "feature/T7-chart-the-tides",
                         "base": "integration/M4-tides",
                         "conflicts": ["src/tides.py", "README.md"],
                     },
@@ -150,6 +172,8 @@ TIDES_BRANCH_CUT = {
 MILESTONE_WITHOUT_FORGE = (("PATH", "/srv/tidepool"), ("MAIN", "main"))
 MILESTONE_ON_GITHUB = (("PATH", "/srv/tidepool"), ("MAIN", "main"), ("FORGE", "github"))
 TASK_OF_THE_MILESTONE = (("MILESTONE", "@MILESTONE.M4"),)
+HARDENING_BRANCH_CUT = {**TIDES_BRANCH_CUT, "milestone": "M6", "branch": "integration/hardening-the-tick"}
+WAVE_STARTED_ON_A_BRANCH = {**WAVE_STARTED, "branch": "integration/tidepool_w16"}
 
 
 class RebaseContextOfAMilestoneOrWaveBranchTest(unittest.TestCase):
@@ -157,7 +181,7 @@ class RebaseContextOfAMilestoneOrWaveBranchTest(unittest.TestCase):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         (self.root / "config").mkdir()
         (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
-        write_ledger(self.root, [TIDES_BRANCH_CUT, WAVE_STARTED])
+        write_ledger(self.root, [TIDES_BRANCH_CUT, HARDENING_BRANCH_CUT, WAVE_STARTED_ON_A_BRANCH])
 
     def _create_runtime(self, project: tuple, branch: str, base: str):
         answers = {
@@ -178,16 +202,23 @@ class RebaseContextOfAMilestoneOrWaveBranchTest(unittest.TestCase):
             ("a milestone branch without a forge", MILESTONE_WITHOUT_FORGE, "integration/tides", "main", "main"),
             ("a milestone branch on GitHub", MILESTONE_ON_GITHUB, "integration/tides", "main", "origin/main"),
             (
-                "a wave branch without a forge",
+                "a milestone branch whose slug holds a hyphen",
                 MILESTONE_WITHOUT_FORGE,
-                "integration/M4-tides",
+                "integration/hardening-the-tick",
+                "main",
+                "main",
+            ),
+            (
+                "a wave branch recorded before waves had none",
+                MILESTONE_WITHOUT_FORGE,
+                "integration/tidepool_w16",
                 "integration/tides",
                 "integration/tides",
             ),
             (
-                "a wave branch on GitHub",
+                "a wave branch recorded before waves had none, on GitHub",
                 MILESTONE_ON_GITHUB,
-                "integration/M4-tides",
+                "integration/tidepool_w16",
                 "integration/tides",
                 "origin/integration/tides",
             ),
@@ -230,7 +261,7 @@ class RebaseContextOfAMilestoneOrWaveBranchTest(unittest.TestCase):
     def test_should_refuse_a_milestone_or_wave_branch_another_project_recorded(self):
         for case, recorded, branch in [
             ("a milestone branch", {**TIDES_BRANCH_CUT, "project": "depot"}, "integration/tides"),
-            ("a wave branch", {**WAVE_STARTED, "project": "depot"}, "integration/M4-tides"),
+            ("a wave branch", {**WAVE_STARTED_ON_A_BRANCH, "project": "depot"}, "integration/tidepool_w16"),
         ]:
             with self.subTest(case=case):
                 # Arrange

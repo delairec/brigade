@@ -22,12 +22,12 @@ PROJECT = Entity(
     ),
 )
 WORKTREE = TaskWorktree(
-    path=Path("/srv/oak-b12"), task="B12", project=PROJECT, wave="oak_w1", wave_branch="integration/oak_w1"
+    path=Path("/srv/oak-b12"), task="B12", project=PROJECT, wave="oak_w1", base="integration/harvest"
 )
 
 STATUS_ARGV = ("git", "status", "--porcelain", "-z", "--no-renames", "--untracked-files=all")
 HEAD_ARGV = ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "HEAD^{commit}")
-MERGE_BASE_ARGV = ("git", "merge-base", "--end-of-options", "integration/oak_w1", "c0ffee")
+MERGE_BASE_ARGV = ("git", "merge-base", "--end-of-options", "integration/harvest", "c0ffee")
 DIFF_ARGV = (
     "git",
     "diff",
@@ -204,7 +204,7 @@ def create_worktree(*fields: EntityField) -> TaskWorktree:
         ),
     )
     return TaskWorktree(
-        path=Path("/srv/oak-b12"), task="B12", project=project, wave="oak_w1", wave_branch="integration/oak_w1"
+        path=Path("/srv/oak-b12"), task="B12", project=project, wave="oak_w1", base="integration/harvest"
     )
 
 
@@ -277,7 +277,7 @@ class CheckTaskOfAProjectOnGithubTest(unittest.TestCase):
         # Arrange
         script_passing_commands(
             self.processes,
-            ("git", "merge-base", "--end-of-options", "origin/integration/oak_w1", "c0ffee"),
+            ("git", "merge-base", "--end-of-options", "origin/integration/harvest", "c0ffee"),
             "+++ b/src/parse.py\n@@ -0,0 +1 @@\n+ROOT = '/home/alice/oak'\n",
         )
         worktree = create_worktree(EntityField(name="FORGE", value="github"))
@@ -304,7 +304,7 @@ class CheckTaskOfALineThatCannotBeSplitTest(unittest.TestCase):
             ),
         )
         self.worktree = TaskWorktree(
-            path=Path("/srv/oak-b12"), task="B12", project=project, wave="oak_w1", wave_branch="integration/oak_w1"
+            path=Path("/srv/oak-b12"), task="B12", project=project, wave="oak_w1", base="integration/harvest"
         )
 
     def test_should_refuse_the_line_by_name_before_any_command_runs(self):

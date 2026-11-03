@@ -14,7 +14,7 @@ ANCESTOR = 0
 @dataclass(frozen=True)
 class RepairSpan:
     repository: Path
-    wave_head: str
+    base_head: str
     judged_head: str
     head: str
     base: str
@@ -23,7 +23,7 @@ class RepairSpan:
 def read_repair_diff(run_process: Callable[[ProcessRequest], ProcessRecord], span: RepairSpan) -> ProcessRecord:
     if check_ancestor(run_process, span.repository, span.judged_head, span.head).exit_code == ANCESTOR:
         return read_diff(run_process, span.repository, span.judged_head, span.head)
-    judged_base = find_merge_base(run_process, span.repository, span.wave_head, span.judged_head)
+    judged_base = find_merge_base(run_process, span.repository, span.base_head, span.judged_head)
     return read_range_diff(
         run_process, span.repository, f"{judged_base}..{span.judged_head}", f"{span.base}..{span.head}"
     )
