@@ -47,6 +47,14 @@ class MovedHead:
 
 
 @dataclass(frozen=True)
+class StoppedRebase:
+    pass
+
+
+STOPPED_ON_A_CONFLICT = StoppedRebase()
+
+
+@dataclass(frozen=True)
 class MilestoneBranchesRebase:
     project: Entity
     milestone: str
@@ -100,7 +108,9 @@ def _rebase_branch(
     return head
 
 
-def _rebase_milestone(runtime: Runtime, rebase: MilestoneBranchesRebase, branch: str, main: str) -> MovedHead | None:
+def _rebase_milestone(
+    runtime: Runtime, rebase: MilestoneBranchesRebase, branch: str, main: str
+) -> MovedHead | StoppedRebase | None:
     worktree = _take_branch(runtime, rebase, branch)
     if worktree is None:
         return None
@@ -108,7 +118,7 @@ def _rebase_milestone(runtime: Runtime, rebase: MilestoneBranchesRebase, branch:
     run = BranchRebaseRun(project=rebase.project.name, worktree=worktree.path, branch=branch, base=base, wave=None)
     before = _rebase_branch(runtime, rebase, run, main)
     if before is None:
-        return None
+        return STOPPED_ON_A_CONFLICT
     after = read_head(runtime.run_process, worktree.path)
     if after == before:
         return None
@@ -135,6 +145,8 @@ def rebase_milestone_branches(runtime: Runtime, rebase: MilestoneBranchesRebase)
         main = locate_forge_branch(runtime.run_process, rebase.project, main_branch, rebase.read_environment)
         login = rebase.read_login() if is_on_github(rebase.project) else NO_LOGIN
         moved = _rebase_milestone(runtime, rebase, rebase.branch, main)
+        if isinstance(moved, StoppedRebase):
+            return None
         rebased_waves = tuple(
             wave.wave
             for wave in list_open_waves(entries, project)
