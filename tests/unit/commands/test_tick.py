@@ -3847,6 +3847,111 @@ class TickLaunchingATaskWhoseBranchIsOffTheWaveBranchWithoutPassedChecksTest(uni
         )
 
 
+IS_T7_ON_THE_WAVE_BRANCH = ("git", "merge-base", "--is-ancestor", "integration/M4", "task/M4/T7")
+BRANCH_OFF_THE_WAVE_BRANCH = ProcessAnswer(exit_code=1)
+BRANCH_DESCENDING_FROM_THE_WAVE_BRANCH = ProcessAnswer()
+SHOW_T7 = ("awawa", "show", "@TASK.T7", "--json")
+T7_RULED_ON_THE_WAVE_BRANCH = ProcessAnswer(
+    stdout=r'{"fields": [{"name": "MILESTONE", "atoms": ["@MILESTONE.M4"]}, {"name": "STATUS", "atoms": ["todo"]},'
+    r' {"name": "SPEC", "atoms": ["\"the tides follow the moon\""]}]}'
+)
+T7_AS_IN_THE_WORKTREE = ProcessAnswer(
+    stdout='{"fields": [{"name": "MILESTONE", "atoms": ["@MILESTONE.M4"]}, {"name": "STATUS", "atoms": ["todo"]}]}'
+)
+
+
+class TickBriefingATaskOnTheTaskAsItReadsOnTheWaveBranchTest(unittest.TestCase):
+    def _create_runtime(self, root: Path, descent: ProcessAnswer, on_the_wave_branch: ProcessAnswer) -> Runtime:
+        write_operational_corpus(root)
+        (root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        repository = root / "tidepool"
+        (repository / ".brigade" / "worktrees" / "T7").mkdir(parents=True)
+        write_ledger(root, [WAVE_STARTED])
+        corpus = {
+            "STUDY": PAUSED_BUILT_IN_STUDIES,
+            "PROJECT": {"tidepool": (("PATH", str(repository)), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_TO_DELIVER},
+        }
+        answers = {
+            **MACHINE_ANSWERS,
+            IS_T7_ON_THE_WAVE_BRANCH: descent,
+            (*SHOW_T7, str(root / "cache" / "refs" / "tidepool" / WAVE_HEAD)): on_the_wave_branch,
+        }
+        return create_test_runtime(
+            create_test_paths(root),
+            run_process=ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus)).run,
+            spawn_process=SpawnRecorderDouble().spawn,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([None])),
+        )
+
+    def test_should_give_the_build_of_a_branch_off_the_wave_branch_the_task_as_it_reads_on_the_wave_branch(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        runtime = self._create_runtime(root, BRANCH_OFF_THE_WAVE_BRANCH, T7_RULED_ON_THE_WAVE_BRANCH)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            (root / "state" / "briefs" / "tidepool_w16-T7.md").read_text(encoding="utf-8"),
+            "Deliver @TASK.T7 of @PROJECT.tidepool, in the wave tidepool_w16.\n"
+            "\n"
+            "- Base branch: integration/M4.\n"
+            f"- Worktree: {root / 'tidepool' / '.brigade' / 'worktrees' / 'T7'}, on the branch task/M4/T7,"
+            " left as it stands, off the head of integration/M4: do not rebase it; the tick rebases it onto"
+            " integration/M4 once the checks of its pull request pass.\n"
+            "\n"
+            "@TASK.T7 reads differently on integration/M4 than in the corpus of the worktree;"
+            " that reading is more recent and prevails:\n"
+            "\n"
+            "```\n"
+            "TASK T7\n"
+            "\tMILESTONE @MILESTONE.M4\n"
+            "\tSTATUS todo\n"
+            "\tSPEC the tides follow the moon\n"
+            "```\n",
+        )
+
+    def test_should_leave_the_brief_as_it_was_when_the_task_reads_the_same_on_the_wave_branch(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        runtime = self._create_runtime(root, BRANCH_OFF_THE_WAVE_BRANCH, T7_AS_IN_THE_WORKTREE)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            (root / "state" / "briefs" / "tidepool_w16-T7.md").read_text(encoding="utf-8"),
+            "Deliver @TASK.T7 of @PROJECT.tidepool, in the wave tidepool_w16.\n"
+            "\n"
+            "- Base branch: integration/M4.\n"
+            f"- Worktree: {root / 'tidepool' / '.brigade' / 'worktrees' / 'T7'}, on the branch task/M4/T7,"
+            " left as it stands, off the head of integration/M4: do not rebase it; the tick rebases it onto"
+            " integration/M4 once the checks of its pull request pass.\n",
+        )
+
+    def test_should_read_no_task_on_the_wave_branch_for_a_branch_descending_from_it(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        runtime = self._create_runtime(root, BRANCH_DESCENDING_FROM_THE_WAVE_BRANCH, T7_RULED_ON_THE_WAVE_BRANCH)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            (root / "state" / "briefs" / "tidepool_w16-T7.md").read_text(encoding="utf-8"),
+            "Deliver @TASK.T7 of @PROJECT.tidepool, in the wave tidepool_w16.\n"
+            "\n"
+            "- Base branch: integration/M4.\n"
+            f"- Worktree: {root / 'tidepool' / '.brigade' / 'worktrees' / 'T7'}, on the branch task/M4/T7,"
+            " cut from the head of integration/M4.\n",
+        )
+
+
 class TickLaunchingAStudyTest(unittest.TestCase):
     def test_should_launch_a_study_whose_schedule_is_due(self):
         # Arrange

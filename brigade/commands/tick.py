@@ -100,6 +100,7 @@ from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.plan import plan
 from brigade.tick.plan_connectors import plan_connectors
 from brigade.tick.prepare_task_worktree import prepare_task_worktree
+from brigade.tick.read_ruled_task import read_ruled_task
 from brigade.tick.rebase_task import rebase_task
 from brigade.tick.record_review_threads import record_review_threads
 from brigade.tick.remove_task_worktree import remove_task_worktree
@@ -190,12 +191,13 @@ def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchT
         _launch_rebase_of_the_branch(runtime, configuration, action, prepared.worktree.path)
         return
     worktree = prepared.worktree
+    ruled_task = read_ruled_task(runtime, configuration, action, prepared)
     building = argparse.Namespace(
         procedure=configuration.procedures.get(BUILD_SLOT, BUILD_PROCEDURE),
         slot=BUILD_SLOT,
         project=action.project,
         cwd=str(worktree.path),
-        brief=str(write_build_brief(runtime.paths.state_root, action, prepared)),
+        brief=str(write_build_brief(runtime.paths.state_root, action, prepared, ruled_task)),
         arguments=(f"task=@TASK.{action.task}", f"base={action.branch}"),
         run_id=None,
         wave=action.wave,
