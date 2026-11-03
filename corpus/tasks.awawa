@@ -12398,7 +12398,8 @@ TASK B175
 
 TASK B176
 	TITLE "The trace of a failed process keeps the tail of its stderr, masked"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 333
 	TYPE feat
 	MILESTONE @MILESTONE.M6
 	COMPONENT "processes"
