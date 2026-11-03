@@ -1,0 +1,24 @@
+{
+  "call": {
+    "arguments": [
+      "status",
+      "--json",
+      "<tmp:0>/state/brigade/runs/<run:1>/answer.awawa"
+    ],
+    "cwd": "<tmp:0>/state/brigade/runs/<run:1>",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/state/brigade/runs/<run:1>/answer.awawa": "REPORT shop_M1\n\tMILESTONE \"M1\"\n\tPROJECT \"shop\"\n\tTASK_ROW \"S1 merged #2\"\n\tTASK_ROW \"S2 merged #4\"\n\tTASK_ROW \"S3 merged #3\"\n\tSTATISTIC \"tasks 3\"\n\tSTATISTIC \"merged 3\"\n\tSTATISTIC \"parked 0\"\n\tSTATISTIC \"runs 6\"\n\tSTATISTIC \"files 3\"\n\tSTATISTIC \"insertions 23\"\n\tSTATISTIC \"deletions 0\"\n\tGRAPH \"S2 after S1\"\n\tINSTRUCTIONS_CHANGE \"corpus/milestones.awawa +3 -0\"\n\tINSTRUCTIONS_CHANGE \"corpus/tasks.awawa +19 -0\"\n\tNARRATIVE \"the customer empties the cart in one click\"\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"statuses\": [], \"types\": [{\"type\": \"REPORT\", \"counts\": {}, \"unset\": 1, \"total\": 1}], \"ignored\": {\"files\": 0, \"by_pattern\": [], \"not_understood\": []}, \"entities\": [{\"type\": \"REPORT\", \"name\": \"shop_M1\", \"target\": \"@REPORT.shop_M1\", \"file\": \"<tmp:0>/state/brigade/runs/<run:1>/answer.awawa\", \"line\": 1, \"status\": null, \"incoming\": 0, \"incoming_by\": []}], \"references\": {\"sites\": 0, \"unresolved\": 0, \"by_file\": []}, \"diagnostics\": {\"errors\": 0, \"warnings\": 1, \"by_rule\": [{\"rule\": \"L002\", \"count\": 1}]}, \"summary\": {\"files\": 1, \"entities\": 1}}\n"
+  },
+  "run_order": [
+    "<run:1>"
+  ],
+  "version": "awawa 2.7.0"
+}

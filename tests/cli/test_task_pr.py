@@ -3,7 +3,7 @@ from pathlib import Path
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
 from tests.cli.test_collect import install_executable
-from tests.cli.test_task import TASK_BRANCH, WAVE_BRANCH
+from tests.cli.test_task import MILESTONE_BRANCH, TASK_BRANCH
 from tests.cli.test_task_check import TaskCheckTestCase
 
 TYPED_SCHEMA = (
@@ -44,7 +44,7 @@ FAKE_GH = (
 PR_KEYS = 'attribution = ["Co-Authored-By: Ada <ada@example.org>"]\n[forge_accounts]\nbuild = "octo-bot"\n'
 SUBJECT = "empty the cart in one click"
 PULL_REQUEST_CREATION = (
-    f"pr create --base {WAVE_BRANCH} --head {TASK_BRANCH} --milestone Empty cart"
+    f"pr create --base {MILESTONE_BRANCH} --head {TASK_BRANCH} --milestone Empty cart"
     f" --title feat(cart-button): {SUBJECT} (@TASK.S3) --body-file -\n"
 )
 

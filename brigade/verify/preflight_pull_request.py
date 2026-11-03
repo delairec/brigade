@@ -31,7 +31,7 @@ REMOTE_BRANCH_PREFIX = "refs/remotes/origin/"
 class PreflightDemand:
     project: Entity
     task: str
-    wave_branch: str
+    base_branch: str
     pr: int
     forge: object
     environment: dict
@@ -48,7 +48,7 @@ class TreeDemand:
 @dataclass(frozen=True)
 class _ComparedCommits:
     repository: Path
-    wave_head: str
+    base_head: str
     base: str
     head: str
 
@@ -63,16 +63,16 @@ def _fetch_pull_request(runtime: Runtime, demand: PreflightDemand, repository: P
     fetch_branches(
         runtime.run_process,
         BranchesFetch(
-            repository=repository, branches=(pull_request["head"], demand.wave_branch), environment=demand.environment
+            repository=repository, branches=(pull_request["head"], demand.base_branch), environment=demand.environment
         ),
     )
     return pull_request
 
 
-def _compare_commits(runtime: Runtime, repository: Path, wave_branch: str, head: str) -> _ComparedCommits:
-    wave_head = resolve_commit(runtime.run_process, repository, f"{REMOTE_BRANCH_PREFIX}{wave_branch}")
-    base = find_merge_base(runtime.run_process, repository, wave_head, head)
-    return _ComparedCommits(repository=repository, wave_head=wave_head, base=base, head=head)
+def _compare_commits(runtime: Runtime, repository: Path, base_branch: str, head: str) -> _ComparedCommits:
+    base_head = resolve_commit(runtime.run_process, repository, f"{REMOTE_BRANCH_PREFIX}{base_branch}")
+    base = find_merge_base(runtime.run_process, repository, base_head, head)
+    return _ComparedCommits(repository=repository, base_head=base_head, base=base, head=head)
 
 
 def _run_checks(runtime: Runtime, demand: PreflightDemand, pull_request: dict, commits: _ComparedCommits) -> list:
@@ -82,7 +82,7 @@ def _run_checks(runtime: Runtime, demand: PreflightDemand, pull_request: dict, c
     base_tree = prepare_project_tree(TreeDemand(project=project, ref=commits.base), demand.configuration, runtime).root
     changed = count_changed_lines(run_process, commits.repository, commits.base, commits.head)
     ancestry = AncestryFacts(
-        repository=commits.repository, wave_branch=demand.wave_branch, wave_head=commits.wave_head, head=commits.head
+        repository=commits.repository, base_branch=demand.base_branch, base_head=commits.base_head, head=commits.head
     )
     return [
         check_ancestry(run_process, ancestry),
@@ -104,7 +104,7 @@ def _run_checks(runtime: Runtime, demand: PreflightDemand, pull_request: dict, c
 def preflight_pull_request(runtime: Runtime, demand: PreflightDemand) -> dict:
     repository = Path(read_project_field(demand.project, "PATH"))
     pull_request = _fetch_pull_request(runtime, demand, repository)
-    commits = _compare_commits(runtime, repository, demand.wave_branch, pull_request["head_sha"])
+    commits = _compare_commits(runtime, repository, demand.base_branch, pull_request["head_sha"])
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "project": demand.project.name,

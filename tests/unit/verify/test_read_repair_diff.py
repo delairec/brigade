@@ -6,7 +6,7 @@ from brigade.verify.read_repair_diff import RepairSpan, read_repair_diff
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
 SPAN = RepairSpan(
-    repository=Path("/srv/shop"), wave_head="c0ffee1", judged_head="efd5ed1", head="51dee9a", base="ba5e002"
+    repository=Path("/srv/shop"), base_head="c0ffee1", judged_head="efd5ed1", head="51dee9a", base="ba5e002"
 )
 REPAIR = "--- a/src/tides.py\n+++ b/src/tides.py\n@@ -12 +12 @@\n-read()\n+cached()\n"
 RANGE_DIFF = "1:  efd5ed1 ! 1:  51dee9a feat(tides): read the tides\n"

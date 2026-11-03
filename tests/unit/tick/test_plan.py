@@ -4,23 +4,21 @@ from datetime import UTC, datetime
 
 from brigade.corpus.read_entity import Entity, EntityField
 from brigade.errors import BrigadeError
+from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.read_live_study_runs import LiveStudyRun
+from brigade.studies.task_report_order import TaskReportOrder
 from brigade.system.pull_request_facts import CheckVerdict, PullRequestFacts
 from brigade.system.reset_hour import ResetHour
 from brigade.tick.actions import (
     CloseMilestone,
     CloseWave,
     CutMilestoneBranch,
-    CutWaveBranch,
     LaunchCheckRepair,
     LaunchRemediation,
     LaunchStudy,
     LaunchTask,
     LaunchVerification,
     MergePullRequest,
-    MergeWavePullRequest,
-    OpenIntegrationPullRequest,
-    OpenMilestonePullRequest,
     ParkTask,
     PauseWave,
     RebaseMilestone,
@@ -28,7 +26,8 @@ from brigade.tick.actions import (
     RebuildTask,
     RecordTaskState,
     RemoveTaskWorktree,
-    ReportWave,
+    ReportMilestone,
+    ReportTask,
     ResumeTaskRun,
     ResumeWave,
     RunPreflight,
@@ -37,7 +36,6 @@ from brigade.tick.actions import (
 from brigade.tick.build_snapshot import (
     BlockedRun,
     LiveRun,
-    MergedWave,
     MilestoneFacts,
     PreflightFailure,
     ProjectFacts,
@@ -56,30 +54,37 @@ from brigade.waves.list_candidate_waves import CandidateWave
 
 NOW = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
 SHOP = ProjectFacts(name="shop", slots=4)
-WAVE_BRANCH = "integration/M1-empty-cart"
+TASK_BASE = "integration/empty-cart"
 
 
 def create_wave(tasks: tuple[TaskFacts, ...], states: dict, implemented: tuple[str, ...] = ()) -> WaveFacts:
     return WaveFacts(
         project="shop",
         wave="shop_w1",
-        branch=WAVE_BRANCH,
+        base=TASK_BASE,
         tasks=tasks,
         states=states,
         implemented=implemented,
+        milestone_branch=TASK_BASE,
     )
 
 
-ALONE = (TaskFacts(name="S3"),)
-FOLLOWING = (TaskFacts(name="S3", after=("S2",)),)
-BLOCKED = (TaskFacts(name="S3", blocked_by=("OPEN_QUESTION.Undecided",)),)
-ALONE_S9 = (TaskFacts(name="S9"),)
+ALONE = (TaskFacts(name="S3", branch="feature/S3-task"),)
+FOLLOWING = (TaskFacts(name="S3", branch="feature/S3-task", after=("S2",)),)
+BLOCKED = (TaskFacts(name="S3", branch="feature/S3-task", blocked_by=("OPEN_QUESTION.Undecided",)),)
+ALONE_S9 = (TaskFacts(name="S9", branch="feature/S9-task"),)
 
 
-LAUNCH_S3 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S3", checks_passed=False)
-LAUNCH_S9 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S9", checks_passed=False)
-LAUNCH_S10 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S10", checks_passed=False)
-REPORT_SHOP_W1 = ReportWave(wave="shop_w1")
+LAUNCH_S3 = LaunchTask(
+    project="shop", wave="shop_w1", branch=TASK_BASE, task="S3", task_branch="feature/S3-task", checks_passed=False
+)
+LAUNCH_S9 = LaunchTask(
+    project="shop", wave="shop_w1", branch=TASK_BASE, task="S9", task_branch="feature/S9-task", checks_passed=False
+)
+LAUNCH_S10 = LaunchTask(
+    project="shop", wave="shop_w1", branch=TASK_BASE, task="S10", task_branch="feature/S10-task", checks_passed=False
+)
+CLOSE_SHOP_W1 = CloseWave(wave="shop_w1", project="shop")
 PARK_BLOCKED_S3 = ParkTask(wave="shop_w1", task="S3", reason="blocked", blockers=("OPEN_QUESTION.Undecided",))
 
 
@@ -106,7 +111,7 @@ class PlanStartableTasksTest(unittest.TestCase):
         ]:
             with self.subTest(case=case):
                 # Arrange
-                task = TaskFacts(name="S3", pull_request=pull_request)
+                task = TaskFacts(name="S3", branch="feature/S3-task", pull_request=pull_request)
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "queued"}),), projects=(SHOP,))
 
                 # Act
@@ -115,7 +120,12 @@ class PlanStartableTasksTest(unittest.TestCase):
                 # Assert
                 self.assertIn(
                     LaunchTask(
-                        project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S3", checks_passed=checks_passed
+                        project="shop",
+                        wave="shop_w1",
+                        branch=TASK_BASE,
+                        task="S3",
+                        task_branch="feature/S3-task",
+                        checks_passed=checks_passed,
                     ),
                     actions,
                 )
@@ -125,7 +135,7 @@ class PlanStartableTasksTest(unittest.TestCase):
             ("with no state yet", ALONE, {}, (), (LAUNCH_S3,)),
             ("queued", ALONE, {"S3": "queued"}, (), (LAUNCH_S3,)),
             ("with its pull request open", ALONE, {"S3": "pr_open"}, (), ()),
-            ("parked", ALONE, {"S3": "parked"}, (), (REPORT_SHOP_W1,)),
+            ("parked", ALONE, {"S3": "parked"}, (), (CLOSE_SHOP_W1,)),
             ("after a task merged in the wave", FOLLOWING, {"S2": "merged"}, (), (LAUNCH_S3,)),
             ("after a task implemented in the corpus", FOLLOWING, {}, ("S2",), (LAUNCH_S3,)),
             ("after a task still running", FOLLOWING, {"S2": "running"}, (), ()),
@@ -159,7 +169,7 @@ HEAD = "0123abc"
 PUSHED_WITHIN_THE_MINUTE = datetime(2026, 10, 6, 11, 59, 1, tzinfo=UTC)
 
 
-def create_pull_request(state: str, verdict: str = "success", base: str = WAVE_BRANCH) -> PullRequestFacts:
+def create_pull_request(state: str, verdict: str = "success", base: str = TASK_BASE) -> PullRequestFacts:
     return PullRequestFacts(
         number=42,
         state=state,
@@ -192,12 +202,12 @@ class PlanFollowedPullRequestsTest(unittest.TestCase):
             ("a task whose open pull request is already recorded", "pr_open", OPEN, ()),
             ("a task in review whose pull request merged", "verifying", MERGED, (RECORD_MERGED,)),
             ("a task in fixing whose pull request closed", "fixing", CLOSED, (RECORD_PARKED,)),
-            ("a task already merged", "merged", MERGED, (REPORT_SHOP_W1,)),
-            ("a task already parked", "parked", CLOSED, (REPORT_SHOP_W1,)),
+            ("a task already merged", "merged", MERGED, (CLOSE_SHOP_W1,)),
+            ("a task already parked", "parked", CLOSED, (CLOSE_SHOP_W1,)),
         ]:
             with self.subTest(case=case):
                 # Arrange
-                task = TaskFacts(name="S3", pull_request=pull_request, worktree=NO_WORKTREE)
+                task = TaskFacts(name="S3", branch="feature/S3-task", pull_request=pull_request, worktree=NO_WORKTREE)
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
 
                 # Act
@@ -208,13 +218,13 @@ class PlanFollowedPullRequestsTest(unittest.TestCase):
 
     def test_should_remove_the_worktree_of_a_task_once_its_pull_request_is_merged_or_closed(self):
         for case, state, pull_request, expected in [
-            ("merged", "merged", MERGED, (REMOVE_WORKTREE_S3, REPORT_SHOP_W1)),
-            ("closed", "parked", CLOSED, (REMOVE_WORKTREE_S3, REPORT_SHOP_W1)),
+            ("merged", "merged", MERGED, (REMOVE_WORKTREE_S3, CLOSE_SHOP_W1)),
+            ("closed", "parked", CLOSED, (REMOVE_WORKTREE_S3, CLOSE_SHOP_W1)),
             ("still open", "pr_open", OPEN, ()),
         ]:
             with self.subTest(case=case):
                 # Arrange
-                task = TaskFacts(name="S3", pull_request=pull_request, worktree=WORKTREE_S3)
+                task = TaskFacts(name="S3", branch="feature/S3-task", pull_request=pull_request, worktree=WORKTREE_S3)
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
 
                 # Act
@@ -230,18 +240,18 @@ class PlanFollowedPullRequestsTest(unittest.TestCase):
             slots=4,
             live_runs=(LiveRun(run="20261006T110000Z-a1b2c3", slot="build", worktree=WORKTREE_S3),),
         )
-        task = TaskFacts(name="S3", pull_request=MERGED, worktree=WORKTREE_S3)
+        task = TaskFacts(name="S3", branch="feature/S3-task", pull_request=MERGED, worktree=WORKTREE_S3)
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "merged"}),), projects=(holding,))
 
         # Act
         actions = plan(snapshot)
 
         # Assert
-        self.assertEqual(actions, (REPORT_SHOP_W1,))
+        self.assertEqual(actions, (CLOSE_SHOP_W1,))
 
     def test_should_record_the_merge_and_remove_the_worktree_in_one_plan(self):
         # Arrange
-        task = TaskFacts(name="S3", pull_request=MERGED, worktree=WORKTREE_S3)
+        task = TaskFacts(name="S3", branch="feature/S3-task", pull_request=MERGED, worktree=WORKTREE_S3)
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
 
         # Act
@@ -260,7 +270,7 @@ NO_CHECK_RUN = PullRequestFacts(
     review=None,
     behind=False,
     head=HEAD,
-    base=WAVE_BRANCH,
+    base=TASK_BASE,
     updated_at=PUSHED_WITHIN_THE_MINUTE,
 )
 NO_CHECK_RUN_FOR_A_MINUTE = dataclasses.replace(NO_CHECK_RUN, updated_at=datetime(2026, 10, 6, 11, 59, tzinfo=UTC))
@@ -270,7 +280,7 @@ OPENED_BY_AN_EARLIER_RUN = 41
 NOT_PREFLIGHTED = None
 PREFLIGHTED_AT_THE_HEAD = HEAD
 PREFLIGHTED_BEFORE_A_PUSH = "fedcba9"
-PREFLIGHT_S3 = RunPreflight(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S3", pr=42)
+PREFLIGHT_S3 = RunPreflight(project="shop", wave="shop_w1", branch=TASK_BASE, task="S3", pr=42)
 
 
 class PlanPreflightTest(unittest.TestCase):
@@ -323,7 +333,11 @@ class PlanPreflightTest(unittest.TestCase):
             with self.subTest(case=case):
                 # Arrange
                 task = TaskFacts(
-                    name="S3", pull_request=pull_request, opened_pull_request=opened, preflighted_head=preflighted
+                    name="S3",
+                    branch="feature/S3-task",
+                    pull_request=pull_request,
+                    opened_pull_request=opened,
+                    preflighted_head=preflighted,
                 )
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(project,))
 
@@ -377,6 +391,7 @@ class PlanVerificationTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=OPEN,
                     worktree=worktree,
                     preflighted_head=PREFLIGHTED_AT_THE_HEAD,
@@ -401,6 +416,7 @@ class PlanVerificationTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=OPEN,
                     worktree=WORKTREE_S3,
                     preflighted_head=PREFLIGHTED_BEFORE_A_PUSH,
@@ -436,7 +452,11 @@ class PlanVerificationTest(unittest.TestCase):
                 # Arrange
                 holding = ProjectFacts(name="shop", slots=4, live_runs=(live,))
                 task = TaskFacts(
-                    name="S3", pull_request=OPEN, worktree=WORKTREE_S3, preflighted_head=PREFLIGHTED_AT_THE_HEAD
+                    name="S3",
+                    branch="feature/S3-task",
+                    pull_request=OPEN,
+                    worktree=WORKTREE_S3,
+                    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
                 )
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(holding,))
 
@@ -448,7 +468,9 @@ class PlanVerificationTest(unittest.TestCase):
 
     def test_should_record_the_merge_of_a_task_in_verifying_rather_than_its_verdict(self):
         # Arrange
-        task = TaskFacts(name="S3", pull_request=MERGED, worktree=WORKTREE_S3, verdict=PASS_AT_THE_HEAD)
+        task = TaskFacts(
+            name="S3", branch="feature/S3-task", pull_request=MERGED, worktree=WORKTREE_S3, verdict=PASS_AT_THE_HEAD
+        )
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(SHOP,))
 
         # Act
@@ -463,7 +485,13 @@ class PlanVerificationTest(unittest.TestCase):
             run="20261006T110000Z-d4e5f6", slot="review", worktree=DISPOSABLE_WORKTREE, wave="shop_w1", task="S9"
         )
         holding = ProjectFacts(name="shop", slots=4, live_runs=(other,))
-        task = TaskFacts(name="S3", pull_request=OPEN, worktree=WORKTREE_S3, preflighted_head=PREFLIGHTED_AT_THE_HEAD)
+        task = TaskFacts(
+            name="S3",
+            branch="feature/S3-task",
+            pull_request=OPEN,
+            worktree=WORKTREE_S3,
+            preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+        )
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(holding,))
 
         # Act
@@ -480,8 +508,15 @@ APPROVED = dataclasses.replace(OPEN, review="approved")
 OPEN_ON_MAIN = create_pull_request("open", base="main")
 MERGE_S3_BY_SQUASH = MergePullRequest(project="shop", wave="shop_w1", task="S3", pr=42, method="squash", head=HEAD)
 PARK_S3_ON_ANOTHER_BASE = ParkTask(
-    wave="shop_w1", task="S3", reason="pull request base is not the wave branch", blockers=()
+    wave="shop_w1", task="S3", reason="pull request base is not the base of its task", blockers=()
 )
+
+
+REPORT_S3 = ReportTask(order=TaskReportOrder(project="shop", task="S3", wave="shop_w1", branch="feature/S3-task"))
+
+
+def create_wave_of_no_milestone(tasks: tuple[TaskFacts, ...], states: dict) -> WaveFacts:
+    return dataclasses.replace(create_wave(tasks, states), base="main", milestone_branch=None)
 
 
 class PlanMergeTest(unittest.TestCase):
@@ -520,7 +555,7 @@ class PlanMergeTest(unittest.TestCase):
         ]:
             with self.subTest(case=case):
                 # Arrange
-                task = TaskFacts(name="S3", pull_request=pull_request, verdict=verdict)
+                task = TaskFacts(name="S3", branch="feature/S3-task", pull_request=pull_request, verdict=verdict)
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(project,))
 
                 # Act
@@ -532,7 +567,9 @@ class PlanMergeTest(unittest.TestCase):
     def test_should_merge_the_pull_request_of_a_task_at_the_head_the_snapshot_read(self):
         # Arrange
         read_at_a_pushed_head = dataclasses.replace(APPROVED, head="9010166")
-        task = TaskFacts(name="S3", pull_request=read_at_a_pushed_head, verdict=PASS_BEFORE_A_PUSH)
+        task = TaskFacts(
+            name="S3", branch="feature/S3-task", pull_request=read_at_a_pushed_head, verdict=PASS_BEFORE_A_PUSH
+        )
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP_UNDER_APPROVAL,))
 
         # Act
@@ -549,7 +586,11 @@ class PlanMergeTest(unittest.TestCase):
             with self.subTest(state=state):
                 # Arrange
                 task = TaskFacts(
-                    name="S3", pull_request=OPEN, preflighted_head=PREFLIGHTED_AT_THE_HEAD, verdict=CHANGES_AT_THE_HEAD
+                    name="S3",
+                    branch="feature/S3-task",
+                    pull_request=OPEN,
+                    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+                    verdict=CHANGES_AT_THE_HEAD,
                 )
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
 
@@ -561,8 +602,87 @@ class PlanMergeTest(unittest.TestCase):
 
     def test_should_park_rather_than_merge_a_task_whose_pull_request_is_based_on_another_branch(self):
         # Arrange
-        task = TaskFacts(name="S3", pull_request=OPEN_ON_MAIN, verdict=PASS_AT_THE_HEAD)
+        task = TaskFacts(name="S3", branch="feature/S3-task", pull_request=OPEN_ON_MAIN, verdict=PASS_AT_THE_HEAD)
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (PARK_S3_ON_ANOTHER_BASE,))
+
+    def test_should_report_rather_than_merge_a_task_naming_no_milestone_once_its_pull_request_is_ready(self):
+        # Arrange
+        task = TaskFacts(name="S3", branch="feature/S3-task", pull_request=OPEN_ON_MAIN, verdict=PASS_AT_THE_HEAD)
+        wave = create_wave_of_no_milestone((task,), {"S3": "verified"})
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (REPORT_S3,))
+
+    def test_should_report_none_for_a_task_naming_no_milestone_whose_pull_request_is_not_ready(self):
+        for case, pull_request, verdict, state in [
+            ("with no verdict", OPEN_ON_MAIN, NO_VERDICT, "verified"),
+            ("a check run failed", create_pull_request("open", "failure", base="main"), PASS_AT_THE_HEAD, "verified"),
+            ("short of verified", OPEN_ON_MAIN, PASS_AT_THE_HEAD, "verifying"),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(name="S3", branch="feature/S3-task", pull_request=pull_request, verdict=verdict)
+                wave = create_wave_of_no_milestone((task,), {"S3": state})
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertNotIn(REPORT_S3, actions)
+
+    def test_should_report_none_for_a_task_naming_no_milestone_once_it_is_reported(self):
+        # Arrange
+        task = TaskFacts(
+            name="S3", branch="feature/S3-task", pull_request=OPEN_ON_MAIN, verdict=PASS_AT_THE_HEAD, reported=True
+        )
+        wave = create_wave_of_no_milestone((task,), {"S3": "verified"})
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_report_a_parked_task_naming_no_milestone(self):
+        # Arrange
+        task = TaskFacts(name="S3", branch="feature/S3-task", pull_request=OPEN_ON_MAIN)
+        wave = create_wave_of_no_milestone((task,), {"S3": "parked"})
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertIn(REPORT_S3, actions)
+
+    def test_should_report_no_parked_task_of_a_milestone(self):
+        # Arrange
+        task = TaskFacts(name="S3", branch="feature/S3-task", pull_request=OPEN)
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "parked"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertNotIn(REPORT_S3, actions)
+
+    def test_should_park_rather_than_merge_a_task_naming_no_milestone_whose_pull_request_is_based_elsewhere(self):
+        # Arrange
+        task = TaskFacts(name="S3", branch="feature/S3-task", pull_request=OPEN, verdict=PASS_AT_THE_HEAD)
+        wave = create_wave_of_no_milestone((task,), {"S3": "verified"})
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
         # Act
         actions = plan(snapshot)
@@ -577,7 +697,7 @@ class PlanMergeTest(unittest.TestCase):
         ]:
             with self.subTest(case=case):
                 # Arrange
-                task = TaskFacts(name="S3", pull_request=MERGED, verdict=PASS_AT_THE_HEAD)
+                task = TaskFacts(name="S3", branch="feature/S3-task", pull_request=MERGED, verdict=PASS_AT_THE_HEAD)
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(project,))
 
                 # Act
@@ -598,7 +718,11 @@ class PlanSlotsTest(unittest.TestCase):
                 LiveRun(run="20261006T110500Z-d4e5f6", slot="review", worktree="/projects/shop"),
             ),
         )
-        tasks = (TaskFacts(name="S10"), TaskFacts(name="S9"), TaskFacts(name="S11"))
+        tasks = (
+            TaskFacts(name="S10", branch="feature/S10-task"),
+            TaskFacts(name="S9", branch="feature/S9-task"),
+            TaskFacts(name="S11", branch="feature/S11-task"),
+        )
         snapshot = Snapshot(now=NOW, waves=(create_wave(tasks, {}),), projects=(project,))
 
         # Act
@@ -628,12 +752,12 @@ class PlanSlotsTest(unittest.TestCase):
     def test_should_share_the_slots_of_a_project_between_its_waves(self):
         # Arrange
         project = ProjectFacts(name="shop", slots=1)
-        first = create_wave((TaskFacts(name="S3"),), {})
+        first = create_wave((TaskFacts(name="S3", branch="feature/S3-task"),), {})
         second = WaveFacts(
             project="shop",
             wave="shop_w2",
-            branch="integration/M2-total",
-            tasks=(TaskFacts(name="S7"),),
+            base="integration/M2-total",
+            tasks=(TaskFacts(name="S7", branch="feature/S7-task"),),
         )
         snapshot = Snapshot(now=NOW, waves=(first, second), projects=(project,))
 
@@ -647,7 +771,9 @@ class PlanSlotsTest(unittest.TestCase):
 class PlanTaskOrderTest(unittest.TestCase):
     def test_should_refuse_a_startable_task_whose_name_carries_no_number_to_order_it_by(self):
         # Arrange
-        snapshot = Snapshot(now=NOW, waves=(create_wave((TaskFacts(name="Login"),), {}),), projects=(SHOP,))
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave((TaskFacts(name="Login", branch="feature/Login-task"),), {}),), projects=(SHOP,)
+        )
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
@@ -779,12 +905,16 @@ class PlanStudyRunsTest(unittest.TestCase):
         self.assertEqual(actions, ())
 
 
-CAFE_WAVE = WaveFacts(project="cafe", wave="cafe_w1", branch="integration/M2-menu")
+CAFE_WAVE = WaveFacts(
+    project="cafe", wave="cafe_w1", base="integration/M2-menu", milestone_branch="integration/M2-menu"
+)
 CAFE = ProjectFacts(name="cafe", slots=4)
-RATE_LIMITED_UNTIL_15 = (TaskFacts(name="S3", rate_limit=RateLimit(reset=ResetHour(hour="15:00", timezone="UTC"))),)
-RATE_LIMITED_WITHOUT_RESET = (TaskFacts(name="S3", rate_limit=RateLimit(reset=None)),)
+RATE_LIMITED_UNTIL_15 = (
+    TaskFacts(name="S3", branch="feature/S3-task", rate_limit=RateLimit(reset=ResetHour(hour="15:00", timezone="UTC"))),
+)
+RATE_LIMITED_WITHOUT_RESET = (TaskFacts(name="S3", branch="feature/S3-task", rate_limit=RateLimit(reset=None)),)
 STOPPED_RUN = "20261006T113000Z-a1b2c3"
-STOPPED_S3 = (TaskFacts(name="S3", stopped_run=STOPPED_RUN),)
+STOPPED_S3 = (TaskFacts(name="S3", branch="feature/S3-task", stopped_run=STOPPED_RUN),)
 PAUSED_S3 = RecordTaskState(wave="shop_w1", task="S3", state="paused:quota", reason=None)
 QUOTA_UNTIL_13 = WavePause(reason="quota", resume_at=datetime(2026, 10, 6, 13, 0, tzinfo=UTC))
 QUOTA_UNTIL_12 = WavePause(reason="quota", resume_at=NOW)
@@ -999,20 +1129,9 @@ class PlanWaveStartTest(unittest.TestCase):
                 self.assertEqual(actions, expected)
 
 
-class PlanMissingWaveBranchTest(unittest.TestCase):
-    def test_should_cut_the_missing_branch_of_an_open_wave_and_launch_nothing_in_it(self):
-        # Arrange
-        wave = WaveFacts(project="shop", wave="shop_w1", branch=WAVE_BRANCH, branch_missing=True)
-        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
-
-        # Act
-        actions = plan(snapshot)
-
-        # Assert
-        self.assertEqual(actions, (CutWaveBranch(project="shop", wave="shop_w1", branch=WAVE_BRANCH),))
-
-
-BLOCKED_TWICE = (TaskFacts(name="S3", blocked_by=("OPEN_QUESTION.Undecided", "OPEN_QUESTION.Unsettled")),)
+BLOCKED_TWICE = (
+    TaskFacts(name="S3", branch="feature/S3-task", blocked_by=("OPEN_QUESTION.Undecided", "OPEN_QUESTION.Unsettled")),
+)
 
 
 class PlanBlockedTaskParkingTest(unittest.TestCase):
@@ -1056,74 +1175,23 @@ class PlanBlockedTaskParkingTest(unittest.TestCase):
                 self.assertEqual(actions, expected)
 
 
-TWO_TASKS = (TaskFacts(name="S3"), TaskFacts(name="S4"))
-
-
-class PlanWaveReportTest(unittest.TestCase):
-    def test_should_report_a_wave_once_every_task_is_merged_or_parked(self):
-        for case, states, reported, expected in [
-            ("every task merged or parked", {"S3": "merged", "S4": "parked"}, False, (ReportWave(wave="shop_w1"),)),
-            (
-                "a task still queued",
-                {"S3": "merged", "S4": "queued"},
-                False,
-                (LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S4", checks_passed=False),),
-            ),
-            ("a task in repair", {"S3": "merged", "S4": "fixing"}, False, ()),
-            ("a task with its pull request open", {"S3": "parked", "S4": "pr_open"}, False, ()),
-            ("already reported", {"S3": "merged", "S4": "parked"}, True, ()),
-        ]:
-            with self.subTest(case=case):
-                # Arrange
-                wave = dataclasses.replace(create_wave(TWO_TASKS, states), reported=reported)
-                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
-
-                # Act
-                actions = plan(snapshot)
-
-                # Assert
-                self.assertEqual(actions, expected)
-
-
-INTEGRATION_MERGED = PullRequestFacts(
-    number=77,
-    state="merged",
-    checks=(),
-    review=None,
-    behind=False,
-    head=HEAD,
-    base="main",
-    updated_at=PUSHED_WITHIN_THE_MINUTE,
-)
-INTEGRATION_OPEN = PullRequestFacts(
-    number=77,
-    state="open",
-    checks=(),
-    review=None,
-    behind=False,
-    head=HEAD,
-    base="main",
-    updated_at=PUSHED_WITHIN_THE_MINUTE,
-)
-NO_INTEGRATION_PULL_REQUEST = None
+TWO_TASKS = (TaskFacts(name="S3", branch="feature/S3-task"), TaskFacts(name="S4", branch="feature/S4-task"))
 
 
 class PlanWaveCloseTest(unittest.TestCase):
-    def test_should_close_a_wave_once_its_integration_pull_request_is_merged(self):
-        for case, integration, expected in [
+    def test_should_close_a_wave_with_no_pull_request_once_every_task_is_merged_or_parked(self):
+        for case, states, expected in [
             (
-                "merged",
-                INTEGRATION_MERGED,
-                (CloseWave(wave="shop_w1", pr=77, project="shop", milestones=()),),
+                "every task merged or parked",
+                {"S3": "merged", "S4": "parked"},
+                (CLOSE_SHOP_W1,),
             ),
-            ("still open", INTEGRATION_OPEN, ()),
-            ("not opened yet", NO_INTEGRATION_PULL_REQUEST, ()),
+            ("a task with its pull request open", {"S3": "merged", "S4": "pr_open"}, ()),
+            ("a task in repair", {"S3": "parked", "S4": "fixing"}, ()),
         ]:
             with self.subTest(case=case):
                 # Arrange
-                wave = dataclasses.replace(
-                    create_wave(TWO_TASKS, {"S3": "pr_open", "S4": "pr_open"}), integration_pull_request=integration
-                )
+                wave = create_wave(TWO_TASKS, states)
                 snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
                 # Act
@@ -1131,180 +1199,6 @@ class PlanWaveCloseTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, expected)
-
-    def test_should_close_a_wave_with_the_milestones_its_tasks_carry(self):
-        # Arrange
-        tasks = (TaskFacts(name="S3", milestone="M4"), TaskFacts(name="S4", milestone="M4"), TaskFacts(name="S5"))
-        wave = dataclasses.replace(
-            create_wave(tasks, {"S3": "merged", "S4": "merged", "S5": "parked"}),
-            reported=True,
-            integration_pull_request=INTEGRATION_MERGED,
-        )
-        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
-
-        # Act
-        actions = plan(snapshot)
-
-        # Assert
-        self.assertEqual(actions, (CloseWave(wave="shop_w1", pr=77, project="shop", milestones=("M4",)),))
-
-
-MILESTONE_BRANCH = "integration/empty-cart"
-WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH = PullRequestFacts(
-    number=77,
-    state="open",
-    checks=(CheckVerdict(name="tests", verdict="success"),),
-    review=None,
-    behind=False,
-    head=HEAD,
-    base=MILESTONE_BRANCH,
-    updated_at=PUSHED_WITHIN_THE_MINUTE,
-)
-MERGE_THE_WAVE_PULL_REQUEST = MergeWavePullRequest(project="shop", wave="shop_w1", pr=77, method="rebase", head=HEAD)
-NO_MILESTONE_BRANCH = None
-NO_UNRESOLVED_THREAD = 0
-ONE_UNRESOLVED_THREAD = 1
-
-
-def create_reported_wave(
-    pull_request: PullRequestFacts, milestone_branch: str | None, unresolved_threads: int
-) -> WaveFacts:
-    return dataclasses.replace(
-        create_wave(TWO_TASKS, {"S3": "merged", "S4": "merged"}),
-        reported=True,
-        opened_integration_pull_request=77,
-        integration_pull_request=pull_request,
-        milestone_branch=milestone_branch,
-        unresolved_threads=unresolved_threads,
-    )
-
-
-class PlanWaveMergeTest(unittest.TestCase):
-    def test_should_merge_the_pull_request_of_a_wave_into_the_branch_of_its_milestone_once_ready(self):
-        # Arrange
-        wave = create_reported_wave(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, MILESTONE_BRANCH, NO_UNRESOLVED_THREAD)
-        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
-
-        # Act
-        actions = plan(snapshot)
-
-        # Assert
-        self.assertEqual(actions, (MERGE_THE_WAVE_PULL_REQUEST,))
-
-    def test_should_merge_it_with_the_merge_method_of_the_project(self):
-        # Arrange
-        wave = create_reported_wave(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, MILESTONE_BRANCH, NO_UNRESOLVED_THREAD)
-        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP_MERGING_BY_SQUASH,))
-
-        # Act
-        actions = plan(snapshot)
-
-        # Assert
-        self.assertEqual(
-            actions, (MergeWavePullRequest(project="shop", wave="shop_w1", pr=77, method="squash", head=HEAD),)
-        )
-
-    def test_should_merge_none_short_of_the_gate(self):
-        # Arrange
-        rows = [
-            (
-                "a check failed",
-                dataclasses.replace(
-                    WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, checks=(CheckVerdict(name="tests", verdict="failure"),)
-                ),
-                NO_UNRESOLVED_THREAD,
-                SHOP,
-            ),
-            (
-                "a check pending",
-                dataclasses.replace(
-                    WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, checks=(CheckVerdict(name="tests", verdict="pending"),)
-                ),
-                NO_UNRESOLVED_THREAD,
-                SHOP,
-            ),
-            ("a review thread unresolved", WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, ONE_UNRESOLVED_THREAD, SHOP),
-            (
-                "not approved under the approval policy",
-                WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH,
-                NO_UNRESOLVED_THREAD,
-                SHOP_UNDER_APPROVAL,
-            ),
-            (
-                "a project without automatic merge",
-                WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH,
-                NO_UNRESOLVED_THREAD,
-                SHOP_WITHOUT_AUTO_MERGE,
-            ),
-        ]
-        for case, pull_request, unresolved_threads, project in rows:
-            with self.subTest(case=case):
-                # Arrange
-                wave = create_reported_wave(pull_request, MILESTONE_BRANCH, unresolved_threads)
-                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(project,))
-
-                # Act
-                actions = plan(snapshot)
-
-                # Assert
-                self.assertEqual(actions, ())
-
-    def test_should_merge_no_pull_request_of_a_wave_whose_branch_its_milestone_branch_has_outrun(self):
-        # Arrange
-        wave = dataclasses.replace(
-            create_reported_wave(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, MILESTONE_BRANCH, NO_UNRESOLVED_THREAD),
-            behind_milestone=True,
-        )
-        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
-
-        # Act
-        actions = plan(snapshot)
-
-        # Assert
-        self.assertEqual(actions, ())
-
-    def test_should_close_the_wave_and_merge_nothing_once_its_pull_request_is_merged(self):
-        # Arrange
-        merged = dataclasses.replace(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, state="merged")
-        wave = create_reported_wave(merged, MILESTONE_BRANCH, NO_UNRESOLVED_THREAD)
-        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
-
-        # Act
-        actions = plan(snapshot)
-
-        # Assert
-        self.assertEqual(actions, (CloseWave(wave="shop_w1", pr=77, project="shop", milestones=()),))
-
-    def test_should_merge_it_approved_under_the_approval_policy(self):
-        # Arrange
-        approved = dataclasses.replace(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, review="approved")
-        wave = create_reported_wave(approved, MILESTONE_BRANCH, NO_UNRESOLVED_THREAD)
-        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP_UNDER_APPROVAL,))
-
-        # Act
-        actions = plan(snapshot)
-
-        # Assert
-        self.assertEqual(actions, (MERGE_THE_WAVE_PULL_REQUEST,))
-
-    def test_should_merge_no_pull_request_whose_base_is_the_main_branch(self):
-        # Arrange
-        into_main = dataclasses.replace(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, base="main")
-        rows = [
-            ("a wave of tasks naming no milestone", into_main, NO_MILESTONE_BRANCH),
-            ("a wave of a milestone", into_main, MILESTONE_BRANCH),
-        ]
-        for case, pull_request, milestone_branch in rows:
-            with self.subTest(case=case):
-                # Arrange
-                wave = create_reported_wave(pull_request, milestone_branch, NO_UNRESOLVED_THREAD)
-                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
-
-                # Act
-                actions = plan(snapshot)
-
-                # Assert
-                self.assertEqual(actions, ())
 
 
 BODY_FAILURE = PreflightFailure(name="body", findings=("the body names no task",))
@@ -1322,8 +1216,9 @@ REMEDIATE_S3 = LaunchRemediation(project="shop", wave="shop_w1", task="S3", pr=4
 REPAIR_CHECKS_OF_S3 = LaunchCheckRepair(
     project="shop",
     wave="shop_w1",
-    branch=WAVE_BRANCH,
+    branch=TASK_BASE,
     task="S3",
+    task_branch="feature/S3-task",
     pr=42,
     worktree=WORKTREE_S3,
     checks=("tests",),
@@ -1346,7 +1241,7 @@ FAILED_CHECK_RUN_BESIDE_A_PASSING_ONE = PullRequestFacts(
     review=None,
     behind=False,
     head=HEAD,
-    base=WAVE_BRANCH,
+    base=TASK_BASE,
     updated_at=PUSHED_WITHIN_THE_MINUTE,
 )
 
@@ -1367,6 +1262,7 @@ class PlanRepairTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=OPEN,
                     worktree=WORKTREE_S3,
                     opened_pull_request=OPENED_BY_THE_TASK,
@@ -1416,6 +1312,7 @@ class PlanRepairTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=pull_request,
                     worktree=WORKTREE_S3,
                     opened_pull_request=OPENED_BY_THE_TASK,
@@ -1442,6 +1339,7 @@ class PlanRepairTest(unittest.TestCase):
                 project = ProjectFacts(name="shop", slots=4, live_runs=live_runs)
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=OPEN,
                     worktree=worktree,
                     preflighted_head=PREFLIGHTED_AT_THE_HEAD,
@@ -1497,6 +1395,7 @@ class PlanRepairTest(unittest.TestCase):
                 project = ProjectFacts(name="shop", slots=4, live_runs=live_runs)
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=pull_request,
                     worktree=WORKTREE_S3,
                     opened_pull_request=OPENED_BY_THE_TASK,
@@ -1573,6 +1472,7 @@ class PlanRepairTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=pull_request,
                     worktree=WORKTREE_S3,
                     opened_pull_request=OPENED_BY_THE_TASK,
@@ -1594,6 +1494,7 @@ class PlanRepairTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=OPEN,
                     worktree=WORKTREE_S3,
                     opened_pull_request=OPENED_BY_THE_TASK,
@@ -1615,8 +1516,9 @@ BEHIND_AND_CLOSED = dataclasses.replace(CLOSED, behind=True)
 REBASE_S3 = RebaseTask(
     project="shop",
     wave="shop_w1",
-    branch=WAVE_BRANCH,
+    branch=TASK_BASE,
     task="S3",
+    task_branch="feature/S3-task",
     pr=42,
     worktree=WORKTREE_S3,
     head=HEAD,
@@ -1637,6 +1539,7 @@ class PlanRebaseTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=pull_request,
                     worktree=WORKTREE_S3,
                     opened_pull_request=OPENED_BY_THE_TASK,
@@ -1657,6 +1560,7 @@ class PlanRebaseTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=BEHIND,
                     worktree=WORKTREE_S3,
                     opened_pull_request=OPENED_BY_THE_TASK,
@@ -1681,6 +1585,7 @@ class PlanRebaseTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=BEHIND,
                     worktree=WORKTREE_S3,
                     opened_pull_request=OPENED_BY_THE_TASK,
@@ -1708,7 +1613,7 @@ class PlanRebaseTest(unittest.TestCase):
         ]:
             with self.subTest(case=case):
                 # Arrange
-                task = TaskFacts(name="S3", pull_request=BEHIND, worktree=worktree)
+                task = TaskFacts(name="S3", branch="feature/S3-task", pull_request=BEHIND, worktree=worktree)
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
 
                 # Act
@@ -1724,7 +1629,7 @@ class PlanRebaseTest(unittest.TestCase):
         ]:
             with self.subTest(case=case):
                 # Arrange
-                task = TaskFacts(name="S3", pull_request=pull_request, worktree=WORKTREE_S3)
+                task = TaskFacts(name="S3", branch="feature/S3-task", pull_request=pull_request, worktree=WORKTREE_S3)
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "pr_open"}),), projects=(SHOP,))
 
                 # Act
@@ -1742,6 +1647,7 @@ class PlanRebaseTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=BEHIND,
                     worktree=WORKTREE_S3,
                     opened_pull_request=OPENED_BY_THE_TASK,
@@ -1773,6 +1679,7 @@ class PlanRebaseTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=pull_request,
                     worktree=WORKTREE_S3,
                     opened_pull_request=OPENED_BY_THE_TASK,
@@ -1795,6 +1702,7 @@ class PlanRebaseTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=BEHIND,
                     worktree=WORKTREE_S3,
                     opened_pull_request=OPENED_BY_THE_TASK,
@@ -1811,7 +1719,7 @@ class PlanRebaseTest(unittest.TestCase):
                 self.assertEqual(actions, (REBASE_S3_TAKING_ITS_CHANGES_OVER,))
 
 
-AMENDED_ON_THE_WAVE_BRANCH = TaskAmendment(
+AMENDED_ON_THE_TASK_BASE = TaskAmendment(
     on_pull_request=Entity(name="S3", fields=(EntityField(name="SPEC", value="the cart is emptied in two clicks"),)),
     on_wave=Entity(name="S3", fields=(EntityField(name="SPEC", value="the cart is emptied in one click"),)),
 )
@@ -1819,23 +1727,24 @@ UNCHANGED_ENTITY = None
 REBUILD_S3 = RebuildTask(
     project="shop",
     wave="shop_w1",
-    base=WAVE_BRANCH,
+    base=TASK_BASE,
     task="S3",
+    task_branch="feature/S3-task",
     pr=42,
     worktree=WORKTREE_S3,
-    reason=f"the entity of the task amended on {WAVE_BRANCH}",
-    amendment=AMENDED_ON_THE_WAVE_BRANCH,
+    reason=f"the entity of the task amended on {TASK_BASE}",
+    amendment=AMENDED_ON_THE_TASK_BASE,
 )
 
 
 class PlanRebuildOfAnAmendedTaskTest(unittest.TestCase):
     def test_should_rebuild_rather_than_rebase_a_task_behind_whose_entity_is_amended(self):
         for state, amendment, expected in [
-            ("pr_open", AMENDED_ON_THE_WAVE_BRANCH, REBUILD_S3),
-            ("verifying", AMENDED_ON_THE_WAVE_BRANCH, REBUILD_S3),
-            ("verified", AMENDED_ON_THE_WAVE_BRANCH, REBUILD_S3),
-            ("changes_requested", AMENDED_ON_THE_WAVE_BRANCH, REBUILD_S3),
-            ("fixing", AMENDED_ON_THE_WAVE_BRANCH, REBUILD_S3),
+            ("pr_open", AMENDED_ON_THE_TASK_BASE, REBUILD_S3),
+            ("verifying", AMENDED_ON_THE_TASK_BASE, REBUILD_S3),
+            ("verified", AMENDED_ON_THE_TASK_BASE, REBUILD_S3),
+            ("changes_requested", AMENDED_ON_THE_TASK_BASE, REBUILD_S3),
+            ("fixing", AMENDED_ON_THE_TASK_BASE, REBUILD_S3),
             ("pr_open", UNCHANGED_ENTITY, REBASE_S3),
             ("fixing", UNCHANGED_ENTITY, REBASE_S3),
         ]:
@@ -1843,6 +1752,7 @@ class PlanRebuildOfAnAmendedTaskTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=BEHIND,
                     worktree=WORKTREE_S3,
                     opened_pull_request=OPENED_BY_THE_TASK,
@@ -1861,12 +1771,13 @@ class PlanRebuildOfAnAmendedTaskTest(unittest.TestCase):
         # Arrange
         task = TaskFacts(
             name="S3",
+            branch="feature/S3-task",
             pull_request=BEHIND,
             worktree=WORKTREE_S3,
             opened_pull_request=OPENED_BY_THE_TASK,
             preflighted_head=PREFLIGHTED_AT_THE_HEAD,
             holds_uncommitted_changes=HOLDING_UNCOMMITTED_CHANGES,
-            amendment=AMENDED_ON_THE_WAVE_BRANCH,
+            amendment=AMENDED_ON_THE_TASK_BASE,
         )
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(SHOP,))
 
@@ -1885,11 +1796,12 @@ class PlanRebuildOfAnAmendedTaskTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=BEHIND,
                     worktree=WORKTREE_S3,
                     opened_pull_request=OPENED_BY_THE_TASK,
                     preflighted_head=PREFLIGHTED_AT_THE_HEAD,
-                    amendment=AMENDED_ON_THE_WAVE_BRANCH,
+                    amendment=AMENDED_ON_THE_TASK_BASE,
                 )
                 project = dataclasses.replace(SHOP, live_runs=(live_run,))
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(project,))
@@ -1904,12 +1816,13 @@ class PlanRebuildOfAnAmendedTaskTest(unittest.TestCase):
         # Arrange
         task = TaskFacts(
             name="S3",
+            branch="feature/S3-task",
             pull_request=BEHIND,
             worktree=WORKTREE_S3,
             opened_pull_request=OPENED_BY_THE_TASK,
             preflighted_head=PREFLIGHTED_AT_THE_HEAD,
             repair_rounds=TWO_ROUNDS_TAKEN,
-            amendment=AMENDED_ON_THE_WAVE_BRANCH,
+            amendment=AMENDED_ON_THE_TASK_BASE,
         )
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(SHOP,))
 
@@ -1983,6 +1896,7 @@ class PlanBlockedRunParkingTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=pull_request,
                     worktree=WORKTREE_S3,
                     opened_pull_request=OPENED_BY_THE_TASK,
@@ -2009,6 +1923,7 @@ class PlanBlockedRunParkingTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=OPEN,
                     worktree=WORKTREE_S3,
                     opened_pull_request=OPENED_BY_THE_TASK,
@@ -2028,6 +1943,7 @@ class PlanBlockedRunParkingTest(unittest.TestCase):
         # Arrange
         task = TaskFacts(
             name="S3",
+            branch="feature/S3-task",
             pull_request=MERGED,
             worktree=WORKTREE_S3,
             opened_pull_request=OPENED_BY_THE_TASK,
@@ -2044,45 +1960,6 @@ class PlanBlockedRunParkingTest(unittest.TestCase):
 
 
 SHOP_ON_GITHUB = dataclasses.replace(SHOP, on_github=True)
-SHOP_ON_GITHUB_UNDER_APPROVAL = dataclasses.replace(SHOP_ON_GITHUB, review="approval")
-SHOP_ON_GITHUB_DELIVERED_LOCALLY = dataclasses.replace(SHOP_ON_GITHUB, review="local")
-FIRST_TASK_MERGED = {"S3": "merged", "S4": "pr_open"}
-NO_TASK_MERGED = {"S3": "pr_open", "S4": "pr_open"}
-NOT_OPENED = None
-OPENED_AS_77 = 77
-OPEN_INTEGRATION_OF_SHOP_W1 = OpenIntegrationPullRequest(
-    project="shop", wave="shop_w1", branch=WAVE_BRANCH, tasks=("S3", "S4")
-)
-
-
-class PlanIntegrationPullRequestTest(unittest.TestCase):
-    def test_should_open_the_integration_pull_request_once_the_first_task_of_the_wave_is_merged(self):
-        for case, project, states, opened, expected in [
-            ("at the first merged task", SHOP_ON_GITHUB, FIRST_TASK_MERGED, NOT_OPENED, (OPEN_INTEGRATION_OF_SHOP_W1,)),
-            (
-                "under the approval review",
-                SHOP_ON_GITHUB_UNDER_APPROVAL,
-                FIRST_TASK_MERGED,
-                NOT_OPENED,
-                (OPEN_INTEGRATION_OF_SHOP_W1,),
-            ),
-            ("before any task is merged", SHOP_ON_GITHUB, NO_TASK_MERGED, NOT_OPENED, ()),
-            ("already opened", SHOP_ON_GITHUB, FIRST_TASK_MERGED, OPENED_AS_77, ()),
-            ("under the local review", SHOP_ON_GITHUB_DELIVERED_LOCALLY, FIRST_TASK_MERGED, NOT_OPENED, ()),
-            ("without a forge", SHOP, FIRST_TASK_MERGED, NOT_OPENED, ()),
-        ]:
-            with self.subTest(case=case):
-                # Arrange
-                wave = dataclasses.replace(create_wave(TWO_TASKS, states), opened_integration_pull_request=opened)
-                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(project,))
-
-                # Act
-                actions = plan(snapshot)
-
-                # Assert
-                self.assertEqual(actions, expected)
-
-
 LAST_RUN_OF_S3 = "20261006T110000Z-d1e2f3"
 NO_RUN = None
 NOT_BLOCKED = None
@@ -2108,7 +1985,7 @@ class PlanRunningTaskWithoutALiveRunTest(unittest.TestCase):
         ]:
             with self.subTest(case=case):
                 # Arrange
-                task = TaskFacts(name="S3", last_run=last_run, blocked_run=blocked_run)
+                task = TaskFacts(name="S3", branch="feature/S3-task", last_run=last_run, blocked_run=blocked_run)
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
 
                 # Act
@@ -2154,7 +2031,9 @@ class PlanRunningTaskWithoutALiveRunTest(unittest.TestCase):
 
 
 LAST_RUN_A_REBASE = "20261006T110000Z-4eba5e"
-LAUNCH_S3 = LaunchTask(project="shop", wave="shop_w1", branch=WAVE_BRANCH, task="S3", checks_passed=False)
+LAUNCH_S3 = LaunchTask(
+    project="shop", wave="shop_w1", branch=TASK_BASE, task="S3", task_branch="feature/S3-task", checks_passed=False
+)
 LAUNCH_S3_ON_PASSED_CHECKS = dataclasses.replace(LAUNCH_S3, checks_passed=True)
 
 
@@ -2168,6 +2047,7 @@ class PlanRunningTaskRebasedByItsLastRunTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=pull_request,
                     last_run=LAST_RUN_A_REBASE,
                     last_run_is_a_rebase=True,
@@ -2187,6 +2067,7 @@ class PlanRunningTaskRebasedByItsLastRunTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=pull_request,
                     last_run=LAST_RUN_A_REBASE,
                     last_run_is_a_rebase=True,
@@ -2205,7 +2086,11 @@ class PlanRunningTaskRebasedByItsLastRunTest(unittest.TestCase):
             with self.subTest(case=case):
                 # Arrange
                 task = TaskFacts(
-                    name="S3", pull_request=pull_request, last_run=LAST_RUN_A_REBASE, last_run_is_a_rebase=True
+                    name="S3",
+                    branch="feature/S3-task",
+                    pull_request=pull_request,
+                    last_run=LAST_RUN_A_REBASE,
+                    last_run_is_a_rebase=True,
                 )
                 live_rebase = LiveRun(
                     run=LAST_RUN_A_REBASE, slot="rebase", worktree=WORKTREE_S3, wave="shop_w1", task="S3"
@@ -2220,10 +2105,9 @@ class PlanRunningTaskRebasedByItsLastRunTest(unittest.TestCase):
                 self.assertEqual(actions, ())
 
 
-SHOP_ON_GITHUB = ProjectFacts(name="shop", slots=4, on_github=True)
 MILESTONE_M4_BRANCH = "integration/tides"
-WAVES_OF_M4_MERGED = (MergedWave(wave="shop_w1", pr=77), MergedWave(wave="shop_w2", pr=81))
-NO_WAVE_MERGED = ()
+WAVES_OF_M4_CLOSED = ("shop_w1", "shop_w2")
+NO_WAVE_CLOSED = ()
 NO_TASK_TODO = ()
 MILESTONE_PULL_REQUEST = PullRequestFacts(
     number=90,
@@ -2235,14 +2119,22 @@ MILESTONE_PULL_REQUEST = PullRequestFacts(
     base="main",
     updated_at=PUSHED_WITHIN_THE_MINUTE,
 )
-OPEN_THE_PULL_REQUEST_OF_M4 = OpenMilestonePullRequest(
-    project="shop", milestone="M4", branch=MILESTONE_M4_BRANCH, waves=WAVES_OF_M4_MERGED
+TASKS_OF_M4 = ("S3", "S4")
+REPORT_M4 = ReportMilestone(
+    order=MilestoneReportOrder(
+        project="shop", milestone="M4", branch=MILESTONE_M4_BRANCH, waves=WAVES_OF_M4_CLOSED, tasks=TASKS_OF_M4
+    )
 )
 
 
-def create_milestone(merged_waves: tuple[MergedWave, ...], todo: tuple[str, ...]) -> MilestoneFacts:
+def create_milestone(closed_waves: tuple[str, ...], todo: tuple[str, ...]) -> MilestoneFacts:
     return MilestoneFacts(
-        project="shop", milestone="M4", branch=MILESTONE_M4_BRANCH, merged_waves=merged_waves, todo=todo
+        project="shop",
+        milestone="M4",
+        branch=MILESTONE_M4_BRANCH,
+        closed_waves=closed_waves,
+        todo=todo,
+        tasks=TASKS_OF_M4,
     )
 
 
@@ -2252,21 +2144,21 @@ def create_open_wave_of_m4() -> WaveFacts:
     )
 
 
-class PlanMilestonePullRequestTest(unittest.TestCase):
-    def test_should_open_the_pull_request_of_a_milestone_once_its_last_wave_is_closed(self):
+class PlanMilestoneReportTest(unittest.TestCase):
+    def test_should_report_a_milestone_once_its_last_wave_is_closed(self):
         # Arrange
-        milestone = create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO)
+        milestone = create_milestone(WAVES_OF_M4_CLOSED, NO_TASK_TODO)
         snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
         # Act
         actions = plan(snapshot)
 
         # Assert
-        self.assertEqual(actions, (OPEN_THE_PULL_REQUEST_OF_M4,))
+        self.assertEqual(actions, (REPORT_M4,))
 
-    def test_should_open_none_before_a_wave_of_the_milestone_is_closed(self):
+    def test_should_report_none_before_a_wave_of_the_milestone_is_closed(self):
         # Arrange
-        milestone = create_milestone(NO_WAVE_MERGED, NO_TASK_TODO)
+        milestone = create_milestone(NO_WAVE_CLOSED, NO_TASK_TODO)
         snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
         # Act
@@ -2275,9 +2167,9 @@ class PlanMilestonePullRequestTest(unittest.TestCase):
         # Assert
         self.assertEqual(actions, ())
 
-    def test_should_open_none_while_a_wave_of_the_milestone_is_open(self):
+    def test_should_report_none_while_a_wave_of_the_milestone_is_open(self):
         # Arrange
-        milestone = create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO)
+        milestone = create_milestone(WAVES_OF_M4_CLOSED, NO_TASK_TODO)
         snapshot = Snapshot(
             now=NOW, waves=(create_open_wave_of_m4(),), projects=(SHOP_ON_GITHUB,), milestones=(milestone,)
         )
@@ -2286,11 +2178,11 @@ class PlanMilestonePullRequestTest(unittest.TestCase):
         actions = plan(snapshot)
 
         # Assert
-        self.assertNotIn(OPEN_THE_PULL_REQUEST_OF_M4, actions)
+        self.assertNotIn(REPORT_M4, actions)
 
-    def test_should_open_none_while_the_ledger_holds_an_open_wave_of_the_milestone(self):
+    def test_should_report_none_while_the_ledger_holds_an_open_wave_of_the_milestone(self):
         # Arrange
-        milestone = dataclasses.replace(create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO), open_waves=("shop_w3",))
+        milestone = dataclasses.replace(create_milestone(WAVES_OF_M4_CLOSED, NO_TASK_TODO), open_waves=("shop_w3",))
         snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
         # Act
@@ -2299,9 +2191,9 @@ class PlanMilestonePullRequestTest(unittest.TestCase):
         # Assert
         self.assertEqual(actions, ())
 
-    def test_should_open_none_for_a_project_the_snapshot_does_not_hold(self):
+    def test_should_report_none_for_a_project_the_snapshot_does_not_hold(self):
         # Arrange
-        milestone = create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO)
+        milestone = create_milestone(WAVES_OF_M4_CLOSED, NO_TASK_TODO)
         snapshot = Snapshot(now=NOW, milestones=(milestone,))
 
         # Act
@@ -2310,9 +2202,9 @@ class PlanMilestonePullRequestTest(unittest.TestCase):
         # Assert
         self.assertEqual(actions, ())
 
-    def test_should_open_it_while_a_wave_of_another_milestone_is_open(self):
+    def test_should_report_it_while_a_wave_of_another_milestone_is_open(self):
         # Arrange
-        milestone = create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO)
+        milestone = create_milestone(WAVES_OF_M4_CLOSED, NO_TASK_TODO)
         other_wave = dataclasses.replace(create_open_wave_of_m4(), milestone_branch="integration/currents")
         snapshot = Snapshot(now=NOW, waves=(other_wave,), projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
@@ -2320,11 +2212,11 @@ class PlanMilestonePullRequestTest(unittest.TestCase):
         actions = plan(snapshot)
 
         # Assert
-        self.assertIn(OPEN_THE_PULL_REQUEST_OF_M4, actions)
+        self.assertIn(REPORT_M4, actions)
 
-    def test_should_open_it_while_a_wave_of_another_project_is_open_on_a_branch_of_the_same_name(self):
+    def test_should_report_it_while_a_wave_of_another_project_is_open_on_a_branch_of_the_same_name(self):
         # Arrange
-        milestone = create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO)
+        milestone = create_milestone(WAVES_OF_M4_CLOSED, NO_TASK_TODO)
         wave_of_another_project = dataclasses.replace(create_open_wave_of_m4(), project="reef")
         snapshot = Snapshot(
             now=NOW,
@@ -2337,11 +2229,11 @@ class PlanMilestonePullRequestTest(unittest.TestCase):
         actions = plan(snapshot)
 
         # Assert
-        self.assertIn(OPEN_THE_PULL_REQUEST_OF_M4, actions)
+        self.assertIn(REPORT_M4, actions)
 
-    def test_should_open_none_while_a_task_of_the_milestone_is_todo(self):
+    def test_should_report_none_while_a_task_of_the_milestone_is_todo(self):
         # Arrange
-        milestone = create_milestone(WAVES_OF_M4_MERGED, ("S5",))
+        milestone = create_milestone(WAVES_OF_M4_CLOSED, ("S5",))
         snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
         # Act
@@ -2350,10 +2242,10 @@ class PlanMilestonePullRequestTest(unittest.TestCase):
         # Assert
         self.assertEqual(actions, ())
 
-    def test_should_open_none_once_its_pull_request_is_opened(self):
+    def test_should_report_none_once_its_pull_request_is_opened(self):
         # Arrange
         milestone = dataclasses.replace(
-            create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO),
+            create_milestone(WAVES_OF_M4_CLOSED, NO_TASK_TODO),
             opened_pull_request=90,
             pull_request=MILESTONE_PULL_REQUEST,
         )
@@ -2365,10 +2257,21 @@ class PlanMilestonePullRequestTest(unittest.TestCase):
         # Assert
         self.assertEqual(actions, ())
 
-    def test_should_open_none_for_a_project_without_a_forge(self):
+    def test_should_report_the_milestone_of_a_project_without_a_forge(self):
         # Arrange
-        milestone = create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO)
+        milestone = create_milestone(WAVES_OF_M4_CLOSED, NO_TASK_TODO)
         snapshot = Snapshot(now=NOW, projects=(SHOP,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (REPORT_M4,))
+
+    def test_should_report_none_once_the_milestone_is_reported(self):
+        # Arrange
+        milestone = dataclasses.replace(create_milestone(WAVES_OF_M4_CLOSED, NO_TASK_TODO), reported=True)
+        snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
         # Act
         actions = plan(snapshot)
@@ -2379,7 +2282,7 @@ class PlanMilestonePullRequestTest(unittest.TestCase):
     def test_should_close_the_milestone_once_its_pull_request_is_merged(self):
         # Arrange
         milestone = dataclasses.replace(
-            create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO),
+            create_milestone(WAVES_OF_M4_CLOSED, NO_TASK_TODO),
             opened_pull_request=90,
             pull_request=dataclasses.replace(MILESTONE_PULL_REQUEST, state="merged"),
         )
@@ -2394,7 +2297,7 @@ class PlanMilestonePullRequestTest(unittest.TestCase):
     def test_should_merge_the_pull_request_of_a_milestone_never(self):
         # Arrange
         milestone = dataclasses.replace(
-            create_milestone(WAVES_OF_M4_MERGED, NO_TASK_TODO),
+            create_milestone(WAVES_OF_M4_CLOSED, NO_TASK_TODO),
             opened_pull_request=90,
             pull_request=dataclasses.replace(
                 MILESTONE_PULL_REQUEST, checks=(CheckVerdict(name="tests", verdict="success"),), review="approved"
@@ -2419,24 +2322,7 @@ START_OF_M10_AND_NO_MILESTONE = (
     StartWave(project="shop", milestone="M10"),
     StartWave(project="shop", milestone=None),
 )
-REBASE_OF_M9 = RebaseMilestone(project="shop", milestone="M9", branch="integration/delivery", waves=("shop_w4",))
-
-M9_WITH_AN_OPEN_WAVE = MilestoneFacts(
-    project="shop", milestone="M9", branch="integration/delivery", open_waves=("shop_w4",)
-)
-SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH = WaveFacts(
-    project="shop",
-    wave="shop_w4",
-    branch="integration/shop_w4",
-    milestone_branch="integration/delivery",
-    behind_milestone=True,
-)
-LIVE_REBASE_RUN_OF_SHOP_W4 = LiveRun(
-    run="20261103T101517Z-0af80e",
-    slot="rebase",
-    worktree="/srv/shop/.brigade/worktrees/integration-shop_w4",
-    wave="shop_w4",
-)
+REBASE_OF_M9 = RebaseMilestone(project="shop", milestone="M9", branch="integration/delivery")
 
 
 class PlanMilestoneRebaseTest(unittest.TestCase):
@@ -2471,240 +2357,6 @@ class PlanMilestoneRebaseTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, expected)
-
-    def test_should_rebase_the_branches_of_a_milestone_whose_open_wave_branch_its_milestone_branch_has_outrun(self):
-        for case, milestone_facts, wave_facts, project, expected in [
-            (
-                "outrun by its milestone branch",
-                M9_WITH_AN_OPEN_WAVE,
-                SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
-                PROJECT_WITH_CANDIDATES,
-                (REBASE_OF_M9, *ONE_START_PER_CANDIDATE_WAVE),
-            ),
-            (
-                "descending from its milestone branch",
-                M9_WITH_AN_OPEN_WAVE,
-                dataclasses.replace(SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH, behind_milestone=False),
-                PROJECT_WITH_CANDIDATES,
-                ONE_START_PER_CANDIDATE_WAVE,
-            ),
-            (
-                "outrun with a rebase run of the wave branch live",
-                M9_WITH_AN_OPEN_WAVE,
-                SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
-                dataclasses.replace(PROJECT_WITH_CANDIDATES, live_runs=(LIVE_REBASE_RUN_OF_SHOP_W4,)),
-                ONE_START_PER_CANDIDATE_WAVE,
-            ),
-            (
-                "outrun with a blocked rebase run of the wave branch",
-                M9_WITH_AN_OPEN_WAVE,
-                dataclasses.replace(SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH, blocked_rebase=BLOCKED_REBASE),
-                PROJECT_WITH_CANDIDATES,
-                (
-                    PauseWave(
-                        wave="shop_w4",
-                        reason="run 20261030T005500Z-2f5135 blocked: Keep the guard of plan.py or drop it?",
-                        resume_at=None,
-                    ),
-                    *ONE_START_PER_CANDIDATE_WAVE,
-                ),
-            ),
-            (
-                "outrun, paused on the question of its blocked rebase run",
-                M9_WITH_AN_OPEN_WAVE,
-                dataclasses.replace(SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH, pause=PAUSED_ON_THE_REBASE_QUESTION),
-                PROJECT_WITH_CANDIDATES,
-                ONE_START_PER_CANDIDATE_WAVE,
-            ),
-            (
-                "outrun with a rebase run of the milestone branch live",
-                dataclasses.replace(M9_WITH_AN_OPEN_WAVE, rebase_run_live=RUN_LIVE),
-                SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
-                PROJECT_WITH_CANDIDATES,
-                ONE_START_PER_CANDIDATE_WAVE,
-            ),
-            (
-                "outrun by a milestone branch main outruns, its rebase run blocked",
-                dataclasses.replace(M9_WITH_AN_OPEN_WAVE, behind_main=BEHIND_MAIN, blocked_rebase=BLOCKED_REBASE),
-                SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
-                PROJECT_WITH_CANDIDATES,
-                ONE_START_PER_CANDIDATE_WAVE,
-            ),
-            (
-                "outrun by a milestone branch main no longer outruns, its last rebase run blocked",
-                dataclasses.replace(M9_WITH_AN_OPEN_WAVE, blocked_rebase=BLOCKED_REBASE),
-                SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
-                PROJECT_WITH_CANDIDATES,
-                (REBASE_OF_M9, *ONE_START_PER_CANDIDATE_WAVE),
-            ),
-        ]:
-            with self.subTest(case=case):
-                # Arrange
-                snapshot = Snapshot(now=NOW, waves=(wave_facts,), projects=(project,), milestones=(milestone_facts,))
-
-                # Act
-                actions = plan(snapshot)
-
-                # Assert
-                self.assertEqual(actions, expected)
-
-    def test_should_leave_out_of_the_rebase_of_a_milestone_its_waves_paused_or_whose_rebase_run_lives_or_ended_blocked(
-        self,
-    ):
-        # Arrange
-        milestone = dataclasses.replace(
-            M9_WITH_AN_OPEN_WAVE, open_waves=("shop_w4", "shop_w5", "shop_w6", "shop_w7"), behind_main=BEHIND_MAIN
-        )
-        paused_wave = dataclasses.replace(
-            SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
-            wave="shop_w5",
-            branch="integration/shop_w5",
-            pause=PAUSED_ON_THE_REBASE_QUESTION,
-        )
-        wave_with_a_blocked_rebase_run = dataclasses.replace(
-            SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
-            wave="shop_w6",
-            branch="integration/shop_w6",
-            blocked_rebase=BLOCKED_REBASE,
-        )
-        wave_with_a_live_rebase_run = dataclasses.replace(
-            SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH, wave="shop_w7", branch="integration/shop_w7"
-        )
-        live_rebase_run_of_shop_w7 = dataclasses.replace(
-            LIVE_REBASE_RUN_OF_SHOP_W4, worktree="/srv/shop/.brigade/worktrees/integration-shop_w7", wave="shop_w7"
-        )
-        snapshot = Snapshot(
-            now=NOW,
-            waves=(
-                SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
-                paused_wave,
-                wave_with_a_blocked_rebase_run,
-                wave_with_a_live_rebase_run,
-            ),
-            projects=(dataclasses.replace(PROJECT_WITH_CANDIDATES, live_runs=(live_rebase_run_of_shop_w7,)),),
-            milestones=(milestone,),
-        )
-
-        # Act
-        actions = plan(snapshot)
-
-        # Assert
-        self.assertEqual(
-            actions,
-            (
-                PauseWave(
-                    wave="shop_w6",
-                    reason="run 20261030T005500Z-2f5135 blocked: Keep the guard of plan.py or drop it?",
-                    resume_at=None,
-                ),
-                RebaseMilestone(project="shop", milestone="M9", branch="integration/delivery", waves=("shop_w4",)),
-                *START_OF_M10_AND_NO_MILESTONE,
-            ),
-        )
-
-    def test_should_rebase_the_milestone_branch_alone_when_every_open_wave_of_it_is_held(self):
-        # Arrange
-        milestone = dataclasses.replace(
-            M9_WITH_AN_OPEN_WAVE, open_waves=("shop_w5", "shop_w6", "shop_w7"), behind_main=BEHIND_MAIN
-        )
-        paused_wave = dataclasses.replace(
-            SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
-            wave="shop_w5",
-            branch="integration/shop_w5",
-            pause=PAUSED_ON_THE_REBASE_QUESTION,
-        )
-        wave_with_a_blocked_rebase_run = dataclasses.replace(
-            SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
-            wave="shop_w6",
-            branch="integration/shop_w6",
-            blocked_rebase=BLOCKED_REBASE,
-        )
-        wave_with_a_live_rebase_run = dataclasses.replace(
-            SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH, wave="shop_w7", branch="integration/shop_w7"
-        )
-        live_rebase_run_of_shop_w7 = dataclasses.replace(
-            LIVE_REBASE_RUN_OF_SHOP_W4, worktree="/srv/shop/.brigade/worktrees/integration-shop_w7", wave="shop_w7"
-        )
-        snapshot = Snapshot(
-            now=NOW,
-            waves=(paused_wave, wave_with_a_blocked_rebase_run, wave_with_a_live_rebase_run),
-            projects=(dataclasses.replace(PROJECT_WITH_CANDIDATES, live_runs=(live_rebase_run_of_shop_w7,)),),
-            milestones=(milestone,),
-        )
-
-        # Act
-        actions = plan(snapshot)
-
-        # Assert
-        self.assertEqual(
-            actions,
-            (
-                PauseWave(
-                    wave="shop_w6",
-                    reason="run 20261030T005500Z-2f5135 blocked: Keep the guard of plan.py or drop it?",
-                    resume_at=None,
-                ),
-                RebaseMilestone(project="shop", milestone="M9", branch="integration/delivery", waves=()),
-                *START_OF_M10_AND_NO_MILESTONE,
-            ),
-        )
-
-
-CUT_OF_M6 = CutMilestoneBranch(project="shop", milestone="M6", branch="integration/hardening")
-NO_UNCUT_MILESTONE = ()
-NO_RECORDED_MILESTONE = ()
-M6_RECORDED = (MilestoneFacts(project="shop", milestone="M6", branch="integration/hardening"),)
-
-
-class PlanMilestoneCutTest(unittest.TestCase):
-    def test_should_cut_the_branch_of_an_uncut_active_milestone_an_open_wave_or_a_todo_task_names(self):
-        for case, uncut_milestones, recorded_milestones, expected in [
-            (
-                "named by an open wave",
-                (UncutMilestone(milestone="M6", branch="integration/hardening", open_waves=("shop_w4",)),),
-                NO_RECORDED_MILESTONE,
-                (CUT_OF_M6,),
-            ),
-            (
-                "named by a todo task alone",
-                (UncutMilestone(milestone="M6", branch="integration/hardening", todo=("S7",)),),
-                NO_RECORDED_MILESTONE,
-                (CUT_OF_M6,),
-            ),
-            (
-                "named by neither",
-                (UncutMilestone(milestone="M6", branch="integration/hardening"),),
-                NO_RECORDED_MILESTONE,
-                (),
-            ),
-            ("whose branch is recorded", NO_UNCUT_MILESTONE, M6_RECORDED, ()),
-        ]:
-            with self.subTest(case=case):
-                # Arrange
-                project = ProjectFacts(name="shop", slots=4, uncut_milestones=uncut_milestones)
-                snapshot = Snapshot(now=NOW, projects=(project,), milestones=recorded_milestones)
-
-                # Act
-                actions = plan(snapshot)
-
-                # Assert
-                self.assertEqual(actions, expected)
-
-    def test_should_start_no_wave_of_a_milestone_whose_branch_it_cuts_in_that_round(self):
-        # Arrange
-        project = ProjectFacts(
-            name="shop",
-            slots=4,
-            candidates=(CandidateWave(milestone="M6", tasks=("S7",)), CandidateWave(milestone=None, tasks=("S8",))),
-            uncut_milestones=(UncutMilestone(milestone="M6", branch="integration/hardening", todo=("S7",)),),
-        )
-        snapshot = Snapshot(now=NOW, projects=(project,))
-
-        # Act
-        actions = plan(snapshot)
-
-        # Assert
-        self.assertEqual(actions, (CUT_OF_M6, StartWave(project="shop", milestone=None)))
 
 
 CUT_OF_M6 = CutMilestoneBranch(project="shop", milestone="M6", branch="integration/hardening")
@@ -2771,6 +2423,7 @@ class PlanQuotaOfATaskInRepairTest(unittest.TestCase):
                 # Arrange
                 task = TaskFacts(
                     name="S3",
+                    branch="feature/S3-task",
                     pull_request=pull_request,
                     worktree=WORKTREE_S3,
                     rate_limit=RateLimit(reset=None),
@@ -2794,7 +2447,7 @@ class PlanQuotaOfATaskInRepairTest(unittest.TestCase):
 
     def test_should_resume_the_cut_repair_run_with_the_task_back_in_fixing(self):
         # Arrange
-        task = TaskFacts(name="S3", stopped_run=STOPPED_RUN, resumed_state="fixing")
+        task = TaskFacts(name="S3", branch="feature/S3-task", stopped_run=STOPPED_RUN, resumed_state="fixing")
         wave = dataclasses.replace(create_wave((task,), {"S3": "paused:quota"}), pause=QUOTA_UNTIL_12)
         snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 

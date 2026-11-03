@@ -5,12 +5,9 @@ from brigade.system.parse_configuration import Configuration
 from brigade.waves.start_project_wave import WaveStart
 from brigade.waves.start_project_waves import start_project_waves
 from tests.unit.commands.command_runtime import write_ledger
-from tests.unit.select_argvs_opening_on import select_argvs_opening_on
 from tests.unit.waves.test_start_project_wave import (
-    BRANCH_NOT_FOUND,
     CUT_OF_M9,
     EVERY_STARTABLE_TASK,
-    GIT_BRANCH,
     MAIN_SHA,
     MILESTONE_BRANCH,
     MILESTONE_SHA,
@@ -29,8 +26,8 @@ TASKS_AT_MAIN = {
 }
 M9_ACTIVE = {"entities": [{"type": "MILESTONE", "name": "M9"}]}
 ONLY_TASKS_IN_AN_OPEN_WAVE = {"S7": (("STATUS", "todo"),)}
-WAVE_OF_M9 = {"wave": "shop_w2", "project": "shop", "branch": "integration/shop_w2", "tasks": ["S21"]}
-WAVE_OF_NO_MILESTONE = {"wave": "shop_w3", "project": "shop", "branch": "integration/shop_w3", "tasks": ["S10"]}
+WAVE_OF_M9 = {"wave": "shop_w2", "project": "shop", "tasks": ["S21"]}
+WAVE_OF_NO_MILESTONE = {"wave": "shop_w3", "project": "shop", "tasks": ["S10"]}
 FORGE_ENVIRONMENT = {"GH_TOKEN": "token-of-the-cli-slot"}
 
 
@@ -46,7 +43,6 @@ class StartProjectWavesTestCase(StartProjectWaveTestCase):
     def setUp(self):
         super().setUp()
         write_ledger(self.root, [OPEN_WAVE, CUT_OF_M9])
-        self.answer_local_branch("shop_w1", 0)
         self.main_tree = self.answer_tree("main", MAIN_SHA, TASKS_AT_MAIN)
         milestone_tree = self.answer_tree(MILESTONE_BRANCH, MILESTONE_SHA, TASKS_AT_THE_MILESTONE_BRANCH)
         self.processes.answer_json(
@@ -54,9 +50,6 @@ class StartProjectWavesTestCase(StartProjectWaveTestCase):
         )
         for tree in (self.main_tree, milestone_tree):
             self.processes.answer_entity(tree, "MILESTONE", "M9", (("TITLE", "Milestone integration branch"),))
-        self.processes.answer(("git", "branch", "--quiet", "integration/shop_w2", MILESTONE_BRANCH))
-        self.answer_local_branch("shop_w3", BRANCH_NOT_FOUND)
-        self.processes.answer(("git", "branch", "--quiet", "integration/shop_w3", "main"))
 
     def answer_tree(self, ref: str, sha: str, tasks: dict):
         tree = self.root / "cache" / "refs" / "shop" / sha
@@ -87,20 +80,6 @@ class StartProjectWavesOfTheCandidatesTest(StartProjectWavesTestCase):
 
         # Assert
         self.assertEqual(started, (WAVE_OF_M9, WAVE_OF_NO_MILESTONE))
-
-    def test_should_cut_the_wave_of_the_tasks_naming_no_milestone_from_the_main_branch(self):
-        # Act
-        self.start_waves(EVERY_STARTABLE_TASK)
-
-        # Assert
-        self.assertEqual(
-            select_argvs_opening_on(self.processes.list_argvs(), GIT_BRANCH),
-            [
-                ("git", "branch", "--quiet", "integration/shop_w2", MILESTONE_BRANCH),
-                ("git", "branch", "--quiet", "integration/shop_w2", MILESTONE_BRANCH),
-                ("git", "branch", "--quiet", "integration/shop_w3", "main"),
-            ],
-        )
 
     def test_should_refuse_a_project_with_no_candidate(self):
         # Arrange

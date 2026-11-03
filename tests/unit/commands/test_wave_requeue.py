@@ -25,8 +25,16 @@ WAVE_STARTED = {
     "event": "wave.started",
     "wave": "tidepool_w16",
     "project": "tidepool",
-    "branch": "integration/tidepool_w16",
     "tasks": ["T7", "T8"],
+}
+MILESTONE_BRANCH_CUT = {
+    "schema_version": 1,
+    "ts": "2026-10-19T07:00:00Z",
+    "event": "milestone.branch_cut",
+    "project": "tidepool",
+    "milestone": "M1",
+    "branch": "integration/tidepool",
+    "login": None,
 }
 PARKED_ON_A_DEAD_RUN = {
     "schema_version": 1,
@@ -140,7 +148,10 @@ def create_main_tree_runtime(
     write_operational_corpus(root)
     (root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
     (root / "cache" / "refs" / "tidepool" / MAIN_HEAD).mkdir(parents=True)
-    corpus = {"PROJECT": {"tidepool": project}, "TASK": {"T7": (("STATUS", "todo"),)}}
+    corpus = {
+        "PROJECT": {"tidepool": project},
+        "TASK": {"T7": (("STATUS", "todo"),), "T8": (("STATUS", "todo"),)},
+    }
     main_root = str(root / "cache" / "refs" / "tidepool" / MAIN_HEAD)
     answers = {
         ("git", "rev-parse", "--verify"): ProcessAnswer(stdout=f"{WAVE_HEAD}\n"),
@@ -231,7 +242,7 @@ class WaveRequeueOfAParkedTaskTheMainBranchDoesNotHoldTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
         runtime = create_main_tree_runtime(root, T7_ABSENT_FROM_MAIN)
-        write_ledger(root, [WAVE_STARTED, PARKED_ON_A_DEAD_RUN])
+        write_ledger(root, [MILESTONE_BRANCH_CUT, WAVE_STARTED, PARKED_ON_A_DEAD_RUN])
 
         # Act
         COMMAND.run(Namespace(wave="tidepool_w16", task="T7"), runtime)
@@ -266,7 +277,7 @@ class WaveRequeueRefusalTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(str(raised.exception), expected_refusal)
 
-    def test_should_refuse_a_parked_task_the_wave_tree_holds_implemented_naming_the_wave_branch(self):
+    def test_should_refuse_a_parked_task_the_wave_tree_holds_implemented_naming_the_branch_of_the_tree(self):
         # Arrange
         runtime = create_wave_tree_runtime(self.root, T7_IMPLEMENTED)
         write_ledger(self.root, [WAVE_STARTED, PARKED_ON_A_DEAD_RUN])
@@ -278,7 +289,7 @@ class WaveRequeueRefusalTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             str(raised.exception),
-            "the task T7 of the wave tidepool_w16 is already implemented on integration/tidepool_w16",
+            "the task T7 of the wave tidepool_w16 is already implemented on main",
         )
 
     def test_should_refuse_a_task_outside_the_wave_naming_the_wave(self):
@@ -310,7 +321,7 @@ class WaveRequeueRefusalTest(unittest.TestCase):
                 TIDEPOOL_WITHOUT_FORGE,
                 "main",
                 (
-                    "the task T7 of the wave tidepool_w16 differs between main and integration/tidepool_w16:"
+                    "the task T7 of the wave tidepool_w16 differs between main and integration/tidepool:"
                     " the ruling on main reaches it through brigade wave cancel tidepool_w16 and a new wave cut from main"
                 ),
             ),
@@ -319,7 +330,7 @@ class WaveRequeueRefusalTest(unittest.TestCase):
                 TIDEPOOL_ON_GITHUB,
                 "origin/main",
                 (
-                    "the task T7 of the wave tidepool_w16 differs between origin/main and integration/tidepool_w16:"
+                    "the task T7 of the wave tidepool_w16 differs between origin/main and integration/tidepool:"
                     " the ruling on main reaches it through brigade wave cancel tidepool_w16"
                     " and a new wave cut from origin/main"
                 ),
@@ -329,7 +340,7 @@ class WaveRequeueRefusalTest(unittest.TestCase):
                 # Arrange
                 root = Path(self.enterContext(tempfile.TemporaryDirectory()))
                 runtime = create_main_tree_runtime(root, T7_RULED_ON_MAIN, project, main)
-                write_ledger(root, [WAVE_STARTED, PARKED_ON_A_DEAD_RUN])
+                write_ledger(root, [MILESTONE_BRANCH_CUT, WAVE_STARTED, PARKED_ON_A_DEAD_RUN])
 
                 # Act
                 with self.assertRaises(BrigadeError) as raised:

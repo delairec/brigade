@@ -57,8 +57,8 @@ def _require_worktree_at_head(runtime: Runtime, worktree: TaskWorktree) -> None:
 
 def _locate_start(worktree: TaskWorktree) -> str:
     if is_on_github(worktree.project):
-        return f"{REMOTE}/{worktree.wave_branch}"
-    return worktree.wave_branch
+        return f"{REMOTE}/{worktree.base}"
+    return worktree.base
 
 
 def _check_privacy_of_the_task(runtime: Runtime, worktree: TaskWorktree, head: str) -> dict:

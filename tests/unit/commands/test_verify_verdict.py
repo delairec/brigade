@@ -126,9 +126,7 @@ class VerifyVerdictOfAPullRequestTest(unittest.TestCase):
                 entries=(
                     LedgerEntry(
                         instant=datetime(2026, 9, 30, 22, 0, tzinfo=UTC),
-                        event=WaveStarted(
-                            wave="tidepool_w16", project="tidepool", branch="integration/M4-tides", tasks=("T7",)
-                        ),
+                        event=WaveStarted(wave="tidepool_w16", project="tidepool", tasks=("T7",)),
                     ),
                     LedgerEntry(
                         instant=datetime(2026, 10, 1, 22, 0, tzinfo=UTC),
