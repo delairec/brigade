@@ -15373,7 +15373,8 @@ TASK B227
 TASK B228
 	TITLE "The Corpus view and /api/corpus read a project at its main branch when no ref is named,"
 		+ "and every reading lists the entity types of the corpus"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 338
 	TYPE fix
 	MILESTONE @MILESTONE.M6
 	COMPONENT "dashboard"
