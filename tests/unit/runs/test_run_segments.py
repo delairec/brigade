@@ -430,6 +430,7 @@ class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
                     "reasoning_table": {},
                     "settings": {},
                     "home": f"{self.root}/home",
+                    "session_bus_address": None,
                 },
                 {
                     "schema_version": 1,
@@ -481,6 +482,7 @@ class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
                     "reasoning_table": {},
                     "settings": {},
                     "home": f"{self.root}/home",
+                    "session_bus_address": None,
                 },
             ],
         )
@@ -568,6 +570,7 @@ class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
                     "reasoning_table": {},
                     "settings": {},
                     "home": f"{self.root}/home",
+                    "session_bus_address": None,
                 }
             ],
         )
