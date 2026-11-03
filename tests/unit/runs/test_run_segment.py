@@ -28,6 +28,7 @@ from brigade.system.trail_writer import TrailWriter
 from tests.process_launcher import ProcessLauncher
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.keep_stderr_as_is import keep_stderr_as_is
 from tests.unit.runs.create_run_plan import CAP_OF_FORTY_STEPS
 
 FIRST_SEGMENT = 1
@@ -658,7 +659,9 @@ class RunSegmentCutAtTheWallTimeLimitTest(unittest.TestCase):
         # Arrange
         traces = []
         plan = _create_plan(self.root, wall_limit_s=LIMIT_ALREADY_REACHED_S)
-        runtime = dataclasses.replace(_create_runtime(self.root, self.spawn), trail=TrailWriter(traces.append))
+        runtime = dataclasses.replace(
+            _create_runtime(self.root, self.spawn), trail=TrailWriter(traces.append, keep_stderr_as_is)
+        )
 
         # Act
         run_segment(plan, FIRST_SEGMENT, runtime, StopSignalReceiver())
@@ -988,7 +991,9 @@ class RunSegmentStoppedWhileItsClientRunsTest(unittest.TestCase):
     def test_should_record_the_client_stopped_in_the_trail(self):
         # Arrange
         traces = []
-        runtime = dataclasses.replace(_create_runtime(self.root, self.spawn), trail=TrailWriter(traces.append))
+        runtime = dataclasses.replace(
+            _create_runtime(self.root, self.spawn), trail=TrailWriter(traces.append, keep_stderr_as_is)
+        )
 
         # Act
         run_segment(_create_plan(self.root), FIRST_SEGMENT, runtime, StopArrivingAfterTheSpawnDouble())

@@ -10,6 +10,7 @@ from brigade.system.process_trace import SPAWNED, ProcessTrace
 from brigade.system.trail_writer import TrailWriter
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.keep_stderr_as_is import keep_stderr_as_is
 from tests.unit.runs.create_run_plan import RUN_ID, create_run_plan
 
 
@@ -33,7 +34,9 @@ class DetachRunTestCase(unittest.TestCase):
         self.spawn = SpawnRecorderDouble()
         self.traces = []
         self.runtime = create_test_runtime(
-            create_test_paths(self.root), spawn_process=self.spawn, trail=TrailWriter(self.traces.append)
+            create_test_paths(self.root),
+            spawn_process=self.spawn,
+            trail=TrailWriter(self.traces.append, keep_stderr_as_is),
         )
 
 
@@ -117,6 +120,7 @@ class DetachRunWithNoOptionTest(DetachRunTestCase):
                     exit_code=None,
                     duration_ms=None,
                     pid=os.getpid(),
+                    stderr_file=str(plan.run_directory / "brigade.log"),
                 )
             ],
         )
