@@ -15406,8 +15406,9 @@ TASK B232
 		+ "wave once reported; on a project of FORGE none the report is committed on the branch and"
 		+ "no pull request opens"
 	SPEC "the built-in study task-report reports a task naming no MILESTONE: the tick runs it once"
-		+ "the pull request of the task is ready on the gate of SPEC 3 or the task is parked, and"
-		+ "appends task.reported with project, task, run and login, which the ledger declares; its"
+		+ "the pull request of the task is ready on the gate of SPEC 3 or the task is parked and"
+		+ "has a pull request, a task parked with no pull request getting no report, and appends"
+		+ "task.reported with project, task, run and login, which the ledger declares; its"
 		+ "collectors are those of SPEC 6 narrowed to the wave of the task, the task and its"
 		+ "branch; its REPORT entity is named <project>_<task>, its Markdown"
 		+ "<PROJECT.CORPUS>/tasks/<task>-report.md, committed on the branch of the task and pushed"
@@ -15550,6 +15551,18 @@ TASK B232
 		+ "RatificationNamesItsEntitiesAfterThePatternAndTheArrivalInMainDeliversThePattern is"
 		+ "amended the same way"
 		REF @DECISION.RatificationNamesItsEntitiesAfterThePatternAndTheArrivalInMainDeliversThePattern
+	SOURCE "the user's ruling of 2026-11-03 on the question of run 20261103T095517Z-27f639 of wave"
+		+ "brigade_w22, « a : reformuler SPEC 9 (Recommandé) », the option « Keep the code as it"
+		+ "is, and reword SPEC 9 so a parked task is reported only once it has a pull request. This"
+		+ "is the verified alternative, the behaviour on c952954a. »; the question, « A task parked"
+		+ "before brigade task pr has neither a branch on origin nor a pull request: a blocked run"
+		+ "pushes nothing, as this one shows. So brigade/tick/plan.py:563-572 (_is_task_report_due)"
+		+ "requires a pull request, and such a task gets no report. »: SPEC 9 reports a parked task"
+		+ "only once it has a pull request, a task parked with no pull request getting no report;"
+		+ "DESC 4 of the DECISION"
+		+ "AMilestoneReportIsBuiltOnceItsTasksAreMergedOrParkedAndIsTheBodyOfItsPullRequest is"
+		+ "amended the same way"
+		REF @DECISION.AMilestoneReportIsBuiltOnceItsTasksAreMergedOrParkedAndIsTheBodyOfItsPullRequest
 
 TASK B233
 	TITLE "A milestone is reached when its pull request is merged into main: the tick commits"
