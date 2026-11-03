@@ -13907,7 +13907,7 @@ TASK B211
 		+ "is cut, and the build run starts; the branch of the cancelled wave is kept"
 		IMPL "brigade/tick/prepare_task_worktree.py::def _open_worktree(runtime: Runtime,"
 			+ "repository: Path, worktree: BranchWorktree, action: LaunchTask) -> bool:"
-		IMPL "brigade/tick/name_cancelled_task_branches.py::def name_cancelled_task_branches("
+		IMPL "brigade/tick/name_ended_task_branches.py::def name_ended_task_branches("
 		IMPL "tests/unit/tick/test_prepare_task_worktree.py::class"
 			+ "PrepareTaskWorktreeLeftInACancelledWaveTest("
 	SPEC "a worktree so held with uncommitted changes is taken over as well: the changes are"

@@ -12,6 +12,7 @@ from brigade.ledger.append_event import append_event
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.wave_cancelled import WaveCancelled
+from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
@@ -617,7 +618,7 @@ COMMIT_THE_UNCOMMITTED_CHANGES = (
     "commit",
     "--quiet",
     "-m",
-    "chore(tick): keep the changes of @TASK.B1 left uncommitted in a cancelled wave",
+    "chore(tick): keep the changes of @TASK.B1 left uncommitted in an ended wave",
 )
 SWITCH_TO_A_NEW_TASK_BRANCH = ("git", "switch", "--quiet", "--create", "task/w1/B1", "integration/w1")
 
@@ -698,6 +699,32 @@ class PrepareTaskWorktreeLeftInACancelledWaveTest(PrepareTaskWorktreeTestCase):
             [
                 (str(WORKTREE), ("git", "switch", "--quiet", "task/w1/B1")),
                 (str(WORKTREE), TASK_BRANCH_DESCENDS),
+            ],
+        )
+
+
+CLOSURE_INSTANT = datetime(2026, 11, 1, 23, 25, tzinfo=UTC)
+
+
+class PrepareTaskWorktreeLeftInAClosedWaveTest(PrepareTaskWorktreeTestCase):
+    def test_should_switch_the_worktree_to_a_new_task_branch_cut_from_the_wave_branch(self):
+        # Arrange
+        append_event(self.paths, CLOSURE_INSTANT, WAVE_OF_THE_PREVIOUS_ATTEMPT)
+        append_event(self.paths, CLOSURE_INSTANT, WaveClosed(wave="w0", pr=31))
+        runner = self.create_runner(MAKE_DEPS, worktrees=TASK_WORKTREE_LEFT_BY_THE_PREVIOUS_WAVE)
+
+        # Act
+        prepare_task_worktree(
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+        )
+
+        # Assert
+        self.assertEqual(
+            runner.commands[-5:-2],
+            [
+                (str(WORKTREE), STAGE_THE_WORKTREE),
+                (str(WORKTREE), FIND_STAGED_CHANGES),
+                (str(WORKTREE), SWITCH_TO_A_NEW_TASK_BRANCH),
             ],
         )
 
