@@ -92,3 +92,23 @@ class ProcessesShowTextTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(text, "exited  0  git status")
+
+    def test_should_print_under_a_failed_process_the_tail_of_its_stderr(self):
+        # Arrange
+        document = {
+            "processes": [
+                {
+                    "argv": ["git", "push"],
+                    "outcome": "exited",
+                    "exit": 1,
+                    "duration_ms": 30,
+                    "stderr": "remote: refused\nfatal: [GitHub token] rejected\n",
+                }
+            ]
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(text, "exited  1  git push\n    remote: refused\n    fatal: [GitHub token] rejected")
