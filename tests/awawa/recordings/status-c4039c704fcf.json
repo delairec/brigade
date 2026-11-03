@@ -1,0 +1,25 @@
+{
+  "call": {
+    "arguments": [
+      "status",
+      "--json",
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>"
+    ],
+    "cwd": "<tmp:0>/cache/brigade/refs/app/<commit:1>",
+    "directories": [
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>"
+    ],
+    "inputs": {
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/schema.awawa": "SCHEMA TASK\n\tFIELD TITLE string\nSCHEMA DECISION\n\tFIELD TITLE string\n",
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/tasks.awawa": "TASK B1\n\tTITLE \"first\"\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"statuses\": [], \"types\": [{\"type\": \"DECISION\", \"counts\": {}, \"unset\": 0, \"total\": 0}, {\"type\": \"SCHEMA\", \"counts\": {}, \"unset\": 2, \"total\": 2}, {\"type\": \"TASK\", \"counts\": {}, \"unset\": 1, \"total\": 1}], \"ignored\": {\"files\": 0, \"by_pattern\": [], \"not_understood\": []}, \"entities\": [{\"type\": \"SCHEMA\", \"name\": \"DECISION\", \"target\": \"@SCHEMA.DECISION\", \"file\": \"<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/schema.awawa\", \"line\": 3, \"status\": null, \"incoming\": 0, \"incoming_by\": []}, {\"type\": \"SCHEMA\", \"name\": \"TASK\", \"target\": \"@SCHEMA.TASK\", \"file\": \"<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/schema.awawa\", \"line\": 1, \"status\": null, \"incoming\": 0, \"incoming_by\": []}, {\"type\": \"TASK\", \"name\": \"B1\", \"target\": \"@TASK.B1\", \"file\": \"<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/tasks.awawa\", \"line\": 1, \"status\": null, \"incoming\": 0, \"incoming_by\": []}], \"references\": {\"sites\": 0, \"unresolved\": 0, \"by_file\": []}, \"diagnostics\": {\"errors\": 2, \"warnings\": 0, \"by_rule\": [{\"rule\": \"L022\", \"count\": 2}]}, \"summary\": {\"files\": 2, \"entities\": 3}}\n"
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}
