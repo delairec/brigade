@@ -41,6 +41,7 @@ from brigade.tick.build_snapshot import (
     StudyFacts,
     TaskAmendment,
     TaskFacts,
+    UncutMilestone,
     WaveFacts,
     build_snapshot,
 )
@@ -1448,6 +1449,65 @@ class BuildSnapshotOfAProjectItSkipsTest(BuildSnapshotTestCase):
 
         # Assert
         self.assertEqual(snapshot.milestones, ())
+
+
+def describe_task_of_milestone(status: str, milestone: str) -> list[dict]:
+    return [{"name": "STATUS", "atoms": [status]}, {"name": "MILESTONE", "atoms": [f"@MILESTONE.{milestone}"]}]
+
+
+def describe_milestone(title: str) -> list[dict]:
+    return [{"name": "TITLE", "atoms": [json.dumps(title)]}, {"name": "STATUS", "atoms": ["active"]}]
+
+
+class BuildSnapshotOfTheUncutMilestonesTest(BuildSnapshotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_operational_corpus()
+        self.remote_answers = {
+            **AWAWA_ANSWERS.answer_entities(
+                self.main_tree,
+                "TASK",
+                {
+                    "B0": AWAWA_ANSWERS.describe_task("implemented"),
+                    "B5": describe_task_of_milestone("todo", "M6"),
+                    "B8": describe_task_of_milestone("implemented", "M8"),
+                    "B9": describe_task_of_milestone("draft", "M9"),
+                    "B10": describe_task_of_milestone("todo", "M4"),
+                    "B11": describe_task_of_milestone("todo", "M5"),
+                },
+            ),
+            **AWAWA_ANSWERS.answer_entities(
+                self.main_tree,
+                "MILESTONE",
+                {
+                    "M4": describe_milestone("Delivery"),
+                    "M6": describe_milestone("Hardening"),
+                    "M8": describe_milestone("Cart & checkout"),
+                    "M9": describe_milestone("Payments"),
+                },
+                "STATUS==active",
+            ),
+            **AWAWA_ANSWERS.answer_no_incoming_refs(self.main_tree, "B5", "B10", "B11"),
+            **answer_tree("integration/delivery", MAIN_SHA),
+        }
+
+    def test_should_list_each_active_milestone_no_cut_records_with_the_open_waves_and_the_todo_tasks_naming_it(self):
+        # Arrange
+        self.record(60, MilestoneBranchCut(project="shop", milestone="M4", branch="integration/delivery", login=None))
+        self.record(50, WaveStarted(wave="w4", project="shop", branch="integration/w4", tasks=("B8",)))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.projects[1].uncut_milestones,
+            (
+                UncutMilestone(milestone="M6", branch="integration/hardening", open_waves=(), todo=("B5",)),
+                UncutMilestone(milestone="M8", branch="integration/cart-checkout", open_waves=("w4",), todo=()),
+                UncutMilestone(milestone="M9", branch="integration/payments", open_waves=(), todo=()),
+            ),
+        )
 
 
 def create_review_run_finished(run: str, task: str, error_class: str | None = None) -> RunFinished:
