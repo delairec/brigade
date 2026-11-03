@@ -5,13 +5,14 @@ from pathlib import Path
 from brigade.runtime import Runtime
 from brigade.studies.check_patterns import check_patterns
 from brigade.studies.convert_study import Study
-from brigade.studies.publish_wave_report import publish_wave_report
+from brigade.studies.publish_milestone_report import publish_milestone_report
+from brigade.studies.publish_task_report import publish_task_report
 from brigade.studies.render_answer import name_answer, render_answer
 from brigade.studies.render_report_answer import render_report_answer
 from brigade.studies.study_run_context import FIELDS_THE_CLI_FILLS, StudyRunContext
 
 REPORT_FIELDS_THE_CLI_FILLS = (
-    "WAVE",
+    "MILESTONE",
     "PROJECT",
     "TASK_ROW",
     "STATISTIC",
@@ -21,6 +22,7 @@ REPORT_FIELDS_THE_CLI_FILLS = (
     "PARKED_QUESTION",
     "PATTERN_TASK",
 )
+TASK_REPORT_FIELDS_THE_CLI_FILLS = ("TASK", *REPORT_FIELDS_THE_CLI_FILLS[1:])
 PATTERN_TYPE = "PATTERN"
 NO_ENTITY = ""
 
@@ -51,7 +53,11 @@ def _check_nothing(runtime: Runtime, directory: Path, collected: list[dict]) -> 
 
 
 def _name_report(study: Study, run_id: str) -> str:
-    return study.wave
+    return f"{study.project}_{study.milestone.milestone}"
+
+
+def _name_task_report(study: Study, run_id: str) -> str:
+    return f"{study.project}_{study.task.task}"
 
 
 STUDY_ANSWER_FORM = AnswerForm(
@@ -65,7 +71,14 @@ REPORT_ANSWER_FORM = AnswerForm(
     name=_name_report,
     render=render_report_answer,
     fields_the_cli_fills=REPORT_FIELDS_THE_CLI_FILLS,
-    publish=publish_wave_report,
+    publish=publish_milestone_report,
+    check=_check_nothing,
+)
+TASK_REPORT_ANSWER_FORM = AnswerForm(
+    name=_name_task_report,
+    render=render_report_answer,
+    fields_the_cli_fills=TASK_REPORT_FIELDS_THE_CLI_FILLS,
+    publish=publish_task_report,
     check=_check_nothing,
 )
 PATTERN_ANSWER_FORM = AnswerForm(
@@ -78,8 +91,10 @@ PATTERN_ANSWER_FORM = AnswerForm(
 
 
 def choose_answer_form(study: Study) -> AnswerForm:
-    if study.wave is not None:
+    if study.milestone is not None:
         return REPORT_ANSWER_FORM
+    if study.task is not None:
+        return TASK_REPORT_ANSWER_FORM
     if study.answer_type == PATTERN_TYPE:
         return PATTERN_ANSWER_FORM
     return STUDY_ANSWER_FORM

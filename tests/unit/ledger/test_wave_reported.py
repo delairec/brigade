@@ -13,6 +13,16 @@ class WaveReportedTest(unittest.TestCase):
         # Assert
         self.assertEqual(event, WaveReported(wave="tidepool_w16", run="20261019T090000Z-5c1d2e"))
 
+    def test_should_give_back_the_wave_and_the_run_of_a_wave_reported_read_from_the_ledger(self):
+        # Arrange
+        event = WaveReported(wave="tidepool_w16", run="20261019T090000Z-5c1d2e")
+
+        # Act
+        document = event.to_document()
+
+        # Assert
+        self.assertEqual(document, {"wave": "tidepool_w16", "run": "20261019T090000Z-5c1d2e"})
+
 
 if __name__ == "__main__":
     unittest.main()

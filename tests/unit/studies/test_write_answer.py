@@ -4,9 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from brigade.ledger.append_event import append_event
-from brigade.ledger.wave_started import WaveStarted
 from brigade.studies.convert_study import Study
+from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.study_run_context import StudyRunContext
 from brigade.studies.write_answer import write_answer
 from tests.unit.forge_double import ForgeDouble
@@ -21,9 +20,9 @@ RATIFIED_PATTERN = 'PATTERN cli_is_hard_to_read\n\tTITLE "the cli is hard to rea
 PROPOSED_PATTERN = (
     'PATTERN slow_tick\n\tTITLE "the tick is slow"\n\tSTATUS new\n\tEVIDENCE "note:5f2b1c0d9e8a"\n\tACTION dismiss\n'
 )
-REPORTED = 'REPORT oak_w2\n\tWAVE "oak_w2"\n'
-WAVE_REPORT = Study(
-    name="wave-report",
+REPORTED = 'REPORT oak_M6\n\tMILESTONE "M6"\n'
+MILESTONE_REPORT = Study(
+    name="milestone-report",
     project="oak",
     question=None,
     collectors=(),
@@ -32,7 +31,9 @@ WAVE_REPORT = Study(
     output="entity:REPORT",
     answer_type="REPORT",
     status="active",
-    wave="oak_w2",
+    milestone=MilestoneReportOrder(
+        project="oak", milestone="M6", branch="integration/hardening", waves=("oak_w2",), tasks=("B17",)
+    ),
 )
 from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
@@ -246,33 +247,30 @@ class WriteAnswerTest(unittest.TestCase):
         # Assert
         self.assertEqual(written["branch"], branch)
 
-    def test_should_publish_the_report_of_a_wave_on_its_integration_branch_once_its_entity_is_written(self):
+    def test_should_publish_the_report_of_a_milestone_on_its_branch_once_its_entity_is_written(self):
         # Arrange
         checkout = self.run_directory / "checkout"
         (self.run_directory / "answer.awawa").write_text(REPORTED, encoding="utf-8")
-        append_event(
-            self.runtime.paths,
-            self.runtime.now,
-            WaveStarted(wave="oak_w2", project="oak", branch="integration/oak_w2", tasks=("B17",)),
-        )
         self.processes.answer_corpus_change(
-            self.config_root, ("reports.awawa",), "brigade study run: the answer of @STUDY.wave-report"
+            self.config_root, ("reports.awawa",), "brigade study run: the answer of @STUDY.milestone-report"
         )
         self.processes.answer_entities(
-            self.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("FORGE", "none"), ("CORPUS", "corpus"))}
+            self.config_root,
+            "PROJECT",
+            {"oak": (("PATH", "/srv/oak"), ("FORGE", "none"), ("CORPUS", "corpus"), ("MAIN", "main"))},
         )
-        self.processes.answer(("git", "fetch", "--quiet", "origin", "integration/oak_w2"))
+        self.processes.answer(("git", "fetch", "--quiet", "origin", "integration/hardening"))
         self.processes.answer(
-            ("git", "worktree", "add", "--quiet", "--detach", str(checkout), "origin/integration/oak_w2")
+            ("git", "worktree", "add", "--quiet", "--detach", str(checkout), "origin/integration/hardening")
         )
-        self.processes.answer(("git", "switch", "--quiet", "--force-create", "integration/oak_w2"))
-        self.processes.answer(("git", "add", "--", "corpus/waves/2-report.md"))
-        self.processes.answer(("git", "diff", "--cached", "--quiet", "--", "corpus/waves/2-report.md"))
-        self.processes.answer(("git", "push", "--quiet", "origin", "integration/oak_w2"))
+        self.processes.answer(("git", "switch", "--quiet", "--force-create", "integration/hardening"))
+        self.processes.answer(("git", "add", "--", "corpus/milestones/M6-report.md"))
+        self.processes.answer(("git", "diff", "--cached", "--quiet", "--", "corpus/milestones/M6-report.md"))
+        self.processes.answer(("git", "push", "--quiet", "origin", "integration/hardening"))
         self.processes.answer(("git", "worktree", "remove", "--force", str(checkout)))
 
         # Act
-        written = write_answer(self.create_context("entity:REPORT", WAVE_REPORT))
+        written = write_answer(self.create_context("entity:REPORT", MILESTONE_REPORT))
 
         # Assert
         self.assertEqual(
@@ -280,8 +278,8 @@ class WriteAnswerTest(unittest.TestCase):
             {
                 "output": "entity:REPORT",
                 "answer": str(self.run_directory / "answer.awawa"),
-                "report": "corpus/waves/2-report.md",
-                "branch": "integration/oak_w2",
+                "report": "corpus/milestones/M6-report.md",
+                "branch": "integration/hardening",
                 "pull_request": None,
             },
         )

@@ -9,6 +9,7 @@ from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
+from brigade.tasks.find_task_base import find_task_base
 from brigade.verify.find_opened_task import find_opened_task
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
 
@@ -31,16 +32,15 @@ def _decide_exit_code(document: dict) -> int:
 def verify_preflight(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)
     run_process = runtime.run_process
-    project = require_project_at(
-        read_projects(runtime), locate_main_checkout(run_process, locate_worktree_root(run_process, Path.cwd()))
-    )
+    worktree = locate_worktree_root(run_process, Path.cwd())
+    project = require_project_at(read_projects(runtime), locate_main_checkout(run_process, worktree))
     found = find_opened_task(runtime, project.name, request.pr)
     return preflight_pull_request(
         runtime,
         PreflightDemand(
             project=project,
             task=found.opened.task,
-            wave_branch=found.wave_branch,
+            base_branch=find_task_base(runtime, worktree, project, found.opened.task),
             pr=request.pr,
             forge=runtime.resolve_plugin("forge", FORGE_NAME),
             environment=read_forge_environment(configuration, CLI_KEY, runtime),

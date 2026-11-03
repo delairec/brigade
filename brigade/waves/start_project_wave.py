@@ -1,29 +1,19 @@
-import functools
 from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
 
 from brigade.corpus.read_entities import Entity
 from brigade.errors import BrigadeError
-from brigade.git.find_branch import find_branch
-from brigade.git.find_remote_branch import RemoteBranch, find_remote_branch
 from brigade.ledger.append_derived_event import append_derived_event
 from brigade.ledger.read_ledger import LedgerReading
 from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.find_project import find_project
-from brigade.registry.is_on_github import is_on_github
-from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runtime import Runtime
-from brigade.system.parse_configuration import CLI_KEY, Configuration
+from brigade.system.parse_configuration import Configuration
 from brigade.tasks.find_task_number import find_task_number
 from brigade.tasks.read_task_after import read_task_after
-from brigade.tick.name_task_branch import WAVE_BRANCH_PREFIX
 from brigade.waves.admit_candidates import admit_candidates
-from brigade.waves.cut_wave_branch import WaveBranchCut, cut_wave_branch
-from brigade.waves.is_wave_branch_missing import is_wave_branch_missing
-from brigade.waves.list_open_waves import list_open_waves
 from brigade.waves.locate_wave_base import WaveBaseDemand, locate_wave_base
 from brigade.waves.map_open_tasks import map_open_tasks
 from brigade.waves.name_next_wave import name_next_wave
@@ -70,16 +60,6 @@ def _compose_tasks(runtime: Runtime, start: WaveStart, tasks: ProjectTasks, read
     return tuple(sorted(chosen, key=find_task_number))
 
 
-def _find_branch_anywhere(runtime: Runtime, start: WaveStart, project: Entity, branch: str) -> bool:
-    repository = Path(read_project_field(project, "PATH"))
-    if find_branch(runtime.run_process, repository, branch):
-        return True
-    if not is_on_github(project):
-        return False
-    remote_branch = RemoteBranch(repository=repository, branch=branch, environment=start.read_environment(CLI_KEY))
-    return find_remote_branch(runtime.run_process, remote_branch)
-
-
 def _demand_base(start: WaveStart, project: Entity, tasks: ProjectTasks, wave: WaveStarted) -> WaveBaseDemand:
     return WaveBaseDemand(
         project=project,
@@ -88,26 +68,6 @@ def _demand_base(start: WaveStart, project: Entity, tasks: ProjectTasks, wave: W
         read_environment=start.read_environment,
         read_login=start.read_login,
     )
-
-
-def _select_wave_tasks(
-    wave: WaveStarted, tasks: ProjectTasks, read_main_tasks: Callable[[], ProjectTasks]
-) -> ProjectTasks:
-    if all(task in tasks.by_name for task in wave.tasks):
-        return tasks
-    return read_main_tasks()
-
-
-def _cut_missing_branches(
-    runtime: Runtime, start: WaveStart, tasks: ProjectTasks, reading: ProjectTasksReading
-) -> None:
-    read_main_tasks = functools.cache(lambda: read_project_tasks(runtime, reading, NO_MILESTONE))
-    for wave in list_open_waves(runtime.read_ledger(runtime.paths.state_root).entries, start.project):
-        cut = WaveBranchCut(project=reading.project, branch=wave.branch, read_environment=start.read_environment)
-        if is_wave_branch_missing(runtime.run_process, cut):
-            wave_tasks = _select_wave_tasks(wave, tasks, read_main_tasks)
-            base = locate_wave_base(runtime, _demand_base(start, reading.project, wave_tasks, wave))
-            cut_wave_branch(runtime.run_process, cut, base)
 
 
 def start_project_wave(runtime: Runtime, start: WaveStart, milestone: str | None) -> dict:
@@ -123,12 +83,9 @@ def start_project_wave(runtime: Runtime, start: WaveStart, milestone: str | None
 
     def name_wave(reading: LedgerReading) -> WaveStarted:
         chosen = _compose_tasks(runtime, start, tasks, reading)
-        wave = name_next_wave(start.project, reading.entries)
-        branch = f"{WAVE_BRANCH_PREFIX}{wave}"
-        if _find_branch_anywhere(runtime, start, project, branch):
-            raise BrigadeError(f"the branch {branch} exists and no wave.started names it")
-        return WaveStarted(wave=wave, project=start.project, branch=branch, tasks=chosen)
+        return WaveStarted(wave=name_next_wave(start.project, reading.entries), project=start.project, tasks=chosen)
 
     started = append_derived_event(runtime.paths, runtime.now, name_wave)
-    _cut_missing_branches(runtime, start, tasks, tasks_reading)
-    return {key: started[key] for key in ("wave", "project", "branch", "tasks")}
+    wave = WaveStarted(wave=started["wave"], project=started["project"], tasks=tuple(started["tasks"]))
+    locate_wave_base(runtime, _demand_base(start, project, tasks, wave))
+    return {key: started[key] for key in ("wave", "project", "tasks")}

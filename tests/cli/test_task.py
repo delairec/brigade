@@ -27,11 +27,15 @@ WAVE_TASKS = (
     'TASK S6\n\tTITLE "Count the emptied carts"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n'
 )
 WAVE_MILESTONES = 'MILESTONE M1\n\tTITLE "Empty cart"\n\tSTATUS running\n'
-WAVE_BRANCH = "integration/M1-empty-cart"
-TASK_BRANCH = "task/M1-empty-cart/S3"
+MILESTONE_BRANCH = "integration/M1-empty-cart"
+TASK_BRANCH = "feature/S3-empty-the-cart-in-one-click"
+MILESTONE_BRANCH_CUT = (
+    '{"schema_version": 1, "ts": "2026-10-13T08:00:00Z", "event": "milestone.branch_cut", "project": "shop",'
+    f' "milestone": "M1", "branch": "{MILESTONE_BRANCH}", "login": "octo-cli"}}\n'
+)
 WAVE_STARTED = (
     '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
-    f' "project": "shop", "branch": "{WAVE_BRANCH}", "tasks": ["S3", "S6"]}}\n'
+    f' "project": "shop", "branch": "{MILESTONE_BRANCH}", "tasks": ["S3", "S6"]}}\n'
 )
 ACCEPTANCE_COMMAND = "python3 -m unittest"
 HEAVY_COMMAND = "python3 -m unittest discover tests/e2e"
@@ -55,7 +59,7 @@ class TaskContextTestCase(unittest.TestCase):
         self.project.write("corpus/tasks.awawa", MAIN_TASKS)
         self.project.track("corpus")
         self.project.run_git("commit", "--quiet", "-m", "the corpus")
-        self.project.run_git("checkout", "--quiet", "-b", WAVE_BRANCH)
+        self.project.run_git("checkout", "--quiet", "-b", MILESTONE_BRANCH)
         self.project.write("corpus/tasks.awawa", WAVE_TASKS)
         self.project.write("corpus/milestones.awawa", WAVE_MILESTONES)
         self.project.track("corpus")
@@ -70,9 +74,9 @@ class TaskContextTestCase(unittest.TestCase):
         )
         self.wave_started = self.state / "ledger" / "2026-10.jsonl"
         self.wave_started.parent.mkdir(parents=True)
-        self.wave_started.write_text(WAVE_STARTED)
+        self.wave_started.write_text(MILESTONE_BRANCH_CUT + WAVE_STARTED)
         self.worktree = self.project.path / ".brigade" / "worktrees" / "S3"
-        self.project.run_git("worktree", "add", "--quiet", "-b", TASK_BRANCH, str(self.worktree), WAVE_BRANCH)
+        self.project.run_git("worktree", "add", "--quiet", "-b", TASK_BRANCH, str(self.worktree), MILESTONE_BRANCH)
         self.setup_log = self.state / "setups" / "shop" / "S3.log"
         self.setup_log.parent.mkdir(parents=True)
         self.setup_log.write_text(SETUP_LOG)

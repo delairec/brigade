@@ -51,12 +51,15 @@ which already has write access to this repository: there is nothing to request.
 
 From M2, brigade delivers its own milestones through its tick, as it does for any registered project: the timer
 fires `brigade tick --once` every five minutes. For each active milestone, the tick cuts its integration branch,
-`integration/<slug of its TITLE>`, rebases it onto `main` once `main` has moved, and each open wave branch of the
-milestone onto it once it has moved without that branch; it starts a wave of the ratified tasks read on that branch, on `integration/<wave>` cut from it,
-merges each verified task pull request into the wave branch, then opens the pull request of the wave into the
-milestone branch and merges it once it is ready. Once every wave of the milestone is merged, the tick opens the pull
-request of the milestone branch into `main`: the milestone is delivered when the user merges it.
-A task naming no milestone runs as before: the user merges the pull request of its wave into `main`.
+`integration/<slug of its TITLE>`, and rebases it onto `main` once `main` has moved. A wave is a batch of the ratified
+tasks read on that branch, recorded in the ledger, with no branch and no pull request of its own: each task runs on
+`<prefix>/<id>-<slug>` (`feature/B46-<slug>`, `fix/B231-<slug>`), cut from the branch of its milestone, and the tick
+merges its verified pull request into it. A wave closes once each of its tasks is merged or parked. Once every task of
+the milestone is merged or parked and no wave of it is open, the tick runs the report of the milestone, commits it on
+the milestone branch and opens the pull request of that branch into `main`, the report as its body: the milestone is
+delivered when the user merges it.
+A task naming no milestone is cut from `main` and its pull request goes into `main`, which the user merges; the tick
+replaces its body with the report of the task once it is ready.
 A session launches no wave and no task run by hand.
 
 ```

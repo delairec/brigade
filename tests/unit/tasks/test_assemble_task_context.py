@@ -38,18 +38,18 @@ class AssembleTaskContextTest(unittest.TestCase):
         self.worktree_path = self.root / "oak-b12"
         self.worktree_path.mkdir()
         self.worktree = TaskWorktree(
-            path=self.worktree_path, task="B12", project=PROJECT, wave="oak_w1", wave_branch="integration/oak_w1"
+            path=self.worktree_path, task="B12", project=PROJECT, wave="oak_w1", base="integration/harvest"
         )
         self.instructions = self.root / "instructions"
         self.processes = ScriptedProcesses()
-        self.processes.answer(("git", "merge-base", "--is-ancestor", "integration/oak_w1", "HEAD"))
+        self.processes.answer(("git", "merge-base", "--is-ancestor", "integration/harvest", "HEAD"))
         self.processes.answer(("awawa", "context", "@TASK.B12", "--with-schema", "."), stdout="TASK B12\n")
         self.processes.answer(("awawa", "lint", "--closure", "@TASK.B12", "."), exit_code=1, stderr="L001\n")
 
     def script_wave_tree(self, runtime) -> None:
         self.processes.answer_entities(runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"),)})
         self.processes.answer(
-            ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "integration/oak_w1^{commit}"),
+            ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "integration/harvest^{commit}"),
             stdout="c0ffee\n",
         )
         tree = self.root / "cache" / "refs" / "oak" / "c0ffee"
@@ -98,7 +98,7 @@ class AssembleTaskContextTest(unittest.TestCase):
             context,
             {
                 "worktree": {
-                    "ancestry": {"command": "git merge-base --is-ancestor integration/oak_w1 HEAD", "exit_code": 0},
+                    "ancestry": {"command": "git merge-base --is-ancestor integration/harvest HEAD", "exit_code": 0},
                     "setup": None,
                 },
                 "task": [
@@ -178,10 +178,10 @@ class AssembleTaskContextTest(unittest.TestCase):
             ],
         )
 
-    def test_should_carry_the_exit_code_of_the_ancestry_once_the_wave_branch_moved(self):
+    def test_should_carry_the_exit_code_of_the_ancestry_once_the_base_moved(self):
         # Arrange
         runtime = self.create_runtime()
-        self.processes.answer(("git", "merge-base", "--is-ancestor", "integration/oak_w1", "HEAD"), exit_code=1)
+        self.processes.answer(("git", "merge-base", "--is-ancestor", "integration/harvest", "HEAD"), exit_code=1)
 
         # Act
         context = assemble_task_context(runtime, Configuration(), self.worktree, ATTRIBUTION)
@@ -189,7 +189,7 @@ class AssembleTaskContextTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             context["worktree"]["ancestry"],
-            {"command": "git merge-base --is-ancestor integration/oak_w1 HEAD", "exit_code": 1},
+            {"command": "git merge-base --is-ancestor integration/harvest HEAD", "exit_code": 1},
         )
 
     def test_should_carry_the_setup_log_of_the_worktree(self):

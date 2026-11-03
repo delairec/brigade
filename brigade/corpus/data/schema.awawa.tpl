@@ -135,17 +135,22 @@ SCHEMA ANSWER
 		DESC "one finding with its evidence, filled by the judging slot"
 
 SCHEMA REPORT
-	DESC "the answer of the built-in study wave-report: the CLI fills what the collectors gave, the"
-		+ "report slot the prose"
+	DESC "the answer of the built-in studies milestone-report and task-report: the CLI fills what"
+		+ "the collectors gave, the report slot the prose; a report written before them names a"
+		+ "wave"
+	FIELD MILESTONE string
+		DESC "the milestone reported, M<n>"
+	FIELD TASK string
+		DESC "the task reported, naming no milestone"
 	FIELD WAVE string
-		REQUIRED
-		DESC "the wave reported, <project>_w<n>"
+		DESC "the wave reported, <project>_w<n>, by a report written before the report of a"
+			+ "milestone"
 	FIELD PROJECT string
 		REQUIRED
-		DESC "the project of the wave"
+		DESC "the project reported"
 	FIELD TASK_ROW string
 		REPEATABLE
-		DESC "one task of the wave, its last state and its pull request, filled by the CLI"
+		DESC "one task reported, its last state and its pull request, filled by the CLI"
 	FIELD STATISTIC string
 		REPEATABLE
 		DESC "one figure of the wave, its name then its value, filled by the CLI"

@@ -147,12 +147,12 @@ class TaskContextOutsideATaskTest(unittest.TestCase):
             COMMAND.run(Namespace(task=THE_TASK_OF_THE_BRANCH), runtime)
 
         # Assert
-        self.assertEqual(str(raised.exception), "the branch main is not a task/<slug>/<task> branch")
+        self.assertEqual(str(raised.exception), "the branch main is not a <prefix>/<task>-<slug> branch")
 
 
 TASK_CHECKOUT = {
     ("git", "rev-parse", "--show-toplevel"): "/home/user/tidepool-T7\n",
-    ("git", "branch", "--show-current"): "task/tidepool_w16/T7\n",
+    ("git", "branch", "--show-current"): "feature/T7-tides\n",
     ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): "/home/user/tidepool/.git\n",
     ("git", "rev-parse", "--verify"): "8885daa\n",
     ("git", "merge-base", "--is-ancestor"): "",
@@ -162,6 +162,16 @@ TASK_CHECKOUT = {
 }
 TIDEPOOL_CORPUS = {
     "PROJECT": {"tidepool": (("PATH", "/home/user/tidepool"), ("ACCEPTANCE", "python3 -m unittest"))},
+    "TASK": {"T7": (("MILESTONE", "@MILESTONE.M4"),)},
+}
+TIDEPOOL_MILESTONE_BRANCH_CUT = {
+    "schema_version": 1,
+    "ts": "2026-10-18T08:00:00Z",
+    "event": "milestone.branch_cut",
+    "project": "tidepool",
+    "milestone": "M4",
+    "branch": "integration/tides",
+    "login": None,
 }
 TIDEPOOL_WAVE_STARTED = {
     "schema_version": 2,
@@ -169,7 +179,6 @@ TIDEPOOL_WAVE_STARTED = {
     "event": "wave.started",
     "wave": "tidepool_w16",
     "project": "tidepool",
-    "branch": "integration/tidepool_w16",
     "tasks": ["T7"],
 }
 
@@ -181,7 +190,7 @@ class TaskContextOfABuildRunTest(unittest.TestCase):
         (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
         (self.root / "config" / "_schema.awawa").write_text("", encoding="utf-8")
         (self.root / "cache" / "refs" / "tidepool" / "8885daa").mkdir(parents=True)
-        write_ledger(self.root, [TIDEPOOL_WAVE_STARTED])
+        write_ledger(self.root, [TIDEPOOL_MILESTONE_BRANCH_CUT, TIDEPOOL_WAVE_STARTED])
         self.run_process = create_machine_double(TIDEPOOL_CORPUS, TASK_CHECKOUT)
 
     def test_should_write_the_package_to_the_directory_of_the_run(self):
@@ -196,7 +205,7 @@ class TaskContextOfABuildRunTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             (self.root / "run" / "context.md").read_text(encoding="utf-8"),
-            "# worktree\n$ git merge-base --is-ancestor integration/tidepool_w16 HEAD\nexit 0\n\n"
+            "# worktree\n$ git merge-base --is-ancestor integration/tides HEAD\nexit 0\n\n"
             "# task\n$ awawa context @TASK.T7 --with-schema .\nexit 0\nTASK T7\n"
             "$ awawa lint --closure @TASK.T7 .\nexit 0\n\n"
             "# acceptance\npython3 -m unittest\n\n"
@@ -218,7 +227,7 @@ class TaskContextOfABuildRunTest(unittest.TestCase):
                 "schema_version": 1,
                 "worktree": {
                     "ancestry": {
-                        "command": "git merge-base --is-ancestor integration/tidepool_w16 HEAD",
+                        "command": "git merge-base --is-ancestor integration/tides HEAD",
                         "exit_code": 0,
                     },
                     "setup": None,

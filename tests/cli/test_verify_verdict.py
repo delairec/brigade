@@ -63,6 +63,15 @@ class BrigadeVerifyVerdictUnderTheVerdictModeTest(VerifyVerdictTestCase):
             self.read_events(),
             [
                 {
+                    "schema_version": 1,
+                    "ts": "2026-10-13T08:00:00Z",
+                    "event": "milestone.branch_cut",
+                    "project": "shop",
+                    "milestone": "M1",
+                    "branch": "integration/M1-empty-cart",
+                    "login": "octo-cli",
+                },
+                {
                     "schema_version": 2,
                     "ts": "2026-10-17T09:00:00Z",
                     "event": "wave.started",
@@ -78,7 +87,7 @@ class BrigadeVerifyVerdictUnderTheVerdictModeTest(VerifyVerdictTestCase):
                     "project": "shop",
                     "task": "S3",
                     "wave": "shop_w1",
-                    "branch": "task/M1-empty-cart/S3",
+                    "branch": "feature/S3-empty-the-cart-in-one-click",
                     "pr": 42,
                     "login": "octo-bot",
                 },

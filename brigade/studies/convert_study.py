@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
 from brigade.corpus.read_entity import Entity
+from brigade.studies.milestone_report_order import MilestoneReportOrder
+from brigade.studies.task_report_order import TaskReportOrder
 
 PROJECT_REFERENCE_PREFIX = "@PROJECT."
 
@@ -16,7 +18,8 @@ class Study:
     output: str
     answer_type: str
     status: str
-    wave: str | None = None
+    milestone: MilestoneReportOrder | None = None
+    task: TaskReportOrder | None = None
 
 
 def _read_values(entity: Entity, field_name: str) -> tuple[str, ...]:

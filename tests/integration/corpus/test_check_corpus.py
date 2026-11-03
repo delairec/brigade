@@ -33,6 +33,10 @@ REPORT_OF_A_WAVE = (
 )
 
 
+REPORT_OF_A_MILESTONE = 'REPORT shop_M6\n\tMILESTONE "M6"\n\tPROJECT "shop"\n\tNARRATIVE "every task merged"\n'
+REPORT_OF_A_TASK = 'REPORT shop_B46\n\tTASK "B46"\n\tPROJECT "shop"\n\tNARRATIVE "the task merged"\n'
+
+
 class CheckCorpusTest(unittest.TestCase):
     def setUp(self):
         self.run_process = create_process_runner(provide_awawa(self))
@@ -199,12 +203,18 @@ class CheckCorpusUnderTheShippedSchemaTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(checks[1].record.exit_code, expected_exit_code, checks[1].record.stdout)
 
-    def test_should_accept_the_report_of_a_wave(self):
-        # Arrange
-        (self.corpus / "reports.awawa").write_text(REPORT_OF_A_WAVE)
+    def test_should_accept_the_report_of_a_milestone_of_a_task_or_of_a_wave(self):
+        for case, report in [
+            ("a milestone", REPORT_OF_A_MILESTONE),
+            ("a task", REPORT_OF_A_TASK),
+            ("a wave", REPORT_OF_A_WAVE),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                (self.corpus / "reports.awawa").write_text(report)
 
-        # Act
-        checks = check_corpus(self.run_process, self.corpus)
+                # Act
+                checks = check_corpus(self.run_process, self.corpus)
 
-        # Assert
-        self.assertEqual(checks[1].record.exit_code, 0, checks[1].record.stdout)
+                # Assert
+                self.assertEqual(checks[1].record.exit_code, 0, checks[1].record.stdout)

@@ -6073,3 +6073,57 @@ DECISION TheSnapshotListsTheUncutMilestonesAndThePlanCutsOneAWaveOrATodoTaskName
 		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 	SOURCE "the delivery of @TASK.B224"
 		REF @TASK.B224
+
+DECISION ATaskSlugWithNoHyphenWithinFortyCharactersIsCutAtItsFortiethAndATaskWithoutTypeHasNoBranch
+	TITLE "a task slug longer than 40 characters with no hyphen within them is cut at its 40th"
+		+ "character; a task carrying no TYPE has no branch, and the snapshot refuses its wave"
+	STATUS active
+	DESC "the slug of a TITLE longer than 40 characters is cut at its last hyphen at or before its"
+		+ "40th character, and at its 40th character when no hyphen stands within them"
+	DESC "the snapshot of the tick names the branch of each task of a wave from its TYPE and its"
+		+ "TITLE; a task carrying no TYPE stops the read of its wave with an error naming the task,"
+		+ "as any unreadable fact of a wave does"
+		REF @TASK.B232
+	REJECTED "a default prefix for a task carrying no TYPE: brigade task pr already refuses such a"
+		+ "task, so a branch named for it would end on a refusal"
+	RATIONALE "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch"
+		+ "rules the cut on a hyphen and the prefix from TYPE without naming either case; the build"
+		+ "run of @TASK.B232 met both on 2026-11-02"
+		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
+		REF @TASK.B232
+
+DECISION TheTreeOfAWaveIsReadAtTheBranchOfTheMilestoneHoldingItsTasksOrAtMain
+	TITLE "the corpus of a wave is read at the branch of the open milestone whose tasks hold every"
+		+ "task of the wave, at PROJECT.MAIN otherwise, whatever branch its wave.started recorded"
+	STATUS active
+	DESC "the tree of a wave is read at the recorded branch of the first milestone of its project,"
+		+ "cut and not closed in the ledger, whose tasks naming it at that branch hold every task"
+		+ "of the wave; at PROJECT.MAIN when none does"
+		REF @TASK.B232
+	DESC "a wave.started that records a branch is read the same way: its recorded branch is never"
+		+ "read as a tree"
+	REJECTED "the milestone recorded in wave.started: the task this decision binds has wave.started"
+		+ "carry wave, project and tasks alone"
+	REJECTED "the tree read at PROJECT.MAIN to learn the milestone of the wave first: a task"
+		+ "ratified on the branch of its milestone is not on PROJECT.MAIN"
+	RATIONALE "a wave has no branch of its own once @TASK.B232 is delivered, and the snapshot"
+		+ "matches the open waves to a milestone by its tasks the same way; ruled by the build run"
+		+ "of @TASK.B232 on 2026-11-02"
+		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
+		REF @TASK.B232
+
+DECISION TheReportOfATaskIsCommittedOnADetachedCheckoutAndPushedToTheBranchOfTheTask
+	TITLE "the report of a task naming no milestone is committed on a detached checkout of"
+		+ "origin/<its branch> and pushed to refs/heads/<its branch>, without force"
+	STATUS active
+	DESC "the task-report run fetches the branch of the task, adds a detached worktree at"
+		+ "origin/<branch> in its run directory, commits the report there, pushes HEAD to"
+		+ "refs/heads/<branch> without force and removes the worktree"
+		REF @TASK.B232
+	REJECTED "a checkout of the branch itself, as the report of a milestone takes: the worktree of"
+		+ "the task holds that branch, and git refuses a branch another worktree holds"
+	REJECTED "the commit made in the worktree of the task: a build or repair run may hold it"
+	RATIONALE "the branch of a task stays held by its worktree while its pull request is open, and"
+		+ "the report must reach the forge without touching that worktree; ruled by the build run"
+		+ "of @TASK.B232 on 2026-11-03"
+		REF @TASK.B232

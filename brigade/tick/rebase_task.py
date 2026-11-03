@@ -9,7 +9,6 @@ from brigade.runtime import Runtime
 from brigade.system.hold_lock import hold_lock
 from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.tick.actions import RebaseTask
-from brigade.tick.name_task_branch import name_task_branch
 
 WHOLE_WORKTREE = "."
 
@@ -35,7 +34,7 @@ def rebase_task(runtime: Runtime, action: RebaseTask, environment: dict) -> str 
             runtime.run_process,
             LeasedPush(
                 worktree=worktree,
-                branch=name_task_branch(action.branch, action.task),
+                branch=action.task_branch,
                 expected_head=action.head,
                 environment=environment,
             ),

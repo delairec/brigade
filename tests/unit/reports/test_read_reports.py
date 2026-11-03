@@ -93,6 +93,27 @@ class ReadReportsTest(unittest.TestCase):
             ],
         )
 
+    def test_should_read_the_kind_of_a_report_by_the_field_it_carries(self):
+        for name, field, kind in [
+            ("brigade_M6", {"name": "MILESTONE", "value": "M6"}, "milestone-report"),
+            ("brigade_B240", {"name": "TASK", "value": "B240"}, "task-report"),
+            ("brigade_w17", {"name": "WAVE", "value": "brigade_w17"}, "wave-report"),
+        ]:
+            with self.subTest(kind=kind):
+                # Arrange
+                root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+                write_operational_corpus(root)
+                (root / "config" / "reports.awawa").write_text("", encoding="utf-8")
+                report = {"type": "REPORT", "name": name, "fields": [field, {"name": "PROJECT", "value": "brigade"}]}
+                plugin = DocumentPluginDouble({str(root / "config" / "reports.awawa"): [report]})
+                runtime = create_test_runtime(create_test_paths(root), run_process=create_corpus_double({}))
+
+                # Act
+                [described] = read_reports(runtime, plugin)
+
+                # Assert
+                self.assertEqual(described["kind"], kind)
+
     def test_should_find_none_where_the_operational_corpus_holds_no_report(self):
         # Arrange
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))

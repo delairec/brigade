@@ -19,6 +19,10 @@ class EntityNotDefined(BrigadeError):
     pass
 
 
+class TaskTypeMissing(BrigadeError):
+    pass
+
+
 class UsageError(BrigadeError):
     pass
 

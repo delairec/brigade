@@ -81,6 +81,20 @@ nothing.
 | `worktrees_P` | `stale-worktrees` | linked worktree on a stale branch, on a branch that no longer exists, or detached with no live run in it | the path |
 
 
+## Built-in reports
+
+Two built-in studies of the slot `report` answer with a `REPORT` entity, which the CLI fills from the collectors
+(`TASK_ROW`, `STATISTIC`, `GRAPH`, `MANUAL_TEST`, `INSTRUCTIONS_CHANGE`, `PARKED_QUESTION`, `PATTERN_TASK`) and the
+judging run completes with its prose. A wave has no report of its own.
+
+| Study | Run by the tick | Collectors | Entity | Markdown | Where it goes |
+|---|---|---|---|---|---|
+| `milestone-report` | once every task of the milestone at its branch is merged or parked and no wave of it is open; `milestone.reported` | `ledger` for each wave of the milestone, `pr-list state=all`, `corpus ref=<branch>` on its tasks, `git-diff-stat to=<branch>` | `<project>_<milestone>`; its `GRAPH` holds every `AFTER` between two tasks of the milestone | `<CORPUS>/milestones/<milestone>-report.md` | committed on the branch of the milestone, then the body of its pull request into the main branch, opened then; no pull request under `FORGE none` |
+| `task-report` | for a task naming no milestone, once its pull request is ready to merge or the task is parked; `task.reported` | the same, narrowed to the wave of the task, the task and its branch | `<project>_<task>` | `<CORPUS>/tasks/<task>-report.md` | committed on the branch of the task, then the body of its pull request, replaced whole |
+
+The commit is pushed without force as the login of the key `cli` of `[forge_accounts]`. `brigade reports list` names
+the kind of each report, `milestone-report`, `task-report` or, for one written before them, `wave-report`.
+
 <details><summary>Steps, ledger events and resumption</summary>
 
 `study run` runs the steps `collect`, `judge` and `output`, each writing its result under `runs/<id>/steps/` and the
