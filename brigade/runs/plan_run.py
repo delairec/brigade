@@ -162,8 +162,12 @@ def _describe_clock_warning(client: str, budget: int, wall_limit_s: float) -> st
     )
 
 
-def _count_segments(run_directory: Path) -> int:
-    return sum(1 for segment in (run_directory / SEGMENTS_DIRECTORY).iterdir() if segment.is_dir())
+def _find_last_finished_segment(run_directory: Path) -> int:
+    return max(
+        int(segment.name)
+        for segment in (run_directory / SEGMENTS_DIRECTORY).iterdir()
+        if (segment / RESULT_FILE).is_file()
+    )
 
 
 def _read_session(run_directory: Path, segment: int) -> str | None:
@@ -216,15 +220,16 @@ def _plan_identity(request: RunRequest, setting: RunSetting, plugins: RunPlugins
 
 
 def _plan_resumption(request: RunRequest, probe: ProbeAnswer, run_directory: Path) -> dict:
+    last_finished_segment = _find_last_finished_segment(run_directory) if request.resume else None
     return {
         "counts_steps": STEP_COUNT_FEATURE in probe.features,
         "reads_actions": ACTIONS_OPERATION in probe.operations,
         "reads_transcripts": TRANSCRIPTS_OPERATION in probe.operations,
         "resumed": request.resume,
-        "first_segment": _count_segments(run_directory) + 1 if request.resume else FIRST_SEGMENT,
+        "first_segment": FIRST_SEGMENT if last_finished_segment is None else last_finished_segment + 1,
         "resumed_session": (
-            _read_session(run_directory, _count_segments(run_directory))
-            if request.resume and RESUME_OPERATION in probe.operations
+            _read_session(run_directory, last_finished_segment)
+            if last_finished_segment is not None and RESUME_OPERATION in probe.operations
             else None
         ),
     }
