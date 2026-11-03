@@ -704,6 +704,15 @@ def _plan_milestone_cuts(snapshot: Snapshot) -> tuple:
     )
 
 
+def _plan_milestone_cuts(snapshot: Snapshot) -> tuple:
+    return tuple(
+        CutMilestoneBranch(project=project.name, milestone=uncut.milestone, branch=uncut.branch)
+        for project in snapshot.projects
+        for uncut in project.uncut_milestones
+        if uncut.open_waves or uncut.todo
+    )
+
+
 def _plan_wave_starts(snapshot: Snapshot) -> tuple:
     rebasing = {
         (milestone.project, milestone.milestone) for milestone in snapshot.milestones if _is_rebase_due(milestone)
