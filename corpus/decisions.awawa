@@ -5366,10 +5366,11 @@ DECISION AMilestoneReportIsBuiltOnceItsTasksAreMergedOrParkedAndIsTheBodyOfItsPu
 		+ "milestone, whole; on a project of FORGE none the report is committed and no pull request"
 		+ "exists"
 	DESC "a task naming no MILESTONE is reported by the study task-report once its pull request is"
-		+ "ready to merge or the task is parked, task.reported appended with the run; its REPORT is"
-		+ "named after the task, its Markdown <PROJECT.CORPUS>/tasks/<task>-report.md committed on"
-		+ "the branch of the task, and the body of its pull request is replaced whole with it; the"
-		+ "head so moved is judged by no further preflight or verification"
+		+ "ready to merge or the task is parked with a pull request, a task parked with no pull"
+		+ "request getting no report, task.reported appended with the run; its REPORT is named"
+		+ "after the task, its Markdown <PROJECT.CORPUS>/tasks/<task>-report.md committed on the"
+		+ "branch of the task, and the body of its pull request is replaced whole with it; the head"
+		+ "so moved is judged by no further preflight or verification"
 	DESC "a wave has no report: wave.reported is written no more; a wave.reported of the ledger and"
 		+ "a REPORT naming a WAVE are still read, brigade reports listing the latter as wave-report"
 	DESC "each field the CLI fills is one string brigade formats, as the wave report had them:"
@@ -5422,6 +5423,12 @@ DECISION AMilestoneReportIsBuiltOnceItsTasksAreMergedOrParkedAndIsTheBodyOfItsPu
 		+ "then, for the tasks naming no milestone, « Rapport par tâche », the option « L'étude"
 		+ "produit un rapport par tâche sans jalon, commité sur sa branche, qui remplace le corps"
 		+ "de sa PR. »"
+	SOURCE "the user's ruling of 2026-11-03 on the question of run 20261103T095517Z-27f639 of wave"
+		+ "brigade_w22, « a : reformuler SPEC 9 (Recommandé) »: a parked task naming no MILESTONE"
+		+ "is reported only once it has a pull request, since a task parked before brigade task pr"
+		+ "has neither a branch on origin nor a pull request to carry the report; DESC 4 is amended"
+		+ "as SPEC 9 of @TASK.B232"
+		REF @TASK.B232
 
 DECISION TheVibeAdapterAddsTheSessionBusAddressOfTheLaunchRequestToItsEnvironment
 	TITLE "the vibe adapter adds DBUS_SESSION_BUS_ADDRESS to the environment of its launch, from"
