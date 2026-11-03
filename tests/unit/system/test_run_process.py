@@ -30,8 +30,23 @@ class RunProcessPastItsTimeoutTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             self.traces,
-            [ProcessTrace(argv=("sleep", "30"), cwd="/", outcome="timed_out", exit_code=None, duration_ms=ANY)],
+            [
+                ProcessTrace(
+                    argv=("sleep", "30"), cwd="/", outcome="timed_out", exit_code=None, duration_ms=ANY, stderr=""
+                )
+            ],
         )
+
+    def test_should_trace_what_the_command_wrote_on_stderr_before_its_timeout(self):
+        # Arrange
+        request = ProcessRequest(argv=("sh", "-c", "echo stuck on the lock >&2; exec sleep 30"), cwd="/", timeout_s=0.5)
+
+        # Act
+        with self.assertRaises(ToolFailure):
+            run_process(request, self.traces.append, INHERITED_ENVIRONMENT)
+
+        # Assert
+        self.assertEqual(self.traces[0].stderr, "stuck on the lock\n")
 
 
 class RunProcessWithTheVariablesOfItsCallerTest(unittest.TestCase):
@@ -87,6 +102,19 @@ class RunProcessOfAnAcceptedExitCodeTest(unittest.TestCase):
         )
 
 
+class RunProcessOfASucceededCommandWritingOnStderrTest(unittest.TestCase):
+    def test_should_trace_no_stderr(self):
+        # Arrange
+        traces = []
+        request = ProcessRequest(argv=("sh", "-c", "echo hint: a warning >&2"), cwd="/", timeout_s=10)
+
+        # Act
+        run_process(request, traces.append, INHERITED_ENVIRONMENT)
+
+        # Assert
+        self.assertIsNone(traces[0].stderr)
+
+
 class RunProcessOfARefusedExitCodeTest(unittest.TestCase):
     def test_should_trace_the_command_before_refusing_it(self):
         # Arrange
@@ -99,8 +127,25 @@ class RunProcessOfARefusedExitCodeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            traces, [ProcessTrace(argv=("false",), cwd="/", outcome="exited", exit_code=1, duration_ms=ANY)]
+            traces,
+            [ProcessTrace(argv=("false",), cwd="/", outcome="exited", exit_code=1, duration_ms=ANY, stderr="")],
         )
+
+    def test_should_trace_the_stderr_of_the_failed_command(self):
+        # Arrange
+        traces = []
+        request = ProcessRequest(
+            argv=("sh", "-c", "echo fatal: not a git repository >&2; exit 128"),
+            cwd="/",
+            timeout_s=10,
+            acceptable_exit_codes=(128,),
+        )
+
+        # Act
+        run_process(request, traces.append, INHERITED_ENVIRONMENT)
+
+        # Assert
+        self.assertEqual(traces[0].stderr, "fatal: not a git repository\n")
 
 
 class RunProcessInAWorkingDirectoryThatDoesNotExistTest(unittest.TestCase):
