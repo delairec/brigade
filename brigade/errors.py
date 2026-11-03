@@ -27,6 +27,10 @@ class CorpusLintFailed(BrigadeError):
     pass
 
 
+class InvalidPattern(BrigadeError):
+    pass
+
+
 class CannotWrite(BrigadeError):
     def __init__(self, path, error: OSError):
         reason = str(error) if error.strerror is None else error.strerror
