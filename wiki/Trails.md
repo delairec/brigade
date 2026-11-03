@@ -57,7 +57,7 @@ exit code.
 | `duration_ms` | null for a spawned run |
 | `outcome` | `exited`, `timed_out`, `not_found`, `no_working_directory` for a command whose working directory does not exist, `cut` for a client segment stopped by its wall limit, `spawned` for a detached run |
 | `pid` | for a spawned run alone |
-| `stderr` | for a process exited with a code other than 0 or timed out: the last 2 KiB of its stderr, masked |
+| `stderr` | for a process exited with a code other than 0, timed out, cut or stopped: the last 2 KiB of its stderr, masked |
 | `stderr_file` | for a spawned run alone: the file under `runs/<run id>/` that holds its stderr |
 
 Before the tail is written, every GitHub token (`ghp_`, `gho_`, `ghs_`, `github_pat_`), every Anthropic API key
