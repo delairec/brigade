@@ -30,7 +30,9 @@ def detach_brigade_command(runtime: Runtime, detached: DetachedCommand, record_p
     )
     process = runtime.spawn_process(request)
     runtime.trail.append(
-        ProcessTrace(request.argv, request.cwd, SPAWNED, exit_code=None, duration_ms=None, pid=process.pid)
+        ProcessTrace(
+            request.argv, request.cwd, SPAWNED, exit_code=None, duration_ms=None, pid=process.pid, stderr_file=str(log)
+        )
     )
     record_pid(detached.run_directory, process.pid)
     return process.pid
