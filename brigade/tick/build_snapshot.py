@@ -756,12 +756,6 @@ def _is_behind_milestone(runtime: Runtime, cut: WaveBranchCut, milestone_branch:
 
 
 @dataclass(frozen=True)
-class _MainReading:
-    main: ProjectTasks
-    open_waves: tuple[WaveStarted, ...]
-
-
-@dataclass(frozen=True)
 class _WaveMaking:
     candidates: tuple[CandidateWave, ...]
     uncut_milestones: tuple[UncutMilestone, ...]
@@ -770,19 +764,24 @@ class _WaveMaking:
 NO_WAVE_MAKING = _WaveMaking(candidates=(), uncut_milestones=())
 
 
-def _describe_uncut_milestone(runtime: Runtime, reading: _MainReading, milestone: str) -> UncutMilestone:
-    entity = read_entity(runtime.run_process, reading.main.root, MILESTONE_TYPE, milestone)
-    tasks = reading.main.by_name.values()
-    of_milestone = {task.name for task in tasks if _read_milestone(task) == milestone}
+@dataclass(frozen=True)
+class _MainReading:
+    project: str
+    main: ProjectTasks
+
+
+def _describe_uncut_milestone(
+    runtime: Runtime, reading: WaveReading, main: _MainReading, milestone: str
+) -> UncutMilestone:
+    entity = read_entity(runtime.run_process, main.main.root, MILESTONE_TYPE, milestone)
+    tasks = tuple(main.main.by_name.values())
     return UncutMilestone(
         milestone=milestone,
         branch=name_milestone_branch(read_project_field(entity, TITLE_FIELD)),
-        open_waves=tuple(wave.wave for wave in reading.open_waves if of_milestone.intersection(wave.tasks)),
-        todo=tuple(
-            task.name
-            for task in tasks
-            if task.name in of_milestone and read_task_field(task, STATUS_FIELD) == (TODO_STATUS,)
+        open_waves=_list_open_waves(
+            reading, main.project, {task.name for task in tasks if _read_milestone(task) == milestone}
         ),
+        todo=_list_todo(tasks, milestone),
     )
 
 
@@ -791,16 +790,8 @@ def _list_uncut_milestones(
 ) -> tuple[UncutMilestone, ...]:
     if not any(_read_milestone(task) for task in main.by_name.values()):
         return ()
-    main_reading = _MainReading(
-        main=main,
-        open_waves=tuple(
-            summary.started
-            for summary in summarize_waves(reading.entries)
-            if summary.is_open and summary.started.project == project
-        ),
-    )
     return tuple(
-        _describe_uncut_milestone(runtime, main_reading, milestone)
+        _describe_uncut_milestone(runtime, reading, _MainReading(project=project, main=main), milestone)
         for milestone in sorted(
             active.removeprefix(MILESTONE_PREFIX) for active in read_active_milestones(runtime.run_process, main.root)
         )
@@ -916,6 +907,14 @@ def _list_merged_waves(reading: WaveReading, project: str, of_milestone: set[str
     )
 
 
+def _list_todo(tasks: tuple[Entity, ...], milestone: str) -> tuple[str, ...]:
+    return tuple(
+        task.name
+        for task in tasks
+        if _read_milestone(task) == milestone and read_task_field(task, STATUS_FIELD) == (TODO_STATUS,)
+    )
+
+
 def _list_open_waves(reading: WaveReading, project: str, of_milestone: set[str]) -> tuple[str, ...]:
     return tuple(
         summary.started.wave
@@ -962,15 +961,14 @@ def _read_milestone_facts(runtime: Runtime, reading: WaveReading, cut: Milestone
     tasks = read_entities(
         runtime.run_process, prepare_project_tree(query, reading.configuration, runtime).root, TASK_TYPE
     )
-    of_milestone = [task for task in tasks if _read_milestone(task) == cut.milestone]
-    names = {task.name for task in of_milestone}
+    names = {task.name for task in tasks if _read_milestone(task) == cut.milestone}
     return MilestoneFacts(
         project=cut.project,
         milestone=cut.milestone,
         branch=cut.branch,
         merged_waves=_list_merged_waves(reading, cut.project, names),
         open_waves=_list_open_waves(reading, cut.project, names),
-        todo=tuple(task.name for task in of_milestone if read_task_field(task, STATUS_FIELD) == (TODO_STATUS,)),
+        todo=_list_todo(tasks, cut.milestone),
         behind_main=_is_behind_main(runtime, reading, cut, ref),
         rebase_run_live=any(run["state"] == LIVE_RUN_STATE for run in rebase_runs),
         blocked_rebase=_read_blocked_run(reading, rebase_runs[-1]["run"]) if rebase_runs else None,
