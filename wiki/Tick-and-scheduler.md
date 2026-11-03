@@ -159,6 +159,20 @@ dies before it records a `run.finished` does.
 
 </details>
 
+<details><summary>Rebasing the branches of a milestone</summary>
+
+- The tick rebases the branch of a milestone onto the main branch once the main branch has outrun it, and each open
+  wave branch of the milestone onto the milestone branch in the same action. No wave of that milestone starts in the
+  round of that rebase.
+- It also rebases an open wave branch that does not descend from `origin/<the milestone branch>`, once the milestone
+  branch moved without it. The pull request of that wave is not merged while it lags.
+- A conflict is aborted and handed to a detached run of the slot `rebase`. When the conflict is on the milestone
+  branch, that action rebases no wave branch: they follow once the run has pushed it.
+- No rebase is planned for a wave that is paused, or whose rebase run lives or ended blocked; a blocked rebase run
+  pauses its wave on its question.
+
+</details>
+
 <details><summary>A failed action, and the waves a tick reads</summary>
 
 - An action that fails is recorded as `tick.action_failed`, with the action, its project, wave and task where it names
