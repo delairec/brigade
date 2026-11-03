@@ -27,7 +27,7 @@ The page polls the view it shows every five seconds while its tab is visible.
 | `/api/inbox`                          | `brigade inbox list`               |
 | `/api/ledger`                         | `brigade ledger`                   |
 | `/api/corpus`                         | `brigade project list`             |
-| `/api/corpus/<project>?ref=<ref>`     | `brigade corpus <project> --ref <ref>`, and `--type`, `--field`, `--entity` of the parameters `type`, `field`, `entity` |
+| `/api/corpus/<project>?ref=<ref>`     | `brigade corpus <project> --ref <ref>`, and `--type`, `--field`, `--entity` of the parameters `type`, `field`, `entity`; without `ref`, `brigade corpus <project>`, the document of the project's `MAIN` branch |
 
 | POST route                            | Command run, with `--json`         |
 |---------------------------------------|------------------------------------|
