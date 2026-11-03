@@ -61,9 +61,10 @@ from brigade.waves.is_wave_branch_missing import is_wave_branch_missing
 from brigade.waves.list_candidate_waves import CandidateWave, list_candidate_waves
 from brigade.waves.locate_branch_worktree import locate_branch_worktree
 from brigade.waves.locate_forge_branch import locate_forge_branch
+from brigade.waves.name_milestone_branch import name_milestone_branch
 from brigade.waves.prepare_wave_tree import prepare_wave_tree
 from brigade.waves.read_active_milestones import read_active_milestones
-from brigade.waves.read_project_tasks import ProjectTasksReading
+from brigade.waves.read_project_tasks import ProjectTasks, ProjectTasksReading, read_project_tasks
 from brigade.waves.read_task_states import read_task_states
 from brigade.waves.read_wave_pause import WavePause, read_wave_pause
 from brigade.waves.read_wave_start import read_wave_start
@@ -79,6 +80,9 @@ AFTER_FIELD = "AFTER"
 TASK_PREFIX = "@TASK."
 MILESTONE_FIELD = "MILESTONE"
 MILESTONE_PREFIX = "@MILESTONE."
+MILESTONE_TYPE = "MILESTONE"
+NO_MILESTONE = None
+TITLE_FIELD = "TITLE"
 PROJECT_SLOTS = 4
 QUEUED_STATE = "queued"
 SETTLED_STATES = ("merged", "parked")
@@ -255,6 +259,14 @@ class LiveRun:
 
 
 @dataclass(frozen=True)
+class UncutMilestone:
+    milestone: str
+    branch: str
+    open_waves: tuple[str, ...] = ()
+    todo: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class ProjectFacts:
     name: str
     slots: int
@@ -267,6 +279,7 @@ class ProjectFacts:
     auto_merge: str = MERGE_INTO_INTEGRATION
     verify_rounds: int = VERIFY_ROUNDS_BY_DEFAULT
     on_github: bool = False
+    uncut_milestones: tuple[UncutMilestone, ...] = ()
 
     def to_document(self) -> dict:
         return {
@@ -281,6 +294,15 @@ class ProjectFacts:
             "verify_rounds": self.verify_rounds,
             "awaits_check_runs": self.awaits_check_runs,
             "on_github": self.on_github,
+            "uncut_milestones": [
+                {
+                    "milestone": uncut.milestone,
+                    "branch": uncut.branch,
+                    "open_waves": list(uncut.open_waves),
+                    "todo": list(uncut.todo),
+                }
+                for uncut in self.uncut_milestones
+            ],
         }
 
 
@@ -732,23 +754,79 @@ def _is_behind_milestone(runtime: Runtime, cut: WaveBranchCut, milestone_branch:
     return check_ancestor(runtime.run_process, repository, milestone, wave).exit_code != DESCENDING
 
 
-def _read_candidates(runtime: Runtime, reading: WaveReading, project: Entity) -> tuple[CandidateWave, ...]:
-    if read_project_field(project, PROJECT_STATUS_FIELD) == PAUSED_PROJECT_STATUS:
-        return ()
-    return list_candidate_waves(
-        runtime,
-        ProjectTasksReading(
-            configuration=reading.configuration,
-            project=project,
-            read_environment=reading.forge.read_environment,
-            entries=reading.entries,
+@dataclass(frozen=True)
+class _MainReading:
+    main: ProjectTasks
+    open_waves: tuple[WaveStarted, ...]
+
+
+@dataclass(frozen=True)
+class _WaveMaking:
+    candidates: tuple[CandidateWave, ...]
+    uncut_milestones: tuple[UncutMilestone, ...]
+
+
+NO_WAVE_MAKING = _WaveMaking(candidates=(), uncut_milestones=())
+
+
+def _describe_uncut_milestone(runtime: Runtime, reading: _MainReading, milestone: str) -> UncutMilestone:
+    entity = read_entity(runtime.run_process, reading.main.root, MILESTONE_TYPE, milestone)
+    tasks = reading.main.by_name.values()
+    of_milestone = {task.name for task in tasks if _read_milestone(task) == milestone}
+    return UncutMilestone(
+        milestone=milestone,
+        branch=name_milestone_branch(read_project_field(entity, TITLE_FIELD)),
+        open_waves=tuple(wave.wave for wave in reading.open_waves if of_milestone.intersection(wave.tasks)),
+        todo=tuple(
+            task.name
+            for task in tasks
+            if task.name in of_milestone and read_task_field(task, STATUS_FIELD) == (TODO_STATUS,)
         ),
+    )
+
+
+def _list_uncut_milestones(
+    runtime: Runtime, reading: WaveReading, project: str, main: ProjectTasks
+) -> tuple[UncutMilestone, ...]:
+    if not any(_read_milestone(task) for task in main.by_name.values()):
+        return ()
+    main_reading = _MainReading(
+        main=main,
+        open_waves=tuple(
+            summary.started
+            for summary in summarize_waves(reading.entries)
+            if summary.is_open and summary.started.project == project
+        ),
+    )
+    return tuple(
+        _describe_uncut_milestone(runtime, main_reading, milestone)
+        for milestone in sorted(
+            active.removeprefix(MILESTONE_PREFIX) for active in read_active_milestones(runtime.run_process, main.root)
+        )
+        if find_milestone_branch(reading.entries, project, milestone) is None
+    )
+
+
+def _read_wave_making(runtime: Runtime, reading: WaveReading, project: Entity) -> _WaveMaking:
+    if read_project_field(project, PROJECT_STATUS_FIELD) == PAUSED_PROJECT_STATUS:
+        return NO_WAVE_MAKING
+    tasks_reading = ProjectTasksReading(
+        configuration=reading.configuration,
+        project=project,
+        read_environment=reading.forge.read_environment,
+        entries=reading.entries,
+    )
+    main = read_project_tasks(runtime, tasks_reading, NO_MILESTONE)
+    return _WaveMaking(
+        candidates=list_candidate_waves(runtime, tasks_reading, main),
+        uncut_milestones=_list_uncut_milestones(runtime, reading, project.name, main),
     )
 
 
 def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity, runs: list[dict]) -> ProjectFacts:
     slots = read_project_field(project, SLOTS_FIELD)
     policies = read_entities(runtime.run_process, runtime.paths.config_root, POLICY_TYPE)
+    wave_making = _read_wave_making(runtime, reading, project)
     return ProjectFacts(
         name=project.name,
         slots=PROJECT_SLOTS if slots is None else int(slots),
@@ -759,7 +837,7 @@ def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity,
             if run["project"] == project.name and run["state"] == LIVE_RUN_STATE
         ),
         wave_start=read_wave_start(runtime, project.name),
-        candidates=_read_candidates(runtime, reading, project),
+        candidates=wave_making.candidates,
         merge=read_project_field(project, MERGE_FIELD) or REBASE_MERGE,
         review=read_policy_field(policies, project.name, REVIEW_FIELD, VERDICT_REVIEW),
         auto_merge=read_policy_field(policies, project.name, AUTO_MERGE_FIELD, MERGE_INTO_INTEGRATION),
@@ -767,6 +845,7 @@ def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity,
             read_policy_field(policies, project.name, VERIFY_ROUNDS_FIELD, str(VERIFY_ROUNDS_BY_DEFAULT))
         ),
         on_github=is_on_github(project),
+        uncut_milestones=wave_making.uncut_milestones,
     )
 
 

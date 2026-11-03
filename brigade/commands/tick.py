@@ -16,6 +16,7 @@ from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME, rea
 from brigade.commands.run import run
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import read_entities
+from brigade.corpus.read_entity import read_entity
 from brigade.errors import StandingDown, UsageError
 from brigade.inbox.record_check_runs import CheckRunsRecording, record_check_runs
 from brigade.ledger.append_event import append_event
@@ -70,6 +71,7 @@ from brigade.tick.actions import (
     CloseWave,
     CollectCheckRuns,
     CollectReviewThreads,
+    CutMilestoneBranch,
     CutWaveBranch,
     LaunchCheckRepair,
     LaunchRemediation,
@@ -111,6 +113,7 @@ from brigade.tick.write_repair_brief import write_repair_brief
 from brigade.triage.deliver_patterns import WaveDelivery, deliver_patterns
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
 from brigade.verify.record_verdict import REVIEW_SLOT
+from brigade.waves.cut_milestone_branch import MilestoneBranchDemand, cut_milestone_branch
 from brigade.waves.cut_wave_branch import WaveBranchCut, cut_wave_branch
 from brigade.waves.find_wave_started import find_wave_started
 from brigade.waves.locate_project_main import locate_project_main
@@ -124,6 +127,7 @@ DOCUMENT_SCHEMA_VERSION = 1
 BUILD_PROCEDURE = "build-task"
 BUILD_SLOT = "build"
 TASK_TYPE = "TASK"
+MILESTONE_TYPE = "MILESTONE"
 VERIFY_PROCEDURE = "verify-pr"
 REMEDIATE_PROCEDURE = "remediate-pr"
 REMEDIATE_SLOT = "remediate"
@@ -598,6 +602,21 @@ def _rebase_milestone(runtime: Runtime, configuration: Configuration, action: Re
         append_event(runtime.paths, runtime.now, rebased)
 
 
+def _cut_milestone_branch(runtime: Runtime, configuration: Configuration, action: CutMilestoneBranch) -> None:
+    project = find_project(read_projects(runtime), action.project)
+    read_environment = _cache_forge_environment(runtime, configuration)
+    main = locate_project_main(runtime.run_process, project, read_environment)
+    query = argparse.Namespace(project=project.name, ref=main, worktree=None)
+    root = prepare_project_tree(query, configuration, runtime).root
+    demand = MilestoneBranchDemand(
+        project=project,
+        milestone=read_entity(runtime.run_process, root, MILESTONE_TYPE, action.milestone),
+        read_environment=read_environment,
+        read_login=lambda: read_cli_login(configuration, runtime),
+    )
+    cut_milestone_branch(runtime, demand)
+
+
 def _cut_wave_branch(runtime: Runtime, configuration: Configuration, action: CutWaveBranch) -> None:
     cut = WaveBranchCut(
         project=find_project(read_projects(runtime), action.project),
@@ -687,6 +706,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         ResumeTaskRun: lambda action: _resume_task_run(runtime, action),
         RebaseMilestone: lambda action: _rebase_milestone(runtime, configuration, action),
         StartWave: lambda action: _start_wave(runtime, configuration, action),
+        CutMilestoneBranch: lambda action: _cut_milestone_branch(runtime, configuration, action),
         CutWaveBranch: lambda action: _cut_wave_branch(runtime, configuration, action),
         OpenIntegrationPullRequest: lambda action: _open_integration_pull_request(runtime, configuration, action),
         ReportWave: lambda action: _report_wave(runtime, action),
