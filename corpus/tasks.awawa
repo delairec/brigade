@@ -15376,10 +15376,8 @@ TASK B232
 		+ "read; brigade waves lists a wave open or closed as today; the patterns of DESC 5 of the"
 		+ "decision"
 		+ "RatificationNamesItsEntitiesAfterThePatternAndTheArrivalInMainDeliversThePattern go"
-		+ "delivered at milestone.closed of the milestone their request was planned into, and, for"
-		+ "a task naming no MILESTONE, when the pull request of the task is merged into"
-		+ "PROJECT.MAIN, no longer at wave.closed, where today brigade/commands/tick.py:_close_wave"
-		+ "delivers them"
+		+ "delivered at milestone.closed of the milestone their request was planned into, no longer"
+		+ "at wave.closed, where today brigade/commands/tick.py:_close_wave delivers them"
 	SPEC "the built-in study milestone-report replaces wave-report: the tick runs it once every"
 		+ "task of the milestone at its branch is merged or parked and no wave of the milestone is"
 		+ "open, and appends milestone.reported with project, milestone, run and login, which the"
@@ -15544,6 +15542,14 @@ TASK B232
 		+ "main), ou au merge de la PR dans main pour une tâche sans jalon. Garde le sens d'origine"
 		+ ": livré = dans main. B35 et la décision amendés en conséquence. »; on the ratification,"
 		+ "« Oui, todo »"
+	SOURCE "the user's ruling of 2026-11-03 on the question of run 20261102T203509Z-2588eb of wave"
+		+ "brigade_w22, « Ok on retire la spec impossible et on requeue. »: SPEC 5 no longer"
+		+ "delivers the patterns of a task naming no MILESTONE at the merge of its pull request"
+		+ "into PROJECT.MAIN, since brigade/planning/record_plan.py:_check_plan plans every REQUEST"
+		+ "into exactly one MILESTONE and every TASK of the plan into it; the DECISION"
+		+ "RatificationNamesItsEntitiesAfterThePatternAndTheArrivalInMainDeliversThePattern is"
+		+ "amended the same way"
+		REF @DECISION.RatificationNamesItsEntitiesAfterThePatternAndTheArrivalInMainDeliversThePattern
 
 TASK B233
 	TITLE "A milestone is reached when its pull request is merged into main: the tick commits"
