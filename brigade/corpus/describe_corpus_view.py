@@ -78,7 +78,6 @@ def describe_corpus_view(run_process: Callable[[ProcessRequest], ProcessRecord],
     )
     document = {
         "type": view.entity_type,
-        "types": [row["type"] for row in status["types"]],
         "entities": [_describe_entity(entity, root, view.ide_link) for entity in listed],
     }
     if view.field is not None:
