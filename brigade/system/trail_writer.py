@@ -7,26 +7,28 @@ from brigade.system.create_directory import create_directory
 from brigade.system.process_trace import ProcessTrace
 
 
-def _append_lines(destination: Path, traces: list[ProcessTrace]) -> None:
+def _append_lines(destination: Path, documents: list[dict]) -> None:
     try:
         with destination.open("a", encoding="utf-8") as trail:
-            trail.writelines(f"{json.dumps(trace.to_document())}\n" for trace in traces)
+            trail.writelines(f"{json.dumps(document)}\n" for document in documents)
     except OSError as error:
         raise CannotWrite(error.filename or destination, error) from error
 
 
 class TrailWriter:
-    def __init__(self, report: Callable[[ProcessTrace], None]):
+    def __init__(self, report: Callable[[ProcessTrace], None], mask: Callable[[str], str]):
         self._report = report
+        self._mask = mask
         self._destination: Path | None = None
-        self._held: list[ProcessTrace] = []
+        self._held: list[dict] = []
 
     def append(self, trace: ProcessTrace) -> None:
         self._report(trace)
+        document = trace.to_document(self._mask)
         if self._destination is None:
-            self._held.append(trace)
+            self._held.append(document)
             return
-        _append_lines(self._destination, [trace])
+        _append_lines(self._destination, [document])
 
     def locate(self, destination: Path) -> None:
         create_directory(destination.parent)

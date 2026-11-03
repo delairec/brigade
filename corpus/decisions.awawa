@@ -5964,3 +5964,34 @@ DECISION EveryMergeBrigadeAsksOfTheForgeNamesTheHeadItRead
 		+ "merge of brigade"
 	SOURCE "the build run of @TASK.B226 of 2026-11-02"
 		REF @TASK.B226
+
+DECISION TheTraceOfAFailedProcessKeepsItsStderrMaskedOrWithheld
+	TITLE "the trace of a failed process keeps the tail of its stderr masked by patterns read once"
+		+ "per command, and withholds it when they cannot be read"
+	STATUS active
+	DESC "a process exited with a code other than 0, or timed out, keeps what it wrote on stderr; a"
+		+ "process exited 0 keeps none, whatever it wrote"
+	DESC "the whole stderr is masked before its last 2 KiB are cut, so that no token the cut splits"
+		+ "survives; a character the cut splits is dropped"
+	DESC "the PRIVATE patterns of the registered projects are read once per command, at the first"
+		+ "failed process that wrote on stderr, through the recorded runner"
+	DESC "while they are read, and once their reading failed, the tail is replaced by the marker"
+		+ "[withheld: the PRIVATE patterns of the registered projects could not be read]; the"
+		+ "reading is not attempted again in that command"
+	DESC "the token shapes join the scrubber the miner of @TASK.B35 uses: the transcripts and their"
+		+ "findings mask them too"
+		REF @TASK.B35
+	DESC "binds @TASK.B176"
+		REF @TASK.B176
+	REJECTED "the patterns read at the start of every command: one awawa call per registered"
+		+ "project and one more for each command, a tick every five minutes included, when most"
+		+ "commands see no failed process"
+	REJECTED "the tail masked by the token shapes and the built-ins alone when the registry cannot"
+		+ "be read: an identifier a PRIVATE pattern declares would be written in the clear"
+	REJECTED "the tail cut before it is masked: a token split by the cut no longer has its shape"
+		+ "and survives"
+	RATIONALE "a reading of the patterns runs awawa through the runner whose traces it masks, so a"
+		+ "failure of that reading would ask for the patterns again without end; withholding is the"
+		+ "one answer that writes nothing unmasked"
+	SOURCE "the run of build-task delivering @TASK.B176"
+		REF @TASK.B176
