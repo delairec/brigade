@@ -96,12 +96,14 @@ def main(argv: list[str]) -> int:
     arguments = argv[1:]
     masker = VolatileValueMasker(configuration["temporary_roots"])
     call, files = _describe_call(arguments, Path.cwd(), masker)
-    if configuration["real_awawa"] is not None:
+    if configuration["records"]:
         recording = _record(configuration, arguments, call, files, masker)
     else:
         recording = _find_recording(Path(configuration["recordings"]), call)
     if recording is None:
         return _report_miss(configuration, arguments)
+    if configuration["real_awawa"] is not None and not configuration["records"]:
+        return ProcessLauncher.run([configuration["real_awawa"], *arguments], check=False).returncode
     outcome = recording["outcome"]
     for path, content in outcome["rewritten"].items():
         Path(masker.unmask(path)).write_text(masker.unmask(content))

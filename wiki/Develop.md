@@ -33,14 +33,18 @@ command.
 ## The awawa recordings
 
 The tests that need awawa run against the real awawa where it is on PATH, and otherwise against a fake that replays
-the recordings of `tests/awawa/recordings/`. A recording is made, or renewed after a bump of awawa or a change of a
-call, from the real binary:
+the recordings of `tests/awawa/recordings/`. Either way, each call must have its recording: a call with no recording
+fails its test, on a developer machine as in the CI. A recording is made, or renewed after a bump of awawa or a change
+of a call, from the real binary, and only on demand:
 
 ```
-rm -r tests/awawa/recordings && AWAWA_RECORD=1 python3 -m unittest   # awawa on PATH
+AWAWA_RECORD=1 python3 -m unittest tests.cli.test_corpus             # the calls of one test module, awawa on PATH
+rm -r tests/awawa/recordings && AWAWA_RECORD=1 python3 -m unittest   # every recording, renewed
 ```
 
-> **Watch out:** a call with no recording fails its test, naming its arguments.
+> **Watch out:** a call with no recording fails its test with `awawa has no recording of: awawa <its arguments>`,
+> followed by the `AWAWA_RECORD=1 python3 -m unittest <the test>` command that records it. Commit the new file of
+> `tests/awawa/recordings/` with the change that makes the call.
 
 <details><summary>What a recording holds, and how it is checked</summary>
 
@@ -49,6 +53,8 @@ rm -r tests/awawa/recordings && AWAWA_RECORD=1 python3 -m unittest   # awawa on 
 - Each recording names the awawa version it was made with and the order its run ids sorted in, which the replay keeps
   for two runs of the same second.
 - The CI installs no awawa, so its tests run on the recordings and none is skipped.
+- Where awawa is on PATH, the fake still stands on the PATH of a test: it looks each call up in the recordings, fails
+  the test on a miss, and lets the real awawa answer a recorded call.
 - Where awawa is on PATH, `tests/awawa/test_recordings.py` replays every recording against it and fails on a
   difference, naming the recording, its version and the version `awawa --version` prints.
 
