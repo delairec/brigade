@@ -3,6 +3,7 @@ from pathlib import Path
 
 FIRST_RUN = "20261007T090000Z-b70a01"
 SECOND_RUN = "20261008T090000Z-c80b02"
+THIRD_RUN = "20261009T090000Z-d90c03"
 
 
 def create_run_record(run_id: str, wave: str | None, task: str | None) -> dict:

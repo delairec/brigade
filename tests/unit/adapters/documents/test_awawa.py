@@ -155,6 +155,25 @@ class AwawaDocumentReadingTest(AwawaDocumentTestCase):
             },
         )
 
+    def test_should_give_a_resuming_run_the_empty_inventory_of_each_type_of_a_file_holding_no_entity(self):
+        # Arrange
+        self.path.write_text(SCHEMA)
+
+        # Act
+        reading = read_document(self.describe_request(), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            reading,
+            {
+                "schema_version": 1,
+                "text": f"$ awawa status STEP {self.path}\n"
+                "STEP (0):\n\n"
+                f"$ awawa status HANDOVER {self.path}\n"
+                "HANDOVER (0):\n",
+            },
+        )
+
     def test_should_format_the_file_before_reading_it(self):
         # Arrange
         self.path.write_text(f'{SCHEMA}STEP s1\n  DONE "read the task"\n')

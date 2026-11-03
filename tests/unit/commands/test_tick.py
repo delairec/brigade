@@ -923,6 +923,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "wave": "tidepool_w16",
                     "task": "T7",
                     "state": "running",
+                    "reason": "resumed after the quota reset",
                 }
             ],
         )
@@ -2106,6 +2107,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "wave": "tidepool_w16",
                     "task": "T7",
                     "state": "running",
+                    "reason": "resumed after the quota reset",
                 },
             ],
         )

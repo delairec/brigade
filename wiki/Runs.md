@@ -6,7 +6,8 @@ how it is held on the clock, stopped and pruned, and how `brigade runs` lists, s
 ```
 brigade run <procedure> --slot <slot> [--project <name>] [--cwd <dir>] [--brief <file>] [--wave <wave>] [--task <task>]
             [--detach] [key=value ...]
-brigade runs list [--wave <wave>] [--task <task>] [--json]  # every run: id, procedure, slot, role, project, state, outcome
+brigade runs list [--wave <wave>] [--task <task>] [--state running|finished|dead] [--json]
+                                                 # every run: id, procedure, slot, role, project, wave, task, state, outcome
 brigade runs show <id> [--log] [--json]          # the summary of a run, its segments and its progress; --log adds its journal
 brigade runs show <id> --follow                  # the same with --log, then each record as it is written
 brigade runs stop <id>                           # stop a running run; exit 0 once it finished on stopped
@@ -127,7 +128,9 @@ each append.
 - When the lint fails, it opens on the lint output, the instruction to rewrite the file and the file whole, and the run
   goes on with the same count of relaunches.
 - In the markdown form the next brief opens on the file as it is.
-- A relaunched segment's brief opens on what the document plugin reads of the progress.
+- A relaunched segment's brief opens on what the document plugin reads of the progress. A `progress.awawa` holding no
+  entity, as that of a run the quota stopped before its first step was written, reads as the empty inventory of each
+  type of its schema.
 
 </details>
 
@@ -145,7 +148,8 @@ of its operation, naming the plugin and the operation when one breaks it.
 - `--wave`, the name of the wave, and `--task`, the task it delivers, both optional and independent, are written in
   `run.json` and in every `run.finished` of the run as `wave` and `task`. An absent `wave` is null with the reason
   `not launched by a wave`, an absent `task` with the reason `not launched for a task`.
-- `runs list --wave` and `--task` keep the runs of that wave or that task.
+- `runs list --wave` and `--task` keep the runs of that wave or that task; `--state` keeps the runs in that state, so
+  `runs list --state dead` names every run whose process is gone without a result, with its wave and its task.
 - A `run.json` without the keys `wave` and `task` is refused, naming the file and the key, and never upgraded:
   `runs list` leaves the run out, names it and the refusal on stderr and under `skipped` with `--json`, and exits 0;
   `runs show` of that run fails on the refusal.

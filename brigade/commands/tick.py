@@ -27,7 +27,7 @@ from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_rebased import TaskRebased
-from brigade.ledger.task_state import TaskState
+from brigade.ledger.task_state import QUOTA_RESUME_REASON, TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.tick_action_failed import TickActionFailed
 from brigade.ledger.wave_closed import WaveClosed
@@ -348,7 +348,11 @@ def _resume_task_run(runtime: Runtime, action: ResumeTaskRun) -> None:
         detach=True,
         resume=True,
     )
-    append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=action.state))
+    append_event(
+        runtime.paths,
+        runtime.now,
+        TaskState(wave=action.wave, task=action.task, state=action.state, reason=QUOTA_RESUME_REASON),
+    )
     run(resuming, runtime)
 
 
