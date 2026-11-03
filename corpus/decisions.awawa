@@ -5533,11 +5533,20 @@ DECISION ATaskBranchIsRebasedOntoItsBaseOnlyOnceItsChecksPassed
 		REF @TASK.B210
 		REF @TASK.B143
 		REF @DECISION.ARebaseRunOfATaskWithoutAPullRequestEndsDoneAndTheTickLaunchesItsBuild
+	DESC "the build brief of a task built on its branch as it stands carries the entity of the task"
+		+ "as it reads on origin/<the branch of its wave> whenever it differs from the entity in"
+		+ "the worktree of the task, marked as the one that prevails; the branch of the task does"
+		+ "not move"
 	REJECTED "the rebase at the launch whatever the checks, a run of the rebase slot judging the"
 		+ "result: the run meets the failures the branch held before the rebase and ends blocked,"
 		+ "which parks a build still in progress"
 	REJECTED "the build rebasing its own branch before it opens its pull request: the same rebase"
 		+ "on failing tests, with no check run to tell a failure of the rebase from one of the work"
+	REJECTED "the branch of a requeued task whose entity changed rebased before the launch, the"
+		+ "task parked on a conflict: for B232 the 22 files that conflict would park it at once"
+	REJECTED "a requeued task started over on a new branch cut from the branch of its wave, the old"
+		+ "branch kept: the work would be redone while the head of B232, c952954a, already passes"
+		+ "every check"
 	RATIONALE "run 20261102T193007Z-6cde94 of wave brigade_w22: @TASK.B232, requeued once the"
 		+ "branch of its wave had moved, held a build in progress whose own tests failed, about 138"
 		+ "of them; the tick rebased its branch at the launch, the rebase conflicted, the run of"
@@ -5547,6 +5556,17 @@ DECISION ATaskBranchIsRebasedOntoItsBaseOnlyOnceItsChecksPassed
 	SOURCE "the user's ruling of 2026-11-02 on the question of run 20261102T193007Z-6cde94 of wave"
 		+ "brigade_w22, on @TASK.B232: « Non la règle serait plutôt qu'on doit avoir une ci verte"
 		+ "avant de passer au rebase. Fix en mode quick fix sans tâche, puis requeue. »"
+		REF @TASK.B232
+	RATIONALE "run 20261103T095517Z-27f639 of wave brigade_w22: @TASK.B232, requeued once the user"
+		+ "had ruled its question in #335, read its SPEC 5 on task/brigade_w22/B232, which lacks"
+		+ "b90b83f6, and asked the same question again; the branch of its wave merges into its"
+		+ "branch with conflicts in 22 files, so a rebase at the launch would only park it again"
+		REF @TASK.B232
+	SOURCE "the user's ruling of 2026-11-03 on the question of run 20261103T095517Z-27f639 of wave"
+		+ "brigade_w22, on @TASK.B232, « A : la tâche à jour dans le brief » — « La branche ne"
+		+ "bouge pas (DESC 2 reste valable). Le brief du run contient la tâche telle qu'elle se lit"
+		+ "sur origin/<branche de wave>, signalée comme plus récente que le corpus du worktree dès"
+		+ "que les deux diffèrent. »"
 		REF @TASK.B232
 
 DECISION AResumeAfterTheQuotaResetEndsTheStopOfItsTaskAndRunsListNamesTheWaveAndTaskOfEachRun
