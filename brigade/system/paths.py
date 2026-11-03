@@ -13,6 +13,7 @@ HEARTBEAT_FILE = "tick.json"
 SCHEMA_FILE = "_schema.awawa"
 RUN_DIRECTORY_VARIABLE = "BRIGADE_RUN_DIR"
 HOME_VARIABLE = "HOME"
+SESSION_BUS_VARIABLE = "DBUS_SESSION_BUS_ADDRESS"
 
 
 @dataclass(frozen=True)
@@ -24,6 +25,7 @@ class Paths:
     executable_search_path: str
     package_file: Path
     run_directory: Path | None = None
+    session_bus_address: str | None = None
 
     @property
     def configuration_file(self) -> Path:
@@ -76,4 +78,5 @@ def build_paths(environment: Mapping[str, str]) -> Paths:
         executable_search_path=environment.get("PATH", os.defpath),
         package_file=Path(brigade.__file__),
         run_directory=_resolve_absolute_path(environment, RUN_DIRECTORY_VARIABLE),
+        session_bus_address=environment.get(SESSION_BUS_VARIABLE),
     )

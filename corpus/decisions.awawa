@@ -6222,3 +6222,48 @@ DECISION TheReportOfATaskIsCommittedOnADetachedCheckoutAndPushedToTheBranchOfThe
 		+ "the report must reach the forge without touching that worktree; ruled by the build run"
 		+ "of @TASK.B232 on 2026-11-03"
 		REF @TASK.B232
+
+DECISION TheVibeAdapterClassifiesAStreamWithoutEntryByStderrEvenOnExitZero
+	TITLE "the vibe adapter classifies a stream holding no entry by the last line of stderr, even"
+		+ "on exit 0, and takes the message of a cut segment from stderr and that of a blocked"
+		+ "segment from its final message"
+	STATUS active
+	DESC "binds @TASK.B108"
+		REF @TASK.B108
+	DESC "a stream holding no entry names no session: with exit 0 it is classified as any other"
+		+ "exit, by the last line of stderr, unreadable_output when stderr holds none"
+	DESC "the message of a segment cut by its turn cap is the last line of stderr"
+	DESC "the message of a blocked segment is the text of its final message"
+	REJECTED "a stream holding no entry on exit 0 read as an ended segment, undeclared: it names no"
+		+ "session and no final message, so nothing shows the client ran the brief"
+	SOURCE "run 20261101T213054Z-33f56c of wave brigade_w20, delivering @TASK.B108"
+		REF @TASK.B108
+
+DECISION ADetachedBrigadeCarriesTheSessionBusAddressOfTheBrigadeThatDetachesIt
+	TITLE "a detached brigade, a run or a study, is spawned with the DBUS_SESSION_BUS_ADDRESS of"
+		+ "the brigade that detaches it, in the environment of its spawn request; the whitelist of"
+		+ "the process runner stays"
+	STATUS active
+	DESC "binds @TASK.B44"
+		REF @TASK.B44
+	DESC "brigade/runs/detach_brigade_command.py adds the variable when the paths of the detaching"
+		+ "brigade carry a session_bus_address, nothing when they carry none; the detached brigade"
+		+ "reads it back in brigade/system/paths.py, so the request its segments complete carries"
+		+ "it, and its own git, awawa and gh children still receive the whitelist alone"
+	REJECTED "DBUS_SESSION_BUS_ADDRESS in the whitelist of"
+		+ "brigade/system/build_process_environment.py: every git, awawa and gh call would carry"
+		+ "the bus, the alternative the ruling on the environment of a vibe launch already refused"
+	REJECTED "the address carried under a BRIGADE_ variable the whitelist passes: a second name for"
+		+ "one value, read in two places"
+	RATIONALE "on 2026-11-02 the rehearsal of @TASK.B44 launched the plan run"
+		+ "20261102T185619Z-de6fa0 on vibe from a shell carrying the address: the run, spawned"
+		+ "through the whitelist, read no address, its launch reached no keyring, Error:"
+		+ "session/start, exit 1; the tick and brigade request new start every run detached, so"
+		+ "without this the address never reaches a segment"
+		REF @TASK.B44
+	RATIONALE "the whitelist stays as"
+		+ "@DECISION.TheVibeAdapterAddsTheSessionBusAddressOfTheLaunchRequestToItsEnvironment"
+		+ "rules; this decision makes its session_bus_address hold in a detached run"
+		REF @DECISION.TheVibeAdapterAddsTheSessionBusAddressOfTheLaunchRequestToItsEnvironment
+	SOURCE "run 20261102T185023Z-f4126b of wave brigade_w20, delivering @TASK.B44"
+		REF @TASK.B44

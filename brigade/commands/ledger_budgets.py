@@ -46,7 +46,7 @@ def ledger_budgets(request: argparse.Namespace, runtime: Runtime) -> dict:
     reading = read_ledger(runtime.paths.state_root)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
-        **describe_budgets(reading, request.last),
+        **describe_budgets(reading, request.last, request.client),
         "roles": describe_role_budgets(reading),
         "skipped": [asdict(line) for line in reading.skipped],
     }
@@ -64,6 +64,7 @@ COMMAND = Command(
                 "help": "the runs of each procedure, 20 by default",
             },
         ),
+        Argument(("--client",), {"help": "the runs of this client alone, every client by default"}),
     ),
     run=ledger_budgets,
     render_text=_render_text,
