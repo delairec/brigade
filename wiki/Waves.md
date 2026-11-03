@@ -38,9 +38,10 @@ in their words, and the plan it receives.
 
 ## Starting and following a wave
 
-A wave is a batch of ratified tasks started together, recorded in the ledger alone. `wave start` composes it without
-a model and names it `<project>_w<n>` on the branch `integration/<project>_w<n>`. A wave is open until `wave.closed`
-or `wave.cancelled`.
+A wave is a batch of ratified tasks started together, recorded in the ledger alone, with no branch and no pull
+request of its own. `wave start` composes it without a model and names it `<project>_w<n>`; each of its tasks runs
+on a branch of its own, cut from the branch of its milestone. A wave is open until `wave.closed`, which the tick
+records once every task of the wave is merged or parked, or `wave.cancelled`.
 
 A task joins the wave when it:
 
@@ -139,8 +140,8 @@ resumed; a wave no `wave.started` names, or one that is not paused, exits 1 nami
 
 - `wave requeue` records `task.state` `queued` for a parked task of the wave named, and prints the task queued.
 - It exits 1 on a task that is not parked, naming its state; on a task outside the wave, naming the wave; on a parked
-  task the wave branch holds implemented, naming the branch; and on a wave no `wave.started` names, naming it.
-- A queued task the wave branch holds implemented is followed through its pull request, and recorded merged once it
+  task the branch of its milestone, or the main branch, holds implemented, naming the branch; and on a wave no `wave.started` names, naming it.
+- A queued task that branch holds implemented is followed through its pull request, and recorded merged once it
   is.
 
 </details>

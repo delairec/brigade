@@ -21,6 +21,7 @@ from brigade.tasks.locate_task_worktree import TaskWorktree, locate_task_worktre
 DOCUMENT_SCHEMA_VERSION = 1
 HEAD = "HEAD"
 MILESTONE_PREFIX = "@MILESTONE."
+NO_MILESTONE = None
 
 
 @dataclass(frozen=True)
@@ -70,12 +71,10 @@ def _compose_title(task: Entity, subject: str | None) -> str:
     )
 
 
-def _read_milestone_title(runtime: Runtime, worktree: TaskWorktree, task: Entity) -> str:
+def _read_milestone_title(runtime: Runtime, worktree: TaskWorktree, task: Entity) -> str | None:
     milestone = read_project_field(task, "MILESTONE")
     if milestone is None:
-        raise BrigadeError(
-            f"@TASK.{task.name} carries no MILESTONE, whose TITLE names the milestone of its pull request"
-        )
+        return NO_MILESTONE
     milestone = milestone.removeprefix(MILESTONE_PREFIX)
     return read_project_field(read_entity(runtime.run_process, worktree.path, "MILESTONE", milestone), "TITLE")
 
@@ -97,7 +96,7 @@ class _TaskPullRequest:
     branch: str
     title: str
     body: str
-    milestone: str
+    milestone: str | None
 
 
 def _compose_body(task: Entity, check: object, attribution: tuple[str, ...]) -> str:
@@ -115,7 +114,7 @@ def _open_on_forge(runtime: Runtime, session: ForgeSession, opened: _TaskPullReq
     return session.forge.open_pull_request(
         {
             "repository": str(session.worktree.path),
-            "base": session.worktree.wave_branch,
+            "base": session.worktree.base,
             "branch": opened.branch,
             "title": opened.title,
             "body": opened.body,
@@ -148,7 +147,7 @@ def _describe_opening(session: ForgeSession, opened: _TaskPullRequest, pull_requ
         "project": session.worktree.project.name,
         "task": session.worktree.task,
         "branch": opened.branch,
-        "base": session.worktree.wave_branch,
+        "base": session.worktree.base,
         "title": opened.title,
         "milestone": opened.milestone,
         "pr": pull_request["number"],
@@ -168,7 +167,8 @@ def open_task_pull_request(runtime: Runtime, demand: TaskPullRequestDemand) -> d
     push_branch(
         runtime.run_process, BranchPush(repository=worktree.path, branch=branch, environment=demand.environment)
     )
-    _ensure_milestone(runtime, session, milestone)
+    if milestone is not NO_MILESTONE:
+        _ensure_milestone(runtime, session, milestone)
     opened = _TaskPullRequest(
         branch=branch, title=title, body=_compose_body(task, check, demand.attribution), milestone=milestone
     )

@@ -8,13 +8,10 @@ from brigade.errors import BrigadeError, ToolFailure
 from brigade.git.add_branch_worktree import BranchWorktree, add_branch_worktree
 from brigade.git.add_worktree_on_branch import add_worktree_on_branch
 from brigade.git.check_ancestor import check_ancestor
-from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.find_branch import find_branch
 from brigade.git.list_worktrees import list_worktrees
 from brigade.git.rebase_onto import rebase_onto
 from brigade.git.require_ancestor import require_ancestor
-from brigade.git.switch_worktree_to_branch import switch_worktree_to_branch
-from brigade.git.switch_worktree_to_new_branch import switch_worktree_to_new_branch
 from brigade.ledger.append_event import append_event
 from brigade.ledger.task_state import TaskState
 from brigade.registry.find_project import find_project
@@ -30,8 +27,6 @@ from brigade.system.write_text_atomically import write_text_atomically
 from brigade.tick.actions import LaunchTask
 from brigade.tick.ignore_worktrees import ignore_worktrees
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
-from brigade.tick.name_ended_task_branches import name_ended_task_branches
-from brigade.tick.name_task_branch import name_task_branch
 from brigade.waves.locate_forge_branch import locate_forge_branch
 from brigade.waves.read_task_state import PARKED_STATE
 
@@ -68,28 +63,13 @@ def _set_up(runtime: Runtime, setup: tuple[str, ...], prepared: PreparedWorktree
         require_ancestor(runtime.run_process, worktree.path, worktree.start)
 
 
-def _keep_uncommitted_changes(runtime: Runtime, worktree: BranchWorktree, task: str) -> None:
-    commit_files(
-        runtime.run_process,
-        CommitRequest(
-            repository=worktree.path,
-            files=(WHOLE_WORKTREE,),
-            message=f"chore(tick): keep the changes of @TASK.{task} left uncommitted in an ended wave",
-        ),
-    )
-
-
-def _open_worktree(runtime: Runtime, repository: Path, worktree: BranchWorktree, action: LaunchTask) -> bool:
+def _open_worktree(runtime: Runtime, repository: Path, worktree: BranchWorktree) -> bool:
     listed = list_worktrees(runtime.run_process, repository)
     held = next((found.branch for found in listed if found.path == worktree.path), None)
     if held == worktree.branch:
         return True
     found = find_branch(runtime.run_process, repository, worktree.branch)
-    ended = name_ended_task_branches(runtime.read_ledger(runtime.paths.state_root).entries, action.project, action.task)
-    if held in ended:
-        _keep_uncommitted_changes(runtime, worktree, action.task)
-        (switch_worktree_to_branch if found else switch_worktree_to_new_branch)(runtime.run_process, worktree)
-    elif found:
+    if found:
         add_worktree_on_branch(runtime.run_process, repository, worktree)
     else:
         add_branch_worktree(runtime.run_process, repository, worktree)
@@ -132,14 +112,14 @@ def prepare_task_worktree(
     with hold_lock(lock):
         worktree = BranchWorktree(
             path=locate_scheduled_worktree(repository, configuration.worktree_root, action.task),
-            branch=name_task_branch(action.branch, action.task),
+            branch=action.task_branch,
             start=locate_forge_branch(runtime.run_process, project, action.branch, read_environment),
         )
         if configuration.worktree_root is None:
             ignore_worktrees(runtime.run_process, repository, action.branch)
         prepared = (
             _put_on_start(runtime, worktree, action)
-            if _open_worktree(runtime, repository, worktree, action)
+            if _open_worktree(runtime, repository, worktree)
             else PreparedWorktree(worktree=worktree, conflicted=False, on_start=True)
         )
         if prepared.conflicted:

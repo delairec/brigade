@@ -17,13 +17,12 @@ from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.milestone_pr_opened import MilestonePrOpened
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_preflighted import TaskPreflighted
+from brigade.ledger.task_reported import TaskReported
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_cancelled import WaveCancelled
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
-from brigade.ledger.wave_pr_opened import WavePrOpened
-from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.runs.record_run_pid import record_run_pid
@@ -53,7 +52,7 @@ from tests.unit.ledger.create_run_finished import create_run_finished
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 from tests.unit.registry_answers import create_registry_answers
 
-WAVE_SHA = "abc123"
+MILESTONE_SHA = "abc123"
 MAIN_SHA = "def456"
 PULL_REQUEST_HEAD = "4f2a9c1"
 DELIVERED_BY_THE_PULL_REQUEST = {"name": "DELIVERED_BY", "atoms": ["7"]}
@@ -88,7 +87,9 @@ class AwawaAnswerWriterDouble:
 
     def describe_task(self, status: str, *after: str) -> list[dict]:
         return [
+            {"name": "TITLE", "atoms": ["Task"]},
             {"name": "STATUS", "atoms": [status]},
+            {"name": "TYPE", "atoms": ["feat"]},
             *({"name": "AFTER", "atoms": [f"@TASK.{task}"]} for task in after),
         ]
 
@@ -100,6 +101,7 @@ class AwawaAnswerWriterDouble:
 
 
 AWAWA_ANSWERS = AwawaAnswerWriterDouble()
+TASK_IDENTITY = [{"name": "TITLE", "atoms": ["Task"]}, {"name": "TYPE", "atoms": ["feat"]}]
 
 
 def answer_tree(ref: str, sha: str) -> dict:
@@ -120,10 +122,6 @@ def _read_forge_environment(slot: str) -> dict:
     return FORGE_ENVIRONMENT
 
 
-def _count_no_thread(repository: str, number: int) -> int:
-    return 0
-
-
 class PullRequestReaderDouble:
     def __init__(self):
         self.branches = []
@@ -135,7 +133,7 @@ class PullRequestReaderDouble:
 
 class PullRequestReaderFailingOnOneWaveDouble(PullRequestReaderDouble):
     def __call__(self, repository: str, branch: str) -> PullRequestFacts:
-        if branch == "task/w1/B1":
+        if branch == "feature/B1-task":
             raise CommandFailed(("gh", "pr", "list", "--head", branch), 1, "HTTP 502: Bad Gateway")
         return super().__call__(repository, branch)
 
@@ -147,8 +145,8 @@ class BuildSnapshotTestCase(unittest.TestCase):
         self.paths = create_test_paths(self.root)
         self.repository = self.root / "shop"
         (self.repository / ".brigade" / "worktrees" / "B1").mkdir(parents=True)
-        self.wave_tree = self.paths.cache_root / "refs" / "shop" / WAVE_SHA
-        self.wave_tree.mkdir(parents=True)
+        self.milestone_tree = self.paths.cache_root / "refs" / "shop" / MILESTONE_SHA
+        self.milestone_tree.mkdir(parents=True)
         self.main_tree = self.paths.cache_root / "refs" / "shop" / MAIN_SHA
         self.main_tree.mkdir(parents=True)
         self.pull_request_tree = self.paths.cache_root / "refs" / "shop" / PULL_REQUEST_HEAD
@@ -207,21 +205,6 @@ class BuildSnapshotTestCase(unittest.TestCase):
                         ]
                     },
                 ),
-                ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/w4"): ProcessAnswer(exit_code=1),
-                **answer_tree("integration/w1", WAVE_SHA),
-                **answer_unreadable_tree("integration/w5"),
-                **AWAWA_ANSWERS.answer_entities(
-                    self.wave_tree,
-                    "TASK",
-                    {
-                        "B1": AWAWA_ANSWERS.describe_task("todo", "B0"),
-                        "B2": [],
-                        "B3": [{"name": "MILESTONE", "atoms": ["@MILESTONE.M4"]}],
-                        "B4": [],
-                    },
-                ),
-                **AWAWA_ANSWERS.answer_no_incoming_refs(self.wave_tree, "B1", "B2", "B3", "B4"),
-                **AWAWA_ANSWERS.answer_entities(self.wave_tree, "TASK", {"B0": []}, "STATUS==implemented"),
                 **answer_tree("main", MAIN_SHA),
                 **AWAWA_ANSWERS.answer_entities(
                     self.main_tree,
@@ -229,16 +212,23 @@ class BuildSnapshotTestCase(unittest.TestCase):
                     {
                         "B0": AWAWA_ANSWERS.describe_task("implemented"),
                         "B1": AWAWA_ANSWERS.describe_task("todo", "B0"),
+                        "B2": TASK_IDENTITY,
+                        "B3": [*TASK_IDENTITY, {"name": "MILESTONE", "atoms": ["@MILESTONE.M4"]}],
+                        "B4": TASK_IDENTITY,
                         "B5": AWAWA_ANSWERS.describe_task("todo", "B0"),
                         "B6": AWAWA_ANSWERS.describe_task("draft"),
                     },
                 ),
-                **AWAWA_ANSWERS.answer_no_incoming_refs(self.main_tree, "B5"),
+                **AWAWA_ANSWERS.answer_no_incoming_refs(self.main_tree, "B1", "B2", "B3", "B4", "B5"),
+                **AWAWA_ANSWERS.answer_entities(
+                    self.main_tree, "TASK", {"B0": AWAWA_ANSWERS.describe_task("implemented")}, "STATUS==implemented"
+                ),
+                **AWAWA_ANSWERS.answer_entities(self.main_tree, "MILESTONE", {}, "STATUS==active"),
                 **answer_tree(PULL_REQUEST_HEAD, PULL_REQUEST_HEAD),
                 **AWAWA_ANSWERS.answer_entities(
                     self.pull_request_tree,
                     "TASK",
-                    {"B1": AWAWA_ANSWERS.describe_task("todo", "B0"), "B2": [], "B4": []},
+                    {"B1": AWAWA_ANSWERS.describe_task("todo", "B0"), "B2": TASK_IDENTITY, "B4": TASK_IDENTITY},
                 ),
                 **answer_unreadable_tree("trunk"),
                 **self.remote_answers,
@@ -250,9 +240,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
         runtime = create_test_runtime(self.paths, run_process=self.runner)
         stderr = io.StringIO()
         with contextlib.redirect_stderr(stderr):
-            snapshot = build_snapshot(
-                runtime, Configuration(), ForgeReaders(self.reader, _read_forge_environment, _count_no_thread)
-            )
+            snapshot = build_snapshot(runtime, Configuration(), ForgeReaders(self.reader, _read_forge_environment))
         return snapshot, stderr.getvalue()
 
 
@@ -269,9 +257,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
     def setUp(self):
         super().setUp()
         self.write_operational_corpus()
-        self.record(60, WaveStarted(wave="w1", project="shop", branch="integration/w1", tasks=("B1", "B2", "B3", "B4")))
-        self.record(60, WaveStarted(wave="w4", project="shop", branch="integration/w4", tasks=("B7",)))
-        self.record(60, WaveStarted(wave="w5", project="shop", branch="integration/w5", tasks=("B8",)))
+        self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B1", "B2", "B3", "B4")))
         self.record(50, TaskState(wave="w1", task="B1", state="running"))
         self.record(50, TaskState(wave="w1", task="B2", state="paused:quota"))
         self.record(50, TaskState(wave="w1", task="B3", state="merged"))
@@ -290,14 +276,15 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             (
                 TaskFacts(
                     name="B1",
+                    branch="feature/B1-task",
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
                     rate_limit=RateLimit(reset=None),
                 ),
-                TaskFacts(name="B2", pull_request=PULL_REQUEST, stopped_run="r2"),
-                TaskFacts(name="B3", milestone="M4"),
-                TaskFacts(name="B4", pull_request=PULL_REQUEST),
+                TaskFacts(name="B2", branch="feature/B2-task", pull_request=PULL_REQUEST, stopped_run="r2"),
+                TaskFacts(name="B3", branch="feature/B3-task", milestone="M4"),
+                TaskFacts(name="B4", branch="feature/B4-task", pull_request=PULL_REQUEST),
             ),
         )
 
@@ -314,6 +301,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             snapshot.waves[0].tasks[0],
             TaskFacts(
                 name="B1",
+                branch="feature/B1-task",
                 after=("B0",),
                 pull_request=PULL_REQUEST,
                 worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -334,6 +322,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             snapshot.waves[0].tasks[0],
             TaskFacts(
                 name="B1",
+                branch="feature/B1-task",
                 after=("B0",),
                 pull_request=PULL_REQUEST,
                 worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -355,6 +344,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             snapshot.waves[0].tasks[0],
             TaskFacts(
                 name="B1",
+                branch="feature/B1-task",
                 after=("B0",),
                 pull_request=PULL_REQUEST,
                 worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -378,15 +368,18 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             (
                 TaskFacts(
                     name="B1",
+                    branch="feature/B1-task",
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
                     rate_limit=RateLimit(reset=None),
                     last_run="20261013T100000Z-a00003",
                 ),
-                TaskFacts(name="B2", pull_request=PULL_REQUEST, stopped_run="r2"),
-                TaskFacts(name="B3", milestone="M4"),
-                TaskFacts(name="B4", pull_request=PULL_REQUEST, last_run="20261013T090000Z-a00002"),
+                TaskFacts(name="B2", branch="feature/B2-task", pull_request=PULL_REQUEST, stopped_run="r2"),
+                TaskFacts(name="B3", branch="feature/B3-task", milestone="M4"),
+                TaskFacts(
+                    name="B4", branch="feature/B4-task", pull_request=PULL_REQUEST, last_run="20261013T090000Z-a00002"
+                ),
             ),
         )
 
@@ -405,15 +398,16 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             (
                 TaskFacts(
                     name="B1",
+                    branch="feature/B1-task",
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
                     rate_limit=RateLimit(reset=None),
                     holds_uncommitted_changes=True,
                 ),
-                TaskFacts(name="B2", pull_request=PULL_REQUEST, stopped_run="r2"),
-                TaskFacts(name="B3", milestone="M4"),
-                TaskFacts(name="B4", pull_request=PULL_REQUEST),
+                TaskFacts(name="B2", branch="feature/B2-task", pull_request=PULL_REQUEST, stopped_run="r2"),
+                TaskFacts(name="B3", branch="feature/B3-task", milestone="M4"),
+                TaskFacts(name="B4", branch="feature/B4-task", pull_request=PULL_REQUEST),
             ),
         )
 
@@ -429,13 +423,20 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     on_pull_request=Entity(
                         name="B1",
                         fields=(
+                            EntityField(name="TITLE", value="Task"),
                             EntityField(name="STATUS", value="implemented"),
+                            EntityField(name="TYPE", value="feat"),
                             EntityField(name="DELIVERED_BY", value="7"),
                         ),
                     ),
                     on_wave=Entity(
                         name="B1",
-                        fields=(EntityField(name="STATUS", value="todo"), EntityField(name="AFTER", value="@TASK.B0")),
+                        fields=(
+                            EntityField(name="TITLE", value="Task"),
+                            EntityField(name="STATUS", value="todo"),
+                            EntityField(name="TYPE", value="feat"),
+                            EntityField(name="AFTER", value="@TASK.B0"),
+                        ),
                     ),
                 ),
             ),
@@ -474,13 +475,12 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         self.assertEqual(wave.wave, "w1")
         self.assertEqual(wave.implemented, ("B0",))
         self.assertEqual(wave.forge_account_unavailable, True)
-        self.assertEqual(wave.reported, False)
 
     def test_should_follow_no_wave_closed_or_cancelled(self):
         # Arrange
-        self.record(40, WaveStarted(wave="w2", project="shop", branch="integration/w2", tasks=("B9",)))
+        self.record(40, WaveStarted(wave="w2", project="shop", tasks=("B9",)))
         self.record(30, WaveClosed(wave="w2", pr=31))
-        self.record(40, WaveStarted(wave="w3", project="shop", branch="integration/w3", tasks=("B10",)))
+        self.record(40, WaveStarted(wave="w3", project="shop", tasks=("B10",)))
         self.record(30, WaveCancelled(wave="w3", reason="user"))
 
         # Act
@@ -493,10 +493,11 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 WaveFacts(
                     project="shop",
                     wave="w1",
-                    branch="integration/w1",
+                    base="main",
                     tasks=(
                         TaskFacts(
                             name="B1",
+                            branch="feature/B1-task",
                             after=("B0",),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -523,6 +524,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         ),
                         TaskFacts(
                             name="B2",
+                            branch="feature/B2-task",
                             after=(),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -549,6 +551,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         ),
                         TaskFacts(
                             name="B3",
+                            branch="feature/B3-task",
                             milestone="M4",
                             after=(),
                             blocked_by=(),
@@ -567,6 +570,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         ),
                         TaskFacts(
                             name="B4",
+                            branch="feature/B4-task",
                             after=(),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -596,311 +600,6 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     implemented=("B0",),
                     pause=None,
                     forge_account_unavailable=True,
-                    branch_missing=False,
-                    reported=False,
-                    integration_pull_request=None,
-                    opened_integration_pull_request=None,
-                ),
-                WaveFacts(
-                    project="shop",
-                    wave="w4",
-                    branch="integration/w4",
-                    tasks=(),
-                    states={},
-                    implemented=(),
-                    pause=None,
-                    forge_account_unavailable=False,
-                    branch_missing=True,
-                    reported=False,
-                    integration_pull_request=None,
-                    opened_integration_pull_request=None,
-                ),
-            ),
-        )
-
-    def test_should_carry_the_integration_pull_request_of_a_reported_wave(self):
-        # Arrange
-        self.record(10, WaveReported(wave="w1", run=None))
-
-        # Act
-        snapshot, _ = self.build()
-
-        # Assert
-        self.assertEqual(
-            snapshot.waves,
-            (
-                WaveFacts(
-                    project="shop",
-                    wave="w1",
-                    branch="integration/w1",
-                    tasks=(
-                        TaskFacts(
-                            name="B1",
-                            after=("B0",),
-                            blocked_by=(),
-                            pull_request=PullRequestFacts(
-                                number=7,
-                                state="open",
-                                checks=(),
-                                review=None,
-                                behind=False,
-                                head="4f2a9c1",
-                                base="integration/w1",
-                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
-                            ),
-                            worktree=f"{self.root}/shop/.brigade/worktrees/B1",
-                            rate_limit=RateLimit(reset=None),
-                            stopped_run=None,
-                            opened_pull_request=None,
-                            preflighted_head=None,
-                            verdict=None,
-                            reviewed_head=None,
-                            preflight_failures=(),
-                            repair_rounds=0,
-                            holds_uncommitted_changes=False,
-                            last_run=None,
-                        ),
-                        TaskFacts(
-                            name="B2",
-                            after=(),
-                            blocked_by=(),
-                            pull_request=PullRequestFacts(
-                                number=7,
-                                state="open",
-                                checks=(),
-                                review=None,
-                                behind=False,
-                                head="4f2a9c1",
-                                base="integration/w1",
-                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
-                            ),
-                            worktree=None,
-                            rate_limit=None,
-                            stopped_run="r2",
-                            opened_pull_request=None,
-                            preflighted_head=None,
-                            verdict=None,
-                            reviewed_head=None,
-                            preflight_failures=(),
-                            repair_rounds=0,
-                            holds_uncommitted_changes=False,
-                            last_run=None,
-                        ),
-                        TaskFacts(
-                            name="B3",
-                            milestone="M4",
-                            after=(),
-                            blocked_by=(),
-                            pull_request=None,
-                            worktree=None,
-                            rate_limit=None,
-                            stopped_run=None,
-                            opened_pull_request=None,
-                            preflighted_head=None,
-                            verdict=None,
-                            reviewed_head=None,
-                            preflight_failures=(),
-                            repair_rounds=0,
-                            holds_uncommitted_changes=False,
-                            last_run=None,
-                        ),
-                        TaskFacts(
-                            name="B4",
-                            after=(),
-                            blocked_by=(),
-                            pull_request=PullRequestFacts(
-                                number=7,
-                                state="open",
-                                checks=(),
-                                review=None,
-                                behind=False,
-                                head="4f2a9c1",
-                                base="integration/w1",
-                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
-                            ),
-                            worktree=None,
-                            rate_limit=None,
-                            stopped_run=None,
-                            opened_pull_request=None,
-                            preflighted_head=None,
-                            verdict=None,
-                            reviewed_head=None,
-                            preflight_failures=(),
-                            repair_rounds=0,
-                            holds_uncommitted_changes=False,
-                            last_run=None,
-                        ),
-                    ),
-                    states={"B1": "running", "B2": "paused:quota", "B3": "merged", "B4": "running"},
-                    implemented=("B0",),
-                    pause=None,
-                    forge_account_unavailable=True,
-                    branch_missing=False,
-                    reported=True,
-                    integration_pull_request=PullRequestFacts(
-                        number=7,
-                        state="open",
-                        checks=(),
-                        review=None,
-                        behind=False,
-                        head="4f2a9c1",
-                        base="integration/w1",
-                        updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
-                    ),
-                    opened_integration_pull_request=None,
-                ),
-                WaveFacts(
-                    project="shop",
-                    wave="w4",
-                    branch="integration/w4",
-                    tasks=(),
-                    states={},
-                    implemented=(),
-                    pause=None,
-                    forge_account_unavailable=False,
-                    branch_missing=True,
-                    reported=False,
-                    integration_pull_request=None,
-                    opened_integration_pull_request=None,
-                ),
-            ),
-        )
-
-    def test_should_carry_the_integration_pull_request_the_ledger_records_as_opened(self):
-        # Arrange
-        self.record(10, WavePrOpened(wave="w1", pr=77, login="shop-cli"))
-
-        # Act
-        snapshot, _ = self.build()
-
-        # Assert
-        self.assertEqual(
-            snapshot.waves,
-            (
-                WaveFacts(
-                    project="shop",
-                    wave="w1",
-                    branch="integration/w1",
-                    tasks=(
-                        TaskFacts(
-                            name="B1",
-                            after=("B0",),
-                            blocked_by=(),
-                            pull_request=PullRequestFacts(
-                                number=7,
-                                state="open",
-                                checks=(),
-                                review=None,
-                                behind=False,
-                                head="4f2a9c1",
-                                base="integration/w1",
-                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
-                            ),
-                            worktree=f"{self.root}/shop/.brigade/worktrees/B1",
-                            rate_limit=RateLimit(reset=None),
-                            stopped_run=None,
-                            opened_pull_request=None,
-                            preflighted_head=None,
-                            verdict=None,
-                            reviewed_head=None,
-                            preflight_failures=(),
-                            repair_rounds=0,
-                            holds_uncommitted_changes=False,
-                            last_run=None,
-                        ),
-                        TaskFacts(
-                            name="B2",
-                            after=(),
-                            blocked_by=(),
-                            pull_request=PullRequestFacts(
-                                number=7,
-                                state="open",
-                                checks=(),
-                                review=None,
-                                behind=False,
-                                head="4f2a9c1",
-                                base="integration/w1",
-                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
-                            ),
-                            worktree=None,
-                            rate_limit=None,
-                            stopped_run="r2",
-                            opened_pull_request=None,
-                            preflighted_head=None,
-                            verdict=None,
-                            reviewed_head=None,
-                            preflight_failures=(),
-                            repair_rounds=0,
-                            holds_uncommitted_changes=False,
-                            last_run=None,
-                        ),
-                        TaskFacts(
-                            name="B3",
-                            milestone="M4",
-                            after=(),
-                            blocked_by=(),
-                            pull_request=None,
-                            worktree=None,
-                            rate_limit=None,
-                            stopped_run=None,
-                            opened_pull_request=None,
-                            preflighted_head=None,
-                            verdict=None,
-                            reviewed_head=None,
-                            preflight_failures=(),
-                            repair_rounds=0,
-                            holds_uncommitted_changes=False,
-                            last_run=None,
-                        ),
-                        TaskFacts(
-                            name="B4",
-                            after=(),
-                            blocked_by=(),
-                            pull_request=PullRequestFacts(
-                                number=7,
-                                state="open",
-                                checks=(),
-                                review=None,
-                                behind=False,
-                                head="4f2a9c1",
-                                base="integration/w1",
-                                updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
-                            ),
-                            worktree=None,
-                            rate_limit=None,
-                            stopped_run=None,
-                            opened_pull_request=None,
-                            preflighted_head=None,
-                            verdict=None,
-                            reviewed_head=None,
-                            preflight_failures=(),
-                            repair_rounds=0,
-                            holds_uncommitted_changes=False,
-                            last_run=None,
-                        ),
-                    ),
-                    states={"B1": "running", "B2": "paused:quota", "B3": "merged", "B4": "running"},
-                    implemented=("B0",),
-                    pause=None,
-                    forge_account_unavailable=True,
-                    branch_missing=False,
-                    reported=False,
-                    integration_pull_request=None,
-                    opened_integration_pull_request=77,
-                ),
-                WaveFacts(
-                    project="shop",
-                    wave="w4",
-                    branch="integration/w4",
-                    tasks=(),
-                    states={},
-                    implemented=(),
-                    pause=None,
-                    forge_account_unavailable=False,
-                    branch_missing=True,
-                    reported=False,
-                    integration_pull_request=None,
-                    opened_integration_pull_request=None,
                 ),
             ),
         )
@@ -908,8 +607,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
     def test_should_describe_a_project_on_the_github_forge(self):
         # Arrange
         self.shop_forge = "github"
-        argv = ("git", "ls-remote", "--quiet", "--exit-code", "--heads", "origin", "refs/heads/integration/w1")
-        self.remote_answers = {argv: ProcessAnswer(), **answer_main_of_the_forge(MAIN_SHA)}
+        self.remote_answers = answer_main_of_the_forge(MAIN_SHA)
 
         # Act
         snapshot, _ = self.build()
@@ -933,8 +631,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
     def test_should_fetch_the_main_branch_with_the_environment_of_the_forge_on_github(self):
         # Arrange
         self.shop_forge = "github"
-        argv = ("git", "ls-remote", "--quiet", "--exit-code", "--heads", "origin", "refs/heads/integration/w1")
-        self.remote_answers = {argv: ProcessAnswer(), **answer_main_of_the_forge(MAIN_SHA)}
+        self.remote_answers = answer_main_of_the_forge(MAIN_SHA)
 
         # Act
         self.build()
@@ -950,31 +647,6 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     environment=FORGE_ENVIRONMENT,
                 )
             ],
-        )
-
-    def test_should_mark_a_wave_whose_branch_is_gone(self):
-        # Act
-        snapshot, _ = self.build()
-
-        # Assert
-        self.assertEqual(
-            snapshot.waves[1],
-            WaveFacts(project="shop", wave="w4", branch="integration/w4", branch_missing=True),
-        )
-
-    def test_should_mark_a_wave_whose_branch_the_remote_lacks_on_the_github_forge(self):
-        # Arrange
-        self.shop_forge = "github"
-        argv = ("git", "ls-remote", "--quiet", "--exit-code", "--heads", "origin", "refs/heads/integration/w1")
-        self.remote_answers = {argv: ProcessAnswer(exit_code=2), **answer_main_of_the_forge(MAIN_SHA)}
-
-        # Act
-        snapshot, _ = self.build()
-
-        # Assert
-        self.assertEqual(
-            snapshot.waves[0],
-            WaveFacts(project="shop", wave="w1", branch="integration/w1", branch_missing=True),
         )
 
     def test_should_describe_each_readable_project_with_the_tasks_a_wave_may_take(self):
@@ -1096,10 +768,11 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 WaveFacts(
                     project="shop",
                     wave="w1",
-                    branch="integration/w1",
+                    base="main",
                     tasks=(
                         TaskFacts(
                             name="B1",
+                            branch="feature/B1-task",
                             after=("B0",),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -1126,6 +799,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         ),
                         TaskFacts(
                             name="B2",
+                            branch="feature/B2-task",
                             after=(),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -1152,6 +826,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         ),
                         TaskFacts(
                             name="B3",
+                            branch="feature/B3-task",
                             milestone="M4",
                             after=(),
                             blocked_by=(),
@@ -1170,6 +845,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         ),
                         TaskFacts(
                             name="B4",
+                            branch="feature/B4-task",
                             after=(),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -1199,24 +875,6 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     implemented=("B0",),
                     pause=None,
                     forge_account_unavailable=True,
-                    branch_missing=False,
-                    reported=False,
-                    integration_pull_request=None,
-                    opened_integration_pull_request=None,
-                ),
-                WaveFacts(
-                    project="shop",
-                    wave="w4",
-                    branch="integration/w4",
-                    tasks=(),
-                    states={},
-                    implemented=(),
-                    pause=None,
-                    forge_account_unavailable=False,
-                    branch_missing=True,
-                    reported=False,
-                    integration_pull_request=None,
-                    opened_integration_pull_request=None,
                 ),
             ),
         )
@@ -1235,10 +893,11 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 WaveFacts(
                     project="shop",
                     wave="w1",
-                    branch="integration/w1",
+                    base="main",
                     tasks=(
                         TaskFacts(
                             name="B1",
+                            branch="feature/B1-task",
                             after=("B0",),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -1265,6 +924,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         ),
                         TaskFacts(
                             name="B2",
+                            branch="feature/B2-task",
                             after=(),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -1291,6 +951,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         ),
                         TaskFacts(
                             name="B3",
+                            branch="feature/B3-task",
                             milestone="M4",
                             after=(),
                             blocked_by=(),
@@ -1309,6 +970,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         ),
                         TaskFacts(
                             name="B4",
+                            branch="feature/B4-task",
                             after=(),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -1338,24 +1000,6 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     implemented=("B0",),
                     pause=None,
                     forge_account_unavailable=False,
-                    branch_missing=False,
-                    reported=False,
-                    integration_pull_request=None,
-                    opened_integration_pull_request=None,
-                ),
-                WaveFacts(
-                    project="shop",
-                    wave="w4",
-                    branch="integration/w4",
-                    tasks=(),
-                    states={},
-                    implemented=(),
-                    pause=None,
-                    forge_account_unavailable=False,
-                    branch_missing=True,
-                    reported=False,
-                    integration_pull_request=None,
-                    opened_integration_pull_request=None,
                 ),
             ),
         )
@@ -1365,7 +1009,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         self.build()
 
         # Assert
-        self.assertEqual(self.reader.branches, ["task/w1/B1", "task/w1/B2", "task/w1/B4"])
+        self.assertEqual(self.reader.branches, ["feature/B1-task", "feature/B2-task", "feature/B4-task"])
 
     def test_should_count_the_live_build_runs_of_the_project(self):
         # Arrange
@@ -1435,29 +1079,14 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         # Assert
         self.assertEqual(
             stderr.splitlines()[1],
-            "brigade tick: the wave w1 skipped: gh pr list --head task/w1/B1 exited 1: HTTP 502: Bad Gateway",
+            "brigade tick: the wave w1 skipped: gh pr list --head feature/B1-task exited 1: HTTP 502: Bad Gateway",
         )
         self.assertEqual(
             snapshot.waves,
-            (
-                WaveFacts(
-                    project="shop",
-                    wave="w4",
-                    branch="integration/w4",
-                    tasks=(),
-                    states={},
-                    implemented=(),
-                    pause=None,
-                    forge_account_unavailable=False,
-                    branch_missing=True,
-                    reported=False,
-                    integration_pull_request=None,
-                    opened_integration_pull_request=None,
-                ),
-            ),
+            (),
         )
 
-    def test_should_skip_a_wave_or_a_project_whose_tree_cannot_be_read(self):
+    def test_should_skip_a_project_whose_tree_cannot_be_read(self):
         # Act
         _, stderr = self.build()
 
@@ -1469,10 +1098,6 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     "brigade tick: the project attic skipped: git rev-parse --verify --quiet --end-of-options"
                     " trunk^{commit} exited 128: fatal: bad revision"
                 ),
-                (
-                    "brigade tick: the wave w5 skipped: git rev-parse --verify --quiet --end-of-options"
-                    " integration/w5^{commit} exited 128: fatal: bad revision"
-                ),
             ],
         )
 
@@ -1481,24 +1106,19 @@ class BuildSnapshotOfAProjectItSkipsTest(BuildSnapshotTestCase):
     def setUp(self):
         super().setUp()
         self.write_operational_corpus()
-        self.remote_answers = {
-            ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/attic_w1"): ProcessAnswer(exit_code=1),
-            **AWAWA_ANSWERS.answer_no_incoming_refs(self.main_tree, "B1"),
-        }
+        self.remote_answers = AWAWA_ANSWERS.answer_no_incoming_refs(self.main_tree, "B1")
 
     def test_should_follow_no_wave_of_the_project_it_skips_and_the_waves_of_the_others(self):
         # Arrange
-        self.record(60, WaveStarted(wave="attic_w1", project="attic", branch="integration/attic_w1", tasks=("A1",)))
-        self.record(60, WaveStarted(wave="w4", project="shop", branch="integration/w4", tasks=("B7",)))
+        self.record(60, WaveStarted(wave="attic_w1", project="attic", tasks=("A1",)))
+        self.record(60, WaveStarted(wave="w4", project="shop", tasks=("B1",)))
 
         # Act
         snapshot, _ = self.build()
 
         # Assert
-        self.assertEqual(
-            snapshot.waves,
-            (WaveFacts(project="shop", wave="w4", branch="integration/w4", branch_missing=True),),
-        )
+        self.assertEqual(len(snapshot.waves), 1)
+        self.assertEqual(snapshot.waves[0].wave, "w4")
 
     def test_should_follow_no_milestone_of_the_project_it_skips(self):
         # Arrange
@@ -1548,6 +1168,9 @@ class BuildSnapshotOfTheUncutMilestonesTest(BuildSnapshotTestCase):
                 },
                 "STATUS==active",
             ),
+            **AWAWA_ANSWERS.answer_entities(
+                self.main_tree, "TASK", {"B10": describe_task_of_milestone("todo", "M4")}, "MILESTONE==@MILESTONE.M4"
+            ),
             **AWAWA_ANSWERS.answer_no_incoming_refs(self.main_tree, "B5", "B10", "B11"),
             **answer_tree("integration/delivery", MAIN_SHA),
         }
@@ -1555,7 +1178,7 @@ class BuildSnapshotOfTheUncutMilestonesTest(BuildSnapshotTestCase):
     def test_should_list_each_active_milestone_no_cut_records_with_the_open_waves_and_the_todo_tasks_naming_it(self):
         # Arrange
         self.record(60, MilestoneBranchCut(project="shop", milestone="M4", branch="integration/delivery", login=None))
-        self.record(50, WaveStarted(wave="w4", project="shop", branch="integration/w4", tasks=("B8",)))
+        self.record(50, WaveStarted(wave="w4", project="shop", tasks=("B8",)))
 
         # Act
         snapshot, _ = self.build()
@@ -1573,8 +1196,8 @@ class BuildSnapshotOfTheUncutMilestonesTest(BuildSnapshotTestCase):
     def test_should_name_no_closed_wave_among_the_waves_of_an_uncut_milestone(self):
         # Arrange
         self.record(60, MilestoneBranchCut(project="shop", milestone="M4", branch="integration/delivery", login=None))
-        self.record(50, WaveStarted(wave="w4", project="shop", branch="integration/w4", tasks=("B8",)))
-        self.record(40, WaveClosed(wave="w4", pr=41))
+        self.record(50, WaveStarted(wave="w4", project="shop", tasks=("B8",)))
+        self.record(40, WaveClosed(wave="w4"))
 
         # Act
         snapshot, _ = self.build()
@@ -1588,7 +1211,7 @@ class BuildSnapshotOfTheUncutMilestonesTest(BuildSnapshotTestCase):
     def test_should_name_no_wave_of_another_project_among_the_waves_of_an_uncut_milestone(self):
         # Arrange
         self.record(60, MilestoneBranchCut(project="shop", milestone="M4", branch="integration/delivery", login=None))
-        self.record(50, WaveStarted(wave="w5", project="attic", branch="integration/w5", tasks=("B8",)))
+        self.record(50, WaveStarted(wave="w5", project="attic", tasks=("B8",)))
 
         # Act
         snapshot, _ = self.build()
@@ -1598,6 +1221,27 @@ class BuildSnapshotOfTheUncutMilestonesTest(BuildSnapshotTestCase):
             snapshot.projects[1].uncut_milestones[1],
             UncutMilestone(milestone="M8", branch="integration/cart-checkout", open_waves=(), todo=()),
         )
+
+
+class BuildSnapshotOfAWaveWhoseTaskCarriesNoTypeTest(BuildSnapshotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_operational_corpus()
+        untyped_task = {"fields": [{"name": "TITLE", "atoms": ["Task"]}]}
+        self.remote_answers = {
+            ("awawa", "show", "@TASK.B2", "--json", str(self.main_tree)): ProcessAnswer(stdout=json.dumps(untyped_task))
+        }
+        self.record(60, WaveStarted(wave="w5", project="shop", tasks=("B2",)))
+
+    def test_should_skip_the_wave_naming_the_task_that_carries_no_type_to_name_its_branch(self):
+        # Act
+        snapshot, stderr = self.build()
+
+        # Assert
+        self.assertIn(
+            "brigade tick: the wave w5 skipped: @TASK.B2 carries no TYPE to name its branch", stderr.splitlines()
+        )
+        self.assertEqual(snapshot.waves, ())
 
 
 def create_review_run_finished(run: str, task: str, error_class: str | None = None) -> RunFinished:
@@ -1614,12 +1258,55 @@ def create_preflight(task: str) -> TaskPreflighted:
     return TaskPreflighted(project="shop", wave="w1", task=task, pr=7, head="4f2a9c1", checks=())
 
 
+class BuildSnapshotOfTheBaseOfTheTasksOfAWaveTest(BuildSnapshotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_operational_corpus()
+
+    def test_should_take_the_branch_of_the_milestone_as_the_base_of_the_tasks_of_a_wave(self):
+        # Arrange
+        self.remote_answers = {
+            **answer_tree("integration/tides", MILESTONE_SHA),
+            **AWAWA_ANSWERS.answer_entities(
+                self.milestone_tree,
+                "TASK",
+                {"B3": [*TASK_IDENTITY, {"name": "MILESTONE", "atoms": ["@MILESTONE.M4"]}]},
+            ),
+            **AWAWA_ANSWERS.answer_entities(
+                self.milestone_tree,
+                "TASK",
+                {"B3": [*TASK_IDENTITY, {"name": "MILESTONE", "atoms": ["@MILESTONE.M4"]}]},
+                "MILESTONE==@MILESTONE.M4",
+            ),
+            **AWAWA_ANSWERS.answer_no_incoming_refs(self.milestone_tree, "B3"),
+            **AWAWA_ANSWERS.answer_entities(self.milestone_tree, "TASK", {}, "STATUS==implemented"),
+        }
+        self.record(70, MilestoneBranchCut(project="shop", milestone="M4", branch="integration/tides", login=None))
+        self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B3",)))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].base, "integration/tides")
+
+    def test_should_take_the_main_branch_of_the_project_as_the_base_of_the_tasks_naming_no_milestone(self):
+        # Arrange
+        self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B2",)))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].base, "main")
+
+
 class BuildSnapshotOfAWaveStartedAfterTheForgeAccountBecameUnavailableTest(BuildSnapshotTestCase):
     def test_should_mark_the_forge_account_of_the_wave_unavailable(self):
         # Arrange
         self.write_operational_corpus()
         self.record(90, ForgeAccountUnavailable(login="octo-builder", key="build"))
-        self.record(60, WaveStarted(wave="w1", project="shop", branch="integration/w1", tasks=("B1",)))
+        self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B1",)))
 
         # Act
         snapshot, _ = self.build()
@@ -1631,10 +1318,11 @@ class BuildSnapshotOfAWaveStartedAfterTheForgeAccountBecameUnavailableTest(Build
                 WaveFacts(
                     project="shop",
                     wave="w1",
-                    branch="integration/w1",
+                    base="main",
                     tasks=(
                         TaskFacts(
                             name="B1",
+                            branch="feature/B1-task",
                             after=("B0",),
                             blocked_by=(),
                             pull_request=None,
@@ -1655,10 +1343,6 @@ class BuildSnapshotOfAWaveStartedAfterTheForgeAccountBecameUnavailableTest(Build
                     implemented=("B0",),
                     pause=None,
                     forge_account_unavailable=True,
-                    branch_missing=False,
-                    reported=False,
-                    integration_pull_request=None,
-                    opened_integration_pull_request=None,
                 ),
             ),
         )
@@ -1668,8 +1352,8 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
     def setUp(self):
         super().setUp()
         self.write_operational_corpus()
-        self.record(60, WaveStarted(wave="w1", project="shop", branch="integration/w1", tasks=("B1", "B2", "B3", "B4")))
-        self.record(60, WaveStarted(wave="w4", project="shop", branch="integration/w4", tasks=("B1",)))
+        self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B1", "B2", "B3", "B4")))
+        self.record(60, WaveStarted(wave="w4", project="shop", tasks=("B1",)))
         self.record(50, TaskState(wave="w1", task="B1", state="verifying"))
         self.record(50, TaskState(wave="w1", task="B2", state="verifying"))
         self.record(50, TaskState(wave="w1", task="B4", state="verifying"))
@@ -1698,6 +1382,7 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
             (
                 TaskFacts(
                     name="B1",
+                    branch="feature/B1-task",
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -1705,9 +1390,43 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
                     verdict=RecordedVerdict(head="4f2a9c1", verdict="changes"),
                     reviewed_head="4f2a9c1",
                 ),
-                TaskFacts(name="B2", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
-                TaskFacts(name="B3", milestone="M4"),
-                TaskFacts(name="B4", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
+                TaskFacts(name="B2", branch="feature/B2-task", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
+                TaskFacts(name="B3", branch="feature/B3-task", milestone="M4"),
+                TaskFacts(name="B4", branch="feature/B4-task", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
+            ),
+        )
+
+    def test_should_mark_reported_the_task_whose_report_the_project_recorded(self):
+        # Arrange
+        self.record(20, TaskReported(project="shop", task="B2", run="r6", login=None))
+        self.record(20, TaskReported(project="reef", task="B4", run="r7", login=None))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.waves[0].tasks,
+            (
+                TaskFacts(
+                    name="B1",
+                    branch="feature/B1-task",
+                    after=("B0",),
+                    pull_request=PULL_REQUEST,
+                    worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
+                    preflighted_head="4f2a9c1",
+                    verdict=RecordedVerdict(head="4f2a9c1", verdict="changes"),
+                    reviewed_head="4f2a9c1",
+                ),
+                TaskFacts(
+                    name="B2",
+                    branch="feature/B2-task",
+                    pull_request=PULL_REQUEST,
+                    preflighted_head="4f2a9c1",
+                    reported=True,
+                ),
+                TaskFacts(name="B3", branch="feature/B3-task", milestone="M4"),
+                TaskFacts(name="B4", branch="feature/B4-task", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
             ),
         )
 
@@ -1724,6 +1443,7 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
             snapshot.waves[0].tasks[0],
             TaskFacts(
                 name="B1",
+                branch="feature/B1-task",
                 after=("B0",),
                 pull_request=PULL_REQUEST,
                 worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -1754,12 +1474,13 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
             (
                 TaskFacts(
                     name="B2",
+                    branch="feature/B2-task",
                     pull_request=PULL_REQUEST,
                     preflighted_head="4f2a9c1",
                     verdict=RecordedVerdict(head="4f2a9c1", verdict="changes"),
                 ),
-                TaskFacts(name="B3", milestone="M4"),
-                TaskFacts(name="B4", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
+                TaskFacts(name="B3", branch="feature/B3-task", milestone="M4"),
+                TaskFacts(name="B4", branch="feature/B4-task", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
             ),
         )
 
@@ -1775,8 +1496,8 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
     def setUp(self):
         super().setUp()
         self.write_operational_corpus()
-        self.record(60, WaveStarted(wave="w1", project="shop", branch="integration/w1", tasks=("B1", "B2", "B3", "B4")))
-        self.record(60, WaveStarted(wave="w4", project="shop", branch="integration/w4", tasks=("B1",)))
+        self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B1", "B2", "B3", "B4")))
+        self.record(60, WaveStarted(wave="w4", project="shop", tasks=("B1",)))
         self.record(50, dataclasses.replace(create_preflight("B1"), checks=(FAILING_BODY,)))
         self.record(49, TaskState(wave="w1", task="B1", state="fixing"))
         self.record(
@@ -1796,6 +1517,7 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
             (
                 TaskFacts(
                     name="B1",
+                    branch="feature/B1-task",
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -1803,7 +1525,7 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
                     preflight_failures=(PreflightFailure(name="checks", findings=("tests: failure",)),),
                     repair_rounds=2,
                 ),
-                TaskFacts(name="B2", pull_request=PULL_REQUEST),
+                TaskFacts(name="B2", branch="feature/B2-task", pull_request=PULL_REQUEST),
             ),
         )
 
@@ -2074,7 +1796,7 @@ class BuildSnapshotOfARebaseRunOfAWaveBranchTest(BuildSnapshotTestCase):
     def setUp(self):
         super().setUp()
         self.write_operational_corpus()
-        self.record(60, WaveStarted(wave="w1", project="shop", branch="integration/w1", tasks=("B1",)))
+        self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B1",)))
 
     def record_rebase_run(self, task: str | None, outcome: str) -> None:
         write_run(
@@ -2200,7 +1922,7 @@ class BuildSnapshotOfAWaveOfQueuedTasksTest(BuildSnapshotTestCase):
     def test_should_read_no_pull_request_of_a_queued_task(self):
         # Arrange
         self.write_operational_corpus()
-        self.record(60, WaveStarted(wave="w1", project="shop", branch="integration/w1", tasks=("B1", "B2", "B3", "B4")))
+        self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B1", "B2", "B3", "B4")))
 
         # Act
         self.build()

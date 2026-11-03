@@ -13,13 +13,13 @@ DESCENDS = 0
 @dataclass(frozen=True)
 class AncestryFacts:
     repository: Path
-    wave_branch: str
-    wave_head: str
+    base_branch: str
+    base_head: str
     head: str
 
 
 def check_ancestry(run_process: Callable[[ProcessRequest], ProcessRecord], facts: AncestryFacts) -> dict:
-    record = check_ancestor(run_process, facts.repository, facts.wave_head, facts.head)
+    record = check_ancestor(run_process, facts.repository, facts.base_head, facts.head)
     if record.exit_code == DESCENDS:
         return judge_findings(NAME, [])
-    return judge_findings(NAME, [f"{facts.head} does not descend from {facts.wave_branch} at {facts.wave_head}"])
+    return judge_findings(NAME, [f"{facts.head} does not descend from {facts.base_branch} at {facts.base_head}"])

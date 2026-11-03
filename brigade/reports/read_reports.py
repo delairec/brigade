@@ -3,6 +3,7 @@ from brigade.studies.name_answer_file import name_answer_file
 from brigade.studies.read_studies import read_studies
 
 KINDS_BY_TYPE = {"REPORT": "wave-report", "ANSWER": "study-answer"}
+REPORT_KINDS_BY_FIELD = {"MILESTONE": "milestone-report", "TASK": "task-report"}
 
 
 def _read_field(entity: dict, name: str) -> str | None:
@@ -16,10 +17,17 @@ def _read_entities(runtime: Runtime, document: object, entity_type: str) -> list
     return document.render_document({"path": str(path)}, runtime)["entities"]
 
 
+def _read_kind(entity: dict) -> str:
+    return next(
+        (kind for field, kind in REPORT_KINDS_BY_FIELD.items() if _read_field(entity, field) is not None),
+        KINDS_BY_TYPE[entity["type"]],
+    )
+
+
 def _describe_report(entity: dict, project: str | None) -> dict:
     return {
         "id": entity["name"],
-        "kind": KINDS_BY_TYPE[entity["type"]],
+        "kind": _read_kind(entity),
         "project": project,
         "type": entity["type"],
         "fields": entity["fields"],

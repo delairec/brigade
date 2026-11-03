@@ -4,7 +4,7 @@ from pathlib import Path
 from brigade.verify.check_ancestry import AncestryFacts, check_ancestry
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
-FACTS = AncestryFacts(repository=Path("/srv/shop"), wave_branch="integration/w1", wave_head="1111111", head="2222222")
+FACTS = AncestryFacts(repository=Path("/srv/shop"), base_branch="integration/w1", base_head="1111111", head="2222222")
 IS_ANCESTOR = ("git", "merge-base", "--is-ancestor", "1111111", "2222222")
 
 

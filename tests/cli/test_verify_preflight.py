@@ -4,7 +4,7 @@ from pathlib import Path
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
 from tests.cli.test_collect import install_executable
-from tests.cli.test_task import TASK_BRANCH, WAVE_BRANCH, TaskContextTestCase
+from tests.cli.test_task import MILESTONE_BRANCH, MILESTONE_BRANCH_CUT, TASK_BRANCH, TaskContextTestCase
 from tests.cli.test_task_pr import TYPED_SCHEMA
 
 DELIVERED_TASKS = (
@@ -43,8 +43,9 @@ FAKE_GH = (
 )
 CLI_KEYS = '[forge_accounts]\ncli = "octo-cli"\n'
 LEDGER_LINES = (
-    '{"schema_version": 2, "ts": "2026-10-17T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
-    f' "project": "shop", "branch": "{WAVE_BRANCH}", "tasks": ["S3"]}}\n'
+    MILESTONE_BRANCH_CUT
+    + '{"schema_version": 2, "ts": "2026-10-17T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
+    f' "project": "shop", "branch": "{MILESTONE_BRANCH}", "tasks": ["S3"]}}\n'
     '{"schema_version": 1, "ts": "2026-10-17T12:00:00Z", "event": "task.pr_opened", "project": "shop",'
     f' "task": "S3", "wave": "shop_w1", "branch": "{TASK_BRANCH}", "pr": 42, "login": "octo-bot"}}\n'
 )
@@ -59,7 +60,7 @@ class VerifyPreflightTestCase(TaskContextTestCase):
         install_executable(root / "tools" / "gh", FAKE_GH.format(calls=self.gh_calls, pull_request=self.pull_request))
         self.configure(keys=CLI_KEYS)
         self.commit_in_worktree({"corpus/_schema.awawa": TYPED_SCHEMA, "corpus/tasks.awawa": WAVE_TASKS}, "the plan")
-        self.project.run_git("branch", "--force", WAVE_BRANCH, TASK_BRANCH)
+        self.project.run_git("branch", "--force", MILESTONE_BRANCH, TASK_BRANCH)
         self.commit_in_worktree(
             {
                 "corpus/tasks.awawa": DELIVERED_TASKS,
@@ -71,7 +72,7 @@ class VerifyPreflightTestCase(TaskContextTestCase):
         self.remote = root / "remotes" / "shop.git"
         self.project.run_git("init", "--quiet", "--bare", str(self.remote))
         self.project.run_git("remote", "add", "origin", str(self.remote))
-        self.project.run_git("push", "--quiet", "origin", WAVE_BRANCH, TASK_BRANCH)
+        self.project.run_git("push", "--quiet", "origin", MILESTONE_BRANCH, TASK_BRANCH)
         ledger = self.state / "ledger" / "2026-10.jsonl"
         ledger.parent.mkdir(parents=True, exist_ok=True)
         ledger.write_text(LEDGER_LINES)
@@ -118,7 +119,7 @@ class VerifyPreflightTestCase(TaskContextTestCase):
             "preflight",
             *arguments,
             environment=self.describe_environment(),
-            cwd=self.project.path,
+            cwd=self.worktree,
         )
 
 

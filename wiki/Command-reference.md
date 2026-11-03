@@ -47,7 +47,7 @@ Every command of brigade, what it does in one line, and the page that documents 
 | `brigade note <text>` | record a note in the inbox | [Inbox](Inbox.md) |
 | `brigade inbox list\|show\|dismiss` | list, show and dismiss the signals of the inbox | [Inbox](Inbox.md) |
 | `brigade inbox ratify` | ratify a pattern by its action | [Dashboard](Dashboard.md) |
-| `brigade reports list\|show` | print one row per wave report and study answer, or one of them rendered from its entity | — |
+| `brigade reports list\|show` | print one row per report, of a milestone, of a task or of a wave, and per study answer, or one of them rendered from its entity | — |
 | `brigade ledger [budgets\|compare]` | read the event journal: an overview, a wave, a task or a project | [Ledger](Ledger.md) |
 | `brigade processes list\|show` | list the subprocesses brigade started and show those of one run, tick or command | [Trails](Trails.md) |
 | `brigade corpus <project>` | read a registered project's tree at a branch, a SHA or a worktree; `-- <awawa args>` runs awawa there | [Project tree at a ref](Project-tree-at-a-ref.md) |
