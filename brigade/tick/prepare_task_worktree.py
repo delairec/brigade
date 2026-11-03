@@ -85,9 +85,7 @@ def _open_worktree(runtime: Runtime, repository: Path, worktree: BranchWorktree,
     if held == worktree.branch:
         return True
     found = find_branch(runtime.run_process, repository, worktree.branch)
-    ended = name_ended_task_branches(
-        runtime.read_ledger(runtime.paths.state_root).entries, action.project, action.task
-    )
+    ended = name_ended_task_branches(runtime.read_ledger(runtime.paths.state_root).entries, action.project, action.task)
     if held in ended:
         _keep_uncommitted_changes(runtime, worktree, action.task)
         (switch_worktree_to_branch if found else switch_worktree_to_new_branch)(runtime.run_process, worktree)
