@@ -290,6 +290,7 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
                     "exit": None,
                     "duration_ms": DurationUnderMatcher(10000),
                     "outcome": "stopped",
+                    "stderr": "",
                 },
             ],
         )
