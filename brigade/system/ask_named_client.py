@@ -19,5 +19,6 @@ def ask_named_client(
         },
         "settings": configuration.clients.get(question.client_name, {}),
         "home": str(runtime.paths.home),
+        "session_bus_address": runtime.paths.session_bus_address,
     }
     return read_client_answer(question, client.answer(question.request.operation, request))
