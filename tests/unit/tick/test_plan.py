@@ -1230,6 +1230,20 @@ class PlanWaveMergeTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(actions, ())
 
+    def test_should_merge_no_pull_request_of_a_wave_whose_branch_its_milestone_branch_has_outrun(self):
+        # Arrange
+        wave = dataclasses.replace(
+            create_reported_wave(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, MILESTONE_BRANCH, NO_UNRESOLVED_THREAD),
+            behind_milestone=True,
+        )
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
     def test_should_close_the_wave_and_merge_nothing_once_its_pull_request_is_merged(self):
         # Arrange
         merged = dataclasses.replace(WAVE_PULL_REQUEST_INTO_THE_MILESTONE_BRANCH, state="merged")
@@ -2388,6 +2402,23 @@ START_OF_M10_AND_NO_MILESTONE = (
 )
 REBASE_OF_M9 = RebaseMilestone(project="shop", milestone="M9", branch="integration/delivery", waves=("shop_w4",))
 
+M9_WITH_AN_OPEN_WAVE = MilestoneFacts(
+    project="shop", milestone="M9", branch="integration/delivery", open_waves=("shop_w4",)
+)
+SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH = WaveFacts(
+    project="shop",
+    wave="shop_w4",
+    branch="integration/shop_w4",
+    milestone_branch="integration/delivery",
+    behind_milestone=True,
+)
+LIVE_REBASE_RUN_OF_SHOP_W4 = LiveRun(
+    run="20261103T101517Z-0af80e",
+    slot="rebase",
+    worktree="/srv/shop/.brigade/worktrees/integration-shop_w4",
+    wave="shop_w4",
+)
+
 
 class PlanMilestoneRebaseTest(unittest.TestCase):
     def test_should_rebase_a_milestone_branch_main_has_outrun_and_start_no_wave_of_it_in_that_round(self):
@@ -2415,6 +2446,75 @@ class PlanMilestoneRebaseTest(unittest.TestCase):
                     blocked_rebase=blocked_rebase,
                 )
                 snapshot = Snapshot(now=NOW, projects=(PROJECT_WITH_CANDIDATES,), milestones=(milestone,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_rebase_the_branches_of_a_milestone_whose_open_wave_branch_its_milestone_branch_has_outrun(self):
+        for case, milestone_facts, wave_facts, project, expected in [
+            (
+                "outrun by its milestone branch",
+                M9_WITH_AN_OPEN_WAVE,
+                SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
+                PROJECT_WITH_CANDIDATES,
+                (REBASE_OF_M9, *ONE_START_PER_CANDIDATE_WAVE),
+            ),
+            (
+                "descending from its milestone branch",
+                M9_WITH_AN_OPEN_WAVE,
+                dataclasses.replace(SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH, behind_milestone=False),
+                PROJECT_WITH_CANDIDATES,
+                ONE_START_PER_CANDIDATE_WAVE,
+            ),
+            (
+                "outrun with a rebase run of the wave branch live",
+                M9_WITH_AN_OPEN_WAVE,
+                SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
+                dataclasses.replace(PROJECT_WITH_CANDIDATES, live_runs=(LIVE_REBASE_RUN_OF_SHOP_W4,)),
+                ONE_START_PER_CANDIDATE_WAVE,
+            ),
+            (
+                "outrun with a blocked rebase run of the wave branch",
+                M9_WITH_AN_OPEN_WAVE,
+                dataclasses.replace(SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH, blocked_rebase=BLOCKED_REBASE),
+                PROJECT_WITH_CANDIDATES,
+                (
+                    PauseWave(
+                        wave="shop_w4",
+                        reason="run 20261030T005500Z-2f5135 blocked: Keep the guard of plan.py or drop it?",
+                        resume_at=None,
+                    ),
+                    *ONE_START_PER_CANDIDATE_WAVE,
+                ),
+            ),
+            (
+                "outrun with a rebase run of the milestone branch live",
+                dataclasses.replace(M9_WITH_AN_OPEN_WAVE, rebase_run_live=RUN_LIVE),
+                SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
+                PROJECT_WITH_CANDIDATES,
+                ONE_START_PER_CANDIDATE_WAVE,
+            ),
+            (
+                "outrun by a milestone branch main outruns, its rebase run blocked",
+                dataclasses.replace(M9_WITH_AN_OPEN_WAVE, behind_main=BEHIND_MAIN, blocked_rebase=BLOCKED_REBASE),
+                SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
+                PROJECT_WITH_CANDIDATES,
+                ONE_START_PER_CANDIDATE_WAVE,
+            ),
+            (
+                "outrun by a milestone branch main no longer outruns, its last rebase run blocked",
+                dataclasses.replace(M9_WITH_AN_OPEN_WAVE, blocked_rebase=BLOCKED_REBASE),
+                SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
+                PROJECT_WITH_CANDIDATES,
+                (REBASE_OF_M9, *ONE_START_PER_CANDIDATE_WAVE),
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                snapshot = Snapshot(now=NOW, waves=(wave_facts,), projects=(project,), milestones=(milestone_facts,))
 
                 # Act
                 actions = plan(snapshot)

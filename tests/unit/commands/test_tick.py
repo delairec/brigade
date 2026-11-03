@@ -3395,6 +3395,7 @@ FORGE_MILESTONE_BRANCH_DESCENT = ("git", "merge-base", "--is-ancestor", "origin/
 REBASE_OF_THE_MILESTONE_BRANCH = ("git", "rebase", "main")
 FORGE_REBASE_OF_THE_MILESTONE_BRANCH = ("git", "rebase", "origin/main")
 REBASE_OF_THE_WAVE_BRANCH = ("git", "rebase", "integration/tides")
+WAVE_BRANCH_DESCENT = ("git", "merge-base", "--is-ancestor", "integration/tides", "integration/M4")
 OUTPUTS_OF_A_MILESTONE_BRANCH_MAIN_HAS_OUTRUN = {
     **MACHINE_ANSWERS,
     ("git", "branch", "--quiet"): ProcessAnswer(),
@@ -3638,6 +3639,22 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         # Assert
         self.assertIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
         self.assertNotIn(REBASE_OF_THE_WAVE_BRANCH, self.machine.argvs)
+
+    def test_should_rebase_an_open_wave_branch_its_milestone_branch_outran_once_main_no_longer_outruns_it(self):
+        # Arrange
+        write_ledger(self.root, [CUT_OF_M4, WAVE_STARTED])
+        self.machine.answers[MILESTONE_BRANCH_DESCENT] = ProcessAnswer()
+        self.machine.answers[WAVE_BRANCH_DESCENT] = ProcessAnswer(exit_code=1)
+        self.machine.answers[("git", "merge-base", "--is-ancestor", "integration/tides", "HEAD")] = ProcessAnswer(
+            exit_code=1
+        )
+        self.machine.answers[REBASE_OF_THE_WAVE_BRANCH] = ProcessAnswer()
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertIn(REBASE_OF_THE_WAVE_BRANCH, self.machine.argvs)
 
     def test_should_name_on_stderr_the_milestone_branch_whose_rebase_run_ended_blocked_with_its_question(self):
         # Arrange

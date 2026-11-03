@@ -218,6 +218,7 @@ class WaveFacts:
     milestone_branch: str | None = None
     unresolved_threads: int = 0
     blocked_rebase: BlockedRun | None = None
+    behind_milestone: bool = False
 
     def to_document(self) -> dict:
         return {
@@ -242,6 +243,7 @@ class WaveFacts:
                 if self.blocked_rebase is None
                 else {"run": self.blocked_rebase.run, "question": self.blocked_rebase.question}
             ),
+            "behind_milestone": self.behind_milestone,
         }
 
 
@@ -719,7 +721,17 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveSta
         milestone_branch=pull_request.milestone_branch,
         unresolved_threads=pull_request.unresolved_threads,
         blocked_rebase=_read_blocked_rebase(reading, started.wave),
+        behind_milestone=_is_behind_milestone(runtime, cut, pull_request.milestone_branch),
     )
+
+
+def _is_behind_milestone(runtime: Runtime, cut: WaveBranchCut, milestone_branch: str | None) -> bool:
+    if milestone_branch is None:
+        return False
+    milestone = locate_forge_branch(runtime.run_process, cut.project, milestone_branch, cut.read_environment)
+    wave = locate_forge_branch(runtime.run_process, cut.project, cut.branch, cut.read_environment)
+    repository = Path(read_project_field(cut.project, PATH_FIELD))
+    return check_ancestor(runtime.run_process, repository, milestone, wave).exit_code != DESCENDING
 
 
 def _read_candidates(runtime: Runtime, reading: WaveReading, project: Entity) -> tuple[CandidateWave, ...]:
