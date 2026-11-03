@@ -8,6 +8,7 @@ from brigade.system.poll_until_signalled import poll_until_signalled as poll_unt
 from brigade.system.trail_writer import TrailWriter
 from brigade.tick.read_live_blockers import read_live_blockers as read_the_live_blockers
 from tests.unit.create_test_paths import create_test_paths
+from tests.unit.keep_stderr_as_is import keep_stderr_as_is
 from tests.unit.refuse_to_run import refuse_to_run
 
 FIXED_NOW = datetime(2026, 10, 19, 9, 0, tzinfo=UTC)
@@ -45,7 +46,7 @@ def create_test_runtime(
         read_clock=lambda: now,
         read_monotonic=lambda: 0.0,
         entry_point=Path("/srv/brigade/bin/brigade"),
-        trail=TrailWriter(_keep_no_trace) if trail is None else trail,
+        trail=TrailWriter(_keep_no_trace, keep_stderr_as_is) if trail is None else trail,
         resolve_plugin=resolve_plugin,
         poll_until_signalled=poll_until_signalled,
         read_ledger=read_ledger,

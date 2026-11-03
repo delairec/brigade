@@ -267,6 +267,7 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
                     "duration_ms": None,
                     "outcome": "spawned",
                     "pid": brigade_pid,
+                    "stderr_file": str(self.runs / run_id / "brigade.log"),
                 },
                 {
                     "schema_version": 1,
