@@ -5,11 +5,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.awawa.install_fake_awawa import install_fake_awawa
+from tests.awawa.install_fake_awawa import RealAwawa, install_fake_awawa
 from tests.process_launcher import ProcessLauncher
 
 SCRIPTED_AWAWA = Path(__file__).resolve().parent / "fixtures" / "scripted-awawa" / "awawa"
 NO_REAL_AWAWA = None
+RECORDING_SCRIPTED_AWAWA = RealAwawa(str(SCRIPTED_AWAWA), records=True)
 LINT_RECORDING = {
     "version": "awawa 2.7.0",
     "call": {
@@ -145,7 +146,12 @@ class FakeAwawaWithoutARecordingTest(FakeAwawaTestCase):
         [(_, failure)] = self.run_inner_case("show", "@AGENT.ghost", "--json", str(self.corpus))
 
         # Assert
-        self.assertIn(f"awawa has no recording of: awawa show @AGENT.ghost --json {self.corpus}", failure)
+        self.assertIn(
+            f"awawa has no recording of: awawa show @AGENT.ghost --json {self.corpus}\n"
+            "record the calls with awawa on PATH: AWAWA_RECORD=1 python3 -m unittest"
+            " tests.awawa.test_replay_awawa.FakeAwawaTestCase.run_inner_case.<locals>.CallingAwawaTest.test_call",
+            failure,
+        )
 
     def test_should_fail_the_test_of_a_call_whose_input_files_differ_from_the_recording(self):
         # Arrange
@@ -162,7 +168,7 @@ class FakeAwawaWithoutARecordingTest(FakeAwawaTestCase):
 class FakeAwawaRecordingTest(FakeAwawaTestCase):
     def test_should_record_what_the_real_awawa_answered_and_rewrote(self):
         # Arrange
-        self.search_path = install_fake_awawa(self, self.recordings, str(SCRIPTED_AWAWA), os.environ["PATH"])
+        self.search_path = install_fake_awawa(self, self.recordings, RECORDING_SCRIPTED_AWAWA, os.environ["PATH"])
         (self.corpus / "tasks.awawa").write_text("TASK  B1\n")
 
         # Act
@@ -191,7 +197,7 @@ class FakeAwawaRecordingTest(FakeAwawaTestCase):
 
     def test_should_record_the_run_ids_of_the_call_in_the_order_they_sort(self):
         # Arrange
-        self.search_path = install_fake_awawa(self, self.recordings, str(SCRIPTED_AWAWA), os.environ["PATH"])
+        self.search_path = install_fake_awawa(self, self.recordings, RECORDING_SCRIPTED_AWAWA, os.environ["PATH"])
         (self.corpus / "answers.awawa").write_text(
             "ANSWER trees_20261015T124950Z_f00000\nANSWER trees_20261015T124950Z_05a3de\n"
         )
@@ -224,7 +230,7 @@ class FakeAwawaRecordingTest(FakeAwawaTestCase):
 
     def test_should_answer_the_call_with_what_the_real_awawa_answered(self):
         # Arrange
-        self.search_path = install_fake_awawa(self, self.recordings, str(SCRIPTED_AWAWA), os.environ["PATH"])
+        self.search_path = install_fake_awawa(self, self.recordings, RECORDING_SCRIPTED_AWAWA, os.environ["PATH"])
         (self.corpus / "tasks.awawa").write_text("TASK  B1\n")
 
         # Act
