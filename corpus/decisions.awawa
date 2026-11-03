@@ -719,6 +719,12 @@ DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 		REF @TASK.B48
 		REF @TASK.B51
 		REF @TASK.B166
+	DESC "until @TASK.B232 reaches PROJECT.MAIN, the rebase of an open wave branch onto the branch"
+		+ "of its milestone that leaves the head of the milestone branch where it was writes no"
+		+ "ledger event: milestone.rebased of @TASK.B223 names the wave branches rebased in an"
+		+ "action that moved the milestone head, and no wave.rebased is added"
+		REF @TASK.B232
+		REF @TASK.B223
 	REJECTED "an imperative tick with injected gateways: every test needs a fake git, a fake forge"
 		+ "and a fake ledger where the planner needs one JSON file"
 	REJECTED "a tick state file as the truth: the facts are in the ledger, git, the forge and the"
@@ -730,6 +736,10 @@ DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 		+ "removed on an exception: the decision"
 		+ "ThePlanOfAWaveIsWrittenInADetachedWorktreeAndItsBranchCreatedAfterTheCommit already"
 		+ "rejects a second write to undo"
+	REJECTED "a wave.rebased event, project, wave, branch, before, after and login, appended by the"
+		+ "executor once a wave branch is rebased and pushed, as SPEC 3 of TASK B225, archived,"
+		+ "designed it: the user ruled the ledger left as it is until TASK B232 removes wave"
+		+ "branches, « Laisser jusqu'à B232 »"
 	RATIONALE "every transition of @DECISION.ADeterministicTickReplacesTheCoordinatorAgent is a"
 		+ "condition evaluated from facts, and @DECISION.CliDoesTheMechanicalWorkAgentsOnlyJudge"
 		+ "leaves no judgement to the tick; the rules test_static_data and test_quality of the"
@@ -737,11 +747,31 @@ DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 		+ "snapshot gives"
 		REF @DECISION.ADeterministicTickReplacesTheCoordinatorAgent
 		REF @DECISION.CliDoesTheMechanicalWorkAgentsOnlyJudge
+	RATIONALE "DESC 10: the quick fix of pull request #345, 2026-11-03, makes the tick rebase an"
+		+ "open wave branch its milestone branch has outrun with no rebase of the milestone branch"
+		+ "onto PROJECT.MAIN, so a wave branch moves in an action that appends no"
+		+ "milestone.rebased, SPEC 2 of @TASK.B223 appending it only once the milestone head moved;"
+		+ "@TASK.B232, ratified, removes wave branches at the merge of @MILESTONE.M6"
+		REF @TASK.B223
+		REF @TASK.B232
+		REF @MILESTONE.M6
 	SOURCE "the user's rulings of 2026-10-05, pull request #9 of the brigade repository"
 	SOURCE "the user's ruling of 2026-10-17 in the triage of the use-case map, answer \"Fact guards"
 		+ "+ per-action isolation (Recommended)\": DESC 3 rewritten, the stop at the first failure"
 		+ "removed, the two alternatives offered added as REJECTED"
 	SOURCE "use-case map of 2026-10-16, findings X3, G3 and B10"
+	SOURCE "the user's ruling of 2026-11-03 on the questions of the run of pull request #345, asked"
+		+ "whether a wave branch rebased while the milestone head stays in place gets a"
+		+ "wave.rebased event as @TASK.B225 designed it or stays unrecorded until @TASK.B232"
+		+ "removes wave branches, and whether the action whose milestone rebase stopped on a"
+		+ "conflict still rebases the wave branches: « Laisser jusqu'à B232 et en cas de conflit ça"
+		+ "doit être résolu par un run manu non? »; the session read « Laisser jusqu'à B232 » as"
+		+ "DESC 10, no wave.rebased event until B232, and the rest as DESC 17 of"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce; the user"
+		+ "left without confirming that reading"
+		REF @TASK.B225
+		REF @TASK.B232
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 
 DECISION EveryCommandReturnsOneDocumentRenderedOnceAndExitsByOneTable
 	TITLE "every command returns one document carrying schema_version, printed as JSON or rendered"
@@ -4474,6 +4504,19 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		+ "name, and milestone.branch_cut appended again; until then the candidates of the"
 		+ "milestone are read at PROJECT.MAIN, as for a milestone never cut; any other failure to"
 		+ "read the branch on the forge still skips the project"
+	DESC "until @TASK.B232 reaches PROJECT.MAIN, the action of DESC 14 is planned as well for a"
+		+ "milestone an open wave of which has its branch behind origin/<the milestone branch>,"
+		+ "unless a rebase run of that wave lives or ended blocked, a rebase run of the milestone"
+		+ "branch lives, or PROJECT.MAIN outruns the milestone branch and its rebase run ended"
+		+ "blocked; the action leaves a milestone branch that descends from PROJECT.MAIN as it is"
+		+ "and rebases each such wave branch onto the milestone branch, as SPEC 3 of @TASK.B214"
+		+ "rebases one; the pull request of a wave is not merged while its branch is behind the"
+		+ "milestone branch; the start of a wave waits for a rebase onto PROJECT.MAIN alone"
+		REF @TASK.B232
+		REF @TASK.B214
+	DESC "the action whose rebase of the milestone branch stopped on a conflict rebases no wave"
+		+ "branch: the conflict goes to the rebase run of DESC 12, and the wave branches follow"
+		+ "through DESC 16 once that run has pushed the milestone branch"
 	REJECTED "one integration branch per wave, integration/<project>_w<n> cut from PROJECT.MAIN and"
 		+ "merged into main by a pull request of its own, as the tick does today: the user ruled"
 		+ "that a wave merges into the integration branch of its milestone and never into main"
@@ -4515,6 +4558,16 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 	REJECTED "the branch of the clone moved with git branch --force before the push: git refuses to"
 		+ "move a branch checked out in a worktree, as integration/dashboard is in the rebase"
 		+ "worktree of M3"
+	REJECTED "the wave branches of a milestone rebased only within a rebase of the milestone branch"
+		+ "onto PROJECT.MAIN, as brigade/tick/plan.py planned it until pull request #345: a"
+		+ "milestone branch its rebase run has pushed descends from PROJECT.MAIN, so the wave"
+		+ "branches behind it never followed, and the pull request #334 of brigade_w24 was not"
+		+ "mergeable on 2026-11-03 at 11:10Z"
+	REJECTED "the wave branches rebased, in the action whose rebase of the milestone branch stopped"
+		+ "on a conflict, onto the milestone head from before the conflict, as the executor did"
+		+ "until pull request #345: on 2026-11-03 at 11:10Z three rebase runs were launched against"
+		+ "a base the rebase run of the milestone was moving, and the branches put back afterwards;"
+		+ "the user ruled the conflict for the rebase run"
 	CLOSES @OPEN_QUESTION.SeveralMilestonesActiveAtOnce
 	CLOSES @OPEN_QUESTION.TheNameOfTheIntegrationBranchOfAMilestone
 	CLOSES @OPEN_QUESTION.WhoMergesAWaveIntoTheIntegrationBranchOfItsMilestone
@@ -4567,6 +4620,17 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		REF @MILESTONE.M9
 		REF @TASK.B224
 		REF @TASK.B227
+	RATIONALE "DESC 16 and DESC 17: on 2026-11-03 the rebase of integration/hardening, the branch"
+		+ "of @MILESTONE.M6, stopped on a conflict at 10:15:17Z and its rebase run pushed the"
+		+ "branch at 10:16:29Z; the same action had checked the wave branches against the local"
+		+ "branch, still at its head of 09:45Z after the abort, and skipped them all; from then on"
+		+ "the branch descended from origin/main and no action rebased the waves, until gh pr merge"
+		+ "334 --rebase failed at 11:10:00Z; @TASK.B225, archived, had recorded the same class of"
+		+ "defect on 2026-10-31; the fix is a quick fix with no task, pull request #345, needed"
+		+ "until @TASK.B232 removes wave branches"
+		REF @MILESTONE.M6
+		REF @TASK.B225
+		REF @TASK.B232
 	SOURCE "the user's words of 2026-10-28 on pull request #239: « comment ça la pr 239 peut être"
 		+ "mergée, il est pas censé y avoir d'abord le merge de toutes les pr de m3?, puis je"
 		+ "comprends pas pourquoi les branche d'intégration ne porte pas le nom de la milestone,"
@@ -4629,6 +4693,23 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		+ "no such pull request existing"
 		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
 		REF @TASK.B232
+	SOURCE "the user's ruling of 2026-11-03 on the wave branches of @MILESTONE.M6 left behind"
+		+ "integration/hardening, « manu rebase + correctif (Recommandé) », the option « En"
+		+ "parallèle, ada prépare un correctif pour que le tick rebase les branches de wave dès que"
+		+ "la branche du jalon a bougé, pas seulement quand elle est en retard sur main. », DESC 16"
+		REF @MILESTONE.M6
+	SOURCE "the user's ruling of 2026-11-03 on the questions of the run of pull request #345, asked"
+		+ "whether the action whose milestone rebase stopped on a conflict still rebases the wave"
+		+ "branches onto the milestone head from before the rebase, SPEC 3 of @TASK.B214 naming the"
+		+ "rebased milestone branch, or skips them, and whether a wave branch rebased while the"
+		+ "milestone head stays in place gets a wave.rebased event: « Laisser jusqu'à B232 et en"
+		+ "cas de conflit ça doit être résolu par un run manu non? »; the session read « en cas de"
+		+ "conflit ça doit être résolu par un run » as DESC 17, the conflict left to the rebase run"
+		+ "and no wave branch rebased in that action, and « Laisser jusqu'à B232 » as DESC 10 of"
+		+ "@DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction; the user left"
+		+ "without confirming that reading"
+		REF @TASK.B214
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 
 DECISION ARequeueOfATaskWhosePullRequestIsOpenSendsItBackToItsPreflight
 	TITLE "brigade wave requeue of a parked task whose pull request is open records task.state"
