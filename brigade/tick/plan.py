@@ -7,6 +7,7 @@ from brigade.tasks.read_task_number import read_task_number
 from brigade.tick.actions import (
     CloseMilestone,
     CloseWave,
+    CutMilestoneBranch,
     CutWaveBranch,
     LaunchCheckRepair,
     LaunchRemediation,
@@ -102,6 +103,7 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_milestone_pull_requests(snapshot)
         + _plan_milestone_closes(snapshot)
         + _plan_launches(snapshot, paused)
+        + _plan_milestone_cuts(snapshot)
         + _plan_milestone_rebases(snapshot)
         + _plan_wave_starts(snapshot)
         + _plan_studies(snapshot)
@@ -698,16 +700,26 @@ def _plan_milestone_rebases(snapshot: Snapshot) -> tuple:
     )
 
 
+def _plan_milestone_cuts(snapshot: Snapshot) -> tuple:
+    return tuple(
+        CutMilestoneBranch(project=project.name, milestone=uncut.milestone, branch=uncut.branch)
+        for project in snapshot.projects
+        for uncut in project.uncut_milestones
+        if uncut.open_waves or uncut.todo
+    )
+
+
 def _plan_wave_starts(snapshot: Snapshot) -> tuple:
     rebasing = {
         (milestone.project, milestone.milestone) for milestone in snapshot.milestones if _is_rebase_due(milestone)
     }
+    cutting = {(cut.project, cut.milestone) for cut in _plan_milestone_cuts(snapshot)}
     return tuple(
         StartWave(project=project.name, milestone=wave.milestone)
         for project in snapshot.projects
         if project.wave_start == AUTOMATIC_WAVE_START
         for wave in project.candidates
-        if (project.name, wave.milestone) not in rebasing
+        if (project.name, wave.milestone) not in rebasing | cutting
     )
 
 
