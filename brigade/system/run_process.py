@@ -1,3 +1,4 @@
+import dataclasses
 import subprocess
 import time
 from collections.abc import Callable, Mapping
@@ -51,6 +52,12 @@ def _trace(request: ProcessRequest, outcome: str, exit_code: int | None, duratio
     )
 
 
+def _keep_failed_stderr(record: ProcessRecord) -> str | None:
+    if record.exit_code == 0:
+        return None
+    return record.stderr
+
+
 def _launch(request: ProcessRequest, environment: Mapping[str, str]) -> subprocess.CompletedProcess:
     # S603: argv is a tuple run with no shell, as tests/guards/find_subprocess_uses.py holds
     # subprocess-injection: a Django rule whose taint source is any parameter named request, the S603 case
@@ -80,8 +87,9 @@ def run_process(
         outcome, refusal = explain_launch_failure(request.argv, request.cwd, missing)
         record_trace(_trace(request, outcome, None, _measure_since(started)))
         raise refusal from None
-    except subprocess.TimeoutExpired:
-        record_trace(_trace(request, TIMED_OUT, None, _measure_since(started)))
+    except subprocess.TimeoutExpired as expired:
+        written = (expired.stderr or b"").decode("utf-8", errors="replace")
+        record_trace(dataclasses.replace(_trace(request, TIMED_OUT, None, _measure_since(started)), stderr=written))
         raise ToolFailure(f"{_describe_command(request.argv)} timed out after {request.timeout_s:g} s") from None
     record = ProcessRecord(
         argv=request.argv,
@@ -91,7 +99,8 @@ def run_process(
         stderr=completed.stderr,
         duration_ms=_measure_since(started),
     )
-    record_trace(_trace(request, EXITED, record.exit_code, record.duration_ms))
+    trace = _trace(request, EXITED, record.exit_code, record.duration_ms)
+    record_trace(dataclasses.replace(trace, stderr=_keep_failed_stderr(record)))
     if record.exit_code not in request.acceptable_exit_codes:
         raise CommandFailed(record.argv, record.exit_code, record.stderr)
     return record

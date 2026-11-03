@@ -1,5 +1,6 @@
 import contextlib
 import io
+import json
 import shutil
 import tempfile
 import unittest
@@ -51,3 +52,22 @@ class BuildRuntimeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(report, "")
+
+    def test_should_withhold_the_stderr_of_a_failed_process_when_the_projects_cannot_be_read(self):
+        # Arrange
+        runtime = build_runtime(
+            Invocation(command="runs list", verbose=False), {**self.environment, "PATH": str(self.root / "no-tool")}
+        )
+        trail = self.root / "trail.jsonl"
+        runtime.trail.locate(trail)
+
+        # Act
+        runtime.trail.append(
+            ProcessTrace(("git", "push"), "/srv/shop", "exited", 1, 30, stderr="fatal: refused for AcmeBilling")
+        )
+
+        # Assert
+        last_record = json.loads(trail.read_text().splitlines()[-1])
+        self.assertEqual(
+            last_record["stderr"], "[withheld: the PRIVATE patterns of the registered projects could not be read]"
+        )
