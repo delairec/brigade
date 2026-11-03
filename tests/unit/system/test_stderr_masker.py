@@ -1,7 +1,11 @@
+import functools
 import unittest
+from pathlib import Path
 
 from brigade.errors import ToolNotFound
+from brigade.mining.read_text_scrubber import read_text_scrubber
 from brigade.system.stderr_masker import StderrMasker
+from tests.unit.scripted_processes import ScriptedProcesses
 
 WITHHELD = "[withheld: the PRIVATE patterns of the registered projects could not be read]"
 
@@ -98,6 +102,21 @@ class StderrMaskerOfAnUnreadableScrubberTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(reader.reads, 1)
+
+
+class StderrMaskerOfAPrivatePatternThatIsNoRegularExpressionTest(unittest.TestCase):
+    def test_should_withhold_the_stderr(self):
+        # Arrange
+        config_root = Path("/srv/config/brigade")
+        processes = ScriptedProcesses()
+        processes.answer_entities(config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("PRIVATE", "Acme("))})
+        masker = StderrMasker(functools.partial(read_text_scrubber, processes, config_root))
+
+        # Act
+        masked = masker.mask("fatal: Acme refused")
+
+        # Assert
+        self.assertEqual(masked, WITHHELD)
 
 
 class StderrMaskerWhileItsScrubberIsReadTest(unittest.TestCase):
