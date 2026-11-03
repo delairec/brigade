@@ -40,7 +40,7 @@ def start_project_waves(runtime: Runtime, start: WaveStart) -> tuple[dict, ...]:
     )
     if start.tasks:
         return (start_project_wave(runtime, start, _read_named_milestone(runtime, start, reading)),)
-    waves = list_candidate_waves(runtime, reading)
+    waves = list_candidate_waves(runtime, reading, read_project_tasks(runtime, reading, NO_MILESTONE))
     if not waves:
         raise BrigadeError(f"@PROJECT.{start.project} has no task to start")
     return tuple(start_project_wave(runtime, start, wave.milestone) for wave in waves)

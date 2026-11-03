@@ -5868,3 +5868,29 @@ DECISION TheTraceOfAFailedProcessKeepsItsStderrMaskedOrWithheld
 		+ "failure of that reading would ask for the patterns again without end; withholding is the"
 		+ "one answer that writes nothing unmasked"
 	SOURCE "pull request #333 of the brigade repository"
+
+DECISION TheSnapshotListsTheUncutMilestonesAndThePlanCutsOneAWaveOrATodoTaskNames
+	TITLE "the snapshot lists each active milestone of a project at PROJECT.MAIN that no"
+		+ "milestone.branch_cut records, with the open waves and the todo tasks naming it; the plan"
+		+ "cuts the branch of one an open wave or a todo task names, and starts no wave of it in"
+		+ "the round of the cut"
+	STATUS active
+	DESC "binds @TASK.B224"
+		REF @TASK.B224
+	DESC "ProjectFacts carries uncut_milestones, each with its milestone, the branch its TITLE"
+		+ "derives, its open waves and its todo tasks; the plan holds one CutMilestoneBranch,"
+		+ "project, milestone and branch, for each one whose open waves or todo tasks are not empty"
+	DESC "the plan starts no wave of a milestone whose branch it cuts in the same round, as it"
+		+ "starts none of a milestone it rebases: the next round reads its candidates on the branch"
+	DESC "the tasks of PROJECT.MAIN are read once per project and round, for the candidates and for"
+		+ "the uncut milestones alike"
+	REJECTED "the snapshot listing only the milestones an open wave or a todo task names: the rule"
+		+ "would live outside the plan, and its literal rows could not prove it"
+	REJECTED "a wave of the milestone started in the round that cuts its branch: its candidates"
+		+ "would be read at PROJECT.MAIN, not on the branch"
+	RATIONALE "the plan is the pure function the decision"
+		+ "TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction makes of the tick, so the rule"
+		+ "of the cut is a fact of the snapshot judged by the plan"
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+	SOURCE "the delivery of @TASK.B224"
+		REF @TASK.B224

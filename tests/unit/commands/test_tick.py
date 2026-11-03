@@ -2926,6 +2926,19 @@ def _resolve_the_collectors_beside(resolve_plugin, root: Path):
     return resolve
 
 
+class ForgeHoldingThePushedBranchRunnerDouble(ScriptedProcessRunner):
+    def __init__(self, answers: dict, fallback, push: tuple, presence: tuple):
+        super().__init__({**answers, presence: ProcessAnswer(exit_code=2)}, fallback)
+        self.push = push
+        self.presence = presence
+
+    def run(self, request):
+        record = super().run(request)
+        if request.argv == self.push and record.exit_code == 0:
+            self.answers[self.presence] = ProcessAnswer()
+        return record
+
+
 class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
@@ -3212,15 +3225,26 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
             **MACHINE_ANSWERS,
             ("git", "ls-remote"): ProcessAnswer(stdout=""),
             ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/tides"): ProcessAnswer(exit_code=1),
-            ("git", "ls-remote", "--quiet", "--exit-code", "--heads", "origin", "refs/heads/integration/tides"): (
-                ProcessAnswer(exit_code=2)
-            ),
             ("git", "branch", "--quiet", "integration/tides"): ProcessAnswer(),
             ("git", "push", "--quiet", "origin", "integration/tides"): ProcessAnswer(),
         }
+        forge_branch = ForgeHoldingThePushedBranchRunnerDouble(
+            answers,
+            fallback=create_corpus_double(corpus),
+            push=("git", "push", "--quiet", "origin", "integration/tides"),
+            presence=(
+                "git",
+                "ls-remote",
+                "--quiet",
+                "--exit-code",
+                "--heads",
+                "origin",
+                "refs/heads/integration/tides",
+            ),
+        )
         runtime = create_test_runtime(
             create_test_paths(self.root),
-            run_process=ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus)).run,
+            run_process=forge_branch.run,
             spawn_process=SpawnRecorderDouble().spawn,
             resolve_plugin=_resolve_the_collectors_beside(
                 create_plugin_resolution(STEP_COUNTING_PROBE, self.forge), self.root
@@ -3419,7 +3443,7 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
         # Assert
         ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
         self.assertEqual(
-            json.loads(ledger[0]),
+            json.loads(ledger[1]),
             {
                 "schema_version": 2,
                 "ts": ANY,
@@ -3431,6 +3455,53 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
             },
         )
         self.assertIn(("git", "branch", "--quiet", "integration/tidepool_w1", "integration/tides"), self.machine.argvs)
+
+    def test_should_cut_the_branch_of_the_milestone_a_todo_task_names_before_its_wave_starts(self):
+        # Arrange
+        self._miss_the_branch("integration/tidepool_w1")
+        self._miss_the_branch("integration/tides")
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(
+            json.loads(ledger[0]),
+            {
+                "schema_version": 1,
+                "ts": ANY,
+                "event": "milestone.branch_cut",
+                "project": "tidepool",
+                "milestone": "M4",
+                "branch": "integration/tides",
+                "login": None,
+            },
+        )
+        self.assertEqual(json.loads(ledger[1])["event"], "wave.started")
+
+    def test_should_print_the_cut_of_the_milestone_branch_on_a_dry_run(self):
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+
+        # Assert
+        self.assertEqual(document["plan"], [{"project": "tidepool", "milestone": "M4", "branch": "integration/tides"}])
+
+    def test_should_name_on_stderr_the_milestone_whose_unrecorded_branch_it_refuses_to_cut(self):
+        # Arrange
+        self._miss_the_branch("integration/tidepool_w1")
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertIn(
+            "brigade tick: CutMilestoneBranch failed: @MILESTONE.M4: the branch integration/tides exists and no"
+            " milestone.branch_cut records it\n",
+            errors.getvalue(),
+        )
 
     def test_should_cut_the_missing_branch_of_an_open_wave(self):
         # Arrange

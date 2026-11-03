@@ -15,6 +15,7 @@ from brigade.tick.build_snapshot import (
     Snapshot,
     StudyFacts,
     TaskFacts,
+    UncutMilestone,
     WaveFacts,
 )
 from brigade.waves.list_candidate_waves import CandidateWave
@@ -257,6 +258,7 @@ class SnapshotTest(unittest.TestCase):
                     "verify_rounds": 2,
                     "awaits_check_runs": True,
                     "on_github": False,
+                    "uncut_milestones": [],
                 }
             ],
         )
@@ -273,6 +275,20 @@ class ProjectFactsTest(unittest.TestCase):
         # Assert
         self.assertEqual(document["awaits_check_runs"], False)
         self.assertEqual(document["on_github"], True)
+
+    def test_should_carry_the_uncut_milestones_with_the_waves_and_the_tasks_naming_them_in_its_document(self):
+        # Arrange
+        uncut = UncutMilestone(milestone="M6", branch="integration/hardening", open_waves=("shop_w4",), todo=("S7",))
+        project = ProjectFacts(name="brigade", slots=4, uncut_milestones=(uncut,))
+
+        # Act
+        document = project.to_document()
+
+        # Assert
+        self.assertEqual(
+            document["uncut_milestones"],
+            [{"milestone": "M6", "branch": "integration/hardening", "open_waves": ["shop_w4"], "todo": ["S7"]}],
+        )
 
 
 class WaveFactsTest(unittest.TestCase):
