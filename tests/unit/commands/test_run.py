@@ -267,6 +267,7 @@ class RunDetachedTest(unittest.TestCase):
                 "duration_ms": None,
                 "outcome": "spawned",
                 "pid": this_process,
+                "stderr_file": str(self.root / "state" / "runs" / "20261019T090000Z-a1b2c3" / "brigade.log"),
             },
         )
 
