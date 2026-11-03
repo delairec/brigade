@@ -1,6 +1,7 @@
 import unittest
 from pathlib import Path
 
+from brigade.errors import BrigadeError
 from brigade.mining.read_text_scrubber import read_text_scrubber
 from tests.unit.scripted_processes import ScriptedProcesses
 
@@ -20,3 +21,19 @@ class ReadTextScrubberTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(scrubbed, "[GitHub token] [GitHub token] [GitHub token] [GitHub token] [Anthropic API key]")
+
+    def test_should_refuse_a_private_pattern_that_is_no_regular_expression(self):
+        # Arrange
+        processes = ScriptedProcesses()
+        processes.answer_entities(CONFIG_ROOT, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("PRIVATE", "Acme("))})
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            read_text_scrubber(processes, CONFIG_ROOT)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "the PRIVATE pattern Acme( of the project oak is no regular expression: "
+            "missing ), unterminated subpattern at position 4",
+        )
