@@ -3442,8 +3442,8 @@ TASK B38
 	ROLE ada
 
 TASK B39
-	TITLE "The wiki follows the commands, and M6 is proven on a real wave against the baseline of"
-		+ "the user's notes"
+	TITLE "The wiki follows the commands, and M6 is proven on the closed waves of one range against"
+		+ "the baseline of the user's notes"
 	STATUS todo
 	TYPE docs
 	MILESTONE @MILESTONE.M6
@@ -3452,11 +3452,13 @@ TASK B39
 	SPEC "a test fails when a command brigade --help lists, subcommands included, has no line"
 		+ "naming it in wiki/Command-reference.md, or when a page wiki/Home.md names has no file"
 		+ "under wiki/"
-	SPEC "a wiki page quotes the output of brigade ledger --wave for a wave of at least ten tasks"
-		+ "the tick delivered on a registered project, its pull request merged"
-	SPEC "the same page quotes brigade ledger compare of that wave's range against the reference"
-		+ "figures of the user's notes of 2026-10-03: steps to first edit p50 23, steps per task"
-		+ "run p50 47, 146 oversized output steps over 67 launches"
+	SPEC "a wiki page quotes the output of brigade ledger --wave for each closed wave of one range"
+		+ "of days that the tick delivered on a registered project, at least ten tasks merged in"
+		+ "total across those waves, the range opening after TASK B37, #309, reached main, which"
+		+ "the tick runs from"
+	SPEC "the same page quotes brigade ledger compare of that range against the reference figures"
+		+ "of the user's notes of 2026-10-03: steps to first edit p50 23, steps per task run p50"
+		+ "47, 146 oversized output steps over 67 launches"
 	AFTER @TASK.B37
 	AFTER @TASK.B175
 	RATIONALE "M6 closes on proof that brigade delivers unattended on a real project and costs less"
@@ -3475,6 +3477,21 @@ TASK B39
 		+ "tâche? », then « Oui, ces 3 SPEC »; the comparison moved to @TASK.B175, « B175 +"
 		+ "comparaison de B39 »"
 		REF @TASK.B175
+	SOURCE "the user's ruling of 2026-11-03 on the question of run 20261103T111517Z-b08ac4 of wave"
+		+ "brigade_w21, « b : plusieurs waves (Recommandé) », the option « On réécrit les SPEC 2 et"
+		+ "3 : la preuve porte sur plusieurs waves fermées d'une même période, au moins 10 tâches"
+		+ "fusionnées au total, comparées à la référence. La période doit commencer après la #309"
+		+ "(B37), sinon deux mesures manquent. M6 reste prouvé sur des livraisons réelles, et B39"
+		+ "peut être livré maintenant. »; the question, « Aucune vague ne remplit cette condition,"
+		+ "et aucune tâche du plan ne la produit : la plus grosse vague du ledger en compte 6. »;"
+		+ "the option rejected, « a : scinder B39 », « B39 est livré avec la SPEC 1 seulement, et"
+		+ "une nouvelle tâche reprend les SPEC 2 et 3 en attendant une wave de 10 tâches. Mais"
+		+ "aucun plan n'en produit une : M6 resterait bloqué sur cette tâche. »: SPEC 2 and 3 cover"
+		+ "the closed waves of one range, at least ten merged tasks in total, compared against the"
+		+ "reference, the range opening after @TASK.B37 reached main; #309 was merged into"
+		+ "integration/brigade_w19 on 2026-11-01T23:22Z and stands in integration/hardening by"
+		+ "#302, not in main at e5704385"
+		REF @TASK.B37
 
 TASK B40
 	TITLE "Evaluate rtk as a candidate filter of shell output"
