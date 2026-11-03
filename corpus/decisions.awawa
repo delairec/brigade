@@ -768,7 +768,8 @@ DECISION TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 		+ "doit être résolu par un run manu non? »; the session read « Laisser jusqu'à B232 » as"
 		+ "DESC 10, no wave.rebased event until B232, and the rest as DESC 17 of"
 		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce; the user"
-		+ "left without confirming that reading"
+		+ "confirmed that reading on 2026-11-04, asked what « run manu » meant, by the option « Run"
+		+ "de rebase du tick »: the tick launches a run on its own to resolve the conflict"
 		REF @TASK.B225
 		REF @TASK.B232
 		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
@@ -4506,12 +4507,13 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		+ "read the branch on the forge still skips the project"
 	DESC "until @TASK.B232 reaches PROJECT.MAIN, the action of DESC 14 is planned as well for a"
 		+ "milestone an open wave of which has its branch behind origin/<the milestone branch>,"
-		+ "unless a rebase run of that wave lives or ended blocked, a rebase run of the milestone"
-		+ "branch lives, or PROJECT.MAIN outruns the milestone branch and its rebase run ended"
-		+ "blocked; the action leaves a milestone branch that descends from PROJECT.MAIN as it is"
-		+ "and rebases each such wave branch onto the milestone branch, as SPEC 3 of @TASK.B214"
-		+ "rebases one; the pull request of a wave is not merged while its branch is behind the"
-		+ "milestone branch; the start of a wave waits for a rebase onto PROJECT.MAIN alone"
+		+ "unless that wave is paused, a rebase run of that wave lives or ended blocked, a rebase"
+		+ "run of the milestone branch lives, or PROJECT.MAIN outruns the milestone branch and its"
+		+ "rebase run ended blocked; the action leaves a milestone branch that descends from"
+		+ "PROJECT.MAIN as it is and rebases each such wave branch onto the milestone branch, as"
+		+ "SPEC 3 of @TASK.B214 rebases one; the pull request of a wave is not merged while its"
+		+ "branch is behind the milestone branch; the start of a wave waits for a rebase onto"
+		+ "PROJECT.MAIN alone"
 		REF @TASK.B232
 		REF @TASK.B214
 	DESC "the action whose rebase of the milestone branch stopped on a conflict rebases no wave"
@@ -4620,14 +4622,11 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		REF @MILESTONE.M9
 		REF @TASK.B224
 		REF @TASK.B227
-	RATIONALE "DESC 16 and DESC 17: on 2026-11-03 the rebase of integration/hardening, the branch"
-		+ "of @MILESTONE.M6, stopped on a conflict at 10:15:17Z and its rebase run pushed the"
-		+ "branch at 10:16:29Z; the same action had checked the wave branches against the local"
-		+ "branch, still at its head of 09:45Z after the abort, and skipped them all; from then on"
-		+ "the branch descended from origin/main and no action rebased the waves, until gh pr merge"
-		+ "334 --rebase failed at 11:10:00Z; @TASK.B225, archived, had recorded the same class of"
-		+ "defect on 2026-10-31; the fix is a quick fix with no task, pull request #345, needed"
-		+ "until @TASK.B232 removes wave branches"
+	RATIONALE "DESC 16 and DESC 17: a milestone branch its rebase run has pushed descends from"
+		+ "PROJECT.MAIN, so wave branches rebased only within a rebase onto PROJECT.MAIN never"
+		+ "followed it, and a wave pull request of @MILESTONE.M6 was left unmergeable, the class of"
+		+ "defect @TASK.B225, archived, recorded. The quick fix of pull request #345 holds until"
+		+ "@TASK.B232 removes wave branches"
 		REF @MILESTONE.M6
 		REF @TASK.B225
 		REF @TASK.B232
@@ -4704,10 +4703,11 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		+ "rebased milestone branch, or skips them, and whether a wave branch rebased while the"
 		+ "milestone head stays in place gets a wave.rebased event: « Laisser jusqu'à B232 et en"
 		+ "cas de conflit ça doit être résolu par un run manu non? »; the session read « en cas de"
-		+ "conflit ça doit être résolu par un run » as DESC 17, the conflict left to the rebase run"
-		+ "and no wave branch rebased in that action, and « Laisser jusqu'à B232 » as DESC 10 of"
-		+ "@DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction; the user left"
-		+ "without confirming that reading"
+		+ "conflit ça doit être résolu par un run manu non? » as DESC 17, the conflict left to the"
+		+ "rebase run and no wave branch rebased in that action, and « Laisser jusqu'à B232 » as"
+		+ "DESC 10 of @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction; the user"
+		+ "confirmed that reading on 2026-11-04, asked what « run manu » meant, by the option « Run"
+		+ "de rebase du tick »: the tick launches a run on its own to resolve the conflict"
 		REF @TASK.B214
 		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
 
