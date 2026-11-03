@@ -4,6 +4,7 @@ from brigade.ledger.read_ledger import LedgerReading
 from brigade.ledger.summarize_measure import summarize_measure
 
 MEASURED_RUNS_FOR_A_MEASUREMENT = 5
+EVERY_CLIENT = None
 
 
 def _summarize_procedure(runs: list[FinishedRun]) -> dict:
@@ -11,8 +12,8 @@ def _summarize_procedure(runs: list[FinishedRun]) -> dict:
     return {**steps, "estimate": steps["runs"]["measured"] < MEASURED_RUNS_FOR_A_MEASUREMENT}
 
 
-def describe_budgets(reading: LedgerReading, last: int) -> dict:
-    runs = group_runs(reading.entries)
+def describe_budgets(reading: LedgerReading, last: int, client: str | None) -> dict:
+    runs = [run for run in group_runs(reading.entries) if client in (EVERY_CLIENT, run.last.client)]
     procedures = sorted({run.last.procedure for run in runs}, key=str)
     return {
         "last": last,
