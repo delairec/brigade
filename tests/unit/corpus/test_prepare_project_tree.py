@@ -58,7 +58,6 @@ class PrepareProjectTreeTest(unittest.TestCase):
             tree, Tree(project="shop", ref=None, sha="2222222", kind="worktree", root=Path("/srv/worktrees/b42"))
         )
 
-
     def test_should_read_a_worktree_in_place_whatever_the_main_branch_of_the_project(self):
         # Arrange
         root = Path(tempfile.mkdtemp())
