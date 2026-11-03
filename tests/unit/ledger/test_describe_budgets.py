@@ -29,8 +29,10 @@ class DescribeBudgetsTest(unittest.TestCase):
             ),
         )
 
+        every_client = None
+
         # Act
-        budgets = describe_budgets(reading, 1)
+        budgets = describe_budgets(reading, 1, every_client)
 
         # Assert
         self.assertEqual(
@@ -77,8 +79,45 @@ class DescribeBudgetsTest(unittest.TestCase):
             ),
         )
 
+        every_client = None
+
         # Act
-        budgets = describe_budgets(reading, 20)
+        budgets = describe_budgets(reading, 20, every_client)
 
         # Assert
         self.assertFalse(budgets["procedures"]["awawa-task"]["estimate"])
+
+    def test_should_summarize_the_runs_of_the_client_named_alone(self):
+        # Arrange
+        reading = create_reading(
+            LedgerEntry(
+                instant=datetime(2026, 11, 1, 9, 0, tzinfo=UTC),
+                event=create_run_finished("r1", procedure="build-task", client="claude-code", main_steps=23),
+            ),
+            LedgerEntry(
+                instant=datetime(2026, 11, 1, 9, 1, tzinfo=UTC),
+                event=create_run_finished("r2", procedure="build-task", client="vibe", main_steps=41),
+            ),
+            LedgerEntry(
+                instant=datetime(2026, 11, 1, 9, 2, tzinfo=UTC),
+                event=create_run_finished("r3", procedure="verify-pr", client="claude-code", main_steps=9),
+            ),
+        )
+
+        # Act
+        budgets = describe_budgets(reading, 20, "vibe")
+
+        # Assert
+        self.assertEqual(
+            budgets,
+            {
+                "last": 20,
+                "procedures": {
+                    "build-task": {
+                        "runs": {"measured": 1, "unmeasured": 0, "p50": 41, "p90": 41, "partial": 0},
+                        "segments": {"measured": 1, "unmeasured": 0, "p50": 41, "p90": 41},
+                        "estimate": True,
+                    },
+                },
+            },
+        )
