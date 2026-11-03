@@ -182,7 +182,7 @@ class AdapterMatrixOfAnAdapterWithSettingsInTheConfigurationTest(unittest.TestCa
 
         # Assert
         self.assertEqual(
-            document["adapters"][1],
+            document["adapters"][2],
             {
                 "name": "fake",
                 "audience": "test_suite",

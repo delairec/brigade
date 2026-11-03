@@ -112,3 +112,20 @@ class BuildPathsInsideARunTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(paths.run_directory, Path("/srv/state/brigade/runs/r1"))
+
+
+class BuildPathsWithTheSessionBusTest(unittest.TestCase):
+    def test_should_hold_the_address_of_the_session_bus_of_the_environment(self):
+        # Arrange
+        rows = [
+            ("set", {"HOME": "/srv/homes/ada", "DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/1000/bus"}),
+            ("unset", {"HOME": "/srv/homes/ada"}),
+        ]
+        expected_addresses = {"set": "unix:path=/run/user/1000/bus", "unset": None}
+        for case, environment in rows:
+            with self.subTest(case=case):
+                # Act
+                paths = build_paths(environment)
+
+                # Assert
+                self.assertEqual(paths.session_bus_address, expected_addresses[case])
