@@ -4,10 +4,7 @@ import unittest
 from pathlib import Path
 
 from brigade.errors import BrigadeError
-from brigade.ledger.append_event import append_event
-from brigade.ledger.wave_started import WaveStarted
 from brigade.studies.build_study_context import build_study_context
-from tests.unit.create_test_runtime import FIXED_NOW
 from tests.unit.scripted_processes import ScriptedProcesses
 
 RUN_ID = "20261019T090000Z-aaaaaa"
@@ -42,8 +39,8 @@ LEDGER_ITEMS = [
     {"ts": "2026-10-04T10:30:00Z", "event": "task.state", "wave": "oak_w2", "task": "B17", "state": "merged"},
 ]
 REPORT_ANSWER = (
-    "REPORT oak_w2\n"
-    '\tWAVE "oak_w2"\n'
+    "REPORT oak_M6\n"
+    '\tMILESTONE "M6"\n'
     '\tPROJECT "oak"\n'
     '\tTASK_ROW "B17 merged"\n'
     '\tSTATISTIC "tasks 1"\n'
@@ -132,15 +129,12 @@ class BuildStudyContextTest(unittest.TestCase):
         path.write_text(json.dumps({"collector": collector, "items": items}), encoding="utf-8")
         return {"collector": collector, "summary": {}, "document": str(path)}
 
-    def script_wave_report_run(self) -> list[dict]:
+    def script_milestone_report_run(self) -> list[dict]:
         config_root = self.runtime.paths.config_root
-        append_event(
-            self.runtime.paths,
-            FIXED_NOW,
-            WaveStarted(wave="oak_w2", project="oak", branch="integration/oak_w2", tasks=("B17",)),
-        )
         (self.run_directory / "study.json").write_text(
-            '{"study": "wave-report", "project": "oak", "wave": "oak_w2"}', encoding="utf-8"
+            '{"study": "milestone-report", "project": "oak", "milestone": {"project": "oak", "milestone": "M6",'
+            ' "branch": "integration/hardening", "waves": ["oak_w2"], "tasks": ["B17"]}}',
+            encoding="utf-8",
         )
         collected = [
             self.write_document("ledger", LEDGER_ITEMS),
@@ -157,7 +151,7 @@ class BuildStudyContextTest(unittest.TestCase):
             ("awawa", "show", "REPORT", "--json", str(config_root)),
             {
                 "fields": [
-                    {"name": "FIELD", "atoms": ["WAVE", "string"]},
+                    {"name": "FIELD", "atoms": ["MILESTONE", "string"]},
                     {"name": "FIELD", "atoms": ["TASK_ROW", "string"]},
                     {"name": "FIELD", "atoms": ["NARRATIVE", "string"]},
                 ]
@@ -166,9 +160,9 @@ class BuildStudyContextTest(unittest.TestCase):
         self.processes.answer(("awawa", "show", "REPORT", str(config_root)), stdout="SCHEMA REPORT\n")
         return collected
 
-    def test_should_package_the_report_of_the_wave_to_complete(self):
+    def test_should_package_the_report_of_the_milestone_to_complete(self):
         # Arrange
-        collected = self.script_wave_report_run()
+        collected = self.script_milestone_report_run()
 
         # Act
         package = build_study_context(self.runtime, RUN_ID)
@@ -178,11 +172,11 @@ class BuildStudyContextTest(unittest.TestCase):
             package,
             {
                 "schema_version": 1,
-                "study": "wave-report",
+                "study": "milestone-report",
                 "run": RUN_ID,
                 "question": (
-                    "Complete the report of the wave oak_w2: what happened, why each parked or failed task stopped,"
-                    " how a tester checks each manual test, and which changes are worth reading by sampling."
+                    "Complete the report of the milestone M6: what happened, why each parked or failed task"
+                    " stopped, how a tester checks each manual test, and which changes are worth reading by sampling."
                 ),
                 "collected": collected,
                 "answer": REPORT_ANSWER,

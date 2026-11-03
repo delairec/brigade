@@ -16,8 +16,8 @@ from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
 from brigade.runtime import Runtime
+from brigade.tasks.find_task_base import find_task_base
 from brigade.tasks.locate_task_worktree import TASK_BRANCH, locate_task_worktree
-from brigade.tick.name_task_branch import name_task_branch
 from brigade.verify.find_opened_task import find_opened_task
 from brigade.waves.find_milestone_branch import find_milestone_branch
 from brigade.waves.locate_forge_branch import locate_forge_branch
@@ -35,18 +35,16 @@ def _render_text(document: dict) -> str:
     return f"# branch\n{document['branch']}\n\n# base\n{document['base']}\n\n# conflicts\n{conflicts}"
 
 
-def _read_unopened_task(runtime: Runtime) -> dict:
+def _read_unopened_task(runtime: Runtime, branch: str) -> dict:
     found = locate_task_worktree(runtime, Path.cwd(), TASK_NAMED_BY_THE_BRANCH)
-    upstream = locate_forge_branch(
-        runtime.run_process, found.project, found.wave_branch, lambda key: ENVIRONMENT_OF_THE_RUN
-    )
+    upstream = locate_forge_branch(runtime.run_process, found.project, found.base, lambda key: ENVIRONMENT_OF_THE_RUN)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "project": found.project.name,
         "pr": None,
         "task": found.task,
-        "branch": name_task_branch(found.wave_branch, found.task),
-        "base": found.wave_branch,
+        "branch": branch,
+        "base": found.base,
         "conflicts": list_conflicting_files(runtime.run_process, found.path, upstream),
     }
 
@@ -99,17 +97,18 @@ def rebase_context(request: argparse.Namespace, runtime: Runtime) -> dict:
         branch = read_current_branch(runtime.run_process, worktree)
         if TASK_BRANCH.fullmatch(branch) is None:
             return _read_unopened_branch(runtime, worktree, branch)
-        return _read_unopened_task(runtime)
+        return _read_unopened_task(runtime, branch)
     project = require_project_at(read_projects(runtime), locate_main_checkout(runtime.run_process, worktree))
     found = find_opened_task(runtime, project.name, request.pr)
+    base = find_task_base(runtime, worktree, project, found.opened.task)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "project": project.name,
         "pr": request.pr,
         "task": found.opened.task,
         "branch": found.opened.branch,
-        "base": found.wave_branch,
-        "conflicts": list_conflicting_files(runtime.run_process, worktree, f"{REMOTE}/{found.wave_branch}"),
+        "base": base,
+        "conflicts": list_conflicting_files(runtime.run_process, worktree, f"{REMOTE}/{base}"),
     }
 
 

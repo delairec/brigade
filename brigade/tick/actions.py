@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
-from brigade.tick.build_snapshot import MergedWave, PreflightFailure, TaskAmendment
+from brigade.studies.milestone_report_order import MilestoneReportOrder
+from brigade.studies.task_report_order import TaskReportOrder
+from brigade.tick.build_snapshot import PreflightFailure, TaskAmendment
 
 
 @dataclass(frozen=True)
@@ -9,6 +11,7 @@ class LaunchTask:
     wave: str
     branch: str
     task: str
+    task_branch: str
     checks_passed: bool
 
 
@@ -66,6 +69,7 @@ class LaunchCheckRepair:
     wave: str
     branch: str
     task: str
+    task_branch: str
     pr: int
     worktree: str
     checks: tuple[str, ...]
@@ -115,7 +119,6 @@ class RebaseMilestone:
     project: str
     milestone: str
     branch: str
-    waves: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -132,48 +135,19 @@ class StartWave:
 
 
 @dataclass(frozen=True)
-class CutWaveBranch:
-    project: str
-    wave: str
-    branch: str
+class ReportMilestone:
+    order: MilestoneReportOrder
 
 
 @dataclass(frozen=True)
-class ReportWave:
-    wave: str
-
-
-@dataclass(frozen=True)
-class OpenIntegrationPullRequest:
-    project: str
-    wave: str
-    branch: str
-    tasks: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class MergeWavePullRequest:
-    project: str
-    wave: str
-    pr: int
-    method: str
-    head: str
+class ReportTask:
+    order: TaskReportOrder
 
 
 @dataclass(frozen=True)
 class CloseWave:
     wave: str
-    pr: int
     project: str
-    milestones: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class OpenMilestonePullRequest:
-    project: str
-    milestone: str
-    branch: str
-    waves: tuple[MergedWave, ...]
 
 
 @dataclass(frozen=True)
@@ -189,6 +163,7 @@ class RebaseTask:
     wave: str
     branch: str
     task: str
+    task_branch: str
     pr: int
     worktree: str
     head: str
@@ -211,6 +186,7 @@ class RebuildTask:
     wave: str
     base: str
     task: str
+    task_branch: str
     pr: int
     worktree: str
     reason: str

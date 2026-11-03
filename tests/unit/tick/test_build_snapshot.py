@@ -6,7 +6,6 @@ from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.reset_hour import ResetHour
 from brigade.tick.build_snapshot import (
     BlockedRun,
-    MergedWave,
     MilestoneFacts,
     PreflightFailure,
     ProjectFacts,
@@ -66,11 +65,13 @@ class SnapshotTest(unittest.TestCase):
                 project="shop",
                 milestone="M4",
                 branch="integration/tides",
-                merged_waves=(MergedWave(wave="shop_w1", pr=77),),
+                closed_waves=("shop_w1",),
                 open_waves=("shop_w3",),
                 todo=("S5",),
                 behind_main=True,
                 blocked_rebase=BlockedRun(run="20261030T005500Z-2f5135", question="Keep the guard or drop it?"),
+                tasks=("S3", "S5"),
+                reported=True,
             ),
             MilestoneFacts(
                 project="shop",
@@ -102,7 +103,7 @@ class SnapshotTest(unittest.TestCase):
                     "project": "shop",
                     "milestone": "M4",
                     "branch": "integration/tides",
-                    "merged_waves": [{"wave": "shop_w1", "pr": 77}],
+                    "closed_waves": ["shop_w1"],
                     "open_waves": ["shop_w3"],
                     "todo": ["S5"],
                     "opened_pull_request": None,
@@ -110,12 +111,14 @@ class SnapshotTest(unittest.TestCase):
                     "behind_main": True,
                     "rebase_run_live": False,
                     "blocked_rebase": {"run": "20261030T005500Z-2f5135", "question": "Keep the guard or drop it?"},
+                    "tasks": ["S3", "S5"],
+                    "reported": True,
                 },
                 {
                     "project": "shop",
                     "milestone": "M5",
                     "branch": "integration/currents",
-                    "merged_waves": [],
+                    "closed_waves": [],
                     "open_waves": [],
                     "todo": [],
                     "opened_pull_request": 90,
@@ -132,6 +135,8 @@ class SnapshotTest(unittest.TestCase):
                     "behind_main": False,
                     "rebase_run_live": False,
                     "blocked_rebase": None,
+                    "tasks": [],
+                    "reported": False,
                 },
             ],
         )
@@ -170,11 +175,14 @@ class SnapshotTest(unittest.TestCase):
 
     def test_should_carry_the_pause_of_a_wave_and_the_rate_limit_of_its_task_in_its_document(self):
         # Arrange
-        task = TaskFacts(name="@TASK.B19", rate_limit=RateLimit(reset=ResetHour(hour="7pm", timezone="Europe/Paris")))
+        task = TaskFacts(
+            name="@TASK.B19",
+            branch="feature/B19-task",
+            rate_limit=RateLimit(reset=ResetHour(hour="7pm", timezone="Europe/Paris")),
+        )
         wave = WaveFacts(
             project="brigade",
             wave="w1",
-            branch="main",
             tasks=(task,),
             pause=WavePause(reason="quota", resume_at=datetime(2026, 10, 18, 17, 0, tzinfo=UTC)),
         )
@@ -190,10 +198,11 @@ class SnapshotTest(unittest.TestCase):
                 {
                     "project": "brigade",
                     "wave": "w1",
-                    "branch": "main",
+                    "base": None,
                     "tasks": [
                         {
                             "task": "@TASK.B19",
+                            "branch": "feature/B19-task",
                             "after": [],
                             "blocked_by": [],
                             "pull_request": None,
@@ -216,14 +225,8 @@ class SnapshotTest(unittest.TestCase):
                     "implemented": [],
                     "pause": {"reason": "quota", "resume_at": "2026-10-18T17:00:00Z"},
                     "forge_account_unavailable": False,
-                    "branch_missing": False,
-                    "reported": False,
-                    "integration_pull_request": None,
-                    "opened_integration_pull_request": None,
                     "milestone_branch": None,
-                    "unresolved_threads": 0,
                     "blocked_rebase": None,
-                    "behind_milestone": False,
                 }
             ],
         )
@@ -293,22 +296,21 @@ class ProjectFactsTest(unittest.TestCase):
 
 
 class WaveFactsTest(unittest.TestCase):
-    def test_should_carry_the_integration_pull_request_the_wave_opened_in_its_document(self):
+    def test_should_carry_the_base_of_its_tasks_in_its_document(self):
         # Arrange
-        wave = WaveFacts(project="brigade", wave="w1", branch="wave/w1", opened_integration_pull_request=184)
+        wave = WaveFacts(project="brigade", wave="w1", base="integration/hardening")
 
         # Act
         document = wave.to_document()
 
         # Assert
-        self.assertEqual(document["opened_integration_pull_request"], 184)
+        self.assertEqual(document["base"], "integration/hardening")
 
     def test_should_carry_the_rebase_run_its_branch_waits_on_a_ruling_from_and_the_question_in_its_document(self):
         # Arrange
         wave = WaveFacts(
             project="brigade",
             wave="brigade_w9",
-            branch="integration/brigade_w9",
             blocked_rebase=BlockedRun(run="20261030T080000Z-4eba5e", question="Keep the guard or drop it?"),
         )
 
@@ -324,7 +326,12 @@ class WaveFactsTest(unittest.TestCase):
 class TaskFactsTest(unittest.TestCase):
     def test_should_carry_the_last_verdict_and_the_head_its_verification_ended_on_in_its_document(self):
         # Arrange
-        task = TaskFacts(name="B16", verdict=RecordedVerdict(head="4f2a9c1", verdict="pass"), reviewed_head="4f2a9c1")
+        task = TaskFacts(
+            name="B16",
+            branch="feature/B16-task",
+            verdict=RecordedVerdict(head="4f2a9c1", verdict="pass"),
+            reviewed_head="4f2a9c1",
+        )
 
         # Act
         document = task.to_document()
@@ -337,6 +344,7 @@ class TaskFactsTest(unittest.TestCase):
         # Arrange
         task = TaskFacts(
             name="B18",
+            branch="feature/B18-task",
             preflight_failures=(PreflightFailure(name="checks", findings=("tests: failure",)),),
             repair_rounds=1,
         )
@@ -359,7 +367,7 @@ class TaskFactsTest(unittest.TestCase):
         ]:
             with self.subTest(case=case):
                 # Arrange
-                task = TaskFacts(name="B25", blocked_run=blocked_run)
+                task = TaskFacts(name="B25", branch="feature/B25-task", blocked_run=blocked_run)
 
                 # Act
                 document = task.to_document()
@@ -369,7 +377,7 @@ class TaskFactsTest(unittest.TestCase):
 
     def test_should_carry_the_last_run_naming_it_in_its_document(self):
         # Arrange
-        task = TaskFacts(name="B19", last_run="20261022T232947Z-1858d2")
+        task = TaskFacts(name="B19", branch="feature/B19-task", last_run="20261022T232947Z-1858d2")
 
         # Act
         document = task.to_document()
@@ -379,7 +387,7 @@ class TaskFactsTest(unittest.TestCase):
 
     def test_should_carry_the_milestone_of_the_task_in_its_document(self):
         # Arrange
-        task = TaskFacts(name="B19", milestone="M4")
+        task = TaskFacts(name="B19", branch="feature/B19-task", milestone="M4")
 
         # Act
         document = task.to_document()

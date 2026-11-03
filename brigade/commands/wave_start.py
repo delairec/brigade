@@ -14,8 +14,7 @@ DOCUMENT_SCHEMA_VERSION = 2
 
 def _render_text(document: dict) -> str:
     return "\n".join(
-        f"wave {wave['wave']} of @PROJECT.{wave['project']} on {wave['branch']}: {', '.join(wave['tasks'])}"
-        for wave in document["waves"]
+        f"wave {wave['wave']} of @PROJECT.{wave['project']}: {', '.join(wave['tasks'])}" for wave in document["waves"]
     )
 
 
@@ -33,7 +32,7 @@ def wave_start(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("wave", "start"),
-    help="compose a wave of the project's startable tasks per milestone and start each on its integration branch",
+    help="compose a wave of the project's startable tasks per milestone and start each on the branch of its milestone",
     group_help="start the waves of the projects, list, show and cancel them",
     arguments=(
         Argument(("project",), {"help": "the name of a registered PROJECT"}),

@@ -60,6 +60,14 @@ REVIEWER_PLAY = (
     'brigade verify verdict "$(read_argument pr)" --file "$verdict" >&2\n'
     'cat -- "$1"\n'
 )
+REPORTER_PLAY = (
+    READ_THE_BRIEF + 'run=$(read_argument run)\nanswer="$BRIGADE_RUN_DIR/report.awawa"\n'
+    f'brigade study context "$run" --json | "{sys.executable}" -c '
+    '\'import json, sys; print(json.load(sys.stdin)["answer"].rstrip())\' > "$answer"\n'
+    'printf \'\\tNARRATIVE "the customer empties the cart in one click"\\n\' >> "$answer"\n'
+    'brigade study answer "$run" --file "$answer" >&2\n'
+    'cat -- "$1"\n'
+)
 FORGE_ACCOUNTS = (
     '[forge_accounts]\ncli = "octo-cli"\nplan = "octo-plan"\nbuild = "octo-build"\nreview = "octo-review"\n'
 )
@@ -121,6 +129,7 @@ class WaveRehearser:
         install_executable(plays / "planner", PLANNER_PLAY)
         install_executable(plays / "builder", BUILDER_PLAY)
         install_executable(plays / "reviewer", REVIEWER_PLAY)
+        install_executable(plays / "reporter", REPORTER_PLAY)
         self.machine.write_configuration(
             f'client = "fake"\n{FORGE_ACCOUNTS}'
             f'[clients.fake]\nrecordings = "{recordings}"\nplays = "{plays}"\n{COUNTING_CLIENT}'
@@ -137,29 +146,31 @@ class WaveRehearser:
     def read_events(self) -> list:
         return read_ledger_events(self.state / "ledger")
 
-    def is_wave_integrated(self) -> bool:
+    def is_milestone_reported(self) -> bool:
         events = self.read_events()
         merged = [event for event in events if event["event"] == "task.state" and event["state"] == "merged"]
-        opened = [event for event in events if event["event"] == "wave.pr_opened"]
-        reported = [event for event in events if event["event"] == "wave.reported"]
-        return len(merged) == 3 and bool(opened) and bool(reported)
+        reported = [event for event in events if event["event"] == "milestone.reported"]
+        return len(merged) == 3 and bool(reported)
 
     def has_the_report_ended(self) -> bool:
         events = self.read_events()
-        [reported] = [event for event in events if event["event"] == "wave.reported"]
+        [reported] = [event for event in events if event["event"] == "milestone.reported"]
         ended = [event["run"] for event in events if event["event"] in ("order.done", "order.parked")]
         return reported["run"] in ended
 
-    def tick_until_the_wave_is_integrated(self) -> None:
+    def tick_until_the_milestone_is_reported(self) -> None:
         deadline = time.monotonic() + REHEARSAL_WAIT_S
-        while not self.is_wave_integrated():
+        while not self.is_milestone_reported():
             if time.monotonic() > deadline:
-                self.registrar.fail(f"the wave was never integrated: {self.run_brigade('tick', '--dry-run').stdout}")
+                self.registrar.fail(f"the milestone was never reported: {self.run_brigade('tick', '--dry-run').stdout}")
             completed = self.run_brigade("tick", "--once")
             if completed.returncode != 0:
                 self.registrar.fail(completed.stderr)
             self.list_finished_runs()
-        self.wait_until(self.has_the_report_ended, "the report of the wave never ended")
+        self.wait_until(self.has_the_report_ended, "the report of the milestone never ended")
+
+    def read_remote_file(self, branch: str, path: str) -> str:
+        return self.project.run_git("--git-dir", str(self.remote), "show", f"{branch}:{path}")
 
     def read_pull_request(self, number: int) -> dict:
         return json.loads((self.store / "pulls" / f"{number}.json").read_text())

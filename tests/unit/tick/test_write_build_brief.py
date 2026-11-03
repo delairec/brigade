@@ -16,11 +16,16 @@ class WriteBuildBriefTest(unittest.TestCase):
         state_root = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, state_root)
         action = LaunchTask(
-            project="shop", wave="shop_w1", branch="integration/shop_w1", task="B1", checks_passed=False
+            project="shop",
+            wave="shop_w1",
+            branch="integration/shop_w1",
+            task="B1",
+            task_branch="feature/B1-task",
+            checks_passed=False,
         )
         prepared = PreparedWorktree(
             worktree=BranchWorktree(
-                path=Path("/srv/shop/.brigade/worktrees/B1"), branch="task/shop_w1/B1", start="integration/shop_w1"
+                path=Path("/srv/shop/.brigade/worktrees/B1"), branch="feature/B1-task", start="integration/shop_w1"
             ),
             conflicted=False,
             on_start=True,
@@ -37,7 +42,7 @@ class WriteBuildBriefTest(unittest.TestCase):
             "Deliver @TASK.B1 of @PROJECT.shop, in the wave shop_w1.\n"
             "\n"
             "- Base branch: integration/shop_w1.\n"
-            "- Worktree: /srv/shop/.brigade/worktrees/B1, on the branch task/shop_w1/B1,"
+            "- Worktree: /srv/shop/.brigade/worktrees/B1, on the branch feature/B1-task,"
             " cut from the head of integration/shop_w1.\n",
         )
 
@@ -46,11 +51,16 @@ class WriteBuildBriefTest(unittest.TestCase):
         state_root = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, state_root)
         action = LaunchTask(
-            project="shop", wave="shop_w1", branch="integration/shop_w1", task="B1", checks_passed=False
+            project="shop",
+            wave="shop_w1",
+            branch="integration/shop_w1",
+            task="B1",
+            task_branch="feature/B1-task",
+            checks_passed=False,
         )
         prepared = PreparedWorktree(
             worktree=BranchWorktree(
-                path=Path("/srv/shop/.brigade/worktrees/B1"), branch="task/shop_w1/B1", start="integration/shop_w1"
+                path=Path("/srv/shop/.brigade/worktrees/B1"), branch="feature/B1-task", start="integration/shop_w1"
             ),
             conflicted=False,
             on_start=False,
@@ -66,7 +76,7 @@ class WriteBuildBriefTest(unittest.TestCase):
             "Deliver @TASK.B1 of @PROJECT.shop, in the wave shop_w1.\n"
             "\n"
             "- Base branch: integration/shop_w1.\n"
-            "- Worktree: /srv/shop/.brigade/worktrees/B1, on the branch task/shop_w1/B1,"
+            "- Worktree: /srv/shop/.brigade/worktrees/B1, on the branch feature/B1-task,"
             " left as it stands, off the head of integration/shop_w1: do not rebase it; the tick rebases it"
             " onto integration/shop_w1 once the checks of its pull request pass.\n",
         )
@@ -76,12 +86,17 @@ class WriteBuildBriefTest(unittest.TestCase):
         state_root = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, state_root)
         action = LaunchTask(
-            project="shop", wave="shop_w1", branch="integration/shop_w1", task="B1", checks_passed=False
+            project="shop",
+            wave="shop_w1",
+            branch="integration/shop_w1",
+            task="B1",
+            task_branch="feature/B1-task",
+            checks_passed=False,
         )
         prepared = PreparedWorktree(
             worktree=BranchWorktree(
                 path=Path("/srv/shop/.brigade/worktrees/B1"),
-                branch="task/shop_w1/B1",
+                branch="feature/B1-task",
                 start="origin/integration/shop_w1",
             ),
             conflicted=False,
@@ -104,7 +119,7 @@ class WriteBuildBriefTest(unittest.TestCase):
             "Deliver @TASK.B1 of @PROJECT.shop, in the wave shop_w1.\n"
             "\n"
             "- Base branch: integration/shop_w1.\n"
-            "- Worktree: /srv/shop/.brigade/worktrees/B1, on the branch task/shop_w1/B1,"
+            "- Worktree: /srv/shop/.brigade/worktrees/B1, on the branch feature/B1-task,"
             " left as it stands, off the head of integration/shop_w1: do not rebase it; the tick rebases it"
             " onto integration/shop_w1 once the checks of its pull request pass.\n"
             "\n"

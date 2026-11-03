@@ -24,7 +24,6 @@ WAVE_HEAD = "c3d9f04"
 REBASED_MILESTONE_HEAD = "9b41d08"
 REBASED_WAVE_HEAD = "e70f3a2"
 STOPPED_ON_A_CONFLICT = 1
-NOT_AN_ANCESTOR = 1
 REBASE_IN_PROGRESS = 0
 GIT_REBASE = ("git", "rebase")
 GIT_PUSH = ("git", "push")
@@ -57,7 +56,6 @@ OPEN_WAVE_OF_NO_MILESTONE = {
     "tasks": ["S7"],
 }
 NO_WORKTREE = ""
-OPEN_WAVES_OF_M3 = ("shop_w1",)
 FORGE_ENVIRONMENT = {"GH_TOKEN": "token-of-the-cli-key"}
 
 
@@ -94,17 +92,12 @@ class RebaseMilestoneBranchesTestCase(unittest.TestCase):
         self.rebase_exit_codes = {MILESTONE_WORKTREE: 0, WAVE_WORKTREE: 0}
         self.heads_after_rebase = {MILESTONE_WORKTREE: REBASED_MILESTONE_HEAD, WAVE_WORKTREE: REBASED_WAVE_HEAD}
         self.rebased_worktrees: set[str] = set()
-        self.wave_descent = NOT_AN_ANCESTOR
         self.read_login = _read_login
         write_ledger(self.root, [CUT_OF_M3, OPEN_WAVE_OF_M3, OPEN_WAVE_OF_NO_MILESTONE])
         self.processes.answer(("git", "worktree", "list", "--porcelain", "-z"), stdout=NO_WORKTREE)
         self.processes.answer(("git", "worktree", "add", "--quiet", MILESTONE_WORKTREE, MILESTONE_BRANCH))
         self.processes.answer(("git", "worktree", "add", "--quiet", WAVE_WORKTREE, "integration/shop_w1"))
         self.processes.answer_by(("git", "rev-parse", "HEAD"), self.answer_head)
-        self.processes.answer_by(
-            ("git", "merge-base", "--is-ancestor", MILESTONE_BRANCH, "HEAD"),
-            lambda request: (self.wave_descent, "", ""),
-        )
         self.processes.answer(("git", "rev-parse", "--quiet", "--verify", "REBASE_HEAD"), exit_code=REBASE_IN_PROGRESS)
         self.processes.answer(("git", "rebase", "--abort"))
         for branch, head in ((MILESTONE_BRANCH, MILESTONE_HEAD), ("integration/shop_w1", WAVE_HEAD)):
@@ -141,7 +134,6 @@ class RebaseMilestoneBranchesTestCase(unittest.TestCase):
             project=project,
             milestone="M3",
             branch=MILESTONE_BRANCH,
-            waves=OPEN_WAVES_OF_M3,
             worktree_root=None,
             read_environment=_read_forge_environment,
             is_run_live_on=lambda worktree: worktree in self.live_worktrees,
@@ -153,9 +145,6 @@ class RebaseMilestoneBranchesTestCase(unittest.TestCase):
 
 class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCase):
     def test_should_rebase_the_milestone_branch_of_the_forge_onto_the_main_branch_of_the_forge(self):
-        # Arrange
-        self.wave_descent = 0
-
         # Act
         self.rebase()
 
@@ -171,7 +160,6 @@ class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCa
 
     def test_should_rebase_in_the_worktree_the_milestone_branch_already_holds_without_adding_one(self):
         # Arrange
-        self.wave_descent = 0
         self.processes.answer(
             ("git", "worktree", "list", "--porcelain", "-z"),
             stdout=f"worktree {MILESTONE_WORKTREE}\0HEAD {MILESTONE_HEAD}\0branch refs/heads/{MILESTONE_BRANCH}\0\0",
@@ -183,7 +171,7 @@ class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCa
         # Assert
         self.assertEqual(
             select_commands_opening_on(self.processes.requests, ("git", "worktree", "add")),
-            [(REPOSITORY, ("git", "worktree", "add", "--quiet", WAVE_WORKTREE, "integration/shop_w1"))],
+            [],
         )
         self.assertEqual(
             select_commands_opening_on(self.processes.requests, GIT_REBASE),
@@ -192,7 +180,6 @@ class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCa
 
     def test_should_add_the_worktree_of_the_milestone_branch_where_its_place_holds_another_branch(self):
         # Arrange
-        self.wave_descent = 0
         self.processes.answer(
             ("git", "worktree", "list", "--porcelain", "-z"),
             stdout=f"worktree {MILESTONE_WORKTREE}\0HEAD {MILESTONE_HEAD}\0branch refs/heads/task/shop_w1/S20\0\0",
@@ -208,9 +195,6 @@ class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCa
         )
 
     def test_should_push_the_rebased_milestone_branch_with_a_lease_on_its_head_on_the_forge(self):
-        # Arrange
-        self.wave_descent = 0
-
         # Act
         self.rebase()
 
@@ -233,9 +217,6 @@ class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCa
         )
 
     def test_should_rebase_the_local_milestone_branch_onto_the_local_main_branch_without_a_forge(self):
-        # Arrange
-        self.wave_descent = 0
-
         # Act
         self.rebase("none")
 
@@ -261,14 +242,12 @@ class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCa
                 held.append(not acquired)
             return 0, "", ""
 
-        self.wave_descent = 0
         project = self.register_project("github")
         self.processes.answer_by(("git", "rebase", "origin/main"), answer_rebase_with_the_lock_tried)
         rebase = MilestoneBranchesRebase(
             project=project,
             milestone="M3",
             branch=MILESTONE_BRANCH,
-            waves=OPEN_WAVES_OF_M3,
             worktree_root=None,
             read_environment=_read_forge_environment,
             is_run_live_on=lambda worktree: False,
@@ -283,60 +262,19 @@ class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCa
         self.assertEqual(held, [True])
 
 
-class RebaseMilestoneBranchesWithTheirOpenWavesTest(RebaseMilestoneBranchesTestCase):
-    def test_should_rebase_an_open_wave_of_the_milestone_off_its_rebased_branch_onto_it(self):
+class RebaseMilestoneBranchesBesideAnOpenWaveTest(RebaseMilestoneBranchesTestCase):
+    def test_should_leave_the_branch_an_open_wave_of_the_milestone_recorded_at_its_start(self):
         # Act
         self.rebase()
 
         # Assert
-        self.assertEqual(
-            select_commands_opening_on(self.processes.requests, GIT_REBASE),
-            [
-                (MILESTONE_WORKTREE, ("git", "rebase", "origin/main")),
-                (WAVE_WORKTREE, ("git", "rebase", MILESTONE_BRANCH)),
-            ],
-        )
-
-    def test_should_push_the_rebased_wave_branch_with_a_lease_on_its_head(self):
-        # Act
-        self.rebase()
-
-        # Assert
-        self.assertEqual(
-            select_commands_opening_on(self.processes.requests, GIT_PUSH)[1],
-            (
-                WAVE_WORKTREE,
-                (
-                    "git",
-                    "push",
-                    "--quiet",
-                    "--force-with-lease=integration/shop_w1:c3d9f04",
-                    "origin",
-                    "HEAD:integration/shop_w1",
-                ),
-            ),
-        )
-
-    def test_should_leave_an_open_wave_that_descends_from_the_rebased_milestone_branch(self):
-        # Arrange
-        self.wave_descent = 0
-
-        # Act
-        self.rebase()
-
-        # Assert
-        self.assertEqual(
-            select_commands_opening_on(self.processes.requests, GIT_REBASE),
-            [(MILESTONE_WORKTREE, ("git", "rebase", "origin/main"))],
-        )
+        self.assertEqual(select_argvs_run_in(self.processes.requests, WAVE_WORKTREE), [])
 
 
 class RebaseMilestoneBranchesStoppedOnAConflictTest(RebaseMilestoneBranchesTestCase):
     def test_should_abort_the_rebase_of_the_milestone_branch_and_launch_a_rebase_run_onto_the_main_branch(self):
         # Arrange
         self.rebase_exit_codes[MILESTONE_WORKTREE] = STOPPED_ON_A_CONFLICT
-        self.wave_descent = 0
-
         # Act
         self.rebase()
 
@@ -350,63 +288,18 @@ class RebaseMilestoneBranchesStoppedOnAConflictTest(RebaseMilestoneBranchesTestC
             ],
         )
 
-    def test_should_touch_no_wave_branch_when_the_rebase_of_the_milestone_branch_stopped_on_a_conflict(self):
-        # Arrange
-        self.rebase_exit_codes[MILESTONE_WORKTREE] = STOPPED_ON_A_CONFLICT
-
-        # Act
-        self.rebase()
-
-        # Assert
-        self.assertEqual(select_argvs_run_in(self.processes.requests, WAVE_WORKTREE), [])
-
     def test_should_push_no_branch_whose_rebase_stopped(self):
         # Arrange
         self.rebase_exit_codes[MILESTONE_WORKTREE] = STOPPED_ON_A_CONFLICT
-        self.wave_descent = 0
-
         # Act
         self.rebase()
 
         # Assert
         self.assertEqual(select_commands_opening_on(self.processes.requests, GIT_PUSH), [])
 
-    def test_should_launch_a_rebase_run_of_the_wave_branch_onto_the_milestone_branch(self):
-        # Arrange
-        self.rebase_exit_codes[WAVE_WORKTREE] = STOPPED_ON_A_CONFLICT
-
-        # Act
-        self.rebase()
-
-        # Assert
-        self.assertEqual(
-            self.launched,
-            [
-                BranchRebaseRun(
-                    project="shop",
-                    worktree=Path(WAVE_WORKTREE),
-                    branch="integration/shop_w1",
-                    base=MILESTONE_BRANCH,
-                    wave="shop_w1",
-                )
-            ],
-        )
-
-    def test_should_touch_no_wave_branch_whose_worktree_a_live_run_holds(self):
-        # Arrange
-        self.live_worktrees = {Path(WAVE_WORKTREE)}
-
-        # Act
-        self.rebase()
-
-        # Assert
-        self.assertEqual(select_argvs_run_in(self.processes.requests, WAVE_WORKTREE), [])
-
     def test_should_touch_no_branch_whose_worktree_a_live_run_holds(self):
         # Arrange
         self.live_worktrees = {Path(MILESTONE_WORKTREE)}
-        self.wave_descent = 0
-
         # Act
         self.rebase()
 
@@ -415,7 +308,7 @@ class RebaseMilestoneBranchesStoppedOnAConflictTest(RebaseMilestoneBranchesTestC
 
 
 class RebaseMilestoneBranchesRecordedTest(RebaseMilestoneBranchesTestCase):
-    def test_should_answer_the_clean_rebase_of_the_milestone_branch_with_its_heads_and_its_rebased_waves(self):
+    def test_should_answer_the_clean_rebase_of_the_milestone_branch_with_its_heads_and_no_wave(self):
         # Act
         rebased = self.rebase()
 
@@ -428,7 +321,7 @@ class RebaseMilestoneBranchesRecordedTest(RebaseMilestoneBranchesTestCase):
                 branch=MILESTONE_BRANCH,
                 before="5e2a7c1",
                 after="9b41d08",
-                waves=("shop_w1",),
+                waves=(),
                 login="octo-bot",
             ),
         )
@@ -446,71 +339,8 @@ class RebaseMilestoneBranchesRecordedTest(RebaseMilestoneBranchesTestCase):
                 branch=MILESTONE_BRANCH,
                 before="5e2a7c1",
                 after="9b41d08",
-                waves=("shop_w1",),
+                waves=(),
                 login=None,
-            ),
-        )
-
-    def test_should_name_no_open_wave_that_descends_from_the_rebased_milestone_branch(self):
-        # Arrange
-        self.wave_descent = 0
-
-        # Act
-        rebased = self.rebase()
-
-        # Assert
-        self.assertEqual(
-            rebased,
-            MilestoneRebased(
-                project="shop",
-                milestone="M3",
-                branch=MILESTONE_BRANCH,
-                before="5e2a7c1",
-                after="9b41d08",
-                waves=(),
-                login="octo-bot",
-            ),
-        )
-
-    def test_should_name_no_open_wave_whose_rebase_stopped_on_a_conflict(self):
-        # Arrange
-        self.rebase_exit_codes[WAVE_WORKTREE] = STOPPED_ON_A_CONFLICT
-
-        # Act
-        rebased = self.rebase()
-
-        # Assert
-        self.assertEqual(
-            rebased,
-            MilestoneRebased(
-                project="shop",
-                milestone="M3",
-                branch=MILESTONE_BRANCH,
-                before="5e2a7c1",
-                after="9b41d08",
-                waves=(),
-                login="octo-bot",
-            ),
-        )
-
-    def test_should_name_no_open_wave_whose_worktree_a_live_run_holds(self):
-        # Arrange
-        self.live_worktrees = {Path(WAVE_WORKTREE)}
-
-        # Act
-        rebased = self.rebase()
-
-        # Assert
-        self.assertEqual(
-            rebased,
-            MilestoneRebased(
-                project="shop",
-                milestone="M3",
-                branch=MILESTONE_BRANCH,
-                before="5e2a7c1",
-                after="9b41d08",
-                waves=(),
-                login="octo-bot",
             ),
         )
 
