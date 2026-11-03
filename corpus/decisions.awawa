@@ -5272,9 +5272,11 @@ DECISION ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranc
 		+ "sets"
 		REF @DECISION.AMilestoneIsReachedByTheMergeOfItsPullRequestAndHoldsNoOpenTask
 		REF @DECISION.AMilestoneReportIsBuiltOnceItsTasksAreMergedOrParkedAndIsTheBodyOfItsPullRequest
-	DESC "the waves open on a wave branch at the delivery of @TASK.B232 are cancelled, their task"
-		+ "branches renamed with git branch -m and their pull requests retargeted onto the branch"
-		+ "of their milestone, by hand, as DESC 13 of"
+	DESC "a wave open on a wave branch when @TASK.B232 reaches PROJECT.MAIN, with the pull request"
+		+ "of its milestone and by no pull request of its own, has its pull request merged into the"
+		+ "branch of its milestone first, by the tick or by the session, then is cancelled, its"
+		+ "task branches renamed with git branch -m and not pushed, and its open pull requests"
+		+ "retargeted onto the branch of its milestone, by hand, as DESC 13 of"
 		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce moved M3; a"
 		+ "wave.started that carries a branch is still read"
 		REF @TASK.B232
@@ -5314,6 +5316,20 @@ DECISION ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranc
 		+ "archived and the others amended"
 	REJECTED "a suffix per attempt on the branch of a task launched again after a cancel: the"
 		+ "branch names the task, and the same name is reused"
+	REJECTED "a wave open on a wave branch at the delivery of TASK B232 cancelled and its pull"
+		+ "request closed, the commits missing from the branch of its milestone cherry-picked onto"
+		+ "it and pushed by hand: the same result, but the commits bypass the pull request, its"
+		+ "checks and the gate of DESC 9 of the decision"
+		+ "AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce"
+	REJECTED "a wave open on a wave branch at the delivery of TASK B232 cancelled and its pull"
+		+ "request closed, its merged tasks started again from the branch of its milestone: B44 and"
+		+ "B108 of brigade_w20 would start from zero and two pull requests already merged, #317 and"
+		+ "#308, would be redone"
+	REJECTED "TASK B232 delivered to PROJECT.MAIN by a pull request of its own, as DESC 5 of the"
+		+ "decision AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce allows a fix"
+		+ "the tick needs: earlier, but the waves of M6 open at that moment would have to move too;"
+		+ "the user chose the merge of M6, the old tick closing brigade_w21, brigade_w22 and"
+		+ "brigade_w24 first"
 	RATIONALE "the user's words of 2026-11-01: « Y a un autre truc qui va pas c'est que les waves"
 		+ "créent des branches nommée integration alors que integration est censé être la branche"
 		+ "de travail qui vise main »"
@@ -5343,6 +5359,23 @@ DECISION ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranc
 		REF @TASK.B224
 		REF @TASK.B226
 		REF @TASK.B227
+	SOURCE "the user's rulings of 2026-11-03 on SPEC 13 of @TASK.B232, asked « B232, SPEC de"
+		+ "livraison (passage du modèle « une branche par wave » au modèle « une branche par tâche"
+		+ "») : que faire d'une wave encore ouverte sur sa branche qui contient déjà des tâches"
+		+ "fusionnées (aujourd'hui w20 : B44 et B108, PR #310) ? », « A : fusionner d'abord"
+		+ "(Recommandé) », the option « Avant le passage, la PR de wave est fusionnée dans la"
+		+ "branche du jalon : par le tick si la wave se termine, à la main sinon (#310 vers"
+		+ "integration/portability, mergeable aujourd'hui). Ensuite, la wave est annulée, la"
+		+ "branche de B46 renommée sans push, et les PR ouvertes reciblées. Les 28 commits passent"
+		+ "par leur PR et leurs checks, sans code en plus. On modifie aussi DESC 11 de la décision."
+		+ "»; asked « B232, moment du passage : le tick tourne sur le code de main. B232 n'y"
+		+ "arrivera donc qu'avec la PR du jalon M6, qui ne s'ouvre qu'une fois toutes les waves de"
+		+ "M6 fermées. Quand fait-on le passage ? », « À la fusion de M6 (Recommandé) », the option"
+		+ "« C'est ce que prévoit le corpus aujourd'hui. L'ancien tick ferme d'abord w21, w22 et"
+		+ "w24. Au moment du passage, il ne reste que w20 à déplacer. B46, B227 et B233 attendent"
+		+ "jusque-là. »; DESC 10 is amended as SPEC 13 of @TASK.B232, the option numbering it DESC"
+		+ "11"
+		REF @TASK.B232
 
 DECISION AMilestoneReportIsBuiltOnceItsTasksAreMergedOrParkedAndIsTheBodyOfItsPullRequest
 	TITLE "milestone-report is a study brigade builds from the waves of a milestone once every task"
