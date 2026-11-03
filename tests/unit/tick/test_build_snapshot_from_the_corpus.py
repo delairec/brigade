@@ -1509,6 +1509,35 @@ class BuildSnapshotOfTheUncutMilestonesTest(BuildSnapshotTestCase):
             ),
         )
 
+    def test_should_name_no_closed_wave_among_the_waves_of_an_uncut_milestone(self):
+        # Arrange
+        self.record(60, MilestoneBranchCut(project="shop", milestone="M4", branch="integration/delivery", login=None))
+        self.record(50, WaveStarted(wave="w4", project="shop", branch="integration/w4", tasks=("B8",)))
+        self.record(40, WaveClosed(wave="w4", pr=41))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.projects[1].uncut_milestones[1],
+            UncutMilestone(milestone="M8", branch="integration/cart-checkout", open_waves=(), todo=()),
+        )
+
+    def test_should_name_no_wave_of_another_project_among_the_waves_of_an_uncut_milestone(self):
+        # Arrange
+        self.record(60, MilestoneBranchCut(project="shop", milestone="M4", branch="integration/delivery", login=None))
+        self.record(50, WaveStarted(wave="w5", project="attic", branch="integration/w5", tasks=("B8",)))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.projects[1].uncut_milestones[1],
+            UncutMilestone(milestone="M8", branch="integration/cart-checkout", open_waves=(), todo=()),
+        )
+
 
 def create_review_run_finished(run: str, task: str, error_class: str | None = None) -> RunFinished:
     return dataclasses.replace(
