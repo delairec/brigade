@@ -37,3 +37,21 @@ class ReadTextScrubberTest(unittest.TestCase):
             "the PRIVATE pattern Acme( of the project oak is no regular expression: "
             "missing ), unterminated subpattern at position 4",
         )
+
+    def test_should_refuse_a_public_pattern_that_is_no_regular_expression(self):
+        # Arrange
+        processes = ScriptedProcesses()
+        processes.answer_entities(
+            CONFIG_ROOT, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("PRIVATE", "Acme"), ("PUBLIC", "Acme("))}
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            read_text_scrubber(processes, CONFIG_ROOT)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "the PUBLIC pattern Acme( of the project oak is no regular expression: "
+            "missing ), unterminated subpattern at position 4",
+        )
