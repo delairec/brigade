@@ -193,7 +193,8 @@ dies before it records a `run.finished` does.
 - The forge-account pause carries no `resume_at`.
 - The first tick past `resume_at` records `wave.resumed` for the wave and resumes the run of each `paused:quota` task as
   its next segment, through `resume-argv` with the session of its last segment, or as a fresh launch from its progress
-  file when the client adapter declares no resume. It moves the task back to `running` with the reason `resumed after
+  file when the client adapter declares no resume. Only a segment that wrote its `result.json` counts: a segment
+  directory left without one, by a segment that failed before or while it ran, is run again under its number. It moves the task back to `running` with the reason `resumed after
   the quota reset`: that resume ends the stop, and only a later `run.finished` on `rate_limit` pauses the task again.
 
 </details>
