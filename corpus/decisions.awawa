@@ -4249,8 +4249,7 @@ DECISION TheTriageGroupsSignalsByKeyAndAPatternCitesASignalByOpeningAnEvidenceOn
 DECISION RatificationNamesItsEntitiesAfterThePatternAndTheArrivalInMainDeliversThePattern
 	TITLE "brigade inbox ratify names the CONSTRAINT and the ORDER after their PATTERN, and the"
 		+ "arrival in main of the request of a pattern delivers the PATTERN and its CONSTRAINT:"
-		+ "milestone.closed, or the merge into main of the pull request of a task naming no"
-		+ "milestone"
+		+ "milestone.closed"
 	STATUS active
 	DESC "a CONSTRAINT and an ORDER a ratification records bear the name of their PATTERN"
 	DESC "brigade inbox ratify takes --kind for a pattern of ACTION constraint, KIND being required"
@@ -4263,9 +4262,7 @@ DECISION RatificationNamesItsEntitiesAfterThePatternAndTheArrivalInMainDeliversT
 		+ "a REQUEST FROM a pattern"
 	DESC "the tick delivers at milestone.closed: every PATTERN a REQUEST of the project comes FROM,"
 		+ "whose MILESTONE is the closed milestone, goes delivered with each CONSTRAINT FROM it,"
-		+ "and constraint.delivered is appended once per constraint; the patterns of a task naming"
-		+ "no MILESTONE go delivered the same way when the pull request of the task is merged into"
-		+ "PROJECT.MAIN; delivered means in main"
+		+ "and constraint.delivered is appended once per constraint; delivered means in main"
 	DESC "binds @TASK.B26"
 		REF @TASK.B26
 	REJECTED "a KIND guessed from the pattern: the triage answer carries no KIND, and a wrong guess"
@@ -4285,6 +4282,12 @@ DECISION RatificationNamesItsEntitiesAfterThePatternAndTheArrivalInMainDeliversT
 		+ "mergé dans main), ou au merge de la PR dans main pour une tâche sans jalon. Garde le"
 		+ "sens d'origine : livré = dans main. B35 et la décision amendés en conséquence. »; the"
 		+ "TITLE, DESC 5 and the RATIONALE read milestone.closed, DESC 4 the milestone report"
+		REF @TASK.B232
+	SOURCE "the user's ruling of 2026-11-03 on the question of run 20261102T203509Z-2588eb of wave"
+		+ "brigade_w22, « Ok on retire la spec impossible et on requeue. »: the delivery of the"
+		+ "patterns of a task naming no MILESTONE is dropped from the TITLE and DESC 5, since"
+		+ "brigade/planning/record_plan.py:_check_plan plans every REQUEST into exactly one"
+		+ "MILESTONE and every TASK of the plan into it, so no pattern reaches such a task"
 		REF @TASK.B232
 
 DECISION ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand
