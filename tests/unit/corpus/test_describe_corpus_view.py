@@ -69,7 +69,6 @@ class DescribeCorpusViewOfATypeTest(unittest.TestCase):
             document,
             {
                 "type": "TASK",
-                "types": ["MILESTONE", "TASK"],
                 "entities": [
                     {
                         "target": "@TASK.B27",
