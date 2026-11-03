@@ -108,8 +108,9 @@ The tick launches no run of a paused wave.
 <details><summary>When a dead run parks a task</summary>
 
 A `running` task with no pull request that no live run names in its wave and task is parked, `task.parked` with the
-reason `run dead: <run>`, the last run naming the task, or `run not started` when no run names it. A run rate-limited,
-or a rebase run ended done, does not park the task.
+reason `run dead: <run>`, the last run naming the task, or `run not started` when no run names it. A run rate-limited
+and not resumed since, or a rebase run ended done, does not park the task; a run resumed after the quota reset that
+dies before it records a `run.finished` does.
 
 </details>
 
@@ -192,7 +193,8 @@ or a rebase run ended done, does not park the task.
 - The forge-account pause carries no `resume_at`.
 - The first tick past `resume_at` records `wave.resumed` for the wave and resumes the run of each `paused:quota` task as
   its next segment, through `resume-argv` with the session of its last segment, or as a fresh launch from its progress
-  file when the client adapter declares no resume. It moves the task back to `running`.
+  file when the client adapter declares no resume. It moves the task back to `running` with the reason `resumed after
+  the quota reset`: that resume ends the stop, and only a later `run.finished` on `rate_limit` pauses the task again.
 
 </details>
 

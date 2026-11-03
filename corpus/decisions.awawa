@@ -5548,3 +5548,51 @@ DECISION ATaskBranchIsRebasedOntoItsBaseOnlyOnceItsChecksPassed
 		+ "brigade_w22, on @TASK.B232: « Non la règle serait plutôt qu'on doit avoir une ci verte"
 		+ "avant de passer au rebase. Fix en mode quick fix sans tâche, puis requeue. »"
 		REF @TASK.B232
+
+DECISION AResumeAfterTheQuotaResetEndsTheStopOfItsTaskAndRunsListNamesTheWaveAndTaskOfEachRun
+	TITLE "the resume of a task stopped on the quota ends its stop, a progress.awawa holding no"
+		+ "entity reads as an empty progress, a resumed run that dies parks its task, and brigade"
+		+ "runs list names the wave and the task of each run and keeps the runs of one state"
+	STATUS active
+	DESC "the task.state running the tick records when it resumes the run of a paused:quota task"
+		+ "carries the reason « resumed after the quota reset »"
+	DESC "a task holds a rate limit only while its last run.finished ends on rate_limit, no live"
+		+ "run holds it, and no such resume of the task is recorded after it; a later run.finished"
+		+ "on rate_limit stops it again"
+	DESC "a running task with no pull request whose resumed run is gone without a run.finished is"
+		+ "parked as a dead run, reason run dead: <run>"
+	DESC "the awawa document plugin answers read_document of a file holding no entity with the"
+		+ "inventory of each type of its schema alone, so the brief of the resumed segment opens on"
+		+ "an empty progress, as the markdown plugin's empty file does"
+	DESC "brigade runs list prints the columns run, procedure, slot, role, project, wave, task,"
+		+ "state and outcome; --state running|finished|dead keeps the runs in that state, alone or"
+		+ "with --wave and --task"
+	DESC "narrows DESC 3 of @DECISION.ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset, the"
+		+ "move to paused:quota, and the SPEC of @TASK.B06 on brigade runs list"
+		REF @DECISION.ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset
+		REF @TASK.B06
+	REJECTED "the stop ended by the paused:quota recorded after it: the ledger already holds such"
+		+ "entries from resumes that crashed on the defect fixed here, so the first tick on the fix"
+		+ "would park those tasks instead of resuming them once"
+	REJECTED "a fresh build run instead of the resume when the progress holds no entry: the resume"
+		+ "keeps the run and the session of the stopped segment, and the tick would have to read"
+		+ "the progress of every stopped run"
+	REJECTED "the brief of a run without progress for a resumed segment whose progress holds no"
+		+ "entry: the brief of a resumed segment opens on its progress, the mark of a resume the"
+		+ "fake client adapter reads"
+	REJECTED "the dead and running runs sorted last by brigade runs list: every listing reads the"
+		+ "runs in the order of their id, and --state dead finds them without moving a row"
+	RATIONALE "run 20261102T214501Z-6fe00d of @TASK.B228, wave brigade_w24, ended its first segment"
+		+ "on « You've hit your 5-hour limit » with no entity in progress.awawa; each resume"
+		+ "crashed before its second segment, brigade/adapters/documents/awawa.py read_document"
+		+ "raising IndexError, so no run.finished followed and every tick read the same rate limit:"
+		+ "119 task.state paused:quota from 2026-11-02T21:50:17Z to 2026-11-03T09:45:00Z, the task"
+		+ "shown running"
+		REF @TASK.B228
+	RATIONALE "brigade runs list sorted 117 runs by id with no wave or task column, so the dead run"
+		+ "of @TASK.B228 stood at row 79 among finished rows and the user could not find it"
+		REF @TASK.B228
+	SOURCE "the user's ruling of 2026-11-03 in session, on @TASK.B228 stuck running: « c'est pas"
+		+ "normal que ça n'apparaisse pas dans brigade runs list... ok corrige le défaut en quick"
+		+ "fix + l'affichage de runs list. »"
+		REF @TASK.B228

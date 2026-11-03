@@ -8,7 +8,8 @@ from brigade.system.render_table import render_table
 DOCUMENT_SCHEMA_VERSION = 1
 ABSENT = "-"
 NO_RUNS = "no runs"
-COLUMNS = ("run", "procedure", "slot", "role", "project", "state", "outcome")
+COLUMNS = ("run", "procedure", "slot", "role", "project", "wave", "task", "state", "outcome")
+RUN_STATES = ("running", "finished", "dead")
 
 
 def _render_value(value) -> str:
@@ -30,8 +31,10 @@ def _describe_skipped_runs(document: dict) -> list[str]:
 
 
 def _is_selected(listed: dict, request) -> bool:
-    return (request.wave is None or listed["wave"] == request.wave) and (
-        request.task is None or listed["task"] == request.task
+    return (
+        (request.wave is None or listed["wave"] == request.wave)
+        and (request.task is None or listed["task"] == request.task)
+        and (request.state is None or listed["state"] == request.state)
     )
 
 
@@ -51,6 +54,7 @@ COMMAND = Command(
     arguments=(
         Argument(("--wave",), {"help": "keep the runs of this wave"}),
         Argument(("--task",), {"help": "keep the runs of this task"}),
+        Argument(("--state",), {"choices": RUN_STATES, "help": "keep the runs in this state"}),
     ),
     run=runs_list,
     render_text=_render_text,

@@ -7,6 +7,7 @@ from brigade.commands.runs_list import COMMAND
 from tests.unit.commands.run_directories import (
     FIRST_RUN,
     SECOND_RUN,
+    THIRD_RUN,
     create_run_record,
     create_run_result,
     write_run,
@@ -16,6 +17,7 @@ from tests.unit.create_test_runtime import create_test_runtime
 
 ANY_WAVE = None
 ANY_TASK = None
+ANY_STATE = None
 FIRST_LISTED = {
     "run": FIRST_RUN,
     "procedure": "deliver",
@@ -27,6 +29,18 @@ FIRST_LISTED = {
     "outcome": "done",
     "wave": "tidepool_w1",
     "task": "T1",
+}
+DEAD_LISTED = {
+    "run": THIRD_RUN,
+    "procedure": "deliver",
+    "slot": "build",
+    "role": "builder",
+    "project": None,
+    "worktree": "/home/user/tidepool",
+    "state": "dead",
+    "outcome": None,
+    "wave": "tidepool_w2",
+    "task": "T3",
 }
 SECOND_LISTED = {
     "run": SECOND_RUN,
@@ -53,7 +67,7 @@ class RunsListTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(text, "no runs")
 
-    def test_should_print_one_row_per_run_marking_what_is_absent(self):
+    def test_should_print_one_row_per_run_naming_its_wave_and_its_task_and_marking_what_is_absent(self):
         # Arrange
         document = {
             "schema_version": 1,
@@ -64,9 +78,22 @@ class RunsListTextTest(unittest.TestCase):
                     "slot": "build",
                     "role": "builder",
                     "project": None,
+                    "wave": "tidepool_w1",
+                    "task": "T1",
+                    "state": "dead",
+                    "outcome": None,
+                },
+                {
+                    "run": SECOND_RUN,
+                    "procedure": "wave-plan",
+                    "slot": "plan",
+                    "role": "planner",
+                    "project": None,
+                    "wave": None,
+                    "task": None,
                     "state": "running",
                     "outcome": None,
-                }
+                },
             ],
         }
 
@@ -76,8 +103,9 @@ class RunsListTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             text,
-            "run                      procedure  slot   role     project  state    outcome\n"
-            f"{FIRST_RUN}  deliver    build  builder  -        running  -",
+            "run                      procedure  slot   role     project  wave         task  state    outcome\n"
+            f"{FIRST_RUN}  deliver    build  builder  -        tidepool_w1  T1    dead     -\n"
+            f"{SECOND_RUN}  wave-plan  plan   planner  -        -            -     running  -",
         )
 
 
@@ -105,7 +133,7 @@ class RunsListExitCodeTest(unittest.TestCase):
 class RunsListRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = Namespace(wave=None, task=None)
+        options = Namespace(wave=None, task=None, state=None)
 
         # Act
         request = COMMAND.read_request(options)
@@ -130,14 +158,29 @@ class RunsListSelectionTest(unittest.TestCase):
             create_run_record(SECOND_RUN, "tidepool_w2", "T2"),
             create_run_result(SECOND_RUN, "done", "2026-10-08T09:12:00Z"),
         )
+        write_run(state_root, create_run_record(THIRD_RUN, "tidepool_w2", "T3"), None)
 
-    def test_should_keep_the_runs_of_the_wave_and_the_task_asked(self):
+    def test_should_keep_the_runs_of_the_wave_the_task_and_the_state_asked(self):
         # Arrange
         rows = [
-            ("every run", Namespace(wave=ANY_WAVE, task=ANY_TASK), [FIRST_LISTED, SECOND_LISTED]),
-            ("the runs of a wave", Namespace(wave="tidepool_w2", task=ANY_TASK), [SECOND_LISTED]),
-            ("the runs of a task", Namespace(wave=ANY_WAVE, task="T1"), [FIRST_LISTED]),
-            ("a task of another wave", Namespace(wave="tidepool_w2", task="T1"), []),
+            (
+                "every run",
+                Namespace(wave=ANY_WAVE, task=ANY_TASK, state=ANY_STATE),
+                [FIRST_LISTED, SECOND_LISTED, DEAD_LISTED],
+            ),
+            (
+                "the runs of a wave",
+                Namespace(wave="tidepool_w2", task=ANY_TASK, state=ANY_STATE),
+                [SECOND_LISTED, DEAD_LISTED],
+            ),
+            ("the runs of a task", Namespace(wave=ANY_WAVE, task="T1", state=ANY_STATE), [FIRST_LISTED]),
+            ("a task of another wave", Namespace(wave="tidepool_w2", task="T1", state=ANY_STATE), []),
+            ("the dead runs", Namespace(wave=ANY_WAVE, task=ANY_TASK, state="dead"), [DEAD_LISTED]),
+            (
+                "the finished runs of a wave",
+                Namespace(wave="tidepool_w2", task=ANY_TASK, state="finished"),
+                [SECOND_LISTED],
+            ),
         ]
         for case, request, expected_runs in rows:
             with self.subTest(case=case):

@@ -16,6 +16,7 @@ TASK_STATES = (
     "paused:quota",
 )
 REQUEUE_REASON = "brigade wave requeue"
+QUOTA_RESUME_REASON = "resumed after the quota reset"
 
 
 @dataclass(frozen=True)

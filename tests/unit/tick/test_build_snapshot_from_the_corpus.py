@@ -300,6 +300,67 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             ),
         )
 
+    def test_should_note_no_quota_stop_on_a_task_whose_run_was_resumed_since_it_hit_the_limit(self):
+        # Arrange
+        self.record(1, TaskState(wave="w1", task="B1", state="paused:quota"))
+        self.record(1, TaskState(wave="w1", task="B1", state="running", reason="resumed after the quota reset"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.waves[0].tasks[0],
+            TaskFacts(
+                name="B1",
+                after=("B0",),
+                pull_request=PULL_REQUEST,
+                worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
+                rate_limit=None,
+            ),
+        )
+
+    def test_should_keep_the_quota_stop_of_a_task_whose_resume_the_ledger_does_not_record(self):
+        # Arrange
+        self.record(1, TaskState(wave="w1", task="B1", state="paused:quota"))
+        self.record(1, TaskState(wave="w1", task="B1", state="running"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.waves[0].tasks[0],
+            TaskFacts(
+                name="B1",
+                after=("B0",),
+                pull_request=PULL_REQUEST,
+                worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
+                rate_limit=RateLimit(reset=None),
+            ),
+        )
+
+    def test_should_note_the_quota_stop_of_a_resumed_run_that_hit_the_limit_again(self):
+        # Arrange
+        self.record(1, TaskState(wave="w1", task="B1", state="paused:quota"))
+        self.record(1, TaskState(wave="w1", task="B1", state="running", reason="resumed after the quota reset"))
+        self.record(0, create_run_finished("r1", wave="w1", task="B1", outcome="failed", error_class="rate_limit"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.waves[0].tasks[0],
+            TaskFacts(
+                name="B1",
+                after=("B0",),
+                pull_request=PULL_REQUEST,
+                worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
+                rate_limit=RateLimit(reset=None),
+            ),
+        )
+
     def test_should_name_the_last_run_naming_each_task_of_the_wave(self):
         # Arrange
         write_run(self.paths.state_root, create_run_record("20261013T080000Z-a00001", "w1", "B4"), None)

@@ -105,6 +105,7 @@ class BrigadeTickOfARemediationCutByARateLimitTest(LaunchingTickTestCase):
                     "wave": "shop_w1",
                     "task": "S3",
                     "state": "fixing",
+                    "reason": "resumed after the quota reset",
                 },
                 {
                     "schema_version": 2,

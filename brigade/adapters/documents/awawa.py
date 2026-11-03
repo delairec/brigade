@@ -97,9 +97,15 @@ def read_document(request: dict, runtime: Runtime) -> dict:
     inventories = [
         _show_command(runtime, path, ("status", name, str(path))) for name, _ in _read_schema_types(request["schema"])
     ]
-    last = _list_entities(runtime, path)[-1]
-    shown = _show_command(runtime, path, ("show", f"@{last['type']}.{last['name']}", str(path)))
-    return {"schema_version": SCHEMA_VERSION, "text": "\n".join([*inventories, shown])}
+    return {"schema_version": SCHEMA_VERSION, "text": "\n".join([*inventories, *_show_last_entity(runtime, path)])}
+
+
+def _show_last_entity(runtime: Runtime, path: Path) -> list[str]:
+    entities = _list_entities(runtime, path)
+    if not entities:
+        return []
+    last = entities[-1]
+    return [_show_command(runtime, path, ("show", f"@{last['type']}.{last['name']}", str(path)))]
 
 
 def detect_entry(request: dict, runtime: Runtime) -> dict:

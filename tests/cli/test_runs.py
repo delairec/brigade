@@ -281,7 +281,7 @@ class BrigadeRunsListOfTheRunsOfAWaveOrOfATaskTest(RunsTestCase):
         self.assertEqual(
             completed.stdout.splitlines(),
             [
-                "run                      procedure  slot   role     project  state     outcome",
-                f"{self.s3_of_cafe}  deliver    build  builder  -        finished  done",
+                "run                      procedure  slot   role     project  wave     task  state     outcome",
+                f"{self.s3_of_cafe}  deliver    build  builder  -        cafe_w1  S3    finished  done",
             ],
         )

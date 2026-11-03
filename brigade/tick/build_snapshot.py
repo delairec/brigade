@@ -22,7 +22,7 @@ from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_preflighted import TaskPreflighted
-from brigade.ledger.task_state import TaskState
+from brigade.ledger.task_state import QUOTA_RESUME_REASON, TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
@@ -454,11 +454,25 @@ def _list_task_runs(reading: WaveReading, wave: str, task: str) -> list[RunFinis
     ]
 
 
+def _is_quota_event_of_task(event, wave: str, task: str) -> bool:
+    if isinstance(event, RunFinished):
+        return event.wave == wave and event.task == task
+    return (
+        isinstance(event, TaskState)
+        and event.wave == wave
+        and event.task == task
+        and event.reason == QUOTA_RESUME_REASON
+    )
+
+
 def _read_rate_limit(reading: WaveReading, wave: str, task: str) -> RateLimit | None:
-    finished = _list_task_runs(reading, wave, task)
-    if not finished or finished[-1].error_class != RATE_LIMIT or finished[-1].run in reading.live_runs:
+    quota_events = [event for event in reading.events if _is_quota_event_of_task(event, wave, task)]
+    if not quota_events or not isinstance(quota_events[-1], RunFinished):
         return None
-    return RateLimit(reset=finished[-1].reset)
+    last = quota_events[-1]
+    if last.error_class != RATE_LIMIT or last.run in reading.live_runs:
+        return None
+    return RateLimit(reset=last.reset)
 
 
 def _read_rate_limits(reading: WaveReading, now: datetime) -> tuple[RateLimit, ...]:
