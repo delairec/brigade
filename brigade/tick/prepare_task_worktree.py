@@ -31,7 +31,7 @@ from brigade.system.write_text_atomically import write_text_atomically
 from brigade.tick.actions import LaunchTask
 from brigade.tick.ignore_worktrees import ignore_worktrees
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
-from brigade.tick.name_cancelled_task_branches import name_cancelled_task_branches
+from brigade.tick.name_ended_task_branches import name_ended_task_branches
 from brigade.tick.name_task_branch import name_task_branch
 from brigade.waves.locate_forge_branch import locate_forge_branch
 from brigade.waves.read_task_state import PARKED_STATE
@@ -75,7 +75,7 @@ def _keep_uncommitted_changes(runtime: Runtime, worktree: BranchWorktree, task: 
         CommitRequest(
             repository=worktree.path,
             files=(WHOLE_WORKTREE,),
-            message=f"chore(tick): keep the changes of @TASK.{task} left uncommitted in a cancelled wave",
+            message=f"chore(tick): keep the changes of @TASK.{task} left uncommitted in an ended wave",
         ),
     )
 
@@ -86,8 +86,8 @@ def _open_worktree(runtime: Runtime, repository: Path, worktree: BranchWorktree,
     if held == worktree.branch:
         return True
     found = find_branch(runtime.run_process, repository, worktree.branch)
-    cancelled = name_cancelled_task_branches(read_ledger(runtime.paths.state_root).entries, action.project, action.task)
-    if held in cancelled:
+    ended = name_ended_task_branches(read_ledger(runtime.paths.state_root).entries, action.project, action.task)
+    if held in ended:
         _keep_uncommitted_changes(runtime, worktree, action.task)
         (switch_worktree_to_branch if found else switch_worktree_to_new_branch)(runtime.run_process, worktree)
     elif found:

@@ -5,13 +5,13 @@ from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.wave_cancelled import WaveCancelled
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_started import WaveStarted
-from brigade.tick.name_cancelled_task_branches import name_cancelled_task_branches
+from brigade.tick.name_ended_task_branches import name_ended_task_branches
 
 INSTANT = datetime(2026, 10, 28, 19, 45, tzinfo=UTC)
 
 
-class NameCancelledTaskBranchesTest(unittest.TestCase):
-    def test_should_name_the_branch_of_the_task_in_each_cancelled_wave_of_the_project(self):
+class NameEndedTaskBranchesTest(unittest.TestCase):
+    def test_should_name_the_branch_of_the_task_in_each_closed_or_cancelled_wave_of_the_project(self):
         # Arrange
         entries = (
             LedgerEntry(
@@ -36,7 +36,7 @@ class NameCancelledTaskBranchesTest(unittest.TestCase):
         )
 
         # Act
-        branches = name_cancelled_task_branches(entries, "shop", "S3")
+        branches = name_ended_task_branches(entries, "shop", "S3")
 
         # Assert
-        self.assertEqual(branches, frozenset({"task/shop_w2/S3"}))
+        self.assertEqual(branches, frozenset({"task/shop_w1/S3", "task/shop_w2/S3"}))

@@ -5596,3 +5596,35 @@ DECISION AResumeAfterTheQuotaResetEndsTheStopOfItsTaskAndRunsListNamesTheWaveAnd
 		+ "normal que ça n'apparaisse pas dans brigade runs list... ok corrige le défaut en quick"
 		+ "fix + l'affichage de runs list. »"
 		REF @TASK.B228
+
+DECISION ATaskCarriedIntoANewWaveStartsAgainFromTheWaveBranch
+	TITLE "a task carried into a new wave from an ended wave, closed or cancelled, starts again"
+		+ "from the wave branch: the tick carries no commit of the branch the task left in the"
+		+ "ended wave"
+	STATUS active
+	DESC "the tick launching a task whose worktree holds the branch of the same task in an ended"
+		+ "wave, closed or cancelled, takes the worktree over as @TASK.B211 sets for a cancelled"
+		+ "wave: the uncommitted changes committed on the old branch, the old branch kept, the"
+		+ "worktree switched to the new task branch cut from the wave branch"
+		REF @TASK.B211
+	DESC "no commit of the old branch is carried onto the new task branch: the build run of the new"
+		+ "wave does again the work the old branch holds"
+	DESC "binds the fix of pull request 339 and @TASK.B211"
+		REF @TASK.B211
+	REJECTED "the commits of the old branch missing from the new task branch cherry-picked onto it"
+		+ "by the tick before the run: the user chose to start again, « A : repartir de zéro », the"
+		+ "old branch being kept"
+	RATIONALE "B39, parked in brigade_w19 then carried into brigade_w21 alone, left 4ea09b12, its"
+		+ "SPEC 1, on the local branch task/brigade_w19/B39; the run of brigade_w21 does not see it"
+		+ "and does the SPEC again. Once SPEC 12 of @TASK.B232 gives a task one branch whatever the"
+		+ "wave, the branch taken over holds its commits and nothing is left behind"
+		REF @TASK.B232
+	SOURCE "the user's ruling of 2026-11-03 on the question of pull request 339, « Le corpus ne dit"
+		+ "pas si le travail d'une tâche dans une wave terminée la suit dans la nouvelle. Que doit"
+		+ "faire le tick de ce travail ? »: « A : repartir de zéro », the option « Ce que fait la"
+		+ "#339, comme B211 pour une wave annulée : l'ancienne branche reste en local et le run de"
+		+ "brigade_w21 refait SPEC 1 à partir de la branche de wave. Rien n'est perdu, mais le"
+		+ "travail est refait. »; the alternative « B : cherry-pick », « Avant le run, le tick"
+		+ "reporte sur la nouvelle branche de tâche les commits de l'ancienne branche qui n'y sont"
+		+ "pas encore. », refused"
+		REF @TASK.B211
