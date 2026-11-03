@@ -245,8 +245,11 @@ class SpawnRunningAWhileDouble:
 class ExitedProcessDouble:
     pid = 4242
 
+    def __init__(self, exit_code: int = 0):
+        self._exit_code = exit_code
+
     def wait(self, **_limit) -> int:
-        return 0
+        return self._exit_code
 
 
 class ProcessEndingItsLineAfterAPollDouble:
@@ -315,15 +318,17 @@ LINE_OF_201_CHARACTERS_CUT_TO_200 = (
 
 
 class SpawnDouble:
-    def __init__(self, output: str = "the client finished the task"):
+    def __init__(self, output: str = "the client finished the task", exit_code: int = 0, stderr: str = ""):
         self.requests = []
         self.output = output
+        self.exit_code = exit_code
+        self.stderr = stderr
 
     def spawn(self, request):
         self.requests.append(request)
         request.stdout.write_text(self.output, encoding="utf-8")
-        request.stderr.write_text("", encoding="utf-8")
-        return ExitedProcessDouble()
+        request.stderr.write_text(self.stderr, encoding="utf-8")
+        return ExitedProcessDouble(self.exit_code)
 
 
 class ProcessStoppedAtTheLimitDouble:
@@ -336,10 +341,12 @@ class ProcessStoppedAtTheLimitDouble:
 class SpawnOutlivingTheLimitDouble:
     def spawn(self, request):
         request.stdout.write_text("Reading the task\n", encoding="utf-8")
-        request.stderr.write_text("", encoding="utf-8")
+        request.stderr.write_text(STDERR_OF_THE_CUT_CLIENT, encoding="utf-8")
         return ProcessStoppedAtTheLimitDouble()
 
 
+STDERR_OF_THE_CUT_CLIENT = "the client wrote this before the limit\n"
+STDERR_OF_THE_FAILED_CLIENT = "API Error: 529 overloaded\n"
 LAUNCH_INSTANT = datetime(2026, 10, 7, 9, 5, 0, tzinfo=UTC)
 
 
@@ -435,6 +442,48 @@ class RunSegmentTest(unittest.TestCase):
             },
         )
         self.assertEqual(request.stdin, "the brief of the run")
+
+    def test_should_keep_in_the_trail_the_stderr_of_the_client_exited_with_a_code_other_than_0(self):
+        # Arrange
+        traces = []
+        spawn = SpawnDouble(exit_code=1, stderr=STDERR_OF_THE_FAILED_CLIENT)
+        runtime = dataclasses.replace(
+            _create_runtime(self.root, spawn), trail=TrailWriter(traces.append, keep_stderr_as_is)
+        )
+
+        # Act
+        run_segment(_create_plan(self.root), FIRST_SEGMENT, runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            traces,
+            [
+                ProcessTrace(
+                    ("double-client", "--print"),
+                    str(self.root / "project"),
+                    "exited",
+                    1,
+                    ANY,
+                    stderr=STDERR_OF_THE_FAILED_CLIENT,
+                )
+            ],
+        )
+
+    def test_should_keep_in_the_trail_no_stderr_of_the_client_exited_with_0(self):
+        # Arrange
+        traces = []
+        spawn = SpawnDouble(stderr=STDERR_OF_THE_FAILED_CLIENT)
+        runtime = dataclasses.replace(
+            _create_runtime(self.root, spawn), trail=TrailWriter(traces.append, keep_stderr_as_is)
+        )
+
+        # Act
+        run_segment(_create_plan(self.root), FIRST_SEGMENT, runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            traces, [ProcessTrace(("double-client", "--print"), str(self.root / "project"), "exited", 0, ANY)]
+        )
 
     def test_should_refuse_a_description_of_the_progress_breaking_its_shape(self):
         # Arrange
@@ -669,7 +718,16 @@ class RunSegmentCutAtTheWallTimeLimitTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             traces,
-            [ProcessTrace(("double-client", "--print"), str(self.root / "project"), "cut", None, ANY)],
+            [
+                ProcessTrace(
+                    ("double-client", "--print"),
+                    str(self.root / "project"),
+                    "cut",
+                    None,
+                    ANY,
+                    stderr=STDERR_OF_THE_CUT_CLIENT,
+                )
+            ],
         )
 
     def test_should_leave_a_cut_segment_unmeasured_with_its_reason(self):
@@ -1001,7 +1059,7 @@ class RunSegmentStoppedWhileItsClientRunsTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             traces,
-            [ProcessTrace(("double-client", "--print"), str(self.root / "project"), "stopped", None, ANY)],
+            [ProcessTrace(("double-client", "--print"), str(self.root / "project"), "stopped", None, ANY, stderr="")],
         )
 
     def test_should_measure_the_session_named_at_launch_from_its_transcripts(self):
