@@ -4,6 +4,8 @@ from collections.abc import Callable
 from pathlib import Path
 
 from brigade.corpus.read_entities import read_entities
+from brigade.corpus.read_entity import Entity
+from brigade.errors import InvalidPattern
 from brigade.mining.scrubbing_rule import ScrubbingRule
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 from brigade.verify.check_privacy import BUILT_IN_PATTERNS
@@ -19,6 +21,15 @@ TOKEN_SHAPES = (
 )
 
 
+def _compile(pattern: str, kind: str, project: Entity) -> re.Pattern:
+    try:
+        return re.compile(pattern)
+    except re.error as error:
+        raise InvalidPattern(
+            f"the {kind} pattern {pattern} of the project {project.name} is no regular expression: {error}"
+        ) from None
+
+
 def _list_rules(run_process: Callable[[ProcessRequest], ProcessRecord], config_root: Path) -> list[ScrubbingRule]:
     rules = [
         ScrubbingRule(pattern, f"[{description.partition(' ')[2]}]", NO_PUBLIC_PATTERN)
@@ -26,8 +37,10 @@ def _list_rules(run_process: Callable[[ProcessRequest], ProcessRecord], config_r
     ]
     for project in read_entities(run_process, config_root, PROJECT_TYPE):
         patterns = read_privacy_patterns(project)
-        public = tuple(re.compile(pattern) for pattern in patterns.public)
-        rules.extend(ScrubbingRule(re.compile(pattern), PRIVATE_MARKER, public) for pattern in patterns.private)
+        public = tuple(_compile(pattern, "PUBLIC", project) for pattern in patterns.public)
+        rules.extend(
+            ScrubbingRule(_compile(pattern, "PRIVATE", project), PRIVATE_MARKER, public) for pattern in patterns.private
+        )
     return rules
 
 
