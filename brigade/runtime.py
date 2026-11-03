@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.ledger.read_ledger import LedgerReading, read_ledger
+from brigade.mining.read_text_scrubber import read_text_scrubber
 from brigade.system.paths import Paths, build_paths
 from brigade.system.poll_until_signalled import poll_until_signalled
 from brigade.system.process_trace import ProcessTrace
@@ -14,6 +15,7 @@ from brigade.system.render_trace import render_trace
 from brigade.system.resolve_plugin import PluginSources, resolve_plugin
 from brigade.system.run_process import ProcessRecord, ProcessRequest, run_process
 from brigade.system.spawn_process import SpawnRequest, spawn_process
+from brigade.system.stderr_masker import StderrMasker
 from brigade.system.trail_writer import TrailWriter
 from brigade.tick.read_live_blockers import read_live_blockers
 
@@ -51,8 +53,12 @@ def _choose_report(invocation: Invocation) -> Callable[[ProcessTrace], None]:
 
 
 def build_runtime(invocation: Invocation, environment: Mapping[str, str]) -> Runtime:
-    trail = TrailWriter(_choose_report(invocation))
     paths = build_paths(environment)
+
+    def read_scrubber() -> Callable[[str], str]:
+        return read_text_scrubber(run_recorded_process, paths.config_root)
+
+    trail = TrailWriter(_choose_report(invocation), StderrMasker(read_scrubber).mask)
     run_recorded_process = functools.partial(run_process, record_trace=trail.append, environment=environment)
     sources = PluginSources(executable_search_path=paths.executable_search_path, run_process=run_recorded_process)
     return Runtime(
