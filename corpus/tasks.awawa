@@ -15846,7 +15846,7 @@ TASK B234
 TASK B235
 	TITLE "A rebuild to an amended entity spends no repair round: the rounds of a task are spent"
 		+ "only by the repairs the tick launches on a failure the gate found"
-	STATUS draft
+	STATUS todo
 	TYPE fix
 	MILESTONE @MILESTONE.M6
 	COMPONENT "the tick"
