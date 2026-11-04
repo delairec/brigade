@@ -14651,7 +14651,12 @@ TASK B221
 TASK B222
 	TITLE "A task whose entity was amended after its pull request opened is rebuilt to the amended"
 		+ "entity by a run of the build slot on that pull request, never sent to the rebase slot"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-11-04 at the draft of @TASK.B235: its SPEC 4, the rebuild counting one"
+		+ "repair round and an amended task past its rounds parked before its rebuild, is made"
+		+ "false by SPEC 1 and SPEC 4 of B235, a rebuild spending no round and planned whatever the"
+		+ "rounds; the rebuild it delivers, SPEC 1 to 3, 5 and 6, stands as implemented"
+		REF @TASK.B235
 	DELIVERED_BY 285
 	TYPE fix
 	MILESTONE @MILESTONE.M10
@@ -15837,3 +15842,95 @@ TASK B234
 		+ "les supprimer ? », the 13 recorded integration branches with no worktree, « Oui, mêmes"
 		+ "garde-fous »; on « Ce nettoyage doit-il faire partie de B234 ? », the worktree of a"
 		+ "parked task of a closed wave, « Non, hors de B234 »"
+
+TASK B235
+	TITLE "A rebuild to an amended entity spends no repair round: the rounds of a task are spent"
+		+ "only by the repairs the tick launches on a failure the gate found"
+	STATUS draft
+	TYPE fix
+	MILESTONE @MILESTONE.M6
+	COMPONENT "the tick"
+	ROLE ada
+	SPEC "the repair rounds of a task are spent only by the repairs the tick launches on a failure"
+		+ "the gate found: a remediation, brigade/commands/tick.py:_launch_remediation, on the"
+		+ "findings of a verdict or of a preflight, and a check repair,"
+		+ "brigade/commands/tick.py:_launch_check_repair, on the checks of a preflight, the two"
+		+ "launches of brigade/tick/plan.py:_launch_repair; the rebuild of a task to its entity"
+		+ "amended on the branch of its wave, brigade/commands/tick.py:_rebuild_task, spends none,"
+		+ "where today brigade/waves/count_repair_rounds.py counts its task.state fixing as it"
+		+ "counts a repair's"
+	SPEC "brigade/waves/count_repair_rounds.py tells the task.state fixing of a rebuild apart by"
+		+ "its reason, recorded from a constant of brigade/ledger/task_state.py that opens the"
+		+ "reason naming the amendment, as brigade/waves/is_requeue.py tells a requeue apart by"
+		+ "REQUEUE_REASON; the ledger keeps no other mark, and the task.state fixing already"
+		+ "recorded by a rebuild are counted under this rule at the next tick"
+	SPEC "a rebuild launched again on the same amendment after a rebuild that ended without"
+		+ "pushing, turn_limit, dead or any outcome but blocked, spends no round either: no launch"
+		+ "of a rebuild spends one, whatever the outcome of the one before, and no count of its own"
+		+ "bounds the rebuilds, as none bounds the runs of the rebase slot; a repair launched again"
+		+ "on a task left fixing still spends one round, as DESC 4 of DECISION"
+		+ "ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone says"
+	SPEC "brigade/tick/plan.py:_decide_rebuild plans the rebuild of an amended task whatever its"
+		+ "repair rounds, as _decide_catch_up rebases a behind task whatever its rounds since TASK"
+		+ "B219, where today it parks the task past the rounds of the policy before a rebuild"
+	SPEC "a task whose preflight fails after its rebuild is launched the repair of that failure,"
+		+ "its first round since its last verdict or its last requeue, where today the task is"
+		+ "parked on the rounds its rebuilds spent and no repair runs"
+	SPEC "tests/unit/tick/test_build_snapshot_from_the_corpus.py proves, on literal rows, a"
+		+ "task.state fixing carrying the reason of a rebuild counting no round, two of them in a"
+		+ "row counting none, and a repair launched after them counting one;"
+		+ "tests/unit/tick/test_plan.py proves an amended task past its rounds planned its rebuild,"
+		+ "replacing test_should_park_an_amended_task_past_its_repair_rounds_on_the_rounds_spent;"
+		+ "tests/cli gains at most one flow through the fake adapter: a task rebuilt twice, the"
+		+ "first rebuild ended turn_limit, whose preflight then fails a check, and the next tick"
+		+ "launches its check repair"
+	RATIONALE "read on 2026-11-04 in the ledger 2026-11.jsonl, @TASK.B232 in brigade_w22, pull"
+		+ "request #348: after the requeue of 2026-11-03T23:15:06Z the tick recorded task.state"
+		+ "fixing « the entity of the task amended on integration/brigade_w22 » at 23:25:00Z, round"
+		+ "1; the rebuild 20261103T232500Z-cd603c ended turn_limit at 23:39:26Z without pushing;"
+		+ "the tick recorded the same fixing at 23:40:00Z, round 2, and the rebuild"
+		+ "20261103T234000Z-b81a07 pushed c37251d9; the preflight of 2026-11-04T00:20:00Z found the"
+		+ "check « Dead code by vulture » failed, nine unused symbols, and the same tick parked the"
+		+ "task « past 2 repair rounds », no repair ever launched on that failure; vulture runs in"
+		+ "the continuous integration alone, so the rebuild could not see the finding before"
+		+ "pushing"
+		REF @TASK.B232
+	RATIONALE "DESC 1 of"
+		+ "@DECISION.ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone"
+		+ "counts one round for each launch of the build slot, and DESC 4 one more for a task left"
+		+ "fixing launched again; a rebuild is a run of the build slot launched as a delivery to"
+		+ "the amended SPEC, not on a failure the gate found, which is what VERIFY_ROUNDS bounds"
+		+ "under that decision, the repair of one verdict; this task adds the rebuild to the"
+		+ "launches that spend none, to be recorded in that decision at delivery as DESC 2 recorded"
+		+ "the rate limit and DESC 3 the rebase slot; it makes SPEC 4 of @TASK.B222 false, and B222"
+		+ "is archived at the draft of this task; the relaunch of SPEC 3 is the same decision taken"
+		+ "again by brigade/tick/plan.py:_decide_catch_up on the amendment still standing, so it"
+		+ "spends what the first launch spends, none"
+		REF @DECISION.ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone
+		REF @TASK.B222
+	RATIONALE "SPEC 4 follows @TASK.B219: a park before a rebuild names a repair no repair ran, as"
+		+ "the park before a conflicting rebase did; the rebuild and the rebase both bring the"
+		+ "branch to what the wave branch says, and neither answers a finding; no bound of its own"
+		+ "replaces the round, REJECTED 2 of the decision having refused a second limit on the runs"
+		+ "of the rebase slot, so a rebuild that never pushes is launched at each tick as a rebase"
+		+ "run that never resolves its conflict is"
+		REF @TASK.B219
+	RATIONALE "rejected: a rebuild counted as a repair round of the verdict to come, as SPEC 4 of"
+		+ "@TASK.B222 did: the budget of @TASK.B232 was spent by two rebuilds before the gate found"
+		+ "anything, the second a relaunch after a turn_limit, and the first finding parked the"
+		+ "task at once, the parks of 2026-10-28 on @TASK.B210 and @TASK.B28 over again, which the"
+		+ "count since the last verdict of @TASK.B217 was meant to end"
+		REF @TASK.B222
+		REF @TASK.B232
+		REF @TASK.B210
+		REF @TASK.B28
+		REF @TASK.B217
+	RATIONALE "distinct from @TASK.B231, the park of a task whose run handed over, and from"
+		+ "@TASK.B219, the rebase whatever the rounds: neither counts a round"
+		REF @TASK.B231
+		REF @TASK.B219
+	SOURCE "the user's ruling of 2026-11-04 in session, on the park of @TASK.B232 of"
+		+ "2026-11-04T00:20Z: « Il faut ne compter que les vrai tours de réparation »; on the"
+		+ "options, « a : un rebuild pour amendement ne compte plus comme repair round »; on the"
+		+ "milestone, « M6 Hardening »"
+		REF @TASK.B232
