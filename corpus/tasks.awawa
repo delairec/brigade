@@ -15486,7 +15486,8 @@ TASK B232
 		+ "and merged into it by its pull request; a wave is a batch of the ledger with no branch"
 		+ "and no pull request of its own; the report of a milestone, run before its pull request"
 		+ "opens, replaces the report of a wave"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 348
 	TYPE feat
 	MILESTONE @MILESTONE.M6
 	COMPONENT "tick"
