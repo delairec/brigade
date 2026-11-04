@@ -44,6 +44,7 @@ from brigade.tick.is_study_due import is_study_due
 from brigade.waves.read_task_state import PARKED_STATE
 
 BUILD_SLOT = "build"
+REBASE_SLOT = "rebase"
 WAITING_STATE = "queued"
 MERGED_STATE = "merged"
 RUNNING_STATE = "running"
@@ -558,6 +559,7 @@ def _is_wave_pull_request_ready(wave: WaveFacts, project: ProjectFacts, now: dat
         and _are_checks_passed(pull_request, project, now)
         and wave.unresolved_threads == 0
         and (project.review != APPROVAL_REVIEW or pull_request.review == APPROVED_REVIEW)
+        and not wave.behind_milestone
     )
 
 
@@ -648,6 +650,30 @@ def _is_rebase_due(milestone: MilestoneFacts) -> bool:
     return milestone.behind_main and not milestone.rebase_run_live and milestone.blocked_rebase is None
 
 
+def _is_wave_rebase_due(wave: WaveFacts, project: ProjectFacts) -> bool:
+    return (
+        wave.behind_milestone
+        and wave.blocked_rebase is None
+        and wave.pause is None
+        and not any(
+            live.slot == REBASE_SLOT and live.wave == wave.wave and live.task is None for live in project.live_runs
+        )
+    )
+
+
+def _is_milestone_rebase_due(milestone: MilestoneFacts, snapshot: Snapshot) -> bool:
+    if _is_rebase_due(milestone):
+        return True
+    if milestone.rebase_run_live or (milestone.behind_main and milestone.blocked_rebase is not None):
+        return False
+    projects = {project.name: project for project in snapshot.projects}
+    return any(
+        _is_wave_rebase_due(wave, projects[wave.project])
+        for wave in snapshot.waves
+        if wave.project == milestone.project and wave.wave in milestone.open_waves
+    )
+
+
 def _plan_milestone_rebases(snapshot: Snapshot) -> tuple:
     return tuple(
         RebaseMilestone(
@@ -657,7 +683,7 @@ def _plan_milestone_rebases(snapshot: Snapshot) -> tuple:
             waves=milestone.open_waves,
         )
         for milestone in snapshot.milestones
-        if _is_rebase_due(milestone)
+        if _is_milestone_rebase_due(milestone, snapshot)
     )
 
 

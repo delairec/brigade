@@ -3148,7 +3148,7 @@ class TickOpeningTheIntegrationPullRequestTest(unittest.TestCase):
         answers = {
             **MACHINE_ANSWERS,
             ("git", "ls-remote"): ProcessAnswer(stdout=""),
-            ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/tides"): ProcessAnswer(exit_code=1),
+            ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/tides"): NO_LOCAL_BRANCH,
             ("git", "ls-remote", "--quiet", "--exit-code", "--heads", "origin", "refs/heads/integration/tides"): (
                 ProcessAnswer(exit_code=2)
             ),
@@ -3334,7 +3334,7 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
 
     def _miss_the_branch(self, branch: str) -> None:
         verify = ("git", "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}")
-        self.machine.answers[verify] = ProcessAnswer(exit_code=1)
+        self.machine.answers[verify] = NO_LOCAL_BRANCH
 
     def test_should_start_a_wave_of_the_candidates_of_a_project_without_one(self):
         # Arrange
@@ -3395,6 +3395,10 @@ FORGE_MILESTONE_BRANCH_DESCENT = ("git", "merge-base", "--is-ancestor", "origin/
 REBASE_OF_THE_MILESTONE_BRANCH = ("git", "rebase", "main")
 FORGE_REBASE_OF_THE_MILESTONE_BRANCH = ("git", "rebase", "origin/main")
 REBASE_OF_THE_WAVE_BRANCH = ("git", "rebase", "integration/tides")
+WAVE_BRANCH_DESCENT = ("git", "merge-base", "--is-ancestor", "integration/tides", "integration/M4")
+WAVE_WORKTREE_DESCENT = ("git", "merge-base", "--is-ancestor", "integration/tides", "HEAD")
+NOT_DESCENDING = ProcessAnswer(exit_code=1)
+NO_LOCAL_BRANCH = ProcessAnswer(exit_code=1)
 OUTPUTS_OF_A_MILESTONE_BRANCH_MAIN_HAS_OUTRUN = {
     **MACHINE_ANSWERS,
     ("git", "branch", "--quiet"): ProcessAnswer(),
@@ -3413,7 +3417,7 @@ BLOCKED_REBASE_OF_THE_MILESTONE_BRANCH = {
 
 class MilestoneBranchRebasingRunnerDouble(ScriptedProcessRunner):
     def __init__(self, answers: dict, fallback, rebase: tuple, descent: tuple):
-        super().__init__({**answers, descent: ProcessAnswer(exit_code=1)}, fallback)
+        super().__init__({**answers, descent: NOT_DESCENDING}, fallback)
         self.head_after_rebase = WAVE_HEAD
         self.rebase = rebase
         self.descent = descent
@@ -3448,9 +3452,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         self.machine = MilestoneBranchRebasingRunnerDouble(
             {
                 **OUTPUTS_OF_A_MILESTONE_BRANCH_MAIN_HAS_OUTRUN,
-                ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/tidepool_w1"): ProcessAnswer(
-                    exit_code=1
-                ),
+                ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/tidepool_w1"): NO_LOCAL_BRANCH,
                 **(answers or {}),
             },
             fallback=create_corpus_double(corpus),
@@ -3622,9 +3624,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
     def test_should_rebase_no_open_wave_branch_whose_worktree_a_live_run_holds(self):
         # Arrange
         write_ledger(self.root, [CUT_OF_M4, WAVE_STARTED])
-        self.machine.answers[("git", "merge-base", "--is-ancestor", "integration/tides", "HEAD")] = ProcessAnswer(
-            exit_code=1
-        )
+        self.machine.answers[WAVE_WORKTREE_DESCENT] = NOT_DESCENDING
         self.machine.answers[REBASE_OF_THE_WAVE_BRANCH] = ProcessAnswer()
         live_run = {
             **create_run_record(FIRST_RUN, "tidepool_w16", "T7"),
@@ -3638,6 +3638,20 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         # Assert
         self.assertIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
         self.assertNotIn(REBASE_OF_THE_WAVE_BRANCH, self.machine.argvs)
+
+    def test_should_rebase_an_open_wave_branch_its_milestone_branch_outran_once_main_no_longer_outruns_it(self):
+        # Arrange
+        write_ledger(self.root, [CUT_OF_M4, WAVE_STARTED])
+        self.machine.answers[MILESTONE_BRANCH_DESCENT] = ProcessAnswer()
+        self.machine.answers[WAVE_BRANCH_DESCENT] = NOT_DESCENDING
+        self.machine.answers[WAVE_WORKTREE_DESCENT] = NOT_DESCENDING
+        self.machine.answers[REBASE_OF_THE_WAVE_BRANCH] = ProcessAnswer()
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertIn(REBASE_OF_THE_WAVE_BRANCH, self.machine.argvs)
 
     def test_should_name_on_stderr_the_milestone_branch_whose_rebase_run_ended_blocked_with_its_question(self):
         # Arrange
@@ -3670,7 +3684,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
 
 OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT = {
     **MACHINE_ANSWERS,
-    ("git", "merge-base", "--is-ancestor", "integration/M4", "task/M4/T7"): ProcessAnswer(exit_code=1),
+    ("git", "merge-base", "--is-ancestor", "integration/M4", "task/M4/T7"): NOT_DESCENDING,
     ("git", "rebase", "integration/M4"): ProcessAnswer(
         exit_code=1, stderr="CONFLICT (content): Merge conflict in src/tides.py"
     ),

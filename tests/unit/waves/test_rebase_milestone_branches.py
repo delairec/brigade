@@ -350,6 +350,16 @@ class RebaseMilestoneBranchesStoppedOnAConflictTest(RebaseMilestoneBranchesTestC
             ],
         )
 
+    def test_should_touch_no_wave_branch_when_the_rebase_of_the_milestone_branch_stopped_on_a_conflict(self):
+        # Arrange
+        self.rebase_exit_codes[MILESTONE_WORKTREE] = STOPPED_ON_A_CONFLICT
+
+        # Act
+        self.rebase()
+
+        # Assert
+        self.assertEqual(select_argvs_run_in(self.processes.requests, WAVE_WORKTREE), [])
+
     def test_should_push_no_branch_whose_rebase_stopped(self):
         # Arrange
         self.rebase_exit_codes[MILESTONE_WORKTREE] = STOPPED_ON_A_CONFLICT
