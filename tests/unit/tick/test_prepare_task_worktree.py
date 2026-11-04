@@ -169,6 +169,40 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
             ],
         )
 
+    def test_should_cut_a_task_naming_no_milestone_from_main_without_committing_on_it(self):
+        # Arrange
+        runner = self.create_runner(
+            {"name": "MAIN", "atoms": ['"main"']},
+            answers={
+                ("git", "cat-file", "-p", "main:.gitignore"): ProcessAnswer(stdout="*.pyc\n"),
+                ("git", "merge-base", "--is-ancestor", "main", "HEAD"): SILENT_SUCCESS,
+            },
+        )
+        action = LaunchTask(
+            project="shop", wave="w1", branch="main", task="B1", task_branch="feature/B1-task", checks_passed=False
+        )
+
+        # Act
+        prepared = prepare_task_worktree(
+            create_test_runtime(self.paths, run_process=runner), Configuration(), action, read_no_environment
+        )
+
+        # Assert
+        self.assertEqual(prepared.worktree, BranchWorktree(path=WORKTREE, branch="feature/B1-task", start="main"))
+        self.assertEqual(
+            runner.commands[-5:],
+            [
+                (
+                    str(self.paths.config_root),
+                    ("awawa", "show", "@PROJECT.shop", "--json", str(self.paths.config_root)),
+                ),
+                ("/srv/shop", LIST_WORKTREES),
+                ("/srv/shop", FIND_TASK_BRANCH),
+                ("/srv/shop", ("git", "worktree", "add", "--quiet", "-b", "feature/B1-task", str(WORKTREE), "main")),
+                (str(WORKTREE), ("git", "merge-base", "--is-ancestor", "main", "HEAD")),
+            ],
+        )
+
 
 class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
     def test_should_reuse_the_worktree_of_the_task_and_run_its_setup_again(self):
