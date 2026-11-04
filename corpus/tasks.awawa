@@ -15560,6 +15560,8 @@ TASK B232
 		IMPL "brigade/tasks/open_task_pull_request.py::def _open_on_forge("
 		IMPL "brigade/tick/prepare_task_worktree.py::start=locate_forge_branch("
 		IMPL "brigade/tasks/open_task_pull_request.py::def _open_on_forge("
+		IMPL "tests/unit/tick/test_prepare_task_worktree.py::def"
+			+ "test_should_cut_a_task_naming_no_milestone_from_main_without_committing_on_it(self):"
 	SPEC "a task pull request whose base is the branch of its milestone is merged by the tick into"
 		+ "it on the gate of DESC 9 of the decision"
 		+ "AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce, where today"
