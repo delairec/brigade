@@ -5813,4 +5813,4 @@ DECISION AMilestoneBranchRebasedOntoMainIsCheckedBeforeItsPushAndARedHeadIsRepai
 		+ "the branch by hand"
 		REF @TASK.B174
 	SOURCE "the user's ruling of 2026-11-04 on the defect, « on le passe en quick fix », with no"
-		+ "TASK entity"
+		+ "TASK entity, delivered by pull request #354"
