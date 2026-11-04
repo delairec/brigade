@@ -3442,8 +3442,7 @@ TASK B38
 	ROLE ada
 
 TASK B39
-	TITLE "The wiki follows the commands, and M6 is proven on the closed waves of one range against"
-		+ "the baseline of the user's notes"
+	TITLE "The wiki follows the commands"
 	STATUS todo
 	TYPE docs
 	MILESTONE @MILESTONE.M6
@@ -3452,46 +3451,32 @@ TASK B39
 	SPEC "a test fails when a command brigade --help lists, subcommands included, has no line"
 		+ "naming it in wiki/Command-reference.md, or when a page wiki/Home.md names has no file"
 		+ "under wiki/"
-	SPEC "a wiki page quotes the output of brigade ledger --wave for each closed wave of one range"
-		+ "of days that the tick delivered on a registered project, at least ten tasks merged in"
-		+ "total across those waves, the range opening after TASK B37, #309, reached main, which"
-		+ "the tick runs from"
-	SPEC "the same page quotes brigade ledger compare of that range against the reference figures"
-		+ "of the user's notes of 2026-10-03: steps to first edit p50 23, steps per task run p50"
-		+ "47, 146 oversized output steps over 67 launches"
-	AFTER @TASK.B37
-	AFTER @TASK.B175
-	RATIONALE "M6 closes on proof that brigade delivers unattended on a real project and costs less"
-		+ "than the agents launched by hand: the exit criterion of the plan, a real wave of about"
-		+ "ten tasks and the comparison against the baseline of 26/09 to 03/10"
-	RATIONALE "the baseline predates the ledger, which starts on 2026-10-07: it is the figures of"
-		+ "the user's notes on their largest project (119 sessions, 217 launches), given to brigade"
-		+ "ledger compare as reference figures, which @TASK.B175 delivers"
-		REF @TASK.B175
 	RATIONALE "the documentation is kept on the wiki task by task, as"
 		+ "@DECISION.TheDocumentationIsWrittenInWikiAndPublishedToTheGitHubWikiOnEachPushToMain"
 		+ "rules; the test keeps it from drifting from the commands"
 		REF @DECISION.TheDocumentationIsWrittenInWikiAndPublishedToTheGitHubWikiOnEachPushToMain
-	SOURCE "the Artifact Brigade Blueprint, plan, M6 and the measured figures of the user's notes"
+	RATIONALE "the measure of M6 against the baseline of the user's notes, SPEC 2 and 3 of this"
+		+ "task until 2026-11-04, is @TASK.B236, taken after the fact: its range opens after"
+		+ "@TASK.B37 reached main, which the pull request of M6 carries, and that pull request"
+		+ "waited for this task; the user ruled M6 delivered on this test alone"
+		REF @TASK.B236
+		REF @TASK.B37
+	SOURCE "the Artifact Brigade Blueprint, plan, M6"
 	SOURCE "the user's rulings of 2026-11-01 in the refinement of M6: « c'est quoi l'objectif de la"
 		+ "tâche? », then « Oui, ces 3 SPEC »; the comparison moved to @TASK.B175, « B175 +"
 		+ "comparaison de B39 »"
 		REF @TASK.B175
-	SOURCE "the user's ruling of 2026-11-03 on the question of run 20261103T111517Z-b08ac4 of wave"
-		+ "brigade_w21, « b : plusieurs waves (Recommandé) », the option « On réécrit les SPEC 2 et"
-		+ "3 : la preuve porte sur plusieurs waves fermées d'une même période, au moins 10 tâches"
-		+ "fusionnées au total, comparées à la référence. La période doit commencer après la #309"
-		+ "(B37), sinon deux mesures manquent. M6 reste prouvé sur des livraisons réelles, et B39"
-		+ "peut être livré maintenant. »; the question, « Aucune vague ne remplit cette condition,"
-		+ "et aucune tâche du plan ne la produit : la plus grosse vague du ledger en compte 6. »;"
-		+ "the option rejected, « a : scinder B39 », « B39 est livré avec la SPEC 1 seulement, et"
-		+ "une nouvelle tâche reprend les SPEC 2 et 3 en attendant une wave de 10 tâches. Mais"
-		+ "aucun plan n'en produit une : M6 resterait bloqué sur cette tâche. »: SPEC 2 and 3 cover"
-		+ "the closed waves of one range, at least ten merged tasks in total, compared against the"
-		+ "reference, the range opening after @TASK.B37 reached main; #309 was merged into"
-		+ "integration/brigade_w19 on 2026-11-01T23:22Z and stands in integration/hardening by"
-		+ "#302, not in main at e5704385"
+	SOURCE "the user's ruling of 2026-11-04 on the question of run 20261103T232500Z-289045 of wave"
+		+ "brigade_w21, which parked this task on SPEC 2 and 3, #309 absent from main, git"
+		+ "merge-base --is-ancestor 5a5219e6 origin/main exit 1: « option B, la mesure se fera"
+		+ "après coup », the option « B : séparer la mesure de M6 — B39 est livrée avec son test"
+		+ "wiki seul, M6 part dans main ; une nouvelle tâche hors M6 fait la mesure ensuite »; SPEC"
+		+ "2 and 3 moved to @TASK.B236 with the RATIONALE and SOURCE that served them, and with"
+		+ "AFTER @TASK.B37 and @TASK.B175, which SPEC 1 needs not; SPEC 1 stands on"
+		+ "task/brigade_w21/B39 at 31c25705"
+		REF @TASK.B236
 		REF @TASK.B37
+		REF @TASK.B175
 
 TASK B40
 	TITLE "Evaluate rtk as a candidate filter of shell output"
@@ -12342,8 +12327,8 @@ TASK B175
 		+ "task run p50 and oversized output steps per launch"
 	RATIONALE "run.finished already carries cost_usd and usage, brigade/ledger/run_finished.py:22"
 		+ "and 31; the reference figures carry a baseline that predates the ledger, as the"
-		+ "comparison of @TASK.B39 needs"
-		REF @TASK.B39
+		+ "comparison of @TASK.B236 needs"
+		REF @TASK.B236
 	SOURCE "use-case map of 2026-10-16, findings C1, C5, C3 and C4"
 	SOURCE "the user's rulings of 2026-11-01 in the refinement of M6: « B175 + comparaison de B39 »"
 
@@ -15934,3 +15919,106 @@ TASK B235
 		+ "options, « a : un rebuild pour amendement ne compte plus comme repair round »; on the"
 		+ "milestone, « M6 Hardening »"
 		REF @TASK.B232
+
+TASK B236
+	TITLE "M6 is proven after the fact on the closed waves of one range, at least ten tasks merged"
+		+ "after B37 reached main, against the baseline of the user's notes"
+	STATUS todo
+	TYPE docs
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "docs"
+	ROLE ada
+	SPEC "a wiki page quotes the output of brigade ledger --wave for each closed wave of one range"
+		+ "of days that the tick delivered on a registered project, at least ten tasks merged in"
+		+ "total across those waves, the range opening after TASK B37, #309, reached main, which"
+		+ "the tick runs from"
+	SPEC "the same page quotes brigade ledger compare of that range against the reference figures"
+		+ "of the user's notes of 2026-10-03: steps to first edit p50 23, steps per task run p50"
+		+ "47, 146 oversized output steps over 67 launches"
+	AFTER @TASK.B37
+	AFTER @TASK.B175
+	AFTER @TASK.B140
+	AFTER @TASK.B177
+	AFTER @TASK.B52
+	AFTER @TASK.B53
+	AFTER @TASK.B163
+	AFTER @TASK.B229
+	AFTER @TASK.B230
+	RATIONALE "the exit criterion of the plan is proof that brigade delivers unattended on a real"
+		+ "project and costs less than the agents launched by hand: a real wave of about ten tasks"
+		+ "and the comparison against the baseline of 26/09 to 03/10; the proof is taken after M6"
+		+ "reached main, as the user ruled on 2026-11-04: the measures it needs, steps to first"
+		+ "edit of @TASK.B37 and the comparison of @TASK.B175, run in the tick only once M6, which"
+		+ "carries both, is merged into main, and the pull request of M6 waited for the proof while"
+		+ "@TASK.B39 carried it"
+		REF @TASK.B37
+		REF @TASK.B175
+		REF @TASK.B39
+	RATIONALE "the baseline predates the ledger, which starts on 2026-10-07: it is the figures of"
+		+ "the user's notes on their largest project (119 sessions, 217 launches), given to brigade"
+		+ "ledger compare as reference figures, which @TASK.B175 delivers"
+		REF @TASK.B175
+	RATIONALE "in @MILESTONE.ADD0 on the user's criterion of 2026-11-04, a milestone after which"
+		+ "ten tasks have passed, « ça dépend du nombre de tâches dans ces milestone »: on"
+		+ "2026-11-04 M7 had 4 open tasks, M8 5 draft tasks, 9 in all, and ADD0, planned after M8,"
+		+ "22 draft tasks"
+		REF @MILESTONE.ADD0
+	RATIONALE "the run of this task starts only once the sample can exist, so that it never parks"
+		+ "on a missing sample as @TASK.B39 did on 2026-11-03: its AFTER names the last open tasks"
+		+ "of M7, @TASK.B140 and @TASK.B177, which every other open task of M7 precedes, the last"
+		+ "tasks of M8, @TASK.B52, @TASK.B53 and @TASK.B163, which @TASK.B50 and @TASK.B51 precede,"
+		+ "and the two tasks of ADD0 that follow a task of M6 or M7, @TASK.B229 and @TASK.B230; the"
+		+ "open tasks of M7 all follow @TASK.B46, AFTER @TASK.B232 of M6, so they merge after M6"
+		+ "reached main: the 4 of M7, @TASK.B229 and @TASK.B230 count whatever happens, 6, and the"
+		+ "5 tasks of M8 count while M8 starts after M6 reached main, 11 in all"
+		REF @TASK.B39
+		REF @TASK.B140
+		REF @TASK.B177
+		REF @TASK.B52
+		REF @TASK.B53
+		REF @TASK.B163
+		REF @TASK.B50
+		REF @TASK.B51
+		REF @TASK.B229
+		REF @TASK.B230
+		REF @TASK.B46
+		REF @TASK.B232
+	RATIONALE "what holds of the AFTER: at least ten tasks that merge after @TASK.B37 reached main"
+		+ "precede this task; a task M7 or M8 gains that no task of its milestone follows is added"
+		+ "to the AFTER, a task they lose is removed from it, and when fewer than ten remain, the"
+		+ "AFTER names tasks of ADD0 until ten do"
+		REF @TASK.B37
+	SOURCE "the Artifact Brigade Blueprint, plan, M6 and the measured figures of the user's notes"
+	SOURCE "the user's rulings of 2026-11-01 in the refinement of M6, on @TASK.B39: « c'est quoi"
+		+ "l'objectif de la tâche? », then « Oui, ces 3 SPEC »; the comparison moved to @TASK.B175,"
+		+ "« B175 + comparaison de B39 »"
+		REF @TASK.B39
+		REF @TASK.B175
+	SOURCE "the user's ruling of 2026-11-03 on the question of run 20261103T111517Z-b08ac4 of wave"
+		+ "brigade_w21, « b : plusieurs waves (Recommandé) », the option « On réécrit les SPEC 2 et"
+		+ "3 : la preuve porte sur plusieurs waves fermées d'une même période, au moins 10 tâches"
+		+ "fusionnées au total, comparées à la référence. La période doit commencer après la #309"
+		+ "(B37), sinon deux mesures manquent. M6 reste prouvé sur des livraisons réelles, et B39"
+		+ "peut être livré maintenant. »; the question, « Aucune vague ne remplit cette condition,"
+		+ "et aucune tâche du plan ne la produit : la plus grosse vague du ledger en compte 6. »;"
+		+ "the option rejected, « a : scinder B39 », « B39 est livré avec la SPEC 1 seulement, et"
+		+ "une nouvelle tâche reprend les SPEC 2 et 3 en attendant une wave de 10 tâches. Mais"
+		+ "aucun plan n'en produit une : M6 resterait bloqué sur cette tâche. »: SPEC 1 and 2 cover"
+		+ "the closed waves of one range, at least ten merged tasks in total, compared against the"
+		+ "reference, the range opening after @TASK.B37 reached main; #309 was merged into"
+		+ "integration/brigade_w19 on 2026-11-01T23:22Z and stands in integration/hardening by"
+		+ "#302, not in main at e5704385"
+		REF @TASK.B37
+	SOURCE "the user's rulings of 2026-11-04 on the question of run 20261103T232500Z-289045 of wave"
+		+ "brigade_w21, which parked @TASK.B39 on these SPEC, #309 absent from main at 8de444e1,"
+		+ "git merge-base --is-ancestor 5a5219e6 origin/main exit 1, and M6 unable to reach main"
+		+ "before B39 merged: « option B, la mesure se fera après coup », the option « B : séparer"
+		+ "la mesure de M6 — B39 est livrée avec son test wiki seul, M6 part dans main ; une"
+		+ "nouvelle tâche hors M6 fait la mesure ensuite »; on the milestone of this task, « on"
+		+ "l'attache à une milestone afin que 10 tâches soient passées, donc ça dépend du nombre de"
+		+ "tâches dans ces milestone »; the ruling of 2026-11-03 stays in force for the measure,"
+		+ "SPEC 1 and 2 being SPEC 2 and 3 of @TASK.B39 as written under it; the option « a :"
+		+ "scinder B39 », rejected on 2026-11-03 for want of a wave of ten tasks, is taken on"
+		+ "2026-11-04, the proof spanning several waves since 2026-11-03 and M6 no longer waiting"
+		+ "for it"
+		REF @TASK.B39
