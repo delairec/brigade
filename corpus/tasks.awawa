@@ -4442,6 +4442,9 @@ TASK B50
 		+ "key and a command naming the configured client's binary"
 	SPEC "recipes/study.toml ships as the built-in recipe study, its collect steps taken from the"
 		+ "order's COLLECTOR lines"
+	AFTER @TASK.B37
+	RATIONALE "M8 starts once @TASK.B37 reached main, so its tasks count in the sample of"
+		+ "@TASK.B236"
 	RATIONALE "the answer of a judge step is an entity, as"
 		+ "@DECISION.EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHandedWhole"
 		+ "sets; after @TASK.B106, which introduces the document kind"
