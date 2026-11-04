@@ -44,6 +44,7 @@ from brigade.studies.read_studies import read_studies
 from brigade.system.parse_configuration import Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
+from brigade.system.remember_process_records import remember_process_records
 from brigade.system.reset_hour import ResetHour
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 from brigade.tasks.read_task_field import read_task_field
@@ -928,6 +929,7 @@ def _read_milestones(runtime: Runtime, reading: WaveReading, projects: frozenset
 def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeReaders) -> Snapshot:
     if not runtime.paths.schema_file.exists():
         return Snapshot(now=runtime.now)
+    runtime = dataclasses.replace(runtime, run_process=remember_process_records(runtime.run_process))
     reading = _assemble_reading(runtime, configuration, forge)
     last_orders = read_last_study_orders(runtime.paths.state_root)
     projects = _read_registered_projects(runtime, reading)
