@@ -31,6 +31,7 @@ from brigade.waves.locate_forge_branch import locate_forge_branch
 from brigade.waves.read_task_state import PARKED_STATE
 
 SETUP_FIELD = "SETUP"
+MAIN_FIELD = "MAIN"
 SETUP_TIMEOUT_S = 1800.0
 SETUP_PROMPT = "$ "
 SETUP_FAILED_REASON = "setup failed"
@@ -115,7 +116,7 @@ def prepare_task_worktree(
             branch=action.task_branch,
             start=locate_forge_branch(runtime.run_process, project, action.branch, read_environment),
         )
-        if configuration.worktree_root is None:
+        if configuration.worktree_root is None and action.branch != read_project_field(project, MAIN_FIELD):
             ignore_worktrees(runtime.run_process, repository, action.branch)
         prepared = (
             _put_on_start(runtime, worktree, action)
