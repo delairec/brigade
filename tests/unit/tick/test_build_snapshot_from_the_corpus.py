@@ -2118,3 +2118,58 @@ class BuildSnapshotOfAWaveOfQueuedTasksTest(BuildSnapshotTestCase):
 
         # Assert
         self.assertEqual(self.reader.branches, [])
+
+
+class BuildSnapshotOfAWaveBranchCutOnMainTest(BuildSnapshotTestCase):
+    def test_should_read_each_task_of_a_tree_once_though_the_project_and_the_wave_both_read_it(self):
+        # Arrange
+        self.write_operational_corpus()
+        self.record(60, WaveStarted(wave="w6", project="shop", branch="integration/w6", tasks=("B1",)))
+        implemented_on_main = {"entities": [{"type": "TASK", "name": "B0"}]}
+        self.remote_answers = {
+            **answer_tree("integration/w6", MAIN_SHA),
+            ("awawa", "status", "TASK", "--where", "STATUS==implemented", "--json", str(self.main_tree)): (
+                ProcessAnswer(stdout=json.dumps(implemented_on_main))
+            ),
+            **AWAWA_ANSWERS.answer_no_incoming_refs(self.main_tree, "B1"),
+        }
+
+        # Act
+        self.build()
+
+        # Assert
+        self.assertEqual(
+            select_requests_opening_on(
+                self.runner.requests,
+                ("awawa", "show", "@TASK.B0"),
+                ("awawa", "show", "@TASK.B1"),
+                ("awawa", "show", "@TASK.B5"),
+                ("awawa", "show", "@TASK.B6"),
+            ),
+            [
+                ProcessRequest(
+                    argv=("awawa", "show", "@TASK.B0", "--json", str(self.main_tree)),
+                    cwd=str(self.main_tree),
+                    timeout_s=300.0,
+                    acceptable_exit_codes=(0, 1),
+                ),
+                ProcessRequest(
+                    argv=("awawa", "show", "@TASK.B1", "--json", str(self.main_tree)),
+                    cwd=str(self.main_tree),
+                    timeout_s=300.0,
+                    acceptable_exit_codes=(0, 1),
+                ),
+                ProcessRequest(
+                    argv=("awawa", "show", "@TASK.B5", "--json", str(self.main_tree)),
+                    cwd=str(self.main_tree),
+                    timeout_s=300.0,
+                    acceptable_exit_codes=(0, 1),
+                ),
+                ProcessRequest(
+                    argv=("awawa", "show", "@TASK.B6", "--json", str(self.main_tree)),
+                    cwd=str(self.main_tree),
+                    timeout_s=300.0,
+                    acceptable_exit_codes=(0, 1),
+                ),
+            ],
+        )
