@@ -2787,20 +2787,6 @@ INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN = {
     "base": "main",
     "updated_at": "2026-10-18T11:00:00Z",
 }
-INTEGRATION_PULL_REQUEST_CLOSED = {**INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN, "state": "closed"}
-INTEGRATION_PULL_REQUEST_OPEN_INTO_ANOTHER_BASE = {**INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN, "base": "develop"}
-
-
-INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH = INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN | {
-    "base": "integration/tides",
-    "checks": [{"name": "ci", "verdict": "pending"}],
-}
-TASK_OF_NO_MILESTONE_DELIVERED = (
-    ("TITLE", "Tide table"),
-    ("TYPE", "feat"),
-    ("STATUS", "implemented"),
-    ("DELIVERED_BY", "42"),
-)
 
 
 class OpeningForgeDouble:
@@ -2841,19 +2827,6 @@ def _resolve_the_collectors_beside(resolve_plugin, root: Path):
         return resolve_plugin(kind, name, **options)
 
     return resolve
-
-
-class ForgeHoldingThePushedBranchRunnerDouble(ScriptedProcessRunner):
-    def __init__(self, answers: dict, fallback, push: tuple, presence: tuple):
-        super().__init__({**answers, presence: ProcessAnswer(exit_code=2)}, fallback)
-        self.push = push
-        self.presence = presence
-
-    def run(self, request):
-        record = super().run(request)
-        if request.argv == self.push and record.exit_code == 0:
-            self.answers[self.presence] = ProcessAnswer()
-        return record
 
 
 class TickCuttingTheBranchOfAMilestoneTest(unittest.TestCase):
@@ -2932,13 +2905,6 @@ WAVE_PR_OPENED = {
     "pr": 206,
     "login": "tidepool-cli",
 }
-WAVE_PULL_REQUEST_READY = INTEGRATION_PULL_REQUEST_OPEN_INTO_THE_MILESTONE_BRANCH | {
-    "checks": [{"name": "tests", "verdict": "success"}]
-}
-NO_REVIEW_THREAD = []
-UNRESOLVED_REVIEW_THREAD = [
-    {"id": "PRRT_1", "file": "brigade/tick/plan.py", "line": 12, "author": "octo-reviewer", "body": "Why here?"}
-]
 
 
 class TickStartingAndCuttingWavesTest(unittest.TestCase):
