@@ -15898,6 +15898,8 @@ TASK B233
 		+ "request of its milestone opens"
 		IMPL "tests/cli/test_rehearsal.py::def"
 			+ "test_should_hold_the_milestone_reached_at_its_branch_once_its_pull_request_opens("
+		IMPL "tests/unit/studies/test_publish_milestone_report.py::def"
+			+ "test_should_open_the_pull_request_of_the_milestone_once_the_reached_milestone_is_pushed_on_its_branch("
 	AFTER @TASK.B232
 	RATIONALE "nothing sets STATUS reached on a MILESTONE today, read on 2026-11-02 at 6719e09d: no"
 		+ "task or decision on main does; milestone.closed is a ledger event, SPEC 2 of @TASK.B215,"
