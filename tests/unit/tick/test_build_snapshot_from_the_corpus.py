@@ -1168,6 +1168,7 @@ class BuildSnapshotOfTheUncutMilestonesTest(BuildSnapshotTestCase):
                 },
                 "STATUS==active",
             ),
+            **AWAWA_ANSWERS.answer_entities(self.main_tree, "MILESTONE", {}, "STATUS==reached"),
             **AWAWA_ANSWERS.answer_entities(
                 self.main_tree, "TASK", {"B10": describe_task_of_milestone("todo", "M4")}, "MILESTONE==@MILESTONE.M4"
             ),
@@ -1221,6 +1222,56 @@ class BuildSnapshotOfTheUncutMilestonesTest(BuildSnapshotTestCase):
             snapshot.projects[1].uncut_milestones[1],
             UncutMilestone(milestone="M8", branch="integration/cart-checkout", open_waves=(), todo=()),
         )
+
+
+class BuildSnapshotOfTheTasksOfAReachedMilestoneTest(BuildSnapshotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_operational_corpus()
+        self.remote_answers = {
+            **AWAWA_ANSWERS.answer_entities(
+                self.main_tree,
+                "TASK",
+                {
+                    "B5": describe_task_of_milestone("todo", "M6"),
+                    "B11": describe_task_of_milestone("todo", "M5"),
+                    "B12": describe_task_of_milestone("draft", "M5"),
+                    "B13": describe_task_of_milestone("implemented", "M5"),
+                    "B14": describe_task_of_milestone("todo", "M7"),
+                },
+            ),
+            **AWAWA_ANSWERS.answer_entities(
+                self.main_tree, "MILESTONE", {"M6": describe_milestone("Hardening")}, "STATUS==active"
+            ),
+            **AWAWA_ANSWERS.answer_entities(
+                self.main_tree, "MILESTONE", {"M5": describe_milestone("Payments")}, "STATUS==reached"
+            ),
+            **AWAWA_ANSWERS.answer_no_incoming_refs(self.main_tree, "B5", "B11", "B14"),
+        }
+
+    def test_should_name_on_stderr_each_draft_or_todo_task_of_a_reached_milestone_and_no_other_task(self):
+        # Act
+        _, stderr = self.build()
+
+        # Assert
+        self.assertEqual(
+            stderr.splitlines(),
+            [
+                (
+                    "brigade tick: the project attic skipped: git rev-parse --verify --quiet --end-of-options"
+                    " trunk^{commit} exited 128: fatal: bad revision"
+                ),
+                "brigade tick: @TASK.B11 is served never: its milestone @MILESTONE.M5 is reached",
+                "brigade tick: @TASK.B12 is served never: its milestone @MILESTONE.M5 is reached",
+            ],
+        )
+
+    def test_should_start_no_wave_holding_a_task_of_a_reached_milestone(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.projects[1].candidates, (CandidateWave(milestone="M6", tasks=("B5",)),))
 
 
 class BuildSnapshotOfAWaveWhoseTaskCarriesNoTypeTest(BuildSnapshotTestCase):

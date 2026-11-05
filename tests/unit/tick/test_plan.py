@@ -2127,13 +2127,13 @@ REPORT_M4 = ReportMilestone(
 )
 
 
-def create_milestone(closed_waves: tuple[str, ...], todo: tuple[str, ...]) -> MilestoneFacts:
+def create_milestone(closed_waves: tuple[str, ...], open_tasks: tuple[str, ...]) -> MilestoneFacts:
     return MilestoneFacts(
         project="shop",
         milestone="M4",
         branch=MILESTONE_M4_BRANCH,
         closed_waves=closed_waves,
-        todo=todo,
+        open_tasks=open_tasks,
         tasks=TASKS_OF_M4,
     )
 
@@ -2231,7 +2231,7 @@ class PlanMilestoneReportTest(unittest.TestCase):
         # Assert
         self.assertIn(REPORT_M4, actions)
 
-    def test_should_report_none_while_a_task_of_the_milestone_is_todo(self):
+    def test_should_report_none_while_a_task_of_the_milestone_is_open(self):
         # Arrange
         milestone = create_milestone(WAVES_OF_M4_CLOSED, ("S5",))
         snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
