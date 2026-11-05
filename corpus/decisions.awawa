@@ -5834,4 +5834,5 @@ DECISION AResumeOfAWaveAnswersEveryRebaseRunOfItEndedBlockedBeforeIt
 		+ "while each wave was paused; the user resumed the three at 2026-11-05T00:49:36Z once pull"
 		+ "request #353 had repaired the base, and the tick of 00:50:00Z paused them again on those"
 		+ "runs"
-	SOURCE "the user's ruling of 2026-11-05 on the defect, « oui quick fix », with no TASK entity"
+	SOURCE "the user's ruling of 2026-11-05 on the defect, « oui quick fix », with no TASK entity,"
+		+ "delivered by pull request #355"
