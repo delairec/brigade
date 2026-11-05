@@ -2529,12 +2529,12 @@ class PlanMilestoneRebaseTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(actions, expected)
 
-    def test_should_leave_out_of_the_rebase_of_a_milestone_its_paused_waves_and_those_whose_rebase_run_ended_blocked(
+    def test_should_leave_out_of_the_rebase_of_a_milestone_its_waves_paused_or_whose_rebase_run_lives_or_ended_blocked(
         self,
     ):
         # Arrange
         milestone = dataclasses.replace(
-            M9_WITH_AN_OPEN_WAVE, open_waves=("shop_w4", "shop_w5", "shop_w6"), behind_main=BEHIND_MAIN
+            M9_WITH_AN_OPEN_WAVE, open_waves=("shop_w4", "shop_w5", "shop_w6", "shop_w7"), behind_main=BEHIND_MAIN
         )
         paused_wave = dataclasses.replace(
             SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
@@ -2548,10 +2548,21 @@ class PlanMilestoneRebaseTest(unittest.TestCase):
             branch="integration/shop_w6",
             blocked_rebase=BLOCKED_REBASE,
         )
+        wave_with_a_live_rebase_run = dataclasses.replace(
+            SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH, wave="shop_w7", branch="integration/shop_w7"
+        )
+        live_rebase_run_of_shop_w7 = dataclasses.replace(
+            LIVE_REBASE_RUN_OF_SHOP_W4, worktree="/srv/shop/.brigade/worktrees/integration-shop_w7", wave="shop_w7"
+        )
         snapshot = Snapshot(
             now=NOW,
-            waves=(SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH, paused_wave, wave_with_a_blocked_rebase_run),
-            projects=(PROJECT_WITH_CANDIDATES,),
+            waves=(
+                SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
+                paused_wave,
+                wave_with_a_blocked_rebase_run,
+                wave_with_a_live_rebase_run,
+            ),
+            projects=(dataclasses.replace(PROJECT_WITH_CANDIDATES, live_runs=(live_rebase_run_of_shop_w7,)),),
             milestones=(milestone,),
         )
 
