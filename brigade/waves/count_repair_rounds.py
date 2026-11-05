@@ -2,7 +2,7 @@ from datetime import UTC
 
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.run_finished import RunFinished
-from brigade.ledger.task_state import TaskState
+from brigade.ledger.task_state import REBUILD_REASON, TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT
 from brigade.waves.is_requeue import is_requeue
@@ -38,11 +38,16 @@ def _is_rate_limited_launch(entry: LedgerEntry, entries: tuple[LedgerEntry, ...]
     )
 
 
+def _is_rebuild(event: TaskState) -> bool:
+    return event.reason is not None and event.reason.startswith(REBUILD_REASON)
+
+
 def _is_spending_round(
     entry: LedgerEntry, entries: tuple[LedgerEntry, ...], runs: tuple[dict, ...], previous_state: str | None
 ) -> bool:
     return (
         previous_state != PAUSED_ON_QUOTA_STATE
+        and not _is_rebuild(entry.event)
         and not _is_rebase_launch(entry, runs)
         and not _is_rate_limited_launch(entry, entries)
     )
