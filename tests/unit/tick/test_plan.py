@@ -2583,6 +2583,53 @@ class PlanMilestoneRebaseTest(unittest.TestCase):
             ),
         )
 
+    def test_should_rebase_the_milestone_branch_alone_when_every_open_wave_of_it_is_held(self):
+        # Arrange
+        milestone = dataclasses.replace(
+            M9_WITH_AN_OPEN_WAVE, open_waves=("shop_w5", "shop_w6", "shop_w7"), behind_main=BEHIND_MAIN
+        )
+        paused_wave = dataclasses.replace(
+            SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
+            wave="shop_w5",
+            branch="integration/shop_w5",
+            pause=PAUSED_ON_THE_REBASE_QUESTION,
+        )
+        wave_with_a_blocked_rebase_run = dataclasses.replace(
+            SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
+            wave="shop_w6",
+            branch="integration/shop_w6",
+            blocked_rebase=BLOCKED_REBASE,
+        )
+        wave_with_a_live_rebase_run = dataclasses.replace(
+            SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH, wave="shop_w7", branch="integration/shop_w7"
+        )
+        live_rebase_run_of_shop_w7 = dataclasses.replace(
+            LIVE_REBASE_RUN_OF_SHOP_W4, worktree="/srv/shop/.brigade/worktrees/integration-shop_w7", wave="shop_w7"
+        )
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(paused_wave, wave_with_a_blocked_rebase_run, wave_with_a_live_rebase_run),
+            projects=(dataclasses.replace(PROJECT_WITH_CANDIDATES, live_runs=(live_rebase_run_of_shop_w7,)),),
+            milestones=(milestone,),
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                PauseWave(
+                    wave="shop_w6",
+                    reason="run 20261030T005500Z-2f5135 blocked: Keep the guard of plan.py or drop it?",
+                    resume_at=None,
+                ),
+                RebaseMilestone(project="shop", milestone="M9", branch="integration/delivery", waves=()),
+                *START_OF_M10_AND_NO_MILESTONE,
+            ),
+        )
+
 
 class PlanQuotaOfATaskInRepairTest(unittest.TestCase):
     def test_should_pause_a_task_in_fixing_whose_repair_run_was_cut_and_launch_no_repair(self):
