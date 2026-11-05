@@ -675,12 +675,17 @@ def _is_milestone_rebase_due(milestone: MilestoneFacts, snapshot: Snapshot) -> b
 
 
 def _plan_milestone_rebases(snapshot: Snapshot) -> tuple:
+    held = {
+        (wave.project, wave.wave)
+        for wave in snapshot.waves
+        if wave.pause is not None or wave.blocked_rebase is not None
+    }
     return tuple(
         RebaseMilestone(
             project=milestone.project,
             milestone=milestone.milestone,
             branch=milestone.branch,
-            waves=milestone.open_waves,
+            waves=tuple(wave for wave in milestone.open_waves if (milestone.project, wave) not in held),
         )
         for milestone in snapshot.milestones
         if _is_milestone_rebase_due(milestone, snapshot)

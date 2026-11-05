@@ -2529,6 +2529,49 @@ class PlanMilestoneRebaseTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(actions, expected)
 
+    def test_should_leave_out_of_the_rebase_of_a_milestone_its_paused_waves_and_those_whose_rebase_run_ended_blocked(
+        self,
+    ):
+        # Arrange
+        milestone = dataclasses.replace(
+            M9_WITH_AN_OPEN_WAVE, open_waves=("shop_w4", "shop_w5", "shop_w6"), behind_main=BEHIND_MAIN
+        )
+        paused_wave = dataclasses.replace(
+            SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
+            wave="shop_w5",
+            branch="integration/shop_w5",
+            pause=PAUSED_ON_THE_REBASE_QUESTION,
+        )
+        wave_with_a_blocked_rebase_run = dataclasses.replace(
+            SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH,
+            wave="shop_w6",
+            branch="integration/shop_w6",
+            blocked_rebase=BLOCKED_REBASE,
+        )
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(SHOP_W4_OUTRUN_BY_ITS_MILESTONE_BRANCH, paused_wave, wave_with_a_blocked_rebase_run),
+            projects=(PROJECT_WITH_CANDIDATES,),
+            milestones=(milestone,),
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                PauseWave(
+                    wave="shop_w6",
+                    reason="run 20261030T005500Z-2f5135 blocked: Keep the guard of plan.py or drop it?",
+                    resume_at=None,
+                ),
+                RebaseMilestone(project="shop", milestone="M9", branch="integration/delivery", waves=("shop_w4",)),
+                *START_OF_M10_AND_NO_MILESTONE,
+            ),
+        )
+
 
 class PlanQuotaOfATaskInRepairTest(unittest.TestCase):
     def test_should_pause_a_task_in_fixing_whose_repair_run_was_cut_and_launch_no_repair(self):
