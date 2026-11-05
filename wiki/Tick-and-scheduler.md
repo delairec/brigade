@@ -156,10 +156,10 @@ dies before it records a `run.finished` does.
 - On a conflict it aborts the rebase and starts a detached run of the slot `rebase`, of `rebase-on-base`, which works
   through `brigade rebase context|done`. The launch records the task `fixing` and counts no round, whatever the rounds
   the repair runs spent.
-- A task behind whose entity was amended on the wave branch since its pull request opened is rebuilt instead: a run of
-  the slot `build` delivers it to the amended entity. The launch records the task `fixing` with the reason
-  `the entity of the task amended on <wave branch>` and counts no round, whatever the rounds spent and whatever the
-  outcome of the rebuild before it.
+- A task behind whose entity was amended on its base, the branch of its milestone or the main branch for a task naming
+  none, since its pull request opened is rebuilt instead: a run of the slot `build` delivers it to the amended entity.
+  The launch records the task `fixing` with the reason `the entity of the task amended on <base>` and counts no round,
+  whatever the rounds spent and whatever the outcome of the rebuild before it.
 
 </details>
 
