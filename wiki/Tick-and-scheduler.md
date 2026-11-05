@@ -168,6 +168,10 @@ dies before it records a `run.finished` does.
   branch moved without it. The pull request of that wave is not merged while it lags.
 - A conflict is aborted and handed to a detached run of the slot `rebase`. When the conflict is on the milestone
   branch, that action rebases no wave branch: they follow once the run has pushed it.
+- A milestone branch git rebased cleanly is checked before it is pushed: in its worktree the tick runs the `SETUP`
+  lines of the project, then its `ACCEPTANCE` lines and `awawa fmt --check .` and `awawa lint --strict .`, as
+  `brigade task check` does. A failing one pushes nothing and rebases no wave branch: the rebased head stays in the
+  worktree and a detached run of the slot `rebase` repairs it there, then pushes it once its tests pass.
 - No rebase is planned for a wave that is paused, or whose rebase run lives or ended blocked; a blocked rebase run
   pauses its wave on its question.
 

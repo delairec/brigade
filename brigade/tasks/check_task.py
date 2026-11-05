@@ -1,4 +1,3 @@
-from brigade.corpus.check_corpus import check_corpus
 from brigade.errors import BrigadeError
 from brigade.git.fetch_branches import REMOTE
 from brigade.git.find_merge_base import find_merge_base
@@ -7,19 +6,17 @@ from brigade.git.list_changed_files import list_changed_files
 from brigade.git.resolve_commit import resolve_commit
 from brigade.registry.is_on_github import is_on_github
 from brigade.runtime import Runtime
-from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRecord, ProcessRequest
-from brigade.system.split_command import split_command
+from brigade.system.run_process import ProcessRecord
 from brigade.system.write_json_atomically import write_json_atomically
 from brigade.system.write_text_atomically import write_text_atomically
 from brigade.tasks.locate_check_record import locate_check_record
 from brigade.tasks.locate_task_worktree import TaskWorktree
+from brigade.tasks.run_project_checks import ProjectCheck, run_project_checks
 from brigade.verify.check_privacy import check_privacy
 from brigade.verify.judge_findings import PASSED
 from brigade.verify.read_privacy_patterns import read_privacy_patterns
 
 DOCUMENT_SCHEMA_VERSION = 1
-ACCEPTANCE_FIELD = "ACCEPTANCE"
-CHECK_TIMEOUT_S = 1800.0
 TAIL_LINES = 20
 CHECK_DIRECTORY = "check"
 OUTPUT_SUFFIX = ".log"
@@ -43,23 +40,10 @@ def _describe_check(command: str, record: ProcessRecord, output: str) -> dict:
     }
 
 
-def _run_acceptance_line(
-    runtime: Runtime, worktree: TaskWorktree, command: tuple[str, tuple[str, ...]]
-) -> tuple[str, ProcessRecord]:
-    line, argv = command
-    record = runtime.run_process(
-        ProcessRequest(
-            argv=argv, cwd=str(worktree.path), timeout_s=CHECK_TIMEOUT_S, acceptable_exit_codes=EVERY_EXIT_CODE
-        )
-    )
-    return line, record
-
-
-def _record_check(runtime: Runtime, rank: int, check: tuple[str, ProcessRecord]) -> dict:
-    command, record = check
-    output = f"{record.stdout}{record.stderr}"
+def _record_check(runtime: Runtime, rank: int, check: ProjectCheck) -> dict:
+    output = f"{check.record.stdout}{check.record.stderr}"
     _write_output(runtime, rank, output)
-    return _describe_check(command, record, output)
+    return _describe_check(check.command, check.record, output)
 
 
 def _require_worktree_at_head(runtime: Runtime, worktree: TaskWorktree) -> None:
@@ -92,13 +76,8 @@ def _check_privacy_of_the_task(runtime: Runtime, worktree: TaskWorktree, head: s
 
 def check_task(runtime: Runtime, worktree: TaskWorktree) -> dict:
     _require_worktree_at_head(runtime, worktree)
-    acceptance = tuple(field.value for field in worktree.project.fields if field.name == ACCEPTANCE_FIELD)
-    commands = tuple((line, split_command(line)) for line in acceptance)
+    checks = run_project_checks(runtime.run_process, worktree.project, worktree.path)
     head = resolve_commit(runtime.run_process, worktree.path, HEAD)
-    checks = (
-        *(_run_acceptance_line(runtime, worktree, command) for command in commands),
-        *((check.command, check.record) for check in check_corpus(runtime.run_process, worktree.path)),
-    )
     document = {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "project": worktree.project.name,

@@ -20,6 +20,9 @@ from brigade.runtime import Runtime
 from brigade.system.hold_lock import hold_lock
 from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.system.parse_configuration import CLI_KEY
+from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRecord, ProcessRequest
+from brigade.system.split_command import split_command
+from brigade.tasks.run_project_checks import run_project_checks
 from brigade.waves.list_open_waves import list_open_waves
 from brigade.waves.locate_branch_worktree import locate_branch_worktree
 from brigade.waves.locate_forge_branch import locate_forge_branch
@@ -28,6 +31,9 @@ DESCENDING = 0
 HEAD = "HEAD"
 PATH_FIELD = "PATH"
 MAIN_FIELD = "MAIN"
+SETUP_FIELD = "SETUP"
+SETUP_TIMEOUT_S = 1800.0
+PASSED_EXIT_CODE = 0
 NO_LOGIN = None
 
 
@@ -52,6 +58,7 @@ class StoppedRebase:
 
 
 STOPPED_ON_A_CONFLICT = StoppedRebase()
+STOPPED_ON_A_FAILED_CHECK = StoppedRebase()
 
 
 @dataclass(frozen=True)
@@ -97,6 +104,10 @@ def _rebase_branch(
     if not rebase_onto(runtime.run_process, run.worktree, upstream):
         rebase.launch_rebase_run(run)
         return None
+    return head
+
+
+def _push_branch(runtime: Runtime, rebase: MilestoneBranchesRebase, run: BranchRebaseRun, head: str) -> None:
     if is_on_github(rebase.project):
         push = LeasedPush(
             worktree=run.worktree,
@@ -105,7 +116,21 @@ def _rebase_branch(
             environment=rebase.read_environment(CLI_KEY),
         )
         push_with_lease(runtime.run_process, push)
-    return head
+
+
+def _run_setup_line(runtime: Runtime, worktree: Path, argv: tuple[str, ...]) -> ProcessRecord:
+    return runtime.run_process(
+        ProcessRequest(argv=argv, cwd=str(worktree), timeout_s=SETUP_TIMEOUT_S, acceptable_exit_codes=EVERY_EXIT_CODE)
+    )
+
+
+def _pass_project_checks(runtime: Runtime, rebase: MilestoneBranchesRebase, worktree: Path) -> bool:
+    setup = tuple(split_command(field.value) for field in rebase.project.fields if field.name == SETUP_FIELD)
+    records = (
+        *(_run_setup_line(runtime, worktree, argv) for argv in setup),
+        *(check.record for check in run_project_checks(runtime.run_process, rebase.project, worktree)),
+    )
+    return all(record.exit_code == PASSED_EXIT_CODE for record in records)
 
 
 def _rebase_milestone(
@@ -120,6 +145,10 @@ def _rebase_milestone(
     if before is None:
         return STOPPED_ON_A_CONFLICT
     after = read_head(runtime.run_process, worktree.path)
+    if after != before and not _pass_project_checks(runtime, rebase, worktree.path):
+        rebase.launch_rebase_run(run)
+        return STOPPED_ON_A_FAILED_CHECK
+    _push_branch(runtime, rebase, run, before)
     if after == before:
         return None
     return MovedHead(before=before, after=after)
@@ -134,7 +163,11 @@ def _rebase_wave(runtime: Runtime, rebase: MilestoneBranchesRebase, wave: WaveSt
     run = BranchRebaseRun(
         project=rebase.project.name, worktree=worktree.path, branch=wave.branch, base=milestone_branch, wave=wave.wave
     )
-    return _rebase_branch(runtime, rebase, run, milestone_branch) is not None
+    before = _rebase_branch(runtime, rebase, run, milestone_branch)
+    if before is None:
+        return False
+    _push_branch(runtime, rebase, run, before)
+    return True
 
 
 def rebase_milestone_branches(runtime: Runtime, rebase: MilestoneBranchesRebase) -> MilestoneRebased | None:

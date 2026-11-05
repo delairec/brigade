@@ -5,9 +5,10 @@ budget: 30
 # Procedure — put the branch of one task, wave or milestone back on its base
 
 Rebase one branch onto the head of its base, in the worktree of that branch, after the tick found that git alone
-could not: the rebase conflicts. The branch is the branch of a task, rebased onto the branch of its wave, or the
-branch of a wave or of a milestone, rebased onto the branch of its milestone or onto the main branch. You did not
-write the branch.
+could not: the rebase conflicts, or, for the branch of a milestone, git rebased it cleanly onto the main branch but
+the rebased head fails the setup, the acceptance commands or the checks of the corpus of the project. The branch is
+the branch of a task, rebased onto the branch of its wave, or the branch of a wave or of a milestone, rebased onto
+the branch of its milestone or onto the main branch. You did not write the branch.
 
 Arguments, which the Arguments section names: for the branch of a task, `task`, the TASK entity the branch delivers,
 and either `pr`, the number of the pull request a build run opened for it, or `base`, the branch of its wave, when
@@ -43,3 +44,10 @@ branch. With no `task`, the branch of a wave or of a milestone, `git push --forc
 the tests pass, never a bare force, nothing on a project with no forge, then end done. When they fail after the rebase, push nothing and end blocked,
 your final message naming each failing test and its failure on the lines above `brigade-end: blocked`: the tick
 parks the task, or pauses the wave, on that failure.
+
+On the branch of a milestone, a failure after the rebase is repaired in this run, as the waves of the milestone wait
+for it: the worktree holds the head the tick rebased and did not push. Find what the main branch and the milestone
+branch each meant where they meet, change the code so that both hold, commit it on the branch as
+`fix(<scope>): <what the repair restores>`, and run the tests again; push once they pass, as above. A repair that
+needs a decision the branch did not settle is not made: push nothing and end blocked, naming each failing test, its
+failure and the question on the lines above `brigade-end: blocked`; the tick names it at each tick.

@@ -3407,6 +3407,8 @@ OUTPUTS_OF_A_MILESTONE_BRANCH_MAIN_HAS_OUTRUN = {
     REBASE_OF_THE_MILESTONE_BRANCH: ProcessAnswer(),
     ("git", "rev-parse", "--quiet", "--verify", "REBASE_HEAD"): ProcessAnswer(stdout="f02da32\n"),
     ("git", "rebase", "--abort"): ProcessAnswer(),
+    ("awawa", "fmt", "--check", "."): ProcessAnswer(),
+    ("awawa", "lint", "--strict", "."): ProcessAnswer(),
 }
 NO_ACTIVE_MILESTONE = ProcessAnswer(stdout='{"entities": []}')
 BLOCKED_REBASE_OF_THE_MILESTONE_BRANCH = {

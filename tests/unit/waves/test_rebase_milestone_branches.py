@@ -29,6 +29,12 @@ REBASE_IN_PROGRESS = 0
 GIT_REBASE = ("git", "rebase")
 GIT_PUSH = ("git", "push")
 GIT_RESET = ("git", "reset")
+NPM = ("npm",)
+AWAWA = ("awawa",)
+NPM_CI = ("npm", "ci")
+NPM_TEST = ("npm", "test")
+AWAWA_LINT = ("awawa", "lint", "--strict", ".")
+CHECK_FAILED = 1
 CUT_OF_M3 = {
     "schema_version": 1,
     "ts": "2026-10-28T09:00:00Z",
@@ -80,6 +86,8 @@ def _create_project(forge: str) -> Entity:
             EntityField(name="PATH", value=REPOSITORY),
             EntityField(name="MAIN", value="main"),
             EntityField(name="FORGE", value=forge),
+            EntityField(name="SETUP", value="npm ci"),
+            EntityField(name="ACCEPTANCE", value="npm test"),
         ),
     )
 
@@ -96,6 +104,7 @@ class RebaseMilestoneBranchesTestCase(unittest.TestCase):
         self.rebased_worktrees: set[str] = set()
         self.wave_descent = NOT_AN_ANCESTOR
         self.read_login = _read_login
+        self.failing_check: tuple[str, ...] | None = None
         write_ledger(self.root, [CUT_OF_M3, OPEN_WAVE_OF_M3, OPEN_WAVE_OF_NO_MILESTONE])
         self.processes.answer(("git", "worktree", "list", "--porcelain", "-z"), stdout=NO_WORKTREE)
         self.processes.answer(("git", "worktree", "add", "--quiet", MILESTONE_WORKTREE, MILESTONE_BRANCH))
@@ -107,6 +116,8 @@ class RebaseMilestoneBranchesTestCase(unittest.TestCase):
         )
         self.processes.answer(("git", "rev-parse", "--quiet", "--verify", "REBASE_HEAD"), exit_code=REBASE_IN_PROGRESS)
         self.processes.answer(("git", "rebase", "--abort"))
+        for check in (NPM_CI, NPM_TEST, ("awawa", "fmt", "--check", "."), AWAWA_LINT):
+            self.processes.answer_by(check, self.answer_check)
         for branch, head in ((MILESTONE_BRANCH, MILESTONE_HEAD), ("integration/shop_w1", WAVE_HEAD)):
             self.processes.answer(
                 ("git", "push", "--quiet", f"--force-with-lease={branch}:{head}", "origin", f"HEAD:{branch}")
@@ -116,6 +127,11 @@ class RebaseMilestoneBranchesTestCase(unittest.TestCase):
         if request.cwd in self.rebased_worktrees:
             return 0, f"{self.heads_after_rebase[request.cwd]}\n", ""
         return 0, f"{MILESTONE_HEAD if request.cwd == MILESTONE_WORKTREE else WAVE_HEAD}\n", ""
+
+    def answer_check(self, request: ProcessRequest) -> tuple[int, str, str]:
+        if request.argv == self.failing_check:
+            return CHECK_FAILED, "FAIL: test_should_read_the_references_of_each_task_once\n", ""
+        return 0, "", ""
 
     def answer_rebase(self, request: ProcessRequest) -> tuple[int, str, str]:
         if self.rebase_exit_codes[request.cwd] == 0:
@@ -281,6 +297,114 @@ class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCa
 
         # Assert
         self.assertEqual(held, [True])
+
+
+class RebaseMilestoneBranchesCheckedBeforeTheirPushTest(RebaseMilestoneBranchesTestCase):
+    def test_should_set_up_and_run_the_acceptance_commands_on_the_rebased_milestone_branch_alone(self):
+        # Act
+        self.rebase()
+
+        # Assert
+        self.assertEqual(
+            select_commands_opening_on(self.processes.requests, NPM),
+            [(MILESTONE_WORKTREE, ("npm", "ci")), (MILESTONE_WORKTREE, ("npm", "test"))],
+        )
+
+    def test_should_run_the_checks_of_the_corpus_on_the_rebased_milestone_branch(self):
+        # Act
+        self.rebase()
+
+        # Assert
+        self.assertEqual(
+            select_commands_opening_on(self.processes.requests, AWAWA),
+            [
+                (MILESTONE_WORKTREE, ("awawa", "fmt", "--check", ".")),
+                (MILESTONE_WORKTREE, ("awawa", "lint", "--strict", ".")),
+            ],
+        )
+
+    def test_should_check_no_milestone_branch_the_rebase_left_where_it_was(self):
+        # Arrange
+        self.heads_after_rebase[MILESTONE_WORKTREE] = MILESTONE_HEAD
+
+        # Act
+        self.rebase()
+
+        # Assert
+        self.assertEqual(select_commands_opening_on(self.processes.requests, NPM), [])
+
+
+class RebaseMilestoneBranchesFailingTheirChecksTest(RebaseMilestoneBranchesTestCase):
+    def assert_a_rebase_run_of_the_milestone_branch_onto_the_main_branch(self) -> None:
+        self.assertEqual(
+            self.launched,
+            [
+                BranchRebaseRun(
+                    project="shop", worktree=Path(MILESTONE_WORKTREE), branch=MILESTONE_BRANCH, base="main", wave=None
+                )
+            ],
+        )
+
+    def test_should_launch_a_rebase_run_of_the_milestone_branch_whose_rebased_head_fails_its_setup(self):
+        # Arrange
+        self.failing_check = NPM_CI
+
+        # Act
+        self.rebase()
+
+        # Assert
+        self.assert_a_rebase_run_of_the_milestone_branch_onto_the_main_branch()
+
+    def test_should_launch_a_rebase_run_of_the_milestone_branch_whose_rebased_head_fails_an_acceptance_command(self):
+        # Arrange
+        self.failing_check = NPM_TEST
+
+        # Act
+        self.rebase()
+
+        # Assert
+        self.assert_a_rebase_run_of_the_milestone_branch_onto_the_main_branch()
+
+    def test_should_launch_a_rebase_run_of_the_milestone_branch_whose_rebased_head_fails_a_check_of_the_corpus(self):
+        # Arrange
+        self.failing_check = AWAWA_LINT
+
+        # Act
+        self.rebase()
+
+        # Assert
+        self.assert_a_rebase_run_of_the_milestone_branch_onto_the_main_branch()
+
+    def test_should_push_no_milestone_branch_whose_rebased_head_fails_a_check(self):
+        # Arrange
+        self.failing_check = NPM_TEST
+        self.wave_descent = 0
+
+        # Act
+        self.rebase()
+
+        # Assert
+        self.assertEqual(select_commands_opening_on(self.processes.requests, GIT_PUSH), [])
+
+    def test_should_touch_no_wave_branch_when_the_rebased_milestone_branch_fails_a_check(self):
+        # Arrange
+        self.failing_check = NPM_TEST
+
+        # Act
+        self.rebase()
+
+        # Assert
+        self.assertEqual(select_argvs_run_in(self.processes.requests, WAVE_WORKTREE), [])
+
+    def test_should_answer_no_rebase_when_the_rebased_milestone_branch_fails_a_check(self):
+        # Arrange
+        self.failing_check = NPM_TEST
+
+        # Act
+        rebased = self.rebase()
+
+        # Assert
+        self.assertIsNone(rebased)
 
 
 class RebaseMilestoneBranchesWithTheirOpenWavesTest(RebaseMilestoneBranchesTestCase):
