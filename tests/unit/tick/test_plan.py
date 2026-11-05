@@ -13,6 +13,7 @@ from brigade.tick.actions import (
     CloseMilestone,
     CloseWave,
     CutMilestoneBranch,
+    KeepIntegrationBranch,
     LaunchCheckRepair,
     LaunchRemediation,
     LaunchStudy,
@@ -25,6 +26,7 @@ from brigade.tick.actions import (
     RebaseTask,
     RebuildTask,
     RecordTaskState,
+    RemoveIntegrationBranch,
     RemoveTaskWorktree,
     ReportMilestone,
     ReportTask,
@@ -50,6 +52,7 @@ from brigade.tick.build_snapshot import (
     WavePause,
 )
 from brigade.tick.plan import plan
+from brigade.tick.read_integration_branches import IntegrationBranchFacts
 from brigade.waves.list_candidate_waves import CandidateWave
 
 NOW = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
@@ -2462,3 +2465,119 @@ class PlanQuotaOfATaskInRepairTest(unittest.TestCase):
                 ResumeTaskRun(wave="shop_w1", task="S3", run=STOPPED_RUN, state="fixing"),
             ),
         )
+
+
+TIDES_WORKTREE = "/srv/shop/.brigade/worktrees/integration-tides"
+CLOSED_MILESTONE_BRANCH = IntegrationBranchFacts(
+    project="shop",
+    branch="integration/tides",
+    milestone="M4",
+    wave=None,
+    ended=True,
+    merged_pull_request=90,
+    merged_head="48537f8",
+    head="48537f8",
+    reached_forge=True,
+    worktree=TIDES_WORKTREE,
+    run_live=False,
+    locked=False,
+)
+CLOSED_WAVE_BRANCH = IntegrationBranchFacts(
+    project="shop",
+    branch="integration/shop_w3",
+    milestone=None,
+    wave="shop_w3",
+    ended=True,
+    merged_pull_request=91,
+    merged_head="9c1e2d3",
+    head="5ff69cd",
+    reached_forge=True,
+    worktree=None,
+    run_live=False,
+    locked=False,
+)
+
+
+class PlanIntegrationBranchRemovalTest(unittest.TestCase):
+    def test_should_remove_the_branch_of_an_ended_milestone_or_wave_whose_commits_reached_the_forge(self):
+        for branch, removal in [
+            (
+                CLOSED_MILESTONE_BRANCH,
+                RemoveIntegrationBranch(project="shop", branch="integration/tides", worktree=TIDES_WORKTREE),
+            ),
+            (
+                dataclasses.replace(CLOSED_MILESTONE_BRANCH, worktree=None),
+                RemoveIntegrationBranch(project="shop", branch="integration/tides", worktree=None),
+            ),
+            (
+                CLOSED_WAVE_BRANCH,
+                RemoveIntegrationBranch(project="shop", branch="integration/shop_w3", worktree=None),
+            ),
+            (
+                dataclasses.replace(CLOSED_WAVE_BRANCH, worktree="/srv/shop/.brigade/worktrees/integration-shop_w3"),
+                RemoveIntegrationBranch(
+                    project="shop",
+                    branch="integration/shop_w3",
+                    worktree="/srv/shop/.brigade/worktrees/integration-shop_w3",
+                ),
+            ),
+        ]:
+            with self.subTest(branch=branch):
+                # Arrange
+                snapshot = Snapshot(now=NOW, projects=(SHOP,), integration_branches=(branch,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, (removal,))
+
+    def test_should_plan_nothing_for_the_branch_of_an_active_milestone_or_of_an_open_wave(self):
+        for branch in [
+            dataclasses.replace(CLOSED_MILESTONE_BRANCH, ended=False),
+            dataclasses.replace(CLOSED_WAVE_BRANCH, ended=False),
+        ]:
+            with self.subTest(branch=branch):
+                # Arrange
+                snapshot = Snapshot(now=NOW, projects=(SHOP,), integration_branches=(branch,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, ())
+
+    def test_should_keep_the_branch_of_an_ended_milestone_or_wave_and_name_its_reason(self):
+        for branch, kept in [
+            (
+                dataclasses.replace(CLOSED_MILESTONE_BRANCH, head="5ff69cd", reached_forge=False),
+                KeepIntegrationBranch(
+                    project="shop", branch="integration/tides", reason="a commit outside the merged pull request"
+                ),
+            ),
+            (
+                dataclasses.replace(CLOSED_MILESTONE_BRANCH, run_live=True),
+                KeepIntegrationBranch(project="shop", branch="integration/tides", reason="a live run"),
+            ),
+            (
+                dataclasses.replace(CLOSED_MILESTONE_BRANCH, locked=True),
+                KeepIntegrationBranch(project="shop", branch="integration/tides", reason="a lock"),
+            ),
+            (
+                dataclasses.replace(
+                    CLOSED_WAVE_BRANCH, merged_pull_request=None, merged_head=None, reached_forge=False
+                ),
+                KeepIntegrationBranch(
+                    project="shop", branch="integration/shop_w3", reason="a commit outside the merged pull request"
+                ),
+            ),
+        ]:
+            with self.subTest(branch=branch):
+                # Arrange
+                snapshot = Snapshot(now=NOW, projects=(SHOP,), integration_branches=(branch,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, (kept,))

@@ -26,6 +26,10 @@ def answer(request: ProcessRequest, stdout: str, exit_code: int = 0, stderr: str
     )
 
 
+BRANCH_DELETION = ("git", "branch", "--quiet", "-D")
+BRANCH_HEAD_READING = ("git", "rev-parse", "--verify", "--quiet")
+
+
 class ScriptedProcessRunner:
     def __init__(self, answers: dict, fallback=refuse_process):
         self.answers = answers
@@ -40,6 +44,8 @@ class ScriptedProcessRunner:
         scripted = self.answers[max(prefixes, key=len)]
         if isinstance(scripted, Exception):
             raise scripted
+        if request.argv[: len(BRANCH_DELETION)] == BRANCH_DELETION:
+            self.answers[(*BRANCH_HEAD_READING, f"refs/heads/{request.argv[-1]}")] = ProcessAnswer(exit_code=1)
         return answer(request, scripted.stdout, scripted.exit_code, scripted.stderr)
 
 
