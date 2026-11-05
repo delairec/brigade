@@ -864,12 +864,12 @@ def _find_milestone_pull_request(reading: WaveReading, project: str, milestone: 
 
 
 def _find_described_head(reading: WaveReading, project: str, milestone: str) -> str | None:
-    described = [
+    heads = [
         event.head
         for event in reading.events
-        if isinstance(event, MilestonePrDescribed) and event.project == project and event.milestone == milestone
+        if isinstance(event, MilestonePrDescribed) and (event.project, event.milestone) == (project, milestone)
     ]
-    return described[-1] if described else None
+    return heads[-1] if heads else None
 
 
 def _list_closed_waves(reading: WaveReading, project: str, of_milestone: set[str]) -> tuple[str, ...]:
