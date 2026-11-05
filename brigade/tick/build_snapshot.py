@@ -96,6 +96,7 @@ REBASE_SLOT = "rebase"
 BLOCKED_OUTCOME = "blocked"
 DONE_OUTCOME = "done"
 FORGE_ACCOUNT_REASON = "forge_account"
+QUOTA_REASON = "quota"
 PROJECT_STATUS_FIELD = "STATUS"
 PAUSED_PROJECT_STATUS = "paused"
 NO_UNRESOLVED_THREAD = 0
@@ -532,6 +533,12 @@ def _read_blocked_run(reading: WaveReading, run: str) -> BlockedRun | None:
     return BlockedRun(run=run, question=read_run_question(finished[-1].message))
 
 
+def _is_blocked_run_answered(event, wave: str, run: str) -> bool:
+    if isinstance(event, WaveResumed):
+        return event.wave == wave and event.reason != QUOTA_REASON
+    return isinstance(event, WavePaused) and event.wave == wave and event.reason.startswith(f"run {run} blocked")
+
+
 def _read_blocked_rebase(reading: WaveReading, wave: str) -> BlockedRun | None:
     naming = [run for run in reading.runs if run["wave"] == wave and run["task"] is None and run["slot"] == REBASE_SLOT]
     if not naming:
@@ -540,10 +547,7 @@ def _read_blocked_rebase(reading: WaveReading, wave: str) -> BlockedRun | None:
     finished = [
         index for index, event in enumerate(reading.events) if isinstance(event, RunFinished) and event.run == run
     ]
-    if not finished or any(
-        isinstance(event, WavePaused) and event.wave == wave and event.reason.startswith(f"run {run} blocked")
-        for event in reading.events[finished[-1] :]
-    ):
+    if not finished or any(_is_blocked_run_answered(event, wave, run) for event in reading.events[finished[-1] :]):
         return None
     return _read_blocked_run(reading, run)
 
