@@ -15946,7 +15946,8 @@ TASK B234
 		+ "its milestone.closed, the branch of a wave once its wave is closed or cancelled, never"
 		+ "while a commit of the branch is outside its merged pull request or a run holds the"
 		+ "worktree"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 362
 	TYPE feat
 	MILESTONE @MILESTONE.M6
 	COMPONENT "tick"
