@@ -16058,7 +16058,7 @@ TASK B235
 			+ "test_should_tell_the_rebuild_of_the_task_apart_by_the_reason_of_its_fixing_state(self):"
 		IMPL "brigade/waves/count_repair_rounds.py::return event.reason is not None and"
 			+ "event.reason.startswith(REBUILD_REASON)"
-		IMPL "brigade/tick/plan.py::reason=f\"{REBUILD_REASON} {wave.branch}\","
+		IMPL "brigade/tick/plan.py::reason=f\"{REBUILD_REASON} {wave.base}\","
 	SPEC "a rebuild launched again on the same amendment after a rebuild that ended without"
 		+ "pushing, turn_limit, dead or any outcome but blocked, spends no round either: no launch"
 		+ "of a rebuild spends one, whatever the outcome of the one before, and no count of its own"
