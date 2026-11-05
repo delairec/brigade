@@ -11,6 +11,7 @@ from brigade.tick.actions import (
     CloseMilestone,
     CloseWave,
     CutMilestoneBranch,
+    KeepIntegrationBranch,
     LaunchCheckRepair,
     LaunchRemediation,
     LaunchStudy,
@@ -23,6 +24,7 @@ from brigade.tick.actions import (
     RebaseTask,
     RebuildTask,
     RecordTaskState,
+    RemoveIntegrationBranch,
     RemoveTaskWorktree,
     ReportMilestone,
     ReportTask,
@@ -42,6 +44,7 @@ from brigade.tick.build_snapshot import (
 )
 from brigade.tick.decide_resume_at import decide_resume_at
 from brigade.tick.is_study_due import is_study_due
+from brigade.tick.read_integration_branches import IntegrationBranchFacts
 from brigade.waves.read_task_state import PARKED_STATE
 
 BUILD_SLOT = "build"
@@ -80,6 +83,10 @@ OTHER_BASE_REASON = "pull request base is not the base of its task"
 RUN_DEAD_REASON = "run dead"
 RUN_NOT_STARTED_REASON = "run not started"
 CHECK_SUITE_CREATION_DELAY = timedelta(minutes=1)
+UNREACHED_FORGE_REASON = "a commit outside the merged pull request"
+LIVE_RUN_REASON = "a live run"
+LOCK_REASON = "a lock"
+NO_KEEPING_REASON = None
 
 
 def plan(snapshot: Snapshot) -> tuple:
@@ -102,7 +109,29 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_milestone_rebases(snapshot)
         + _plan_wave_starts(snapshot)
         + _plan_studies(snapshot)
+        + _plan_integration_branches(snapshot)
     )
+
+
+def _find_keeping_reason(branch: IntegrationBranchFacts) -> str | None:
+    if not branch.reached_forge:
+        return UNREACHED_FORGE_REASON
+    if branch.run_live:
+        return LIVE_RUN_REASON
+    if branch.locked:
+        return LOCK_REASON
+    return NO_KEEPING_REASON
+
+
+def _decide_integration_branch(branch: IntegrationBranchFacts) -> RemoveIntegrationBranch | KeepIntegrationBranch:
+    reason = _find_keeping_reason(branch)
+    if reason is None:
+        return RemoveIntegrationBranch(project=branch.project, branch=branch.branch, worktree=branch.worktree)
+    return KeepIntegrationBranch(project=branch.project, branch=branch.branch, reason=reason)
+
+
+def _plan_integration_branches(snapshot: Snapshot) -> tuple:
+    return tuple(_decide_integration_branch(branch) for branch in snapshot.integration_branches if branch.ended)
 
 
 def _plan_launches(snapshot: Snapshot, paused: set) -> tuple:

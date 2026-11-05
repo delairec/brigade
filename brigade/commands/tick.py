@@ -69,6 +69,7 @@ from brigade.tick.actions import (
     CollectCheckRuns,
     CollectReviewThreads,
     CutMilestoneBranch,
+    KeepIntegrationBranch,
     LaunchCheckRepair,
     LaunchRemediation,
     LaunchStudy,
@@ -81,6 +82,7 @@ from brigade.tick.actions import (
     RebaseTask,
     RebuildTask,
     RecordTaskState,
+    RemoveIntegrationBranch,
     RemoveTaskWorktree,
     ReportMilestone,
     ReportTask,
@@ -99,6 +101,7 @@ from brigade.tick.prepare_task_worktree import prepare_task_worktree
 from brigade.tick.read_ruled_task import read_ruled_task
 from brigade.tick.rebase_task import rebase_task
 from brigade.tick.record_review_threads import record_review_threads
+from brigade.tick.remove_integration_branch import remove_integration_branch
 from brigade.tick.remove_task_worktree import remove_task_worktree
 from brigade.tick.run_rounds import Rounds, RoundsOutcome, run_rounds
 from brigade.tick.write_build_brief import write_build_brief
@@ -591,6 +594,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         RecordTaskState: lambda action: _record_task_state(runtime, action),
         ParkTask: lambda action: _park_task(runtime, action),
         RemoveTaskWorktree: lambda action: remove_task_worktree(runtime, action),
+        RemoveIntegrationBranch: lambda action: remove_integration_branch(runtime, action),
         RunPreflight: lambda action: _run_preflight(runtime, configuration, action),
         MergePullRequest: lambda action: _merge_pull_request(runtime, configuration, action),
         **_list_task_run_executors(runtime, configuration),
@@ -650,6 +654,13 @@ def _name_the_blocked_milestone_rebases(snapshot: Snapshot) -> Snapshot:
     return snapshot
 
 
+def _name_the_kept_integration_branches(actions: tuple) -> tuple:
+    kept = [action for action in actions if isinstance(action, KeepIntegrationBranch)]
+    for branch in kept:
+        sys.stderr.write(f"brigade tick: the branch {branch.branch} of {branch.project} kept: {branch.reason}\n")
+    return tuple(action for action in actions if action not in kept)
+
+
 def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuration) -> RoundsOutcome:
     forge = _read_the_forge(runtime, configuration)
     apply = functools.partial(
@@ -660,7 +671,7 @@ def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuratio
     outcome = run_rounds(
         Rounds(
             build_snapshot=lambda: _name_the_blocked_milestone_rebases(build_snapshot(runtime, configuration, forge)),
-            plan=plan,
+            plan=lambda snapshot: _name_the_kept_integration_branches(plan(snapshot)),
             apply=apply,
             cap=ROUND_CAP,
         )
