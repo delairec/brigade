@@ -67,7 +67,7 @@ from brigade.waves.list_tasks_of_reached_milestones import list_tasks_of_reached
 from brigade.waves.locate_branch_worktree import locate_branch_worktree
 from brigade.waves.locate_forge_branch import locate_forge_branch
 from brigade.waves.name_milestone_branch import name_milestone_branch
-from brigade.waves.prepare_wave_tree import prepare_wave_tree
+from brigade.waves.prepare_wave_tree import locate_wave_branch_base, prepare_wave_tree
 from brigade.waves.read_active_milestones import read_active_milestones
 from brigade.waves.read_project_tasks import ProjectTasks, ProjectTasksReading, read_project_tasks
 from brigade.waves.read_task_states import read_task_states
@@ -1007,7 +1007,7 @@ def _read_integration_branches(
             state_root=runtime.paths.state_root,
             read_pull_request=reading.forge.read_pull_request,
             read_environment=reading.forge.read_environment,
-            locate_wave_base=lambda started: prepare_wave_tree(runtime, configuration, started).ref,
+            locate_wave_base=lambda started: locate_wave_branch_base(runtime, configuration, started),
             is_alive=is_recorded_process_alive,
         ),
     )
