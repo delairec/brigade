@@ -3,6 +3,7 @@ import argparse
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.prepare_tree import Tree
 from brigade.corpus.read_entities import read_entities
+from brigade.errors import BrigadeError
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.milestone_closed import MilestoneClosed
@@ -23,18 +24,26 @@ def _prepare_tree_at(runtime: Runtime, configuration: Configuration, project: st
     return prepare_project_tree(query, configuration, runtime)
 
 
+def _list_milestone_cuts(entries: tuple[LedgerEntry, ...], project: str) -> tuple[MilestoneBranchCut, ...]:
+    cuts = {
+        entry.event.milestone: entry.event
+        for entry in entries
+        if isinstance(entry.event, MilestoneBranchCut) and entry.event.project == project
+    }
+    return tuple(cuts.values())
+
+
 def _list_open_milestone_cuts(entries: tuple[LedgerEntry, ...], project: str) -> tuple[MilestoneBranchCut, ...]:
     closed = {
         entry.event.milestone
         for entry in entries
         if isinstance(entry.event, MilestoneClosed) and entry.event.project == project
     }
-    cuts = {
-        entry.event.milestone: entry.event
-        for entry in entries
-        if isinstance(entry.event, MilestoneBranchCut) and entry.event.project == project
-    }
-    return tuple(cut for milestone, cut in cuts.items() if milestone not in closed)
+    return tuple(cut for cut in _list_milestone_cuts(entries, project) if cut.milestone not in closed)
+
+
+def _read_main(runtime: Runtime, project: str) -> str:
+    return read_project_field(find_project(read_projects(runtime), project), MAIN_FIELD)
 
 
 def _holds_the_wave(runtime: Runtime, tree: Tree, cut: MilestoneBranchCut, started: WaveStarted) -> bool:
@@ -50,5 +59,20 @@ def prepare_wave_tree(runtime: Runtime, configuration: Configuration, started: W
         tree = _prepare_tree_at(runtime, configuration, started.project, cut.branch)
         if _holds_the_wave(runtime, tree, cut, started):
             return tree
-    main = read_project_field(find_project(read_projects(runtime), started.project), MAIN_FIELD)
-    return _prepare_tree_at(runtime, configuration, started.project, main)
+    return _prepare_tree_at(runtime, configuration, started.project, _read_main(runtime, started.project))
+
+
+def _prepare_cut_tree(runtime: Runtime, configuration: Configuration, cut: MilestoneBranchCut, main: str) -> Tree:
+    try:
+        return _prepare_tree_at(runtime, configuration, cut.project, cut.branch)
+    except BrigadeError:
+        return _prepare_tree_at(runtime, configuration, cut.project, main)
+
+
+def locate_wave_branch_base(runtime: Runtime, configuration: Configuration, started: WaveStarted) -> str:
+    entries = runtime.read_ledger(runtime.paths.state_root).entries
+    main = _read_main(runtime, started.project)
+    for cut in _list_milestone_cuts(entries, started.project):
+        if _holds_the_wave(runtime, _prepare_cut_tree(runtime, configuration, cut, main), cut, started):
+            return cut.branch
+    return main
