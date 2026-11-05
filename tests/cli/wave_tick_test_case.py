@@ -70,6 +70,7 @@ FAKE_GH = (
     '    if [ -f "$answer.refused" ]; then echo "HTTP 502: Bad Gateway" >&2; exit 1; fi\n'
     '    if [ -f "$answer.json" ]; then cat "$answer.json"; else echo "[]"; fi ;;\n'
     '  "pr view") cat "{pull_requests}/$3.json" ;;\n'
+    '  "pr checks") cat "{pull_requests}/$3.checks.json" ;;\n'
     '  "api repos/{{owner}}/{{repo}}/compare/"*) if [ -f "{pull_requests}/behind-by" ]; then\n'
     '    cat "{pull_requests}/behind-by"; else echo 0; fi ;;\n'
     "  *) exit 2 ;;\n"

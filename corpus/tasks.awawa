@@ -16128,7 +16128,7 @@ TASK B235
 		+ "its first round since its last verdict or its last requeue, where today the task is"
 		+ "parked on the rounds its rebuilds spent and no repair runs"
 		IMPL "tests/cli/test_tick_after_a_rebuild.py::def"
-			+ "test_should_plan_the_check_repair_of_the_failing_check_at_the_next_tick(self):"
+			+ "test_should_launch_the_check_repair_of_the_failing_check_at_the_next_tick(self):"
 	SPEC "tests/unit/tick/test_build_snapshot_from_the_corpus.py proves, on literal rows, a"
 		+ "task.state fixing carrying the reason of a rebuild counting no round, two of them in a"
 		+ "row counting none, and a repair launched after them counting one;"
