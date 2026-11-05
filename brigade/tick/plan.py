@@ -2,6 +2,7 @@ import dataclasses
 from datetime import datetime, timedelta
 
 from brigade.ledger.format_instant import format_instant
+from brigade.ledger.task_state import REBUILD_REASON
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.task_report_order import TaskReportOrder
 from brigade.system.pull_request_facts import PullRequestFacts
@@ -312,10 +313,7 @@ def _decide_blocked_parking(wave: WaveFacts, task: TaskFacts, occupancy: _Occupa
     )
 
 
-def _decide_rebuild(wave: WaveFacts, task: TaskFacts, project: ProjectFacts) -> RebuildTask | ParkTask:
-    parking_reason = _describe_spent_rounds(task, project)
-    if parking_reason is not None:
-        return ParkTask(wave=wave.wave, task=task.name, reason=parking_reason, blockers=())
+def _decide_rebuild(wave: WaveFacts, task: TaskFacts) -> RebuildTask:
     return RebuildTask(
         project=wave.project,
         wave=wave.wave,
@@ -324,7 +322,7 @@ def _decide_rebuild(wave: WaveFacts, task: TaskFacts, project: ProjectFacts) -> 
         task_branch=task.branch,
         pr=task.pull_request.number,
         worktree=task.worktree,
-        reason=f"the entity of the task amended on {wave.base}",
+        reason=f"{REBUILD_REASON} {wave.base}",
         amendment=task.amendment,
     )
 
@@ -342,7 +340,7 @@ def _decide_catch_up(
     ):
         return None
     if task.amendment is not None:
-        return _decide_rebuild(wave, task, project)
+        return _decide_rebuild(wave, task)
     if task.holds_uncommitted_changes and _describe_spent_rounds(task, project) is None:
         return _launch_repair(wave, task)
     if not _are_checks_passed(task.pull_request, project, reading.now):
