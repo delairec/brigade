@@ -1574,6 +1574,19 @@ class BuildSnapshotOfAWaveStartedAfterTheForgeAccountBecameUnavailableTest(Build
             ),
         )
 
+    def test_should_read_the_forge_account_available_once_another_wave_was_resumed_from_it(self):
+        # Arrange
+        self.write_operational_corpus()
+        self.record(90, ForgeAccountUnavailable(login="octo-builder", key="build"))
+        self.record(70, WaveResumed(wave="w0", reason="forge_account"))
+        self.record(60, WaveStarted(wave="w1", project="shop", branch="integration/w1", tasks=("B1",)))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].forge_account_unavailable, False)
+
 
 class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
     def setUp(self):
