@@ -45,7 +45,6 @@ TIDES_HEAD = ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration
 W3_HEAD = ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/shop_w3")
 TIDES_IN_ITS_PULL_REQUEST = ("git", "merge-base", "--is-ancestor", "5ff69cd", "48537f8")
 TIDES_IN_MAIN = ("git", "merge-base", "--is-ancestor", "5ff69cd", "main")
-W3_IN_ITS_PULL_REQUEST = ("git", "merge-base", "--is-ancestor", "9c1e2d3", "48537f8")
 W3_IN_ITS_MILESTONE_BRANCH = ("git", "merge-base", "--is-ancestor", "9c1e2d3", "integration/currents")
 WORKTREE_LISTING = ("git", "worktree", "list", "--porcelain", "-z")
 
