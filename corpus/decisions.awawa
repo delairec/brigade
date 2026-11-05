@@ -4017,8 +4017,8 @@ DECISION AFindingRecordedWithoutASummaryPrintsNoneAsItsSummaryInThePreviousVerdi
 DECISION ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone
 	TITLE "a repair round is one launch by the tick of a run of the remediate or the build slot on"
 		+ "a task of a wave, counted since the last verdict or the last requeue of the task; a run"
-		+ "of the rebase slot counts none, a run cut by a rate limit counts none, and no other"
-		+ "bound replaces it"
+		+ "of the rebase slot counts none, a run cut by a rate limit counts none, a rebuild to an"
+		+ "amended entity counts none, and no other bound replaces it"
 	STATUS active
 	DESC "the rounds of a task are the count of the runs of the remediate slot and of the build"
 		+ "slot the tick launched on it in its wave since its last task.verdict or its last"
@@ -4053,6 +4053,12 @@ DECISION ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsN
 		+ "task.state fixing of the wave"
 		REF @TASK.B217
 		REF @TASK.B220
+	DESC "a rebuild of a task to its entity amended on the branch of its wave, a run of the build"
+		+ "slot launched as a delivery to the amended SPEC and not on a failure the gate found,"
+		+ "spends no round, whatever the outcome of the rebuild before it: its task.state fixing is"
+		+ "told apart by its reason, which opens on REBUILD_REASON of brigade/ledger/task_state.py,"
+		+ "and no count of its own bounds the rebuilds, as none bounds the runs of the rebase slot"
+		REF @TASK.B235
 	REJECTED "a run of the rebase slot counted as one round, as the former ruling did: the user"
 		+ "ruled that only the repair rounds are counted"
 	REJECTED "a bound of its own on the runs of the rebase slot once they count no round: the user"
