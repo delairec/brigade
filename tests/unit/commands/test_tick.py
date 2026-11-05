@@ -5358,16 +5358,24 @@ CLOSE_OF_M4 = {
     "milestone": "M4",
     "pr": 90,
 }
-HEAD_OF_THE_MILESTONE_BRANCH = ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/tides")
 DELETION_OF_THE_MILESTONE_BRANCH = ("git", "branch", "--quiet", "-D", "integration/tides")
 MILESTONE_BRANCH_WITHIN_MAIN = ("git", "merge-base", "--is-ancestor", WAVE_HEAD, "main")
+
+
+CUT_OF_M5 = {**CUT_OF_M4, "milestone": "M5", "branch": "integration/reefs"}
+CLOSE_OF_M5 = {**CLOSE_OF_M4, "milestone": "M5", "pr": 92}
+REEFS_HEAD = "a1b2c3d"
+HEAD_OF_THE_REEFS_BRANCH = ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/reefs")
+BRANCH_DELETION = ("git", "branch", "--quiet", "-D")
 
 
 class IntegrationBranchDeletingRunnerDouble(ScriptedProcessRunner):
     def run(self, request):
         record = super().run(request)
-        if request.argv == DELETION_OF_THE_MILESTONE_BRANCH:
-            self.answers[HEAD_OF_THE_MILESTONE_BRANCH] = ProcessAnswer(exit_code=1)
+        if request.argv[: len(BRANCH_DELETION)] == BRANCH_DELETION:
+            self.answers[("git", "rev-parse", "--verify", "--quiet", f"refs/heads/{request.argv[-1]}")] = ProcessAnswer(
+                exit_code=1
+            )
         return record
 
 
@@ -5426,6 +5434,21 @@ class TickRemovingTheBranchOfAClosedMilestoneTest(unittest.TestCase):
             "brigade tick: the branch integration/tides of tidepool kept: a commit outside the merged pull request\n",
             errors.getvalue(),
         )
+
+    def test_should_name_the_branch_it_keeps_once_in_a_tick_of_several_rounds(self):
+        # Arrange
+        write_ledger(self.root, [CUT_OF_M4, CLOSE_OF_M4, CUT_OF_M5, CLOSE_OF_M5])
+        self.machine.answers[MILESTONE_BRANCH_WITHIN_MAIN] = ProcessAnswer(exit_code=1)
+        self.machine.answers[HEAD_OF_THE_REEFS_BRANCH] = ProcessAnswer(stdout=f"{REEFS_HEAD}\n")
+        self.machine.answers[("git", "branch", "--quiet", "-D", "integration/reefs")] = ProcessAnswer()
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(errors.getvalue().count("the branch integration/tides of tidepool kept"), 1)
 
     def test_should_remove_nothing_of_the_branch_it_keeps(self):
         # Arrange
