@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+from collections.abc import Callable
 from pathlib import Path
 
 from brigade.collecting.collector_equipment import CollectorEquipment
@@ -49,15 +50,15 @@ class DocumentDouble:
         return {"entities": [{"type": "REPORT", "name": "oak_M6", "fields": [{"name": "MILESTONE", "value": "M6"}]}]}
 
 
-def create_forge() -> ForgeDouble:
+def answer_opened_pull_request(request: dict) -> dict:
+    return {"schema_version": 1, "url": "https://github.com/octo/oak/pull/190", "number": 190}
+
+
+def create_forge(open_pull_request: Callable[[dict], dict] = answer_opened_pull_request) -> ForgeDouble:
     return ForgeDouble(
         {
             "rewrite_pull_request_body": lambda request: {"schema_version": 1},
-            "open_pull_request": lambda request: {
-                "schema_version": 1,
-                "url": "https://github.com/octo/oak/pull/190",
-                "number": 190,
-            },
+            "open_pull_request": open_pull_request,
             "describe_account": lambda request: {"schema_version": 1, "login": "octo-cli"},
             "read_login_environment": lambda request: {
                 "schema_version": 1,
@@ -305,6 +306,26 @@ class PublishMilestoneReportTest(unittest.TestCase):
                 ("git", "push", "--quiet", "origin", BRANCH),
                 ("git", "worktree", "remove", "--force", str(self.checkout)),
             ],
+        )
+
+    def test_should_open_the_pull_request_of_the_milestone_once_the_reached_milestone_is_pushed_on_its_branch(self):
+        # Arrange
+        processes_before_opening = []
+
+        def open_pull_request(request: dict) -> dict:
+            processes_before_opening.extend(self.processes.list_argvs())
+            return answer_opened_pull_request(request)
+
+        self.forge = create_forge(open_pull_request)
+        context = self.create_context("github")
+
+        # Act
+        publish_milestone_report(context)
+
+        # Assert
+        self.assertEqual(
+            processes_before_opening[-2:],
+            [("git", "commit", "--quiet", "-m", REACHED_MESSAGE), ("git", "push", "--quiet", "origin", BRANCH)],
         )
 
     def test_should_remove_its_checkout_from_the_project_when_the_push_fails(self):
