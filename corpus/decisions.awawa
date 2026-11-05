@@ -5814,3 +5814,24 @@ DECISION AMilestoneBranchRebasedOntoMainIsCheckedBeforeItsPushAndARedHeadIsRepai
 		REF @TASK.B174
 	SOURCE "the user's ruling of 2026-11-04 on the defect, « on le passe en quick fix », with no"
 		+ "TASK entity, delivered by pull request #354"
+
+DECISION AResumeOfAWaveAnswersEveryRebaseRunOfItEndedBlockedBeforeIt
+	TITLE "a resume of a wave answers every rebase run of its branch that ended blocked before it,"
+		+ "even one that ended while the wave was paused on another question; only a rebase run"
+		+ "that ends blocked after the resume pauses the wave again"
+	STATUS active
+	DESC "the snapshot carries no blocked rebase run of a wave once a wave.resumed of that wave"
+		+ "follows the run.finished of its last rebase run, whatever the pause it ended, as it"
+		+ "carries none once a wave.paused names that run"
+		REF @TASK.B214
+	DESC "the resume the tick records once the quota has reset, reason quota, answers no question:"
+		+ "a rebase run that ended blocked under a quota pause still pauses its wave after it"
+	REJECTED "the blocked run answered only by a wave.paused naming it: a run that ended blocked"
+		+ "while its wave was paused already is named by no pause, and the next tick undoes the"
+		+ "resume of the user on a question older than it"
+	RATIONALE "on 2026-11-04 the rebase runs 20261104T142500Z-de1399, -711a80 and -8bb012 of the"
+		+ "waves brigade_w21, brigade_w22 and brigade_w25 ended blocked on the failure of the base"
+		+ "while each wave was paused; the user resumed the three at 2026-11-05T00:49:36Z once pull"
+		+ "request #353 had repaired the base, and the tick of 00:50:00Z paused them again on those"
+		+ "runs"
+	SOURCE "the user's ruling of 2026-11-05 on the defect, « oui quick fix », with no TASK entity"

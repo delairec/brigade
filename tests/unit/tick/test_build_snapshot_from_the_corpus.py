@@ -2061,6 +2061,47 @@ class BuildSnapshotOfARebaseRunOfAWaveBranchTest(BuildSnapshotTestCase):
             BlockedRun(run="20261019T083000Z-4eba5e", question="Keep the guard of plan.py or drop it?"),
         )
 
+    def test_should_carry_no_blocked_rebase_run_ended_while_the_wave_was_paused_once_the_user_resumes_it(self):
+        # Arrange
+        self.record(6, WavePaused(wave="w1", reason="forge_account", resume_at=None))
+        self.record_rebase_run(WAVE_BRANCH_RUN, "blocked")
+        self.record(3, WaveResumed(wave="w1", reason="forge_account"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertIsNone(snapshot.waves[0].blocked_rebase)
+
+    def test_should_carry_the_blocked_rebase_run_past_the_resume_of_another_wave(self):
+        # Arrange
+        self.record_rebase_run(WAVE_BRANCH_RUN, "blocked")
+        self.record(3, WaveResumed(wave="w2", reason="forge_account"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.waves[0].blocked_rebase,
+            BlockedRun(run="20261019T083000Z-4eba5e", question="Keep the guard of plan.py or drop it?"),
+        )
+
+    def test_should_carry_the_blocked_rebase_run_ended_after_the_user_resumed_the_wave(self):
+        # Arrange
+        self.record(7, WavePaused(wave="w1", reason="forge_account", resume_at=None))
+        self.record(6, WaveResumed(wave="w1", reason="forge_account"))
+        self.record_rebase_run(WAVE_BRANCH_RUN, "blocked")
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.waves[0].blocked_rebase,
+            BlockedRun(run="20261019T083000Z-4eba5e", question="Keep the guard of plan.py or drop it?"),
+        )
+
     def test_should_carry_no_blocked_rebase_run_while_the_rebase_run_of_the_wave_branch_has_not_finished(self):
         # Arrange
         write_run(

@@ -174,6 +174,9 @@ dies before it records a `run.finished` does.
   worktree and a detached run of the slot `rebase` repairs it there, then pushes it once its tests pass.
 - No rebase is planned for a wave that is paused, or whose rebase run lives or ended blocked; a blocked rebase run
   pauses its wave on its question.
+- `brigade wave resume` answers every rebase run of the wave that ended blocked before it, one that ended while the
+  wave was paused on another question included: only a rebase run that ends blocked after the resume pauses the wave
+  again. The resume the tick records after a quota reset answers none.
 
 </details>
 
