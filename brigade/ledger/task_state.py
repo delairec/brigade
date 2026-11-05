@@ -16,6 +16,7 @@ TASK_STATES = (
     "paused:quota",
 )
 REQUEUE_REASON = "brigade wave requeue"
+REBUILD_REASON = "the entity of the task amended on"
 QUOTA_RESUME_REASON = "resumed after the quota reset"
 
 

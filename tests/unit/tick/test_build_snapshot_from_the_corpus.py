@@ -1486,6 +1486,7 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
 
 
 REQUEUE_REASON = "brigade wave requeue"
+REBUILD_REASON = "the entity of the task amended on integration/w1"
 FAILING_CHECKS = {"name": "checks", "verdict": "fail", "findings": ["tests: failure"]}
 FAILING_BODY = {"name": "body", "verdict": "fail", "findings": ["the body names no task"]}
 PASSING_PRIVACY = {"name": "privacy", "verdict": "pass", "findings": []}
@@ -1583,6 +1584,59 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
     def test_should_count_the_rounds_recorded_after_the_last_requeue_of_the_task(self):
         # Arrange
         self.record(35, TaskState(wave="w1", task="B1", state="pr_open", reason=REQUEUE_REASON))
+        self.record(20, TaskState(wave="w1", task="B1", state="fixing"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].tasks[0].repair_rounds, 1)
+
+    def test_should_count_no_round_for_the_rebuild_of_the_task_to_its_amended_entity(self):
+        # Arrange
+        self.record(35, create_verdict("B1", "4f2a9c1", "changes"))
+        self.record(30, TaskState(wave="w1", task="B1", state="fixing", reason=REBUILD_REASON))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].tasks[0].repair_rounds, 0)
+
+    def test_should_tell_the_rebuild_of_the_task_apart_by_the_reason_of_its_fixing_state(self):
+        for case, reason, expected_rounds in [
+            ("the reason of a rebuild", "the entity of the task amended on integration/w1", 0),
+            ("the reason of another fixing state", "resumed after the quota reset", 1),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                self.record(35, create_verdict("B1", "4f2a9c1", "changes"))
+                self.record(30, TaskState(wave="w1", task="B1", state="fixing", reason=reason))
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].tasks[0].repair_rounds, expected_rounds)
+
+    def test_should_count_no_round_for_two_rebuilds_of_the_task_in_a_row(self):
+        # Arrange
+        self.record(35, create_verdict("B1", "4f2a9c1", "changes"))
+        self.record(30, TaskState(wave="w1", task="B1", state="fixing", reason=REBUILD_REASON))
+        self.record(25, TaskState(wave="w1", task="B1", state="fixing", reason=REBUILD_REASON))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].tasks[0].repair_rounds, 0)
+
+    def test_should_count_one_round_for_a_repair_launched_after_two_rebuilds_of_the_task(self):
+        # Arrange
+        self.record(35, create_verdict("B1", "4f2a9c1", "changes"))
+        self.record(30, TaskState(wave="w1", task="B1", state="fixing", reason=REBUILD_REASON))
+        self.record(25, TaskState(wave="w1", task="B1", state="fixing", reason=REBUILD_REASON))
         self.record(20, TaskState(wave="w1", task="B1", state="fixing"))
 
         # Act

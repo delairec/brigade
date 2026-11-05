@@ -1812,7 +1812,7 @@ class PlanRebuildOfAnAmendedTaskTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(actions, ())
 
-    def test_should_park_an_amended_task_past_its_repair_rounds_on_the_rounds_spent(self):
+    def test_should_rebuild_an_amended_task_past_its_repair_rounds(self):
         # Arrange
         task = TaskFacts(
             name="S3",
@@ -1830,7 +1830,7 @@ class PlanRebuildOfAnAmendedTaskTest(unittest.TestCase):
         actions = plan(snapshot)
 
         # Assert
-        self.assertEqual(actions, (PARK_S3_PAST_ITS_ROUNDS,))
+        self.assertEqual(actions, (REBUILD_S3,))
 
 
 BLOCKED_ON_A_RULING = BlockedRun(run="20261006T110000Z-b10c4d", question="Keep the guard or drop it?")
