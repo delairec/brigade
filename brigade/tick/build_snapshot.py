@@ -490,14 +490,12 @@ def _read_rate_limits(reading: WaveReading, now: datetime) -> tuple[RateLimit, .
     )
 
 
-def _is_forge_account_unavailable(entries: tuple[LedgerEntry, ...], wave: str) -> bool:
+def _is_forge_account_unavailable(entries: tuple[LedgerEntry, ...]) -> bool:
     unavailable = [entry.instant for entry in entries if isinstance(entry.event, ForgeAccountUnavailable)]
     cleared = [
         entry.instant
         for entry in entries
-        if isinstance(entry.event, WaveResumed)
-        and entry.event.wave == wave
-        and entry.event.reason == FORGE_ACCOUNT_REASON
+        if isinstance(entry.event, WaveResumed) and entry.event.reason == FORGE_ACCOUNT_REASON
     ]
     return bool(unavailable) and max(unavailable) > max(cleared, default=BEFORE_ANY_EVENT)
 
@@ -719,7 +717,7 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveSta
         states=open_wave.followed.states,
         implemented=open_wave.implemented,
         pause=read_wave_pause(reading.events, started.wave),
-        forge_account_unavailable=_is_forge_account_unavailable(reading.entries, started.wave),
+        forge_account_unavailable=_is_forge_account_unavailable(reading.entries),
         reported=_is_reported(reading, started.wave),
         integration_pull_request=pull_request.facts,
         opened_integration_pull_request=find_integration_pull_request(reading.events, started.wave),
