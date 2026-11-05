@@ -228,6 +228,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
                     "study_runs": 2,
                     "rate_limits": [],
                     "milestones": [],
+                    "integration_branches": [],
                 },
                 "plan": [],
             },
@@ -484,6 +485,8 @@ MACHINE_OUTPUTS = {
     ("git", "cat-file", "-p"): ".brigade/worktrees/\n",
     ("git", "worktree", "add"): "",
     ("git", "worktree", "list"): "",
+    ("git", "worktree", "remove"): "",
+    ("git", "branch", "--quiet", "-D"): "",
     ("git", "merge-base"): "",
     ("git", "fetch"): "",
     ("git", "diff"): "",
@@ -4103,7 +4106,13 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
                     "repository": str(self.repository),
                     "branch": "feature/T7-tide-table",
                     "environment": {"GH_TOKEN": "t0k3n"},
-                }
+                },
+                {
+                    "schema_version": 1,
+                    "repository": str(self.repository),
+                    "branch": "integration/M4",
+                    "environment": {"GH_TOKEN": "t0k3n"},
+                },
             ],
         )
 
@@ -5336,6 +5345,114 @@ class TickReportingATaskNamingNoMilestoneTest(unittest.TestCase):
                     "task": "T7",
                     "run": reported_run,
                     "login": None,
+                }
+            ],
+        )
+
+
+CLOSE_OF_M4 = {
+    "schema_version": 1,
+    "ts": "2026-10-19T09:30:00Z",
+    "event": "milestone.closed",
+    "project": "tidepool",
+    "milestone": "M4",
+    "pr": 90,
+}
+HEAD_OF_THE_MILESTONE_BRANCH = ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/tides")
+DELETION_OF_THE_MILESTONE_BRANCH = ("git", "branch", "--quiet", "-D", "integration/tides")
+MILESTONE_BRANCH_WITHIN_MAIN = ("git", "merge-base", "--is-ancestor", WAVE_HEAD, "main")
+
+
+class IntegrationBranchDeletingRunnerDouble(ScriptedProcessRunner):
+    def run(self, request):
+        record = super().run(request)
+        if request.argv == DELETION_OF_THE_MILESTONE_BRANCH:
+            self.answers[HEAD_OF_THE_MILESTONE_BRANCH] = ProcessAnswer(exit_code=1)
+        return record
+
+
+class TickRemovingTheBranchOfAClosedMilestoneTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.worktree = self.root / "tidepool" / ".brigade" / "worktrees" / "integration-tides"
+        self.worktree.mkdir(parents=True)
+        write_ledger(self.root, [CUT_OF_M4, CLOSE_OF_M4])
+        corpus = {
+            "STUDY": PAUSED_BUILT_IN_STUDIES,
+            "PROJECT": {"tidepool": (("PATH", str(self.root / "tidepool")), ("MAIN", "main"))},
+            "TASK": {},
+        }
+        self.machine = IntegrationBranchDeletingRunnerDouble(
+            {
+                **MACHINE_ANSWERS,
+                ("awawa", "status", "MILESTONE"): NO_ACTIVE_MILESTONE,
+                ("git", "worktree", "remove"): ProcessAnswer(),
+                DELETION_OF_THE_MILESTONE_BRANCH: ProcessAnswer(),
+            },
+            fallback=create_corpus_double(corpus),
+        )
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=self.machine.run,
+            resolve_plugin=create_plugin_resolution(
+                STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
+            ),
+        )
+
+    def test_should_remove_the_worktree_then_the_local_branch_of_the_closed_milestone(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            select_argvs_opening_on(self.machine.argvs, ("git", "worktree", "remove"), ("git", "branch", "--quiet")),
+            [("git", "worktree", "remove", "--force", str(self.worktree)), DELETION_OF_THE_MILESTONE_BRANCH],
+        )
+
+    def test_should_name_on_stderr_the_branch_of_the_closed_milestone_it_keeps_with_its_reason(self):
+        # Arrange
+        self.machine.answers[MILESTONE_BRANCH_WITHIN_MAIN] = ProcessAnswer(exit_code=1)
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertIn(
+            "brigade tick: the branch integration/tides of tidepool kept: a commit outside the merged pull request\n",
+            errors.getvalue(),
+        )
+
+    def test_should_remove_nothing_of_the_branch_it_keeps(self):
+        # Arrange
+        self.machine.answers[MILESTONE_BRANCH_WITHIN_MAIN] = ProcessAnswer(exit_code=1)
+
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertNotIn(DELETION_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
+
+    def test_should_name_the_branch_it_keeps_with_its_reason_on_a_dry_run(self):
+        # Arrange
+        self.machine.answers[MILESTONE_BRANCH_WITHIN_MAIN] = ProcessAnswer(exit_code=1)
+
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["plan"],
+            [
+                {
+                    "project": "tidepool",
+                    "branch": "integration/tides",
+                    "reason": "a commit outside the merged pull request",
                 }
             ],
         )

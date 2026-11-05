@@ -14,6 +14,7 @@ from brigade.errors import CommandFailed
 from brigade.ledger.append_event import append_event
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
+from brigade.ledger.milestone_closed import MilestoneClosed
 from brigade.ledger.milestone_pr_opened import MilestonePrOpened
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_preflighted import TaskPreflighted
@@ -44,6 +45,7 @@ from brigade.tick.build_snapshot import (
     WaveFacts,
     build_snapshot,
 )
+from brigade.tick.read_integration_branches import IntegrationBranchFacts
 from brigade.waves.list_candidate_waves import CandidateWave
 from tests.unit.commands.run_directories import FIRST_RUN, SECOND_RUN, create_run_record, create_run_result, write_run
 from tests.unit.create_test_paths import create_test_paths
@@ -251,6 +253,41 @@ class BuildSnapshotWithoutCorpusTest(BuildSnapshotTestCase):
 
         # Assert
         self.assertEqual(snapshot, Snapshot(now=FIXED_NOW))
+
+
+class BuildSnapshotOfTheIntegrationBranchesTest(BuildSnapshotTestCase):
+    def test_should_read_the_integration_branches_from_the_ledger_git_and_the_forge(self):
+        # Arrange
+        self.write_operational_corpus()
+        self.record(60, WaveStarted(wave="w0", project="shop", tasks=("B0",), branch="integration/w0"))
+        self.record(30, WaveClosed(wave="w0"))
+        self.remote_answers = {
+            ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/w0"): ProcessAnswer(stdout="9c1e2d3\n")
+        }
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.integration_branches,
+            (
+                IntegrationBranchFacts(
+                    project="shop",
+                    branch="integration/w0",
+                    milestone=None,
+                    wave="w0",
+                    ended=True,
+                    merged_pull_request=None,
+                    merged_head=None,
+                    head="9c1e2d3",
+                    reached_forge=True,
+                    worktree=None,
+                    run_live=False,
+                    locked=False,
+                ),
+            ),
+        )
 
 
 class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
@@ -1130,6 +1167,17 @@ class BuildSnapshotOfAProjectItSkipsTest(BuildSnapshotTestCase):
 
         # Assert
         self.assertEqual(snapshot.milestones, ())
+
+    def test_should_read_no_integration_branch_of_the_project_it_skips(self):
+        # Arrange
+        self.record(60, MilestoneBranchCut(project="attic", milestone="M2", branch="integration/attic", login=None))
+        self.record(50, MilestoneClosed(project="attic", milestone="M2", pr=12))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.integration_branches, ())
 
 
 def describe_task_of_milestone(status: str, milestone: str) -> list[dict]:

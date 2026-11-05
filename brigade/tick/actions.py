@@ -191,3 +191,17 @@ class RebuildTask:
     worktree: str
     reason: str
     amendment: TaskAmendment
+
+
+@dataclass(frozen=True)
+class RemoveIntegrationBranch:
+    project: str
+    branch: str
+    worktree: str | None
+
+
+@dataclass(frozen=True)
+class KeepIntegrationBranch:
+    project: str
+    branch: str
+    reason: str
