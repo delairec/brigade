@@ -22,7 +22,23 @@ plan is empty or ten rounds have passed. Among those actions, it:
 - runs the due studies, as [Studies](Studies.md) says;
 - starts a wave for each project whose `POLICY` sets `WAVE_START` to `auto`;
 - carries each task of an open wave from its launch to its merge, as below;
-- pauses every running wave on the quota or on the forge account, and resumes it.
+- pauses every running wave on the quota or on the forge account, and resumes it;
+- removes the local branch of an integration branch the ledger records, and its worktree with it when one stands,
+  once the branch has nothing left to do: the branch of a milestone once the ledger holds its `milestone.closed`, the
+  branch of a wave once it holds its `wave.closed` or its `wave.cancelled`.
+
+The branch of an active milestone or of an open wave is never removed, nor a branch the ledger does not record, nor
+the branch on the forge. An ended branch is kept, with its worktree, while one of these holds, and the tick names it
+with its reason on stderr and in `brigade tick --dry-run`:
+
+| Reason | When |
+|---|---|
+| `a commit outside the merged pull request` | the head of the local branch is neither the head of its merged pull request, nor an ancestor of it, nor an ancestor of `origin/` the branch it merges into: the main branch for a milestone branch, the branch of its milestone for a wave branch |
+| `a live run` | a run is live on its worktree |
+| `a lock` | git lists its worktree locked |
+
+The worktree of a task is not an integration worktree: it is removed once the pull request of its task is merged or
+closed, as below, and a parked task of a closed wave keeps its worktree and its commits.
 
 ## The course of a task
 

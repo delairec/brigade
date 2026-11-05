@@ -17,6 +17,7 @@ from brigade.tick.build_snapshot import (
     UncutMilestone,
     WaveFacts,
 )
+from brigade.tick.read_integration_branches import IntegrationBranchFacts
 from brigade.waves.list_candidate_waves import CandidateWave
 from brigade.waves.read_wave_pause import WavePause
 
@@ -42,7 +43,50 @@ class SnapshotTest(unittest.TestCase):
                 "study_runs": 2,
                 "rate_limits": [],
                 "milestones": [],
+                "integration_branches": [],
             },
+        )
+
+    def test_should_carry_the_integration_branches_in_its_document(self):
+        # Arrange
+        branch = IntegrationBranchFacts(
+            project="shop",
+            branch="integration/shop_w3",
+            milestone=None,
+            wave="shop_w3",
+            ended=True,
+            merged_pull_request=None,
+            merged_head=None,
+            head="9c1e2d3",
+            reached_forge=False,
+            worktree=None,
+            run_live=False,
+            locked=False,
+        )
+        snapshot = Snapshot(now=datetime(2026, 11, 5, 12, 0, tzinfo=UTC), integration_branches=(branch,))
+
+        # Act
+        document = snapshot.to_document()
+
+        # Assert
+        self.assertEqual(
+            document["integration_branches"],
+            [
+                {
+                    "project": "shop",
+                    "branch": "integration/shop_w3",
+                    "milestone": None,
+                    "wave": "shop_w3",
+                    "ended": True,
+                    "merged_pull_request": None,
+                    "merged_head": None,
+                    "head": "9c1e2d3",
+                    "reached_forge": False,
+                    "worktree": None,
+                    "run_live": False,
+                    "locked": False,
+                }
+            ],
         )
 
     def test_should_carry_the_rate_limits_in_force_in_its_document(self):

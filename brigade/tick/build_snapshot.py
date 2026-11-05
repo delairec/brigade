@@ -53,6 +53,11 @@ from brigade.tick.describe_study_facts import describe_study_facts
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
 from brigade.tick.name_task_branch import name_task_branch
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
+from brigade.tick.read_integration_branches import (
+    IntegrationBranchFacts,
+    IntegrationBranchReading,
+    read_integration_branches,
+)
 from brigade.tick.study_facts import StudyFacts
 from brigade.waves.count_repair_rounds import count_repair_rounds
 from brigade.waves.find_milestone_branch import find_milestone_branch
@@ -346,6 +351,7 @@ class Snapshot:
     study_runs: int = STUDY_RUNS_BY_DEFAULT
     rate_limits: tuple[RateLimit, ...] = ()
     milestones: tuple[MilestoneFacts, ...] = ()
+    integration_branches: tuple[IntegrationBranchFacts, ...] = ()
 
     def to_document(self) -> dict:
         return {
@@ -358,6 +364,7 @@ class Snapshot:
             "study_runs": self.study_runs,
             "rate_limits": [rate_limit.to_document() for rate_limit in self.rate_limits],
             "milestones": [milestone.to_document() for milestone in self.milestones],
+            "integration_branches": [branch.to_document() for branch in self.integration_branches],
         }
 
 
@@ -988,6 +995,24 @@ def _read_milestones(runtime: Runtime, reading: WaveReading, projects: frozenset
     )
 
 
+def _read_integration_branches(
+    runtime: Runtime, configuration: Configuration, reading: WaveReading, projects: frozenset[str]
+) -> tuple[IntegrationBranchFacts, ...]:
+    return read_integration_branches(
+        runtime.run_process,
+        IntegrationBranchReading(
+            entries=reading.entries,
+            projects=tuple(project for project in reading.projects if project.name in projects),
+            worktree_root=configuration.worktree_root,
+            state_root=runtime.paths.state_root,
+            read_pull_request=reading.forge.read_pull_request,
+            read_environment=reading.forge.read_environment,
+            locate_wave_base=lambda started: prepare_wave_tree(runtime, configuration, started).ref,
+            is_alive=is_recorded_process_alive,
+        ),
+    )
+
+
 def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeReaders) -> Snapshot:
     if not runtime.paths.schema_file.exists():
         return Snapshot(now=runtime.now)
@@ -1005,4 +1030,5 @@ def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeR
         study_runs=configuration.study_runs,
         rate_limits=_read_rate_limits(reading, runtime.now),
         milestones=_read_milestones(runtime, reading, projects_read),
+        integration_branches=_read_integration_branches(runtime, configuration, reading, projects_read),
     )
