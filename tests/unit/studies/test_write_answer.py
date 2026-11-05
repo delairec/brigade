@@ -21,6 +21,7 @@ PROPOSED_PATTERN = (
     'PATTERN slow_tick\n\tTITLE "the tick is slow"\n\tSTATUS new\n\tEVIDENCE "note:5f2b1c0d9e8a"\n\tACTION dismiss\n'
 )
 REPORTED = 'REPORT oak_M6\n\tMILESTONE "M6"\n'
+MILESTONES_PATH = "corpus/milestones.awawa"
 MILESTONE_REPORT = Study(
     name="milestone-report",
     project="oak",
@@ -266,8 +267,16 @@ class WriteAnswerTest(unittest.TestCase):
         self.processes.answer(("git", "switch", "--quiet", "--force-create", "integration/hardening"))
         self.processes.answer(("git", "add", "--", "corpus/milestones/M6-report.md"))
         self.processes.answer(("git", "diff", "--cached", "--quiet", "--", "corpus/milestones/M6-report.md"))
+        self.processes.answer_json(
+            ("awawa", "show", "@MILESTONE.M6", "--json", str(checkout)), {"file": str(checkout / MILESTONES_PATH)}
+        )
+        self.processes.answer_corpus_change(checkout, (MILESTONES_PATH,), "docs(corpus): mark @MILESTONE.M6 reached")
         self.processes.answer(("git", "push", "--quiet", "origin", "integration/hardening"))
         self.processes.answer(("git", "worktree", "remove", "--force", str(checkout)))
+        (checkout / "corpus").mkdir(parents=True)
+        (checkout / MILESTONES_PATH).write_text(
+            'MILESTONE M6\n\tTITLE "Hardening"\n\tSTATUS active\n', encoding="utf-8"
+        )
 
         # Act
         written = write_answer(self.create_context("entity:REPORT", MILESTONE_REPORT))

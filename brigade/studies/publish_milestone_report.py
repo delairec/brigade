@@ -13,6 +13,7 @@ from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.studies.locate_study_project import locate_study_project
+from brigade.studies.mark_milestone_reached import mark_milestone_reached
 from brigade.studies.present_answer import present_answer
 from brigade.studies.read_publication_environment import read_publication_environment
 from brigade.studies.study_run_context import StudyRunContext
@@ -104,6 +105,7 @@ def _commit_report(context: StudyRunContext, publication: MilestonePublication, 
             message=f"docs(milestones): add the report of {context.study.milestone.milestone}",
         ),
     )
+    mark_milestone_reached(context.runtime, checkout, context.study.milestone.milestone)
     push_branch(run_process, BranchPush(repository=checkout, branch=branch, environment=publication.environment))
 
 

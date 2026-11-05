@@ -80,6 +80,13 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
             },
         )
 
+    def test_should_hold_the_milestone_reached_at_its_branch_once_its_pull_request_opens(self):
+        # Act
+        milestones = self.rehearser.read_remote_file("integration/empty-cart", "corpus/milestones.awawa")
+
+        # Assert
+        self.assertEqual(milestones, 'MILESTONE M1\n\tTITLE "Empty cart"\n\tSTATUS reached\n')
+
     def test_should_record_every_run_in_the_ledger(self):
         # Arrange
         self.rehearser.list_finished_runs()

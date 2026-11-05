@@ -20,6 +20,9 @@ from tests.unit.studies.create_study_equipment import create_study_equipment
 RUN_ID = "20261022T150000Z-aaaaaa"
 BRANCH = "integration/hardening"
 REPORT_PATH = "corpus/milestones/M6-report.md"
+MILESTONES_PATH = "corpus/milestones.awawa"
+MILESTONE_M6_ACTIVE = 'MILESTONE M6\n\tTITLE "Hardening"\n\tSTATUS active\n'
+REACHED_MESSAGE = "docs(corpus): mark @MILESTONE.M6 reached"
 MARKDOWN = "# REPORT oak_M6\n\n- MILESTONE: M6\n"
 STUDY = Study(
     name="milestone-report",
@@ -81,8 +84,15 @@ class PublishMilestoneReportTest(unittest.TestCase):
         self.processes.answer(("git", "add", "--", REPORT_PATH))
         self.processes.answer(("git", "diff", "--cached", "--quiet", "--", REPORT_PATH), exit_code=1)
         self.processes.answer(("git", "commit", "--quiet", "-m", "docs(milestones): add the report of M6"))
+        self.processes.answer_json(
+            ("awawa", "show", "@MILESTONE.M6", "--json", str(self.checkout)),
+            {"file": str(self.checkout / MILESTONES_PATH)},
+        )
+        self.processes.answer_corpus_change(self.checkout, (MILESTONES_PATH,), REACHED_MESSAGE)
         self.processes.answer(("git", "push", "--quiet", "origin", BRANCH))
         self.processes.answer(("git", "worktree", "remove", "--force", str(self.checkout)))
+        (self.checkout / "corpus").mkdir(parents=True)
+        (self.checkout / MILESTONES_PATH).write_text(MILESTONE_M6_ACTIVE, encoding="utf-8")
 
     def create_context(self, forge: str, configuration: Configuration = NOTHING_BOUND) -> StudyRunContext:
         self.processes.answer_entities(
@@ -265,7 +275,7 @@ class PublishMilestoneReportTest(unittest.TestCase):
         self.assertEqual(published, {"report": REPORT_PATH, "branch": BRANCH, "pull_request": None})
         self.assertEqual(self.forge.list_operations(), [])
 
-    def test_should_commit_the_report_on_the_milestone_branch_push_it_and_remove_its_checkout(self):
+    def test_should_commit_the_report_then_the_reached_milestone_on_its_branch_push_both_and_remove_its_checkout(self):
         # Arrange
         context = self.create_context("github")
 
@@ -286,6 +296,12 @@ class PublishMilestoneReportTest(unittest.TestCase):
                 ("git", "add", "--", REPORT_PATH),
                 ("git", "diff", "--cached", "--quiet", "--", REPORT_PATH),
                 ("git", "commit", "--quiet", "-m", "docs(milestones): add the report of M6"),
+                ("awawa", "show", "@MILESTONE.M6", "--json", str(self.checkout)),
+                ("awawa", "fmt", str(self.checkout / MILESTONES_PATH)),
+                ("awawa", "lint", "--strict", str(self.checkout)),
+                ("git", "add", "--", MILESTONES_PATH),
+                ("git", "diff", "--cached", "--quiet", "--", MILESTONES_PATH),
+                ("git", "commit", "--quiet", "-m", REACHED_MESSAGE),
                 ("git", "push", "--quiet", "origin", BRANCH),
                 ("git", "worktree", "remove", "--force", str(self.checkout)),
             ],
@@ -314,7 +330,36 @@ class PublishMilestoneReportTest(unittest.TestCase):
                 ("git", "add", "--", REPORT_PATH),
                 ("git", "diff", "--cached", "--quiet", "--", REPORT_PATH),
                 ("git", "commit", "--quiet", "-m", "docs(milestones): add the report of M6"),
+                ("awawa", "show", "@MILESTONE.M6", "--json", str(self.checkout)),
+                ("awawa", "fmt", str(self.checkout / MILESTONES_PATH)),
+                ("awawa", "lint", "--strict", str(self.checkout)),
+                ("git", "add", "--", MILESTONES_PATH),
+                ("git", "diff", "--cached", "--quiet", "--", MILESTONES_PATH),
+                ("git", "commit", "--quiet", "-m", REACHED_MESSAGE),
                 ("git", "push", "--quiet", "origin", BRANCH),
                 ("git", "worktree", "remove", "--force", str(self.checkout)),
             ],
         )
+
+    def test_should_mark_the_milestone_reached_in_the_corpus_at_its_branch(self):
+        # Arrange
+        context = self.create_context("github")
+
+        # Act
+        publish_milestone_report(context)
+
+        # Assert
+        self.assertEqual(
+            (self.checkout / MILESTONES_PATH).read_text(encoding="utf-8"),
+            'MILESTONE M6\n\tTITLE "Hardening"\n\tSTATUS reached\n',
+        )
+
+    def test_should_commit_the_reached_milestone_on_its_branch_on_a_project_without_a_forge(self):
+        # Arrange
+        context = self.create_context("none")
+
+        # Act
+        publish_milestone_report(context)
+
+        # Assert
+        self.assertIn(("git", "commit", "--quiet", "-m", REACHED_MESSAGE), self.processes.list_argvs())
