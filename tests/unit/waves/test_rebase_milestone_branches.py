@@ -151,13 +151,13 @@ class RebaseMilestoneBranchesTestCase(unittest.TestCase):
         self.processes.answer_by(("git", "rebase", MILESTONE_BRANCH), self.answer_rebase)
         return _create_project(forge)
 
-    def rebase(self, forge: str = "github") -> MilestoneRebased | None:
+    def rebase(self, forge: str = "github", waves: tuple[str, ...] = OPEN_WAVES_OF_M3) -> MilestoneRebased | None:
         project = self.register_project(forge)
         rebase = MilestoneBranchesRebase(
             project=project,
             milestone="M3",
             branch=MILESTONE_BRANCH,
-            waves=OPEN_WAVES_OF_M3,
+            waves=waves,
             worktree_root=None,
             read_environment=_read_forge_environment,
             is_run_live_on=lambda worktree: worktree in self.live_worktrees,
@@ -447,6 +447,19 @@ class RebaseMilestoneBranchesWithTheirOpenWavesTest(RebaseMilestoneBranchesTestC
 
         # Act
         self.rebase()
+
+        # Assert
+        self.assertEqual(
+            select_commands_opening_on(self.processes.requests, GIT_REBASE),
+            [(MILESTONE_WORKTREE, ("git", "rebase", "origin/main"))],
+        )
+
+    def test_should_rebase_the_milestone_branch_alone_when_the_action_names_none_of_its_open_waves(self):
+        # Arrange
+        no_wave_to_rebase = ()
+
+        # Act
+        self.rebase(waves=no_wave_to_rebase)
 
         # Assert
         self.assertEqual(

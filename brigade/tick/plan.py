@@ -650,15 +650,16 @@ def _is_rebase_due(milestone: MilestoneFacts) -> bool:
     return milestone.behind_main and not milestone.rebase_run_live and milestone.blocked_rebase is None
 
 
-def _is_wave_rebase_due(wave: WaveFacts, project: ProjectFacts) -> bool:
+def _is_wave_held_from_rebase(wave: WaveFacts, project: ProjectFacts) -> bool:
     return (
-        wave.behind_milestone
-        and wave.blocked_rebase is None
-        and wave.pause is None
-        and not any(
-            live.slot == REBASE_SLOT and live.wave == wave.wave and live.task is None for live in project.live_runs
-        )
+        wave.blocked_rebase is not None
+        or wave.pause is not None
+        or any(live.slot == REBASE_SLOT and live.wave == wave.wave and live.task is None for live in project.live_runs)
     )
+
+
+def _is_wave_rebase_due(wave: WaveFacts, project: ProjectFacts) -> bool:
+    return wave.behind_milestone and not _is_wave_held_from_rebase(wave, project)
 
 
 def _is_milestone_rebase_due(milestone: MilestoneFacts, snapshot: Snapshot) -> bool:
@@ -675,12 +676,16 @@ def _is_milestone_rebase_due(milestone: MilestoneFacts, snapshot: Snapshot) -> b
 
 
 def _plan_milestone_rebases(snapshot: Snapshot) -> tuple:
+    projects = {project.name: project for project in snapshot.projects}
+    held = {
+        (wave.project, wave.wave) for wave in snapshot.waves if _is_wave_held_from_rebase(wave, projects[wave.project])
+    }
     return tuple(
         RebaseMilestone(
             project=milestone.project,
             milestone=milestone.milestone,
             branch=milestone.branch,
-            waves=milestone.open_waves,
+            waves=tuple(wave for wave in milestone.open_waves if (milestone.project, wave) not in held),
         )
         for milestone in snapshot.milestones
         if _is_milestone_rebase_due(milestone, snapshot)
