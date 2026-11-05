@@ -10,19 +10,20 @@ ROOT = Path("/cache/refs/shop/4f1c2a9")
 REACHED_MILESTONES = ("awawa", "status", "MILESTONE", "--where", "STATUS==reached", "--json", str(ROOT))
 NO_TASK_IMPLEMENTED = frozenset()
 READ_AT_MAIN = None
-
-
-def create_task(name: str, *fields: tuple[str, str]) -> Entity:
-    return Entity(name=name, fields=tuple(EntityField(name=field, value=value) for field, value in fields))
-
-
-def create_main(*tasks: Entity) -> ProjectTasks:
-    return ProjectTasks(
-        root=ROOT,
-        by_name={task.name: task for task in tasks},
-        implemented=NO_TASK_IMPLEMENTED,
-        milestone=READ_AT_MAIN,
-    )
+S1_TODO_OF_M9 = Entity(
+    name="S1", fields=(EntityField(name="STATUS", value="todo"), EntityField(name="MILESTONE", value="@MILESTONE.M9"))
+)
+S2_DRAFT_OF_M9 = Entity(
+    name="S2", fields=(EntityField(name="STATUS", value="draft"), EntityField(name="MILESTONE", value="@MILESTONE.M9"))
+)
+S3_IMPLEMENTED_OF_M9 = Entity(
+    name="S3",
+    fields=(EntityField(name="STATUS", value="implemented"), EntityField(name="MILESTONE", value="@MILESTONE.M9")),
+)
+S4_TODO_OF_M10 = Entity(
+    name="S4", fields=(EntityField(name="STATUS", value="todo"), EntityField(name="MILESTONE", value="@MILESTONE.M10"))
+)
+S5_TODO_NAMING_NO_MILESTONE = Entity(name="S5", fields=(EntityField(name="STATUS", value="todo"),))
 
 
 class ListTasksOfReachedMilestonesTest(unittest.TestCase):
@@ -32,11 +33,11 @@ class ListTasksOfReachedMilestonesTest(unittest.TestCase):
 
     def test_should_list_the_draft_and_todo_tasks_naming_a_reached_milestone(self):
         # Arrange
-        main = create_main(
-            create_task("S1", ("STATUS", "todo"), ("MILESTONE", "@MILESTONE.M9")),
-            create_task("S2", ("STATUS", "draft"), ("MILESTONE", "@MILESTONE.M9")),
-            create_task("S3", ("STATUS", "implemented"), ("MILESTONE", "@MILESTONE.M9")),
-            create_task("S4", ("STATUS", "todo"), ("MILESTONE", "@MILESTONE.M10")),
+        main = ProjectTasks(
+            root=ROOT,
+            by_name={"S1": S1_TODO_OF_M9, "S2": S2_DRAFT_OF_M9, "S3": S3_IMPLEMENTED_OF_M9, "S4": S4_TODO_OF_M10},
+            implemented=NO_TASK_IMPLEMENTED,
+            milestone=READ_AT_MAIN,
         )
 
         # Act
@@ -53,9 +54,11 @@ class ListTasksOfReachedMilestonesTest(unittest.TestCase):
 
     def test_should_read_no_milestone_when_no_draft_or_todo_task_names_one(self):
         # Arrange
-        main = create_main(
-            create_task("S3", ("STATUS", "implemented"), ("MILESTONE", "@MILESTONE.M9")),
-            create_task("S5", ("STATUS", "todo")),
+        main = ProjectTasks(
+            root=ROOT,
+            by_name={"S3": S3_IMPLEMENTED_OF_M9, "S5": S5_TODO_NAMING_NO_MILESTONE},
+            implemented=NO_TASK_IMPLEMENTED,
+            milestone=READ_AT_MAIN,
         )
 
         # Act
