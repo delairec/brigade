@@ -15848,7 +15848,8 @@ TASK B233
 		+ "STATUS reached on the branch of the milestone before it opens the pull request, opens"
 		+ "none while a task of the milestone is draft or todo, and a reached milestone gains no"
 		+ "task"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 363
 	TYPE feat
 	MILESTONE @MILESTONE.M6
 	COMPONENT "tick"
