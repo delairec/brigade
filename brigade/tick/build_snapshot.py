@@ -58,6 +58,7 @@ from brigade.waves.count_repair_rounds import count_repair_rounds
 from brigade.waves.find_milestone_branch import find_milestone_branch
 from brigade.waves.is_requeue import is_requeue
 from brigade.waves.list_candidate_waves import CandidateWave, list_candidate_waves
+from brigade.waves.list_tasks_of_reached_milestones import list_tasks_of_reached_milestones
 from brigade.waves.locate_branch_worktree import locate_branch_worktree
 from brigade.waves.locate_forge_branch import locate_forge_branch
 from brigade.waves.name_milestone_branch import name_milestone_branch
@@ -116,6 +117,7 @@ FAILED_PREFLIGHT_CHECK = "fail"
 BEFORE_ANY_EVENT = datetime.min.replace(tzinfo=UTC)
 STATUS_FIELD = "STATUS"
 TODO_STATUS = "todo"
+OPEN_TASK_STATUSES = frozenset({("draft",), (TODO_STATUS,)})
 OPEN_PULL_REQUEST = "open"
 PROMOTION_FIELDS = (STATUS_FIELD, "DELIVERED_BY")
 
@@ -303,7 +305,7 @@ class MilestoneFacts:
     branch: str
     closed_waves: tuple[str, ...] = ()
     open_waves: tuple[str, ...] = ()
-    todo: tuple[str, ...] = ()
+    open_tasks: tuple[str, ...] = ()
     opened_pull_request: int | None = None
     pull_request: PullRequestFacts | None = None
     behind_main: bool = False
@@ -319,7 +321,7 @@ class MilestoneFacts:
             "branch": self.branch,
             "closed_waves": list(self.closed_waves),
             "open_waves": list(self.open_waves),
-            "todo": list(self.todo),
+            "open_tasks": list(self.open_tasks),
             "opened_pull_request": self.opened_pull_request,
             "pull_request": None if self.pull_request is None else self.pull_request.to_document(),
             "behind_main": self.behind_main,
@@ -772,6 +774,10 @@ def _read_wave_making(runtime: Runtime, reading: WaveReading, project: Entity) -
         entries=reading.entries,
     )
     main = read_project_tasks(runtime, tasks_reading, NO_MILESTONE)
+    for held in list_tasks_of_reached_milestones(runtime.run_process, main):
+        sys.stderr.write(
+            f"brigade tick: @TASK.{held.task} is served never: its milestone {held.milestone} is reached\n"
+        )
     return _WaveMaking(
         candidates=list_candidate_waves(runtime, tasks_reading, main),
         uncut_milestones=_list_uncut_milestones(runtime, reading, project.name, main),
@@ -878,6 +884,10 @@ def _list_todo(tasks: tuple[Entity, ...], milestone: str) -> tuple[str, ...]:
     )
 
 
+def _list_open_tasks(tasks: tuple[Entity, ...]) -> tuple[str, ...]:
+    return tuple(task.name for task in tasks if read_task_field(task, STATUS_FIELD) in OPEN_TASK_STATUSES)
+
+
 def _list_open_waves(reading: WaveReading, project: str, of_milestone: set[str]) -> tuple[str, ...]:
     return tuple(
         summary.started.wave
@@ -943,7 +953,7 @@ def _read_milestone_facts(runtime: Runtime, reading: WaveReading, cut: Milestone
         branch=cut.branch,
         closed_waves=_list_closed_waves(reading, cut.project, names),
         open_waves=_list_open_waves(reading, cut.project, names),
-        todo=_list_todo(tuple(of_milestone), cut.milestone),
+        open_tasks=_list_open_tasks(tuple(of_milestone)),
         behind_main=_is_behind_main(runtime, reading, cut, ref),
         rebase_run_live=any(run["state"] == LIVE_RUN_STATE for run in rebase_runs),
         blocked_rebase=_read_blocked_run(reading, rebase_runs[-1]["run"]) if rebase_runs else None,

@@ -4467,6 +4467,7 @@ MILESTONE_M4_REPORTED = {
 }
 MILESTONE_PULL_REQUEST_MERGED = {**INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN, "number": 77, "state": "merged"}
 TASK_OF_M4_TO_DELIVER = (("TITLE", "Tide table"), ("TYPE", "feat"), ("MILESTONE", "@MILESTONE.M4"), ("STATUS", "todo"))
+TASK_OF_M4_DRAFTED = (("TITLE", "Tide table"), ("TYPE", "feat"), ("MILESTONE", "@MILESTONE.M4"), ("STATUS", "draft"))
 TASK_OF_M5_DELIVERED = (
     ("TITLE", "Tide table"),
     ("TYPE", "feat"),
@@ -4805,6 +4806,30 @@ class TickReportingAMilestoneTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(self._read_reported_milestones(), [])
+
+    def test_should_report_none_while_a_task_of_the_milestone_is_draft_at_its_branch(self):
+        # Arrange
+        runtime = self._create_runtime(self.forge, {"T7": TASK_DELIVERED, "T8": TASK_OF_M4_DRAFTED})
+
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self._read_reported_milestones(), [])
+
+    def test_should_name_the_open_tasks_holding_the_pull_request_of_the_milestone_in_the_dry_run(self):
+        # Arrange
+        runtime = self._create_runtime(
+            self.forge, {"T7": TASK_DELIVERED, "T8": TASK_OF_M4_DRAFTED, "T9": TASK_OF_M4_TO_DELIVER}
+        )
+
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            document = COMMAND.run(Namespace(mode="dry-run"), runtime)
+
+        # Assert
+        self.assertEqual(document["snapshot"]["milestones"][0]["open_tasks"], ["T8", "T9"])
 
     def test_should_report_none_while_no_closed_wave_holds_a_task_of_the_milestone(self):
         # Arrange

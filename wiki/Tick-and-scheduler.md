@@ -202,9 +202,16 @@ dies before it records a `run.finished` does.
 - A project whose tasks cannot be read is skipped, named on stderr.
 - The tick cuts no branch for a wave, opens no pull request for it and merges none. Once every task of a wave is
   `merged` or `parked`, it records `wave.closed`, with no pull request.
-- Once every task of a milestone at its branch is `merged` or `parked` and no wave of it is open, the tick runs the
-  study `milestone-report` and records `milestone.reported`; that run commits the report on the branch of the
-  milestone and opens its pull request into the main branch, the report as its body.
+- Once no task of a milestone at its branch is `draft` or `todo`, a parked task being `todo`, and no wave of it is
+  open, the tick runs the study `milestone-report` and records `milestone.reported`; that run commits the report on
+  the branch of the milestone, then `STATUS reached` on the `MILESTONE` in a commit of its own, pushes both and opens
+  the pull request of the milestone into the main branch, the report as its body. The milestone is reached when the
+  user merges that pull request: the tick sets `STATUS reached` nowhere else, neither on the main branch nor at
+  `milestone.closed`. On a project of `FORGE none` both commits land on the branch and no pull request opens.
+- `brigade tick --dry-run` names the tasks that hold the pull request of a milestone in the `open_tasks` of the
+  milestone.
+- A task `draft` or `todo` whose `MILESTONE` is `reached` at the main branch is served never: the tick starts no wave
+  holding it and names the task and the milestone on stderr at each tick.
 - For a task naming no milestone, once its pull request is ready to merge or the task is parked, the tick runs the
   study `task-report` and records `task.reported`; that run commits the report on the branch of the task and
   replaces the body of its pull request with it. The user merges that pull request into the main branch.

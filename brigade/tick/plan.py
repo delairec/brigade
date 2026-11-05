@@ -556,7 +556,7 @@ def _is_milestone_report_due(milestone: MilestoneFacts, snapshot: Snapshot, proj
         and milestone.opened_pull_request is None
         and bool(milestone.closed_waves)
         and not milestone.open_waves
-        and not milestone.todo
+        and not milestone.open_tasks
         and not any(
             wave.project == milestone.project and wave.milestone_branch == milestone.branch for wave in snapshot.waves
         )

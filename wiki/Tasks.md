@@ -17,6 +17,11 @@ letters and digits made one hyphen, cut at a hyphen within 40 characters (`featu
 goes to that base. Every command runs from that worktree, takes the task of the branch when `<task>` is left out,
 and its wave from the open wave of the ledger that holds the task. Each prints text or, with `--json`, a JSON document.
 
+A task `draft` or `todo` at the branch of its milestone, a parked task being `todo`, holds the pull request of that
+milestone until it is merged, moved to another milestone or archived. A milestone is reached once the user merges its
+pull request, and a reached milestone takes no task: the tick serves a task naming it never and names the task on
+stderr at each tick.
+
 | Command | Records in the ledger |
 |---|---|
 | `task pr` | `task.pr_opened`, `milestone.created` |
