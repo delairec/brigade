@@ -792,11 +792,22 @@ def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuratio
     )
 
 
+def _remember_the_live_blockers(read_live_blockers: Callable) -> Callable:
+    blockers: dict[tuple[Path, str], tuple[str, ...]] = {}
+
+    def read_once(run_process: Callable, root: Path, task: str) -> tuple[str, ...]:
+        if (root, task) not in blockers:
+            blockers[(root, task)] = read_live_blockers(run_process, root, task)
+        return blockers[(root, task)]
+
+    return read_once
+
+
 def _remember_the_readings_of_the_tick(runtime: Runtime) -> Runtime:
     return dataclasses.replace(
         runtime,
         read_ledger=LedgerReadingKeeper(runtime.read_ledger).read,
-        read_live_blockers=functools.cache(runtime.read_live_blockers),
+        read_live_blockers=_remember_the_live_blockers(runtime.read_live_blockers),
     )
 
 
