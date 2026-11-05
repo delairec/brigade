@@ -3450,7 +3450,8 @@ TASK B38
 
 TASK B39
 	TITLE "The wiki follows the commands"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 356
 	TYPE docs
 	MILESTONE @MILESTONE.M6
 	COMPONENT "docs"
