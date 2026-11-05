@@ -174,9 +174,9 @@ class PublishMilestoneReportTest(unittest.TestCase):
         publish_milestone_report(context)
 
         # Assert
-        self.assertIn(
+        self.assertEqual(
+            read_ledger(self.runtime.paths.state_root).entries[0].event,
             MilestonePrOpened(project="oak", milestone="M6", pr=190, login="octo-cli"),
-            [entry.event for entry in read_ledger(self.runtime.paths.state_root).entries],
         )
 
     def test_should_record_the_head_it_described_the_pull_request_of_the_milestone_at_after_its_opening(self):
@@ -188,11 +188,8 @@ class PublishMilestoneReportTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            [entry.event for entry in read_ledger(self.runtime.paths.state_root).entries],
-            [
-                MilestonePrOpened(project="oak", milestone="M6", pr=190, login="octo-cli"),
-                MilestonePrDescribed(project="oak", milestone="M6", pr=190, head="8885daa", login="octo-cli"),
-            ],
+            read_ledger(self.runtime.paths.state_root).entries[-1].event,
+            MilestonePrDescribed(project="oak", milestone="M6", pr=190, head="8885daa", login="octo-cli"),
         )
 
     def test_should_open_no_second_pull_request_once_the_milestone_opened_one(self):

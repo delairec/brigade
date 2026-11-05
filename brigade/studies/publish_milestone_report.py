@@ -89,23 +89,23 @@ def _open_pull_request(context: StudyRunContext, publication: MilestonePublicati
         context.runtime,
     )
     login = ask_forge_account(forge, publication.forge_name, publication.environment, context.runtime).login
-    append_event(
-        context.runtime.paths,
-        context.runtime.now,
-        MilestonePrOpened(project=order.project, milestone=order.milestone, pr=opened["number"], login=login),
-    )
+    _record_opening(context, MilestonePrOpened(order.project, order.milestone, opened["number"], login), checkout)
+    return opened["number"]
+
+
+def _record_opening(context: StudyRunContext, opening: MilestonePrOpened, checkout) -> None:
+    append_event(context.runtime.paths, context.runtime.now, opening)
     append_event(
         context.runtime.paths,
         context.runtime.now,
         MilestonePrDescribed(
-            project=order.project,
-            milestone=order.milestone,
-            pr=opened["number"],
+            project=opening.project,
+            milestone=opening.milestone,
+            pr=opening.pr,
             head=read_head(context.runtime.run_process, checkout),
-            login=login,
+            login=opening.login,
         ),
     )
-    return opened["number"]
 
 
 def _publish_pull_request(context: StudyRunContext, publication: MilestonePublication, checkout) -> int:

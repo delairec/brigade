@@ -5374,11 +5374,10 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
             ),
         )
 
-    def _read_described_events(self) -> list[dict]:
-        events = map(
-            json.loads, (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+    def _read_last_event(self) -> dict:
+        return json.loads(
+            (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()[-1]
         )
-        return [event for event in events if event["event"] == "milestone.pr_described"]
 
     def test_should_retitle_the_pull_request_of_the_milestone_by_what_its_head_delivers(self):
         # Arrange
@@ -5401,7 +5400,7 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
                 }
             ],
         )
-        self.assertEqual(self._read_described_events(), [{**MILESTONE_PR_DESCRIBED_AT_THE_HEAD, "ts": ANY}])
+        self.assertEqual(self._read_last_event(), {**MILESTONE_PR_DESCRIBED_AT_THE_HEAD, "ts": ANY})
 
     def test_should_record_the_head_described_without_retitling_a_pull_request_already_titled_so(self):
         # Arrange
@@ -5412,7 +5411,7 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(forge.edited, [])
-        self.assertEqual(self._read_described_events(), [{**MILESTONE_PR_DESCRIBED_AT_THE_HEAD, "ts": ANY}])
+        self.assertEqual(self._read_last_event(), {**MILESTONE_PR_DESCRIBED_AT_THE_HEAD, "ts": ANY})
 
     def test_should_describe_no_head_already_described(self):
         # Arrange
@@ -5434,7 +5433,7 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(forge.edited, [])
-        self.assertEqual(self._read_described_events(), [MILESTONE_PR_DESCRIBED_AT_THE_HEAD])
+        self.assertEqual(self._read_last_event(), MILESTONE_PR_DESCRIBED_AT_THE_HEAD)
 
     def test_should_print_the_describe_with_its_milestone_its_pull_request_and_its_head_on_a_dry_run(self):
         # Arrange

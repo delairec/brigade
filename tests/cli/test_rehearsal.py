@@ -70,7 +70,7 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
             pull_request,
             {
                 "number": 5,
-                "title": "chore(milestone): merge the milestone M1 into main",
+                "title": "feat: deliver S1; deliver S2; deliver S3 (M1, @TASK.S1, @TASK.S2, @TASK.S3)",
                 "body": report,
                 "headRefName": "integration/empty-cart",
                 "baseRefName": "main",
@@ -96,6 +96,7 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
                 "events": {
                     "milestone.branch_cut": 1,
                     "milestone.created": 3,
+                    "milestone.pr_described": 1,
                     "milestone.pr_opened": 1,
                     "milestone.reported": 1,
                     "order.done": 1,
