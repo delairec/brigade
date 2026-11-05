@@ -1,8 +1,7 @@
 import json
 
-from tests.cli.wave_tick_test_case import WAVE_BRANCH, LaunchingTickTestCase
+from tests.cli.wave_tick_test_case import MILESTONE_BRANCH, MILESTONE_BRANCH_CUT, TASK_BRANCH, LaunchingTickTestCase
 
-TASK_BRANCH = "task/M1-empty-cart/S3"
 FAILING_CHECK_RUN = {"__typename": "CheckRun", "name": "tests", "status": "COMPLETED", "conclusion": "FAILURE"}
 S3_REBUILT_TWICE_THEN_PREFLIGHTED_ON_A_FAILING_CHECK = (
     '{{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
@@ -34,17 +33,17 @@ S3_REBUILT_TWICE_THEN_PREFLIGHTED_ON_A_FAILING_CHECK = (
 class BrigadeTickOfATaskRebuiltTwiceWhosePreflightFailsACheckTest(LaunchingTickTestCase):
     def setUp(self):
         super().setUp()
-        self.project.run_git("branch", TASK_BRANCH, WAVE_BRANCH)
+        self.project.run_git("branch", TASK_BRANCH, MILESTONE_BRANCH)
         self.project.run_git("worktree", "add", "--quiet", str(self.worktree), TASK_BRANCH)
         head = self.project.run_git("rev-parse", TASK_BRANCH).strip()
-        (self.pull_requests / "task-M1-empty-cart-S3.json").write_text(
+        (self.pull_requests / "feature-S3-empty-the-cart-in-one-click.json").write_text(
             json.dumps(
                 [
                     {
                         "number": 12,
                         "state": "OPEN",
                         "headRefOid": head,
-                        "baseRefName": WAVE_BRANCH,
+                        "baseRefName": MILESTONE_BRANCH,
                         "reviewDecision": "",
                         "updatedAt": "2026-10-18T11:00:00Z",
                         "statusCheckRollup": [FAILING_CHECK_RUN],
@@ -53,8 +52,9 @@ class BrigadeTickOfATaskRebuiltTwiceWhosePreflightFailsACheckTest(LaunchingTickT
             )
         )
         (self.state / "ledger" / "2026-10.jsonl").write_text(
-            S3_REBUILT_TWICE_THEN_PREFLIGHTED_ON_A_FAILING_CHECK.format(
-                wave_branch=WAVE_BRANCH, task_branch=TASK_BRANCH, head=head
+            MILESTONE_BRANCH_CUT
+            + S3_REBUILT_TWICE_THEN_PREFLIGHTED_ON_A_FAILING_CHECK.format(
+                wave_branch=MILESTONE_BRANCH, task_branch=TASK_BRANCH, head=head
             )
         )
 
@@ -71,6 +71,7 @@ class BrigadeTickOfATaskRebuiltTwiceWhosePreflightFailsACheckTest(LaunchingTickT
                     "wave": "shop_w1",
                     "branch": "integration/M1-empty-cart",
                     "task": "S3",
+                    "task_branch": TASK_BRANCH,
                     "pr": 12,
                     "worktree": str(self.worktree),
                     "checks": ["tests"],
