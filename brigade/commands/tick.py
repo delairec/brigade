@@ -654,15 +654,18 @@ def _name_the_blocked_milestone_rebases(snapshot: Snapshot) -> Snapshot:
     return snapshot
 
 
-def _name_the_kept_integration_branches(actions: tuple) -> tuple:
+def _name_the_kept_integration_branches(named: set[KeepIntegrationBranch], actions: tuple) -> tuple:
     kept = [action for action in actions if isinstance(action, KeepIntegrationBranch)]
     for branch in kept:
-        sys.stderr.write(f"brigade tick: the branch {branch.branch} of {branch.project} kept: {branch.reason}\n")
+        if branch not in named:
+            sys.stderr.write(f"brigade tick: the branch {branch.branch} of {branch.project} kept: {branch.reason}\n")
+            named.add(branch)
     return tuple(action for action in actions if action not in kept)
 
 
 def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuration) -> RoundsOutcome:
     forge = _read_the_forge(runtime, configuration)
+    named: set[KeepIntegrationBranch] = set()
     apply = functools.partial(
         apply_actions,
         executors=_list_executors(runtime, configuration),
@@ -671,7 +674,7 @@ def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuratio
     outcome = run_rounds(
         Rounds(
             build_snapshot=lambda: _name_the_blocked_milestone_rebases(build_snapshot(runtime, configuration, forge)),
-            plan=lambda snapshot: _name_the_kept_integration_branches(plan(snapshot)),
+            plan=lambda snapshot: _name_the_kept_integration_branches(named, plan(snapshot)),
             apply=apply,
             cap=ROUND_CAP,
         )
