@@ -6133,3 +6133,29 @@ DECISION TheReportOfATaskIsCommittedOnADetachedCheckoutAndPushedToTheBranchOfThe
 		+ "the report must reach the forge without touching that worktree; ruled by the build run"
 		+ "of @TASK.B232 on 2026-11-03"
 		REF @TASK.B232
+
+DECISION TheTitleOfAMilestonePullRequestJoinsTheSubjectsOfTheTasksOfThatMilestoneImplementedAtItsHead
+	TITLE "the title of the pull request of a milestone names the tasks of that milestone"
+		+ "implemented at its head, their subjects joined by a semicolon and a space"
+	STATUS active
+	DESC "the tasks a milestone pull request delivers are the tasks implemented in the tree of its"
+		+ "head whose MILESTONE is that milestone; a task of an earlier milestone, implemented on"
+		+ "main before the branch was cut, is not among them"
+	DESC "the subjects are joined by « ; » followed by one space: feat: a; b (M1, @TASK.S1,"
+		+ "@TASK.S2)"
+	DESC "the pull request of a milestone is opened, and its describe event appended, by"
+		+ "brigade/studies/publish_milestone_report.py, the study that commits the report on the"
+		+ "branch since @TASK.B232; brigade/commands/tick.py describes it again when the head moves"
+		REF @TASK.B232
+	DESC "binds @TASK.B227"
+		REF @TASK.B227
+	REJECTED "every task implemented at the head: the tree of a milestone branch holds the tasks of"
+		+ "every earlier milestone, and the title would name what main already carries"
+	REJECTED "the open kept in brigade/commands/tick.py:_open_milestone_pull_request, as SPEC 3 of"
+		+ "the task names it: the study opens the pull request once the report is committed, and a"
+		+ "second open in the tick would race it"
+	RATIONALE "SPEC 1 of @TASK.B227 names the tasks implemented on the head and the separator « ; »"
+		+ "alone; the milestone filter keeps the title to what the squash lands on main"
+		REF @TASK.B227
+	SOURCE "the run 20261105T153000Z-539f74 of @TASK.B227 in the wave brigade_w26"
+		REF @TASK.B227
