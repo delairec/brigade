@@ -15177,7 +15177,8 @@ TASK B227
 	TITLE "The tick titles the pull request of a milestone by what its head delivers, in"
 		+ "Conventional Commits form, opens it with the report of the milestone as its body, and"
 		+ "rewrites the title when the head moves"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 364
 	TYPE fix
 	MILESTONE @MILESTONE.M6
 	COMPONENT "the tick"
