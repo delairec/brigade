@@ -12346,7 +12346,7 @@ TASK B174
 		+ "brigade/tick/read_live_blockers.py:40-44 runs them for every task of an open wave at"
 		+ "every round, up to ROUND_CAP 10 of brigade/commands/tick.py:144, and"
 		+ "brigade/waves/admit_candidates.py:33 for every candidate"
-		IMPL "brigade/commands/tick.py::read_live_blockers=functools.cache(runtime.read_live_blockers),"
+		IMPL "brigade/commands/tick.py::read_live_blockers=_remember_the_live_blockers(runtime.read_live_blockers),"
 		IMPL "tests/unit/commands/test_tick.py::def"
 			+ "test_should_read_the_references_of_each_task_again_on_the_wave_branch_the_merge_moved"
 	SPEC "a test counts the reads: a tick of several rounds over a wave of N tasks reads the ledger"
