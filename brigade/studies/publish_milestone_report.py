@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from brigade.git.add_detached_worktree import add_detached_worktree
 from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.fetch_branches import BranchesFetch, fetch_branches
-from brigade.git.read_head import read_head
 from brigade.git.push_branch import BranchPush, push_branch
+from brigade.git.read_head import read_head
 from brigade.git.remove_worktree import remove_worktree
 from brigade.git.reset_branch import reset_branch
 from brigade.ledger.append_event import append_event
