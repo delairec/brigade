@@ -289,6 +289,47 @@ class BuildSnapshotOfTheIntegrationBranchesTest(BuildSnapshotTestCase):
             ),
         )
 
+    def test_should_compare_a_wave_branch_of_a_closed_milestone_to_the_branch_of_that_milestone(self):
+        # Arrange
+        self.write_operational_corpus()
+        self.record(90, MilestoneBranchCut(project="shop", milestone="M4", branch="integration/delivery", login=None))
+        self.record(60, WaveStarted(wave="w0", project="shop", tasks=("B3",), branch="integration/w0"))
+        self.record(40, WaveClosed(wave="w0"))
+        self.record(30, MilestoneClosed(project="shop", milestone="M4", pr=90))
+        self.remote_answers = {
+            ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/delivery"): ProcessAnswer(exit_code=1),
+            ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/w0"): ProcessAnswer(stdout="9c1e2d3\n"),
+            **answer_tree("integration/delivery", MILESTONE_SHA),
+            **AWAWA_ANSWERS.answer_entities(
+                self.milestone_tree, "TASK", {"B3": TASK_IDENTITY}, "MILESTONE==@MILESTONE.M4"
+            ),
+            ("git", "merge-base", "--is-ancestor", "9c1e2d3", "main"): ProcessAnswer(exit_code=1),
+        }
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.integration_branches,
+            (
+                IntegrationBranchFacts(
+                    project="shop",
+                    branch="integration/w0",
+                    milestone=None,
+                    wave="w0",
+                    ended=True,
+                    merged_pull_request=None,
+                    merged_head=None,
+                    head="9c1e2d3",
+                    reached_forge=True,
+                    worktree=None,
+                    run_live=False,
+                    locked=False,
+                ),
+            ),
+        )
+
 
 class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
     def setUp(self):
