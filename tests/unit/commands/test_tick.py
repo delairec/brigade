@@ -5314,3 +5314,137 @@ class TickReportingATaskNamingNoMilestoneTest(unittest.TestCase):
                 }
             ],
         )
+
+
+MILESTONE_PULL_REQUEST_OPEN = {**INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN, "number": 77}
+TITLE_OF_THE_TASK_PULL_REQUEST = "feat: chart the tides (@TASK.T7)"
+TITLE_OF_WHAT_THE_MILESTONE_DELIVERS = "feat: chart the tides (M4, @TASK.T7)"
+MILESTONE_PR_DESCRIBED_AT_THE_HEAD = {
+    "schema_version": 1,
+    "ts": "2026-10-18T14:00:00Z",
+    "event": "milestone.pr_described",
+    "project": "tidepool",
+    "milestone": "M4",
+    "pr": 77,
+    "head": "8885daa",
+    "login": "tidepool-cli",
+}
+
+
+class DescribingForgeDouble(OpeningForgeDouble):
+    def __init__(self, titles: dict):
+        super().__init__({MILESTONE_BRANCH: MILESTONE_PULL_REQUEST_OPEN})
+        self.titles = titles
+        self.edited = []
+
+    def read_pull_request(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "pull_request": {**PULL_REQUEST_DETAILS, "title": self.titles[request["number"]]}}
+
+    def edit_pull_request(self, request: dict, runtime) -> dict:
+        self.edited.append(request)
+        return {"schema_version": 1}
+
+
+class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.repository = self.root / "tidepool"
+        write_ledger(
+            self.root, [WAVE_STARTED, _record_task_state("merged"), CUT_OF_M4, WAVE_CLOSED, MILESTONE_PR_OPENED]
+        )
+
+    def _create_runtime(self, forge: DescribingForgeDouble) -> Runtime:
+        corpus = {
+            "STUDY": PAUSED_BUILT_IN_STUDIES,
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
+            "TASK": {"T7": TASK_DELIVERED},
+            "MILESTONE": {"M4": MILESTONE_M4},
+        }
+        return create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_machine_double(
+                corpus, {**MACHINE_OUTPUTS, **WAVE_TREE_HOLDING_T7_IMPLEMENTED_OUTPUTS, ("git", "ls-remote"): ""}
+            ),
+            spawn_process=SpawnRecorderDouble().spawn,
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
+            ),
+        )
+
+    def _read_described_events(self) -> list[dict]:
+        events = map(
+            json.loads, (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        )
+        return [event for event in events if event["event"] == "milestone.pr_described"]
+
+    def test_should_retitle_the_pull_request_of_the_milestone_by_what_its_head_delivers(self):
+        # Arrange
+        forge = DescribingForgeDouble(
+            {42: TITLE_OF_THE_TASK_PULL_REQUEST, 77: "chore(milestone): merge the milestone M4 into main"}
+        )
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+
+        # Assert
+        self.assertEqual(
+            forge.edited,
+            [
+                {
+                    "repository": str(self.repository),
+                    "number": 77,
+                    "title": TITLE_OF_WHAT_THE_MILESTONE_DELIVERS,
+                    "environment": {},
+                }
+            ],
+        )
+        self.assertEqual(self._read_described_events(), [{**MILESTONE_PR_DESCRIBED_AT_THE_HEAD, "ts": ANY}])
+
+    def test_should_record_the_head_described_without_retitling_a_pull_request_already_titled_so(self):
+        # Arrange
+        forge = DescribingForgeDouble({42: TITLE_OF_THE_TASK_PULL_REQUEST, 77: TITLE_OF_WHAT_THE_MILESTONE_DELIVERS})
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+
+        # Assert
+        self.assertEqual(forge.edited, [])
+        self.assertEqual(self._read_described_events(), [{**MILESTONE_PR_DESCRIBED_AT_THE_HEAD, "ts": ANY}])
+
+    def test_should_describe_no_head_already_described(self):
+        # Arrange
+        write_ledger(
+            self.root,
+            [
+                WAVE_STARTED,
+                _record_task_state("merged"),
+                CUT_OF_M4,
+                WAVE_CLOSED,
+                MILESTONE_PR_OPENED,
+                MILESTONE_PR_DESCRIBED_AT_THE_HEAD,
+            ],
+        )
+        forge = DescribingForgeDouble({42: TITLE_OF_THE_TASK_PULL_REQUEST, 77: "chore: an older title"})
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+
+        # Assert
+        self.assertEqual(forge.edited, [])
+        self.assertEqual(self._read_described_events(), [MILESTONE_PR_DESCRIBED_AT_THE_HEAD])
+
+    def test_should_print_the_describe_with_its_milestone_its_pull_request_and_its_head_on_a_dry_run(self):
+        # Arrange
+        forge = DescribingForgeDouble({42: TITLE_OF_THE_TASK_PULL_REQUEST, 77: "chore: an older title"})
+
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), self._create_runtime(forge))
+
+        # Assert
+        self.assertIn(
+            {"project": "tidepool", "milestone": "M4", "branch": "integration/tides", "pr": 77, "head": "8885daa"},
+            document["plan"],
+        )

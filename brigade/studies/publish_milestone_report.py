@@ -3,10 +3,12 @@ from dataclasses import dataclass
 from brigade.git.add_detached_worktree import add_detached_worktree
 from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.fetch_branches import BranchesFetch, fetch_branches
+from brigade.git.read_head import read_head
 from brigade.git.push_branch import BranchPush, push_branch
 from brigade.git.remove_worktree import remove_worktree
 from brigade.git.reset_branch import reset_branch
 from brigade.ledger.append_event import append_event
+from brigade.ledger.milestone_pr_described import MilestonePrDescribed
 from brigade.ledger.milestone_pr_opened import MilestonePrOpened
 from brigade.ledger.read_ledger import read_ledger
 from brigade.registry.find_project import find_project
@@ -19,6 +21,8 @@ from brigade.studies.study_run_context import StudyRunContext
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.create_directory import create_directory
 from brigade.system.write_text_file import write_text_file
+from brigade.waves.compose_milestone_title import MilestoneTitleDemand, compose_milestone_title
+from brigade.waves.pull_request_titles import PullRequestTitles
 
 CORPUS_FIELD = "CORPUS"
 MAIN_FIELD = "MAIN"
@@ -52,7 +56,24 @@ def _find_opened_pull_request(context: StudyRunContext) -> int | None:
     return opened[-1] if opened else NO_PULL_REQUEST
 
 
-def _open_pull_request(context: StudyRunContext, publication: MilestonePublication) -> int:
+def _compose_title(context: StudyRunContext, publication: MilestonePublication, checkout) -> str:
+    pull_requests = PullRequestTitles(
+        forge=context.equipment.resolve_forge(publication.forge_name),
+        repository=publication.repository,
+        environment=publication.environment,
+        runtime=context.runtime,
+    )
+    return compose_milestone_title(
+        MilestoneTitleDemand(
+            run_process=context.runtime.run_process,
+            root=checkout,
+            milestone=context.study.milestone.milestone,
+            read_pull_request_title=pull_requests.read_title,
+        )
+    )
+
+
+def _open_pull_request(context: StudyRunContext, publication: MilestonePublication, checkout) -> int:
     order = context.study.milestone
     forge = context.equipment.resolve_forge(publication.forge_name)
     opened = forge.open_pull_request(
@@ -60,7 +81,7 @@ def _open_pull_request(context: StudyRunContext, publication: MilestonePublicati
             "repository": publication.repository,
             "base": publication.main,
             "branch": order.branch,
-            "title": f"chore(milestone): merge the milestone {order.milestone} into {publication.main}",
+            "title": _compose_title(context, publication, checkout),
             "body": publication.markdown,
             "milestone": NO_MILESTONE,
             "environment": publication.environment,
@@ -73,13 +94,24 @@ def _open_pull_request(context: StudyRunContext, publication: MilestonePublicati
         context.runtime.now,
         MilestonePrOpened(project=order.project, milestone=order.milestone, pr=opened["number"], login=login),
     )
+    append_event(
+        context.runtime.paths,
+        context.runtime.now,
+        MilestonePrDescribed(
+            project=order.project,
+            milestone=order.milestone,
+            pr=opened["number"],
+            head=read_head(context.runtime.run_process, checkout),
+            login=login,
+        ),
+    )
     return opened["number"]
 
 
 def _publish_pull_request(context: StudyRunContext, publication: MilestonePublication, checkout) -> int:
     opened = _find_opened_pull_request(context)
     if opened is None:
-        return _open_pull_request(context, publication)
+        return _open_pull_request(context, publication, checkout)
     body = {
         "repository": str(checkout),
         "number": opened,
