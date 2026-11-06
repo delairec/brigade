@@ -17,6 +17,7 @@ from brigade.ledger.format_instant import format_instant
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.milestone_closed import MilestoneClosed
+from brigade.ledger.milestone_pr_described import MilestonePrDescribed
 from brigade.ledger.milestone_pr_opened import MilestonePrOpened
 from brigade.ledger.milestone_reported import MilestoneReported
 from brigade.ledger.run_finished import RunFinished
@@ -318,6 +319,7 @@ class MilestoneFacts:
     blocked_rebase: BlockedRun | None = None
     tasks: tuple[str, ...] = ()
     reported: bool = False
+    described_head: str | None = None
 
     def to_document(self) -> dict:
         return {
@@ -338,6 +340,7 @@ class MilestoneFacts:
             ),
             "tasks": list(self.tasks),
             "reported": self.reported,
+            "described_head": self.described_head,
         }
 
 
@@ -871,6 +874,15 @@ def _find_milestone_pull_request(reading: WaveReading, project: str, milestone: 
     return opened[-1] if opened else None
 
 
+def _find_described_head(reading: WaveReading, project: str, milestone: str) -> str | None:
+    heads = [
+        event.head
+        for event in reading.events
+        if isinstance(event, MilestonePrDescribed) and (event.project, event.milestone) == (project, milestone)
+    ]
+    return heads[-1] if heads else None
+
+
 def _list_closed_waves(reading: WaveReading, project: str, of_milestone: set[str]) -> tuple[str, ...]:
     closed = {event.wave for event in reading.events if isinstance(event, WaveClosed)}
     return tuple(
@@ -949,6 +961,7 @@ def _read_milestone_facts(runtime: Runtime, reading: WaveReading, cut: Milestone
             branch=cut.branch,
             opened_pull_request=opened,
             pull_request=reading.forge.read_pull_request(read_project_field(project, PATH_FIELD), cut.branch),
+            described_head=_find_described_head(reading, cut.project, cut.milestone),
         )
     ref = locate_forge_branch(runtime.run_process, project, cut.branch, reading.forge.read_environment)
     rebase_runs = _list_branch_rebase_runs(reading, project, cut.branch)

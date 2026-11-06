@@ -6,6 +6,7 @@ from pathlib import Path
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.errors import CommandFailed
 from brigade.ledger.append_event import append_event
+from brigade.ledger.milestone_pr_described import MilestonePrDescribed
 from brigade.ledger.milestone_pr_opened import MilestonePrOpened
 from brigade.ledger.read_ledger import read_ledger
 from brigade.studies.convert_study import Study
@@ -60,6 +61,13 @@ def create_forge(open_pull_request: Callable[[dict], dict] = answer_opened_pull_
             "rewrite_pull_request_body": lambda request: {"schema_version": 1},
             "open_pull_request": open_pull_request,
             "describe_account": lambda request: {"schema_version": 1, "login": "octo-cli"},
+            "read_pull_request": lambda request: {
+                "schema_version": 1,
+                "pull_request": {
+                    "number": 341,
+                    "title": "feat(tick): open the pull request of a milestone (@TASK.B17)",
+                },
+            },
             "read_login_environment": lambda request: {
                 "schema_version": 1,
                 "environment": {"octo-cli": {"GH_TOKEN": "cli-token"}}.get(request["login"]),
@@ -94,6 +102,13 @@ class PublishMilestoneReportTest(unittest.TestCase):
         self.processes.answer(("git", "worktree", "remove", "--force", str(self.checkout)))
         (self.checkout / "corpus").mkdir(parents=True)
         (self.checkout / MILESTONES_PATH).write_text(MILESTONE_M6_ACTIVE, encoding="utf-8")
+        self.processes.answer(("git", "rev-parse", "HEAD"), stdout="8885daa\n")
+        self.processes.answer_entities(
+            self.checkout,
+            "TASK",
+            {"B17": (("TYPE", "feat"), ("COMPONENT", "tick"), ("MILESTONE", "@MILESTONE.M6"), ("DELIVERED_BY", "341"))},
+            ("STATUS==implemented",),
+        )
 
     def create_context(self, forge: str, configuration: Configuration = NOTHING_BOUND) -> StudyRunContext:
         self.processes.answer_entities(
@@ -154,7 +169,7 @@ class PublishMilestoneReportTest(unittest.TestCase):
                     "repository": "/srv/oak",
                     "base": "main",
                     "branch": BRANCH,
-                    "title": "chore(milestone): merge the milestone M6 into main",
+                    "title": "feat(tick): open the pull request of a milestone (M6, @TASK.B17)",
                     "body": MARKDOWN,
                     "milestone": None,
                     "environment": {"GH_TOKEN": "cli-token"},
@@ -171,8 +186,21 @@ class PublishMilestoneReportTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            read_ledger(self.runtime.paths.state_root).entries[-1].event,
+            read_ledger(self.runtime.paths.state_root).entries[0].event,
             MilestonePrOpened(project="oak", milestone="M6", pr=190, login="octo-cli"),
+        )
+
+    def test_should_record_the_head_it_described_the_pull_request_of_the_milestone_at_after_its_opening(self):
+        # Arrange
+        context = self.create_context("github")
+
+        # Act
+        publish_milestone_report(context)
+
+        # Assert
+        self.assertEqual(
+            read_ledger(self.runtime.paths.state_root).entries[-1].event,
+            MilestonePrDescribed(project="oak", milestone="M6", pr=190, head="8885daa", login="octo-cli"),
         )
 
     def test_should_open_no_second_pull_request_once_the_milestone_opened_one(self):
@@ -304,6 +332,9 @@ class PublishMilestoneReportTest(unittest.TestCase):
                 ("git", "diff", "--cached", "--quiet", "--", MILESTONES_PATH),
                 ("git", "commit", "--quiet", "-m", REACHED_MESSAGE),
                 ("git", "push", "--quiet", "origin", BRANCH),
+                ("awawa", "status", "TASK", "--where", "STATUS==implemented", "--json", str(self.checkout)),
+                ("awawa", "show", "@TASK.B17", "--json", str(self.checkout)),
+                ("git", "rev-parse", "HEAD"),
                 ("git", "worktree", "remove", "--force", str(self.checkout)),
             ],
         )
@@ -324,8 +355,13 @@ class PublishMilestoneReportTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            processes_before_opening[-2:],
-            [("git", "commit", "--quiet", "-m", REACHED_MESSAGE), ("git", "push", "--quiet", "origin", BRANCH)],
+            processes_before_opening[-4:],
+            [
+                ("git", "commit", "--quiet", "-m", REACHED_MESSAGE),
+                ("git", "push", "--quiet", "origin", BRANCH),
+                ("awawa", "status", "TASK", "--where", "STATUS==implemented", "--json", str(self.checkout)),
+                ("awawa", "show", "@TASK.B17", "--json", str(self.checkout)),
+            ],
         )
 
     def test_should_remove_its_checkout_from_the_project_when_the_push_fails(self):

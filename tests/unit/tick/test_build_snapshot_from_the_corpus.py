@@ -15,6 +15,7 @@ from brigade.ledger.append_event import append_event
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.milestone_closed import MilestoneClosed
+from brigade.ledger.milestone_pr_described import MilestonePrDescribed
 from brigade.ledger.milestone_pr_opened import MilestonePrOpened
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_preflighted import TaskPreflighted
@@ -2232,3 +2233,32 @@ class BuildSnapshotOfAWaveBranchCutOnMainTest(BuildSnapshotTestCase):
                 ),
             ],
         )
+
+
+class BuildSnapshotOfTheDescribedHeadOfAMilestoneTest(BuildSnapshotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_operational_corpus()
+        self.record(90, MilestoneBranchCut(project="shop", milestone="M4", branch="integration/delivery", login=None))
+        self.record(80, MilestonePrOpened(project="shop", milestone="M4", pr=90, login=None))
+
+    def test_should_carry_the_head_the_last_describe_of_the_milestone_named(self):
+        # Arrange
+        self.record(70, MilestonePrDescribed(project="shop", milestone="M4", pr=90, head="0123abc", login=None))
+        self.record(60, MilestonePrDescribed(project="shop", milestone="M4", pr=90, head="4567def", login=None))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.milestones[0].described_head, "4567def")
+
+    def test_should_carry_no_head_described_for_another_milestone(self):
+        # Arrange
+        self.record(70, MilestonePrDescribed(project="shop", milestone="M9", pr=91, head="89abcde", login=None))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertIsNone(snapshot.milestones[0].described_head)
