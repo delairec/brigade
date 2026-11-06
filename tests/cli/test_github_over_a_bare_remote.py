@@ -67,3 +67,71 @@ class GithubOverABareRemoteMergeTest(unittest.TestCase):
         # Assert
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(json.loads((self.store / "pulls" / "1.json").read_text()), PULL_REQUEST_OF_S1)
+
+
+class GithubOverABareRemoteEditTest(unittest.TestCase):
+    def setUp(self):
+        root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        self.machine = TemporaryMachine(root)
+        self.store = root / "forge"
+        (self.store / "pulls").mkdir(parents=True)
+        (self.store / "pulls" / "1.json").write_text(json.dumps(PULL_REQUEST_OF_S1))
+
+    def test_should_retitle_a_pull_request_edited_with_a_title_and_keep_its_body(self):
+        # Arrange
+        title = "feat: empty the cart in one click (M1, @TASK.S1)"
+        input_a_title_edit_leaves_unread = "a body brigade never sent"
+
+        # Act
+        ProcessLauncher.run(
+            [sys.executable, str(FORGE), str(self.store), "pr", "edit", "1", "--title", title],
+            input=input_a_title_edit_leaves_unread,
+            capture_output=True,
+            text=True,
+            check=True,
+            env=self.machine.describe_environment(),
+        )
+
+        # Assert
+        self.assertEqual(
+            json.loads((self.store / "pulls" / "1.json").read_text()),
+            {
+                "number": 1,
+                "title": "feat: empty the cart in one click (M1, @TASK.S1)",
+                "body": "",
+                "headRefName": "task/S1",
+                "baseRefName": "main",
+                "state": "OPEN",
+                "reviewDecision": None,
+                "author": "octo-build",
+            },
+        )
+
+    def test_should_replace_the_body_of_a_pull_request_edited_without_a_title_by_its_input(self):
+        # Arrange
+        report = "# The report of M1\n"
+
+        # Act
+        ProcessLauncher.run(
+            [sys.executable, str(FORGE), str(self.store), "pr", "edit", "1", "--body-file", "-"],
+            input=report,
+            capture_output=True,
+            text=True,
+            check=True,
+            env=self.machine.describe_environment(),
+        )
+
+        # Assert
+        self.assertEqual(
+            json.loads((self.store / "pulls" / "1.json").read_text()),
+            {
+                "number": 1,
+                "title": "deliver S1",
+                "body": "# The report of M1\n",
+                "headRefName": "task/S1",
+                "baseRefName": "main",
+                "state": "OPEN",
+                "reviewDecision": None,
+                "author": "octo-build",
+            },
+        )

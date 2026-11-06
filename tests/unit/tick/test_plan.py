@@ -13,6 +13,7 @@ from brigade.tick.actions import (
     CloseMilestone,
     CloseWave,
     CutMilestoneBranch,
+    DescribeMilestonePullRequest,
     KeepIntegrationBranch,
     LaunchCheckRepair,
     LaunchRemediation,
@@ -2251,6 +2252,7 @@ class PlanMilestoneReportTest(unittest.TestCase):
             create_milestone(WAVES_OF_M4_CLOSED, NO_TASK_TODO),
             opened_pull_request=90,
             pull_request=MILESTONE_PULL_REQUEST,
+            described_head="0123abc",
         )
         snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
@@ -2297,6 +2299,47 @@ class PlanMilestoneReportTest(unittest.TestCase):
         # Assert
         self.assertEqual(actions, (CloseMilestone(project="shop", milestone="M4", pr=90),))
 
+    def test_should_describe_the_pull_request_of_a_milestone_by_its_head_only_while_it_is_open_and_undescribed(self):
+        for case, state, described_head, expected in [
+            (
+                "a head not described",
+                "open",
+                "5d1e0a2",
+                (
+                    DescribeMilestonePullRequest(
+                        project="shop", milestone="M4", branch="integration/tides", pr=90, head="0123abc"
+                    ),
+                ),
+            ),
+            (
+                "a pull request never described",
+                "open",
+                None,
+                (
+                    DescribeMilestonePullRequest(
+                        project="shop", milestone="M4", branch="integration/tides", pr=90, head="0123abc"
+                    ),
+                ),
+            ),
+            ("its head described", "open", "0123abc", ()),
+            ("a pull request closed", "closed", "5d1e0a2", ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                milestone = dataclasses.replace(
+                    create_milestone(WAVES_OF_M4_CLOSED, NO_TASK_TODO),
+                    opened_pull_request=90,
+                    pull_request=dataclasses.replace(MILESTONE_PULL_REQUEST, state=state),
+                    described_head=described_head,
+                )
+                snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
     def test_should_merge_the_pull_request_of_a_milestone_never(self):
         # Arrange
         milestone = dataclasses.replace(
@@ -2305,6 +2348,7 @@ class PlanMilestoneReportTest(unittest.TestCase):
             pull_request=dataclasses.replace(
                 MILESTONE_PULL_REQUEST, checks=(CheckVerdict(name="tests", verdict="success"),), review="approved"
             ),
+            described_head="0123abc",
         )
         snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 

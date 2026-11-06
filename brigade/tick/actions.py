@@ -158,6 +158,15 @@ class CloseMilestone:
 
 
 @dataclass(frozen=True)
+class DescribeMilestonePullRequest:
+    project: str
+    milestone: str
+    branch: str
+    pr: int
+    head: str
+
+
+@dataclass(frozen=True)
 class RebaseTask:
     project: str
     wave: str

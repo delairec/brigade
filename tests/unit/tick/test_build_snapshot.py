@@ -157,6 +157,7 @@ class SnapshotTest(unittest.TestCase):
                     "blocked_rebase": {"run": "20261030T005500Z-2f5135", "question": "Keep the guard or drop it?"},
                     "tasks": ["S3", "S5"],
                     "reported": True,
+                    "described_head": None,
                 },
                 {
                     "project": "shop",
@@ -181,6 +182,7 @@ class SnapshotTest(unittest.TestCase):
                     "blocked_rebase": None,
                     "tasks": [],
                     "reported": False,
+                    "described_head": None,
                 },
             ],
         )
