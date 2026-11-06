@@ -565,3 +565,8 @@ def read_job_steps(request: dict, runtime: Runtime) -> dict:
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "steps": [{"name": step["name"], "conclusion": step["conclusion"]} for step in job["steps"]],
     }
+
+
+def edit_pull_request(request: dict, runtime: Runtime) -> dict:
+    _ask_gh(request, runtime, ("pr", "edit", str(request["number"]), "--title", request["title"]))
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION}

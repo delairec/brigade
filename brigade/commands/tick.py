@@ -21,6 +21,7 @@ from brigade.inbox.record_check_runs import CheckRunsRecording, record_check_run
 from brigade.ledger.append_event import append_event
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.milestone_closed import MilestoneClosed
+from brigade.ledger.milestone_pr_described import MilestonePrDescribed
 from brigade.ledger.milestone_reported import MilestoneReported
 from brigade.ledger.pr_merged import PrMerged
 from brigade.ledger.task_parked import TaskParked
@@ -69,6 +70,7 @@ from brigade.tick.actions import (
     CollectCheckRuns,
     CollectReviewThreads,
     CutMilestoneBranch,
+    DescribeMilestonePullRequest,
     KeepIntegrationBranch,
     LaunchCheckRepair,
     LaunchRemediation,
@@ -110,8 +112,11 @@ from brigade.tick.write_repair_brief import write_repair_brief
 from brigade.triage.deliver_patterns import WaveDelivery, deliver_patterns
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
 from brigade.verify.record_verdict import REVIEW_SLOT
+from brigade.waves.compose_milestone_title import MilestoneTitleDemand, compose_milestone_title
 from brigade.waves.cut_milestone_branch import MilestoneBranchDemand, cut_milestone_branch
+from brigade.waves.locate_forge_branch import locate_forge_branch
 from brigade.waves.locate_project_main import locate_project_main
+from brigade.waves.pull_request_titles import PullRequestTitles
 from brigade.waves.rebase_milestone_branches import MilestoneBranchesRebase, rebase_milestone_branches
 from brigade.waves.start_project_wave import WaveStart, start_project_wave
 
@@ -479,6 +484,38 @@ def _close_milestone(runtime: Runtime, action: CloseMilestone) -> None:
     )
 
 
+def _describe_milestone_pull_request(
+    runtime: Runtime, configuration: Configuration, action: DescribeMilestonePullRequest
+) -> None:
+    forge = runtime.resolve_plugin(FORGE_KIND, FORGE_NAME)
+    environment = read_forge_environment(configuration, CLI_KEY, runtime)
+    project = find_project(read_projects(runtime), action.project)
+    repository = read_project_field(project, PATH_FIELD)
+    locate_forge_branch(runtime.run_process, project, action.branch, _cache_forge_environment(runtime, configuration))
+    query = argparse.Namespace(project=action.project, ref=action.head, worktree=None)
+    pull_requests = PullRequestTitles(forge=forge, repository=repository, environment=environment, runtime=runtime)
+    title = compose_milestone_title(
+        MilestoneTitleDemand(
+            run_process=runtime.run_process,
+            root=prepare_project_tree(query, configuration, runtime).root,
+            milestone=action.milestone,
+            read_pull_request_title=pull_requests.read_title,
+        )
+    )
+    if pull_requests.read_title(action.pr) != title:
+        forge.edit_pull_request(
+            {"repository": repository, "number": action.pr, "title": title, "environment": environment}, runtime
+        )
+    login = ask_forge_account(forge, FORGE_NAME, environment, runtime).login
+    append_event(
+        runtime.paths,
+        runtime.now,
+        MilestonePrDescribed(
+            project=action.project, milestone=action.milestone, pr=action.pr, head=action.head, login=login
+        ),
+    )
+
+
 def _cache_forge_environment(runtime: Runtime, configuration: Configuration) -> Callable[[str], dict]:
     return functools.cache(lambda key: read_forge_environment(configuration, key, runtime))
 
@@ -611,6 +648,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         ReportTask: lambda action: _report_task(runtime, configuration, action),
         CloseWave: lambda action: _close_wave(runtime, action),
         CloseMilestone: lambda action: _close_milestone(runtime, action),
+        DescribeMilestonePullRequest: lambda action: _describe_milestone_pull_request(runtime, configuration, action),
         CollectCheckRuns: lambda action: _collect_check_runs(runtime, configuration, action),
         CollectReviewThreads: lambda action: _collect_review_threads(runtime, configuration, action),
     }

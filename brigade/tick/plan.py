@@ -11,6 +11,7 @@ from brigade.tick.actions import (
     CloseMilestone,
     CloseWave,
     CutMilestoneBranch,
+    DescribeMilestonePullRequest,
     KeepIntegrationBranch,
     LaunchCheckRepair,
     LaunchRemediation,
@@ -104,6 +105,7 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_milestone_reports(snapshot)
         + _plan_task_reports(snapshot)
         + _plan_milestone_closes(snapshot)
+        + _plan_milestone_describes(snapshot)
         + _plan_launches(snapshot, paused)
         + _plan_milestone_cuts(snapshot)
         + _plan_milestone_rebases(snapshot)
@@ -636,6 +638,28 @@ def _plan_milestone_closes(snapshot: Snapshot) -> tuple:
         CloseMilestone(project=milestone.project, milestone=milestone.milestone, pr=milestone.opened_pull_request)
         for milestone in snapshot.milestones
         if milestone.pull_request is not None and milestone.pull_request.state == MERGED_PULL_REQUEST
+    )
+
+
+def _is_description_due(milestone: MilestoneFacts) -> bool:
+    return (
+        milestone.pull_request is not None
+        and milestone.pull_request.state == OPEN_PULL_REQUEST
+        and milestone.pull_request.head != milestone.described_head
+    )
+
+
+def _plan_milestone_describes(snapshot: Snapshot) -> tuple:
+    return tuple(
+        DescribeMilestonePullRequest(
+            project=milestone.project,
+            milestone=milestone.milestone,
+            branch=milestone.branch,
+            pr=milestone.opened_pull_request,
+            head=milestone.pull_request.head,
+        )
+        for milestone in snapshot.milestones
+        if _is_description_due(milestone)
     )
 
 

@@ -8,6 +8,7 @@ from brigade.ledger.ledger_locations import LOCK_FILE
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.milestone_closed import MilestoneClosed
 from brigade.ledger.milestone_created import MilestoneCreated
+from brigade.ledger.milestone_pr_described import MilestonePrDescribed
 from brigade.ledger.milestone_pr_opened import MilestonePrOpened
 from brigade.ledger.milestone_rebased import MilestoneRebased
 from brigade.ledger.milestone_reported import MilestoneReported
@@ -56,6 +57,7 @@ AppendedEvent = (
     | MilestoneCreated
     | MilestoneBranchCut
     | MilestonePrOpened
+    | MilestonePrDescribed
     | MilestoneRebased
     | MilestoneClosed
     | MilestoneReported
