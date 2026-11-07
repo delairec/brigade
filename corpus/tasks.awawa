@@ -16079,7 +16079,7 @@ TASK B237
 		+ "its pull requests, by week, in brigade ledger --project and in the milestone report; a"
 		+ "fix task names the pull request it corrects, and its pull request and the ledger carry"
 		+ "it"
-	STATUS draft
+	STATUS todo
 	TYPE feat
 	MILESTONE @MILESTONE.ADD0
 	COMPONENT "the ledger"
