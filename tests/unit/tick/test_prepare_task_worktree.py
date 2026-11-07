@@ -16,6 +16,7 @@ from brigade.ledger.wave_started import WaveStarted
 from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
 from brigade.tick.actions import LaunchTask
+from brigade.tick.head_proof import ForgeCheck, HeadChecks
 from brigade.tick.prepare_task_worktree import PreparedWorktree, prepare_task_worktree
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -24,10 +25,38 @@ from tests.unit.recording_process_runner import SILENT_SUCCESS, ProcessAnswer, R
 from tests.unit.registry_answers import create_registry_answers
 
 ACTION = LaunchTask(
-    project="shop", wave="w1", branch="integration/w1", task="B1", task_branch="feature/B1-task", checks_passed=False
+    project="shop",
+    wave="w1",
+    branch="integration/w1",
+    task="B1",
+    task_branch="feature/B1-task",
+    pull_request_checks=None,
 )
-ACTION_ON_PASSED_CHECKS = LaunchTask(
-    project="shop", wave="w1", branch="integration/w1", task="B1", task_branch="feature/B1-task", checks_passed=True
+TASK_HEAD = "5c1d2e0"
+WAVE_HEAD = "9a8b7c6"
+ACTION_WITH_PASSED_PULL_REQUEST_CHECKS = LaunchTask(
+    project="shop",
+    wave="w1",
+    branch="integration/w1",
+    task="B1",
+    task_branch="feature/B1-task",
+    pull_request_checks=HeadChecks(head=TASK_HEAD, checks=(ForgeCheck(name="unit", verdict="success"),)),
+)
+ACTION_WITH_PENDING_PULL_REQUEST_CHECKS = LaunchTask(
+    project="shop",
+    wave="w1",
+    branch="integration/w1",
+    task="B1",
+    task_branch="feature/B1-task",
+    pull_request_checks=HeadChecks(head=TASK_HEAD, checks=(ForgeCheck(name="unit", verdict="pending"),)),
+)
+ACTION_WITH_PULL_REQUEST_CHECKS_OF_AN_OLDER_HEAD = LaunchTask(
+    project="shop",
+    wave="w1",
+    branch="integration/w1",
+    task="B1",
+    task_branch="feature/B1-task",
+    pull_request_checks=HeadChecks(head="0ld4ead", checks=(ForgeCheck(name="unit", verdict="success"),)),
 )
 WORKTREE = Path("/srv/shop/.brigade/worktrees/B1")
 ADD_TASK_WORKTREE = ("git", "worktree", "add", "--quiet", "-b", "feature/B1-task", str(WORKTREE), "integration/w1")
@@ -68,6 +97,21 @@ class PrepareTaskWorktreeTestCase(unittest.TestCase):
         root = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, root)
         self.paths = create_test_paths(root)
+
+    def record_commit_checks(self, commit: str, exit_code: int) -> None:
+        record = self.paths.state_root / "commit-checks" / "shop" / f"{commit}.json"
+        record.parent.mkdir(parents=True, exist_ok=True)
+        record.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "project": "shop",
+                    "commit": commit,
+                    "checks": [{"command": "make test", "exit_code": exit_code}],
+                }
+            ),
+            encoding="utf-8",
+        )
 
     def create_runner(
         self,
@@ -179,7 +223,7 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
             },
         )
         action = LaunchTask(
-            project="shop", wave="w1", branch="main", task="B1", task_branch="feature/B1-task", checks_passed=False
+            project="shop", wave="w1", branch="main", task="B1", task_branch="feature/B1-task", pull_request_checks=None
         )
 
         # Act
@@ -468,7 +512,14 @@ class PrepareTaskWorktreeUnderTheLockTest(PrepareTaskWorktreeTestCase):
 ON_GITHUB = ({"name": "FORGE", "atoms": ['"github"']},)
 CLI_ENVIRONMENT = {"GH_TOKEN": "token-of-the-bot"}
 FETCH_THE_WAVE_BRANCH = ("git", "fetch", "--quiet", "origin", "integration/w1")
-OFF_THE_WAVE_BRANCH = {TASK_BRANCH_DESCENDS: ProcessAnswer(exit_code=1)}
+READ_THE_TASK_HEAD = ("git", "rev-parse", "HEAD")
+READ_THE_WAVE_HEAD = ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "integration/w1^{commit}")
+OFF_THE_WAVE_BRANCH = {
+    TASK_BRANCH_DESCENDS: ProcessAnswer(exit_code=1),
+    READ_THE_TASK_HEAD: ProcessAnswer(stdout=f"{TASK_HEAD}\n"),
+    READ_THE_WAVE_HEAD: ProcessAnswer(stdout=f"{WAVE_HEAD}\n"),
+}
+ADD_A_CHECKOUT_OF_THE_TASK_HEAD = ("git", "worktree", "add", "--quiet", "--detach")
 REBASE_ON_THE_WAVE_BRANCH = ("git", "rebase", "--fork-point", "integration/w1")
 STOPPED_ON_A_CONFLICT = {
     TASK_BRANCH_DESCENDS: ProcessAnswer(exit_code=1),
@@ -539,8 +590,10 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
             runner.requests,
         )
 
-    def test_should_rebase_an_existing_branch_whose_checks_passed_onto_the_wave_branch_of_the_forge(self):
+    def test_should_rebase_an_existing_green_branch_onto_the_green_wave_branch_of_the_forge(self):
         # Arrange
+        self.record_commit_checks(TASK_HEAD, exit_code=0)
+        self.record_commit_checks(WAVE_HEAD, exit_code=0)
         runner = self.create_runner(
             MAKE_DEPS,
             forge=ON_GITHUB,
@@ -548,16 +601,22 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
             answers={
                 ("git", "merge-base", "--is-ancestor", "origin/integration/w1", "feature/B1-task"): ProcessAnswer(
                     exit_code=1
-                )
+                ),
+                READ_THE_TASK_HEAD: ProcessAnswer(stdout=f"{TASK_HEAD}\n"),
+                (
+                    "git",
+                    "rev-parse",
+                    "--verify",
+                    "--quiet",
+                    "--end-of-options",
+                    "origin/integration/w1^{commit}",
+                ): ProcessAnswer(stdout=f"{WAVE_HEAD}\n"),
             },
         )
 
         # Act
         prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner),
-            Configuration(),
-            ACTION_ON_PASSED_CHECKS,
-            read_cli_environment,
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_cli_environment
         )
 
         # Assert
@@ -565,29 +624,126 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
 
 
 class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCase):
-    def test_should_rebase_the_branch_whose_checks_passed_onto_the_wave_branch_before_the_setup(self):
+    def test_should_rebase_a_green_branch_onto_the_green_wave_branch_before_the_setup_and_require_it(self):
         # Arrange
+        self.record_commit_checks(TASK_HEAD, exit_code=0)
+        self.record_commit_checks(WAVE_HEAD, exit_code=0)
         runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
 
         # Act
         prepared = prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner),
-            Configuration(),
-            ACTION_ON_PASSED_CHECKS,
-            read_no_environment,
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
         )
 
         # Assert
         self.assertFalse(prepared.conflicted)
         self.assertEqual(
-            runner.commands[-4:],
+            runner.commands[-3:],
             [
-                (str(WORKTREE), TASK_BRANCH_DESCENDS),
                 (str(WORKTREE), REBASE_ON_THE_WAVE_BRANCH),
                 (str(WORKTREE), ("make", "deps")),
                 (str(WORKTREE), REQUIRE_THE_WAVE_BRANCH),
             ],
         )
+
+    def test_should_hand_over_a_rebased_branch_as_put_on_the_head_of_the_wave_branch(self):
+        # Arrange
+        self.record_commit_checks(TASK_HEAD, exit_code=0)
+        self.record_commit_checks(WAVE_HEAD, exit_code=0)
+        runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
+
+        # Act
+        prepared = prepare_task_worktree(
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+        )
+
+        # Assert
+        self.assertEqual(
+            prepared,
+            PreparedWorktree(
+                worktree=BranchWorktree(path=WORKTREE, branch="feature/B1-task", start="integration/w1"),
+                conflicted=False,
+                on_start=True,
+                rebased=True,
+                failed_commands=(),
+            ),
+        )
+
+    def test_should_prove_the_branch_green_by_the_check_runs_its_pull_request_passed_at_its_head(self):
+        # Arrange
+        self.record_commit_checks(WAVE_HEAD, exit_code=0)
+        runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
+
+        # Act
+        prepare_task_worktree(
+            create_test_runtime(self.paths, run_process=runner),
+            Configuration(),
+            ACTION_WITH_PASSED_PULL_REQUEST_CHECKS,
+            read_no_environment,
+        )
+
+        # Assert
+        self.assertIn((str(WORKTREE), REBASE_ON_THE_WAVE_BRANCH), runner.commands)
+
+    def test_should_check_the_branch_on_a_checkout_of_its_head_when_its_pull_request_was_checked_at_another(self):
+        # Arrange
+        self.record_commit_checks(WAVE_HEAD, exit_code=0)
+        runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
+
+        # Act
+        prepare_task_worktree(
+            create_test_runtime(self.paths, run_process=runner),
+            Configuration(),
+            ACTION_WITH_PULL_REQUEST_CHECKS_OF_AN_OLDER_HEAD,
+            read_no_environment,
+        )
+
+        # Assert
+        self.assertIn(
+            (
+                "/srv/shop",
+                (
+                    *ADD_A_CHECKOUT_OF_THE_TASK_HEAD,
+                    str(self.paths.state_root / "head-checks" / "shop" / TASK_HEAD),
+                    TASK_HEAD,
+                ),
+            ),
+            runner.commands,
+        )
+
+    def test_should_leave_a_branch_whose_pull_request_checks_are_pending_unrebased(self):
+        # Arrange
+        self.record_commit_checks(WAVE_HEAD, exit_code=0)
+        runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
+
+        # Act
+        prepare_task_worktree(
+            create_test_runtime(self.paths, run_process=runner),
+            Configuration(),
+            ACTION_WITH_PENDING_PULL_REQUEST_CHECKS,
+            read_no_environment,
+        )
+
+        # Assert
+        self.assertNotIn((str(WORKTREE), REBASE_ON_THE_WAVE_BRANCH), runner.commands)
+
+    def test_should_leave_a_green_branch_off_a_red_wave_branch_unrebased(self):
+        # Arrange
+        self.record_commit_checks(TASK_HEAD, exit_code=0)
+        self.record_commit_checks(WAVE_HEAD, exit_code=1)
+        runner = self.create_runner(
+            MAKE_DEPS,
+            branch=TASK_BRANCH_FOUND,
+            answers={**OFF_THE_WAVE_BRANCH, REQUIRE_THE_WAVE_BRANCH: HEAD_OFF_THE_WAVE_BRANCH},
+        )
+
+        # Act
+        prepare_task_worktree(
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+        )
+
+        # Assert
+        self.assertNotIn((str(WORKTREE), REBASE_ON_THE_WAVE_BRANCH), runner.commands)
 
     def test_should_leave_a_branch_descending_from_the_wave_branch_unrebased(self):
         # Arrange
@@ -603,14 +759,15 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
 
     def test_should_abort_a_rebase_stopped_on_a_conflict_and_run_no_setup(self):
         # Arrange
-        runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers=STOPPED_ON_A_CONFLICT)
+        self.record_commit_checks(TASK_HEAD, exit_code=0)
+        self.record_commit_checks(WAVE_HEAD, exit_code=0)
+        runner = self.create_runner(
+            MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers={**OFF_THE_WAVE_BRANCH, **STOPPED_ON_A_CONFLICT}
+        )
 
         # Act
         prepared = prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner),
-            Configuration(),
-            ACTION_ON_PASSED_CHECKS,
-            read_no_environment,
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
         )
 
         # Assert
@@ -618,9 +775,11 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
         self.assertEqual(runner.commands[-1], (str(WORKTREE), ("git", "rebase", "--abort")))
 
 
-class PrepareTaskWorktreeOfABranchOffTheWaveBranchWhoseChecksHaveNotPassedTest(PrepareTaskWorktreeTestCase):
+class PrepareTaskWorktreeOfARedBranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCase):
     def test_should_run_the_setup_on_the_branch_as_it_stands_without_rebasing_it_or_requiring_the_wave_branch(self):
         # Arrange
+        self.record_commit_checks(TASK_HEAD, exit_code=1)
+        self.record_commit_checks(WAVE_HEAD, exit_code=0)
         runner = self.create_runner(
             MAKE_DEPS,
             branch=TASK_BRANCH_FOUND,
@@ -633,16 +792,12 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchWhoseChecksHaveNotPassedTest(P
         )
 
         # Assert
-        self.assertEqual(
-            runner.commands[-2:],
-            [
-                (str(WORKTREE), TASK_BRANCH_DESCENDS),
-                (str(WORKTREE), ("make", "deps")),
-            ],
-        )
+        self.assertNotIn((str(WORKTREE), REBASE_ON_THE_WAVE_BRANCH), runner.commands)
+        self.assertEqual(runner.commands[-1], (str(WORKTREE), ("make", "deps")))
 
-    def test_should_hand_over_the_worktree_off_its_start(self):
+    def test_should_hand_over_the_worktree_off_its_start_with_the_commands_that_failed_at_its_head(self):
         # Arrange
+        self.record_commit_checks(TASK_HEAD, exit_code=1)
         runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
 
         # Act
@@ -657,6 +812,8 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchWhoseChecksHaveNotPassedTest(P
                 worktree=BranchWorktree(path=WORKTREE, branch="feature/B1-task", start="integration/w1"),
                 conflicted=False,
                 on_start=False,
+                rebased=False,
+                failed_commands=("make test",),
             ),
         )
 

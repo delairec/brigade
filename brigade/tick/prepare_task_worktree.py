@@ -10,8 +10,10 @@ from brigade.git.add_worktree_on_branch import add_worktree_on_branch
 from brigade.git.check_ancestor import check_ancestor
 from brigade.git.find_branch import find_branch
 from brigade.git.list_worktrees import list_worktrees
+from brigade.git.read_head import read_head
 from brigade.git.rebase_onto import rebase_onto
 from brigade.git.require_ancestor import require_ancestor
+from brigade.git.resolve_commit import resolve_commit
 from brigade.ledger.append_event import append_event
 from brigade.ledger.task_state import TaskState
 from brigade.registry.find_project import find_project
@@ -25,8 +27,11 @@ from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
 from brigade.system.write_text_atomically import write_text_atomically
 from brigade.tick.actions import LaunchTask
+from brigade.tick.head_proof import GREEN, RED, ForgeCheck, HeadProof
 from brigade.tick.ignore_worktrees import ignore_worktrees
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
+from brigade.tick.prove_head import HeadQuery, prove_head
+from brigade.tick.read_task_check import read_task_check
 from brigade.waves.locate_forge_branch import locate_forge_branch
 from brigade.waves.read_task_state import PARKED_STATE
 
@@ -37,6 +42,8 @@ SETUP_PROMPT = "$ "
 SETUP_FAILED_REASON = "setup failed"
 DESCENDING = 0
 WHOLE_WORKTREE = "."
+NO_TASK_CHECK = None
+NO_FORGE_CHECK = ()
 
 
 @dataclass(frozen=True)
@@ -44,6 +51,8 @@ class PreparedWorktree:
     worktree: BranchWorktree
     conflicted: bool
     on_start: bool
+    rebased: bool = False
+    failed_commands: tuple[str, ...] = ()
 
 
 def _split_line(line: str) -> tuple[str, ...]:
@@ -77,14 +86,62 @@ def _open_worktree(runtime: Runtime, repository: Path, worktree: BranchWorktree)
     return found
 
 
-def _put_on_start(runtime: Runtime, worktree: BranchWorktree, action: LaunchTask) -> PreparedWorktree:
+@dataclass(frozen=True)
+class _Launch:
+    project: Entity
+    repository: Path
+    worktree: BranchWorktree
+    action: LaunchTask
+
+
+def _read_pull_request_checks(action: LaunchTask, commit: str) -> tuple[ForgeCheck, ...]:
+    checked = action.pull_request_checks
+    if checked is None or checked.head != commit:
+        return NO_FORGE_CHECK
+    return checked.checks
+
+
+def _prove_task_head(runtime: Runtime, launch: _Launch) -> HeadProof:
+    commit = read_head(runtime.run_process, launch.worktree.path)
+    return prove_head(
+        runtime,
+        HeadQuery(
+            project=launch.project,
+            repository=launch.repository,
+            commit=commit,
+            task_check=read_task_check(runtime.paths.state_root, launch.project.name, launch.action.task),
+            forge_checks=_read_pull_request_checks(launch.action, commit),
+        ),
+    )
+
+
+def _prove_start_head(runtime: Runtime, launch: _Launch) -> HeadProof:
+    return prove_head(
+        runtime,
+        HeadQuery(
+            project=launch.project,
+            repository=launch.repository,
+            commit=resolve_commit(runtime.run_process, launch.worktree.path, launch.worktree.start),
+            task_check=NO_TASK_CHECK,
+            forge_checks=NO_FORGE_CHECK,
+        ),
+    )
+
+
+def _put_on_start(runtime: Runtime, launch: _Launch) -> PreparedWorktree:
+    worktree = launch.worktree
     descent = check_ancestor(runtime.run_process, worktree.path, worktree.start, worktree.branch)
     if descent.exit_code == DESCENDING:
         return PreparedWorktree(worktree=worktree, conflicted=False, on_start=True)
-    if not action.checks_passed:
+    task_head = _prove_task_head(runtime, launch)
+    if task_head.state == RED:
+        return PreparedWorktree(
+            worktree=worktree, conflicted=False, on_start=False, failed_commands=task_head.failed_commands
+        )
+    if task_head.state != GREEN or _prove_start_head(runtime, launch).state != GREEN:
         return PreparedWorktree(worktree=worktree, conflicted=False, on_start=False)
     rebased = rebase_onto(runtime.run_process, worktree.path, worktree.start)
-    return PreparedWorktree(worktree=worktree, conflicted=not rebased, on_start=rebased)
+    return PreparedWorktree(worktree=worktree, conflicted=not rebased, on_start=rebased, rebased=rebased)
 
 
 def _set_up_or_park(runtime: Runtime, project: Entity, action: LaunchTask, prepared: PreparedWorktree) -> None:
@@ -119,7 +176,7 @@ def prepare_task_worktree(
         if configuration.worktree_root is None and action.branch != read_project_field(project, MAIN_FIELD):
             ignore_worktrees(runtime.run_process, repository, action.branch)
         prepared = (
-            _put_on_start(runtime, worktree, action)
+            _put_on_start(runtime, _Launch(project=project, repository=repository, worktree=worktree, action=action))
             if _open_worktree(runtime, repository, worktree)
             else PreparedWorktree(worktree=worktree, conflicted=False, on_start=True)
         )
