@@ -6446,3 +6446,20 @@ DECISION DoctorChecksTheForgesTheRegisteredProjectsName
 	SOURCE "the build run of @TASK.B46, step 3, on 2026-11-01: brigade/commands/doctor.py:40 names"
 		+ "github, which SPEC 1 of the task forbids"
 		REF @TASK.B46
+
+DECISION ATaskOfForgeNoneWhoseLocalPreflightFailsIsParkedOnItsFindings
+	TITLE "a running task of FORGE none whose preflight failed at the head its build run delivered"
+		+ "is parked by the tick, the reason naming that head and each finding of the failed"
+		+ "checks; brigade wave requeue sends it back to a build run"
+	STATUS active
+	DESC "binds @TASK.B46"
+		REF @TASK.B46
+	REJECTED "a repair run launched from the findings, as LaunchCheckRepair does on GitHub: its"
+		+ "brief reads the logs of the check runs from the forge, and a repair from the acceptance"
+		+ "output alone has no procedure yet"
+	RATIONALE "SPEC 2 of @TASK.B46 fails the preflight on a failing ACCEPTANCE command and sets"
+		+ "nothing after it; a task left running with nothing planned holds its wave open for good"
+		REF @TASK.B46
+	SOURCE "the build run of @TASK.B46, step 3, on 2026-11-07, the path of a failed local preflight"
+		+ "left open by SPEC 2"
+		REF @TASK.B46
