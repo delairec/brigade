@@ -92,6 +92,37 @@ FAILING_SETUP = {"name": "SETUP", "atoms": ['"false"']}
 TOUCH_THE_WORKTREE = {"name": "SETUP", "atoms": ['"touch \\"$PWD\\""']}
 
 
+no_check_run = []
+
+
+class CheckRunsForgeDouble:
+    def __init__(self, check_runs: list[dict]):
+        self.check_runs = check_runs
+
+    def list_check_runs(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "check_runs": self.check_runs}
+
+
+def create_wave_head_check_run(conclusion: str) -> dict:
+    return {
+        "pull_request": None,
+        "branch": "integration/w1",
+        "head": WAVE_HEAD,
+        "name": "unit",
+        "conclusion": conclusion,
+        "link": "https://github.com/delairec/shop/actions/runs/1/job/2",
+    }
+
+
+def resolve_the_forge(forge: CheckRunsForgeDouble):
+    def resolve_plugin(kind: str, name: str):
+        if (kind, name) != ("forge", "github"):
+            raise AssertionError(f"the {kind} plugin {name} should not be resolved")
+        return forge
+
+    return resolve_plugin
+
+
 class PrepareTaskWorktreeTestCase(unittest.TestCase):
     def setUp(self):
         root = Path(tempfile.mkdtemp())
@@ -590,11 +621,8 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
             runner.requests,
         )
 
-    def test_should_rebase_an_existing_green_branch_onto_the_green_wave_branch_of_the_forge(self):
-        # Arrange
-        self.record_commit_checks(TASK_HEAD, exit_code=0)
-        self.record_commit_checks(WAVE_HEAD, exit_code=0)
-        runner = self.create_runner(
+    def create_runner_of_a_branch_off_the_wave_branch_of_the_forge(self) -> RecordingProcessRunner:
+        return self.create_runner(
             MAKE_DEPS,
             forge=ON_GITHUB,
             branch=TASK_BRANCH_FOUND,
@@ -614,13 +642,65 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
             },
         )
 
+    def test_should_rebase_an_existing_green_branch_onto_the_green_wave_branch_of_the_forge(self):
+        # Arrange
+        self.record_commit_checks(TASK_HEAD, exit_code=0)
+        self.record_commit_checks(WAVE_HEAD, exit_code=0)
+        runner = self.create_runner_of_a_branch_off_the_wave_branch_of_the_forge()
+        forge = CheckRunsForgeDouble(no_check_run)
+
         # Act
         prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_cli_environment
+            create_test_runtime(self.paths, run_process=runner, resolve_plugin=resolve_the_forge(forge)),
+            Configuration(),
+            ACTION,
+            read_cli_environment,
         )
 
         # Assert
         self.assertIn((str(WORKTREE), ("git", "rebase", "--fork-point", "origin/integration/w1")), runner.commands)
+
+    def test_should_prove_the_wave_branch_green_by_the_check_runs_of_the_forge_on_its_head(self):
+        # Arrange
+        self.record_commit_checks(TASK_HEAD, exit_code=0)
+        runner = self.create_runner_of_a_branch_off_the_wave_branch_of_the_forge()
+        forge = CheckRunsForgeDouble([create_wave_head_check_run("success")])
+        checkout_of_the_wave_head = str(self.paths.state_root / "head-checks" / "shop" / WAVE_HEAD)
+
+        # Act
+        prepare_task_worktree(
+            create_test_runtime(self.paths, run_process=runner, resolve_plugin=resolve_the_forge(forge)),
+            Configuration(),
+            ACTION,
+            read_cli_environment,
+        )
+
+        # Assert
+        self.assertNotIn(
+            ("/srv/shop", (*ADD_A_CHECKOUT_OF_THE_TASK_HEAD, checkout_of_the_wave_head, WAVE_HEAD)), runner.commands
+        )
+
+    def test_should_hold_a_branch_off_a_wave_branch_whose_check_run_of_the_forge_failed_on_its_head(self):
+        # Arrange
+        self.record_commit_checks(TASK_HEAD, exit_code=0)
+        runner = self.create_runner_of_a_branch_off_the_wave_branch_of_the_forge()
+        forge = CheckRunsForgeDouble([create_wave_head_check_run("failure")])
+
+        # Act
+        prepared = prepare_task_worktree(
+            create_test_runtime(self.paths, run_process=runner, resolve_plugin=resolve_the_forge(forge)),
+            Configuration(),
+            ACTION,
+            read_cli_environment,
+        )
+
+        # Assert
+        self.assertEqual(
+            prepared.held_by,
+            HoldingHead(
+                branch="integration/w1", proof=HeadProof(commit=WAVE_HEAD, state="red", failed_commands=("unit",))
+            ),
+        )
 
 
 class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCase):
