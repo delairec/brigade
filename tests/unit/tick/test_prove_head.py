@@ -5,6 +5,8 @@ from pathlib import Path
 
 from brigade.corpus.read_entities import Entity, EntityField
 from brigade.errors import ToolFailure
+from brigade.git.timeouts import TREE_TIMEOUT_S
+from brigade.system.run_process import ProcessRequest
 from brigade.tick.head_proof import HeadProof, TaskCheck
 from brigade.tick.prove_head import HeadQuery, prove_head
 from tests.unit.create_test_paths import create_test_paths
@@ -98,11 +100,12 @@ class ProveHeadTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            [(request.cwd, request.argv) for request in self.processes.requests][-2:],
-            [
-                (str(self.checkout), ("awawa", "lint", "--strict", ".")),
-                ("/srv/oak", ("git", "worktree", "remove", "--force", str(self.checkout))),
-            ],
+            self.processes.requests[-1],
+            ProcessRequest(
+                argv=("git", "worktree", "remove", "--force", str(self.checkout)),
+                cwd="/srv/oak",
+                timeout_s=TREE_TIMEOUT_S,
+            ),
         )
 
     def test_should_remove_the_checkout_of_an_unproven_commit_whose_check_stopped_on_an_error(self):

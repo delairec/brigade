@@ -44,6 +44,7 @@ from brigade.tick.build_snapshot import (
     WaveFacts,
 )
 from brigade.tick.decide_resume_at import decide_resume_at
+from brigade.tick.head_proof import ForgeCheck, HeadChecks
 from brigade.tick.is_study_due import is_study_due
 from brigade.tick.read_integration_branches import IntegrationBranchFacts
 from brigade.waves.read_task_state import PARKED_STATE
@@ -138,7 +139,6 @@ def _plan_integration_branches(snapshot: Snapshot) -> tuple:
 
 def _plan_launches(snapshot: Snapshot, paused: set) -> tuple:
     free_slots = {project.name: _count_free_slots(project) for project in snapshot.projects}
-    projects = {project.name: project for project in snapshot.projects}
     live_tasks = _read_occupancy(snapshot).tasks
     launches = []
     for wave in (wave for wave in snapshot.waves if wave.wave not in paused):
@@ -156,17 +156,18 @@ def _plan_launches(snapshot: Snapshot, paused: set) -> tuple:
                     branch=wave.base,
                     task=task.name,
                     task_branch=task.branch,
-                    checks_passed=_are_open_pull_request_checks_passed(task, projects[wave.project], snapshot.now),
+                    pull_request_checks=_read_open_pull_request_checks(task),
                 )
             )
     return tuple(launches)
 
 
-def _are_open_pull_request_checks_passed(task: TaskFacts, project: ProjectFacts, now: datetime) -> bool:
-    return (
-        task.pull_request is not None
-        and task.pull_request.state == OPEN_PULL_REQUEST
-        and _are_checks_passed(task.pull_request, project, now)
+def _read_open_pull_request_checks(task: TaskFacts) -> HeadChecks | None:
+    if task.pull_request is None or task.pull_request.state != OPEN_PULL_REQUEST:
+        return None
+    return HeadChecks(
+        head=task.pull_request.head,
+        checks=tuple(ForgeCheck(name=check.name, verdict=check.verdict) for check in task.pull_request.checks),
     )
 
 
