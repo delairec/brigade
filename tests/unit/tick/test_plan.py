@@ -294,7 +294,9 @@ OPENED_BY_AN_EARLIER_RUN = 41
 NOT_PREFLIGHTED = None
 PREFLIGHTED_AT_THE_HEAD = HEAD
 PREFLIGHTED_BEFORE_A_PUSH = "fedcba9"
-PREFLIGHT_S3 = RunPreflight(project="shop", wave="shop_w1", branch=TASK_BASE, task="S3", pr=42)
+PREFLIGHT_S3 = RunPreflight(
+    project="shop", wave="shop_w1", branch=TASK_BASE, task="S3", task_branch="feature/S3-task", pr=42
+)
 
 
 class PlanPreflightTest(unittest.TestCase):
@@ -2711,3 +2713,56 @@ class PlanIntegrationBranchRemovalTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, (kept,))
+
+
+DELIVERED_HEAD = "4d5e6f7"
+NOT_DELIVERED = None
+LOCAL_PREFLIGHT_S3 = RunPreflight(
+    project="shop", wave="shop_w1", branch=TASK_BASE, task="S3", task_branch="feature/S3-task", pr=None
+)
+
+
+class PlanPreflightOfATaskWithoutAForgeTest(unittest.TestCase):
+    def test_should_preflight_the_head_its_build_run_delivered_once(self):
+        for case, delivered, preflighted, live_runs, expected in [
+            ("delivered and not preflighted", DELIVERED_HEAD, NOT_PREFLIGHTED, (), (LOCAL_PREFLIGHT_S3,)),
+            ("delivered and preflighted at that head", DELIVERED_HEAD, DELIVERED_HEAD, (), ()),
+            (
+                "delivered again since its preflight",
+                DELIVERED_HEAD,
+                PREFLIGHTED_BEFORE_A_PUSH,
+                (),
+                (LOCAL_PREFLIGHT_S3,),
+            ),
+            ("delivered while a live run names it", DELIVERED_HEAD, NOT_PREFLIGHTED, (LIVE_RUN_OF_S3,), ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    branch="feature/S3-task",
+                    last_run=LAST_RUN_OF_S3,
+                    delivered_head=delivered,
+                    preflighted_head=preflighted,
+                )
+                project = dataclasses.replace(SHOP, live_runs=live_runs)
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_park_a_running_task_whose_last_run_delivered_nothing(self):
+        # Arrange
+        task = TaskFacts(name="S3", branch="feature/S3-task", last_run=LAST_RUN_OF_S3, delivered_head=NOT_DELIVERED)
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions, (ParkTask(wave="shop_w1", task="S3", reason="run dead: 20261006T110000Z-d1e2f3", blockers=()),)
+        )
