@@ -1,8 +1,7 @@
 import unittest
 
 from brigade.tick.describe_holding_head import describe_holding_head
-from brigade.tick.head_proof import HeadProof
-from brigade.tick.prepare_task_worktree import HoldingHead
+from brigade.tick.head_proof import HeadProof, HoldingHead
 
 
 class DescribeHoldingHeadTest(unittest.TestCase):
