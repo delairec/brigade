@@ -17,16 +17,12 @@ from brigade.runtime import Runtime
 from brigade.system.hold_lock import hold_lock
 from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.system.parse_configuration import CLI_KEY
-from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRecord, ProcessRequest
-from brigade.system.split_command import split_command
-from brigade.tasks.run_project_checks import run_project_checks
+from brigade.tick.run_commit_checks import run_commit_checks
 from brigade.waves.locate_branch_worktree import locate_branch_worktree
 from brigade.waves.locate_forge_branch import locate_forge_branch
 
 PATH_FIELD = "PATH"
 MAIN_FIELD = "MAIN"
-SETUP_FIELD = "SETUP"
-SETUP_TIMEOUT_S = 1800.0
 PASSED_EXIT_CODE = 0
 NO_LOGIN = None
 NO_WAVE_REBASED = ()
@@ -103,19 +99,9 @@ def _push_branch(runtime: Runtime, rebase: MilestoneBranchesRebase, run: BranchR
         push_with_lease(runtime.run_process, push)
 
 
-def _run_setup_line(runtime: Runtime, worktree: Path, argv: tuple[str, ...]) -> ProcessRecord:
-    return runtime.run_process(
-        ProcessRequest(argv=argv, cwd=str(worktree), timeout_s=SETUP_TIMEOUT_S, acceptable_exit_codes=EVERY_EXIT_CODE)
-    )
-
-
-def _pass_project_checks(runtime: Runtime, rebase: MilestoneBranchesRebase, worktree: Path) -> bool:
-    setup = tuple(split_command(field.value) for field in rebase.project.fields if field.name == SETUP_FIELD)
-    records = (
-        *(_run_setup_line(runtime, worktree, argv) for argv in setup),
-        *(check.record for check in run_project_checks(runtime.run_process, rebase.project, worktree)),
-    )
-    return all(record.exit_code == PASSED_EXIT_CODE for record in records)
+def _pass_project_checks(runtime: Runtime, rebase: MilestoneBranchesRebase, worktree: Path, head: str) -> bool:
+    checks = run_commit_checks(runtime, rebase.project, worktree, head)
+    return all(result.exit_code == PASSED_EXIT_CODE for result in checks.results)
 
 
 def _rebase_milestone(runtime: Runtime, rebase: MilestoneBranchesRebase, branch: str, main: str) -> MovedHead | None:
@@ -128,7 +114,7 @@ def _rebase_milestone(runtime: Runtime, rebase: MilestoneBranchesRebase, branch:
     if before is None:
         return None
     after = read_head(runtime.run_process, worktree.path)
-    if after != before and not _pass_project_checks(runtime, rebase, worktree.path):
+    if after != before and not _pass_project_checks(runtime, rebase, worktree.path, after):
         rebase.launch_rebase_run(run)
         return None
     _push_branch(runtime, rebase, run, before)

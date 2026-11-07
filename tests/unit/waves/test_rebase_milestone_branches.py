@@ -7,6 +7,8 @@ from brigade.errors import BrigadeError
 from brigade.ledger.milestone_rebased import MilestoneRebased
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 from brigade.system.run_process import ProcessRequest
+from brigade.tick.commit_checks import CommandResult, CommitChecks
+from brigade.tick.read_commit_checks import read_commit_checks
 from brigade.waves.rebase_milestone_branches import BranchRebaseRun, MilestoneBranchesRebase, rebase_milestone_branches
 from tests.unit.commands.command_runtime import write_ledger
 from tests.unit.create_test_paths import create_test_paths
@@ -302,6 +304,28 @@ class RebaseMilestoneBranchesCheckedBeforeTheirPushTest(RebaseMilestoneBranchesT
                 (MILESTONE_WORKTREE, ("awawa", "fmt", "--check", ".")),
                 (MILESTONE_WORKTREE, ("awawa", "lint", "--strict", ".")),
             ],
+        )
+
+    def test_should_keep_the_checks_of_the_rebased_head_in_the_record_by_commit(self):
+        # Arrange
+        self.failing_check = NPM_TEST
+
+        # Act
+        self.rebase()
+
+        # Assert
+        self.assertEqual(
+            read_commit_checks(self.runtime.paths.state_root, "shop", REBASED_MILESTONE_HEAD),
+            CommitChecks(
+                project="shop",
+                commit=REBASED_MILESTONE_HEAD,
+                results=(
+                    CommandResult(command="npm ci", exit_code=0),
+                    CommandResult(command="npm test", exit_code=1),
+                    CommandResult(command="awawa fmt --check .", exit_code=0),
+                    CommandResult(command="awawa lint --strict .", exit_code=0),
+                ),
+            ),
         )
 
     def test_should_check_no_milestone_branch_the_rebase_left_where_it_was(self):
