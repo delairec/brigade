@@ -1,7 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import ClassVar
 
-from brigade.ledger.omit_absent_pull_request import omit_absent_pull_request
+from brigade.ledger.omit_absent_pull_request import ABSENT_PULL_REQUEST, omit_absent_pull_request
 
 
 @dataclass(frozen=True)
@@ -10,7 +10,7 @@ class TaskPreflighted:
     project: str
     wave: str
     task: str
-    pr: int | None
+    pr: int | None = field(default=ABSENT_PULL_REQUEST, kw_only=True)
     head: str
     checks: tuple[dict, ...]
 
