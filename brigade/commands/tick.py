@@ -108,6 +108,7 @@ from brigade.tick.prepare_task_worktree import prepare_task_worktree
 from brigade.tick.read_ruled_task import read_ruled_task
 from brigade.tick.rebase_task import rebase_task
 from brigade.tick.record_review_threads import record_review_threads
+from brigade.tick.remember_forge_logins import remember_forge_logins
 from brigade.tick.remove_integration_branch import remove_integration_branch
 from brigade.tick.remove_task_worktree import remove_task_worktree
 from brigade.tick.run_rounds import Rounds, RoundsOutcome, run_rounds
@@ -771,6 +772,7 @@ def _remember_the_readings_of_the_tick(runtime: Runtime) -> Runtime:
         runtime,
         read_ledger=LedgerReadingKeeper(runtime.read_ledger).read,
         read_live_blockers=_remember_the_live_blockers(runtime.read_live_blockers),
+        resolve_plugin=remember_forge_logins(runtime.resolve_plugin),
     )
 
 
