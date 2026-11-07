@@ -55,7 +55,12 @@ class PromoteTaskTest(unittest.TestCase):
             {"file": str(self.worktree / "corpus" / "tasks.awawa"), "fields": []},
         )
         self.processes.answer_corpus_change(self.worktree, ("corpus/tasks.awawa",), MESSAGE)
-        self.processes.answer(("git", "push", "--quiet", "origin", "fix/B12-the-parser"))
+        self.processes.answer(
+            ("git", "rev-parse", "--verify", "--quiet", "refs/remotes/origin/fix/B12-the-parser"), stdout="c0ffee\n"
+        )
+        self.processes.answer(
+            ("git", "push", "--quiet", "--force-with-lease=fix/B12-the-parser:c0ffee", "origin", "fix/B12-the-parser")
+        )
         self.processes.answer(
             ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "HEAD^{commit}"), stdout="d00d\n"
         )
@@ -152,7 +157,10 @@ class PromoteTaskTest(unittest.TestCase):
             pushed_environments.append(request.environment)
             return 0, "", ""
 
-        self.processes.answer_by(("git", "push", "--quiet", "origin", "fix/B12-the-parser"), record_push)
+        self.processes.answer_by(
+            ("git", "push", "--quiet", "--force-with-lease=fix/B12-the-parser:c0ffee", "origin", "fix/B12-the-parser"),
+            record_push,
+        )
         demand = TaskPromotionDemand(
             path=self.worktree,
             task="B12",
