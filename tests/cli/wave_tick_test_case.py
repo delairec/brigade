@@ -73,6 +73,10 @@ FAKE_GH = (
     '  "pr checks") cat "{pull_requests}/$3.checks.json" ;;\n'
     '  "api repos/{{owner}}/{{repo}}/compare/"*) if [ -f "{pull_requests}/behind-by" ]; then\n'
     '    cat "{pull_requests}/behind-by"; else echo 0; fi ;;\n'
+    '  "api graphql") case " $* " in\n'
+    '    *" --slurp "*) echo \'[{{"data": {{"repository": {{"pullRequests": {{"nodes": []}}}}}}}}]\' ;;\n'
+    '    *) echo \'{{"data": {{"repository": {{"ref": null}}}}}}\' ;;\n'
+    "  esac ;;\n"
     "  *) exit 2 ;;\n"
     "esac\n"
 )
@@ -148,6 +152,14 @@ class LaunchingTickTestCase(WaveTickTestCase, FileWaitingTestCase):
         (instructions / "procedures" / "deliver.md").write_text(REPLACING_PROCEDURE)
         self.configure(recordings, instructions)
         self.worktree = self.project.path / ".brigade" / "worktrees" / "S3"
+
+    def register_on_github(self, *branches: str) -> None:
+        remote = self.project.path.parent / "shop.git"
+        self.project.run_git("init", "--quiet", "--bare", str(remote))
+        self.project.run_git("remote", "add", "origin", str(remote))
+        self.project.run_git("push", "--quiet", "origin", *branches)
+        projects = self.machine.corpus / "projects.awawa"
+        projects.write_text(projects.read_text().replace('\tFORGE "none"\n', '\tFORGE "github"\n'))
 
     def configure(self, recordings: Path, instructions: Path, keys: str = "") -> None:
         self.machine.write_configuration(
