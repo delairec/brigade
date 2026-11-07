@@ -2281,3 +2281,37 @@ class BuildSnapshotOfTheDescribedHeadOfAMilestoneTest(BuildSnapshotTestCase):
 
         # Assert
         self.assertIsNone(snapshot.milestones[0].described_head)
+
+
+DELIVERED_HEAD = "5e6f7a8"
+HEAD_OF_THE_BRANCH_OF_B1 = ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "feature/B1-task^{commit}")
+
+
+class BuildSnapshotOfATaskDeliveredWithoutAForgeTest(BuildSnapshotTestCase):
+    def test_should_note_the_head_of_the_task_branch_once_its_last_build_run_ended_done(self):
+        for case, forge, slot, outcome, expected in [
+            ("a build run delivered", "none", "build", "done", DELIVERED_HEAD),
+            ("a build run blocked", "none", "build", "blocked", None),
+            ("a rebase run delivered", "none", "rebase", "done", None),
+            ("a build run delivered on GitHub", "github", "build", "done", None),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                self.shop_forge = forge
+                self.write_operational_corpus()
+                self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B1",)))
+                self.record(50, TaskState(wave="w1", task="B1", state="running"))
+                write_run(
+                    self.paths.state_root,
+                    {**create_run_record("20261019T083000Z-b0d1e2", "w1", "B1"), "slot": slot},
+                    None,
+                )
+                self.record(5, create_run_finished("20261019T083000Z-b0d1e2", wave="w1", task="B1", outcome=outcome))
+                self.remote_answers = {HEAD_OF_THE_BRANCH_OF_B1: ProcessAnswer(stdout=f"{DELIVERED_HEAD}\n")}
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].tasks[0].delivered_head, expected)
