@@ -2231,6 +2231,20 @@ class BuildSnapshotOfAWaveOfQueuedTasksTest(BuildSnapshotTestCase):
         self.assertEqual(self.reader.branches, [])
 
 
+class BuildSnapshotOfARunningTaskOfAProjectWithoutAForgeTest(BuildSnapshotTestCase):
+    def test_should_ask_no_forge_for_the_pull_request_of_the_task(self):
+        # Arrange
+        self.write_operational_corpus()
+        self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B1",)))
+        self.record(50, TaskState(wave="w1", task="B1", state="running"))
+
+        # Act
+        self.build()
+
+        # Assert
+        self.assertEqual(self.reader.branches, [])
+
+
 class BuildSnapshotOfAWaveBranchCutOnMainTest(BuildSnapshotTestCase):
     def test_should_read_each_task_of_a_tree_once_though_the_project_and_the_wave_both_read_it(self):
         # Arrange
