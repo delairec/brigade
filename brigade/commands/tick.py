@@ -40,6 +40,7 @@ from brigade.ledger.wave_resumed import WaveResumed
 from brigade.registry.find_project import find_project
 from brigade.registry.is_on_github import is_on_github
 from brigade.registry.read_project_field import read_project_field
+from brigade.registry.read_project_forge import NO_FORGE, read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.runs.create_run_id import create_run_id
 from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
@@ -118,6 +119,7 @@ from brigade.tick.write_rebuild_brief import write_rebuild_brief
 from brigade.tick.write_repair_brief import write_repair_brief
 from brigade.triage.deliver_patterns import WaveDelivery, deliver_patterns
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
+from brigade.verify.preflight_task_branch import BranchPreflightDemand, preflight_task_branch
 from brigade.verify.record_verdict import REVIEW_SLOT
 from brigade.waves.compose_milestone_title import MilestoneTitleDemand, compose_milestone_title
 from brigade.waves.cut_milestone_branch import MilestoneBranchDemand, cut_milestone_branch
@@ -425,11 +427,23 @@ def _record_task_state(runtime: Runtime, action: RecordTaskState) -> None:
     )
 
 
-def _run_preflight(runtime: Runtime, configuration: Configuration, action: RunPreflight) -> None:
-    findings = preflight_pull_request(
+def _preflight(runtime: Runtime, configuration: Configuration, action: RunPreflight) -> dict:
+    project = find_project(read_projects(runtime), action.project)
+    if read_project_forge(project) == NO_FORGE:
+        return preflight_task_branch(
+            runtime,
+            BranchPreflightDemand(
+                project=project,
+                task=action.task,
+                task_branch=action.task_branch,
+                base_branch=action.branch,
+                configuration=configuration,
+            ),
+        )
+    return preflight_pull_request(
         runtime,
         PreflightDemand(
-            project=find_project(read_projects(runtime), action.project),
+            project=project,
             task=action.task,
             base_branch=action.branch,
             pr=action.pr,
@@ -438,6 +452,10 @@ def _run_preflight(runtime: Runtime, configuration: Configuration, action: RunPr
             configuration=configuration,
         ),
     )
+
+
+def _run_preflight(runtime: Runtime, configuration: Configuration, action: RunPreflight) -> None:
+    findings = _preflight(runtime, configuration, action)
     append_event(
         runtime.paths,
         runtime.now,
