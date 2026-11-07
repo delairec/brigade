@@ -43,7 +43,8 @@ class RunPreflight:
     wave: str
     branch: str
     task: str
-    pr: int
+    task_branch: str
+    pr: int | None
 
 
 @dataclass(frozen=True)
