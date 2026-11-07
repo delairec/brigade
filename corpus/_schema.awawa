@@ -29,8 +29,15 @@ SCHEMA MILESTONE
 	DESC "a delivery the tasks are planned against"
 	FIELD TITLE string
 		REQUIRED
+	FIELD SUBJECT string
+		DESC "the subject of its pull request, opening on a verb in the imperative, written at"
+			+ "planning, short enough for type(scope): <subject> (<milestone>) to fit a commit"
+			+ "subject of 72 characters"
 	FIELD STATUS planned|active|reached
 		REQUIRED
+	WHEN STATUS active
+		FIELD SUBJECT
+			REQUIRED
 	WHEN STATUS reached
 		GATE error
 

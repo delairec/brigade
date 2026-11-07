@@ -39,11 +39,21 @@ MILESTONE M5
 
 MILESTONE M6
 	TITLE "Hardening"
+	SUBJECT "harden the tick against moved heads and lost branches"
 	STATUS active
+	SOURCE "the SUBJECT written on 2026-11-07 from the tasks of the milestone, under the user's"
+		+ "ruling « Écrit dans le jalon » recorded in"
+		+ "@DECISION.TheSubjectOfAMilestonePullRequestIsWrittenOnTheMilestoneAndItsTypeAndScopeComeFromTheTasksAtItsHead"
+		REF @DECISION.TheSubjectOfAMilestonePullRequestIsWrittenOnTheMilestoneAndItsTypeAndScopeComeFromTheTasksAtItsHead
 
 MILESTONE M7
 	TITLE "Portability"
+	SUBJECT "port brigade to other machines, clients and forges"
 	STATUS active
+	SOURCE "the SUBJECT written on 2026-11-07 from the tasks of the milestone, under the user's"
+		+ "ruling « Écrit dans le jalon » recorded in"
+		+ "@DECISION.TheSubjectOfAMilestonePullRequestIsWrittenOnTheMilestoneAndItsTypeAndScopeComeFromTheTasksAtItsHead"
+		REF @DECISION.TheSubjectOfAMilestonePullRequestIsWrittenOnTheMilestoneAndItsTypeAndScopeComeFromTheTasksAtItsHead
 
 MILESTONE M8
 	TITLE "Recipes"
