@@ -102,3 +102,28 @@ class CheckPromotionTest(unittest.TestCase):
                 "findings": [r"SPEC 1 has no IMPL whose anchor resolves: matches brigade/cli\.py"],
             },
         )
+
+    def test_should_pass_a_task_implemented_and_anchored_without_a_pull_request_to_deliver_it(self):
+        # Arrange
+        no_pull_request = None
+        awawa = RecordingProcessRunner(
+            {
+                ("awawa", "show", "@TASK.B1", "--json", str(self.head_tree)): ProcessAnswer(
+                    stdout=json.dumps(
+                        {
+                            "fields": [
+                                {"name": "STATUS", "atoms": ["implemented"], "fields": []},
+                                create_spec("runs the command line", "brigade/cli.py::def main"),
+                            ]
+                        }
+                    )
+                )
+            }
+        )
+        facts = PromotionFacts(head_tree=self.head_tree, task="B1", pr=no_pull_request)
+
+        # Act
+        check = check_promotion(awawa, facts)
+
+        # Assert
+        self.assertEqual(check, {"name": "promotion", "verdict": "pass", "findings": []})
