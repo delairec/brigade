@@ -99,6 +99,7 @@ from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.ledger_reading_keeper import LedgerReadingKeeper
 from brigade.tick.plan import plan
 from brigade.tick.plan_connectors import plan_connectors
+from brigade.tick.describe_holding_head import describe_holding_head
 from brigade.tick.prepare_task_worktree import prepare_task_worktree
 from brigade.tick.read_ruled_task import read_ruled_task
 from brigade.tick.rebase_task import rebase_task
@@ -187,6 +188,9 @@ def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchT
     prepared = prepare_task_worktree(runtime, configuration, action, _cache_forge_environment(runtime, configuration))
     if prepared.conflicted:
         _launch_rebase_of_the_branch(runtime, configuration, action, prepared.worktree.path)
+        return
+    if prepared.held_by is not None:
+        sys.stderr.write(f"brigade tick: @TASK.{action.task} waits: {describe_holding_head(prepared.held_by)}\n")
         return
     worktree = prepared.worktree
     ruled_task = read_ruled_task(runtime, configuration, action, prepared)

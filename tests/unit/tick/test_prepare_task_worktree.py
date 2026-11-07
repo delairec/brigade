@@ -16,8 +16,8 @@ from brigade.ledger.wave_started import WaveStarted
 from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
 from brigade.tick.actions import LaunchTask
-from brigade.tick.head_proof import ForgeCheck, HeadChecks
-from brigade.tick.prepare_task_worktree import PreparedWorktree, prepare_task_worktree
+from brigade.tick.head_proof import ForgeCheck, HeadChecks, HeadProof
+from brigade.tick.prepare_task_worktree import HoldingHead, PreparedWorktree, prepare_task_worktree
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.lock_observing_runner import LockObservingRunner
@@ -711,13 +711,13 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
             runner.commands,
         )
 
-    def test_should_leave_a_branch_whose_pull_request_checks_are_pending_unrebased(self):
+    def test_should_hold_a_branch_whose_pull_request_checks_are_pending_with_no_rebase_and_no_setup(self):
         # Arrange
         self.record_commit_checks(WAVE_HEAD, exit_code=0)
         runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
 
         # Act
-        prepare_task_worktree(
+        prepared = prepare_task_worktree(
             create_test_runtime(self.paths, run_process=runner),
             Configuration(),
             ACTION_WITH_PENDING_PULL_REQUEST_CHECKS,
@@ -725,25 +725,46 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
         )
 
         # Assert
+        self.assertEqual(
+            prepared,
+            PreparedWorktree(
+                worktree=BranchWorktree(path=WORKTREE, branch="feature/B1-task", start="integration/w1"),
+                conflicted=False,
+                on_start=False,
+                held_by=HoldingHead(
+                    branch="feature/B1-task", proof=HeadProof(commit=TASK_HEAD, state="pending", failed_commands=())
+                ),
+            ),
+        )
         self.assertNotIn((str(WORKTREE), REBASE_ON_THE_WAVE_BRANCH), runner.commands)
+        self.assertNotIn((str(WORKTREE), ("make", "deps")), runner.commands)
 
-    def test_should_leave_a_green_branch_off_a_red_wave_branch_unrebased(self):
+    def test_should_hold_a_green_branch_off_a_red_wave_branch_with_no_rebase_and_no_setup(self):
         # Arrange
         self.record_commit_checks(TASK_HEAD, exit_code=0)
         self.record_commit_checks(WAVE_HEAD, exit_code=1)
-        runner = self.create_runner(
-            MAKE_DEPS,
-            branch=TASK_BRANCH_FOUND,
-            answers={**OFF_THE_WAVE_BRANCH, REQUIRE_THE_WAVE_BRANCH: HEAD_OFF_THE_WAVE_BRANCH},
-        )
+        runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
 
         # Act
-        prepare_task_worktree(
+        prepared = prepare_task_worktree(
             create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
         )
 
         # Assert
+        self.assertEqual(
+            prepared,
+            PreparedWorktree(
+                worktree=BranchWorktree(path=WORKTREE, branch="feature/B1-task", start="integration/w1"),
+                conflicted=False,
+                on_start=False,
+                held_by=HoldingHead(
+                    branch="integration/w1",
+                    proof=HeadProof(commit=WAVE_HEAD, state="red", failed_commands=("make test",)),
+                ),
+            ),
+        )
         self.assertNotIn((str(WORKTREE), REBASE_ON_THE_WAVE_BRANCH), runner.commands)
+        self.assertNotIn((str(WORKTREE), ("make", "deps")), runner.commands)
 
     def test_should_leave_a_branch_descending_from_the_wave_branch_unrebased(self):
         # Arrange
