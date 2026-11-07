@@ -16,7 +16,6 @@ RED = Template(
     "left as it stands, off the head of $branch: its head failed $commands;"
     " repair those failures first, and do not rebase the branch"
 )
-HELD = Template("left as it stands, off the head of $branch: do not rebase it")
 RULED_TASK = Template(
     "\n@TASK.$task reads differently on $start than in the corpus of the worktree;"
     " that reading is more recent and prevails:\n\n```\nTASK $task\n$fields```\n"
@@ -39,10 +38,8 @@ def _describe_start(action: LaunchTask, prepared: PreparedWorktree) -> str:
         return REBASED.substitute(branch=action.branch)
     if prepared.on_start:
         return CUT.substitute(branch=action.branch)
-    if prepared.failed_commands:
-        commands = ", ".join(f"`{command}`" for command in prepared.failed_commands)
-        return RED.substitute(branch=action.branch, commands=commands)
-    return HELD.substitute(branch=action.branch)
+    commands = ", ".join(f"`{command}`" for command in prepared.failed_commands)
+    return RED.substitute(branch=action.branch, commands=commands)
 
 
 def write_build_brief(
