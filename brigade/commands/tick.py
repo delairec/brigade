@@ -14,6 +14,7 @@ from brigade.commands._launch_branch_rebase import launch_branch_rebase
 from brigade.commands._list_branch_check_runs import list_branch_check_runs
 from brigade.commands._read_cli_login import read_cli_login
 from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME, ForgeSlot, read_forge_environment
+from brigade.commands._remember_forge_logins import remember_forge_logins
 from brigade.commands._repair_red_head import repair_red_head
 from brigade.commands.run import run
 from brigade.corpus.prepare_project_tree import prepare_project_tree
@@ -108,7 +109,6 @@ from brigade.tick.prepare_task_worktree import prepare_task_worktree
 from brigade.tick.read_ruled_task import read_ruled_task
 from brigade.tick.rebase_task import rebase_task
 from brigade.tick.record_review_threads import record_review_threads
-from brigade.tick.remember_forge_logins import remember_forge_logins
 from brigade.tick.remove_integration_branch import remove_integration_branch
 from brigade.tick.remove_task_worktree import remove_task_worktree
 from brigade.tick.run_rounds import Rounds, RoundsOutcome, run_rounds
