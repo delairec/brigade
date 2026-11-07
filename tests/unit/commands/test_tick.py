@@ -4244,7 +4244,7 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
                     "branch": "integration/M4",
                     "task": "T7",
                     "task_branch": "feature/T7-tide-table",
-                    "checks_passed": False,
+                    "pull_request_checks": None,
                 }
             ],
         )
