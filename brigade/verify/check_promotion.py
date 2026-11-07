@@ -18,7 +18,7 @@ NO_PULL_REQUEST = "no pull request"
 class PromotionFacts:
     head_tree: Path
     task: str
-    pr: int
+    pr: int | None
 
 
 def _read_atom(field: dict) -> str:
@@ -44,7 +44,7 @@ def check_promotion(run_process: Callable[[ProcessRequest], ProcessRecord], fact
     if status != IMPLEMENTED:
         findings.append(f"{target} is STATUS {status}, not implemented")
     delivered_by = _read_value(fields, "DELIVERED_BY")
-    if delivered_by != str(facts.pr):
+    if facts.pr is not None and delivered_by != str(facts.pr):
         findings.append(
             f"{target} is delivered by {f'#{delivered_by}' if delivered_by else NO_PULL_REQUEST}, not by #{facts.pr}"
         )
