@@ -2690,3 +2690,39 @@ class PlanPreflightOfATaskWithoutAForgeTest(unittest.TestCase):
         self.assertEqual(
             actions, (ParkTask(wave="shop_w1", task="S3", reason="run dead: 20261006T110000Z-d1e2f3", blockers=()),)
         )
+
+    def test_should_launch_a_task_queued_again_after_its_build_run_delivered_a_head(self):
+        # Arrange
+        task = TaskFacts(
+            name="S3",
+            branch="feature/S3-task",
+            last_run=LAST_RUN_OF_S3,
+            delivered_head=DELIVERED_HEAD,
+            preflighted_head=NOT_PREFLIGHTED,
+        )
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "queued"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (LAUNCH_S3,))
+
+    def test_should_park_a_running_task_whose_last_run_delivered_nothing_since_its_preflight(self):
+        # Arrange
+        task = TaskFacts(
+            name="S3",
+            branch="feature/S3-task",
+            last_run=LAST_RUN_OF_S3,
+            delivered_head=NOT_DELIVERED,
+            preflighted_head=PREFLIGHTED_BEFORE_A_PUSH,
+        )
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions, (ParkTask(wave="shop_w1", task="S3", reason="run dead: 20261006T110000Z-d1e2f3", blockers=()),)
+        )
