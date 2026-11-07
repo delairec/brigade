@@ -5262,8 +5262,10 @@ DECISION AProjectOfForgeNoneMergesATaskOnItsAcceptanceAndItsVerdictAndTheUserMer
 		+ "@DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate; brigade names the command, git"
 		+ "-C <PATH> merge integration/<slug>, and runs it never"
 		REF @DECISION.AVerifierRunOnEveryPullRequestAndOneHumanGate
-	DESC "binds @TASK.B46"
+	DESC "binds @TASK.B46, the forge read from the PROJECT entity, the preflight and the verdict,"
+		+ "and @TASK.B240, the merges and the commands named, split from it on 2026-11-08"
 		REF @TASK.B46
+		REF @TASK.B240
 	REJECTED "the acceptance commands alone, « Acceptance seule »: a task would merge with no"
 		+ "judgment of its diff, where every change passes one prudence run before its merge into"
 		+ "integration"
