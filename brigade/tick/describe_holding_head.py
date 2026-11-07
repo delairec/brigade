@@ -1,5 +1,4 @@
-from brigade.tick.head_proof import RED
-from brigade.tick.prepare_task_worktree import HoldingHead
+from brigade.tick.head_proof import RED, HoldingHead
 
 
 def describe_holding_head(held_by: HoldingHead) -> str:

@@ -3804,6 +3804,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         self.spawn = SpawnRecorderDouble()
         self.lock_free_at_the_rebase = []
         self.environments_of_the_fetch = []
+        write_commit_checks(self.root, WAVE_HEAD, PASSED)
 
     def _create_runtime(self, outputs: dict, found: list[dict]) -> Runtime:
         corpus = {
@@ -3841,6 +3842,36 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
     def _read_events(self) -> list[dict]:
         return list(
             map(json.loads, (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines())
+        )
+
+    def test_should_rebase_nothing_while_the_head_of_the_wave_branch_is_red(self):
+        # Arrange
+        write_ledger(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
+        write_commit_checks(self.root, WAVE_HEAD, FAILED)
+        runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST])
+
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(select_argvs_opening_on(self.machine.argvs, GIT_REBASE, GIT_PUSH), [])
+
+    def test_should_name_the_red_wave_branch_holding_the_catch_up_on_stderr(self):
+        # Arrange
+        write_ledger(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
+        write_commit_checks(self.root, WAVE_HEAD, FAILED)
+        runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST])
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertIn(
+            "brigade tick: the catch-up of @TASK.T7 waits: integration/M4 is red at 8885daa, `make test` failed\n",
+            errors.getvalue(),
         )
 
     def test_should_rebase_the_task_branch_in_its_worktree_and_push_it_with_a_lease_on_its_head(self):

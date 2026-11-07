@@ -16,8 +16,8 @@ from brigade.ledger.wave_started import WaveStarted
 from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
 from brigade.tick.actions import LaunchTask
-from brigade.tick.head_proof import ForgeCheck, HeadChecks, HeadProof
-from brigade.tick.prepare_task_worktree import HoldingHead, PreparedWorktree, prepare_task_worktree
+from brigade.tick.head_proof import ForgeCheck, HeadChecks, HeadProof, HoldingHead
+from brigade.tick.prepare_task_worktree import PreparedWorktree, prepare_task_worktree
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.lock_observing_runner import LockObservingRunner
