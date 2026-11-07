@@ -633,6 +633,16 @@ def _locate_wave_repository(reading: WaveReading, started: WaveStarted) -> Path:
     return Path(read_project_field(find_project(reading.projects, started.project), PATH_FIELD))
 
 
+def _read_no_pull_request(repository: str, branch: str) -> None:
+    return None
+
+
+def _choose_pull_request_reader(reading: WaveReading, started: WaveStarted) -> Callable:
+    if is_on_github(find_project(reading.projects, started.project)):
+        return reading.forge.read_pull_request
+    return _read_no_pull_request
+
+
 def _read_preflighted_heads(events: tuple, wave: str) -> dict:
     return {event.task: event.head for event in events if isinstance(event, TaskPreflighted) and event.wave == wave}
 
@@ -674,7 +684,7 @@ def _follow_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, s
         },
         repair_rounds=count_repair_rounds(reading.entries, reading.runs, wave),
         reported_tasks=_read_reported_tasks(reading.events, started.project),
-        read_pull_request=reading.forge.read_pull_request,
+        read_pull_request=_choose_pull_request_reader(reading, started),
         run_process=runtime.run_process,
     )
 
