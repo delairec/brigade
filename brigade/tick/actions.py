@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.task_report_order import TaskReportOrder
 from brigade.tick.build_snapshot import PreflightFailure, TaskAmendment
+from brigade.tick.head_proof import HeadChecks
 
 
 @dataclass(frozen=True)
@@ -12,7 +13,7 @@ class LaunchTask:
     branch: str
     task: str
     task_branch: str
-    checks_passed: bool
+    pull_request_checks: HeadChecks | None
 
 
 @dataclass(frozen=True)
