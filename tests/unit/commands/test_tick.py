@@ -5484,8 +5484,8 @@ class TickRemovingTheBranchOfAClosedMilestoneTest(unittest.TestCase):
 
 
 MILESTONE_PULL_REQUEST_OPEN = {**INTEGRATION_PULL_REQUEST_OPEN_INTO_MAIN, "number": 77}
-TITLE_OF_THE_TASK_PULL_REQUEST = "feat: chart the tides (@TASK.T7)"
-TITLE_OF_WHAT_THE_MILESTONE_DELIVERS = "feat: chart the tides (M4, @TASK.T7)"
+MILESTONE_M4_WITH_ITS_SUBJECT = (("STATUS", "active"), ("TITLE", "Tides"), ("SUBJECT", "chart the tides"))
+TITLE_OF_WHAT_THE_MILESTONE_DELIVERS = "feat: chart the tides (M4)"
 MILESTONE_PR_DESCRIBED_AT_THE_HEAD = {
     "schema_version": 1,
     "ts": "2026-10-18T14:00:00Z",
@@ -5558,7 +5558,7 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
             "STUDY": PAUSED_BUILT_IN_STUDIES,
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_DELIVERED},
-            "MILESTONE": {"M4": MILESTONE_M4},
+            "MILESTONE": {"M4": MILESTONE_M4_WITH_ITS_SUBJECT},
         }
         return create_machine_double(
             corpus, {**MACHINE_OUTPUTS, **WAVE_TREE_HOLDING_T7_IMPLEMENTED_OUTPUTS, ("git", "ls-remote"): ""}
@@ -5581,9 +5581,7 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
 
     def test_should_retitle_the_pull_request_of_the_milestone_by_what_its_head_delivers(self):
         # Arrange
-        forge = DescribingForgeDouble(
-            {42: TITLE_OF_THE_TASK_PULL_REQUEST, 77: "chore(milestone): merge the milestone M4 into main"}
-        )
+        forge = DescribingForgeDouble({77: "chore(milestone): merge the milestone M4 into main"})
 
         # Act
         COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
@@ -5606,7 +5604,7 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
         # Arrange
         repository = RepositoryMissingTheHeadPushedOnTheForgeDouble(self._create_machine())
         forge = ForgeMovingTheHeadOfTheMilestoneDouble(
-            {42: TITLE_OF_THE_TASK_PULL_REQUEST, 77: "chore(milestone): merge the milestone M4 into main"}, repository
+            {77: "chore(milestone): merge the milestone M4 into main"}, repository
         )
 
         # Act
@@ -5628,7 +5626,7 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
 
     def test_should_record_the_head_described_without_retitling_a_pull_request_already_titled_so(self):
         # Arrange
-        forge = DescribingForgeDouble({42: TITLE_OF_THE_TASK_PULL_REQUEST, 77: TITLE_OF_WHAT_THE_MILESTONE_DELIVERS})
+        forge = DescribingForgeDouble({77: TITLE_OF_WHAT_THE_MILESTONE_DELIVERS})
 
         # Act
         COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
@@ -5650,7 +5648,7 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
                 MILESTONE_PR_DESCRIBED_AT_THE_HEAD,
             ],
         )
-        forge = DescribingForgeDouble({42: TITLE_OF_THE_TASK_PULL_REQUEST, 77: "chore: an older title"})
+        forge = DescribingForgeDouble({77: "chore: an older title"})
 
         # Act
         COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
@@ -5661,7 +5659,7 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
 
     def test_should_print_the_describe_with_its_milestone_its_pull_request_and_its_head_on_a_dry_run(self):
         # Arrange
-        forge = DescribingForgeDouble({42: TITLE_OF_THE_TASK_PULL_REQUEST, 77: "chore: an older title"})
+        forge = DescribingForgeDouble({77: "chore: an older title"})
 
         # Act
         document = COMMAND.run(Namespace(mode="dry-run"), self._create_runtime(forge))

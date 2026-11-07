@@ -9,6 +9,7 @@ from brigade.tick.read_implemented_tasks import read_implemented_tasks
 from brigade.waves.compose_delivery_title import DeliveredTask, Delivery, compose_delivery_title
 
 TASK_TYPE = "TASK"
+MILESTONE_TYPE = "MILESTONE"
 MILESTONE_PREFIX = "@MILESTONE."
 
 
@@ -17,22 +18,20 @@ class MilestoneTitleDemand:
     run_process: Callable[[ProcessRequest], ProcessRecord]
     root: Path
     milestone: str
-    read_pull_request_title: Callable[[int], str]
 
 
 def compose_milestone_title(demand: MilestoneTitleDemand) -> str:
+    milestone = read_entity(demand.run_process, demand.root, MILESTONE_TYPE, demand.milestone)
     implemented = (
         read_entity(demand.run_process, demand.root, TASK_TYPE, name)
         for name in read_implemented_tasks(demand.run_process, demand.root)
     )
     tasks = tuple(
         DeliveredTask(
-            name=task.name,
-            type=read_project_field(task, "TYPE"),
-            component=read_project_field(task, "COMPONENT"),
-            pull_request_title=demand.read_pull_request_title(int(read_project_field(task, "DELIVERED_BY"))),
+            name=task.name, type=read_project_field(task, "TYPE"), component=read_project_field(task, "COMPONENT")
         )
         for task in implemented
         if read_project_field(task, "MILESTONE") == MILESTONE_PREFIX + demand.milestone
     )
-    return compose_delivery_title(Delivery(milestone=demand.milestone, tasks=tasks))
+    subject = read_project_field(milestone, "SUBJECT") or read_project_field(milestone, "TITLE")
+    return compose_delivery_title(Delivery(milestone=demand.milestone, subject=subject, tasks=tasks))
