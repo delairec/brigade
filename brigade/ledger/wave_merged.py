@@ -1,14 +1,14 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import ClassVar
 
-from brigade.ledger.omit_absent_pull_request import omit_absent_pull_request
+from brigade.ledger.omit_absent_pull_request import ABSENT_PULL_REQUEST, omit_absent_pull_request
 
 
 @dataclass(frozen=True)
 class WaveMerged:
     name: ClassVar[str] = "wave.merged"
     wave: str
-    pr: int | None
+    pr: int | None = field(default=ABSENT_PULL_REQUEST, kw_only=True)
     login: str | None
 
     @classmethod
