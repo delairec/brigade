@@ -5,7 +5,8 @@ from pathlib import Path
 
 from brigade.corpus.read_entity import Entity, read_entity
 from brigade.errors import BrigadeError
-from brigade.git.push_branch import BranchPush, push_branch
+from brigade.git.push_branch import BranchPush
+from brigade.git.push_branch_with_lease import push_branch_with_lease
 from brigade.git.read_current_branch import read_current_branch
 from brigade.git.resolve_commit import resolve_commit
 from brigade.ledger.append_event import append_event
@@ -164,7 +165,7 @@ def open_task_pull_request(runtime: Runtime, demand: TaskPullRequestDemand) -> d
     session = ForgeSession(worktree=worktree, forge=demand.forge, environment=demand.environment, login=demand.login)
     branch = read_current_branch(runtime.run_process, worktree.path)
     milestone = _read_milestone_title(runtime, worktree, task)
-    push_branch(
+    push_branch_with_lease(
         runtime.run_process, BranchPush(repository=worktree.path, branch=branch, environment=demand.environment)
     )
     if milestone is not NO_MILESTONE:
