@@ -166,6 +166,11 @@ dies before it records a `run.finished` does.
   round of that rebase.
 - It also rebases an open wave branch that does not descend from `origin/<the milestone branch>`, once the milestone
   branch moved without it. The pull request of that wave is not merged while it lags.
+- A wave branch is rebased onto `origin/<the milestone branch>`, its own branch without a forge. Every rebase of the
+  tick, of a milestone, wave or task branch, is `git rebase --fork-point`: it replays only the commits the branch holds
+  past the head of its base it was last cut from or rebased onto, read from the reflog of that base. A wave holding no
+  commit of its own thus ends at the head of its rewritten milestone branch, with no conflict and no run. When the
+  reflog no longer holds that head, git falls back to the merge base.
 - A conflict is aborted and handed to a detached run of the slot `rebase`. When the conflict is on the milestone
   branch, that action rebases no wave branch: they follow once the run has pushed it.
 - A milestone branch git rebased cleanly is checked before it is pushed: in its worktree the tick runs the `SETUP`

@@ -13,7 +13,7 @@ REBASE_IN_PROGRESS = 0
 def rebase_onto(run_process: Callable[[ProcessRequest], ProcessRecord], worktree: Path, upstream: str) -> bool:
     rebased = run_process(
         ProcessRequest(
-            argv=("git", "rebase", upstream),
+            argv=("git", "rebase", "--fork-point", upstream),
             cwd=str(worktree),
             timeout_s=REMOTE_TIMEOUT_S,
             acceptable_exit_codes=APPLIED_OR_STOPPED,

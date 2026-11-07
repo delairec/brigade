@@ -419,7 +419,7 @@ ON_GITHUB = ({"name": "FORGE", "atoms": ['"github"']},)
 CLI_ENVIRONMENT = {"GH_TOKEN": "token-of-the-bot"}
 FETCH_THE_WAVE_BRANCH = ("git", "fetch", "--quiet", "origin", "integration/w1")
 OFF_THE_WAVE_BRANCH = {TASK_BRANCH_DESCENDS: ProcessAnswer(exit_code=1)}
-REBASE_ON_THE_WAVE_BRANCH = ("git", "rebase", "integration/w1")
+REBASE_ON_THE_WAVE_BRANCH = ("git", "rebase", "--fork-point", "integration/w1")
 STOPPED_ON_A_CONFLICT = {
     TASK_BRANCH_DESCENDS: ProcessAnswer(exit_code=1),
     REBASE_ON_THE_WAVE_BRANCH: ProcessAnswer(exit_code=1),
@@ -502,7 +502,7 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
         )
 
         # Assert
-        self.assertIn((str(WORKTREE), ("git", "rebase", "origin/integration/w1")), runner.commands)
+        self.assertIn((str(WORKTREE), ("git", "rebase", "--fork-point", "origin/integration/w1")), runner.commands)
 
 
 class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCase):

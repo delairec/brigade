@@ -5,7 +5,7 @@ from brigade.errors import CommandFailed
 from brigade.git.rebase_onto import rebase_onto
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
-REBASE = ("git", "rebase", "origin/integration/M4")
+REBASE = ("git", "rebase", "--fork-point", "origin/integration/M4")
 REBASE_IN_PROGRESS = ("git", "rev-parse", "--quiet", "--verify", "REBASE_HEAD")
 ABORT = ("git", "rebase", "--abort")
 STOPPED = ProcessAnswer(exit_code=1, stderr="error: cannot rebase: You have unstaged changes.")
@@ -47,6 +47,6 @@ class RebaseOntoTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             str(refusal.exception),
-            "git rebase origin/integration/M4 exited 1: error: cannot rebase: You have unstaged changes.",
+            "git rebase --fork-point origin/integration/M4 exited 1: error: cannot rebase: You have unstaged changes.",
         )
         self.assertEqual(git.list_argvs(), [REBASE, REBASE_IN_PROGRESS])
