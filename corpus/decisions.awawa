@@ -5903,3 +5903,56 @@ DECISION AMilestoneWhoseHeadDeliversNoTaskHasItsPullRequestTitledAsItsReportAlon
 		+ "Contredit cette décision, et le milestone resterait bloqué sans aucun signal », and «"
 		+ "(c) Hors de B227 : tâche séparée », « Laisse le plantage en place dans M6 »"
 		REF @TASK.B227
+
+DECISION TheSubjectOfAMilestonePullRequestIsWrittenOnTheMilestoneAndItsTypeAndScopeComeFromTheTasksAtItsHead
+	TITLE "the pull request of a milestone is titled type(scope): <subject> (<milestone>), the"
+		+ "subject the SUBJECT field of the MILESTONE entity, written at planning, short, opening"
+		+ "on a verb in the imperative, the type and the scope derived from the tasks of the"
+		+ "milestone implemented at its head"
+	STATUS active
+	DESC "a MILESTONE of the corpus of brigade carries SUBJECT, required while it is active;"
+		+ "@MILESTONE.M6 and @MILESTONE.M7 carry theirs since 2026-11-07, and a milestone planned"
+		+ "from then on is written with one"
+		REF @MILESTONE.M6
+		REF @MILESTONE.M7
+	DESC "the subject is read in the tree of the milestone branch at its head, as the TITLE is; the"
+		+ "type is feat when a task implemented at the head is a feat, else fix when one is a fix,"
+		+ "else the TYPE of the first task; the scope is the COMPONENT every task shares, its"
+		+ "spaces replaced by hyphens, absent when they differ; the title names no task, reads the"
+		+ "pull request of none and calls no model"
+	DESC "@DECISION.AMilestoneWhoseHeadDeliversNoTaskHasItsPullRequestTitledAsItsReportAlone stays"
+		+ "whole: a head delivering no task has no task to read a type from, and its fallback title"
+		+ "carries neither a type of the tasks nor the SUBJECT"
+		REF @DECISION.AMilestoneWhoseHeadDeliversNoTaskHasItsPullRequestTitledAsItsReportAlone
+	DESC "replaces"
+		+ "TheTitleOfAMilestonePullRequestJoinsTheSubjectsOfTheTasksOfThatMilestoneImplementedAtItsHead,"
+		+ "recorded by the parked run of @TASK.B227 on its branch task/brigade_w27/B227 and never"
+		+ "on main: the run that resumes drops it, its DESC 3 on the open living in"
+		+ "brigade/studies/publish_milestone_report.py carried by SPEC 3 of the task"
+		REF @TASK.B227
+	DESC "binds @TASK.B227, SPEC 1, 5 and 7"
+		REF @TASK.B227
+	REJECTED "the subjects of the pull requests of the tasks implemented at the head, joined by « ;"
+		+ "»: measured at 1284 characters for M6 by the parked run of B227, over the 256 characters"
+		+ "GitHub accepts, and refused by the user as no commit subject"
+	REJECTED "that title bounded to the length GitHub accepts, offered by the run: refused by the"
+		+ "user, « tu te fous de ma gueule? »"
+	REJECTED "a subject composed by a model when the pull request opens: the tick calls no model,"
+		+ "the decision CliDoesTheMechanicalWorkAgentsOnlyJudge"
+	RATIONALE "the tick, the one author of these pull requests, calls no model and reads the"
+		+ "corpus: a subject it cannot compose from the tasks is written for it, and the milestone,"
+		+ "where the user plans the delivery, is where it is written"
+	RATIONALE "SUBJECT is required while the milestone is active, when its branch lives and its"
+		+ "pull request may open; a reached milestone was delivered before the field existed, and a"
+		+ "planned one is written with its subject, which lint requires once it is active"
+	SOURCE "the user's rulings of 2026-11-07 in the session on the park of @TASK.B227 in wave"
+		+ "brigade_w27, the run having measured SPEC 1 at 1284 characters for @MILESTONE.M6 and"
+		+ "offered to bound it: « tu te fous de ma gueule? un titre de PR correspond à un nom de"
+		+ "commit, donc ça ne devrait jamais dépasser la limite, ça doit être court et parlant »,"
+		+ "then, asked where the short subject comes from, « Écrit dans le jalon », the option «"
+		+ "Chaque MILESTONE porte un sujet impératif court, écrit à la planification (ex. M6 : «"
+		+ "harden the tick against rewritten branches and blocked runs »). Titre : type(scope):"
+		+ "<sujet> (M6). Déterministe, aucun modèle appelé. Il faut écrire ce sujet pour M6 et M7."
+		+ "»"
+		REF @TASK.B227
+		REF @MILESTONE.M6
