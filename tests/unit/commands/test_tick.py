@@ -3470,6 +3470,15 @@ def write_commit_checks(root: Path, commit: str, exit_code: int) -> None:
         encoding="utf-8",
     )
 
+OUTPUTS_OF_A_LAUNCH_FROM_THE_FORGE_STOPPED_ON_A_CONFLICT = {
+    **OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT,
+    ("git", "merge-base", "--is-ancestor", "origin/integration/M4", "feature/T7-tide-table"): ProcessAnswer(
+        exit_code=1
+    ),
+    ("git", "rebase", "--fork-point", "origin/integration/M4"): ProcessAnswer(
+        exit_code=1, stderr="CONFLICT (content): Merge conflict in src/tides.py"
+    ),
+}
 
 REBASE_RUN_OF_T7 = "20261018T100000Z-5e6f70"
 T7_RUNNING = {
@@ -3519,7 +3528,7 @@ class TickLaunchingATaskWhoseChecksPassedAndWhoseBranchConflictsWithTheWaveBranc
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
             run_process=ScriptedProcessRunner(
-                OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT, fallback=create_corpus_double(corpus)
+                OUTPUTS_OF_A_LAUNCH_FROM_THE_FORGE_STOPPED_ON_A_CONFLICT, fallback=create_corpus_double(corpus)
             ).run,
             spawn_process=self.spawn.spawn,
             resolve_plugin=_resolve_the_collectors_beside(
