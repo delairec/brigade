@@ -15,6 +15,12 @@ class ForgeCheck:
 
 
 @dataclass(frozen=True)
+class HeadChecks:
+    head: str
+    checks: tuple[ForgeCheck, ...]
+
+
+@dataclass(frozen=True)
 class TaskCheck:
     head: str
     failed_commands: tuple[str, ...]

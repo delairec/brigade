@@ -52,6 +52,7 @@ from brigade.tick.build_snapshot import (
     WaveFacts,
     WavePause,
 )
+from brigade.tick.head_proof import ForgeCheck, HeadChecks
 from brigade.tick.plan import plan
 from brigade.tick.read_integration_branches import IntegrationBranchFacts
 from brigade.waves.list_candidate_waves import CandidateWave
@@ -80,13 +81,18 @@ ALONE_S9 = (TaskFacts(name="S9", branch="feature/S9-task"),)
 
 
 LAUNCH_S3 = LaunchTask(
-    project="shop", wave="shop_w1", branch=TASK_BASE, task="S3", task_branch="feature/S3-task", checks_passed=False
+    project="shop", wave="shop_w1", branch=TASK_BASE, task="S3", task_branch="feature/S3-task", pull_request_checks=None
 )
 LAUNCH_S9 = LaunchTask(
-    project="shop", wave="shop_w1", branch=TASK_BASE, task="S9", task_branch="feature/S9-task", checks_passed=False
+    project="shop", wave="shop_w1", branch=TASK_BASE, task="S9", task_branch="feature/S9-task", pull_request_checks=None
 )
 LAUNCH_S10 = LaunchTask(
-    project="shop", wave="shop_w1", branch=TASK_BASE, task="S10", task_branch="feature/S10-task", checks_passed=False
+    project="shop",
+    wave="shop_w1",
+    branch=TASK_BASE,
+    task="S10",
+    task_branch="feature/S10-task",
+    pull_request_checks=None,
 )
 CLOSE_SHOP_W1 = CloseWave(wave="shop_w1", project="shop")
 PARK_BLOCKED_S3 = ParkTask(wave="shop_w1", task="S3", reason="blocked", blockers=("OPEN_QUESTION.Undecided",))
@@ -105,13 +111,15 @@ class PlanTest(unittest.TestCase):
 
 
 class PlanStartableTasksTest(unittest.TestCase):
-    def test_should_launch_a_queued_task_telling_whether_the_checks_of_its_open_pull_request_passed(self):
-        for case, pull_request, checks_passed in [
-            ("without a pull request", None, False),
-            ("its checks passed", create_pull_request("open"), True),
-            ("a check failed", create_pull_request("open", "failure"), False),
-            ("a check pending", create_pull_request("open", "pending"), False),
-            ("its pull request closed", create_pull_request("closed"), False),
+    def test_should_launch_a_queued_task_carrying_the_check_runs_of_its_open_pull_request_at_its_head(self):
+        for case, pull_request, pull_request_checks in [
+            ("without a pull request", None, None),
+            (
+                "its pull request open",
+                create_pull_request("open", "failure"),
+                HeadChecks(head="0123abc", checks=(ForgeCheck(name="tests", verdict="failure"),)),
+            ),
+            ("its pull request closed", create_pull_request("closed"), None),
         ]:
             with self.subTest(case=case):
                 # Arrange
@@ -129,7 +137,7 @@ class PlanStartableTasksTest(unittest.TestCase):
                         branch=TASK_BASE,
                         task="S3",
                         task_branch="feature/S3-task",
-                        checks_passed=checks_passed,
+                        pull_request_checks=pull_request_checks,
                     ),
                     actions,
                 )
@@ -2036,16 +2044,18 @@ class PlanRunningTaskWithoutALiveRunTest(unittest.TestCase):
 
 LAST_RUN_A_REBASE = "20261006T110000Z-4eba5e"
 LAUNCH_S3 = LaunchTask(
-    project="shop", wave="shop_w1", branch=TASK_BASE, task="S3", task_branch="feature/S3-task", checks_passed=False
+    project="shop", wave="shop_w1", branch=TASK_BASE, task="S3", task_branch="feature/S3-task", pull_request_checks=None
 )
-LAUNCH_S3_ON_PASSED_CHECKS = dataclasses.replace(LAUNCH_S3, checks_passed=True)
+LAUNCH_S3_WITH_PULL_REQUEST_CHECKS = dataclasses.replace(
+    LAUNCH_S3, pull_request_checks=HeadChecks(head="0123abc", checks=(ForgeCheck(name="tests", verdict="success"),))
+)
 
 
 class PlanRunningTaskRebasedByItsLastRunTest(unittest.TestCase):
     def test_should_launch_the_build_run_once_the_rebase_run_has_put_the_branch_on_the_wave_branch(self):
         for case, pull_request, expected in [
             ("without a pull request", NO_PULL_REQUEST, LAUNCH_S3),
-            ("with its pull request open", OPEN, LAUNCH_S3_ON_PASSED_CHECKS),
+            ("with its pull request open", OPEN, LAUNCH_S3_WITH_PULL_REQUEST_CHECKS),
         ]:
             with self.subTest(case=case):
                 # Arrange
