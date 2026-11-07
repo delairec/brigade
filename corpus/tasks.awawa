@@ -3859,7 +3859,10 @@ TASK B46
 		+ "plans the merge of a pull request and brigade/commands/tick.py:28-49 merges it on the"
 		+ "forge; task.state merged and pr.merged are recorded as on GitHub, pr absent; a task"
 		+ "naming no MILESTONE is merged into nothing, and the tick names the command the user"
-		+ "runs, git -C <PATH> merge <its branch>, in its text output"
+		+ "runs, git -C <PATH> merge <its branch>, in its text output; a merge that fast-forwards"
+		+ "puts the tip of the task in the reflog of the milestone branch, where git rebase"
+		+ "--fork-point, brigade/git/rebase_onto.py since pull request 368, would take it for a"
+		+ "fork point: a task branch once merged is never rebased again"
 	SPEC "once every task of a wave of FORGE none is merged or parked, the tick appends wave.closed"
 		+ "with no pr, as SPEC 5 of TASK B232 has it on every forge, where today"
 		+ "brigade/tick/plan.py:532-552 waits for the pull request of the wave and"
@@ -3933,6 +3936,9 @@ TASK B46
 		+ "at SPEC 2 on its branch"
 		REF @TASK.B232
 		REF @MILESTONE.M6
+	SOURCE "the user's ruling of 2026-11-07, « ok, ajoute la ligne à B46 », on the hazard of git"
+		+ "rebase --fork-point found by the verification of pull request 368: a commit of a branch"
+		+ "held in the reflog of its upstream is dropped from its rebase"
 
 TASK B47
 	TITLE "brigade collect runs a collector under one contract, caches its document and ships the"
