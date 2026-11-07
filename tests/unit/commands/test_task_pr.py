@@ -142,7 +142,18 @@ class TaskPrPushTest(unittest.TestCase):
         self.processes.answer_entity(worktree, "TASK", "B12", TASK_FIELDS)
         self.processes.answer_entity(worktree, "MILESTONE", "F0", (("TITLE", "Parser"),))
         self.pushed_environments = []
-        self.processes.answer_by(("git", "push", "--quiet", "origin", "feature/B12-the-parser"), self.record_push)
+        self.processes.answer(("git", "rev-parse", "--verify", "--quiet", "refs/remotes/origin/feature/B12-the-parser"))
+        self.processes.answer_by(
+            (
+                "git",
+                "push",
+                "--quiet",
+                "--force-with-lease=feature/B12-the-parser:",
+                "origin",
+                "feature/B12-the-parser",
+            ),
+            self.record_push,
+        )
 
     def record_push(self, request):
         self.pushed_environments.append(request.environment)
