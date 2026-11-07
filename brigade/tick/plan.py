@@ -613,14 +613,14 @@ def _plan_milestone_reports(snapshot: Snapshot) -> tuple:
 
 
 def _is_task_report_due(wave: WaveFacts, task: TaskFacts, project: ProjectFacts, now: datetime) -> bool:
+    if wave.milestone_branch is not None or task.reported:
+        return False
+    if wave.states.get(task.name) == PARKED_STATE:
+        return task.pull_request is not None or not project.on_github
     return (
-        wave.milestone_branch is None
-        and not task.reported
-        and task.pull_request is not None
-        and (
-            wave.states.get(task.name) == PARKED_STATE
-            or (task.pull_request.base == wave.base and _is_on_merge_gate(wave, task, project, now))
-        )
+        task.pull_request is not None
+        and task.pull_request.base == wave.base
+        and _is_on_merge_gate(wave, task, project, now)
     )
 
 
