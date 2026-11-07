@@ -40,11 +40,15 @@ MILESTONE M5
 MILESTONE M6
 	TITLE "Hardening"
 	SUBJECT "harden the tick against moved heads and lost branches"
-	STATUS active
+	STATUS reached
 	SOURCE "the SUBJECT written on 2026-11-07 from the tasks of the milestone, under the user's"
 		+ "ruling « Écrit dans le jalon » recorded in"
 		+ "@DECISION.TheSubjectOfAMilestonePullRequestIsWrittenOnTheMilestoneAndItsTypeAndScopeComeFromTheTasksAtItsHead"
 		REF @DECISION.TheSubjectOfAMilestonePullRequestIsWrittenOnTheMilestoneAndItsTypeAndScopeComeFromTheTasksAtItsHead
+	SOURCE "the user's ruling of 2026-11-08: « oui » to marking M6 reached by hand, delivered on"
+		+ "main by pull request 371 (commit 710c15d0) from a tick that ran without @TASK.B233 and"
+		+ "so committed no reached status on the milestone branch"
+		REF @TASK.B233
 
 MILESTONE M7
 	TITLE "Portability"
