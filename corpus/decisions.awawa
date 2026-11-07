@@ -6364,3 +6364,21 @@ DECISION ADetachedBrigadeCarriesTheSessionBusAddressOfTheBrigadeThatDetachesIt
 		REF @DECISION.TheVibeAdapterAddsTheSessionBusAddressOfTheLaunchRequestToItsEnvironment
 	SOURCE "run 20261102T185023Z-f4126b of wave brigade_w20, delivering @TASK.B44"
 		REF @TASK.B44
+
+DECISION AHeadIsGreenOnceOneOfItsProofsPassedAndRedOnlyWhenNoneDid
+	TITLE "a head is green once one of its three proofs, the check runs of the forge on its commit,"
+		+ "the task check of that commit or the record the tick kept for it, passed whole; it is"
+		+ "pending while no proof passed and a check run of the forge is pending, red while no"
+		+ "proof passed and one failed, and unproven with none"
+	STATUS active
+	DESC "binds @TASK.B238: brigade/tick/judge_head.py decides the state of a head from the"
+		+ "evidence the tick gathers"
+		REF @TASK.B238
+	DESC "a task check proves only the commit it names as its head"
+	DESC "a red head names the failures of the first proof that failed, in the order forge, task"
+		+ "check, record by SHA"
+	REJECTED "a failed check run of the forge holding the head red whatever a record of that commit"
+		+ "says: SPEC 1 of the task it binds takes any of the three proofs as green, and a check"
+		+ "the tick ran on the commit itself is as strong as one the forge ran"
+	SOURCE "the build run of @TASK.B238 on 2026-11-08, reading the « or » of its SPEC 1"
+		REF @TASK.B238
