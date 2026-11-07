@@ -70,7 +70,7 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
             pull_request,
             {
                 "number": 5,
-                "title": "feat: deliver S1; deliver S2; deliver S3 (M1, @TASK.S1, @TASK.S2, @TASK.S3)",
+                "title": "feat: Empty cart (M1)",
                 "body": report,
                 "headRefName": "integration/empty-cart",
                 "baseRefName": "main",

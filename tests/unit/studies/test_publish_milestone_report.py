@@ -61,13 +61,6 @@ def create_forge(open_pull_request: Callable[[dict], dict] = answer_opened_pull_
             "rewrite_pull_request_body": lambda request: {"schema_version": 1},
             "open_pull_request": open_pull_request,
             "describe_account": lambda request: {"schema_version": 1, "login": "octo-cli"},
-            "read_pull_request": lambda request: {
-                "schema_version": 1,
-                "pull_request": {
-                    "number": 341,
-                    "title": "feat(tick): open the pull request of a milestone (@TASK.B17)",
-                },
-            },
             "read_login_environment": lambda request: {
                 "schema_version": 1,
                 "environment": {"octo-cli": {"GH_TOKEN": "cli-token"}}.get(request["login"]),
@@ -95,7 +88,14 @@ class PublishMilestoneReportTest(unittest.TestCase):
         self.processes.answer(("git", "commit", "--quiet", "-m", "docs(milestones): add the report of M6"))
         self.processes.answer_json(
             ("awawa", "show", "@MILESTONE.M6", "--json", str(self.checkout)),
-            {"file": str(self.checkout / MILESTONES_PATH)},
+            {
+                "file": str(self.checkout / MILESTONES_PATH),
+                "fields": [
+                    {"name": "TITLE", "atoms": ['"Hardening"']},
+                    {"name": "SUBJECT", "atoms": ['"harden the tick against moved heads"']},
+                    {"name": "STATUS", "atoms": ['"reached"']},
+                ],
+            },
         )
         self.processes.answer_corpus_change(self.checkout, (MILESTONES_PATH,), REACHED_MESSAGE)
         self.processes.answer(("git", "push", "--quiet", "origin", BRANCH))
@@ -106,7 +106,7 @@ class PublishMilestoneReportTest(unittest.TestCase):
         self.processes.answer_entities(
             self.checkout,
             "TASK",
-            {"B17": (("TYPE", "feat"), ("COMPONENT", "tick"), ("MILESTONE", "@MILESTONE.M6"), ("DELIVERED_BY", "341"))},
+            {"B17": (("TYPE", "feat"), ("COMPONENT", "tick"), ("MILESTONE", "@MILESTONE.M6"))},
             ("STATUS==implemented",),
         )
 
@@ -169,7 +169,7 @@ class PublishMilestoneReportTest(unittest.TestCase):
                     "repository": "/srv/oak",
                     "base": "main",
                     "branch": BRANCH,
-                    "title": "feat(tick): open the pull request of a milestone (M6, @TASK.B17)",
+                    "title": "feat(tick): harden the tick against moved heads (M6)",
                     "body": MARKDOWN,
                     "milestone": None,
                     "environment": {"GH_TOKEN": "cli-token"},
@@ -332,6 +332,7 @@ class PublishMilestoneReportTest(unittest.TestCase):
                 ("git", "diff", "--cached", "--quiet", "--", MILESTONES_PATH),
                 ("git", "commit", "--quiet", "-m", REACHED_MESSAGE),
                 ("git", "push", "--quiet", "origin", BRANCH),
+                ("awawa", "show", "@MILESTONE.M6", "--json", str(self.checkout)),
                 ("awawa", "status", "TASK", "--where", "STATUS==implemented", "--json", str(self.checkout)),
                 ("awawa", "show", "@TASK.B17", "--json", str(self.checkout)),
                 ("git", "rev-parse", "HEAD"),
@@ -355,10 +356,11 @@ class PublishMilestoneReportTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            processes_before_opening[-4:],
+            processes_before_opening[-5:],
             [
                 ("git", "commit", "--quiet", "-m", REACHED_MESSAGE),
                 ("git", "push", "--quiet", "origin", BRANCH),
+                ("awawa", "show", "@MILESTONE.M6", "--json", str(self.checkout)),
                 ("awawa", "status", "TASK", "--where", "STATUS==implemented", "--json", str(self.checkout)),
                 ("awawa", "show", "@TASK.B17", "--json", str(self.checkout)),
             ],
