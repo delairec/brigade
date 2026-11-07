@@ -1,12 +1,13 @@
 from pathlib import Path
 
 from brigade.git.rebase_onto import rebase_onto
-from tests.integration.repository_test_case import IDENTITY, RepositoryTestCase
+from tests.integration.repository_test_case import RepositoryTestCase
 from tests.integration.run_process_without_trail import run_process_without_trail
 from tests.process_launcher import ProcessLauncher
 
 MILESTONE_BRANCH = "integration/hardening"
 WAVE_BRANCH = "integration/brigade_w27"
+COMMITS_PAST_THE_MILESTONE_BRANCH = "integration/hardening..HEAD"
 
 
 def run_git(repository: Path, *arguments: str) -> str:
@@ -22,7 +23,7 @@ def run_git(repository: Path, *arguments: str) -> str:
 def commit_tides(repository: Path, tides: str, message: str) -> None:
     (repository / "tides.txt").write_text(tides, encoding="utf-8")
     run_git(repository, "add", "tides.txt")
-    run_git(repository, *IDENTITY, "commit", "--quiet", "-m", message)
+    run_git(repository, "commit", "--quiet", "-m", message)
 
 
 class RebaseOntoARewrittenBaseTest(RepositoryTestCase):
@@ -64,6 +65,17 @@ class RebaseOntoARewrittenBaseTest(RepositoryTestCase):
 
         # Assert
         self.assertEqual(
-            run_git(self.repository, "log", "--format=%s", "integration/hardening..HEAD"),
+            run_git(self.repository, "log", "--format=%s", COMMITS_PAST_THE_MILESTONE_BRANCH),
             "docs: name the wave\n",
         )
+
+    def test_should_fall_back_to_the_merge_base_once_the_reflog_of_the_base_no_longer_holds_its_former_head(self):
+        # Arrange
+        self.rewrite_the_milestone_branch()
+        run_git(self.repository, "reflog", "expire", "--expire=now", MILESTONE_BRANCH)
+
+        # Act
+        rebased = rebase_onto(run_process_without_trail, self.repository, MILESTONE_BRANCH)
+
+        # Assert
+        self.assertFalse(rebased)
