@@ -14,6 +14,7 @@ from brigade.git.resolve_commit import resolve_commit
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
 from brigade.runtime import Runtime
+from brigade.tasks.find_task_base import find_task_base
 from brigade.verify.find_opened_task import find_opened_task
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -33,7 +34,7 @@ def rebase_done(request: argparse.Namespace, runtime: Runtime) -> dict:
     worktree = locate_worktree_root(run_process, Path.cwd())
     project = require_project_at(read_projects(runtime), locate_main_checkout(run_process, worktree))
     found = find_opened_task(runtime, project.name, request.pr)
-    branch, base = found.opened.branch, found.wave_branch
+    branch, base = found.opened.branch, find_task_base(runtime, worktree, project, found.opened.task)
     fetch_branches(
         run_process, BranchesFetch(repository=worktree, branches=(base, branch), environment=ENVIRONMENT_OF_THE_RUN)
     )

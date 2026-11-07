@@ -40,22 +40,22 @@ class PromoteTaskTest(unittest.TestCase):
         self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         config_root = self.runtime.paths.config_root
         self.processes.answer(("git", "rev-parse", "--show-toplevel"), stdout=f"{self.worktree}\n")
-        self.processes.answer(("git", "branch", "--show-current"), stdout="task/oak_w1/B12\n")
+        self.processes.answer(("git", "branch", "--show-current"), stdout="fix/B12-the-parser\n")
         self.processes.answer(
             ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"), stdout="/srv/oak/.git\n"
         )
-        self.processes.answer_entities(config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"),)})
+        self.processes.answer_entities(config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("MAIN", "main"))})
         append_event(
             self.runtime.paths,
             datetime(2026, 10, 19, 7, 0, tzinfo=UTC),
-            WaveStarted(wave="oak_w1", project="oak", branch="integration/oak_w1", tasks=("B12",)),
+            WaveStarted(wave="oak_w1", project="oak", tasks=("B12",)),
         )
         self.processes.answer_json(
             ("awawa", "show", "@TASK.B12", "--json", str(self.worktree)),
-            {"file": str(self.worktree / "corpus" / "tasks.awawa")},
+            {"file": str(self.worktree / "corpus" / "tasks.awawa"), "fields": []},
         )
         self.processes.answer_corpus_change(self.worktree, ("corpus/tasks.awawa",), MESSAGE)
-        self.processes.answer(("git", "push", "--quiet", "origin", "task/oak_w1/B12"))
+        self.processes.answer(("git", "push", "--quiet", "origin", "fix/B12-the-parser"))
         self.processes.answer(
             ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "HEAD^{commit}"), stdout="d00d\n"
         )
@@ -76,7 +76,7 @@ class PromoteTaskTest(unittest.TestCase):
         append_event(
             self.runtime.paths,
             datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
-            TaskPrOpened(project="oak", task="B12", wave="oak_w1", branch="task/oak_w1/B12", pr=pr, login="bot"),
+            TaskPrOpened(project="oak", task="B12", wave="oak_w1", branch="fix/B12-the-parser", pr=pr, login="bot"),
         )
 
     def test_should_mark_the_task_implemented_and_delivered_by_its_pull_request(self):
@@ -134,7 +134,7 @@ class PromoteTaskTest(unittest.TestCase):
         append_event(
             self.runtime.paths,
             datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
-            TaskPrOpened(project="oak", task="B13", wave="oak_w1", branch="task/oak_w1/B13", pr=43, login="bot"),
+            TaskPrOpened(project="oak", task="B13", wave="oak_w1", branch="fix/B13-the-printer", pr=43, login="bot"),
         )
 
         # Act
@@ -152,7 +152,7 @@ class PromoteTaskTest(unittest.TestCase):
             pushed_environments.append(request.environment)
             return 0, "", ""
 
-        self.processes.answer_by(("git", "push", "--quiet", "origin", "task/oak_w1/B12"), record_push)
+        self.processes.answer_by(("git", "push", "--quiet", "origin", "fix/B12-the-parser"), record_push)
         demand = TaskPromotionDemand(
             path=self.worktree,
             task="B12",
@@ -211,7 +211,7 @@ class PromoteTaskTest(unittest.TestCase):
         self.assertEqual((self.worktree / "corpus" / "tasks.awawa").read_text(encoding="utf-8"), TASKS)
         self.assertEqual(
             read_ledger(self.root / "state").entries[-1].event,
-            WaveStarted(wave="oak_w1", project="oak", branch="integration/oak_w1", tasks=("B12",)),
+            WaveStarted(wave="oak_w1", project="oak", tasks=("B12",)),
         )
 
     def test_should_refuse_a_schema_that_declares_no_delivering_pull_request(self):

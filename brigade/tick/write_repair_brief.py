@@ -7,7 +7,6 @@ from brigade.system.create_directory import create_directory
 from brigade.system.write_text_file import write_text_file
 from brigade.tick.actions import LaunchCheckRepair
 from brigade.tick.build_snapshot import PreflightFailure
-from brigade.tick.name_task_branch import name_task_branch
 
 BRIEF_TEMPLATE = files("brigade.tick") / "data" / "repair-brief.md.tpl"
 BRIEFS_DIRECTORY = "briefs"
@@ -57,7 +56,7 @@ def write_repair_brief(state_root: Path, action: LaunchCheckRepair, logs: list[d
         wave=action.wave,
         branch=action.branch,
         worktree=action.worktree,
-        task_branch=name_task_branch(action.branch, action.task),
+        task_branch=action.task_branch,
         logs="".join(f"\n## {log['name']}\n\n{_describe_log(log)}\n" for log in logs),
         findings=_describe_findings(action.findings),
         remedy=_name_remedy(action.checks),

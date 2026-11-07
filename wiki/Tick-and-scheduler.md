@@ -22,7 +22,23 @@ plan is empty or ten rounds have passed. Among those actions, it:
 - runs the due studies, as [Studies](Studies.md) says;
 - starts a wave for each project whose `POLICY` sets `WAVE_START` to `auto`;
 - carries each task of an open wave from its launch to its merge, as below;
-- pauses every running wave on the quota or on the forge account, and resumes it.
+- pauses every running wave on the quota or on the forge account, and resumes it;
+- removes the local branch of an integration branch the ledger records, and its worktree with it when one stands,
+  once the branch has nothing left to do: the branch of a milestone once the ledger holds its `milestone.closed`, the
+  branch of a wave once it holds its `wave.closed` or its `wave.cancelled`.
+
+The branch of an active milestone or of an open wave is never removed, nor a branch the ledger does not record, nor
+the branch on the forge. An ended branch is kept, with its worktree, while one of these holds, and the tick names it
+with its reason on stderr and in `brigade tick --dry-run`:
+
+| Reason | When |
+|---|---|
+| `a commit outside the merged pull request` | the head of the local branch is neither the head of its merged pull request, nor an ancestor of it, nor an ancestor of `origin/` the branch it merges into: the main branch for a milestone branch, the branch of its milestone for a wave branch |
+| `a live run` | a run is live on its worktree |
+| `a lock` | git lists its worktree locked |
+
+The worktree of a task is not an integration worktree: it is removed once the pull request of its task is merged or
+closed, as below, and a parked task of a closed wave keeps its worktree and its commits.
 
 ## The course of a task
 
@@ -33,8 +49,8 @@ plan is empty or ten rounds have passed. Among those actions, it:
 | preflight | once every check run completed, runs `brigade verify preflight`; no failing check moves the task on | `verifying` |
 | review | starts a detached run of the slot `review`, of `verify-pr`; its `task.verdict` decides | `verified` on `pass`, `changes_requested` on `changes` |
 | repair | starts a detached run of the slot `remediate`, of `remediate-pr`, or of the slot `build` for a failing check | `fixing`, back to `pr_open` on a push |
-| rebase | rebases a pull request behind the wave branch once its check runs all passed; a conflict starts a run of the slot `rebase` | back to `pr_open`, or `fixing` |
-| merge | removes the task's worktree once its pull request is merged or closed | `merged` |
+| rebase | rebases a pull request behind its base once its check runs all passed; a conflict starts a run of the slot `rebase` | back to `pr_open`, or `fixing` |
+| merge | merges a verified pull request into the branch of its milestone, never into the main branch, then removes the task's worktree once its pull request is merged or closed | `merged` |
 
 The procedure of each run is the one brigade ships, or the one the key of its slot (`build`, `review`, `remediate`,
 `rebase`) of the table `[procedures]` of `config.toml` names in its place.
@@ -87,19 +103,19 @@ The tick launches no run of a paused wave.
 
 - The build run is launched in the worktree the tick cuts for the task, resolved as the argument of `brigade run` is,
   with the wave and the task as `--wave` and `--task`.
-- A task is recorded `running` before its run is spawned. Its launch reuses the branch `task/<slug>/<task>` and its
-  worktree when they exist.
-- On a project of `FORGE github`, the launch fetches the wave branch and cuts the task branch from `origin/<branch>`,
-  its setup checking that `origin/<branch>` is an ancestor of `HEAD`. A project of `FORGE none` keeps its local wave
-  branch.
-- An existing task branch that does not descend from that wave branch is rebased onto it before the setup only when
-  its pull request is open and its check runs all passed. A rebase stopped on a conflict is aborted, and the tick
-  starts a detached run of the slot `rebase` in the worktree of the task, with the arguments `task` and `base`, the
+- A task is recorded `running` before its run is spawned. Its launch reuses the branch `<prefix>/<id>-<slug>` and its
+  worktree when they exist, whatever the wave, a cancelled or a closed one included.
+- On a project of `FORGE github`, the launch fetches the base of the task, the branch of its milestone or the main
+  branch for a task naming none, and cuts the task branch from `origin/<base>`, its setup checking that
+  `origin/<base>` is an ancestor of `HEAD`. A project of `FORGE none` keeps its local base.
+- An existing task branch that does not descend from that base is rebased onto it before the setup only when its pull
+  request is open and its check runs all passed. A rebase stopped on a conflict is aborted, and the tick starts a
+  detached run of the slot `rebase` in the worktree of the task, with the arguments `task` and `base` and no `pr`, the
   task staying `running`. Once that run ends done, the next tick launches the build run; a run that ends blocked parks
   the task on its question.
 - Any other such branch is built as it stands: the tick rebases nothing, its setup checks no ancestry, and the brief
-  tells the build not to rebase it. The build opens its pull request behind the wave branch, and the tick rebases it
-  once its check runs pass.
+  tells the build not to rebase it. The build opens its pull request behind its base, and the tick rebases it once its
+  check runs pass.
 - The tick follows the pull request of each task past its launch, read as the login of the key `cli` of
   `[forge_accounts]`. The worktree of a task is never removed while a run holds it.
 
@@ -146,37 +162,34 @@ dies before it records a `run.finished` does.
 
 </details>
 
-<details><summary>Rebasing a pull request behind its wave branch</summary>
+<details><summary>Rebasing a pull request behind its base</summary>
 
-- A task whose open pull request is behind the branch of its wave, from `pr_open` to `fixing`, is rebased by git when
+- A task whose open pull request is behind its base, from `pr_open` to `fixing`, is rebased by git when
   no run holds its worktree, and waits for the next tick otherwise.
-- Under the lock of the project's worktrees, the tick fetches the wave branch, rebases the worktree onto it and pushes
+- Under the lock of the project's worktrees, the tick fetches the base, rebases the worktree onto it and pushes
   with `--force-with-lease` on the head it read, as the login of the key `cli` of `[forge_accounts]`. It then records
   `task.rebased`, the head before and after and that login, and moves the task back to `pr_open`.
 - On a conflict it aborts the rebase and starts a detached run of the slot `rebase`, of `rebase-on-base`, which works
-  through `brigade rebase context|done`. The launch records the task `fixing` and counts no round; past the rounds the
-  repair runs spent, the task is parked instead.
+  through `brigade rebase context|done`. The launch records the task `fixing` and counts no round, whatever the rounds
+  the repair runs spent.
+- A task behind whose entity was amended on its base, the branch of its milestone or the main branch for a task naming
+  none, since its pull request opened is rebuilt instead: a run of the slot `build` delivers it to the amended entity.
+  The launch records the task `fixing` with the reason `the entity of the task amended on <base>` and counts no round,
+  whatever the rounds spent and whatever the outcome of the rebuild before it.
 
 </details>
 
-<details><summary>Rebasing the branches of a milestone</summary>
+<details><summary>Rebasing the branch of a milestone</summary>
 
-- The tick rebases the branch of a milestone onto the main branch once the main branch has outrun it, and each open
-  wave branch of the milestone onto the milestone branch in the same action. No wave of that milestone starts in the
-  round of that rebase.
-- It also rebases an open wave branch that does not descend from `origin/<the milestone branch>`, once the milestone
-  branch moved without it. The pull request of that wave is not merged while it lags.
-- A wave branch is rebased onto `origin/<the milestone branch>`, its own branch without a forge. Every rebase of the
-  tick, of a milestone, wave or task branch, is `git rebase --fork-point`: it replays only the commits the branch holds
-  past the head of its base it was last cut from or rebased onto, read from the reflog of that base. A wave holding no
-  commit of its own thus ends at the head of its rewritten milestone branch, with no conflict and no run. When the
-  reflog no longer holds that head, git falls back to the merge base.
-- A conflict is aborted and handed to a detached run of the slot `rebase`. When the conflict is on the milestone
-  branch, that action rebases no wave branch: they follow once the run has pushed it.
+- The tick rebases the branch of a milestone onto the main branch once the main branch has outrun it.
+- Every rebase of the tick, of a milestone or task branch, is `git rebase --fork-point`: it replays only the commits
+  the branch holds past the head of its base it was last cut from or rebased onto, read from the reflog of that base.
+  When the reflog no longer holds that head, git falls back to the merge base.
+- A conflict is aborted and handed to a detached run of the slot `rebase`.
 - A milestone branch git rebased cleanly is checked before it is pushed: in its worktree the tick runs the `SETUP`
   lines of the project, then its `ACCEPTANCE` lines and `awawa fmt --check .` and `awawa lint --strict .`, as
-  `brigade task check` does. A failing one pushes nothing and rebases no wave branch: the rebased head stays in the
-  worktree and a detached run of the slot `rebase` repairs it there, then pushes it once its tests pass.
+  `brigade task check` does. A failing one pushes nothing: the rebased head stays in the worktree and a detached run of
+  the slot `rebase` repairs it there, then pushes it once its tests pass.
 - No rebase is planned for a wave that is paused, or whose rebase run lives or ended blocked; a blocked rebase run
   pauses its wave on its question.
 - `brigade wave resume` answers every rebase run of the wave that ended blocked before it, one that ended while the
@@ -191,7 +204,7 @@ dies before it records a `run.finished` does.
   them, and the error. The tick applies the actions that follow it, never applies it again in the same tick and undoes
   nothing, the next tick planning again from the facts.
 - The waves are the open waves of the ledger, each with the tasks its `wave.started` names, in that order, read from
-  the project corpus at the wave's branch. A wave whose pull requests the forge fails to read is skipped, named on
+  the project corpus at the branch of the open milestone holding every task of the wave, or at the main branch. A wave whose pull requests the forge fails to read is skipped, named on
   stderr, and the tick serves the others.
 
 </details>
@@ -203,10 +216,22 @@ dies before it records a `run.finished` does.
   when no `POLICY` names the project; `ask` leaves the start to the user.
 - The wave takes every candidate, the `SLOTS` of the project bounding the live build runs alone.
 - A project whose tasks cannot be read is skipped, named on stderr.
-- An open wave whose branch is missing has it cut again from the main branch, with no second `wave.started`.
-- Once every task of a wave is `merged` or `parked`, the tick records `wave.reported`, its `run` null until the
-  wave-report study exists. Once the integration pull request of a reported wave is merged, it records `wave.closed`
-  with its number.
+- The tick cuts no branch for a wave, opens no pull request for it and merges none. Once every task of a wave is
+  `merged` or `parked`, it records `wave.closed`, with no pull request.
+- Once no task of a milestone at its branch is `draft` or `todo`, a parked task being `todo`, and no wave of it is
+  open, the tick runs the study `milestone-report` and records `milestone.reported`; that run commits the report on
+  the branch of the milestone, then `STATUS reached` on the `MILESTONE` in a commit of its own, pushes both and opens
+  the pull request of the milestone into the main branch, the report as its body. The milestone is reached when the
+  user merges that pull request: the tick sets `STATUS reached` nowhere else, neither on the main branch nor at
+  `milestone.closed`. On a project of `FORGE none` both commits land on the branch and no pull request opens.
+- `brigade tick --dry-run` names the tasks that hold the pull request of a milestone in the `open_tasks` of the
+  milestone.
+- A task `draft` or `todo` whose `MILESTONE` is `reached` at the main branch is served never: the tick starts no wave
+  holding it and names the task and the milestone on stderr at each tick.
+- For a task naming no milestone, once its pull request is ready to merge or the task is parked, the tick runs the
+  study `task-report` and records `task.reported`; that run commits the report on the branch of the task and
+  replaces the body of its pull request with it. The user merges that pull request into the main branch.
+- The patterns of a request go delivered at `milestone.closed` of the milestone it was planned into.
 
 </details>
 

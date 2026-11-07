@@ -1,0 +1,29 @@
+# REPORT brigade_w22
+
+- WAVE: brigade_w22
+- PROJECT: brigade
+- TASK_ROW: B232 running
+- STATISTIC: tasks 1
+- STATISTIC: merged 0
+- STATISTIC: parked 0
+- STATISTIC: runs 5
+- STATISTIC: files 126
+- STATISTIC: insertions 5052
+- STATISTIC: deletions 764
+- INSTRUCTIONS_CHANGE: corpus/decisions.awawa +498 -92
+- INSTRUCTIONS_CHANGE: corpus/tasks.awawa +425 -157
+- NARRATIVE: Verdict: the wave delivered nothing; its one task, B232, was parked after five build segments of one run, none merged (ledger, wave.started 16:55:54Z to task.parked 17:45:54Z, 2026-11-02).
+- NARRATIVE: Cost: 5 segments of run 20261102T165554Z-55d211 (build-task, role ada, claude-code), 322 main steps, 46 min 3 s, 18.78 USD, 206 632 output tokens, 42 771 016 cache-read tokens (sum of the five run.finished events of the ledger collector).
+- NARRATIVE: Per segment: 68, 67, 64, 61, 62 steps; 7 min 50 s, 8 min 53 s, 7 min 32 s, 13 min 7 s, 8 min 42 s; 4.05, 3.80, 3.61, 3.48, 3.83 USD (ledger collector, run.finished segments 1 to 5).
+- NARRATIVE: Every segment ended handed_over with exit 0 and no error class: each overran the fifty-step handover point and passed on to the next, five times (ledger collector).
+- NARRATIVE: The rows TASK_ROW B232 running and STATISTIC parked 0 predate the parking: task.parked and wave.reported share the timestamp 17:45:54Z in the ledger; B232 stands parked, so the true count is parked 1.
+- NARRATIVE: B232 is the task ratified by merged PR #311: a task runs on <type>/<id>-<slug> cut from its milestone branch, a wave has no branch, a milestone report replaces the wave report (pr-list collector).
+- NARRATIVE: No pull request of B232 nor of the wave branch integration/brigade_w22 appears among the 2 open pull requests of the pr-list collector (#307, #310).
+- NARRATIVE: The figures files 126, insertions 5052, deletions 764 come from the git-diff-stat collector, whose document records no base nor head: with no task merged, they cannot be the wave's own delivery, and their perimeter is a gap of the collector.
+- NARRATIVE: Next wave: split B232 so that one segment of fifty steps can deliver a piece, rather than requeue it whole; a requeue as is would likely spend another five segments.
+- NARRATIVE: Gap: the progress file of run 20261102T165554Z-55d211 was not collected, so where the five segments stood when they stopped is not known from this package.
+- REASON: B232 parked at 17:45:54Z with the reason run dead: 20261102T165554Z-55d211 and no blocker (ledger, task.parked): the run did not crash, its five segments each handed over with exit 0, so it stopped on exhausting its segments, not on an error; open PR #307 drafts the task that names such a run exhausted instead of dead.
+- SAMPLING: brigade/ledger/run_finished.py +40 -42: a near-complete rewrite of the module that records run.finished, the event this report rests on (git-diff-stat collector, perimeter unrecorded).
+- SAMPLING: brigade/commands/doctor.py +149 -1 with tests/unit/commands/test_doctor.py +395 -4: the largest code addition of the diff and its tests (git-diff-stat collector, perimeter unrecorded).
+- SAMPLING: brigade/ledger/describe_role_budget.py +100 -0, a new module, with tests/unit/ledger/test_describe_role_budget.py +240: the step budget of a role, the figure that would have flagged the segments of B232 (git-diff-stat collector, perimeter unrecorded).
+- SAMPLING: corpus/decisions.awawa +498 -92: the largest file of the diff, 590 lines of decisions to read before the next wave (git-diff-stat collector, perimeter unrecorded).

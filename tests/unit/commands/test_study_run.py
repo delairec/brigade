@@ -10,7 +10,7 @@ from brigade.commands.study_run import COMMAND
 from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
 from brigade.system.resolve_collector import resolve_collector
-from tests.unit.commands.command_runtime import create_corpus_double, write_ledger, write_operational_corpus
+from tests.unit.commands.command_runtime import create_corpus_double, write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.mining.create_run_finished import create_run_finished
@@ -25,6 +25,7 @@ SESSION_BRIEF = {
     "timestamp": None,
     "content": "Deliver B42.",
     "tool_calls": 0,
+    "tools": [],
     "id": None,
     "usage": None,
 }
@@ -98,28 +99,16 @@ class StudyRunOfAStudyTest(unittest.TestCase):
         # Assert
         self.assertEqual(str(raised.exception), "@STUDY.health is not defined in the operational corpus")
 
-    def test_should_resume_the_run_of_a_wave_report_from_the_wave_its_run_records(self):
+    def test_should_resume_the_run_of_a_milestone_report_from_the_milestone_its_run_records(self):
         # Arrange
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(root)
-        write_ledger(
-            root,
-            [
-                {
-                    "schema_version": 2,
-                    "ts": "2026-10-19T08:00:00Z",
-                    "event": "wave.started",
-                    "wave": "oak_w2",
-                    "project": "oak",
-                    "branch": "integration/oak_w2",
-                    "tasks": ["B17"],
-                }
-            ],
-        )
         steps = root / "state" / "runs" / RUN_ID / "steps"
         steps.mkdir(parents=True)
         (steps.parent / "study.json").write_text(
-            '{"schema_version": 1, "study": "wave-report", "project": "oak", "wave": "oak_w2"}', encoding="utf-8"
+            '{"schema_version": 1, "study": "milestone-report", "project": "oak", "milestone": {"project": "oak",'
+            ' "milestone": "M6", "branch": "integration/hardening", "waves": ["oak_w2"], "tasks": ["B17"]}}',
+            encoding="utf-8",
         )
         (steps / "collect.json").write_text("{}", encoding="utf-8")
         (steps / "judge.json").write_text("{}", encoding="utf-8")
@@ -131,10 +120,10 @@ class StudyRunOfAStudyTest(unittest.TestCase):
         )
 
         # Act
-        ending = COMMAND.run(Namespace(name="wave-report", run_id=RUN_ID), runtime)
+        ending = COMMAND.run(Namespace(name="milestone-report", run_id=RUN_ID), runtime)
 
         # Assert
-        self.assertEqual(ending, {"schema_version": 1, "study": "wave-report", "run": RUN_ID, "state": "done"})
+        self.assertEqual(ending, {"schema_version": 1, "study": "milestone-report", "run": RUN_ID, "state": "done"})
 
 
 class StudyRunOfMineTranscriptsTest(unittest.TestCase):

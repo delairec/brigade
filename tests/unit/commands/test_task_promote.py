@@ -83,7 +83,7 @@ class TaskPromoteOutsideATaskTest(unittest.TestCase):
             COMMAND.run(Namespace(task=THE_TASK_OF_THE_BRANCH, pr=THE_LAST_PULL_REQUEST), runtime)
 
         # Assert
-        self.assertEqual(str(raised.exception), "the branch main is not a task/<slug>/<task> branch")
+        self.assertEqual(str(raised.exception), "the branch main is not a <prefix>/<task>-<slug> branch")
 
 
 class TaskPromotePushTest(unittest.TestCase):
@@ -100,15 +100,17 @@ class TaskPromotePushTest(unittest.TestCase):
             create_test_paths(root), run_process=self.processes, resolve_plugin=lambda kind, name, **places: forge
         )
         self.processes.answer(("git", "rev-parse", "--show-toplevel"), stdout=f"{worktree}\n")
-        self.processes.answer(("git", "branch", "--show-current"), stdout="task/oak_w1/B12\n")
+        self.processes.answer(("git", "branch", "--show-current"), stdout="feature/B12-the-parser\n")
         self.processes.answer(
             ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"), stdout="/srv/oak/.git\n"
         )
-        self.processes.answer_entities(self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"),)})
+        self.processes.answer_entities(
+            self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("MAIN", "main"))}
+        )
         append_event(
             self.runtime.paths,
             NOW,
-            WaveStarted(wave="oak_w1", project="oak", branch="integration/oak_w1", tasks=("B12",)),
+            WaveStarted(wave="oak_w1", project="oak", tasks=("B12",)),
         )
         self.processes.answer_json(
             ("awawa", "show", "TASK", "--json", str(worktree)),
@@ -120,7 +122,8 @@ class TaskPromotePushTest(unittest.TestCase):
             },
         )
         self.processes.answer_json(
-            ("awawa", "show", "@TASK.B12", "--json", str(worktree)), {"file": str(worktree / "corpus" / "tasks.awawa")}
+            ("awawa", "show", "@TASK.B12", "--json", str(worktree)),
+            {"file": str(worktree / "corpus" / "tasks.awawa"), "fields": []},
         )
         self.processes.answer_corpus_change(worktree, ("corpus/tasks.awawa",), MESSAGE)
         self.processes.answer(
@@ -135,7 +138,7 @@ class TaskPromotePushTest(unittest.TestCase):
             pushed_environments.append(request.environment)
             return 0, "", ""
 
-        self.processes.answer_by(("git", "push", "--quiet", "origin", "task/oak_w1/B12"), record_push)
+        self.processes.answer_by(("git", "push", "--quiet", "origin", "feature/B12-the-parser"), record_push)
 
         # Act
         COMMAND.run(Namespace(task=THE_TASK_OF_THE_BRANCH, pr=42), self.runtime)

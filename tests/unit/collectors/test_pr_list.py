@@ -13,7 +13,8 @@ from tests.unit.forge_double import ForgeDouble
 from tests.unit.scripted_processes import ScriptedProcesses
 
 PULL_REQUESTS = [
-    {"number": 4, "head": "task/f0-parser/B12", "state": "open"},
+    {"number": 4, "head": "feature/B12-parse-the-saves", "state": "open"},
+    {"number": 5, "head": "integration/hardening-the-tick", "state": "open"},
     {"number": 3, "head": "docs/readme", "state": "merged"},
 ]
 
@@ -56,9 +57,10 @@ class PrListCollectorTest(unittest.TestCase):
                 "collector": "pr-list",
                 "collected_at": "2026-10-19T09:00:00Z",
                 "cache": False,
-                "summary": {"open": 1, "merged": 1, "closed": 0},
+                "summary": {"open": 2, "merged": 1, "closed": 0},
                 "items": [
-                    {"number": 4, "head": "task/f0-parser/B12", "state": "open", "task": "B12"},
+                    {"number": 4, "head": "feature/B12-parse-the-saves", "state": "open", "task": "B12"},
+                    {"number": 5, "head": "integration/hardening-the-tick", "state": "open", "task": None},
                     {"number": 3, "head": "docs/readme", "state": "merged", "task": None},
                 ],
             },

@@ -6,7 +6,6 @@ from brigade.corpus.read_entity import Entity
 from brigade.system.create_directory import create_directory
 from brigade.system.write_text_file import write_text_file
 from brigade.tick.actions import RebuildTask
-from brigade.tick.name_task_branch import name_task_branch
 
 BRIEF_TEMPLATE = files("brigade.tick") / "data" / "rebuild-brief.md.tpl"
 BRIEFS_DIRECTORY = "briefs"
@@ -26,7 +25,7 @@ def write_rebuild_brief(state_root: Path, action: RebuildTask) -> Path:
         base=action.base,
         pr=action.pr,
         worktree=action.worktree,
-        task_branch=name_task_branch(action.base, action.task),
+        task_branch=action.task_branch,
         on_pull_request=_render_entity(action.amendment.on_pull_request),
         on_wave=_render_entity(action.amendment.on_wave),
     )

@@ -4,10 +4,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.errors import BrigadeError
+from brigade.processes.is_failed_record import SUCCEEDED_EXIT_CODE
 from brigade.runs.ask_progress import ask_progress
 from brigade.runs.compose_brief import BriefParts, compose_brief
 from brigade.runs.count_session_steps import SessionSteps, count_session_steps
 from brigade.runs.decide_stop_at import decide_stop_at
+from brigade.runs.locate_first_edit import FirstEdit, locate_first_edit
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.run_locations import (
     BRIEF_FILE,
@@ -71,6 +73,7 @@ class SegmentRecord:
     counted_steps: SessionSteps | None
     uncounted: str | None
     adapter_failure: str | None
+    first_edit: FirstEdit | None = None
 
 
 def _compose_segment_brief(plan: RunPlan, number: int, runtime: Runtime) -> str:
@@ -83,6 +86,7 @@ def _compose_segment_brief(plan: RunPlan, number: int, runtime: Runtime) -> str:
             arguments=plan.arguments,
             brief=plan.brief,
             progress_description=ask_progress(plan, "describe_document", runtime).text,
+            budget=plan.budget.applied,
         )
     )
 
@@ -94,7 +98,7 @@ def _describe_role(plan: RunPlan) -> ClientRole:
         package_file=str(plan.run_directory / ROLE_FILE),
         capabilities=plan.capabilities,
         reasoning=plan.role.front_matter["reasoning"],
-        budget=plan.procedure.budget,
+        budget=plan.budget.applied,
     )
 
 
@@ -121,6 +125,12 @@ def _read_transcripts(
 
 def _count_steps(transcripts: TranscriptsAnswer | None) -> SessionSteps | None:
     return None if transcripts is None else count_session_steps(transcripts)
+
+
+def _locate_first_edit(plan: RunPlan, transcripts: TranscriptsAnswer | None) -> FirstEdit | None:
+    if transcripts is None:
+        return None
+    return locate_first_edit(transcripts.messages, plan.edit_tools, str(plan.progress_file))
 
 
 @dataclass(frozen=True)
@@ -173,6 +183,7 @@ def _measure_ending(plan: RunPlan, runtime: Runtime, ending: SegmentRecord) -> S
         usage=None if transcripts is None else sum_session_usage(transcripts),
         counted_steps=_count_steps(transcripts),
         uncounted=uncounted,
+        first_edit=_locate_first_edit(plan, transcripts),
     )
 
 
@@ -220,6 +231,12 @@ def _build_spawn_request(context: SegmentContext, launch: ClientCommand) -> Spaw
     )
 
 
+def _keep_failed_stderr(request: SpawnRequest, outcome: str, exit_code: int | None) -> str | None:
+    if outcome == EXITED and exit_code == SUCCEEDED_EXIT_CODE:
+        return None
+    return request.stderr.read_text(encoding="utf-8", errors="replace")
+
+
 def _follow_client(context: SegmentContext, request: SpawnRequest, stop: StopSignalReceiver) -> ClientExit:
     plan = context.plan
     runtime = context.runtime
@@ -232,7 +249,16 @@ def _follow_client(context: SegmentContext, request: SpawnRequest, stop: StopSig
     exit_code, outcome = _wait_for_client(process, limit, journal.write_complete_lines, stop)
     measured_ms = round((runtime.read_monotonic() - started) * 1000)
     journal.write_rest()
-    runtime.trail.append(ProcessTrace(request.argv, request.cwd, outcome, exit_code=exit_code, duration_ms=measured_ms))
+    runtime.trail.append(
+        ProcessTrace(
+            request.argv,
+            request.cwd,
+            outcome,
+            exit_code=exit_code,
+            duration_ms=measured_ms,
+            stderr=_keep_failed_stderr(request, outcome, exit_code),
+        )
+    )
     return ClientExit(exit_code=exit_code, outcome=outcome, measured_ms=measured_ms)
 
 
@@ -285,6 +311,7 @@ def _describe_answer(
         counted_steps=_count_steps(transcripts),
         uncounted=uncounted,
         adapter_failure=None,
+        first_edit=_locate_first_edit(context.plan, transcripts),
     )
 
 

@@ -4017,8 +4017,8 @@ DECISION AFindingRecordedWithoutASummaryPrintsNoneAsItsSummaryInThePreviousVerdi
 DECISION ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsNone
 	TITLE "a repair round is one launch by the tick of a run of the remediate or the build slot on"
 		+ "a task of a wave, counted since the last verdict or the last requeue of the task; a run"
-		+ "of the rebase slot counts none, a run cut by a rate limit counts none, and no other"
-		+ "bound replaces it"
+		+ "of the rebase slot counts none, a run cut by a rate limit counts none, a rebuild to an"
+		+ "amended entity counts none, and no other bound replaces it"
 	STATUS active
 	DESC "the rounds of a task are the count of the runs of the remediate slot and of the build"
 		+ "slot the tick launched on it in its wave since its last task.verdict or its last"
@@ -4053,6 +4053,12 @@ DECISION ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsN
 		+ "task.state fixing of the wave"
 		REF @TASK.B217
 		REF @TASK.B220
+	DESC "a rebuild of a task to its entity amended on the branch of its wave, a run of the build"
+		+ "slot launched as a delivery to the amended SPEC and not on a failure the gate found,"
+		+ "spends no round, whatever the outcome of the rebuild before it: its task.state fixing is"
+		+ "told apart by its reason, which opens on REBUILD_REASON of brigade/ledger/task_state.py,"
+		+ "and no count of its own bounds the rebuilds, as none bounds the runs of the rebase slot"
+		REF @TASK.B235
 	REJECTED "a run of the rebase slot counted as one round, as the former ruling did: the user"
 		+ "ruled that only the repair rounds are counted"
 	REJECTED "a bound of its own on the runs of the rebase slot once they count no round: the user"
@@ -5956,3 +5962,263 @@ DECISION TheSubjectOfAMilestonePullRequestIsWrittenOnTheMilestoneAndItsTypeAndSc
 		+ "»"
 		REF @TASK.B227
 		REF @MILESTONE.M6
+
+DECISION DoctorChecksABindingWhereTheRunResolvesIt
+	TITLE "doctor checks each binding where the run resolves it, so that a finding foretells a"
+		+ "failure of the unattended run and nothing else"
+	STATUS active
+	DESC "a [slots] entry is checked against the AGENT entities of the instructions corpus, the"
+		+ "role set brigade/roles/resolve_role.py reads a slot binding from; a [slots] entry with"
+		+ "no instructions corpus set is a finding"
+	DESC "a ROLESET other than builtin and corpus resolves to nothing when its directory, under the"
+		+ "project's PATH unless absolute, holds no role file"
+	DESC "the first word of a project command holding a slash is looked up under the project's"
+		+ "PATH, the runner running it with the worktree as its cwd; a word without one is looked"
+		+ "up on PATH; such a script is the form @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell"
+		+ "prescribes for a command needing a shell feature"
+		REF @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell
+	DESC "an empty project command line is a finding: it splits into no argv"
+	DESC "binds @TASK.B173"
+		REF @TASK.B173
+	REJECTED "every first word looked up on PATH alone: every command calling a script the project"
+		+ "versions would be a finding"
+	REJECTED "a ROLESET resolving to nothing only when its directory is missing: an empty directory"
+		+ "falls back to the built-in roles as silently"
+	RATIONALE "@TASK.B173 names the findings, not where each binding resolves; the run resolves a"
+		+ "slot binding in the instructions corpus alone and a roleset directory without role files"
+		+ "falls back to the built-ins without a word"
+		REF @TASK.B173
+	SOURCE "the delivery of @TASK.B173 in the wave brigade_w19"
+		REF @TASK.B173
+
+DECISION TheTickExtendsItsLedgerReadingWithTheBytesAppendedPastEachMonthlyFile
+	TITLE "the tick reads the ledger once through a LedgerReadingKeeper, which extends that reading"
+		+ "with read_ledger since it: the lines past the end of each monthly file it read, so the"
+		+ "extension holds the events the tick appended and those another process appended"
+		+ "meanwhile; append_derived_event keeps its own reading under the ledger lock: the wave it"
+		+ "derives must see every wave.started, a brigade wave start run by hand included"
+	STATUS active
+	REJECTED "the appended events added to the reading in memory at each append_event of the tick:"
+		+ "every writer reached by an executor passes Paths, not the runtime, and the reads under a"
+		+ "worktrees lock would miss what another process recorded"
+	RATIONALE "@TASK.B174 bounds the reads of a tick to one; a read past the known ends costs a"
+		+ "seek per monthly file, where brigade/ledger/read_ledger.py read every line of every file"
+		REF @TASK.B174
+	SOURCE "the build run of @TASK.B174 of 2026-11-01"
+		REF @TASK.B174
+
+DECISION TheTickRemembersTheLiveBlockersOfATaskByTheTreeItReadThemOn
+	TITLE "the tick caches read_live_blockers by its tree root, which names a commit: a task whose"
+		+ "branch did not move is read once per tick, and again on the tree of a branch the tick"
+		+ "moved"
+	STATUS active
+	REJECTED "the blockers cached by task alone: a merge or a rebase the tick applies changes the"
+		+ "corpus the task is read on, and its blockers would stay those of the branch before"
+	RATIONALE "brigade/corpus/prepare_tree.py extracts an archive tree under the SHA of its ref, so"
+		+ "the root of a tree changes exactly when its branch moved"
+	SOURCE "the build run of @TASK.B174 of 2026-11-01"
+		REF @TASK.B174
+
+DECISION ALedgerComparisonSetsTwoRangesOfDaysOrOneRangeAgainstReferenceFigures
+	TITLE "brigade ledger compare takes two ranges of days, the end day included, or one range and"
+		+ "the reference figures it is set against"
+	STATUS active
+	DESC "a range is --range START..END, two days YYYY-MM-DD in UTC, the end day included: a run"
+		+ "belongs to it when its last segment finished from START at 00:00 to the day after END at"
+		+ "00:00 excluded"
+	DESC "compare takes two --range, or one --range and one --reference <measure>=<value> per"
+		+ "measure, and refuses any other count as a usage error; --before leaves the command"
+	DESC "the reference measures and what a range gives for each: steps_to_first_edit_p50, the runs"
+		+ "p50 of the steps to the first edit; task_run_steps_p50, the runs p50 of the steps of the"
+		+ "runs whose last segment names a task; oversized_output_steps_per_launch, the oversized"
+		+ "output steps per segment reporting them, rounded to two decimals"
+	DESC "the link compare before <day> of the ledger page of the dashboard passes ?range=<first"
+		+ "day of the ledger>..<the day before>&range=<day>..<last day of the ledger>, so it still"
+		+ "sets every run before the day against every run from it on"
+	REJECTED "--before kept beside --range: two ways to read one window, against the rule"
+		+ "specific_isolated_one_path of the instructions corpus"
+	REJECTED "the end day excluded: the baseline of the user's notes is named from 26/09 to 03/10,"
+		+ "both days in"
+	REJECTED "the steps per task run read from every run: a study or a verification naming no task"
+		+ "would weigh in a figure the baseline measured on task agents"
+	REJECTED "the oversized output steps per launch over every segment: a segment whose client"
+		+ "reports no transcript would count as zero"
+	RATIONALE "the reference figures carry the baseline of the user's notes, which predates the"
+		+ "ledger, as the comparison of @TASK.B39 needs"
+		REF @TASK.B39
+	SOURCE "the build run of @TASK.B175 of 2026-11-01"
+		REF @TASK.B175
+
+DECISION TheViewsOfBrigadeLedgerTakeSinceAndSumOnlyTheCostsTheRunsCarry
+	TITLE "--since narrows the overview, --wave, --task and --project of brigade ledger, and a"
+		+ "cost, a token count or a duration of a view is the sum of the run.finished events that"
+		+ "carry it, none when no event does"
+	STATUS active
+	DESC "--since filters the entries of the ledger once, before the view reads them; ledger"
+		+ "budgets keeps --last and ledger compare its ranges"
+	DESC "the cost in USD, the tokens and the duration of a wave, of a task of a wave and of a run"
+		+ "of brigade ledger --task sum the run.finished events that carry them, and are none when"
+		+ "no event of the view carries one"
+	REJECTED "--since on ledger compare and ledger budgets: a second window beside the ranges and"
+		+ "--last"
+	REJECTED "a cost of zero when no event carries one: it would read as a wave that cost nothing"
+	SOURCE "the build run of @TASK.B175 of 2026-11-01"
+		REF @TASK.B175
+
+DECISION TheStepCapOfARoleIsFittedOnItsSegmentsAtTheLatestDigests
+	TITLE "the cap of a role is fitted on its segments whose role digest is the latest recorded for"
+		+ "the role and whose procedure digest is the latest recorded for their procedure, the"
+		+ "digests of the launch taking precedence"
+	STATUS active
+	DESC "binds @TASK.B37"
+		REF @TASK.B37
+	DESC "a segment recorded before the digests carries none and is never measured"
+	DESC "the tokens of a step are the four usage counters summed; the growth g is twice the"
+		+ "least-squares slope of the tokens per step over the length of the segments"
+	DESC "a growth not above zero, segments of one length, or no restart measured compute no cap,"
+		+ "and the role runs at the budget its package ships"
+	DESC "a restart is a segment that follows, in the same run, a segment ended on turn_limit, the"
+		+ "outcome the signal budget_reached names"
+	DESC "half the shipped budget is rounded up: a cap is never below it"
+	DESC "each run.finished records shipped_budget, the budget the role package shipped at its"
+		+ "launch; brigade ledger budgets reads the shipped budget of a role from its latest"
+		+ "run.finished carrying one, and leaves out a role none carries"
+	DESC "the brief of a segment states the applied cap in a Budget section, and a procedure states"
+		+ "no number of steps"
+	REJECTED "the digests of every procedure resolved anew at each reading: brigade ledger budgets"
+		+ "would resolve the roles and procedures of every project, where the ledger already holds"
+		+ "the latest version that ran"
+	RATIONALE "a launch knows the digests of its own role and procedure and no other; the latest"
+		+ "recorded digest of a procedure is the version that ran last, so a changed procedure"
+		+ "starts its own window at its first segment"
+	SOURCE "the delivery of @TASK.B37"
+		REF @TASK.B37
+
+DECISION EveryMergeBrigadeAsksOfTheForgeNamesTheHeadItRead
+	TITLE "every merge brigade asks of the forge names the head of the pull request it read, the"
+		+ "merge of a wave pull request and of a plan pull request as the merge of a task pull"
+		+ "request"
+	STATUS active
+	DESC "binds @TASK.B226"
+		REF @TASK.B226
+	DESC "the request of merge_pull_request to a forge plugin always carries the head; the github"
+		+ "adapter hands it to gh pr merge as --match-head-commit"
+	DESC "MergeWavePullRequest carries the head of the wave pull request as the snapshot read it;"
+		+ "review_plan_pull_request merges the plan pull request at the head of the pull request it"
+		+ "read for its review"
+	REJECTED "--match-head-commit passed only when the request carries a head: a second path in the"
+		+ "adapter, and the merge of a wave or a plan pull request left unbound to the head judged"
+	RATIONALE "B226 names the merge of a task pull request alone, while the adapter serves every"
+		+ "merge of brigade"
+	SOURCE "the build run of @TASK.B226 of 2026-11-02"
+		REF @TASK.B226
+
+DECISION TheTraceOfAFailedProcessKeepsItsStderrMaskedOrWithheld
+	TITLE "the trace of a failed process keeps the tail of its stderr masked by patterns read once"
+		+ "per command, and withholds it when they cannot be read"
+	STATUS active
+	DESC "a process exited with a code other than 0, timed out, or a client cut or stopped keeps"
+		+ "what it wrote on stderr; a process exited 0 keeps none, whatever it wrote"
+	DESC "the whole stderr is masked before its last 2 KiB are cut, so that no token the cut splits"
+		+ "survives; a character the cut splits is dropped"
+	DESC "the PRIVATE patterns of the registered projects are read once per command, at the first"
+		+ "failed process that wrote on stderr, through the recorded runner"
+	DESC "while they are read, and once their reading failed, the tail is replaced by the marker"
+		+ "[withheld: the PRIVATE patterns of the registered projects could not be read]; the"
+		+ "reading is not attempted again in that command"
+	DESC "the token shapes join the scrubber the miner of @TASK.B35 uses: the transcripts and their"
+		+ "findings mask them too"
+		REF @TASK.B35
+	DESC "binds @TASK.B176"
+		REF @TASK.B176
+	REJECTED "the patterns read at the start of every command: one awawa call per registered"
+		+ "project and one more for each command, a tick every five minutes included, when most"
+		+ "commands see no failed process"
+	REJECTED "the tail masked by the token shapes and the built-ins alone when the registry cannot"
+		+ "be read: an identifier a PRIVATE pattern declares would be written in the clear"
+	REJECTED "the tail cut before it is masked: a token split by the cut no longer has its shape"
+		+ "and survives"
+	RATIONALE "a reading of the patterns runs awawa through the runner whose traces it masks, so a"
+		+ "failure of that reading would ask for the patterns again without end; withholding is the"
+		+ "one answer that writes nothing unmasked"
+	SOURCE "pull request #333 of the brigade repository"
+
+DECISION TheSnapshotListsTheUncutMilestonesAndThePlanCutsOneAWaveOrATodoTaskNames
+	TITLE "the snapshot lists each active milestone of a project at PROJECT.MAIN that no"
+		+ "milestone.branch_cut records, with the open waves and the todo tasks naming it; the plan"
+		+ "cuts the branch of one an open wave or a todo task names, and starts no wave of it in"
+		+ "the round of the cut"
+	STATUS active
+	DESC "binds @TASK.B224"
+		REF @TASK.B224
+	DESC "ProjectFacts carries uncut_milestones, each with its milestone, the branch its TITLE"
+		+ "derives, its open waves and its todo tasks; the plan holds one CutMilestoneBranch,"
+		+ "project, milestone and branch, for each one whose open waves or todo tasks are not empty"
+	DESC "the plan starts no wave of a milestone whose branch it cuts in the same round, as it"
+		+ "starts none of a milestone it rebases: the next round reads its candidates on the branch"
+	DESC "the tasks of PROJECT.MAIN are read once per project and round, for the candidates and for"
+		+ "the uncut milestones alike"
+	REJECTED "the snapshot listing only the milestones an open wave or a todo task names: the rule"
+		+ "would live outside the plan, and its literal rows could not prove it"
+	REJECTED "a wave of the milestone started in the round that cuts its branch: its candidates"
+		+ "would be read at PROJECT.MAIN, not on the branch"
+	RATIONALE "the plan is the pure function the decision"
+		+ "TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction makes of the tick, so the rule"
+		+ "of the cut is a fact of the snapshot judged by the plan"
+		REF @DECISION.TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction
+	SOURCE "the delivery of @TASK.B224"
+		REF @TASK.B224
+
+DECISION ATaskSlugWithNoHyphenWithinFortyCharactersIsCutAtItsFortiethAndATaskWithoutTypeHasNoBranch
+	TITLE "a task slug longer than 40 characters with no hyphen within them is cut at its 40th"
+		+ "character; a task carrying no TYPE has no branch, and the snapshot refuses its wave"
+	STATUS active
+	DESC "the slug of a TITLE longer than 40 characters is cut at its last hyphen at or before its"
+		+ "40th character, and at its 40th character when no hyphen stands within them"
+	DESC "the snapshot of the tick names the branch of each task of a wave from its TYPE and its"
+		+ "TITLE; a task carrying no TYPE stops the read of its wave with an error naming the task,"
+		+ "as any unreadable fact of a wave does"
+		REF @TASK.B232
+	REJECTED "a default prefix for a task carrying no TYPE: brigade task pr already refuses such a"
+		+ "task, so a branch named for it would end on a refusal"
+	RATIONALE "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch"
+		+ "rules the cut on a hyphen and the prefix from TYPE without naming either case; the build"
+		+ "run of @TASK.B232 met both on 2026-11-02"
+		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
+		REF @TASK.B232
+
+DECISION TheTreeOfAWaveIsReadAtTheBranchOfTheMilestoneHoldingItsTasksOrAtMain
+	TITLE "the corpus of a wave is read at the branch of the open milestone whose tasks hold every"
+		+ "task of the wave, at PROJECT.MAIN otherwise, whatever branch its wave.started recorded"
+	STATUS active
+	DESC "the tree of a wave is read at the recorded branch of the first milestone of its project,"
+		+ "cut and not closed in the ledger, whose tasks naming it at that branch hold every task"
+		+ "of the wave; at PROJECT.MAIN when none does"
+		REF @TASK.B232
+	DESC "a wave.started that records a branch is read the same way: its recorded branch is never"
+		+ "read as a tree"
+	REJECTED "the milestone recorded in wave.started: the task this decision binds has wave.started"
+		+ "carry wave, project and tasks alone"
+	REJECTED "the tree read at PROJECT.MAIN to learn the milestone of the wave first: a task"
+		+ "ratified on the branch of its milestone is not on PROJECT.MAIN"
+	RATIONALE "a wave has no branch of its own once @TASK.B232 is delivered, and the snapshot"
+		+ "matches the open waves to a milestone by its tasks the same way; ruled by the build run"
+		+ "of @TASK.B232 on 2026-11-02"
+		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
+		REF @TASK.B232
+
+DECISION TheReportOfATaskIsCommittedOnADetachedCheckoutAndPushedToTheBranchOfTheTask
+	TITLE "the report of a task naming no milestone is committed on a detached checkout of"
+		+ "origin/<its branch> and pushed to refs/heads/<its branch>, without force"
+	STATUS active
+	DESC "the task-report run fetches the branch of the task, adds a detached worktree at"
+		+ "origin/<branch> in its run directory, commits the report there, pushes HEAD to"
+		+ "refs/heads/<branch> without force and removes the worktree"
+		REF @TASK.B232
+	REJECTED "a checkout of the branch itself, as the report of a milestone takes: the worktree of"
+		+ "the task holds that branch, and git refuses a branch another worktree holds"
+	REJECTED "the commit made in the worktree of the task: a build or repair run may hold it"
+	RATIONALE "the branch of a task stays held by its worktree while its pull request is open, and"
+		+ "the report must reach the forge without touching that worktree; ruled by the build run"
+		+ "of @TASK.B232 on 2026-11-03"
+		REF @TASK.B232

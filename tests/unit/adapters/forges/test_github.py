@@ -10,6 +10,7 @@ from brigade.adapters.forges.github import (
     approve_pull_request,
     create_milestone,
     describe_account,
+    edit_pull_request,
     find_pull_request,
     list_check_runs,
     list_milestones,
@@ -71,12 +72,14 @@ def create_gh_answering_in_turn(answers: list[str]) -> GhDouble:
 
 
 class DecidePullRequestTest(unittest.TestCase):
-    def test_should_ask_gh_to_approve_or_merge_the_pull_request_by_its_method_as_the_login_of_the_environment(self):
+    def test_should_ask_gh_to_approve_or_merge_the_pull_request_by_its_method_at_its_head_as_the_login_of_the_environment(
+        self,
+    ):
         for decide, method, expected_argv in [
             (approve_pull_request, None, ("gh", "pr", "review", "12", "--approve")),
-            (merge_pull_request, "squash", ("gh", "pr", "merge", "12", "--squash")),
-            (merge_pull_request, "rebase", ("gh", "pr", "merge", "12", "--rebase")),
-            (merge_pull_request, "merge", ("gh", "pr", "merge", "12", "--merge")),
+            (merge_pull_request, "squash", ("gh", "pr", "merge", "12", "--squash", "--match-head-commit", "0123abc")),
+            (merge_pull_request, "rebase", ("gh", "pr", "merge", "12", "--rebase", "--match-head-commit", "0123abc")),
+            (merge_pull_request, "merge", ("gh", "pr", "merge", "12", "--merge", "--match-head-commit", "0123abc")),
         ]:
             with self.subTest(decision=decide.__name__, method=method):
                 # Arrange
@@ -86,6 +89,7 @@ class DecidePullRequestTest(unittest.TestCase):
                     "repository": "/projects/shop",
                     "number": 12,
                     "method": method,
+                    "head": "0123abc",
                     "environment": BOT_ENVIRONMENT,
                 }
 
@@ -129,6 +133,43 @@ class RewritePullRequestBodyTest(unittest.TestCase):
                     cwd="/projects/shop",
                     timeout_s=60.0,
                     stdin="# REPORT shop_w1\n",
+                    environment=BOT_ENVIRONMENT,
+                )
+            ],
+        )
+
+
+class EditPullRequestTest(unittest.TestCase):
+    def test_should_ask_gh_to_replace_the_title_of_the_pull_request_as_the_login_of_the_environment(self):
+        # Arrange
+        gh = create_gh("")
+        runtime = create_test_runtime(run_process=gh)
+        request = {
+            "repository": "/projects/shop",
+            "number": 12,
+            "title": "feat(cart): empty the cart in one click (M1, @TASK.S3)",
+            "environment": BOT_ENVIRONMENT,
+        }
+
+        # Act
+        answer = edit_pull_request(request, runtime)
+
+        # Assert
+        self.assertEqual(answer, {"schema_version": 1})
+        self.assertEqual(
+            gh.requests,
+            [
+                ProcessRequest(
+                    argv=(
+                        "gh",
+                        "pr",
+                        "edit",
+                        "12",
+                        "--title",
+                        "feat(cart): empty the cart in one click (M1, @TASK.S3)",
+                    ),
+                    cwd="/projects/shop",
+                    timeout_s=60.0,
                     environment=BOT_ENVIRONMENT,
                 )
             ],

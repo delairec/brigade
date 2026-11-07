@@ -2,14 +2,25 @@ import json
 from unittest.mock import ANY
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
-from tests.cli.wave_tick_test_case import WAVE_BRANCH, LaunchingTickTestCase
+from tests.cli.wave_tick_test_case import (
+    MILESTONE_BRANCH,
+    MILESTONE_BRANCH_CUT,
+    TASK_BRANCH,
+    LaunchingTickTestCase,
+)
 from tests.value_matchers import DurationUnderMatcher, PatternMatcher
+
+SHA256_DIGEST = PatternMatcher("^[0-9a-f]{64}$")
+NO_EDIT_TOOL_NAMED = {
+    "steps_to_first_edit": "the client names no edit tool",
+    "tokens_to_first_edit": "the client names no edit tool",
+}
 
 RUN_ID_PATTERN = r"^\d{8}T\d{6}Z-[0-9a-f]{6}$"
 
 S3_PARKED_ON_A_DEAD_RUN = (
     '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
-    f' "project": "shop", "branch": "{WAVE_BRANCH}", "tasks": ["S3"]}}\n'
+    f' "project": "shop", "branch": "{MILESTONE_BRANCH}", "tasks": ["S3"]}}\n'
     '{"schema_version": 1, "ts": "2026-10-13T10:00:00Z", "event": "task.parked", "wave": "shop_w1", "task": "S3",'
     ' "reason": "run dead: 20261013T093000Z-a00001", "blockers": []}\n'
 )
@@ -18,7 +29,7 @@ S3_PARKED_ON_A_DEAD_RUN = (
 class BrigadeWaveRequeueOfAParkedTaskTest(LaunchingTickTestCase):
     def setUp(self):
         super().setUp()
-        (self.state / "ledger" / "2026-10.jsonl").write_text(S3_PARKED_ON_A_DEAD_RUN)
+        (self.state / "ledger" / "2026-10.jsonl").write_text(MILESTONE_BRANCH_CUT + S3_PARKED_ON_A_DEAD_RUN)
 
     def test_should_queue_the_parked_task_again_for_the_next_tick_to_launch_it(self):
         # Act
@@ -30,6 +41,15 @@ class BrigadeWaveRequeueOfAParkedTaskTest(LaunchingTickTestCase):
         self.assertEqual(
             self.read_events(),
             [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-13T08:00:00Z",
+                    "event": "milestone.branch_cut",
+                    "project": "shop",
+                    "milestone": "M1",
+                    "branch": "integration/M1-empty-cart",
+                    "login": "octo-cli",
+                },
                 {
                     "schema_version": 2,
                     "ts": "2026-10-13T09:00:00Z",
@@ -91,7 +111,14 @@ class BrigadeWaveRequeueOfAParkedTaskTest(LaunchingTickTestCase):
                     "exit": 0,
                     "wave": "shop_w1",
                     "task": "S3",
-                    "nulls": {"total_steps": "the client reads no transcript", "error_class": "the run did not fail"},
+                    "role_digest": SHA256_DIGEST,
+                    "procedure_digest": SHA256_DIGEST,
+                    "shipped_budget": 75,
+                    "nulls": {
+                        **NO_EDIT_TOOL_NAMED,
+                        "total_steps": "the client reads no transcript",
+                        "error_class": "the run did not fail",
+                    },
                     "cost_usd": 0.42,
                 },
             ],
@@ -112,16 +139,16 @@ S3_RULED_ON_MAIN = (
 )
 S3_AS_PLANNED = (
     'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS implemented\n\n'
-    'TASK S3\n\tTITLE "Empty the cart in one click"\n\tSTATUS todo\n\tMILESTONE @MILESTONE.M1\n\tAFTER @TASK.S2\n'
+    'TASK S3\n\tTITLE "Empty the cart in one click"\n\tSTATUS todo\n\tTYPE feat\n\tMILESTONE @MILESTONE.M1\n\tAFTER @TASK.S2\n'
 )
 
 
 class BrigadeWaveRequeueOfATaskWhoseWaveBranchMovedSinceItsCutTest(LaunchingTickTestCase):
     def setUp(self):
         super().setUp()
-        (self.state / "ledger" / "2026-10.jsonl").write_text(S3_PARKED_ON_A_DEAD_RUN)
-        self.project.run_git("branch", "task/M1-empty-cart/S3", WAVE_BRANCH)
-        self.project.run_git("checkout", "--quiet", WAVE_BRANCH)
+        (self.state / "ledger" / "2026-10.jsonl").write_text(MILESTONE_BRANCH_CUT + S3_PARKED_ON_A_DEAD_RUN)
+        self.project.run_git("branch", TASK_BRANCH, MILESTONE_BRANCH)
+        self.project.run_git("checkout", "--quiet", MILESTONE_BRANCH)
         self.project.write("docs/wave-report.md", "# shop_w1\n")
         self.project.track("docs")
         self.project.run_git("commit", "--quiet", "-m", "the report of shop_w1")
@@ -159,6 +186,9 @@ class BrigadeWaveRequeueOfATaskWhoseWaveBranchMovedSinceItsCutTest(LaunchingTick
                 "exit": 0,
                 "wave": "shop_w1",
                 "task": "S3",
+                "role_digest": SHA256_DIGEST,
+                "procedure_digest": SHA256_DIGEST,
+                "shipped_budget": 75,
                 "nulls": ANY,
                 "cost_usd": 0.42,
             },
@@ -168,7 +198,7 @@ class BrigadeWaveRequeueOfATaskWhoseWaveBranchMovedSinceItsCutTest(LaunchingTick
 class BrigadeWaveRequeueOfATaskRuledOnTheMainBranchTest(LaunchingTickTestCase):
     def setUp(self):
         super().setUp()
-        (self.state / "ledger" / "2026-10.jsonl").write_text(S3_PARKED_ON_A_DEAD_RUN)
+        (self.state / "ledger" / "2026-10.jsonl").write_text(MILESTONE_BRANCH_CUT + S3_PARKED_ON_A_DEAD_RUN)
 
     def rule_on_main(self, tasks: str):
         self.project.write("corpus/tasks.awawa", tasks)
@@ -229,7 +259,6 @@ class BrigadeWaveRequeueOfATaskRuledOnTheMainBranchTest(LaunchingTickTestCase):
         self.assertEqual(requeued.stdout, "task S3 of shop_w1 queued\n", requeued.stderr)
 
 
-TASK_BRANCH = "task/M1-empty-cart/S3"
 SUCCESSFUL_CHECK_RUN = {"__typename": "CheckRun", "name": "tests", "status": "COMPLETED", "conclusion": "SUCCESS"}
 S3_PARKED_AFTER_ITS_FIRST_VERDICT = (
     '{{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
@@ -253,20 +282,20 @@ S3_PARKED_AFTER_ITS_FIRST_VERDICT = (
 class BrigadeWaveRequeueOfATaskParkedAfterItsFirstVerdictTest(LaunchingTickTestCase):
     def setUp(self):
         super().setUp()
-        self.project.run_git("branch", TASK_BRANCH, WAVE_BRANCH)
+        self.project.run_git("branch", TASK_BRANCH, MILESTONE_BRANCH)
         remote = self.project.path.parent / "shop.git"
         self.project.run_git("init", "--quiet", "--bare", str(remote))
         self.project.run_git("remote", "add", "origin", str(remote))
-        self.project.run_git("push", "--quiet", "origin", WAVE_BRANCH, TASK_BRANCH)
+        self.project.run_git("push", "--quiet", "origin", MILESTONE_BRANCH, TASK_BRANCH)
         self.head = self.project.run_git("rev-parse", TASK_BRANCH).strip()
-        (self.pull_requests / "task-M1-empty-cart-S3.json").write_text(
+        (self.pull_requests / "feature-S3-empty-the-cart-in-one-click.json").write_text(
             json.dumps(
                 [
                     {
                         "number": 12,
                         "state": "OPEN",
                         "headRefOid": self.head,
-                        "baseRefName": WAVE_BRANCH,
+                        "baseRefName": MILESTONE_BRANCH,
                         "reviewDecision": "",
                         "updatedAt": "2026-10-18T11:00:00Z",
                         "statusCheckRollup": [SUCCESSFUL_CHECK_RUN],
@@ -287,7 +316,10 @@ class BrigadeWaveRequeueOfATaskParkedAfterItsFirstVerdictTest(LaunchingTickTestC
             )
         )
         (self.state / "ledger" / "2026-10.jsonl").write_text(
-            S3_PARKED_AFTER_ITS_FIRST_VERDICT.format(wave_branch=WAVE_BRANCH, task_branch=TASK_BRANCH, head=self.head)
+            MILESTONE_BRANCH_CUT
+            + S3_PARKED_AFTER_ITS_FIRST_VERDICT.format(
+                wave_branch=MILESTONE_BRANCH, task_branch=TASK_BRANCH, head=self.head
+            )
         )
 
     def test_should_send_the_task_back_to_its_preflight_and_the_next_tick_preflights_its_head(self):
@@ -301,7 +333,7 @@ class BrigadeWaveRequeueOfATaskParkedAfterItsFirstVerdictTest(LaunchingTickTestC
         # Assert
         self.assertEqual(requeued.stdout, "task S3 of shop_w1 pr_open\n", requeued.stderr)
         self.assertEqual(
-            self.read_events()[7:9],
+            self.read_events()[8:10],
             [
                 {
                     "schema_version": 1,

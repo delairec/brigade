@@ -4,9 +4,20 @@ from pathlib import Path
 from unittest.mock import ANY
 
 from tests.cli.run_test_case import DONE_RESULT
-from tests.cli.wave_tick_test_case import WAVE_BRANCH, LaunchingTickTestCase
+from tests.cli.wave_tick_test_case import (
+    MILESTONE_BRANCH,
+    MILESTONE_BRANCH_CUT,
+    TASK_BRANCH,
+    LaunchingTickTestCase,
+)
+from tests.value_matchers import PatternMatcher
 
-TASK_BRANCH = "task/M1-empty-cart/S3"
+SHA256_DIGEST = PatternMatcher("^[0-9a-f]{64}$")
+NO_EDIT_TOOL_NAMED = {
+    "steps_to_first_edit": "the client names no edit tool",
+    "tokens_to_first_edit": "the client names no edit tool",
+}
+
 SUCCESSFUL_CHECK_RUN = {"__typename": "CheckRun", "name": "tests", "status": "COMPLETED", "conclusion": "SUCCESS"}
 FIVE_HOUR_LIMIT_RESULT = {
     **DONE_RESULT,
@@ -46,17 +57,17 @@ class BrigadeTickOfARemediationCutByARateLimitTest(LaunchingTickTestCase):
         recordings = Path(self.root.name) / "recordings"
         (recordings / "remediator.json").write_text(json.dumps(FIVE_HOUR_LIMIT_RESULT))
         (recordings / "remediator.resumed.json").write_text(json.dumps(DONE_RESULT))
-        self.project.run_git("branch", TASK_BRANCH, WAVE_BRANCH)
+        self.project.run_git("branch", TASK_BRANCH, MILESTONE_BRANCH)
         self.project.run_git("worktree", "add", "--quiet", str(self.worktree), TASK_BRANCH)
         head = self.project.run_git("rev-parse", TASK_BRANCH).strip()
-        (self.pull_requests / "task-M1-empty-cart-S3.json").write_text(
+        (self.pull_requests / "feature-S3-empty-the-cart-in-one-click.json").write_text(
             json.dumps(
                 [
                     {
                         "number": 12,
                         "state": "OPEN",
                         "headRefOid": head,
-                        "baseRefName": WAVE_BRANCH,
+                        "baseRefName": MILESTONE_BRANCH,
                         "reviewDecision": "",
                         "updatedAt": "2026-10-18T11:00:00Z",
                         "statusCheckRollup": [SUCCESSFUL_CHECK_RUN],
@@ -65,7 +76,8 @@ class BrigadeTickOfARemediationCutByARateLimitTest(LaunchingTickTestCase):
             )
         )
         (self.state / "ledger" / "2026-10.jsonl").write_text(
-            S3_IN_CHANGES_REQUESTED.format(wave_branch=WAVE_BRANCH, task_branch=TASK_BRANCH, head=head)
+            MILESTONE_BRANCH_CUT
+            + S3_IN_CHANGES_REQUESTED.format(wave_branch=MILESTONE_BRANCH, task_branch=TASK_BRANCH, head=head)
         )
 
     def cut_then_resume_after_the_reset(self) -> None:
@@ -87,7 +99,7 @@ class BrigadeTickOfARemediationCutByARateLimitTest(LaunchingTickTestCase):
 
         # Assert
         self.assertEqual(
-            self.read_events()[10:],
+            self.read_events()[11:],
             [
                 {
                     "schema_version": 1,
@@ -128,6 +140,9 @@ class BrigadeTickOfARemediationCutByARateLimitTest(LaunchingTickTestCase):
                     "exit": 0,
                     "wave": "shop_w1",
                     "task": "S3",
+                    "role_digest": SHA256_DIGEST,
+                    "procedure_digest": SHA256_DIGEST,
+                    "shipped_budget": 50,
                     "nulls": ANY,
                     "cost_usd": 0.42,
                 },

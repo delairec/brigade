@@ -5,6 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.ledger.budget_applied import BudgetApplied
+from brigade.ledger.describe_role_budget import RoleBudget
 from brigade.runs.ask_progress import ask_progress
 from brigade.runs.resolve_procedure import Procedure
 from brigade.runs.run_segment import SegmentRecord
@@ -30,11 +32,18 @@ REPORTED_USAGE = {
     "cache_creation_input_tokens": 16778,
     "cache_read_input_tokens": 98000,
 }
-PROCEDURE_OF_FIVE_STEPS = Procedure(
-    name="build-task", location="built-in", argument="build-task", capabilities=("read",), budget=5, body="."
+ROLE_DIGEST = "da7cc724d530669664decd8af3f657fc15665691731442c3be1776eb13e2c510"
+PROCEDURE_DIGEST = "e395b77e8ab7354e4418d2e1bb9d6f5c5b4de99c417c8b5ac1bc588d5d5c4151"
+ONE_DOT_PROCEDURE_DIGEST = "cdb4ee2aea69cc6a83331bbe96dc2caa9a299d21329efb0336fc02a82e1839a8"
+NO_EDIT_TOOL = "the client names no edit tool"
+ONE_DOT_PROCEDURE = Procedure(
+    name="build-task", location="built-in", argument="build-task", capabilities=("read",), body="."
 )
-PROCEDURE_OF_TWELVE_STEPS = Procedure(
-    name="build-task", location="built-in", argument="build-task", capabilities=("read",), budget=12, body="."
+CAP_OF_FIVE_STEPS = RoleBudget(
+    shipped=10, computed=5, applied=5, segments=6, restarts=3, growth=8000.0, restart_tokens=100000.0
+)
+CAP_OF_TWELVE_STEPS = RoleBudget(
+    shipped=12, computed=None, applied=12, segments=0, restarts=0, growth=None, restart_tokens=None
 )
 LAUNCH = {
     "schema_version": 1,
@@ -156,7 +165,12 @@ class RunSegmentsOfARunDoneInOneSegmentTest(RunSegmentsTestCase):
                 "exit": 0,
                 "wave": None,
                 "task": None,
+                "role_digest": ROLE_DIGEST,
+                "procedure_digest": PROCEDURE_DIGEST,
+                "shipped_budget": 40,
                 "nulls": {
+                    "steps_to_first_edit": NO_EDIT_TOOL,
+                    "tokens_to_first_edit": NO_EDIT_TOOL,
                     "project": "no project given",
                     "wave": "not launched by a wave",
                     "task": "not launched for a task",
@@ -222,7 +236,12 @@ class RunSegmentsOfARunHandedOverTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": PROCEDURE_DIGEST,
+                    "shipped_budget": 40,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -388,6 +407,10 @@ class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
                     "earlier entry holds\n"
                     "- a handover entry holds what remains, one line per step not done, and the next step\n"
                     "\n"
+                    "# Budget\n"
+                    "\n"
+                    "40 steps, the cap of your role for this segment.\n"
+                    "\n"
                     "# End of segment\n"
                     "\n"
                     "End your final message on one of these lines: brigade-end: done once the work is delivered, "
@@ -434,6 +457,10 @@ class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
                     "- never command output, a diff, the course of the step, a restatement of the brief or a fact an "
                     "earlier entry holds\n"
                     "- a handover entry holds what remains, one line per step not done, and the next step\n"
+                    "\n"
+                    "# Budget\n"
+                    "\n"
+                    "40 steps, the cap of your role for this segment.\n"
                     "\n"
                     "# End of segment\n"
                     "\n"
@@ -518,6 +545,10 @@ class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
                     "earlier entry holds\n"
                     "- a handover entry holds what remains, one line per step not done, and the next step\n"
                     "\n"
+                    "# Budget\n"
+                    "\n"
+                    "40 steps, the cap of your role for this segment.\n"
+                    "\n"
                     "# End of segment\n"
                     "\n"
                     "End your final message on one of these lines: brigade-end: done once the work is delivered, "
@@ -594,7 +625,12 @@ class RunSegmentsCutOnTheClockTest(RunSegmentsTestCase):
                     "exit": None,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": PROCEDURE_DIGEST,
+                    "shipped_budget": 40,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -720,7 +756,12 @@ class RunSegmentsStoppedAtTheSoftLimitTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": PROCEDURE_DIGEST,
+                    "shipped_budget": 40,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -791,10 +832,39 @@ class RunSegmentsStoppedAtTheSoftLimitTest(RunSegmentsTestCase):
         )
 
 
+class RunSegmentsOfARoleWhoseCapChangedTest(RunSegmentsTestCase):
+    def test_should_record_the_change_of_the_applied_cap_before_its_first_segment(self):
+        # Arrange
+        change = BudgetApplied(
+            role="builder", before=10, after=5, segments=6, restarts=3, growth=8000.0, restart_tokens=100000.0
+        )
+        plan = self.create_plan(["done"], budget=CAP_OF_FIVE_STEPS, budget_applied=change)
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            self.read_events()[0],
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "budget.applied",
+                "role": "builder",
+                "before": 10,
+                "after": 5,
+                "segments": 6,
+                "restarts": 3,
+                "growth": 8000.0,
+                "restart_tokens": 100000.0,
+            },
+        )
+
+
 class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
     def test_should_record_the_steps_beyond_the_budget(self):
         # Arrange
-        plan = self.create_plan(["done"], procedure=PROCEDURE_OF_FIVE_STEPS)
+        plan = self.create_plan(["done"], procedure=ONE_DOT_PROCEDURE, budget=CAP_OF_FIVE_STEPS)
 
         # Act
         run_segments(plan, self.runtime, StopSignalReceiver())
@@ -824,7 +894,12 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
+                    "shipped_budget": 10,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -848,9 +923,12 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
             ],
         )
 
-    def test_should_record_no_signal_for_a_segment_at_exactly_its_budget(self):
+    def test_should_measure_the_steps_against_the_applied_cap_below_the_shipped_budget(self):
         # Arrange
-        plan = self.create_plan(["done"], procedure=PROCEDURE_OF_TWELVE_STEPS)
+        cap_of_ten_steps = RoleBudget(
+            shipped=15, computed=10, applied=10, segments=6, restarts=3, growth=8000.0, restart_tokens=400000.0
+        )
+        plan = self.create_plan(["done"], procedure=ONE_DOT_PROCEDURE, budget=cap_of_ten_steps)
 
         # Act
         run_segments(plan, self.runtime, StopSignalReceiver())
@@ -880,7 +958,125 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
+                    "shipped_budget": 15,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
+                        "project": "no project given",
+                        "wave": "not launched by a wave",
+                        "task": "not launched for a task",
+                        "total_steps": "the client reads no transcript",
+                        "usage": "the client reported no usage",
+                        "error_class": "the run did not fail",
+                    },
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "signal.recorded",
+                    "signal": "budget_exceeded",
+                    "project": None,
+                    "procedure": "build-task",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "budget": 10,
+                    "steps": 12,
+                },
+            ],
+        )
+
+    def test_should_measure_the_steps_against_the_applied_cap_above_the_shipped_budget(self):
+        # Arrange
+        cap_of_twenty_steps = RoleBudget(
+            shipped=10, computed=20, applied=20, segments=6, restarts=3, growth=2000.0, restart_tokens=400000.0
+        )
+        plan = self.create_plan(["done"], procedure=ONE_DOT_PROCEDURE, budget=cap_of_twenty_steps)
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            self.read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "run.finished",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "procedure": "build-task",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "session-b73",
+                    "main_steps": 12,
+                    "total_steps": None,
+                    "duration_ms": 0,
+                    "usage": None,
+                    "outcome": "done",
+                    "error_class": None,
+                    "exit": 0,
+                    "wave": None,
+                    "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
+                    "shipped_budget": 10,
+                    "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
+                        "project": "no project given",
+                        "wave": "not launched by a wave",
+                        "task": "not launched for a task",
+                        "total_steps": "the client reads no transcript",
+                        "usage": "the client reported no usage",
+                        "error_class": "the run did not fail",
+                    },
+                },
+            ],
+        )
+
+    def test_should_record_no_signal_for_a_segment_at_exactly_its_budget(self):
+        # Arrange
+        plan = self.create_plan(["done"], procedure=ONE_DOT_PROCEDURE, budget=CAP_OF_TWELVE_STEPS)
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            self.read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "run.finished",
+                    "run": RUN_ID,
+                    "segment": 1,
+                    "procedure": "build-task",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "session-b73",
+                    "main_steps": 12,
+                    "total_steps": None,
+                    "duration_ms": 0,
+                    "usage": None,
+                    "outcome": "done",
+                    "error_class": None,
+                    "exit": 0,
+                    "wave": None,
+                    "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
+                    "shipped_budget": 12,
+                    "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -894,7 +1090,7 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
 
     def test_should_record_no_signal_for_the_steps_of_a_client_that_counts_none(self):
         # Arrange
-        plan = self.create_plan(["done"], procedure=PROCEDURE_OF_FIVE_STEPS, counts_steps=False)
+        plan = self.create_plan(["done"], procedure=ONE_DOT_PROCEDURE, budget=CAP_OF_FIVE_STEPS, counts_steps=False)
 
         # Act
         run_segments(plan, self.runtime, StopSignalReceiver())
@@ -924,7 +1120,12 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
+                    "shipped_budget": 10,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -1033,7 +1234,12 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
                     "wave": None,
                     "task": None,
                     "duration_ms": 0,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": PROCEDURE_DIGEST,
+                    "shipped_budget": 40,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -1080,7 +1286,12 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
                 "exit": 0,
                 "wave": None,
                 "task": None,
+                "role_digest": ROLE_DIGEST,
+                "procedure_digest": PROCEDURE_DIGEST,
+                "shipped_budget": 40,
                 "nulls": {
+                    "steps_to_first_edit": NO_EDIT_TOOL,
+                    "tokens_to_first_edit": NO_EDIT_TOOL,
                     "project": "no project given",
                     "wave": "not launched by a wave",
                     "task": "not launched for a task",
@@ -1117,7 +1328,12 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
                 "exit": 0,
                 "wave": None,
                 "task": None,
+                "role_digest": ROLE_DIGEST,
+                "procedure_digest": PROCEDURE_DIGEST,
+                "shipped_budget": 40,
                 "nulls": {
+                    "steps_to_first_edit": NO_EDIT_TOOL,
+                    "tokens_to_first_edit": NO_EDIT_TOOL,
                     "project": "no project given",
                     "wave": "not launched by a wave",
                     "task": "not launched for a task",
@@ -1233,7 +1449,12 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": PROCEDURE_DIGEST,
+                    "shipped_budget": 40,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -1273,7 +1494,12 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": PROCEDURE_DIGEST,
+                    "shipped_budget": 40,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -1313,7 +1539,12 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": PROCEDURE_DIGEST,
+                    "shipped_budget": 40,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -1368,7 +1599,10 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
     def test_should_record_the_budget_exceeded_then_the_step_cap_reached(self):
         # Arrange
         plan = self.create_plan(
-            ["turn_limit"], procedure=PROCEDURE_OF_FIVE_STEPS, client_double=ClientFailingOnAnErrorClassDouble
+            ["turn_limit"],
+            procedure=ONE_DOT_PROCEDURE,
+            budget=CAP_OF_FIVE_STEPS,
+            client_double=ClientFailingOnAnErrorClassDouble,
         )
 
         # Act
@@ -1399,7 +1633,12 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
+                    "shipped_budget": 10,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
@@ -1464,7 +1703,12 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                 "exit": 0,
                 "wave": None,
                 "task": None,
+                "role_digest": ROLE_DIGEST,
+                "procedure_digest": PROCEDURE_DIGEST,
+                "shipped_budget": 40,
                 "nulls": {
+                    "steps_to_first_edit": NO_EDIT_TOOL,
+                    "tokens_to_first_edit": NO_EDIT_TOOL,
                     "project": "no project given",
                     "wave": "not launched by a wave",
                     "task": "not launched for a task",
@@ -1566,6 +1810,8 @@ class RunSegmentsOfARunHandedOverAtEverySegmentTest(RunSegmentsTestCase):
             "- never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier"
             " entry holds\n"
             "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
+            "# Budget\n\n"
+            "40 steps, the cap of your role for this segment.\n\n"
             "# End of segment\n\n"
             "End your final message on one of these lines: brigade-end: done once the work is delivered,"
             " brigade-end: handed_over when a next segment resumes it from the progress file,"
@@ -1700,7 +1946,12 @@ class RunSegmentsOfASegmentEndedWithoutDeclarationTest(RunSegmentsTestCase):
                     "exit": 0,
                     "wave": None,
                     "task": None,
+                    "role_digest": ROLE_DIGEST,
+                    "procedure_digest": PROCEDURE_DIGEST,
+                    "shipped_budget": 40,
                     "nulls": {
+                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",

@@ -6,6 +6,7 @@ from pathlib import Path
 from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
 from brigade.ledger.ledger_entry import LedgerEntry
+from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.milestone_created import MilestoneCreated
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_pr_opened import TaskPrOpened
@@ -18,7 +19,8 @@ from tests.unit.forge_double import ForgeDouble
 from tests.unit.scripted_processes import ScriptedProcesses
 
 WAVE_START = datetime(2026, 10, 19, 8, 0, tzinfo=UTC)
-WAVE_STARTED = WaveStarted(wave="oak_w1", project="oak", branch="integration/f0-parser", tasks=("B12",))
+WAVE_STARTED = WaveStarted(wave="oak_w1", project="oak", tasks=("B12",))
+MILESTONE_BRANCH_CUT = MilestoneBranchCut(project="oak", milestone="F0", branch="integration/f0-parser", login=None)
 TASK_FIELDS = (
     ("TYPE", "feat"),
     ("COMPONENT", "the parser"),
@@ -61,11 +63,11 @@ class OpenTaskPullRequestTestCase(unittest.TestCase):
         self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         config_root = self.runtime.paths.config_root
         self.processes.answer(("git", "rev-parse", "--show-toplevel"), stdout="/srv/oak-b12\n")
-        self.processes.answer(("git", "branch", "--show-current"), stdout="task/f0-parser/B12\n")
+        self.processes.answer(("git", "branch", "--show-current"), stdout="feature/B12-the-parser\n")
         self.processes.answer(
             ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"), stdout="/srv/oak/.git\n"
         )
-        self.processes.answer_entities(config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"),)})
+        self.processes.answer_entities(config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("MAIN", "main"))})
         self.processes.answer_entities(
             config_root,
             "REQUEST",
@@ -75,8 +77,9 @@ class OpenTaskPullRequestTestCase(unittest.TestCase):
         self.processes.answer(
             ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "HEAD^{commit}"), stdout="c0ffee\n"
         )
-        self.processes.answer(("git", "push", "--quiet", "origin", "task/f0-parser/B12"))
+        self.processes.answer(("git", "push", "--quiet", "origin", "feature/B12-the-parser"))
         self.processes.answer_entity(Path("/srv/oak-b12"), "MILESTONE", "F0", (("TITLE", "Parser"),))
+        append_event(self.runtime.paths, WAVE_START, MILESTONE_BRANCH_CUT)
         append_event(self.runtime.paths, WAVE_START, WAVE_STARTED)
 
     def record_check(self, check: str) -> None:
@@ -101,7 +104,7 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
         super().setUp()
         self.record_check(PASSING_CHECK)
 
-    def test_should_open_the_pull_request_of_the_task_on_the_branch_of_its_wave(self):
+    def test_should_open_the_pull_request_of_the_task_into_the_branch_of_its_milestone(self):
         # Arrange
         self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", TASK_FIELDS)
 
@@ -115,7 +118,7 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
                 "schema_version": 1,
                 "project": "oak",
                 "task": "B12",
-                "branch": "task/f0-parser/B12",
+                "branch": "feature/B12-the-parser",
                 "base": "integration/f0-parser",
                 "title": "feat(the-parser): add the parser (@TASK.B12)",
                 "milestone": "Parser",
@@ -140,7 +143,7 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
                 {
                     "repository": "/srv/oak-b12",
                     "base": "integration/f0-parser",
-                    "branch": "task/f0-parser/B12",
+                    "branch": "feature/B12-the-parser",
                     "title": "feat(the-parser): add the parser (@TASK.B12)",
                     "body": "The parser\n"
                     "\n"
@@ -170,6 +173,7 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
         self.assertEqual(
             read_ledger(self.root / "state").entries,
             (
+                LedgerEntry(instant=WAVE_START, event=MILESTONE_BRANCH_CUT),
                 LedgerEntry(instant=WAVE_START, event=WAVE_STARTED),
                 LedgerEntry(
                     instant=FIXED_NOW,
@@ -177,7 +181,7 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
                         project="oak",
                         task="B12",
                         wave="oak_w1",
-                        branch="task/f0-parser/B12",
+                        branch="feature/B12-the-parser",
                         pr=42,
                         login="clauche-bot",
                     ),
@@ -208,7 +212,7 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
 
         # Assert
         self.assertEqual(
-            read_ledger(self.root / "state").entries[1],
+            read_ledger(self.root / "state").entries[2],
             LedgerEntry(instant=FIXED_NOW, event=MilestoneCreated(project="oak", title="Parser", login="clauche-bot")),
         )
 
@@ -236,7 +240,7 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
             pushed_environments.append(request.environment)
             return 0, "", ""
 
-        self.processes.answer_by(("git", "push", "--quiet", "origin", "task/f0-parser/B12"), record_push)
+        self.processes.answer_by(("git", "push", "--quiet", "origin", "feature/B12-the-parser"), record_push)
 
         # Act
         open_task_pull_request(self.runtime, self.create_demand(create_forge(["Parser"])))
@@ -256,11 +260,68 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
         self.assertEqual(forge.list_operations(), ["list_milestones", "open_pull_request"])
 
 
+class OpenTaskPullRequestWithNoMilestoneTest(OpenTaskPullRequestTestCase):
+    def test_should_open_the_pull_request_of_a_task_naming_no_milestone_into_the_main_branch_without_milestone(self):
+        # Arrange
+        self.record_check(PASSING_CHECK)
+        self.processes.answer_entity(
+            Path("/srv/oak-b12"), "TASK", "B12", (("TYPE", "fix"), ("TITLE", "The parser"), ("SPEC", "parses a line"))
+        )
+        forge = create_forge(["Parser"])
+
+        # Act
+        open_task_pull_request(self.runtime, self.create_demand(forge))
+
+        # Assert
+        self.assertEqual(
+            forge.list_requests("open_pull_request"),
+            [
+                {
+                    "repository": "/srv/oak-b12",
+                    "base": "main",
+                    "branch": "feature/B12-the-parser",
+                    "title": "fix: add the parser (@TASK.B12)",
+                    "body": "The parser\n"
+                    "\n"
+                    "## Acceptance criteria\n"
+                    "\n"
+                    "- parses a line\n"
+                    "\n"
+                    "## Checks of c0ffee\n"
+                    "\n"
+                    "- pass `python3 -m unittest` 1.2 s\n"
+                    "\n"
+                    "Co-Authored-By: Ada <ada@example.org>\n",
+                    "milestone": None,
+                    "environment": {"GH_TOKEN": "t0ken"},
+                }
+            ],
+        )
+
+    def test_should_create_no_milestone_on_the_forge_for_a_task_naming_none(self):
+        # Arrange
+        self.record_check(PASSING_CHECK)
+        self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", (("TYPE", "fix"), ("TITLE", "The parser")))
+        forge = create_forge(["Parser"])
+
+        # Act
+        open_task_pull_request(self.runtime, self.create_demand(forge))
+
+        # Assert
+        self.assertEqual(forge.list_operations(), ["open_pull_request"])
+
+
 class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestTestCase):
+    def setUp(self):
+        super().setUp()
+        self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", TASK_FIELDS)
+
     def test_should_neither_push_nor_open_nor_record_a_task_it_refuses(self):
         # Arrange
         self.record_check(PASSING_CHECK)
-        self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", (("TYPE", "feat"), ("TITLE", "The parser")))
+        self.processes.answer_entity(
+            Path("/srv/oak-b12"), "TASK", "B12", (("TITLE", "The parser"), ("MILESTONE", "@MILESTONE.F0"))
+        )
         forge = create_forge(["Parser"])
 
         # Act
@@ -268,10 +329,14 @@ class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestTestCase):
             open_task_pull_request(self.runtime, self.create_demand(forge))
 
         # Assert
-        self.assertNotIn(("git", "push", "--quiet", "origin", "task/f0-parser/B12"), self.processes.list_argvs())
+        self.assertNotIn(("git", "push", "--quiet", "origin", "feature/B12-the-parser"), self.processes.list_argvs())
         self.assertEqual(forge.list_operations(), [])
         self.assertEqual(
-            read_ledger(self.root / "state").entries, (LedgerEntry(instant=WAVE_START, event=WAVE_STARTED),)
+            read_ledger(self.root / "state").entries,
+            (
+                LedgerEntry(instant=WAVE_START, event=MILESTONE_BRANCH_CUT),
+                LedgerEntry(instant=WAVE_START, event=WAVE_STARTED),
+            ),
         )
 
     def test_should_refuse_a_task_whose_check_is_not_recorded(self):
@@ -321,19 +386,4 @@ class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestTestCase):
         # Assert
         self.assertEqual(
             str(refusal.exception), "@TASK.B12 carries no TYPE, which the title of its pull request opens on"
-        )
-
-    def test_should_refuse_a_task_with_no_milestone(self):
-        # Arrange
-        self.record_check(PASSING_CHECK)
-        self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", (("TYPE", "feat"), ("TITLE", "The parser")))
-
-        # Act
-        with self.assertRaises(BrigadeError) as refusal:
-            open_task_pull_request(self.runtime, self.create_demand(create_forge(["Parser"])))
-
-        # Assert
-        self.assertEqual(
-            str(refusal.exception),
-            "@TASK.B12 carries no MILESTONE, whose TITLE names the milestone of its pull request",
         )

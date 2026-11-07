@@ -5,11 +5,22 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from brigade.commands.ledger import COMMAND, ledger
-from brigade.errors import UsageError
 
 WAVE_STARTED = (
     '{"schema_version": 2, "ts": "2026-09-30T22:00:00Z", "event": "wave.started", "wave": "tidepool_w16",'
     ' "project": "tidepool", "branch": "integration/M4-tides", "tasks": ["T7"]}\n'
+)
+TASK_RUN_EARLIER = (
+    '{"schema_version": 2, "ts": "2026-10-01T09:00:00Z", "event": "run.finished", "run": "r1", "segment": 1,'
+    ' "procedure": "build-task", "slot": "build", "role": "ada", "client": "claude-code", "project": "tidepool",'
+    ' "session": null, "main_steps": 40, "total_steps": null, "duration_ms": 60000, "usage": null, "outcome": "done",'
+    ' "error_class": null, "exit": 0, "wave": "tidepool_w16", "task": "TP1", "nulls": {}, "cost_usd": 4.0}\n'
+)
+TASK_RUN_LATER = (
+    '{"schema_version": 2, "ts": "2026-10-06T09:00:00Z", "event": "run.finished", "run": "r2", "segment": 1,'
+    ' "procedure": "build-task", "slot": "build", "role": "ada", "client": "claude-code", "project": "tidepool",'
+    ' "session": null, "main_steps": 30, "total_steps": null, "duration_ms": 120000, "usage": null, "outcome": "done",'
+    ' "error_class": null, "exit": 0, "wave": "tidepool_w16", "task": "TP1", "nulls": {}, "cost_usd": 2.5}\n'
 )
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -26,7 +37,7 @@ class LedgerTest(unittest.TestCase):
     def test_should_give_the_overview_of_the_journal_when_no_wave_and_no_project_is_asked(self):
         # Arrange
         (self.ledger_directory / "2026-10.jsonl").write_text("not a document\n")
-        request = argparse.Namespace(wave=None, project=None, since=None)
+        request = argparse.Namespace(wave=None, task=None, project=None, since=None)
 
         # Act
         document = ledger(request, self.runtime)
@@ -44,6 +55,7 @@ class LedgerTest(unittest.TestCase):
                 "runs": {"outcomes": {}, "error_classes": {}},
                 "segments": {"outcomes": {}, "error_classes": {}},
                 "waves_started": {},
+                "since": None,
                 "skipped": [{"file": str(self.ledger_directory / "2026-10.jsonl"), "line": 1, "reason": "not JSON"}],
             },
         )
@@ -51,7 +63,7 @@ class LedgerTest(unittest.TestCase):
     def test_should_describe_the_wave_asked(self):
         # Arrange
         (self.ledger_directory / "2026-09.jsonl").write_text(WAVE_STARTED)
-        request = argparse.Namespace(wave="tidepool_w16", project=None, since=None)
+        request = argparse.Namespace(wave="tidepool_w16", task=None, project=None, since=None)
 
         # Act
         document = ledger(request, self.runtime)
@@ -68,7 +80,7 @@ class LedgerTest(unittest.TestCase):
         ]
         for since, expected in rows:
             with self.subTest(since=since):
-                request = argparse.Namespace(wave=None, project="app", since=since)
+                request = argparse.Namespace(wave=None, task=None, project="app", since=since)
 
                 # Act
                 document = ledger(request, self.runtime)
@@ -77,13 +89,74 @@ class LedgerTest(unittest.TestCase):
                 self.assertEqual(document["since"], expected)
 
 
+class LedgerSinceTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.addCleanup(self.root.cleanup)
+        self.runtime = create_test_runtime(create_test_paths(Path(self.root.name)))
+        ledger_directory = self.runtime.paths.state_root / "ledger"
+        ledger_directory.mkdir(parents=True)
+        (ledger_directory / "2026-10.jsonl").write_text(TASK_RUN_EARLIER + TASK_RUN_LATER)
+
+    def test_should_read_the_overview_from_the_instant_since_names(self):
+        # Arrange
+        request = argparse.Namespace(wave=None, task=None, project=None, since=date(2026, 10, 5))
+
+        # Act
+        document = ledger(request, self.runtime)
+
+        # Assert
+        self.assertEqual(document["events"], {"run.finished": 1})
+
+    def test_should_read_the_runs_of_the_task_from_the_instant_since_names(self):
+        # Arrange
+        request = argparse.Namespace(wave=None, task="TP1", project=None, since=date(2026, 10, 5))
+
+        # Act
+        document = ledger(request, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document,
+            {
+                "schema_version": 1,
+                "view": "task",
+                "task": "TP1",
+                "runs": [
+                    {
+                        "run": "r2",
+                        "finished_at": "2026-10-06T09:00:00Z",
+                        "slot": "build",
+                        "outcome": "done",
+                        "steps": 30,
+                        "partial": False,
+                        "duration_ms": 120000,
+                        "cost_usd": 2.5,
+                    }
+                ],
+                "since": "2026-10-05T00:00:00Z",
+                "skipped": [],
+            },
+        )
+
+    def test_should_read_the_wave_from_the_instant_since_names(self):
+        # Arrange
+        request = argparse.Namespace(wave="tidepool_w16", task=None, project=None, since=date(2026, 10, 5))
+
+        # Act
+        document = ledger(request, self.runtime)
+
+        # Assert
+        self.assertEqual(document["first"], "2026-10-06T09:00:00Z")
+
+
 class LedgerOfNoJournalTest(unittest.TestCase):
     def test_should_give_an_empty_overview_when_the_ledger_directory_does_not_exist(self):
         # Arrange
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         runtime = create_test_runtime(create_test_paths(Path(directory.name)))
-        request = argparse.Namespace(wave=None, project=None, since=None)
+        request = argparse.Namespace(wave=None, task=None, project=None, since=None)
 
         # Act
         document = ledger(request, runtime)
@@ -102,31 +175,25 @@ class LedgerOfNoJournalTest(unittest.TestCase):
                 "runs": {"outcomes": {}, "error_classes": {}},
                 "segments": {"outcomes": {}, "error_classes": {}},
                 "waves_started": {},
+                "since": None,
             },
         )
 
 
 class LedgerRequestTest(unittest.TestCase):
-    def test_should_refuse_since_without_a_project(self):
-        # Arrange
-        options = argparse.Namespace(wave=None, project=None, since=timedelta(days=2))
+    def test_should_take_since_with_every_view(self):
+        for wave, task, project in [(None, None, None), ("w1", None, None), (None, "TP1", None), (None, None, "app")]:
+            with self.subTest(wave=wave, task=task, project=project):
+                # Arrange
+                options = argparse.Namespace(wave=wave, task=task, project=project, since=timedelta(days=2))
 
-        # Act
-        with self.assertRaises(UsageError) as refusal:
-            COMMAND.read_request(options)
+                # Act
+                request = COMMAND.read_request(options)
 
-        # Assert
-        self.assertEqual(str(refusal.exception), "--since needs --project")
-
-    def test_should_take_since_with_a_project(self):
-        # Arrange
-        options = argparse.Namespace(wave=None, project="app", since=timedelta(days=2))
-
-        # Act
-        request = COMMAND.read_request(options)
-
-        # Assert
-        self.assertEqual(request, argparse.Namespace(wave=None, project="app", since=timedelta(days=2)))
+                # Assert
+                self.assertEqual(
+                    request, argparse.Namespace(wave=wave, task=task, project=project, since=timedelta(days=2))
+                )
 
 
 class LedgerExitCodeTest(unittest.TestCase):
@@ -233,6 +300,17 @@ class LedgerWaveTextTest(unittest.TestCase):
             "last": "2026-10-01T02:30:00Z",
             "wall_time_ms": 16200000,
             "tasks": ["T7", "T8"],
+            "cost_usd": 4.75,
+            "usage": {
+                "input_tokens": 11,
+                "output_tokens": 22,
+                "cache_creation_input_tokens": 33,
+                "cache_read_input_tokens": 44,
+            },
+            "by_task": [
+                {"task": "T7", "steps": 80, "partial": True, "duration_ms": 1500000, "cost_usd": 4.75},
+                {"task": "T8", "steps": None, "partial": False, "duration_ms": None, "cost_usd": None},
+            ],
             "pull_requests": [{"task": "T7", "pr": 42, "rounds": 2}],
             "steps": {"by_slot": {"build": build_steps}, "by_role": {}},
             "pauses": [
@@ -251,7 +329,11 @@ class LedgerWaveTextTest(unittest.TestCase):
         self.assertEqual(
             text,
             "wave tidepool_w16: 2026-09-30T22:00:00Z to 2026-10-01T02:30:00Z, wall time 4h30m\n"
-            "tasks: T7, T8\n"
+            "cost: 4.75 USD\n"
+            "tokens: input 11, output 22, cache creation 33, cache read 44\n"
+            "tasks:\n"
+            "  T7  steps 80 partial  duration 0h25m  cost 4.75 USD\n"
+            "  T8  steps -  duration -  cost -\n"
             "pull requests: #42 T7 rounds 2\n"
             "steps by slot:\n"
             "  build\n"
@@ -274,6 +356,9 @@ class LedgerWaveTextTest(unittest.TestCase):
             "last": "2026-10-03T09:00:00Z",
             "wall_time_ms": 86400000,
             "tasks": [],
+            "cost_usd": None,
+            "usage": None,
+            "by_task": [],
             "pull_requests": [],
             "steps": {"by_slot": {}, "by_role": {}},
             "pauses": [{"paused_at": "2026-10-02T10:00:00Z", "resumed_at": None, "duration_ms": None}],
@@ -289,6 +374,8 @@ class LedgerWaveTextTest(unittest.TestCase):
         self.assertEqual(
             text,
             "wave tidepool_w17: 2026-10-02T09:00:00Z to 2026-10-03T09:00:00Z, wall time 24h00m\n"
+            "cost: none\n"
+            "tokens: none\n"
             "tasks: none\n"
             "pull requests: none\n"
             "steps by slot: none\n"
@@ -312,6 +399,9 @@ class LedgerWaveTextTest(unittest.TestCase):
             "last": "2026-10-04T10:00:00Z",
             "wall_time_ms": 3600000,
             "tasks": ["TP147"],
+            "cost_usd": None,
+            "usage": None,
+            "by_task": [{"task": "TP147", "steps": 40, "partial": False, "duration_ms": 60000, "cost_usd": None}],
             "pull_requests": [],
             "steps": {"by_slot": {}, "by_role": {"ada": ada_steps}},
             "pauses": [],
@@ -327,7 +417,10 @@ class LedgerWaveTextTest(unittest.TestCase):
         self.assertEqual(
             text,
             "wave tidepool_w18: 2026-10-04T09:00:00Z to 2026-10-04T10:00:00Z, wall time 1h00m\n"
-            "tasks: TP147\n"
+            "cost: none\n"
+            "tokens: none\n"
+            "tasks:\n"
+            "  TP147  steps 40  duration 0h01m  cost -\n"
             "pull requests: none\n"
             "steps by slot: none\n"
             "steps by role:\n"
@@ -337,6 +430,59 @@ class LedgerWaveTextTest(unittest.TestCase):
             "pauses: 0, 0h00m in all\n"
             "hand-overs: none\n"
             "parked: TP147",
+        )
+
+
+class LedgerTaskTextTest(unittest.TestCase):
+    def test_should_present_each_run_of_the_task(self):
+        # Arrange
+        document = {
+            "view": "task",
+            "task": "TP1",
+            "runs": [
+                {
+                    "run": "r1",
+                    "finished_at": "2026-10-06T09:00:00Z",
+                    "slot": "build",
+                    "outcome": "done",
+                    "steps": 30,
+                    "partial": False,
+                    "duration_ms": 120000,
+                    "cost_usd": 2.5,
+                },
+                {
+                    "run": "r2",
+                    "finished_at": "2026-10-06T10:00:00Z",
+                    "slot": "build",
+                    "outcome": "budget_reached",
+                    "steps": 75,
+                    "partial": True,
+                    "duration_ms": 3720000,
+                    "cost_usd": None,
+                },
+                {
+                    "run": "r3",
+                    "finished_at": "2026-10-06T11:00:00Z",
+                    "slot": "verify",
+                    "outcome": "failed",
+                    "steps": None,
+                    "partial": False,
+                    "duration_ms": None,
+                    "cost_usd": None,
+                },
+            ],
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text,
+            "task TP1: 3 runs\n"
+            "  r1  2026-10-06T09:00:00Z  build  done  steps 30  duration 0h02m  cost 2.50 USD\n"
+            "  r2  2026-10-06T10:00:00Z  build  budget_reached  steps 75 partial  duration 1h02m  cost -\n"
+            "  r3  2026-10-06T11:00:00Z  verify  failed  steps -  duration -  cost -",
         )
 
 

@@ -19,11 +19,19 @@ class EntityNotDefined(BrigadeError):
     pass
 
 
+class TaskTypeMissing(BrigadeError):
+    pass
+
+
 class UsageError(BrigadeError):
     pass
 
 
 class CorpusLintFailed(BrigadeError):
+    pass
+
+
+class InvalidPattern(BrigadeError):
     pass
 
 

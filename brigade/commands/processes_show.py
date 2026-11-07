@@ -7,6 +7,7 @@ from brigade.runtime import Runtime
 
 ABSENT = "-"
 RECORD_SEPARATOR = "  "
+STDERR_INDENT = "    "
 
 
 def _render_measure(record: dict) -> str:
@@ -18,7 +19,9 @@ def _render_measure(record: dict) -> str:
 
 
 def _render_record(record: dict) -> str:
-    return RECORD_SEPARATOR.join((record["outcome"], _render_measure(record), shlex.join(record["argv"])))
+    line = RECORD_SEPARATOR.join((record["outcome"], _render_measure(record), shlex.join(record["argv"])))
+    tail = record.get("stderr", "").splitlines()
+    return "\n".join((line, *(f"{STDERR_INDENT}{written}" for written in tail)))
 
 
 def _render_text(document: dict) -> str:

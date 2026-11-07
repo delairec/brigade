@@ -4,6 +4,7 @@ from pathlib import Path
 from brigade.command import Argument, Command, ExclusiveArguments
 from brigade.corpus.describe_corpus_view import CorpusView, describe_corpus_view
 from brigade.corpus.prepare_project_tree import prepare_project_tree
+from brigade.corpus.read_corpus_types import read_corpus_types
 from brigade.errors import BrigadeError
 from brigade.runtime import Runtime
 from brigade.system.find_awawa_web import find_awawa_web
@@ -61,6 +62,7 @@ def corpus(request: argparse.Namespace, runtime: Runtime) -> dict:
         "sha": tree.sha,
         "kind": tree.kind,
         "root": str(tree.root),
+        "types": read_corpus_types(runtime.run_process, tree.root),
     }
     if request.type is None:
         return document
@@ -82,14 +84,14 @@ COMMAND = Command(
                     ("--ref",),
                     {
                         "help": "a branch or a SHA, extracted to the cache;"
-                        " worktree:<branch> reads the worktree of that branch"
+                        " worktree:<branch> reads the worktree of that branch;"
+                        " the MAIN branch of the project by default"
                     },
                 ),
                 Argument(
                     ("--worktree",), {"type": Path, "help": "the path of a worktree of the project, read in place"}
                 ),
             ),
-            required=True,
         ),
         Argument(("--type",), {"help": "the entity type whose entities the document lists"}),
         Argument(("--field",), {"help": "with --type, the field whose values the board groups the entities by"}),

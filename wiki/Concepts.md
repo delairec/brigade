@@ -11,12 +11,13 @@ of another page is unknown.
 | `[forge_accounts]` | the table of `config.toml` that binds a forge login to each slot, `plan`, `build`, `review`, `remediate`, `rebase`, `report`, `triage`, `rules` and `explore`, and to the key `cli` for the gh calls brigade makes itself | [Waves](Waves.md) |
 | request | what the user wants for one project, in their words, and the plan it receives, a `REQUEST` entity | [Waves](Waves.md) |
 | plan | one `MILESTONE` and its tasks, recorded for a request on the branch `plan/<request>` | [Waves](Waves.md) |
-| wave | a batch of ratified tasks started together, recorded in the ledger alone, on the branch `integration/<project>_w<n>` | [Waves](Waves.md) |
-| task | a `TASK` entity of the project corpus, delivered by a build run on the branch `task/<slug>/<task>` | [Tasks](Tasks.md) |
+| milestone | a `MILESTONE` entity of the project corpus whose tasks merge into the branch `integration/<slug>`; reached when the user merges its pull request into the main branch, the tick committing `STATUS reached` on its branch before opening it, held while one of its tasks is `draft` or `todo`, and taking no task once reached | [Tick and scheduler](Tick-and-scheduler.md) |
+| wave | a batch of ratified tasks started together, recorded in the ledger alone, with no branch and no pull request of its own | [Waves](Waves.md) |
+| task | a `TASK` entity of the project corpus, delivered by a build run on the branch `<prefix>/<id>-<slug>` | [Tasks](Tasks.md) |
 | preflight | the deterministic checks of the pull request of a task, before any judgment | [Preflight](Preflight.md) |
 | verdict | `pass` or `changes`, the judgment of a review run on the pull request of a task, recorded as `task.verdict` | [Verification](Verification.md) |
 | finding | one defect a verdict names, graded `critical`, `high`, `medium` or `low`, which a remediation run answers | [Review answers](Review-answers.md) |
-| procedure | a Markdown file whose front matter declares `capabilities` and `budget`: what the agent is asked to do | [Runs](Runs.md) |
+| procedure | a Markdown file whose front matter declares `capabilities`: what the agent is asked to do | [Runs](Runs.md) |
 | slot | what a procedure calls, never a role: `plan`, `build`, `review`, `remediate`, `rebase`, `report`, `triage`, `rules`, `explore` | [Roles](Roles.md) |
 | role | a Markdown file, a front matter then the system prompt, that a slot resolves to | [Roles](Roles.md) |
 | client adapter | what runs the agents: `claude-code`, `fake`, or an executable `brigade-client-<name>` | [Client adapters](Client-adapters.md) |

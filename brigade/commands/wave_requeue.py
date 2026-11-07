@@ -1,8 +1,10 @@
 import argparse
+from dataclasses import dataclass
 
 from brigade.command import Argument, Command
 from brigade.commands._read_forge_environment import read_forge_environment
 from brigade.corpus.prepare_project_tree import prepare_project_tree
+from brigade.corpus.prepare_tree import Tree
 from brigade.corpus.read_entity import Entity, read_entity
 from brigade.errors import BrigadeError, EntityNotDefined
 from brigade.ledger.append_event import append_event
@@ -47,11 +49,19 @@ def _read_task_on_main(runtime: Runtime, configuration: Configuration, started: 
         return main, None
 
 
-def _require_unruled_on_main(runtime: Runtime, configuration: Configuration, started: WaveStarted, on_wave: Entity):
-    main, on_main = _read_task_on_main(runtime, configuration, started, on_wave.name)
-    if on_main is not None and on_main != on_wave:
+@dataclass(frozen=True)
+class TaskOfWave:
+    started: WaveStarted
+    tree: Tree
+    entity: Entity
+
+
+def _require_unruled_on_main(runtime: Runtime, configuration: Configuration, task: TaskOfWave):
+    started = task.started
+    main, on_main = _read_task_on_main(runtime, configuration, started, task.entity.name)
+    if on_main is not None and on_main != task.entity:
         raise BrigadeError(
-            f"the task {on_wave.name} of the wave {started.wave} differs between {main} and {started.branch}:"
+            f"the task {task.entity.name} of the wave {started.wave} differs between {main} and {task.tree.ref}:"
             f" the ruling on main reaches it through brigade wave cancel {started.wave} and a new wave cut from {main}"
         )
 
@@ -70,17 +80,15 @@ def wave_requeue(request: argparse.Namespace, runtime: Runtime) -> dict:
     summary = require_wave_summary(entries, request.wave)
     if request.task not in summary.started.tasks:
         raise BrigadeError(f"the task {request.task} is not a task of the wave {request.wave}")
-    state = read_task_states(runtime.paths.state_root, request.wave).get(request.task, QUEUED_STATE)
+    state = read_task_states(entries, request.wave).get(request.task, QUEUED_STATE)
     if state != PARKED_STATE:
         raise BrigadeError(f"the task {request.task} of the wave {request.wave} is {state}, not parked")
     configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     tree = prepare_wave_tree(runtime, configuration, summary.started)
     if request.task in read_implemented_tasks(runtime.run_process, tree.root):
-        raise BrigadeError(
-            f"the task {request.task} of the wave {request.wave} is already implemented on {summary.started.branch}"
-        )
+        raise BrigadeError(f"the task {request.task} of the wave {request.wave} is already implemented on {tree.ref}")
     on_wave = read_entity(runtime.run_process, tree.root, TASK_TYPE, request.task)
-    _require_unruled_on_main(runtime, configuration, summary.started, on_wave)
+    _require_unruled_on_main(runtime, configuration, TaskOfWave(started=summary.started, tree=tree, entity=on_wave))
     requeued = _decide_requeued_state(entries, request.wave, request.task)
     append_event(
         runtime.paths,

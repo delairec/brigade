@@ -68,7 +68,7 @@ def _describe_quota(entries: tuple[LedgerEntry, ...], waves: list[dict], runtime
 
 
 def _list_studies_to_watch(runtime: Runtime) -> list[dict]:
-    last_orders = read_last_study_orders(runtime.paths.state_root)
+    last_orders = read_last_study_orders(read_ledger(runtime.paths.state_root).entries)
     studies = []
     for study in read_studies(runtime):
         last_order = last_orders.get(study.name)

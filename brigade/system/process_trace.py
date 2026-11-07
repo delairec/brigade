@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 
 TRACE_SCHEMA_VERSION = 1
@@ -8,6 +9,11 @@ NO_WORKING_DIRECTORY = "no_working_directory"
 CUT = "cut"
 STOPPED = "stopped"
 SPAWNED = "spawned"
+STDERR_TAIL_BYTES = 2048
+
+
+def _keep_tail(text: str) -> str:
+    return text.encode("utf-8")[-STDERR_TAIL_BYTES:].decode("utf-8", errors="ignore")
 
 
 @dataclass(frozen=True)
@@ -18,8 +24,10 @@ class ProcessTrace:
     exit_code: int | None
     duration_ms: int | None
     pid: int | None = None
+    stderr: str | None = None
+    stderr_file: str | None = None
 
-    def to_document(self) -> dict:
+    def to_document(self, mask: Callable[[str], str]) -> dict:
         document = {
             "schema_version": TRACE_SCHEMA_VERSION,
             "argv": list(self.argv),
@@ -28,6 +36,8 @@ class ProcessTrace:
             "duration_ms": self.duration_ms,
             "outcome": self.outcome,
         }
+        if self.stderr is not None:
+            document["stderr"] = _keep_tail(mask(self.stderr))
         if self.outcome == SPAWNED:
-            return {**document, "pid": self.pid}
+            return {**document, "pid": self.pid, "stderr_file": self.stderr_file}
         return document

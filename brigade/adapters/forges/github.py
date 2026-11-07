@@ -194,7 +194,11 @@ def approve_pull_request(request: dict, runtime: Runtime) -> dict:
 
 
 def merge_pull_request(request: dict, runtime: Runtime) -> dict:
-    _ask_gh(request, runtime, ("pr", "merge", str(request["number"]), f"--{request['method']}"))
+    _ask_gh(
+        request,
+        runtime,
+        ("pr", "merge", str(request["number"]), f"--{request['method']}", "--match-head-commit", request["head"]),
+    )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION}
 
 
@@ -561,3 +565,8 @@ def read_job_steps(request: dict, runtime: Runtime) -> dict:
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "steps": [{"name": step["name"], "conclusion": step["conclusion"]} for step in job["steps"]],
     }
+
+
+def edit_pull_request(request: dict, runtime: Runtime) -> dict:
+    _ask_gh(request, runtime, ("pr", "edit", str(request["number"]), "--title", request["title"]))
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION}

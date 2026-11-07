@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from brigade.ledger.budget_applied import BudgetApplied
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.inbox_dismissed import InboxDismissed
 from brigade.ledger.inbox_recorded import InboxRecorded
@@ -7,8 +8,10 @@ from brigade.ledger.ledger_locations import LOCK_FILE
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.milestone_closed import MilestoneClosed
 from brigade.ledger.milestone_created import MilestoneCreated
+from brigade.ledger.milestone_pr_described import MilestonePrDescribed
 from brigade.ledger.milestone_pr_opened import MilestonePrOpened
 from brigade.ledger.milestone_rebased import MilestoneRebased
+from brigade.ledger.milestone_reported import MilestoneReported
 from brigade.ledger.order_done import OrderDone
 from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.order_started import OrderStarted
@@ -21,6 +24,7 @@ from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_promoted import TaskPromoted
+from brigade.ledger.task_reported import TaskReported
 from brigade.ledger.task_review_answered import TaskReviewAnswered
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
@@ -53,8 +57,11 @@ AppendedEvent = (
     | MilestoneCreated
     | MilestoneBranchCut
     | MilestonePrOpened
+    | MilestonePrDescribed
     | MilestoneRebased
     | MilestoneClosed
+    | MilestoneReported
+    | TaskReported
     | TaskPromoted
     | WavePaused
     | WaveResumed
@@ -68,6 +75,7 @@ AppendedEvent = (
     | TickActionFailed
     | InboxRecorded
     | InboxDismissed
+    | BudgetApplied
 )
 
 

@@ -58,6 +58,31 @@ class PrepareProjectTreeTest(unittest.TestCase):
             tree, Tree(project="shop", ref=None, sha="2222222", kind="worktree", root=Path("/srv/worktrees/b42"))
         )
 
+    def test_should_read_a_worktree_in_place_whatever_the_main_branch_of_the_project(self):
+        # Arrange
+        root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, root)
+        paths = create_test_paths(root)
+        paths.config_root.mkdir(parents=True)
+        paths.schema_file.write_text("SCHEMA PROJECT\n")
+        runner = RecordingProcessRunner(
+            {
+                **create_registry_answers(paths.config_root, {"shop": {"PATH": "/srv/shop", "MAIN": "trunk"}}),
+                ("git", "worktree", "list", "--porcelain", "-z"): ProcessAnswer(
+                    stdout="worktree /srv/worktrees/b42\0HEAD 2222222\0branch refs/heads/feat/b42\0\0"
+                ),
+            }
+        )
+        request = Namespace(project="shop", ref=None, worktree=Path("/srv/worktrees/b42"))
+
+        # Act
+        tree = prepare_project_tree(request, Configuration(), create_test_runtime(paths, run_process=runner))
+
+        # Assert
+        self.assertEqual(
+            tree, Tree(project="shop", ref=None, sha="2222222", kind="worktree", root=Path("/srv/worktrees/b42"))
+        )
+
 
 class PrepareProjectTreeAtABranchTest(unittest.TestCase):
     def setUp(self):
@@ -94,6 +119,33 @@ class PrepareProjectTreeAtABranchTest(unittest.TestCase):
 
         # Assert
         self.assertTrue((self.paths.lock_directory / "refs-cache.lock").is_file())
+
+
+class PrepareProjectTreeWithoutARefTest(unittest.TestCase):
+    def test_should_read_the_project_at_the_branch_of_its_main_field(self):
+        # Arrange
+        root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, root)
+        paths = create_test_paths(root)
+        paths.config_root.mkdir(parents=True)
+        paths.schema_file.write_text("SCHEMA PROJECT\n")
+        cached_tree = paths.cache_root / "refs" / "shop" / "3333333"
+        cached_tree.mkdir(parents=True)
+        runner = RecordingProcessRunner(
+            {
+                **create_registry_answers(paths.config_root, {"shop": {"PATH": "/srv/shop", "MAIN": "trunk"}}),
+                ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "trunk^{commit}"): ProcessAnswer(
+                    stdout="3333333\n"
+                ),
+            }
+        )
+        request = Namespace(project="shop", ref=None, worktree=None)
+
+        # Act
+        tree = prepare_project_tree(request, Configuration(), create_test_runtime(paths, run_process=runner))
+
+        # Assert
+        self.assertEqual(tree, Tree(project="shop", ref="trunk", sha="3333333", kind="archive", root=cached_tree))
 
 
 class PrepareProjectTreeUnderTheConfiguredCacheBoundTest(unittest.TestCase):

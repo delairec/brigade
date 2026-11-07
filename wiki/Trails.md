@@ -10,10 +10,12 @@ brigade processes list [--json]                  # every run, tick and command: 
 brigade processes show <id> [--failed] [--json]  # the records of one run, tick or command, as written
 ```
 
-`show` prints one line per record, `<outcome>  <exit code, else duration, else ->  <argv>`:
+`show` prints one line per record, `<outcome>  <exit code, else duration, else ->  <argv>`, and under a failed process
+the tail of its stderr, indented:
 
 ```
 exited  128  git fetch origin
+    fatal: unable to access 'https://github.com/[private]/': Could not resolve host: github.com
 cut  600000 ms  claude -p 'deliver the task'
 ```
 
@@ -55,6 +57,13 @@ exit code.
 | `duration_ms` | null for a spawned run |
 | `outcome` | `exited`, `timed_out`, `not_found`, `no_working_directory` for a command whose working directory does not exist, `cut` for a client segment stopped by its wall limit, `spawned` for a detached run |
 | `pid` | for a spawned run alone |
+| `stderr` | for a process exited with a code other than 0, timed out, cut or stopped: the last 2 KiB of its stderr, masked |
+| `stderr_file` | for a spawned run alone: the file under `runs/<run id>/` that holds its stderr |
+
+Before the tail is written, every GitHub token (`ghp_`, `gho_`, `ghs_`, `github_pat_`), every Anthropic API key
+(`sk-ant-`), every e-mail address, home path and match of a `PRIVATE` pattern of a registered project is replaced by a
+marker naming its kind, `[GitHub token]` or `[private]`. When the `PRIVATE` patterns cannot be read, the tail is
+withheld: `[withheld: the PRIVATE patterns of the registered projects could not be read]`.
 
 A record carries no instant: the name of its trail and the order of the lines one process wrote date it. The `spawned`
 line of a detached run and the lines of the process it re-executes carry no order between them; a detached run's

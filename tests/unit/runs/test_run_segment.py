@@ -12,8 +12,10 @@ from unittest.mock import ANY
 
 from brigade.adapters.documents import markdown
 from brigade.errors import BrigadeError, CannotWrite
+from brigade.ledger.describe_role_budget import RoleBudget
 from brigade.roles.resolve_role import ResolvedRole
 from brigade.runs.count_session_steps import SessionSteps
+from brigade.runs.locate_first_edit import FirstEdit
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
 from brigade.runs.run_segment import run_segment
@@ -26,6 +28,8 @@ from brigade.system.trail_writer import TrailWriter
 from tests.process_launcher import ProcessLauncher
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.keep_stderr_as_is import keep_stderr_as_is
+from tests.unit.runs.create_run_plan import CAP_OF_FORTY_STEPS
 
 FIRST_SEGMENT = 1
 NO_ARGUMENTS = {}
@@ -54,6 +58,7 @@ TRANSCRIPTS_ANSWER = {
             "timestamp": None,
             "content": [],
             "tool_calls": 2,
+            "tools": [{"name": "Read", "target": "/srv/b73/README.md"}, {"name": "Edit", "target": "/srv/b73/cli.py"}],
             "id": "msg_main",
             "usage": {
                 "input_tokens": 1,
@@ -71,6 +76,7 @@ TRANSCRIPTS_ANSWER = {
                     "timestamp": None,
                     "content": [],
                     "tool_calls": 1,
+                    "tools": [],
                     "id": "msg_sub",
                     "usage": {
                         "input_tokens": 2,
@@ -239,8 +245,11 @@ class SpawnRunningAWhileDouble:
 class ExitedProcessDouble:
     pid = 4242
 
+    def __init__(self, exit_code: int = 0):
+        self._exit_code = exit_code
+
     def wait(self, **_limit) -> int:
-        return 0
+        return self._exit_code
 
 
 class ProcessEndingItsLineAfterAPollDouble:
@@ -309,15 +318,17 @@ LINE_OF_201_CHARACTERS_CUT_TO_200 = (
 
 
 class SpawnDouble:
-    def __init__(self, output: str = "the client finished the task"):
+    def __init__(self, output: str = "the client finished the task", exit_code: int = 0, stderr: str = ""):
         self.requests = []
         self.output = output
+        self.exit_code = exit_code
+        self.stderr = stderr
 
     def spawn(self, request):
         self.requests.append(request)
         request.stdout.write_text(self.output, encoding="utf-8")
-        request.stderr.write_text("", encoding="utf-8")
-        return ExitedProcessDouble()
+        request.stderr.write_text(self.stderr, encoding="utf-8")
+        return ExitedProcessDouble(self.exit_code)
 
 
 class ProcessStoppedAtTheLimitDouble:
@@ -330,10 +341,12 @@ class ProcessStoppedAtTheLimitDouble:
 class SpawnOutlivingTheLimitDouble:
     def spawn(self, request):
         request.stdout.write_text("Reading the task\n", encoding="utf-8")
-        request.stderr.write_text("", encoding="utf-8")
+        request.stderr.write_text(STDERR_OF_THE_CUT_CLIENT, encoding="utf-8")
         return ProcessStoppedAtTheLimitDouble()
 
 
+STDERR_OF_THE_CUT_CLIENT = "the client wrote this before the limit\n"
+STDERR_OF_THE_FAILED_CLIENT = "API Error: 529 overloaded\n"
 LAUNCH_INSTANT = datetime(2026, 10, 7, 9, 5, 0, tzinfo=UTC)
 
 
@@ -366,7 +379,6 @@ def _create_plan(
             location="built-in",
             argument="deliver",
             capabilities=("read", "write"),
-            budget=40,
             body="Deliver the task.",
         ),
         slot="build",
@@ -388,6 +400,7 @@ def _create_plan(
         disposable_worktree=False,
         capabilities=("read", "write"),
         wall_limit_s=wall_limit_s,
+        budget=CAP_OF_FORTY_STEPS,
         arguments=NO_ARGUMENTS,
         wave=NO_WAVE,
         task=NO_TASK,
@@ -429,6 +442,48 @@ class RunSegmentTest(unittest.TestCase):
             },
         )
         self.assertEqual(request.stdin, "the brief of the run")
+
+    def test_should_keep_in_the_trail_the_stderr_of_the_client_exited_with_a_code_other_than_0(self):
+        # Arrange
+        traces = []
+        spawn = SpawnDouble(exit_code=1, stderr=STDERR_OF_THE_FAILED_CLIENT)
+        runtime = dataclasses.replace(
+            _create_runtime(self.root, spawn), trail=TrailWriter(traces.append, keep_stderr_as_is)
+        )
+
+        # Act
+        run_segment(_create_plan(self.root), FIRST_SEGMENT, runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            traces,
+            [
+                ProcessTrace(
+                    ("double-client", "--print"),
+                    str(self.root / "project"),
+                    "exited",
+                    1,
+                    ANY,
+                    stderr=STDERR_OF_THE_FAILED_CLIENT,
+                )
+            ],
+        )
+
+    def test_should_keep_in_the_trail_no_stderr_of_the_client_exited_with_0(self):
+        # Arrange
+        traces = []
+        spawn = SpawnDouble(stderr=STDERR_OF_THE_FAILED_CLIENT)
+        runtime = dataclasses.replace(
+            _create_runtime(self.root, spawn), trail=TrailWriter(traces.append, keep_stderr_as_is)
+        )
+
+        # Act
+        run_segment(_create_plan(self.root), FIRST_SEGMENT, runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            traces, [ProcessTrace(("double-client", "--print"), str(self.root / "project"), "exited", 0, ANY)]
+        )
 
     def test_should_refuse_a_description_of_the_progress_breaking_its_shape(self):
         # Arrange
@@ -475,6 +530,17 @@ class RunSegmentStepsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
+
+    def test_should_locate_the_first_edit_of_the_session_among_the_edit_tools_of_the_client(self):
+        # Arrange
+        plan = _create_plan(self.root, reads_transcripts=True)
+        plan = dataclasses.replace(plan, edit_tools=("Edit", "Write"))
+
+        # Act
+        record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(record.first_edit, FirstEdit(steps=2, tokens=1111))
 
     def test_should_leave_the_steps_uncounted_with_their_reason(self):
         # Arrange
@@ -642,7 +708,9 @@ class RunSegmentCutAtTheWallTimeLimitTest(unittest.TestCase):
         # Arrange
         traces = []
         plan = _create_plan(self.root, wall_limit_s=LIMIT_ALREADY_REACHED_S)
-        runtime = dataclasses.replace(_create_runtime(self.root, self.spawn), trail=TrailWriter(traces.append))
+        runtime = dataclasses.replace(
+            _create_runtime(self.root, self.spawn), trail=TrailWriter(traces.append, keep_stderr_as_is)
+        )
 
         # Act
         run_segment(plan, FIRST_SEGMENT, runtime, StopSignalReceiver())
@@ -650,7 +718,16 @@ class RunSegmentCutAtTheWallTimeLimitTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             traces,
-            [ProcessTrace(("double-client", "--print"), str(self.root / "project"), "cut", None, ANY)],
+            [
+                ProcessTrace(
+                    ("double-client", "--print"),
+                    str(self.root / "project"),
+                    "cut",
+                    None,
+                    ANY,
+                    stderr=STDERR_OF_THE_CUT_CLIENT,
+                )
+            ],
         )
 
     def test_should_leave_a_cut_segment_unmeasured_with_its_reason(self):
@@ -972,7 +1049,9 @@ class RunSegmentStoppedWhileItsClientRunsTest(unittest.TestCase):
     def test_should_record_the_client_stopped_in_the_trail(self):
         # Arrange
         traces = []
-        runtime = dataclasses.replace(_create_runtime(self.root, self.spawn), trail=TrailWriter(traces.append))
+        runtime = dataclasses.replace(
+            _create_runtime(self.root, self.spawn), trail=TrailWriter(traces.append, keep_stderr_as_is)
+        )
 
         # Act
         run_segment(_create_plan(self.root), FIRST_SEGMENT, runtime, StopArrivingAfterTheSpawnDouble())
@@ -980,7 +1059,7 @@ class RunSegmentStoppedWhileItsClientRunsTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             traces,
-            [ProcessTrace(("double-client", "--print"), str(self.root / "project"), "stopped", None, ANY)],
+            [ProcessTrace(("double-client", "--print"), str(self.root / "project"), "stopped", None, ANY, stderr="")],
         )
 
     def test_should_measure_the_session_named_at_launch_from_its_transcripts(self):
@@ -1167,8 +1246,14 @@ class RunSegmentFilesTest(unittest.TestCase):
 
     def test_should_send_the_client_the_procedure_the_arguments_the_brief_and_the_progress_file(self):
         # Arrange
+        cap_applied_above_the_shipped_budget = RoleBudget(
+            shipped=75, computed=132, applied=132, segments=6, restarts=3, growth=2500.0, restart_tokens=21780000.0
+        )
         plan = dataclasses.replace(
-            _create_plan(self.root), arguments={"task": "@TASK.B73", "base": "main"}, brief="Deliver S3 first.\n"
+            _create_plan(self.root),
+            arguments={"task": "@TASK.B73", "base": "main"},
+            brief="Deliver S3 first.\n",
+            budget=cap_applied_above_the_shipped_budget,
         )
 
         # Act
@@ -1192,11 +1277,26 @@ class RunSegmentFilesTest(unittest.TestCase):
             "- never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier"
             " entry holds\n"
             "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
+            "# Budget\n\n"
+            "132 steps, the cap of your role for this segment.\n\n"
             "# End of segment\n\n"
             "End your final message on one of these lines: brigade-end: done once the work is delivered,"
             " brigade-end: handed_over when a next segment resumes it from the progress file,"
             " brigade-end: blocked when it waits for a ruling.\n",
         )
+
+    def test_should_pass_the_client_the_applied_cap_as_the_budget_of_the_role(self):
+        # Arrange
+        cap_applied_below_the_shipped_budget = RoleBudget(
+            shipped=75, computed=63, applied=63, segments=6, restarts=3, growth=100.0, restart_tokens=200000.0
+        )
+        plan = dataclasses.replace(_create_plan(self.root), budget=cap_applied_below_the_shipped_budget)
+
+        # Act
+        run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(plan.client_adapter.requests["launch-argv"]["role"]["budget"], 63)
 
     def test_should_name_the_directory_of_the_segment_it_cannot_create(self):
         # Arrange

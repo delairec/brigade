@@ -6,13 +6,21 @@ open the pull request and promote the task.
 ```
 brigade task context [<task>]                  # the starting package of the run
 brigade task check [<task>]                    # the acceptance commands and the corpus checks; exit 1 when one fails
-brigade task pr [<task>] --subject <subject>   # push the branch and open the pull request on the wave's branch
+brigade task pr [<task>] --subject <subject>   # push the branch and open the pull request on its base
 brigade task promote [<task>] [--pr <n>]       # STATUS implemented and DELIVERED_BY, committed and pushed
 ```
 
-A build run works in the worktree of its task, on the branch `task/<slug>/<task>` the tick cut from the wave's branch
-`integration/<slug>`. Every command runs from that worktree and takes the task of the branch when `<task>` is left
-out. Each prints text or, with `--json`, a JSON document.
+A build run works in the worktree of its task, on the branch `<prefix>/<id>-<slug>` the tick cut from the branch of
+its milestone, `integration/<slug>`, or from the main branch for a task naming no milestone: the prefix is the `TYPE`
+of the task, `feat` becoming `feature`, the slug its `TITLE` lowercased, each run of other characters than ASCII
+letters and digits made one hyphen, cut at a hyphen within 40 characters (`feature/B46-local-mode`). Its pull request
+goes to that base. Every command runs from that worktree, takes the task of the branch when `<task>` is left out,
+and its wave from the open wave of the ledger that holds the task. Each prints text or, with `--json`, a JSON document.
+
+A task `draft` or `todo` at the branch of its milestone, a parked task being `todo`, holds the pull request of that
+milestone until it is merged, moved to another milestone or archived. A milestone is reached once the user merges its
+pull request, and a reached milestone takes no task: the tick serves a task naming it never and names the task on
+stderr at each tick.
 
 | Command | Records in the ledger |
 |---|---|

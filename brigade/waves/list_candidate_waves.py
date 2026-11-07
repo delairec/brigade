@@ -12,7 +12,6 @@ from brigade.waves.read_project_tasks import ProjectTasks, ProjectTasksReading, 
 MILESTONE = "MILESTONE"
 STATUS_FIELD = "STATUS"
 ACTIVE_STATUS = "active"
-NO_MILESTONE = None
 NO_ACTIVE_MILESTONE = ()
 
 
@@ -33,8 +32,9 @@ def _read_active_milestones(
     return tuple(entity["name"] for entity in status["entities"])
 
 
-def list_candidate_waves(runtime: Runtime, reading: ProjectTasksReading) -> tuple[CandidateWave, ...]:
-    main = read_project_tasks(runtime, reading, NO_MILESTONE)
+def list_candidate_waves(
+    runtime: Runtime, reading: ProjectTasksReading, main: ProjectTasks
+) -> tuple[CandidateWave, ...]:
     readings = (
         *(
             read_project_tasks(runtime, reading, milestone)
@@ -44,7 +44,7 @@ def list_candidate_waves(runtime: Runtime, reading: ProjectTasksReading) -> tupl
     )
     open_tasks = map_open_tasks(reading.entries, reading.project.name)
     waves = (
-        CandidateWave(milestone=tasks.milestone, tasks=admit_candidates(runtime.run_process, tasks, open_tasks))
+        CandidateWave(milestone=tasks.milestone, tasks=admit_candidates(runtime, tasks, open_tasks))
         for tasks in readings
     )
     return tuple(wave for wave in waves if wave.tasks)

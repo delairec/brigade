@@ -9,6 +9,7 @@ from brigade.runs.run_segment import (
     WALL_LIMIT_OUTCOME,
     SegmentRecord,
 )
+from brigade.system.digest_text import digest_text
 
 DONE_OUTCOME = "done"
 NO_FAILURE = "the run did not fail"
@@ -16,6 +17,9 @@ NO_ERROR_CLASS = "the client reported no error class"
 NOT_IN_A_WAVE = "not launched by a wave"
 NOT_FOR_A_TASK = "not launched for a task"
 WALL_LIMIT_CUT = "cut at the wall-time limit"
+NO_EDIT_TOOL = "the client names no edit tool"
+NO_EDIT = "the segment made no edit outside the progress file"
+FIRST_EDIT_FIELDS = ("steps_to_first_edit", "tokens_to_first_edit")
 NO_NULLS_EXPLAINED = {}
 ENDING_REASONS = {WALL_LIMIT_OUTCOME: WALL_LIMIT_CUT, STOPPED_OUTCOME: STOPPED_BY_A_SIGNAL}
 
@@ -56,8 +60,20 @@ def _choose_ending_reason(record: SegmentRecord, finished: RunFinished) -> str |
     return None
 
 
+def _explain_missing_first_edit(plan: RunPlan, record: SegmentRecord) -> dict:
+    if record.first_edit is not None:
+        return {}
+    if not plan.edit_tools:
+        reason = NO_EDIT_TOOL
+    elif record.counted_steps is None:
+        reason = record.uncounted
+    else:
+        reason = NO_EDIT
+    return dict.fromkeys(FIRST_EDIT_FIELDS, reason)
+
+
 def _explain_nulls(plan: RunPlan, record: SegmentRecord, finished: RunFinished) -> dict:
-    nulls = {}
+    nulls = _explain_missing_first_edit(plan, record)
     if finished.project is None:
         nulls["project"] = "no project given"
     if finished.wave is None:
@@ -99,5 +115,10 @@ def describe_finished(plan: RunPlan, record: SegmentRecord) -> RunFinished:
         cost_usd=record.cost_usd,
         message=record.message,
         reset=record.reset,
+        steps_to_first_edit=None if record.first_edit is None else record.first_edit.steps,
+        tokens_to_first_edit=None if record.first_edit is None else record.first_edit.tokens,
+        role_digest=digest_text(plan.role.body),
+        procedure_digest=digest_text(plan.procedure.body),
+        shipped_budget=plan.budget.shipped,
     )
     return dataclasses.replace(finished, nulls=_explain_nulls(plan, record, finished))

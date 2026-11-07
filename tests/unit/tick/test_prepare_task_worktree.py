@@ -12,7 +12,6 @@ from brigade.ledger.append_event import append_event
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.wave_cancelled import WaveCancelled
-from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
@@ -24,28 +23,32 @@ from tests.unit.lock_observing_runner import LockObservingRunner
 from tests.unit.recording_process_runner import SILENT_SUCCESS, ProcessAnswer, RecordingProcessRunner
 from tests.unit.registry_answers import create_registry_answers
 
-ACTION = LaunchTask(project="shop", wave="w1", branch="integration/w1", task="B1", checks_passed=False)
-ACTION_ON_PASSED_CHECKS = LaunchTask(project="shop", wave="w1", branch="integration/w1", task="B1", checks_passed=True)
+ACTION = LaunchTask(
+    project="shop", wave="w1", branch="integration/w1", task="B1", task_branch="feature/B1-task", checks_passed=False
+)
+ACTION_ON_PASSED_CHECKS = LaunchTask(
+    project="shop", wave="w1", branch="integration/w1", task="B1", task_branch="feature/B1-task", checks_passed=True
+)
 WORKTREE = Path("/srv/shop/.brigade/worktrees/B1")
-ADD_TASK_WORKTREE = ("git", "worktree", "add", "--quiet", "-b", "task/w1/B1", str(WORKTREE), "integration/w1")
+ADD_TASK_WORKTREE = ("git", "worktree", "add", "--quiet", "-b", "feature/B1-task", str(WORKTREE), "integration/w1")
 REQUIRE_THE_WAVE_BRANCH = ("git", "merge-base", "--is-ancestor", "integration/w1", "HEAD")
 HEAD_OFF_THE_WAVE_BRANCH = ProcessAnswer(exit_code=1)
-TASK_BRANCH_DESCENDS = ("git", "merge-base", "--is-ancestor", "integration/w1", "task/w1/B1")
+TASK_BRANCH_DESCENDS = ("git", "merge-base", "--is-ancestor", "integration/w1", "feature/B1-task")
 LIST_WORKTREES = ("git", "worktree", "list", "--porcelain", "-z")
-FIND_TASK_BRANCH = ("git", "rev-parse", "--verify", "--quiet", "refs/heads/task/w1/B1")
+FIND_TASK_BRANCH = ("git", "rev-parse", "--verify", "--quiet", "refs/heads/feature/B1-task")
 NO_TASK_BRANCH = ProcessAnswer(exit_code=1)
 TASK_BRANCH_FOUND = ProcessAnswer(stdout="5c1d2e0\n")
 MAIN_CHECKOUT_ALONE = ProcessAnswer(stdout="worktree /srv/shop\0HEAD 8885daa\0branch refs/heads/main\0\0")
 TASK_BRANCH_LISTED_ELSEWHERE = ProcessAnswer(
     stdout=(
         "worktree /srv/shop\0HEAD 8885daa\0branch refs/heads/main\0\0"
-        "worktree /var/old/B1\0HEAD 5c1d2e0\0branch refs/heads/task/w1/B1\0\0"
+        "worktree /var/old/B1\0HEAD 5c1d2e0\0branch refs/heads/feature/B1-task\0\0"
     )
 )
 TASK_WORKTREE_LISTED = ProcessAnswer(
     stdout=(
         "worktree /srv/shop\0HEAD 8885daa\0branch refs/heads/main\0\0"
-        "worktree /srv/shop/.brigade/worktrees/B1\0HEAD 5c1d2e0\0branch refs/heads/task/w1/B1\0\0"
+        "worktree /srv/shop/.brigade/worktrees/B1\0HEAD 5c1d2e0\0branch refs/heads/feature/B1-task\0\0"
     )
 )
 
@@ -105,7 +108,9 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
         )
 
         # Assert
-        self.assertEqual(prepared.worktree, BranchWorktree(path=WORKTREE, branch="task/w1/B1", start="integration/w1"))
+        self.assertEqual(
+            prepared.worktree, BranchWorktree(path=WORKTREE, branch="feature/B1-task", start="integration/w1")
+        )
         self.assertEqual(
             runner.commands[-6:],
             [
@@ -114,7 +119,7 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
                 ("/srv/shop", FIND_TASK_BRANCH),
                 (
                     "/srv/shop",
-                    ("git", "worktree", "add", "--quiet", "-b", "task/w1/B1", str(WORKTREE), "integration/w1"),
+                    ("git", "worktree", "add", "--quiet", "-b", "feature/B1-task", str(WORKTREE), "integration/w1"),
                 ),
                 (str(WORKTREE), ("make", "deps")),
                 (str(WORKTREE), ("git", "merge-base", "--is-ancestor", "integration/w1", "HEAD")),
@@ -148,10 +153,53 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
                 ("/srv/shop", FIND_TASK_BRANCH),
                 (
                     "/srv/shop",
-                    ("git", "worktree", "add", "--quiet", "-b", "task/w1/B1", "/var/worktrees/B1", "integration/w1"),
+                    (
+                        "git",
+                        "worktree",
+                        "add",
+                        "--quiet",
+                        "-b",
+                        "feature/B1-task",
+                        "/var/worktrees/B1",
+                        "integration/w1",
+                    ),
                 ),
                 ("/var/worktrees/B1", ("make", "deps")),
                 ("/var/worktrees/B1", ("git", "merge-base", "--is-ancestor", "integration/w1", "HEAD")),
+            ],
+        )
+
+    def test_should_cut_a_task_naming_no_milestone_from_main_without_committing_on_it(self):
+        # Arrange
+        runner = self.create_runner(
+            {"name": "MAIN", "atoms": ['"main"']},
+            answers={
+                ("git", "cat-file", "-p", "main:.gitignore"): ProcessAnswer(stdout="*.pyc\n"),
+                ("git", "merge-base", "--is-ancestor", "main", "HEAD"): SILENT_SUCCESS,
+            },
+        )
+        action = LaunchTask(
+            project="shop", wave="w1", branch="main", task="B1", task_branch="feature/B1-task", checks_passed=False
+        )
+
+        # Act
+        prepared = prepare_task_worktree(
+            create_test_runtime(self.paths, run_process=runner), Configuration(), action, read_no_environment
+        )
+
+        # Assert
+        self.assertEqual(prepared.worktree, BranchWorktree(path=WORKTREE, branch="feature/B1-task", start="main"))
+        self.assertEqual(
+            runner.commands[-5:],
+            [
+                (
+                    str(self.paths.config_root),
+                    ("awawa", "show", "@PROJECT.shop", "--json", str(self.paths.config_root)),
+                ),
+                ("/srv/shop", LIST_WORKTREES),
+                ("/srv/shop", FIND_TASK_BRANCH),
+                ("/srv/shop", ("git", "worktree", "add", "--quiet", "-b", "feature/B1-task", str(WORKTREE), "main")),
+                (str(WORKTREE), ("git", "merge-base", "--is-ancestor", "main", "HEAD")),
             ],
         )
 
@@ -167,7 +215,9 @@ class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
         )
 
         # Assert
-        self.assertEqual(prepared.worktree, BranchWorktree(path=WORKTREE, branch="task/w1/B1", start="integration/w1"))
+        self.assertEqual(
+            prepared.worktree, BranchWorktree(path=WORKTREE, branch="feature/B1-task", start="integration/w1")
+        )
         self.assertEqual(
             runner.commands[-4:],
             [
@@ -192,7 +242,7 @@ class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
             runner.commands[-5:-3],
             [
                 ("/srv/shop", FIND_TASK_BRANCH),
-                ("/srv/shop", ("git", "worktree", "add", "--quiet", str(WORKTREE), "task/w1/B1")),
+                ("/srv/shop", ("git", "worktree", "add", "--quiet", str(WORKTREE), "feature/B1-task")),
             ],
         )
 
@@ -208,7 +258,7 @@ class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
         # Assert
         self.assertEqual(
             runner.commands[-4],
-            ("/srv/shop", ("git", "worktree", "add", "--quiet", str(WORKTREE), "task/w1/B1")),
+            ("/srv/shop", ("git", "worktree", "add", "--quiet", str(WORKTREE), "feature/B1-task")),
         )
 
 
@@ -248,7 +298,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
             runner.commands[-1],
             (
                 "/srv/shop",
-                ("git", "worktree", "add", "--quiet", "-b", "task/w1/B1", str(WORKTREE), "integration/w1"),
+                ("git", "worktree", "add", "--quiet", "-b", "feature/B1-task", str(WORKTREE), "integration/w1"),
             ),
         )
 
@@ -286,7 +336,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
                 ),
                 ("/srv/shop", ("git", "cat-file", "-p", "integration/w1:.gitignore")),
                 ("/srv/shop", ("git", "worktree", "list", "--porcelain", "-z")),
-                ("/srv/shop", ("git", "rev-parse", "--verify", "--quiet", "refs/heads/task/w1/B1")),
+                ("/srv/shop", ("git", "rev-parse", "--verify", "--quiet", "refs/heads/feature/B1-task")),
                 (
                     "/srv/shop",
                     (
@@ -295,7 +345,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
                         "add",
                         "--quiet",
                         "-b",
-                        "task/w1/B1",
+                        "feature/B1-task",
                         "/srv/shop/.brigade/worktrees/B1",
                         "integration/w1",
                     ),
@@ -325,7 +375,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
                 ),
                 ("/srv/shop", ("git", "cat-file", "-p", "integration/w1:.gitignore")),
                 ("/srv/shop", ("git", "worktree", "list", "--porcelain", "-z")),
-                ("/srv/shop", ("git", "rev-parse", "--verify", "--quiet", "refs/heads/task/w1/B1")),
+                ("/srv/shop", ("git", "rev-parse", "--verify", "--quiet", "refs/heads/feature/B1-task")),
                 (
                     "/srv/shop",
                     (
@@ -334,7 +384,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
                         "add",
                         "--quiet",
                         "-b",
-                        "task/w1/B1",
+                        "feature/B1-task",
                         "/srv/shop/.brigade/worktrees/B1",
                         "integration/w1",
                     ),
@@ -380,7 +430,7 @@ class PrepareTaskWorktreeOfASetupLineInShellSyntaxTest(PrepareTaskWorktreeTestCa
                 ),
                 ("/srv/shop", ("git", "cat-file", "-p", "integration/w1:.gitignore")),
                 ("/srv/shop", ("git", "worktree", "list", "--porcelain", "-z")),
-                ("/srv/shop", ("git", "rev-parse", "--verify", "--quiet", "refs/heads/task/w1/B1")),
+                ("/srv/shop", ("git", "rev-parse", "--verify", "--quiet", "refs/heads/feature/B1-task")),
                 (
                     "/srv/shop",
                     (
@@ -389,7 +439,7 @@ class PrepareTaskWorktreeOfASetupLineInShellSyntaxTest(PrepareTaskWorktreeTestCa
                         "add",
                         "--quiet",
                         "-b",
-                        "task/w1/B1",
+                        "feature/B1-task",
                         "/srv/shop/.brigade/worktrees/B1",
                         "integration/w1",
                     ),
@@ -445,7 +495,7 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
         self.assertEqual(
             prepared,
             PreparedWorktree(
-                worktree=BranchWorktree(path=WORKTREE, branch="task/w1/B1", start="origin/integration/w1"),
+                worktree=BranchWorktree(path=WORKTREE, branch="feature/B1-task", start="origin/integration/w1"),
                 conflicted=False,
                 on_start=True,
             ),
@@ -456,7 +506,16 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
                 ("/srv/shop", FIND_TASK_BRANCH),
                 (
                     "/srv/shop",
-                    ("git", "worktree", "add", "--quiet", "-b", "task/w1/B1", str(WORKTREE), "origin/integration/w1"),
+                    (
+                        "git",
+                        "worktree",
+                        "add",
+                        "--quiet",
+                        "-b",
+                        "feature/B1-task",
+                        str(WORKTREE),
+                        "origin/integration/w1",
+                    ),
                 ),
                 (str(WORKTREE), ("make", "deps")),
                 (str(WORKTREE), ("git", "merge-base", "--is-ancestor", "origin/integration/w1", "HEAD")),
@@ -487,7 +546,7 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
             forge=ON_GITHUB,
             branch=TASK_BRANCH_FOUND,
             answers={
-                ("git", "merge-base", "--is-ancestor", "origin/integration/w1", "task/w1/B1"): ProcessAnswer(
+                ("git", "merge-base", "--is-ancestor", "origin/integration/w1", "feature/B1-task"): ProcessAnswer(
                     exit_code=1
                 )
             },
@@ -595,7 +654,7 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchWhoseChecksHaveNotPassedTest(P
         self.assertEqual(
             prepared,
             PreparedWorktree(
-                worktree=BranchWorktree(path=WORKTREE, branch="task/w1/B1", start="integration/w1"),
+                worktree=BranchWorktree(path=WORKTREE, branch="feature/B1-task", start="integration/w1"),
                 conflicted=False,
                 on_start=False,
             ),
@@ -604,34 +663,14 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchWhoseChecksHaveNotPassedTest(P
 
 CANCELLATION_INSTANT = datetime(2026, 10, 28, 19, 40, tzinfo=UTC)
 WAVE_OF_THE_PREVIOUS_ATTEMPT = WaveStarted(wave="w0", project="shop", branch="integration/w0", tasks=("B1",))
-TASK_WORKTREE_LEFT_BY_THE_PREVIOUS_WAVE = ProcessAnswer(
-    stdout=(
-        "worktree /srv/shop\0HEAD 8885daa\0branch refs/heads/main\0\0"
-        "worktree /srv/shop/.brigade/worktrees/B1\0HEAD 7a3b9c1\0branch refs/heads/task/w0/B1\0\0"
-    )
-)
-STAGE_THE_WORKTREE = ("git", "add", "--", ".")
-FIND_STAGED_CHANGES = ("git", "diff", "--cached", "--quiet", "--", ".")
-UNCOMMITTED_CHANGES = {FIND_STAGED_CHANGES: ProcessAnswer(exit_code=1)}
-COMMIT_THE_UNCOMMITTED_CHANGES = (
-    "git",
-    "commit",
-    "--quiet",
-    "-m",
-    "chore(tick): keep the changes of @TASK.B1 left uncommitted in an ended wave",
-)
-SWITCH_TO_A_NEW_TASK_BRANCH = ("git", "switch", "--quiet", "--create", "task/w1/B1", "integration/w1")
 
 
-class PrepareTaskWorktreeLeftInACancelledWaveTest(PrepareTaskWorktreeTestCase):
-    def setUp(self):
-        super().setUp()
+class PrepareTaskWorktreeOfATaskLaunchedAgainAfterACancelTest(PrepareTaskWorktreeTestCase):
+    def test_should_take_over_the_branch_of_the_task_its_worktree_holds(self):
+        # Arrange
         append_event(self.paths, CANCELLATION_INSTANT, WAVE_OF_THE_PREVIOUS_ATTEMPT)
         append_event(self.paths, CANCELLATION_INSTANT, WaveCancelled(wave="w0", reason="user"))
-
-    def test_should_switch_the_worktree_to_a_new_task_branch_cut_from_the_wave_branch_and_run_its_setup(self):
-        # Arrange
-        runner = self.create_runner(MAKE_DEPS, worktrees=TASK_WORKTREE_LEFT_BY_THE_PREVIOUS_WAVE)
+        runner = self.create_runner(MAKE_DEPS, worktrees=TASK_WORKTREE_LISTED, branch=TASK_BRANCH_FOUND)
 
         # Act
         prepared = prepare_task_worktree(
@@ -642,103 +681,17 @@ class PrepareTaskWorktreeLeftInACancelledWaveTest(PrepareTaskWorktreeTestCase):
         self.assertEqual(
             prepared,
             PreparedWorktree(
-                worktree=BranchWorktree(path=WORKTREE, branch="task/w1/B1", start="integration/w1"),
+                worktree=BranchWorktree(path=WORKTREE, branch="feature/B1-task", start="integration/w1"),
                 conflicted=False,
                 on_start=True,
             ),
         )
         self.assertEqual(
-            runner.commands[-7:],
+            runner.commands[-4:],
             [
                 ("/srv/shop", LIST_WORKTREES),
-                ("/srv/shop", FIND_TASK_BRANCH),
-                (str(WORKTREE), STAGE_THE_WORKTREE),
-                (str(WORKTREE), FIND_STAGED_CHANGES),
-                (str(WORKTREE), SWITCH_TO_A_NEW_TASK_BRANCH),
+                (str(WORKTREE), TASK_BRANCH_DESCENDS),
                 (str(WORKTREE), ("make", "deps")),
                 (str(WORKTREE), REQUIRE_THE_WAVE_BRANCH),
             ],
         )
-
-    def test_should_commit_the_uncommitted_changes_on_the_branch_of_the_cancelled_wave_before_the_switch(self):
-        # Arrange
-        runner = self.create_runner(
-            MAKE_DEPS, worktrees=TASK_WORKTREE_LEFT_BY_THE_PREVIOUS_WAVE, answers=UNCOMMITTED_CHANGES
-        )
-
-        # Act
-        prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
-        )
-
-        # Assert
-        self.assertEqual(
-            runner.commands[-6:-2],
-            [
-                (str(WORKTREE), STAGE_THE_WORKTREE),
-                (str(WORKTREE), FIND_STAGED_CHANGES),
-                (str(WORKTREE), COMMIT_THE_UNCOMMITTED_CHANGES),
-                (str(WORKTREE), SWITCH_TO_A_NEW_TASK_BRANCH),
-            ],
-        )
-
-    def test_should_switch_the_worktree_to_the_existing_branch_of_the_task_and_put_it_on_the_wave_branch(self):
-        # Arrange
-        runner = self.create_runner(
-            MAKE_DEPS, worktrees=TASK_WORKTREE_LEFT_BY_THE_PREVIOUS_WAVE, branch=TASK_BRANCH_FOUND
-        )
-
-        # Act
-        prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
-        )
-
-        # Assert
-        self.assertEqual(
-            runner.commands[-4:-2],
-            [
-                (str(WORKTREE), ("git", "switch", "--quiet", "task/w1/B1")),
-                (str(WORKTREE), TASK_BRANCH_DESCENDS),
-            ],
-        )
-
-
-CLOSURE_INSTANT = datetime(2026, 11, 1, 23, 25, tzinfo=UTC)
-
-
-class PrepareTaskWorktreeLeftInAClosedWaveTest(PrepareTaskWorktreeTestCase):
-    def test_should_switch_the_worktree_to_a_new_task_branch_cut_from_the_wave_branch(self):
-        # Arrange
-        append_event(self.paths, CLOSURE_INSTANT, WAVE_OF_THE_PREVIOUS_ATTEMPT)
-        append_event(self.paths, CLOSURE_INSTANT, WaveClosed(wave="w0", pr=31))
-        runner = self.create_runner(MAKE_DEPS, worktrees=TASK_WORKTREE_LEFT_BY_THE_PREVIOUS_WAVE)
-
-        # Act
-        prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
-        )
-
-        # Assert
-        self.assertEqual(
-            runner.commands[-5:-2],
-            [
-                (str(WORKTREE), STAGE_THE_WORKTREE),
-                (str(WORKTREE), FIND_STAGED_CHANGES),
-                (str(WORKTREE), SWITCH_TO_A_NEW_TASK_BRANCH),
-            ],
-        )
-
-
-class PrepareTaskWorktreeHeldByTheTaskInAnOpenWaveTest(PrepareTaskWorktreeTestCase):
-    def test_should_leave_the_worktree_on_the_branch_of_the_open_wave(self):
-        # Arrange
-        append_event(self.paths, CANCELLATION_INSTANT, WAVE_OF_THE_PREVIOUS_ATTEMPT)
-        runner = self.create_runner(MAKE_DEPS, worktrees=TASK_WORKTREE_LEFT_BY_THE_PREVIOUS_WAVE)
-
-        # Act
-        prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
-        )
-
-        # Assert
-        self.assertEqual(runner.commands[-3], ("/srv/shop", ADD_TASK_WORKTREE))
