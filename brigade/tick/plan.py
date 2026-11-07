@@ -293,7 +293,12 @@ def _decide_preflight(wave: WaveFacts, task: TaskFacts, project: ProjectFacts, n
     if not _is_ready_for_preflight(wave, task, project, now):
         return None
     return RunPreflight(
-        project=wave.project, wave=wave.wave, branch=wave.base, task=task.name, pr=task.pull_request.number
+        project=wave.project,
+        wave=wave.wave,
+        branch=wave.base,
+        task=task.name,
+        task_branch=task.branch,
+        pr=task.pull_request.number,
     )
 
 

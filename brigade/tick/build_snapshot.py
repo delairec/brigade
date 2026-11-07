@@ -188,6 +188,7 @@ class TaskFacts:
     milestone: str | None = None
     amendment: TaskAmendment | None = None
     reported: bool = False
+    delivered_head: str | None = None
 
     def to_document(self) -> dict:
         return {
