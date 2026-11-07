@@ -236,6 +236,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
                     {"B1": AWAWA_ANSWERS.describe_task("todo", "B0"), "B2": TASK_IDENTITY, "B4": TASK_IDENTITY},
                 ),
                 **answer_unreadable_tree("trunk"),
+                **answer_main_of_the_forge(MAIN_SHA),
                 **self.remote_answers,
             }
         )
@@ -337,6 +338,7 @@ class BuildSnapshotOfTheIntegrationBranchesTest(BuildSnapshotTestCase):
 class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
     def setUp(self):
         super().setUp()
+        self.shop_forge = "github"
         self.write_operational_corpus()
         self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B1", "B2", "B3", "B4")))
         self.record(50, TaskState(wave="w1", task="B1", state="running"))
@@ -748,6 +750,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     review="approval",
                     auto_merge="none",
                     verify_rounds=3,
+                    on_github=True,
                 ),
             ),
         )
@@ -1145,7 +1148,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     review="approval",
                     auto_merge="none",
                     verify_rounds=3,
-                    on_github=False,
+                    on_github=True,
                 ),
             ),
         )
@@ -1556,6 +1559,7 @@ class BuildSnapshotOfAWaveStartedAfterTheForgeAccountBecameUnavailableTest(Build
 class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
     def setUp(self):
         super().setUp()
+        self.shop_forge = "github"
         self.write_operational_corpus()
         self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B1", "B2", "B3", "B4")))
         self.record(60, WaveStarted(wave="w4", project="shop", tasks=("B1",)))
@@ -1701,6 +1705,7 @@ MEASURED_SIZE = {"name": "size", "verdict": "info", "findings": ["3 files"]}
 class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
     def setUp(self):
         super().setUp()
+        self.shop_forge = "github"
         self.write_operational_corpus()
         self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B1", "B2", "B3", "B4")))
         self.record(60, WaveStarted(wave="w4", project="shop", tasks=("B1",)))
