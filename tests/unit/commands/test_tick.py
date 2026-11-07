@@ -6336,3 +6336,90 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
             {"project": "tidepool", "milestone": "M4", "branch": "integration/tides", "pr": 77, "head": "8885daa"},
             document["plan"],
         )
+
+
+ACCEPTANCE_COMMAND = "python3 -m unittest"
+
+
+class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.repository = self.root / "tidepool"
+        delivered_run = {**create_run_record(FIRST_RUN, WAVE, "T7"), "project": "tidepool"}
+        write_run(self.root / "state", delivered_run, create_run_result(FIRST_RUN, "done", "2026-10-18T10:30:00Z"))
+        delivered = {**create_run_result(FIRST_RUN, "done", "2026-10-18T10:30:00Z"), "wave": WAVE, "task": "T7"}
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("running"), delivered])
+
+    def _create_runtime(self, acceptance_outputs: dict) -> Runtime:
+        project = (
+            ("PATH", str(self.repository)),
+            ("MAIN", "main"),
+            ("FORGE", "none"),
+            ("ACCEPTANCE", ACCEPTANCE_COMMAND),
+        )
+        corpus = {"STUDY": PAUSED_BUILT_IN_STUDIES, "PROJECT": {"tidepool": project}, "TASK": {"T7": TASK_DELIVERED}}
+        return create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **acceptance_outputs}),
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)),
+                self.root,
+            ),
+        )
+
+    def _read_events_of_the_tick(self) -> list[dict]:
+        events = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        return list(map(json.loads, events[3:]))
+
+    def test_should_hold_for_verification_the_head_its_build_run_delivered_once_its_acceptance_passes(self):
+        # Arrange
+        passing_acceptance = {("python3", "-m", "unittest"): ""}
+        runtime = self._create_runtime(passing_acceptance)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_events_of_the_tick(),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.preflighted",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "head": "8885daa",
+                    "checks": [
+                        {"name": "ancestry", "verdict": "pass", "findings": []},
+                        {
+                            "name": "acceptance",
+                            "verdict": "pass",
+                            "findings": [],
+                            "commands": [{"command": "python3 -m unittest", "exit_code": 0}],
+                        },
+                        {"name": "corpus", "verdict": "pass", "findings": []},
+                        {"name": "promotion", "verdict": "pass", "findings": []},
+                        {"name": "untouched_files", "verdict": "pass", "findings": []},
+                        {"name": "privacy", "verdict": "pass", "findings": []},
+                        {
+                            "name": "size",
+                            "verdict": "info",
+                            "findings": ["0 files", "0 lines", "0 packages", "0 layers"],
+                        },
+                    ],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "verifying",
+                },
+            ],
+        )
