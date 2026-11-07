@@ -100,6 +100,7 @@ def plan(snapshot: Snapshot) -> tuple:
         pauses
         + _plan_resumes(snapshot)
         + _plan_followed_pull_requests(snapshot)
+        + _plan_delivered_head_preflights(snapshot)
         + _plan_blocked_task_parkings(snapshot)
         + _plan_dead_run_parkings(snapshot)
         + _plan_closes(snapshot)
@@ -543,6 +544,27 @@ def _is_ready_for_preflight(wave: WaveFacts, task: TaskFacts, project: ProjectFa
     )
 
 
+def _is_delivered_head_due(wave: WaveFacts, task: TaskFacts, live_tasks: frozenset) -> bool:
+    return (
+        wave.states.get(task.name) == RUNNING_STATE
+        and task.delivered_head is not None
+        and task.delivered_head != task.preflighted_head
+        and (wave.wave, task.name) not in live_tasks
+    )
+
+
+def _plan_delivered_head_preflights(snapshot: Snapshot) -> tuple:
+    live_tasks = _read_occupancy(snapshot).tasks
+    return tuple(
+        RunPreflight(
+            project=wave.project, wave=wave.wave, branch=wave.base, task=task.name, task_branch=task.branch, pr=None
+        )
+        for wave in snapshot.waves
+        for task in wave.tasks
+        if _is_delivered_head_due(wave, task, live_tasks)
+    )
+
+
 def _plan_blocked_task_parkings(snapshot: Snapshot) -> tuple:
     return tuple(
         ParkTask(wave=wave.wave, task=task.name, reason=BLOCKED_REASON, blockers=task.blocked_by)
@@ -572,6 +594,7 @@ def _plan_dead_run_parkings(snapshot: Snapshot) -> tuple:
         for task in wave.tasks
         if wave.states.get(task.name) == RUNNING_STATE
         and (task.pull_request is None or task.last_run_is_a_rebase)
+        and task.delivered_head is None
         and task.rate_limit is None
         and not task.rebased_by_last_run
         and (wave.wave, task.name) not in live_tasks
