@@ -15,10 +15,10 @@ from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.tick.actions import RebaseTask
 from brigade.tick.head_proof import GREEN, HeadProof, HoldingHead
 from brigade.tick.prove_head import HeadQuery, prove_head
+from brigade.tick.read_branch_head_checks import BranchHeadQuery, read_branch_head_checks
 
 WHOLE_WORKTREE = "."
 NO_TASK_CHECK = None
-NO_FORGE_CHECK = ()
 
 
 @dataclass(frozen=True)
@@ -27,15 +27,17 @@ class TaskRebase:
     held_by: HoldingHead | None = None
 
 
-def _prove_base_head(runtime: Runtime, action: RebaseTask, worktree: Path) -> HeadProof:
+def _prove_base_head(runtime: Runtime, action: RebaseTask, worktree: Path, environment: dict) -> HeadProof:
+    project = find_project(read_projects(runtime), action.project)
+    commit = resolve_commit(runtime.run_process, worktree, f"{REMOTE}/{action.branch}")
+    forge_checks = read_branch_head_checks(
+        runtime,
+        BranchHeadQuery(project=project, branch=action.branch, commit=commit, read_environment=lambda key: environment),
+    )
     return prove_head(
         runtime,
         HeadQuery(
-            project=find_project(read_projects(runtime), action.project),
-            repository=worktree,
-            commit=resolve_commit(runtime.run_process, worktree, f"{REMOTE}/{action.branch}"),
-            task_check=NO_TASK_CHECK,
-            forge_checks=NO_FORGE_CHECK,
+            project=project, repository=worktree, commit=commit, task_check=NO_TASK_CHECK, forge_checks=forge_checks
         ),
     )
 
@@ -55,7 +57,7 @@ def rebase_task(runtime: Runtime, action: RebaseTask, environment: dict) -> Task
         fetch_branches(
             runtime.run_process, BranchesFetch(repository=worktree, branches=(action.branch,), environment=environment)
         )
-        base_head = _prove_base_head(runtime, action, worktree)
+        base_head = _prove_base_head(runtime, action, worktree, environment)
         if base_head.state != GREEN:
             return TaskRebase(head=None, held_by=HoldingHead(branch=action.branch, proof=base_head))
         if not rebase_onto(runtime.run_process, worktree, f"{REMOTE}/{action.branch}"):
