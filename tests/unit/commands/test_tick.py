@@ -696,6 +696,9 @@ def create_forge(found: dict | None, details: dict | None, tails: dict | None = 
             "find_pull_request": lambda request: {"schema_version": 1, "pull_request": found},
             "read_pull_request": lambda request: {"schema_version": 1, "pull_request": details},
             "read_check_logs": CheckLogsReaderDouble(tails).read_check_logs,
+            "list_check_runs": lambda request: {"schema_version": 1, "check_runs": []},
+            "list_review_threads": lambda request: {"schema_version": 1, "threads": []},
+            "list_pull_requests": lambda request: {"schema_version": 1, "pull_requests": []},
         }
     )
 
@@ -732,7 +735,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
     def _create_runtime(self, task: tuple, forge: ForgeDouble, setup: tuple = (), requests: tuple = ()) -> Runtime:
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), *setup)},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"), *setup)},
             "TASK": {"T7": task},
             "REQUEST": dict(requests),
         }
@@ -740,7 +743,9 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, MACHINE_OUTPUTS),
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
+            ),
         )
 
     def _read_events(self) -> list[dict]:
@@ -758,7 +763,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         document = COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
-        self.assertEqual(document["actions_applied"], 1)
+        self.assertEqual(document["actions_applied"], 3)
         self.assertEqual(
             self.spawn.argvs,
             [
@@ -994,16 +999,16 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("queued")])
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_DELIVERED},
         }
         runtime = create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **WAVE_TREE_HOLDING_T7_IMPLEMENTED_OUTPUTS}),
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(
+            resolve_plugin=_resolve_the_collectors_beside(create_plugin_resolution(
                 STEP_COUNTING_PROBE, create_forge(MERGED_PULL_REQUEST, NO_DETAILS_ASKED)
-            ),
+            ), self.root),
         )
 
         # Act
@@ -1753,16 +1758,16 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("queued")])
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_TO_DELIVER},
         }
         runtime = create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **BLOCKING_QUESTION_OUTPUTS}),
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(
+            resolve_plugin=_resolve_the_collectors_beside(create_plugin_resolution(
                 STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
-            ),
+            ), self.root),
         )
 
         # Act
@@ -2479,7 +2484,18 @@ OTHER_TASK_PASSED = {**TASK_PASSED_AT_THE_HEAD, "task": "T8", "pr": 43}
 SAME_TASK_PASSED_IN_ANOTHER_WAVE = {**TASK_PASSED_AT_THE_HEAD, "wave": "tidepool_w15", "pr": 41}
 
 
-class MergingForgeDouble:
+class ForgeWithNothingToCollectDouble:
+    def list_check_runs(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "check_runs": []}
+
+    def list_pull_requests(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "pull_requests": []}
+
+    def list_review_threads(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "threads": []}
+
+
+class MergingForgeDouble(ForgeWithNothingToCollectDouble):
     def __init__(self, found_by_branch: dict):
         self.found_by_branch = found_by_branch
         self.merges = []
@@ -2527,14 +2543,14 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
     def _create_runtime(self, forge: MergingForgeDouble) -> Runtime:
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_DELIVERED, "T8": TASK_AFTER_T7},
         }
         return create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, MACHINE_OUTPUTS),
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+            resolve_plugin=_resolve_the_collectors_beside(create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root),
         )
 
     def _read_events(self) -> list[dict]:
@@ -2601,7 +2617,9 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
                     "pr": 42,
                     "method": "rebase",
                     "head": "8885daa",
-                }
+                },
+                {"project": "tidepool"},
+                {"project": "tidepool"},
             ],
         )
 
@@ -3632,7 +3650,7 @@ class TickLaunchingATaskWhoseChecksPassedAndWhoseBranchConflictsWithTheWaveBranc
         write_commit_checks(self.root, WAVE_HEAD, PASSED)
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_TO_DELIVER},
         }
         self.runtime = create_test_runtime(
@@ -3641,8 +3659,11 @@ class TickLaunchingATaskWhoseChecksPassedAndWhoseBranchConflictsWithTheWaveBranc
                 OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT, fallback=create_corpus_double(corpus)
             ).run,
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(
-                STEP_COUNTING_PROBE, RebasingForgeDouble([GREEN_PULL_REQUEST_AT_THE_T7_HEAD])
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(
+                    STEP_COUNTING_PROBE, RebasingForgeDouble([GREEN_PULL_REQUEST_AT_THE_T7_HEAD])
+                ),
+                self.root,
             ),
         )
 
@@ -4210,7 +4231,7 @@ LEDGER_OF_A_TASK_PAST_ITS_ROUNDS = [
 ]
 
 
-class RebasingForgeDouble:
+class RebasingForgeDouble(ForgeWithNothingToCollectDouble):
     def __init__(self, found: list[dict]):
         self.found = found
 
@@ -4242,7 +4263,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
     def _create_runtime(self, outputs: dict, found: list[dict]) -> Runtime:
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_DELIVERED, "T8": TASK_DELIVERED},
         }
         self.machine = ScriptedProcessRunner(outputs, fallback=create_corpus_double(corpus))
@@ -4251,7 +4272,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=create_the_worktree_at_its_addition(self._observe_the_lock(self.machine.run)),
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+            resolve_plugin=_resolve_the_collectors_beside(create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root),
         )
 
     def _observe_the_lock(self, run_process):
@@ -4523,7 +4544,10 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
-        self.assertEqual(self.environments_of_the_fetch, [ENVIRONMENT_OF_THE_CLI_ACCOUNT])
+        self.assertEqual(
+            self.environments_of_the_fetch,
+            [ENVIRONMENT_OF_THE_CLI_ACCOUNT, ENVIRONMENT_OF_THE_CLI_ACCOUNT, ENVIRONMENT_OF_THE_CLI_ACCOUNT],
+        )
 
     def test_should_abort_a_conflicting_rebase_and_launch_the_rebase_slot_in_fixing(self):
         # Arrange
@@ -4693,6 +4717,9 @@ def create_forge_of_the_cli(found: dict | None, environment: dict | None) -> For
         {
             "find_pull_request": lambda request: {"schema_version": 1, "pull_request": found},
             "read_login_environment": lambda request: {"schema_version": 1, "environment": environment},
+            "list_check_runs": lambda request: {"schema_version": 1, "check_runs": []},
+            "list_review_threads": lambda request: {"schema_version": 1, "threads": []},
+            "list_pull_requests": lambda request: {"schema_version": 1, "pull_requests": []},
         }
     )
 
@@ -4710,13 +4737,13 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
         )
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_TO_DELIVER},
         }
         return create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, MACHINE_OUTPUTS),
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+            resolve_plugin=_resolve_the_collectors_beside(create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root),
         )
 
     def test_should_read_the_pull_request_of_a_running_task_as_the_login_of_the_key_cli(self):
@@ -5656,7 +5683,7 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
         self.spawn = SpawnRecorderDouble()
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_AMENDED_ON_THE_WAVE_BRANCH},
         }
         on_the_pull_request = {**corpus, "TASK": {"T7": TASK_DELIVERED_TO_ITS_FIRST_WORDING}}
@@ -5671,7 +5698,7 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=self.machine.run,
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([BEHIND_PULL_REQUEST])),
+            resolve_plugin=_resolve_the_collectors_beside(create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([BEHIND_PULL_REQUEST])), self.root),
         )
 
     def test_should_launch_the_build_slot_on_the_worktree_of_the_task_and_rebase_nothing(self):
@@ -5765,6 +5792,8 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
                         },
                     },
                 },
+                {"project": "tidepool"},
+                {"project": "tidepool"},
             ],
         )
 
@@ -5783,7 +5812,7 @@ class TickBoundingItsReadsTest(unittest.TestCase):
         (self.repository / ".brigade" / "worktrees" / "T8").mkdir(parents=True)
         corpus = {
             "STUDY": {"triage": PAUSED_TRIAGE},
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_TO_DELIVER, "T8": TASK_TO_DELIVER},
         }
         self.processes = ScriptedProcessRunner(MACHINE_ANSWERS, fallback=create_corpus_double(corpus))
@@ -5795,9 +5824,9 @@ class TickBoundingItsReadsTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=self.processes.run,
             spawn_process=SpawnRecorderDouble().spawn,
-            resolve_plugin=create_plugin_resolution(
+            resolve_plugin=_resolve_the_collectors_beside(create_plugin_resolution(
                 STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
-            ),
+            ), self.root),
             read_ledger=self.readings.read,
         )
 
@@ -5859,7 +5888,7 @@ class TickReadingTheReferencesOfAWaveItMovedTest(unittest.TestCase):
         write_ledger(root, LEDGER_OF_A_VERIFIED_TASK)
         corpus = {
             "STUDY": {"triage": PAUSED_TRIAGE},
-            "PROJECT": {"tidepool": (("PATH", str(repository)), ("MAIN", "main"))},
+            "PROJECT": {"tidepool": (("PATH", str(repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_DELIVERED, "T8": TASK_AFTER_T7},
         }
         processes = ScriptedProcessRunner(MACHINE_ANSWERS, fallback=create_corpus_double(corpus))
@@ -5868,7 +5897,7 @@ class TickReadingTheReferencesOfAWaveItMovedTest(unittest.TestCase):
             create_test_paths(root),
             run_process=WaveBranchMovedByTheMergeDouble(forge, processes).run,
             spawn_process=SpawnRecorderDouble().spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+            resolve_plugin=_resolve_the_collectors_beside(create_plugin_resolution(STEP_COUNTING_PROBE, forge), root),
         )
 
         # Act
