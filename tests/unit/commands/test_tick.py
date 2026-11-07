@@ -3708,6 +3708,64 @@ class TickLaunchingATaskWithoutAPullRequestWhoseBranchConflictsWithTheWaveBranch
         )
 
 
+class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.repository = self.root / "tidepool"
+        (self.repository / ".brigade" / "worktrees" / "T7").mkdir(parents=True)
+        self.spawn = SpawnRecorderDouble()
+        write_ledger(self.root, [CUT_OF_M4_ON_THE_WAVE_BRANCH, WAVE_STARTED])
+        write_commit_checks(self.root, T7_HEAD, PASSED)
+        write_commit_checks(self.root, WAVE_HEAD, FAILED)
+        corpus = {
+            "STUDY": PAUSED_BUILT_IN_STUDIES,
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_TO_DELIVER},
+        }
+        self.machine = ScriptedProcessRunner(
+            OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT, fallback=create_corpus_double(corpus)
+        )
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=self.machine.run,
+            spawn_process=self.spawn.spawn,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([None])),
+        )
+
+    def test_should_launch_no_run(self):
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(self.spawn.argvs, [])
+
+    def test_should_name_the_red_wave_branch_its_commit_and_the_command_that_failed_on_stderr(self):
+        # Arrange
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertIn(
+            "brigade tick: @TASK.T7 waits: integration/M4 is red at 8885daa, `make test` failed\n", errors.getvalue()
+        )
+
+    def test_should_record_no_state_for_the_task(self):
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        events = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(json.loads(events[-1])["event"], "wave.started")
+
+
 IS_T7_ON_THE_WAVE_BRANCH = ("git", "merge-base", "--is-ancestor", "integration/M4", "feature/T7-tide-table")
 BRANCH_OFF_THE_WAVE_BRANCH = ProcessAnswer(exit_code=1)
 BRANCH_DESCENDING_FROM_THE_WAVE_BRANCH = ProcessAnswer()
