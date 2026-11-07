@@ -712,13 +712,33 @@ def _note_amendment(task: TaskFacts, on_pull_request: Entity | None, on_wave: En
     return dataclasses.replace(task, amendment=TaskAmendment(on_pull_request=on_pull_request, on_wave=on_wave))
 
 
+def _is_delivered_by_a_build_run(reading: WaveReading, open_wave: _OpenWave, task: TaskFacts) -> bool:
+    finished = [event for event in reading.events if isinstance(event, RunFinished) and event.run == task.last_run]
+    return (
+        not is_on_github(find_project(reading.projects, open_wave.started.project))
+        and not task.last_run_is_a_rebase
+        and bool(finished)
+        and finished[-1].outcome == DONE_OUTCOME
+    )
+
+
+def _note_delivered_head(reading: WaveReading, open_wave: _OpenWave, task: TaskFacts) -> TaskFacts:
+    if not _is_delivered_by_a_build_run(reading, open_wave, task):
+        return task
+    followed = open_wave.followed
+    return dataclasses.replace(
+        task, delivered_head=resolve_commit(followed.run_process, followed.repository, task.branch)
+    )
+
+
 def _read_wave_task(runtime: Runtime, reading: WaveReading, open_wave: _OpenWave, task: Entity) -> TaskFacts:
     wave = open_wave.started.wave
     followed = _follow_task(
         _read_task_facts(runtime, open_wave.tree_root, task), open_wave.followed, open_wave.implemented
     )
     amended = _note_amendment(followed, _read_task_on_its_pull_request(runtime, reading, open_wave, followed), task)
-    return _note_last_run(_note_quota(amended, reading, wave, open_wave.followed.states), reading, wave)
+    noted = _note_last_run(_note_quota(amended, reading, wave, open_wave.followed.states), reading, wave)
+    return _note_delivered_head(reading, open_wave, noted)
 
 
 def _open_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, tree_root: Path) -> _OpenWave:
