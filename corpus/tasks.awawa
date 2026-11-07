@@ -16179,3 +16179,8 @@ TASK B237
 		+ "(today 13 of 74 do). A rising escape rate would then be the signal that the gate's"
 		+ "findings need sharpening; a falling one, that the \"3000 fixes\" are the tick's"
 		+ "bootstrap defects being paid down. »"
+	SOURCE "the user's words of 2026-11-07 on the four choices the draft made beyond their ruling"
+		+ "(CORRECTS names a pull request; brigade task pr refuses a fix without CORRECTS; the"
+		+ "series reads the ledger alone, so a fix opened by hand without a task counts in no"
+		+ "figure; a round to pass is one task.verdict, not a fixing state of pr.merged): « je suis"
+		+ "d'accord avec ces choix »"
