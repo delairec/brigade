@@ -419,3 +419,40 @@ class ReadLedgerSinceAnEarlierReadingTest(ReadLedgerTestCase):
                 ),
             ),
         )
+
+
+TASK_PREFLIGHTED_WITHOUT_A_PULL_REQUEST = (
+    '{"schema_version": 1, "ts": "2026-10-19T09:00:00Z", "event": "task.preflighted", "project": "tidepool",'
+    ' "wave": "tidepool_w16", "task": "T7", "head": "8885daa", "checks": []}\n'
+)
+TASK_VERDICT_WITHOUT_A_PULL_REQUEST = (
+    '{"schema_version": 1, "ts": "2026-10-19T09:00:00Z", "event": "task.verdict", "project": "tidepool",'
+    ' "wave": "tidepool_w16", "task": "T7", "head": "8885daa", "verdict": "pass", "findings": [], "login": null}\n'
+)
+PR_MERGED_WITHOUT_A_PULL_REQUEST = (
+    '{"schema_version": 1, "ts": "2026-10-19T09:00:00Z", "event": "pr.merged", "project": "tidepool",'
+    ' "wave": "tidepool_w16", "task": "T7", "rounds": 1, "login": null}\n'
+)
+WAVE_MERGED_WITHOUT_A_PULL_REQUEST = (
+    '{"schema_version": 1, "ts": "2026-10-19T09:00:00Z", "event": "wave.merged", "wave": "tidepool_w16",'
+    ' "login": null}\n'
+)
+
+
+class ReadLedgerOfAnEventOfAProjectWithoutAForgeTest(ReadLedgerTestCase):
+    def test_should_read_the_event_with_its_pull_request_absent(self):
+        for line in [
+            TASK_PREFLIGHTED_WITHOUT_A_PULL_REQUEST,
+            TASK_VERDICT_WITHOUT_A_PULL_REQUEST,
+            PR_MERGED_WITHOUT_A_PULL_REQUEST,
+            WAVE_MERGED_WITHOUT_A_PULL_REQUEST,
+        ]:
+            with self.subTest(line=line):
+                # Arrange
+                self.write_ledger("2026-10.jsonl", line.encode())
+
+                # Act
+                reading = read_ledger(self.state_root)
+
+                # Assert
+                self.assertIsNone(reading.entries[0].event.pr)
