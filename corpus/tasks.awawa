@@ -1576,7 +1576,7 @@ TASK B14
 		IMPL "tests/unit/commands/test_tick.py::def"
 			+ "test_should_read_the_token_of_the_login_of_the_key_cli_once_per_tick(self):"
 		IMPL "tests/unit/commands/test_tick.py::def"
-			+ "test_should_plan_the_wave_while_it_follows_no_task(self):"
+			+ "test_should_plan_the_wave_of_a_project_without_a_forge_with_no_token_for_the_login_of_the_key_cli(self):"
 	SPEC "an open wave whose forge read fails is named on stderr and skipped, and the tick serves"
 		+ "the other waves; a login of the key cli for which gh prints no token still stops the"
 		+ "tick"
