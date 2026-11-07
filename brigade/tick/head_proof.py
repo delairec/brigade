@@ -39,3 +39,9 @@ class HeadProof:
     commit: str
     state: str
     failed_commands: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class HoldingHead:
+    branch: str
+    proof: HeadProof
