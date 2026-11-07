@@ -4603,13 +4603,13 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
         (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
         self.repository = self.root / "tidepool"
 
-    def _create_runtime(self, binding: str, forge: ForgeDouble) -> Runtime:
+    def _create_runtime(self, binding: str, forge: ForgeDouble, project_forge: str) -> Runtime:
         (self.root / "config" / "config.toml").write_text(
             CLIENT_AND_DOCUMENT_CONFIGURATION + ONE_FORGE_ATTEMPT + binding, encoding="utf-8"
         )
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", project_forge))},
             "TASK": {"T7": TASK_TO_DELIVER},
         }
         return create_test_runtime(
@@ -4622,7 +4622,7 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("running")])
         forge = create_forge_of_the_cli(OPEN_PULL_REQUEST, ENVIRONMENT_OF_THE_CLI_ACCOUNT)
-        runtime = self._create_runtime(CLI_BOUND_TO_A_FORGE_ACCOUNT, forge)
+        runtime = self._create_runtime(CLI_BOUND_TO_A_FORGE_ACCOUNT, forge, "github")
 
         # Act
         COMMAND.run(Namespace(mode="dry-run"), runtime)
@@ -4650,7 +4650,7 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("running")])
         forge = create_forge_of_the_cli(OPEN_PULL_REQUEST, ENVIRONMENT_OF_THE_CLI_ACCOUNT)
-        runtime = self._create_runtime(CLI_BOUND_TO_A_FORGE_ACCOUNT, forge)
+        runtime = self._create_runtime(CLI_BOUND_TO_A_FORGE_ACCOUNT, forge, "github")
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
@@ -4664,7 +4664,7 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("running")])
         forge = create_forge_of_the_cli(OPEN_PULL_REQUEST, NO_TOKEN)
-        runtime = self._create_runtime(CLI_BOUND_TO_A_TOKENLESS_ACCOUNT, forge)
+        runtime = self._create_runtime(CLI_BOUND_TO_A_TOKENLESS_ACCOUNT, forge, "github")
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
@@ -4675,11 +4675,11 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
             str(raised.exception), "gh printed no token for the login tidepool-tokenless, bound to cli, after 1 attempt"
         )
 
-    def test_should_plan_the_wave_while_it_follows_no_task(self):
+    def test_should_plan_the_wave_of_a_project_without_a_forge_with_no_token_for_the_login_of_the_key_cli(self):
         # Arrange
         write_ledger(self.root, [CUT_OF_M4_ON_THE_WAVE_BRANCH, WAVE_STARTED])
         forge = create_forge_of_the_cli(NO_PULL_REQUEST, NO_TOKEN)
-        runtime = self._create_runtime(CLI_BOUND_TO_A_TOKENLESS_ACCOUNT, forge)
+        runtime = self._create_runtime(CLI_BOUND_TO_A_TOKENLESS_ACCOUNT, forge, "none")
 
         # Act
         document = COMMAND.run(Namespace(mode="dry-run"), runtime)
