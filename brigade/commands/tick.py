@@ -319,7 +319,13 @@ def _launch_rebase(runtime: Runtime, configuration: Configuration, action: Rebas
 def _rebase_task(runtime: Runtime, configuration: Configuration, action: RebaseTask) -> None:
     environment = read_forge_environment(configuration, CLI_KEY, runtime)
     login = ask_forge_account(runtime.resolve_plugin("forge", FORGE_NAME), FORGE_NAME, environment, runtime).login
-    head = rebase_task(runtime, action, environment)
+    rebase = rebase_task(runtime, action, environment)
+    if rebase.held_by is not None:
+        sys.stderr.write(
+            f"brigade tick: the catch-up of @TASK.{action.task} waits: {describe_holding_head(rebase.held_by)}\n"
+        )
+        return
+    head = rebase.head
     if head is not None:
         append_event(
             runtime.paths,

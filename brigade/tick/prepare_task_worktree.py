@@ -27,7 +27,7 @@ from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
 from brigade.system.write_text_atomically import write_text_atomically
 from brigade.tick.actions import LaunchTask
-from brigade.tick.head_proof import GREEN, RED, ForgeCheck, HeadProof
+from brigade.tick.head_proof import GREEN, RED, ForgeCheck, HeadProof, HoldingHead
 from brigade.tick.ignore_worktrees import ignore_worktrees
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
 from brigade.tick.prove_head import HeadQuery, prove_head
@@ -44,12 +44,6 @@ DESCENDING = 0
 WHOLE_WORKTREE = "."
 NO_TASK_CHECK = None
 NO_FORGE_CHECK = ()
-
-
-@dataclass(frozen=True)
-class HoldingHead:
-    branch: str
-    proof: HeadProof
 
 
 @dataclass(frozen=True)
