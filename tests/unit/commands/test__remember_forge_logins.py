@@ -1,6 +1,6 @@
 import unittest
 
-from brigade.tick.remember_forge_logins import remember_forge_logins
+from brigade.commands._remember_forge_logins import remember_forge_logins
 
 FORGE = object()
 CHECK_RUNS_COLLECTOR = object()
