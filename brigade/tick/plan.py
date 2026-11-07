@@ -86,6 +86,7 @@ SUCCESSFUL_CHECK = "success"
 OTHER_BASE_REASON = "pull request base is not the base of its task"
 RUN_DEAD_REASON = "run dead"
 RUN_NOT_STARTED_REASON = "run not started"
+PREFLIGHT_FAILED_REASON = "preflight failed"
 CHECK_SUITE_CREATION_DELAY = timedelta(minutes=1)
 UNREACHED_FORGE_REASON = "a commit outside the merged pull request"
 LIVE_RUN_REASON = "a live run"
@@ -103,6 +104,7 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_resumes(snapshot)
         + _plan_followed_pull_requests(snapshot)
         + _plan_delivered_head_preflights(snapshot)
+        + _plan_failed_preflight_parkings(snapshot)
         + _plan_blocked_task_parkings(snapshot)
         + _plan_dead_run_parkings(snapshot)
         + _plan_closes(snapshot)
@@ -576,6 +578,26 @@ def _plan_delivered_head_preflights(snapshot: Snapshot) -> tuple:
         for wave in snapshot.waves
         for task in wave.tasks
         if _is_delivered_head_due(wave, task, live_tasks)
+    )
+
+
+def _describe_failed_preflight(task: TaskFacts) -> str:
+    findings = "; ".join(
+        f"{failure.name}: {finding}" for failure in task.preflight_failures for finding in failure.findings
+    )
+    return f"{PREFLIGHT_FAILED_REASON} at {task.delivered_head}: {findings}"
+
+
+def _plan_failed_preflight_parkings(snapshot: Snapshot) -> tuple:
+    live_tasks = _read_occupancy(snapshot).tasks
+    return tuple(
+        ParkTask(wave=wave.wave, task=task.name, reason=_describe_failed_preflight(task), blockers=())
+        for wave in snapshot.waves
+        for task in wave.tasks
+        if wave.states.get(task.name) == RUNNING_STATE
+        and task.delivered_head == task.preflighted_head
+        and task.preflight_failures
+        and (wave.wave, task.name) not in live_tasks
     )
 
 
