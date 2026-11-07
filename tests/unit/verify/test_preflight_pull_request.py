@@ -140,7 +140,7 @@ class PreflightPullRequestTest(unittest.TestCase):
                 fields=(EntityField(name="PATH", value="/srv/shop"), EntityField(name="FORGE", value="gitlab")),
             ),
             task="B1",
-            wave_branch="integration/w1",
+            base_branch="integration/w1",
             pr=160,
             forge=ForgeAnsweringOutOfShapeDouble(),
             environment={"GH_TOKEN": "token-of-octo-builder"},

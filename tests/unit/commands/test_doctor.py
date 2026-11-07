@@ -34,8 +34,12 @@ APPROVAL_POLICY = json.dumps(
     {"fields": [{"name": "PROJECT", "atoms": ["@PROJECT.app"]}, {"name": "REVIEW", "atoms": ["approval"]}]}
 )
 PROJECTS = json.dumps({"entities": [{"type": "PROJECT", "name": "app"}, {"type": "PROJECT", "name": "lib"}]})
-PROJECT_ON_GITHUB = json.dumps({"fields": [{"name": "FORGE", "atoms": ["github"]}]})
-PROJECT_OF_NO_FORGE = json.dumps({"fields": [{"name": "FORGE", "atoms": ["none"]}]})
+PROJECT_ON_GITHUB = json.dumps(
+    {"fields": [{"name": "PATH", "atoms": ["/"]}, {"name": "MAIN", "atoms": ["main"]}, {"name": "FORGE", "atoms": ["github"]}]}
+)
+PROJECT_OF_NO_FORGE = json.dumps(
+    {"fields": [{"name": "PATH", "atoms": ["/"]}, {"name": "MAIN", "atoms": ["main"]}, {"name": "FORGE", "atoms": ["none"]}]}
+)
 COMMENT_POLICY = json.dumps(
     {"fields": [{"name": "PROJECT", "atoms": ["@PROJECT.lib"]}, {"name": "REVIEW", "atoms": ["comment"]}]}
 )
@@ -77,6 +81,7 @@ def _create_doctor_answers() -> dict:
         ("awawa-web",): ProcessAnswer(),
         ("awawa", "lint"): ProcessAnswer(),
         ("git", "for-each-ref"): ProcessAnswer(),
+        ("git", "rev-parse", "--verify", "--quiet", "refs/heads/main"): ProcessAnswer(),
         ("awawa", "status", "POLICY"): ProcessAnswer(stdout=POLICIES),
         ("awawa", "show", "@POLICY.p1"): ProcessAnswer(stdout=APPROVAL_POLICY),
         ("awawa", "show", "@POLICY.p2"): ProcessAnswer(stdout=COMMENT_POLICY),
@@ -1076,6 +1081,8 @@ class DoctorProjectsTest(DoctorTestCase):
         super().setUp()
         self.configure(CONFIGURATION)
         self.runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
+        for registered in (("status", "PROJECT"), ("show", "@PROJECT.app"), ("show", "@PROJECT.lib")):
+            del self.answers["awawa", *registered]
         self.project = Path(self.root.name) / "app"
         self.project.mkdir()
         tools = Path(self.root.name) / "tools"
