@@ -6,7 +6,8 @@ from brigade.corpus.locate_corpus_lock import locate_corpus_lock
 from brigade.corpus.locate_entity_block import locate_entity_block
 from brigade.corpus.read_awawa_document import read_awawa_document
 from brigade.errors import BrigadeError
-from brigade.git.push_branch import BranchPush, push_branch
+from brigade.git.push_branch import BranchPush
+from brigade.git.push_branch_with_lease import push_branch_with_lease
 from brigade.git.read_current_branch import read_current_branch
 from brigade.git.resolve_commit import resolve_commit
 from brigade.ledger.append_event import append_event
@@ -101,7 +102,7 @@ def promote_task(runtime: Runtime, demand: TaskPromotionDemand) -> dict:
     _require_promotion_fields(runtime, worktree)
     _write_promotion(runtime, worktree, pr, demand.attribution)
     branch = read_current_branch(runtime.run_process, worktree.path)
-    push_branch(
+    push_branch_with_lease(
         runtime.run_process, BranchPush(repository=worktree.path, branch=branch, environment=demand.environment)
     )
     commit = resolve_commit(runtime.run_process, worktree.path, HEAD)
