@@ -47,12 +47,19 @@ NO_FORGE_CHECK = ()
 
 
 @dataclass(frozen=True)
+class HoldingHead:
+    branch: str
+    proof: HeadProof
+
+
+@dataclass(frozen=True)
 class PreparedWorktree:
     worktree: BranchWorktree
     conflicted: bool
     on_start: bool
     rebased: bool = False
     failed_commands: tuple[str, ...] = ()
+    held_by: HoldingHead | None = None
 
 
 def _split_line(line: str) -> tuple[str, ...]:
@@ -138,8 +145,13 @@ def _put_on_start(runtime: Runtime, launch: _Launch) -> PreparedWorktree:
         return PreparedWorktree(
             worktree=worktree, conflicted=False, on_start=False, failed_commands=task_head.failed_commands
         )
-    if task_head.state != GREEN or _prove_start_head(runtime, launch).state != GREEN:
-        return PreparedWorktree(worktree=worktree, conflicted=False, on_start=False)
+    if task_head.state != GREEN:
+        held_by = HoldingHead(branch=worktree.branch, proof=task_head)
+        return PreparedWorktree(worktree=worktree, conflicted=False, on_start=False, held_by=held_by)
+    start_head = _prove_start_head(runtime, launch)
+    if start_head.state != GREEN:
+        held_by = HoldingHead(branch=launch.action.branch, proof=start_head)
+        return PreparedWorktree(worktree=worktree, conflicted=False, on_start=False, held_by=held_by)
     rebased = rebase_onto(runtime.run_process, worktree.path, worktree.start)
     return PreparedWorktree(worktree=worktree, conflicted=not rebased, on_start=rebased, rebased=rebased)
 
@@ -180,7 +192,7 @@ def prepare_task_worktree(
             if _open_worktree(runtime, repository, worktree)
             else PreparedWorktree(worktree=worktree, conflicted=False, on_start=True)
         )
-        if prepared.conflicted:
+        if prepared.conflicted or prepared.held_by is not None:
             return prepared
     _set_up_or_park(runtime, project, action, prepared)
     return prepared

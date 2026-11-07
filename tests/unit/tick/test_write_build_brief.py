@@ -110,32 +110,6 @@ class WriteBuildBriefTest(unittest.TestCase):
             " repair those failures first, and do not rebase the branch.\n",
         )
 
-    def test_should_tell_the_build_of_a_branch_left_off_its_start_not_to_rebase_it(self):
-        # Arrange
-        state_root = Path(tempfile.mkdtemp())
-        self.addCleanup(shutil.rmtree, state_root)
-        prepared = PreparedWorktree(
-            worktree=BranchWorktree(
-                path=Path("/srv/shop/.brigade/worktrees/B1"), branch="feature/B1-task", start="integration/shop_w1"
-            ),
-            conflicted=False,
-            on_start=False,
-        )
-        no_task_ruled_on_the_wave_branch = None
-
-        # Act
-        path = write_build_brief(state_root, ACTION, prepared, no_task_ruled_on_the_wave_branch)
-
-        # Assert
-        self.assertEqual(
-            path.read_text(encoding="utf-8"),
-            "Deliver @TASK.B1 of @PROJECT.shop, in the wave shop_w1.\n"
-            "\n"
-            "- Base branch: integration/shop_w1.\n"
-            "- Worktree: /srv/shop/.brigade/worktrees/B1, on the branch feature/B1-task,"
-            " left as it stands, off the head of integration/shop_w1: do not rebase it.\n",
-        )
-
     def test_should_give_the_build_the_task_as_it_reads_on_the_wave_branch_as_prevailing_over_its_worktree(self):
         # Arrange
         state_root = Path(tempfile.mkdtemp())
