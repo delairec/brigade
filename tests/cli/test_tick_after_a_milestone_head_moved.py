@@ -36,5 +36,5 @@ class TickAfterTheHeadOfAMilestonePullRequestMovedTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             self.rehearser.read_pull_request(MILESTONE_PULL_REQUEST)["title"],
-            "feat: deliver S1; deliver S2; deliver S3 (M1, @TASK.S1, @TASK.S2, @TASK.S3)",
+            "feat: Empty cart (M1)",
         )

@@ -499,7 +499,6 @@ def _describe_milestone_pull_request(
             run_process=runtime.run_process,
             root=prepare_project_tree(query, configuration, runtime).root,
             milestone=action.milestone,
-            read_pull_request_title=pull_requests.read_title,
         )
     )
     if pull_requests.read_title(action.pr) != title:

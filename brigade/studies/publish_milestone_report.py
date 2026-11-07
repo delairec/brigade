@@ -23,7 +23,6 @@ from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.create_directory import create_directory
 from brigade.system.write_text_file import write_text_file
 from brigade.waves.compose_milestone_title import MilestoneTitleDemand, compose_milestone_title
-from brigade.waves.pull_request_titles import PullRequestTitles
 
 CORPUS_FIELD = "CORPUS"
 MAIN_FIELD = "MAIN"
@@ -57,23 +56,6 @@ def _find_opened_pull_request(context: StudyRunContext) -> int | None:
     return opened[-1] if opened else NO_PULL_REQUEST
 
 
-def _compose_title(context: StudyRunContext, publication: MilestonePublication, checkout) -> str:
-    pull_requests = PullRequestTitles(
-        forge=context.equipment.resolve_forge(publication.forge_name),
-        repository=publication.repository,
-        environment=publication.environment,
-        runtime=context.runtime,
-    )
-    return compose_milestone_title(
-        MilestoneTitleDemand(
-            run_process=context.runtime.run_process,
-            root=checkout,
-            milestone=context.study.milestone.milestone,
-            read_pull_request_title=pull_requests.read_title,
-        )
-    )
-
-
 def _open_pull_request(context: StudyRunContext, publication: MilestonePublication, checkout) -> int:
     order = context.study.milestone
     forge = context.equipment.resolve_forge(publication.forge_name)
@@ -82,7 +64,9 @@ def _open_pull_request(context: StudyRunContext, publication: MilestonePublicati
             "repository": publication.repository,
             "base": publication.main,
             "branch": order.branch,
-            "title": _compose_title(context, publication, checkout),
+            "title": compose_milestone_title(
+                MilestoneTitleDemand(run_process=context.runtime.run_process, root=checkout, milestone=order.milestone)
+            ),
             "body": publication.markdown,
             "milestone": NO_MILESTONE,
             "environment": publication.environment,
