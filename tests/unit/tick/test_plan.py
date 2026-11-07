@@ -2726,3 +2726,60 @@ class PlanPreflightOfATaskWithoutAForgeTest(unittest.TestCase):
         self.assertEqual(
             actions, (ParkTask(wave="shop_w1", task="S3", reason="run dead: 20261006T110000Z-d1e2f3", blockers=()),)
         )
+
+    def test_should_park_a_running_task_whose_delivered_head_failed_its_preflight_with_its_findings(self):
+        # Arrange
+        acceptance_failure = PreflightFailure(
+            name="acceptance", findings=("python3 -m unittest exited 1", "FAILED (failures=1)")
+        )
+        task = TaskFacts(
+            name="S3",
+            branch="feature/S3-task",
+            last_run=LAST_RUN_OF_S3,
+            delivered_head=DELIVERED_HEAD,
+            preflighted_head=DELIVERED_HEAD,
+            preflight_failures=(ANCESTRY_FAILURE, acceptance_failure),
+        )
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                ParkTask(
+                    wave="shop_w1",
+                    task="S3",
+                    reason="preflight failed at 4d5e6f7: ancestry: the head does not descend from the wave branch;"
+                    " acceptance: python3 -m unittest exited 1; acceptance: FAILED (failures=1)",
+                    blockers=(),
+                ),
+            ),
+        )
+
+    def test_should_park_no_task_whose_failed_preflight_is_not_of_its_delivered_head_while_it_runs(self):
+        for case, state, preflighted, live_runs, expected in [
+            ("delivered again since", "running", PREFLIGHTED_BEFORE_A_PUSH, (), (LOCAL_PREFLIGHT_S3,)),
+            ("named by a live run", "running", DELIVERED_HEAD, (LIVE_RUN_OF_S3,), ()),
+            ("parked already", "parked", DELIVERED_HEAD, (), (CloseWave(wave="shop_w1", project="shop"),)),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    branch="feature/S3-task",
+                    last_run=LAST_RUN_OF_S3,
+                    delivered_head=DELIVERED_HEAD,
+                    preflighted_head=preflighted,
+                    preflight_failures=(ANCESTRY_FAILURE,),
+                )
+                project = dataclasses.replace(SHOP, live_runs=live_runs)
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
