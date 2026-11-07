@@ -31,6 +31,7 @@ from brigade.tick.head_proof import GREEN, RED, ForgeCheck, HeadProof, HoldingHe
 from brigade.tick.ignore_worktrees import ignore_worktrees
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
 from brigade.tick.prove_head import HeadQuery, prove_head
+from brigade.tick.read_branch_head_checks import BranchHeadQuery, read_branch_head_checks
 from brigade.tick.read_task_check import read_task_check
 from brigade.waves.locate_forge_branch import locate_forge_branch
 from brigade.waves.read_task_state import PARKED_STATE
@@ -93,6 +94,7 @@ class _Launch:
     repository: Path
     worktree: BranchWorktree
     action: LaunchTask
+    read_environment: Callable[[str], dict]
 
 
 def _read_pull_request_checks(action: LaunchTask, commit: str) -> tuple[ForgeCheck, ...]:
@@ -117,14 +119,24 @@ def _prove_task_head(runtime: Runtime, launch: _Launch) -> HeadProof:
 
 
 def _prove_start_head(runtime: Runtime, launch: _Launch) -> HeadProof:
+    commit = resolve_commit(runtime.run_process, launch.worktree.path, launch.worktree.start)
+    forge_checks = read_branch_head_checks(
+        runtime,
+        BranchHeadQuery(
+            project=launch.project,
+            branch=launch.action.branch,
+            commit=commit,
+            read_environment=launch.read_environment,
+        ),
+    )
     return prove_head(
         runtime,
         HeadQuery(
             project=launch.project,
             repository=launch.repository,
-            commit=resolve_commit(runtime.run_process, launch.worktree.path, launch.worktree.start),
+            commit=commit,
             task_check=NO_TASK_CHECK,
-            forge_checks=NO_FORGE_CHECK,
+            forge_checks=forge_checks,
         ),
     )
 
@@ -182,7 +194,16 @@ def prepare_task_worktree(
         if configuration.worktree_root is None and action.branch != read_project_field(project, MAIN_FIELD):
             ignore_worktrees(runtime.run_process, repository, action.branch)
         prepared = (
-            _put_on_start(runtime, _Launch(project=project, repository=repository, worktree=worktree, action=action))
+            _put_on_start(
+                runtime,
+                _Launch(
+                    project=project,
+                    repository=repository,
+                    worktree=worktree,
+                    action=action,
+                    read_environment=read_environment,
+                ),
+            )
             if _open_worktree(runtime, repository, worktree)
             else PreparedWorktree(worktree=worktree, conflicted=False, on_start=True)
         )
