@@ -163,7 +163,8 @@ def _rebase_wave(runtime: Runtime, rebase: MilestoneBranchesRebase, wave: WaveSt
     run = BranchRebaseRun(
         project=rebase.project.name, worktree=worktree.path, branch=wave.branch, base=milestone_branch, wave=wave.wave
     )
-    before = _rebase_branch(runtime, rebase, run, milestone_branch)
+    upstream = locate_forge_branch(runtime.run_process, rebase.project, milestone_branch, rebase.read_environment)
+    before = _rebase_branch(runtime, rebase, run, upstream)
     if before is None:
         return False
     _push_branch(runtime, rebase, run, before)

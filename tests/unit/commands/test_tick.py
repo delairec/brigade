@@ -3392,9 +3392,9 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
 
 MILESTONE_BRANCH_DESCENT = ("git", "merge-base", "--is-ancestor", "main", "integration/tides")
 FORGE_MILESTONE_BRANCH_DESCENT = ("git", "merge-base", "--is-ancestor", "origin/main", "origin/integration/tides")
-REBASE_OF_THE_MILESTONE_BRANCH = ("git", "rebase", "main")
-FORGE_REBASE_OF_THE_MILESTONE_BRANCH = ("git", "rebase", "origin/main")
-REBASE_OF_THE_WAVE_BRANCH = ("git", "rebase", "integration/tides")
+REBASE_OF_THE_MILESTONE_BRANCH = ("git", "rebase", "--fork-point", "main")
+FORGE_REBASE_OF_THE_MILESTONE_BRANCH = ("git", "rebase", "--fork-point", "origin/main")
+REBASE_OF_THE_WAVE_BRANCH = ("git", "rebase", "--fork-point", "integration/tides")
 WAVE_BRANCH_DESCENT = ("git", "merge-base", "--is-ancestor", "integration/tides", "integration/M4")
 WAVE_WORKTREE_DESCENT = ("git", "merge-base", "--is-ancestor", "integration/tides", "HEAD")
 NOT_DESCENDING = ProcessAnswer(exit_code=1)
@@ -3687,7 +3687,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
 OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT = {
     **MACHINE_ANSWERS,
     ("git", "merge-base", "--is-ancestor", "integration/M4", "task/M4/T7"): NOT_DESCENDING,
-    ("git", "rebase", "integration/M4"): ProcessAnswer(
+    ("git", "rebase", "--fork-point", "integration/M4"): ProcessAnswer(
         exit_code=1, stderr="CONFLICT (content): Merge conflict in src/tides.py"
     ),
     ("git", "rev-parse", "--quiet", "--verify", "REBASE_HEAD"): ProcessAnswer(stdout="f02da32\n"),
@@ -4045,7 +4045,7 @@ class TickLaunchingAStudyTest(unittest.TestCase):
 BEHIND_PULL_REQUEST = {**GREEN_PULL_REQUEST, "behind": True}
 REBASED_HEAD = "9a9a9a9"
 REBASED_PULL_REQUEST = {**OPEN_PULL_REQUEST, "head": REBASED_HEAD, "checks": [{"name": "ci", "verdict": "pending"}]}
-REBASE_ONTO_THE_WAVE_BRANCH = ("git", "rebase", "origin/integration/M4")
+REBASE_ONTO_THE_WAVE_BRANCH = ("git", "rebase", "--fork-point", "origin/integration/M4")
 FETCH_OF_THE_WAVE_BRANCH = ("git", "fetch", "--quiet", "origin", "integration/M4")
 CLI_BOUND_TO_A_FORGE_ACCOUNT = '[forge_accounts]\ncli = "tidepool-cli"\n'
 ENVIRONMENT_OF_THE_CLI_ACCOUNT = {"GH_TOKEN": "t0k3n"}

@@ -17,6 +17,7 @@ from tests.unit.select_commands_opening_on import select_commands_opening_on
 
 REPOSITORY = "/srv/shop"
 MILESTONE_BRANCH = "integration/dashboard"
+FORGE_MILESTONE_BRANCH = "origin/integration/dashboard"
 MILESTONE_WORKTREE = "/srv/shop/.brigade/worktrees/integration-dashboard"
 WAVE_WORKTREE = "/srv/shop/.brigade/worktrees/integration-shop_w1"
 MILESTONE_HEAD = "5e2a7c1"
@@ -146,9 +147,10 @@ class RebaseMilestoneBranchesTestCase(unittest.TestCase):
         self.processes.answer(("git", "reset", "--quiet", "--hard", "origin/integration/shop_w1"))
         self.processes.answer(("git", "reset", "--quiet", "--hard", MILESTONE_BRANCH))
         self.processes.answer(("git", "reset", "--quiet", "--hard", "integration/shop_w1"))
-        self.processes.answer_by(("git", "rebase", "origin/main"), self.answer_rebase)
-        self.processes.answer_by(("git", "rebase", "main"), self.answer_rebase)
-        self.processes.answer_by(("git", "rebase", MILESTONE_BRANCH), self.answer_rebase)
+        self.processes.answer_by(("git", "rebase", "--fork-point", "origin/main"), self.answer_rebase)
+        self.processes.answer_by(("git", "rebase", "--fork-point", "main"), self.answer_rebase)
+        for milestone in (MILESTONE_BRANCH, FORGE_MILESTONE_BRANCH):
+            self.processes.answer_by(("git", "rebase", "--fork-point", milestone), self.answer_rebase)
         return _create_project(forge)
 
     def rebase(self, forge: str = "github", waves: tuple[str, ...] = OPEN_WAVES_OF_M3) -> MilestoneRebased | None:
@@ -182,7 +184,7 @@ class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCa
         )
         self.assertEqual(
             select_commands_opening_on(self.processes.requests, GIT_REBASE),
-            [(MILESTONE_WORKTREE, ("git", "rebase", "origin/main"))],
+            [(MILESTONE_WORKTREE, ("git", "rebase", "--fork-point", "origin/main"))],
         )
 
     def test_should_rebase_in_the_worktree_the_milestone_branch_already_holds_without_adding_one(self):
@@ -203,7 +205,7 @@ class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCa
         )
         self.assertEqual(
             select_commands_opening_on(self.processes.requests, GIT_REBASE),
-            [(MILESTONE_WORKTREE, ("git", "rebase", "origin/main"))],
+            [(MILESTONE_WORKTREE, ("git", "rebase", "--fork-point", "origin/main"))],
         )
 
     def test_should_add_the_worktree_of_the_milestone_branch_where_its_place_holds_another_branch(self):
@@ -258,7 +260,7 @@ class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCa
         # Assert
         self.assertEqual(
             select_commands_opening_on(self.processes.requests, GIT_REBASE),
-            [(MILESTONE_WORKTREE, ("git", "rebase", "main"))],
+            [(MILESTONE_WORKTREE, ("git", "rebase", "--fork-point", "main"))],
         )
 
     def test_should_push_nothing_without_a_forge(self):
@@ -279,7 +281,7 @@ class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCa
 
         self.wave_descent = 0
         project = self.register_project("github")
-        self.processes.answer_by(("git", "rebase", "origin/main"), answer_rebase_with_the_lock_tried)
+        self.processes.answer_by(("git", "rebase", "--fork-point", "origin/main"), answer_rebase_with_the_lock_tried)
         rebase = MilestoneBranchesRebase(
             project=project,
             milestone="M3",
@@ -416,8 +418,21 @@ class RebaseMilestoneBranchesWithTheirOpenWavesTest(RebaseMilestoneBranchesTestC
         self.assertEqual(
             select_commands_opening_on(self.processes.requests, GIT_REBASE),
             [
-                (MILESTONE_WORKTREE, ("git", "rebase", "origin/main")),
-                (WAVE_WORKTREE, ("git", "rebase", MILESTONE_BRANCH)),
+                (MILESTONE_WORKTREE, ("git", "rebase", "--fork-point", "origin/main")),
+                (WAVE_WORKTREE, ("git", "rebase", "--fork-point", FORGE_MILESTONE_BRANCH)),
+            ],
+        )
+
+    def test_should_rebase_an_open_wave_onto_the_local_milestone_branch_without_a_forge(self):
+        # Act
+        self.rebase("none")
+
+        # Assert
+        self.assertEqual(
+            select_commands_opening_on(self.processes.requests, GIT_REBASE),
+            [
+                (MILESTONE_WORKTREE, ("git", "rebase", "--fork-point", "main")),
+                (WAVE_WORKTREE, ("git", "rebase", "--fork-point", MILESTONE_BRANCH)),
             ],
         )
 
@@ -451,7 +466,7 @@ class RebaseMilestoneBranchesWithTheirOpenWavesTest(RebaseMilestoneBranchesTestC
         # Assert
         self.assertEqual(
             select_commands_opening_on(self.processes.requests, GIT_REBASE),
-            [(MILESTONE_WORKTREE, ("git", "rebase", "origin/main"))],
+            [(MILESTONE_WORKTREE, ("git", "rebase", "--fork-point", "origin/main"))],
         )
 
     def test_should_rebase_the_milestone_branch_alone_when_the_action_names_none_of_its_open_waves(self):
@@ -464,7 +479,7 @@ class RebaseMilestoneBranchesWithTheirOpenWavesTest(RebaseMilestoneBranchesTestC
         # Assert
         self.assertEqual(
             select_commands_opening_on(self.processes.requests, GIT_REBASE),
-            [(MILESTONE_WORKTREE, ("git", "rebase", "origin/main"))],
+            [(MILESTONE_WORKTREE, ("git", "rebase", "--fork-point", "origin/main"))],
         )
 
 
