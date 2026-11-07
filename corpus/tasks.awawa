@@ -16478,7 +16478,7 @@ TASK B238
 		+ "pushed with --force-with-lease"
 	STATUS todo
 	TYPE fix
-	MILESTONE @MILESTONE.ADD0
+	MILESTONE @MILESTONE.M7
 	COMPONENT "the tick"
 	ROLE ada
 	DESC "applies"
@@ -16666,3 +16666,7 @@ TASK B238
 		+ "ajoute une SPEC : le push d'une branche de tâche se fait en --force-with-lease, jamais"
 		+ "en force simple. »"
 		REF @DECISION.TheTickRebasesABranchOnlyBetweenAGreenSourceAndAGreenTargetProvenByCommit
+	SOURCE "the user's ruling of 2026-11-07, @MILESTONE.ADD0 being planned and its tasks served by"
+		+ "no tick: « dans ce cas on la met dans m7, tant pis »"
+		REF @MILESTONE.M7
+		REF @MILESTONE.ADD0
