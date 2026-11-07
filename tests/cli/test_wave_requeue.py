@@ -283,10 +283,7 @@ class BrigadeWaveRequeueOfATaskParkedAfterItsFirstVerdictTest(LaunchingTickTestC
     def setUp(self):
         super().setUp()
         self.project.run_git("branch", TASK_BRANCH, MILESTONE_BRANCH)
-        remote = self.project.path.parent / "shop.git"
-        self.project.run_git("init", "--quiet", "--bare", str(remote))
-        self.project.run_git("remote", "add", "origin", str(remote))
-        self.project.run_git("push", "--quiet", "origin", MILESTONE_BRANCH, TASK_BRANCH)
+        self.register_on_github("main", MILESTONE_BRANCH, TASK_BRANCH)
         self.head = self.project.run_git("rev-parse", TASK_BRANCH).strip()
         (self.pull_requests / "feature-S3-empty-the-cart-in-one-click.json").write_text(
             json.dumps(

@@ -39,6 +39,7 @@ class BrigadeTickOfATaskRebuiltTwiceWhosePreflightFailsACheckTest(LaunchingTickT
         super().setUp()
         self.project.run_git("branch", TASK_BRANCH, MILESTONE_BRANCH)
         self.project.run_git("worktree", "add", "--quiet", str(self.worktree), TASK_BRANCH)
+        self.register_on_github("main", MILESTONE_BRANCH, TASK_BRANCH)
         head = self.project.run_git("rev-parse", TASK_BRANCH).strip()
         (self.pull_requests / "feature-S3-empty-the-cart-in-one-click.json").write_text(
             json.dumps(
