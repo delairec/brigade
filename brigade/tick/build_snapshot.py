@@ -172,6 +172,7 @@ class TaskFacts:
     stopped_run: str | None = None
     resumed_state: str | None = None
     opened_pull_request: int | None = None
+    opening_of_its_pull_request: TaskPrOpened | None = None
     preflighted_head: str | None = None
     verdict: RecordedVerdict | None = None
     reviewed_head: str | None = None
@@ -399,6 +400,7 @@ class FollowedWave:
     worktree_root: str | None
     states: dict
     opened_pull_requests: dict
+    pull_request_openings: dict
     preflighted_heads: dict
     verdicts: dict
     reviewed_heads: dict
@@ -415,11 +417,15 @@ def _follow_task(task: TaskFacts, followed: FollowedWave, implemented: tuple[str
     standing = worktree.is_dir()
     if (state == QUEUED_STATE and task.name not in implemented) or (state in SETTLED_STATES and not standing):
         return task
+    pull_request = followed.read_pull_request(str(followed.repository), task.branch)
     return dataclasses.replace(
         task,
-        pull_request=followed.read_pull_request(str(followed.repository), task.branch),
+        pull_request=pull_request,
         worktree=str(worktree) if standing else None,
         opened_pull_request=followed.opened_pull_requests.get(task.name),
+        opening_of_its_pull_request=(
+            None if pull_request is None else followed.pull_request_openings.get((task.name, pull_request.number))
+        ),
         preflighted_head=followed.preflighted_heads.get(task.name),
         verdict=followed.verdicts.get(task.name),
         reviewed_head=followed.reviewed_heads.get(task.name),
@@ -635,6 +641,14 @@ def _read_reported_tasks(events: tuple, project: str) -> frozenset[str]:
     return frozenset(event.task for event in events if isinstance(event, TaskReported) and event.project == project)
 
 
+def _read_pull_request_openings(events: tuple, project: str) -> dict:
+    return {
+        (event.task, event.pr): event
+        for event in events
+        if isinstance(event, TaskPrOpened) and event.project == project
+    }
+
+
 def _follow_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, states: dict) -> FollowedWave:
     wave = started.wave
     since_requeue = _list_events_since_requeue(reading.events, wave)
@@ -645,6 +659,7 @@ def _follow_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, s
         opened_pull_requests={
             event.task: event.pr for event in reading.events if isinstance(event, TaskPrOpened) and event.wave == wave
         },
+        pull_request_openings=_read_pull_request_openings(reading.events, started.project),
         preflighted_heads=_read_preflighted_heads(since_requeue, wave),
         verdicts={
             event.task: RecordedVerdict(head=event.head, verdict=event.verdict)

@@ -8,6 +8,7 @@ from brigade.studies.task_report_order import TaskReportOrder
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.tasks.read_task_number import read_task_number
 from brigade.tick.actions import (
+    CarryOpenedPullRequest,
     CloseMilestone,
     CloseWave,
     CutMilestoneBranch,
@@ -251,6 +252,17 @@ def _decide_task_state(wave: WaveFacts, task: TaskFacts) -> RecordTaskState | No
     return None
 
 
+def _decide_opening_carried(wave: WaveFacts, task: TaskFacts) -> CarryOpenedPullRequest | None:
+    if (
+        task.opening_of_its_pull_request is None
+        or task.opened_pull_request is not None
+        or task.pull_request.state != OPEN_PULL_REQUEST
+        or wave.states.get(task.name, WAITING_STATE) in (WAITING_STATE, *SETTLED_STATES)
+    ):
+        return None
+    return CarryOpenedPullRequest(wave=wave.wave, opened=task.opening_of_its_pull_request)
+
+
 def _is_pushed_since_preflight(state: str, task: TaskFacts) -> bool:
     return state in AWAITING_PUSH_STATES and task.preflighted_head != task.pull_request.head
 
@@ -296,8 +308,9 @@ def _decide_worktree_removal(wave: WaveFacts, task: TaskFacts, occupancy: _Occup
 def _plan_followed_task(wave: WaveFacts, task: TaskFacts, project: ProjectFacts, reading: _FollowedReading) -> tuple:
     if task.rate_limit is not None:
         return ()
-    record = _decide_task_state(wave, task)
-    recorded = () if record is None else (record,)
+    recorded = tuple(
+        action for action in (_decide_task_state(wave, task), _decide_opening_carried(wave, task)) if action is not None
+    )
     blocked_parking = _decide_blocked_parking(wave, task, reading.occupancy)
     if blocked_parking is not None:
         return (*recorded, blocked_parking)

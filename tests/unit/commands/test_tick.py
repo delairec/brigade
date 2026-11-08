@@ -531,6 +531,17 @@ TASK_PR_OPENED = {
     "pr": 42,
     "login": "tidepool-bot",
 }
+TASK_PR_OPENED_IN_AN_EARLIER_WAVE = {
+    "schema_version": 1,
+    "ts": "2026-10-17T11:00:00Z",
+    "event": "task.pr_opened",
+    "project": "tidepool",
+    "task": "T7",
+    "wave": "tidepool_w15",
+    "branch": "feature/T7-old-title",
+    "pr": 42,
+    "login": "earlier-bot",
+}
 BLOCKING_QUESTION_OUTPUTS = {
     ("awawa", "refs"): json.dumps(
         {
@@ -1138,6 +1149,73 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 },
             ],
         )
+
+    def test_should_carry_onto_the_wave_the_opening_of_the_pull_request_an_earlier_wave_of_its_task_opened(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("pr_open"), TASK_PR_OPENED_IN_AN_EARLIER_WAVE])
+        runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, PULL_REQUEST_DETAILS))
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_events()[3],
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "task.pr_opened",
+                "project": "tidepool",
+                "task": "T7",
+                "wave": "tidepool_w16",
+                "branch": "feature/T7-old-title",
+                "pr": 42,
+                "login": "earlier-bot",
+            },
+        )
+
+    def test_should_preflight_on_its_wave_a_pull_request_an_earlier_wave_of_its_task_opened(self):
+        # Arrange
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("pr_open"), TASK_PR_OPENED_IN_AN_EARLIER_WAVE])
+        runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, PULL_REQUEST_DETAILS))
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self._read_events()[4]["event"], "task.preflighted")
+        self.assertEqual(self._read_events()[4]["wave"], "tidepool_w16")
+
+    def test_should_leave_a_task_waiting_when_the_opening_of_another_wave_is_not_of_its_pull_request(self):
+        for case, opening in [
+            ("of another pull request", {**TASK_PR_OPENED_IN_AN_EARLIER_WAVE, "pr": 41}),
+            ("of another project", {**TASK_PR_OPENED_IN_AN_EARLIER_WAVE, "project": "harbour"}),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                ledger = [WAVE_STARTED, _record_task_state("pr_open"), opening]
+                write_ledger(self.root, ledger)
+                runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, PULL_REQUEST_DETAILS))
+
+                # Act
+                COMMAND.run(Namespace(mode="once"), runtime)
+
+                # Assert
+                self.assertEqual(self._read_events(), ledger)
+
+    def test_should_not_carry_an_opening_onto_a_wave_already_holding_its_own(self):
+        # Arrange
+        write_ledger(
+            self.root,
+            [WAVE_STARTED, _record_task_state("pr_open"), TASK_PR_OPENED_IN_AN_EARLIER_WAVE, TASK_PR_OPENED],
+        )
+        runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, PULL_REQUEST_DETAILS))
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self._read_events()[4]["event"], "task.preflighted")
 
     def test_should_record_the_findings_of_the_preflight_in_the_ledger(self):
         # Arrange

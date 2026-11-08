@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.task_report_order import TaskReportOrder
 from brigade.tick.build_snapshot import PreflightFailure, TaskAmendment
@@ -26,6 +27,12 @@ class RecordTaskState:
     task: str
     state: str
     reason: str | None
+
+
+@dataclass(frozen=True)
+class CarryOpenedPullRequest:
+    wave: str
+    opened: TaskPrOpened
 
 
 @dataclass(frozen=True)
