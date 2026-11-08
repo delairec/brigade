@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -9,6 +10,7 @@ from brigade.ledger.milestone_rebased import MilestoneRebased
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 from brigade.system.run_process import ProcessRequest
 from brigade.tick.commit_checks import CommandResult, CommitChecks
+from brigade.tick.head_proof import HeadProof, HoldingHead
 from brigade.tick.read_commit_checks import read_commit_checks
 from brigade.waves.rebase_milestone_branches import BranchRebaseRun, MilestoneBranchesRebase, rebase_milestone_branches
 from tests.unit.commands.command_runtime import write_ledger
@@ -96,11 +98,32 @@ def _create_project(forge: str) -> Entity:
     )
 
 
+class CheckRunsListingDouble:
+    def __init__(self):
+        self.check_runs: list[dict] = []
+
+    def list_check_runs(self, repository: str, branch: str) -> list[dict]:
+        return self.check_runs
+
+
 class RebaseMilestoneBranchesTestCase(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         self.processes = ScriptedProcesses()
+        self.forge = CheckRunsListingDouble()
         self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
+        self.held: list[HoldingHead] = []
+        self.record_commit_checks(MAIN_HEAD, exit_code=0)
+        self.record_commit_checks(MILESTONE_HEAD, exit_code=0)
+        for ref, head in (
+            ("origin/main", MAIN_HEAD),
+            ("main", MAIN_HEAD),
+            (FORGE_MILESTONE_BRANCH, MILESTONE_HEAD),
+            (MILESTONE_BRANCH, MILESTONE_HEAD),
+        ):
+            self.processes.answer(
+                ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}^{{commit}}"), stdout=f"{head}\n"
+            )
         self.launched: list[BranchRebaseRun] = []
         self.live_worktrees: set[Path] = set()
         self.rebase_exit_codes = {MILESTONE_WORKTREE: 0, WAVE_WORKTREE: 0}
@@ -125,6 +148,21 @@ class RebaseMilestoneBranchesTestCase(unittest.TestCase):
     def launch_rebase_run(self, run: BranchRebaseRun) -> str:
         self.launched.append(run)
         return LAUNCHED_RUN
+
+    def record_commit_checks(self, commit: str, exit_code: int) -> None:
+        record = self.root / "state" / "commit-checks" / "shop" / f"{commit}.json"
+        record.parent.mkdir(parents=True, exist_ok=True)
+        record.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "project": "shop",
+                    "commit": commit,
+                    "checks": [{"command": "npm test", "exit_code": exit_code}],
+                }
+            ),
+            encoding="utf-8",
+        )
 
     def answer_head(self, request: ProcessRequest) -> tuple[int, str, str]:
         if request.cwd in self.rebased_worktrees:
@@ -171,8 +209,70 @@ class RebaseMilestoneBranchesTestCase(unittest.TestCase):
             is_run_live_on=lambda worktree: worktree in self.live_worktrees,
             launch_rebase_run=self.launch_rebase_run,
             read_login=self.read_login,
+            name_holding_head=self.held.append,
+            list_check_runs=self.forge.list_check_runs,
         )
         return rebase_milestone_branches(self.runtime, rebase)
+
+
+class RebaseMilestoneBranchesBetweenGreenHeadsTest(RebaseMilestoneBranchesTestCase):
+    def test_should_rebase_nothing_onto_a_red_main_branch_and_name_it(self):
+        # Arrange
+        self.record_commit_checks(MAIN_HEAD, exit_code=CHECK_FAILED)
+
+        # Act
+        rebased = self.rebase()
+
+        # Assert
+        self.assertIsNone(rebased)
+        self.assertEqual(select_commands_opening_on(self.processes.requests, GIT_REBASE), [])
+        self.assertEqual(
+            self.held,
+            [HoldingHead(branch="main", proof=HeadProof(commit=MAIN_HEAD, state="red", failed_commands=("npm test",)))],
+        )
+
+    def test_should_rebase_no_red_milestone_branch_and_name_it(self):
+        # Arrange
+        self.record_commit_checks(MILESTONE_HEAD, exit_code=CHECK_FAILED)
+
+        # Act
+        rebased = self.rebase()
+
+        # Assert
+        self.assertIsNone(rebased)
+        self.assertEqual(select_commands_opening_on(self.processes.requests, GIT_REBASE), [])
+        self.assertEqual(
+            self.held,
+            [
+                HoldingHead(
+                    branch=MILESTONE_BRANCH,
+                    proof=HeadProof(commit=MILESTONE_HEAD, state="red", failed_commands=("npm test",)),
+                )
+            ],
+        )
+
+    def test_should_rebase_onto_a_main_branch_whose_check_runs_of_the_forge_passed_on_its_head(self):
+        # Arrange
+        self.record_commit_checks(MAIN_HEAD, exit_code=CHECK_FAILED)
+        self.forge.check_runs = [
+            {
+                "pull_request": None,
+                "branch": "main",
+                "head": MAIN_HEAD,
+                "name": "unit",
+                "conclusion": "success",
+                "link": "https://github.com/delairec/shop/actions/runs/1/job/2",
+            }
+        ]
+
+        # Act
+        self.rebase()
+
+        # Assert
+        self.assertEqual(
+            select_commands_opening_on(self.processes.requests, GIT_REBASE),
+            [(MILESTONE_WORKTREE, ("git", "rebase", "--fork-point", "origin/main"))],
+        )
 
 
 class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCase):
@@ -285,6 +385,8 @@ class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCa
             is_run_live_on=lambda worktree: False,
             launch_rebase_run=self.launch_rebase_run,
             read_login=_read_login,
+            name_holding_head=self.held.append,
+            list_check_runs=self.forge.list_check_runs,
         )
 
         # Act
