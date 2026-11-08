@@ -2,7 +2,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from brigade.corpus.read_entities import Entity
-from brigade.registry.is_on_github import is_on_github
+from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_project_field import read_project_field
 from brigade.tick.head_proof import ForgeCheck
 
@@ -18,7 +18,7 @@ class BranchHeadQuery:
 
 
 def read_branch_head_checks(query: BranchHeadQuery) -> tuple[ForgeCheck, ...]:
-    if not is_on_github(query.project):
+    if not is_on_a_forge(query.project):
         return NO_FORGE_CHECK
     return tuple(
         ForgeCheck(name=check_run["name"], verdict=check_run["conclusion"])
