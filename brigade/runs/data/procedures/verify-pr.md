@@ -6,8 +6,8 @@ capabilities: read, shell
 Judge one pull request a build run opened for its task, in the worktree of that task, and hand back a verdict: pass,
 or changes with the findings that ask for them. You did not write the pull request; change nothing in it.
 
-Arguments, which the Arguments section names: `pr`, the number of the pull request, and `task`, the TASK entity it
-delivers.
+Arguments, which the Arguments section names: `pr`, the number of the pull request, absent for a task of a project
+without a forge, which has none, and `task`, the TASK entity it delivers.
 
 **Budget**: the steps the Budget section names, the cap of your role. On reaching it, stop and
 summarise what is done, what is not, and what the next run picks up.
@@ -18,8 +18,9 @@ step needs and no command gives back (a finding and its evidence), and the next 
 
 ## 1. Read the package
 
-`brigade verify context <pr>`, from the worktree. It prints the task with its awawa context and its closure, the diff
-of the pull request against its base, the findings of the preflight, the rules of the files the diff touches, and the
+`brigade verify context <pr>`, from the worktree, `<pr>` left out when the Arguments name none: the package then
+judges the head of the task branch against the branch of its milestone. It prints the task with its awawa context and
+its closure, the diff of the pull request against its base, the findings of the preflight, the rules of the files the diff touches, and the
 grades a finding takes. The task's `SPEC` lines are the acceptance criteria you judge, its `RATIONALE` the design
 already settled; the preflight already judged the ancestry, the checks, the corpus, the promotion, the untouched
 files, the privacy and the body, so do not judge them again.
@@ -63,7 +64,8 @@ package, the one you judged, each finding with a `summary` saying in one sentenc
 `pass` when every criterion is met and no finding asks for a change; `changes` otherwise, with at least one finding.
 On the re-verification path, `pass` when every finding of the previous verdict is fixed or soundly challenged and no
 new finding is raised; `changes` otherwise, carrying the findings still open and the new ones.
-Then `brigade verify verdict <pr> --file <path>`. It validates the verdict and records it, and posts it as a review of
-the pull request when the project's review policy asks for one. A refusal names what to correct: correct the file and
-hand it back again. A refusal naming a head no longer the head of the pull request ends the run without a verdict: the
+Then `brigade verify verdict <pr> --file <path>`, `<pr>` left out as in step 1. It validates the verdict and records
+it, and posts it as a review of the pull request when the project's review policy asks for one; a verdict naming no
+pull request is recorded in the ledger alone. A refusal names what to correct: correct the file and
+hand it back again. A refusal naming a head no longer the head of the pull request, or of the task branch, ends the run without a verdict: the
 tick verifies the new head once its preflight has run. The verdict it accepts is your result; end there.
