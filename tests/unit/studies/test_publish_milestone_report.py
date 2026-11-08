@@ -413,6 +413,34 @@ class PublishMilestoneReportTest(unittest.TestCase):
             ],
         )
 
+    def test_should_stay_detached_on_a_branch_another_worktree_holds(self):
+        # Arrange
+        self.processes.answer(
+            ("git", "worktree", "list", "--porcelain", "-z"),
+            stdout="worktree /srv/held\0HEAD 8885daa\0branch refs/heads/integration/hardening\0\0",
+        )
+        context = self.create_context("github")
+
+        # Act
+        publish_milestone_report(context)
+
+        # Assert
+        self.assertNotIn(("git", "switch", "--quiet", "--force-create", BRANCH), self.processes.list_argvs())
+
+    def test_should_take_the_branch_when_the_worktrees_hold_only_other_branches(self):
+        # Arrange
+        self.processes.answer(
+            ("git", "worktree", "list", "--porcelain", "-z"),
+            stdout="worktree /srv/held\0HEAD 8885daa\0branch refs/heads/integration/portability\0\0",
+        )
+        context = self.create_context("github")
+
+        # Act
+        publish_milestone_report(context)
+
+        # Assert
+        self.assertIn(("git", "switch", "--quiet", "--force-create", BRANCH), self.processes.list_argvs())
+
     def test_should_mark_the_milestone_reached_in_the_corpus_at_its_branch(self):
         # Arrange
         context = self.create_context("github")
