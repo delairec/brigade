@@ -296,6 +296,13 @@ CORPUS = {
     "TASK": {"T7": (("TITLE", "Tide table"), ("TYPE", "feat"), ("MILESTONE", "@MILESTONE.M4"))},
     "POLICY": {},
 }
+CORPUS_WITH_A_TASK_OF_ANOTHER_MILESTONE = {
+    **CORPUS,
+    "TASK": {
+        "T7": (("TITLE", "Tide table"), ("TYPE", "feat"), ("MILESTONE", "@MILESTONE.M4")),
+        "T9": (("TITLE", "Tide almanac"), ("TYPE", "feat"), ("MILESTONE", "@MILESTONE.M5")),
+    },
+}
 
 
 class WaveShowOfAProjectWithoutAForgeTest(unittest.TestCase):
@@ -320,6 +327,19 @@ class WaveShowOfAProjectWithoutAForgeTest(unittest.TestCase):
         self.assertIn(
             "to merge: git -C /srv/tidepool merge integration/tides", COMMAND.render_text(document).splitlines()
         )
+
+    def test_should_read_the_milestone_from_the_tasks_of_the_wave_alone(self):
+        # Arrange
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_machine_double(CORPUS_WITH_A_TASK_OF_ANOTHER_MILESTONE, MACHINE_OUTPUTS),
+        )
+
+        # Act
+        document = self._show([CUT, FORGELESS_WAVE_STARTED, REPORTED, REPORT_DONE])
+
+        # Assert
+        self.assertEqual(document["merge_command"], "git -C /srv/tidepool merge integration/tides")
 
     def test_should_print_no_command_before_the_report_of_the_milestone(self):
         # Act
