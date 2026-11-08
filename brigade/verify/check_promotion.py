@@ -33,8 +33,12 @@ def _read_value(fields: list, name: str) -> str | None:
 
 def _resolves(repository_tree: Path, anchor: str) -> bool:
     path, _separator, text = anchor.partition(ANCHOR_SEPARATOR)
-    file = repository_tree / path
-    return file.is_file() and text in file.read_text(encoding="utf-8", errors="replace")
+    file = (repository_tree / path).resolve()
+    return (
+        file.is_relative_to(repository_tree.resolve())
+        and file.is_file()
+        and text in file.read_text(encoding="utf-8", errors="replace")
+    )
 
 
 def check_promotion(run_process: Callable[[ProcessRequest], ProcessRecord], facts: PromotionFacts) -> dict:
