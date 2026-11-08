@@ -2,6 +2,7 @@ import argparse
 
 from brigade.command import Command
 from brigade.corpus.read_entities import Entity
+from brigade.registry.read_project_forge import read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runtime import Runtime
@@ -33,7 +34,7 @@ def project_list(request: argparse.Namespace, runtime: Runtime) -> dict:
                 "name": project.name,
                 "path": _read_field(project, "PATH"),
                 "status": _read_field(project, "STATUS"),
-                "forge": _read_field(project, "FORGE"),
+                "forge": read_project_forge(project),
             }
             for project in read_projects(runtime)
         ],
