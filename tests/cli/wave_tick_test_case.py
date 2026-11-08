@@ -135,6 +135,8 @@ class WaveTickTestCase(unittest.TestCase):
             "project",
             "add",
             str(self.project.path),
+            "--corpus-mode",
+            "control",
             *(argument for command in self.setup_commands for argument in ("--setup", command)),
         )
         (self.state / "ledger").mkdir(parents=True)

@@ -19,6 +19,10 @@ SCHEMA PROJECT
 	FIELD CORPUS string
 		DESC "the corpus folder, relative to PATH, the anchors resolve from: corpus/ when brigade"
 			+ "creates it, else the root project add discovered"
+	FIELD MODE control|area|none
+		DEFAULT control
+		DESC "how brigade uses the corpus of the repository: control, every file of it; area, the"
+			+ "folder CORPUS names alone, read as the awawa workspace; none, not delivered yet"
 	FIELD ACCEPTANCE string
 		REPEATABLE
 		DESC "a light command run by task check"

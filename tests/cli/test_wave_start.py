@@ -51,7 +51,9 @@ class WaveStartTestCase(FileWaitingTestCase):
         self.project.write("corpus/questions.awawa", MAIN_QUESTIONS)
         self.project.track("corpus")
         self.project.run_git("commit", "--quiet", "-m", "the corpus")
-        self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(self.project.path))
+        self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "project", "add", str(self.project.path), "--corpus-mode", "control"
+        )
         self.ledger = self.machine.state_home / "brigade" / "ledger"
         self.ledger.mkdir(parents=True)
         (self.ledger / "2026-10.jsonl").write_text(OPEN_WAVE)

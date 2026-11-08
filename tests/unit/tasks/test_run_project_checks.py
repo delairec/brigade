@@ -102,3 +102,33 @@ class RunProjectChecksTest(unittest.TestCase):
             str(refusal.exception), "the command printf 'oak cannot be split into an argv: No closing quotation"
         )
         self.assertEqual(self.processes.list_argvs(), [])
+
+
+class RunProjectChecksOfAnAreaTest(unittest.TestCase):
+    def test_should_check_the_area_and_run_the_acceptance_at_the_root_of_the_worktree(self):
+        # Arrange
+        processes = ScriptedProcesses()
+        project = Entity(
+            name="oak",
+            fields=(
+                EntityField(name="CORPUS", value="brigade"),
+                EntityField(name="MODE", value="area"),
+                EntityField(name="ACCEPTANCE", value="ruff check ."),
+            ),
+        )
+        processes.answer(("ruff", "check", "."))
+        processes.answer(("awawa", "fmt", "--check", "."))
+        processes.answer(("awawa", "lint", "--strict", "."))
+
+        # Act
+        checks = run_project_checks(processes, project, ROOT)
+
+        # Assert
+        self.assertEqual(
+            [(check.command, check.record.cwd) for check in checks],
+            [
+                ("ruff check .", str(ROOT)),
+                ("awawa fmt --check .", str(ROOT / "brigade")),
+                ("awawa lint --strict .", str(ROOT / "brigade")),
+            ],
+        )

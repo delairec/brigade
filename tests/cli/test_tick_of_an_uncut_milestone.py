@@ -55,7 +55,9 @@ class TickOfARatifiedTaskWhoseMilestoneHasNoBranchTest(unittest.TestCase):
         self.project.write("corpus/milestones.awawa", ACTIVE_MILESTONE)
         self.project.track("corpus")
         self.project.run_git("commit", "--quiet", "-m", "the plan of M1")
-        self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(self.project.path))
+        self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "project", "add", str(self.project.path), "--corpus-mode", "control"
+        )
 
     def test_should_cut_the_branch_of_the_milestone_before_the_wave_starts(self):
         # Act

@@ -14,6 +14,7 @@ from brigade.git.find_branch import find_branch
 from brigade.git.push_branch import BranchPush, push_branch
 from brigade.git.remove_worktree import remove_worktree
 from brigade.registry.is_on_a_forge import is_on_a_forge
+from brigade.registry.read_corpus_workspace import read_corpus_workspace
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.system.parse_configuration import CLI_KEY
@@ -48,6 +49,7 @@ def _commit_on_branch(runtime: Runtime, installation: CorpusInstallation, root: 
                 file_names=(f"{read_project_field(project, 'CORPUS')}/{SCHEMA_FILE}",),
                 describe_message=lambda: SUBJECT,
                 rewrite=lambda texts: (SHIPPED_PROJECT_SCHEMA.read_text(encoding="utf-8"),),
+                workspace=read_corpus_workspace(project),
             ),
         )
         create_branch(runtime.run_process, worktree, BRANCH)

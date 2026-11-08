@@ -17,6 +17,7 @@ from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRecord
 from brigade.tasks.describe_command import describe_command
 from brigade.tasks.list_trigger_rules import list_trigger_rules
+from brigade.tasks.locate_task_corpus import locate_task_corpus
 from brigade.tasks.locate_task_worktree import TaskWorktree
 from brigade.tasks.reserve_task_number import reserve_task_number
 
@@ -56,12 +57,14 @@ def _list_task_paths(task: dict) -> list[str]:
 def _list_rules(runtime: Runtime, configuration: Configuration, worktree: TaskWorktree) -> list[dict] | None:
     if configuration.instructions is None:
         return None
-    task = read_awawa_document(runtime.run_process, worktree.path, ("show", f"@TASK.{worktree.task}"))
+    task = read_awawa_document(runtime.run_process, locate_task_corpus(worktree), ("show", f"@TASK.{worktree.task}"))
     return list_trigger_rules(runtime, Path(configuration.instructions), _list_task_paths(task))
 
 
 def _read_task(runtime: Runtime, worktree: TaskWorktree, target: str) -> ProcessRecord:
-    record = run_awawa(runtime.run_process, worktree.path, ("context", target, "--with-schema", WORKTREE_ROOT))
+    record = run_awawa(
+        runtime.run_process, locate_task_corpus(worktree), ("context", target, "--with-schema", WORKTREE_ROOT)
+    )
     if record.exit_code != 0:
         raise CommandFailed(record.argv, record.exit_code, record.stderr)
     return record
@@ -101,7 +104,9 @@ def assemble_task_context(
         "task": [
             describe_command(_read_task(runtime, worktree, target)),
             describe_command(
-                run_awawa(runtime.run_process, worktree.path, ("lint", "--closure", target, WORKTREE_ROOT))
+                run_awawa(
+                    runtime.run_process, locate_task_corpus(worktree), ("lint", "--closure", target, WORKTREE_ROOT)
+                )
             ),
         ],
         "rules": _list_rules(runtime, configuration, worktree),

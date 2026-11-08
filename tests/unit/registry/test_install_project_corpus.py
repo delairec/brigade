@@ -62,6 +62,34 @@ class InstallProjectCorpusTestCase(unittest.TestCase):
         )
 
 
+class InstallProjectCorpusInAnAreaTest(InstallProjectCorpusTestCase):
+    def test_should_lint_the_area_alone_and_leave_the_corpus_of_the_project_unread(self):
+        # Arrange
+        project = Entity(
+            name="app",
+            fields=(
+                EntityField(name="PATH", value="/srv/app"),
+                EntityField(name="MAIN", value="trunk"),
+                EntityField(name="CORPUS", value="brigade"),
+                EntityField(name="MODE", value="area"),
+                EntityField(name="FORGE", value="none"),
+            ),
+        )
+
+        # Act
+        install_project_corpus(
+            self.runtime,
+            CorpusInstallation(project=project, forge=None, read_environment=lambda key: LOGIN_ENVIRONMENT),
+        )
+
+        # Assert
+        self.assertEqual((self.worktree / "brigade" / "_schema.awawa").read_text(), SHIPPED_PROJECT_SCHEMA.read_text())
+        self.assertIn(
+            ("awawa", "lint", "--strict", str(self.worktree / "brigade")),
+            self.processes.argvs,
+        )
+
+
 class InstallProjectCorpusWithoutAForgeTest(InstallProjectCorpusTestCase):
     def test_should_write_the_template_in_the_corpus_folder(self):
         # Act

@@ -17,7 +17,7 @@ from brigade.registry.change_registry import change_registry
 from brigade.registry.derive_project_name import derive_project_name
 from brigade.registry.discover_project import CORPUS_FILES, ProjectDiscovery, discover_project
 from brigade.registry.guess_commands import CommandGuess, guess_commands
-from brigade.registry.install_project_corpus import CorpusInstallation, install_project_corpus
+from brigade.registry.install_project_corpus import SCHEMA_FILE, CorpusInstallation, install_project_corpus
 from brigade.registry.read_project_forge import read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.registry.remove_project_entity import remove_project_entity
@@ -36,6 +36,11 @@ NO_CONFIGURATION = "no supported configuration was found"
 DEFAULT_CORPUS_FOLDER = "corpus"
 PARENT_DIRECTORY = ".."
 NOTHING_INSTALLED = None
+CONTROL_MODE = "control"
+AREA_MODE = "area"
+CORPUS_MODES = (CONTROL_MODE, AREA_MODE)
+DEFAULT_AREA_FOLDER = "brigade"
+MODE_QUESTION = "Corpus mode, control or area: "
 
 
 @dataclass(frozen=True)
@@ -85,6 +90,7 @@ def _describe_fields(request, discovery: ProjectDiscovery, guess: CommandGuess) 
         ("REMOTE", discovery.remote),
         ("MAIN", discovery.main),
         ("CORPUS", discovery.corpus),
+        ("MODE", discovery.mode),
     )
     return [
         *(_DocumentField(name=name, value=value, guessed=False) for name, value in discovered if value is not None),
@@ -104,11 +110,37 @@ def _choose_name(request, path: Path) -> str:
     return request.name
 
 
-def _choose_corpus_folder(request) -> str:
-    folder = posixpath.normpath(request.corpus or DEFAULT_CORPUS_FOLDER)
+def _validate_corpus_folder(given: str) -> str:
+    folder = posixpath.normpath(given)
     if posixpath.isabs(folder) or folder.split(posixpath.sep)[0] == PARENT_DIRECTORY:
-        raise UsageError(f"--corpus {request.corpus} is not a folder inside the repository")
+        raise UsageError(f"--corpus {given} is not a folder inside the repository")
     return folder
+
+
+def _choose_corpus_mode(request, runtime: Runtime, path: Path, tracked: tuple[str, ...]) -> str:
+    if request.corpus_mode is not None:
+        return request.corpus_mode
+    answer = runtime.ask_on_terminal(MODE_QUESTION)
+    if answer is None:
+        raise UsageError(f"{path} tracks {tracked[0]}: --corpus-mode control|area says how brigade uses it")
+    if answer not in CORPUS_MODES:
+        raise UsageError(f"{answer} is not a corpus mode: --corpus-mode control|area")
+    return answer
+
+
+def _confirm_corpus_folder(request, runtime: Runtime, proposed: str) -> str:
+    if request.corpus is not None:
+        return _validate_corpus_folder(request.corpus)
+    return _validate_corpus_folder(runtime.ask_on_terminal(f"Corpus folder [{proposed}]: ") or proposed)
+
+
+def _adopt_tracked_corpus(request, runtime: Runtime, path: Path, discovery: ProjectDiscovery) -> ProjectDiscovery:
+    tracked = list_tracked_files(runtime.run_process, path, CORPUS_FILES)
+    mode = _choose_corpus_mode(request, runtime, path, tracked)
+    if mode == AREA_MODE:
+        folder = _confirm_corpus_folder(request, runtime, DEFAULT_AREA_FOLDER)
+        return dataclasses.replace(discovery, corpus=folder, mode=AREA_MODE)
+    return dataclasses.replace(discovery, corpus=_confirm_corpus_folder(request, runtime, discovery.corpus))
 
 
 def _refuse_a_corpus_already_tracked(runtime: Runtime, path: Path) -> None:
@@ -118,13 +150,26 @@ def _refuse_a_corpus_already_tracked(runtime: Runtime, path: Path) -> None:
 
 
 def _discover(request, runtime: Runtime, path: Path) -> ProjectDiscovery:
-    if request.corpus is not None and not request.init_corpus:
-        raise UsageError("--corpus names the folder of --init-corpus and needs it")
     discovery = discover_project(runtime.run_process, path)
-    if not request.init_corpus:
+    if request.init_corpus:
+        _refuse_a_corpus_already_tracked(runtime, path)
+    if discovery.corpus is None and request.corpus_mode is not None:
+        raise UsageError(f"--corpus-mode reads a corpus {path} does not track")
+    if request.init_corpus:
+        return dataclasses.replace(discovery, corpus=_validate_corpus_folder(request.corpus or DEFAULT_CORPUS_FOLDER))
+    if discovery.corpus is None:
+        if request.corpus is not None:
+            raise UsageError("--corpus names the folder of --init-corpus and needs it")
         return discovery
-    _refuse_a_corpus_already_tracked(runtime, path)
-    return dataclasses.replace(discovery, corpus=_choose_corpus_folder(request))
+    return _adopt_tracked_corpus(request, runtime, path, discovery)
+
+
+def _installs_a_corpus(request, runtime: Runtime, path: Path, discovery: ProjectDiscovery) -> bool:
+    if request.init_corpus:
+        return True
+    if discovery.mode != AREA_MODE:
+        return False
+    return f"{discovery.corpus}/{SCHEMA_FILE}" not in list_tracked_files(runtime.run_process, path, CORPUS_FILES)
 
 
 def _install_corpus(runtime: Runtime, project: Entity) -> dict:
@@ -169,11 +214,12 @@ def project_add(request: argparse.Namespace, runtime: Runtime) -> dict:
     if not detect_repository(runtime.run_process, path):
         raise BrigadeError(f"{path} is not a git repository")
     guess = guess_commands(path)
-    fields = _describe_fields(request, _discover(request, runtime, path), guess)
+    discovery = _discover(request, runtime, path)
+    fields = _describe_fields(request, discovery, guess)
     project = Entity(name=name, fields=tuple(EntityField(name=field.name, value=field.value) for field in fields))
     registration = _Registration(runtime, project, force=request.force)
     installed = NOTHING_INSTALLED
-    if request.init_corpus:
+    if _installs_a_corpus(request, runtime, path, discovery):
         registration.find_registered()
         installed = _install_corpus(runtime, project)
     change_registry(runtime, f"brigade project add: {name}", registration.rewrite)
@@ -204,7 +250,14 @@ COMMAND = Command(
             ("--init-corpus",),
             {"action": "store_true", "help": "install a corpus on a branch of a repository that tracks no .awawa file"},
         ),
-        Argument(("--corpus",), {"help": "the folder --init-corpus installs the corpus in; corpus by default"}),
+        Argument(
+            ("--corpus-mode",),
+            {"choices": CORPUS_MODES, "help": "how brigade uses the corpus the repository already tracks"},
+        ),
+        Argument(
+            ("--corpus",),
+            {"help": "the folder of the corpus: corpus for --init-corpus, brigade in area, the discovered one else"},
+        ),
     ),
     run=project_add,
     render_text=_render_text,

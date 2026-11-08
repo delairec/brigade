@@ -21,6 +21,7 @@ TIDES_BRANCH_CUT = {
     "branch": "integration/tides",
     "login": None,
 }
+AREA_FIELDS = (EntityField(name="CORPUS", value="brigade"), EntityField(name="MODE", value="area"))
 TASK_OF_THE_MILESTONE = (("MILESTONE", "@MILESTONE.M4"),)
 TASK_OF_NO_MILESTONE = ()
 
@@ -64,3 +65,18 @@ class FindTaskBaseTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), "@MILESTONE.M4 of @TASK.T7 has no branch in the ledger")
+
+    def test_should_read_the_task_in_the_area_of_the_project(self):
+        # Arrange
+        write_ledger(self.root, [TIDES_BRANCH_CUT])
+        project = Entity(
+            name="tidepool",
+            fields=(EntityField(name="MAIN", value="trunk"), *AREA_FIELDS),
+        )
+        self.processes.answer_entity(WORKTREE / "brigade", "TASK", "T7", TASK_OF_THE_MILESTONE)
+
+        # Act
+        base = find_task_base(self.runtime, WORKTREE, project, "T7")
+
+        # Assert
+        self.assertEqual(base, "integration/tides")

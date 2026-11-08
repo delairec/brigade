@@ -20,6 +20,7 @@ class CorpusChange:
     file_names: tuple[str, ...]
     describe_message: Callable[[], str]
     rewrite: Callable[[tuple[str, ...]], tuple[str, ...] | None]
+    workspace: Path = Path()
 
 
 def _read_text(path: Path) -> str:
@@ -40,7 +41,7 @@ def _write_checked(
     for path, text in zip(paths, texts, strict=True):
         _write_text(path, text)
     format_files(run_process, paths)
-    report = lint_corpus(run_process, change.repository)
+    report = lint_corpus(run_process, change.repository / change.workspace)
     if not report.clean:
         restore_files(run_process, change.repository, change.file_names)
         raise CorpusLintFailed(f"awawa lint --strict refused the change; the corpus is restored\n{report.output}")

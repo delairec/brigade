@@ -72,6 +72,10 @@ def create_forge(found_pull_requests: list[dict]) -> ForgeDouble:
     )
 
 
+CONTROLLED_CORPUS = (EntityField(name="CORPUS", value="corpus"),)
+AREA_CORPUS = (EntityField(name="CORPUS", value="brigade"), EntityField(name="MODE", value="area"))
+
+
 class RecordPlanTestCase(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
@@ -87,6 +91,7 @@ class RecordPlanTestCase(unittest.TestCase):
         self.worktree = self.root / "cache" / "plans" / "oak_r1"
         (self.worktree / "corpus").mkdir(parents=True)
         (self.worktree / "corpus" / "tasks.awawa").write_text('TASK B19\n\tTITLE "the parser"\n', encoding="utf-8")
+        self.workspace = self.worktree
         self.config_root = self.runtime.paths.config_root
         (self.config_root / "requests.awawa").write_text("REQUEST oak_r1\n\tSTATUS planning\n", encoding="utf-8")
         self.processes.answer(("git", "fetch", "--quiet", "origin", "main"))
@@ -104,14 +109,14 @@ class RecordPlanTestCase(unittest.TestCase):
         self.processes.answer_json(("awawa", "show", target, "--json", plan_file), {"fields": fields})
 
     def script_corpus_sites(self, sites: list[dict]) -> None:
-        self.processes.answer_json(("awawa", "status", "--json", str(self.worktree)), {"entities": sites})
+        self.processes.answer_json(("awawa", "status", "--json", str(self.workspace)), {"entities": sites})
 
     def script_skeletons(self) -> None:
         self.processes.answer(
-            ("awawa", "new", "MILESTONE", "F1", str(self.worktree)), stdout='MILESTONE F1\n\tTITLE ""\n'
+            ("awawa", "new", "MILESTONE", "F1", str(self.workspace)), stdout='MILESTONE F1\n\tTITLE ""\n'
         )
         self.processes.answer(
-            ("awawa", "new", "TASK", "B20", str(self.worktree)),
+            ("awawa", "new", "TASK", "B20", str(self.workspace)),
             stdout='TASK B20\n\tTITLE ""\n\tMILESTONE @MILESTONE.X\n',
         )
 
@@ -159,13 +164,13 @@ class RecordPlanTestCase(unittest.TestCase):
         self.processes.answer(("git", "rm", "--cached", "--quiet", "--ignore-unmatch", "--", "corpus/milestones.awawa"))
         self.processes.answer(("git", "clean", "--force", "--quiet", "--", "corpus/milestones.awawa"))
 
-    def create_recording(self, forge: str = "github") -> PlanRecording:
+    def create_recording(self, forge: str = "github", corpus_fields: tuple = CONTROLLED_CORPUS) -> PlanRecording:
         project = Entity(
             name="oak",
             fields=(
                 EntityField(name="PATH", value="/srv/oak"),
                 EntityField(name="MAIN", value="main"),
-                EntityField(name="CORPUS", value="corpus"),
+                *corpus_fields,
                 EntityField(name="FORGE", value=forge),
             ),
         )
@@ -367,6 +372,43 @@ class RecordPlanTest(RecordPlanTestCase):
                 )
             ],
         )
+
+
+class RecordPlanInAnAreaTest(RecordPlanTestCase):
+    def setUp(self):
+        super().setUp()
+        self.workspace = self.worktree / "brigade"
+        self.workspace.mkdir()
+        (self.workspace / "tasks.awawa").write_text('TASK B19\n\tTITLE "the parser"\n', encoding="utf-8")
+
+    def script_area_recording(self) -> None:
+        files = ("brigade/milestones.awawa", "brigade/tasks.awawa")
+        self.script_plan_entities([{"type": "MILESTONE", "name": "F1"}, {"type": "TASK", "name": "B20"}])
+        self.script_plan_entity("@MILESTONE.F1", [{"name": "TITLE", "atoms": ['"Printer"']}])
+        self.script_plan_entity(
+            "@TASK.B20",
+            [{"name": "TITLE", "atoms": ['"the printer"']}, {"name": "MILESTONE", "atoms": ["@MILESTONE.F1"]}],
+        )
+        self.script_corpus_sites([{"type": "TASK", "name": "B19", "file": "tasks.awawa", "line": 1}])
+        self.script_skeletons()
+        self.script_plan_branch(BRANCH_NOT_FOUND)
+        self.processes.answer_corpus_change(self.worktree, files, f"brigade plan record: {BRANCH}")
+        self.processes.answer(("awawa", "lint", "--strict", str(self.workspace)))
+        self.processes.answer(("git", "switch", "--quiet", "--create", BRANCH))
+        self.processes.answer(PUSH)
+        self.script_policies(NO_POLICY)
+        self.script_marking()
+
+    def test_should_write_the_plan_in_the_files_of_the_area(self):
+        # Arrange
+        self.script_area_recording()
+
+        # Act
+        record_plan(self.runtime, self.create_recording(corpus_fields=AREA_CORPUS))
+
+        # Assert
+        self.assertIn("TASK B20", (self.workspace / "tasks.awawa").read_text(encoding="utf-8"))
+        self.assertIn("MILESTONE F1", (self.workspace / "milestones.awawa").read_text(encoding="utf-8"))
 
 
 class RecordPlanWithoutForgeTest(RecordPlanTestCase):

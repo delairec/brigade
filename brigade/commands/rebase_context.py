@@ -13,6 +13,7 @@ from brigade.git.read_current_branch import read_current_branch
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.wave_started import WaveStarted
+from brigade.registry.read_corpus_workspace import read_corpus_workspace
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_project_forge import read_project_forge
 from brigade.registry.read_projects import read_projects
@@ -85,7 +86,10 @@ def _find_base_of_the_branch(runtime: Runtime, worktree: Path, project, branch: 
         raise BrigadeError(
             f"the branch {branch} is not a task, a wave or a milestone branch of @PROJECT.{project.name}"
         )
-    tasks = (read_entity(runtime.run_process, worktree, TASK_TYPE, task) for task in started.tasks)
+    tasks = (
+        read_entity(runtime.run_process, worktree / read_corpus_workspace(project), TASK_TYPE, task)
+        for task in started.tasks
+    )
     return find_milestone_branch(entries, project.name, read_wave_milestone(started.wave, tasks))
 
 

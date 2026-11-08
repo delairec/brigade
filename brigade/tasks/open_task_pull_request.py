@@ -17,6 +17,7 @@ from brigade.runtime import Runtime
 from brigade.tasks.compose_pull_request_title import PullRequestTitleParts, compose_pull_request_title
 from brigade.tasks.describe_pull_request_body import PullRequestBodyParts, describe_pull_request_body
 from brigade.tasks.locate_check_record import locate_check_record
+from brigade.tasks.locate_task_corpus import locate_task_corpus
 from brigade.tasks.locate_task_worktree import TaskWorktree, locate_task_worktree
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -77,7 +78,9 @@ def _read_milestone_title(runtime: Runtime, worktree: TaskWorktree, task: Entity
     if milestone is None:
         return NO_MILESTONE
     milestone = milestone.removeprefix(MILESTONE_PREFIX)
-    return read_project_field(read_entity(runtime.run_process, worktree.path, "MILESTONE", milestone), "TITLE")
+    return read_project_field(
+        read_entity(runtime.run_process, locate_task_corpus(worktree), "MILESTONE", milestone), "TITLE"
+    )
 
 
 def _ensure_milestone(runtime: Runtime, session: ForgeSession, title: str) -> None:
@@ -160,7 +163,7 @@ def _describe_opening(session: ForgeSession, opened: _TaskPullRequest, pull_requ
 def open_task_pull_request(runtime: Runtime, demand: TaskPullRequestDemand) -> dict:
     worktree = locate_task_worktree(runtime, demand.path, demand.task)
     check = _require_passing_check(runtime, worktree)
-    task = read_entity(runtime.run_process, worktree.path, "TASK", worktree.task)
+    task = read_entity(runtime.run_process, locate_task_corpus(worktree), "TASK", worktree.task)
     title = _compose_title(task, demand.subject)
     session = ForgeSession(worktree=worktree, forge=demand.forge, environment=demand.environment, login=demand.login)
     branch = read_current_branch(runtime.run_process, worktree.path)
