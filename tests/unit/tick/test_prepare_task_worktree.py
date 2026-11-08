@@ -18,6 +18,7 @@ from brigade.system.run_process import ProcessRequest
 from brigade.tick.actions import LaunchTask
 from brigade.tick.head_proof import ForgeCheck, HeadChecks, HeadProof, HoldingHead
 from brigade.tick.prepare_task_worktree import PreparedWorktree, prepare_task_worktree
+from brigade.tick.tick_forge import TickForge
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.lock_observing_runner import LockObservingRunner
@@ -92,15 +93,19 @@ FAILING_SETUP = {"name": "SETUP", "atoms": ['"false"']}
 TOUCH_THE_WORKTREE = {"name": "SETUP", "atoms": ['"touch \\"$PWD\\""']}
 
 
-no_check_run = []
+def list_no_check_run(repository: str, branch: str) -> list[dict]:
+    return []
 
 
-class CheckRunsForgeDouble:
+NO_FORGE = TickForge(read_environment=read_no_environment, list_check_runs=list_no_check_run)
+
+
+class CheckRunsListingDouble:
     def __init__(self, check_runs: list[dict]):
         self.check_runs = check_runs
 
-    def list_check_runs(self, request: dict, runtime) -> dict:
-        return {"schema_version": 1, "check_runs": self.check_runs}
+    def list_check_runs(self, repository: str, branch: str) -> list[dict]:
+        return self.check_runs
 
 
 def create_wave_head_check_run(conclusion: str) -> dict:
@@ -112,15 +117,6 @@ def create_wave_head_check_run(conclusion: str) -> dict:
         "conclusion": conclusion,
         "link": "https://github.com/delairec/shop/actions/runs/1/job/2",
     }
-
-
-def resolve_the_forge(forge: CheckRunsForgeDouble):
-    def resolve_plugin(kind: str, name: str):
-        if (kind, name) != ("forge", "github"):
-            raise AssertionError(f"the {kind} plugin {name} should not be resolved")
-        return forge
-
-    return resolve_plugin
 
 
 class PrepareTaskWorktreeTestCase(unittest.TestCase):
@@ -179,7 +175,7 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
 
         # Act
         prepared = prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
         )
 
         # Assert
@@ -213,7 +209,7 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
             create_test_runtime(self.paths, run_process=runner),
             Configuration(worktree_root="/var/worktrees"),
             ACTION,
-            read_no_environment,
+            NO_FORGE,
         )
 
         # Assert
@@ -259,7 +255,7 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
 
         # Act
         prepared = prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), action, read_no_environment
+            create_test_runtime(self.paths, run_process=runner), Configuration(), action, NO_FORGE
         )
 
         # Assert
@@ -286,7 +282,7 @@ class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
 
         # Act
         prepared = prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
         )
 
         # Assert
@@ -309,7 +305,7 @@ class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
 
         # Act
         prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
         )
 
         # Assert
@@ -327,7 +323,7 @@ class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
 
         # Act
         prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
         )
 
         # Assert
@@ -345,7 +341,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
             prepare_task_worktree(
-                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
             )
 
         # Assert
@@ -365,7 +361,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
         # Act
         with self.assertRaises(BrigadeError):
             prepare_task_worktree(
-                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
             )
 
         # Assert
@@ -384,7 +380,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
             prepare_task_worktree(
-                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
             )
 
         # Assert
@@ -397,7 +393,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
         # Act
         with self.assertRaises(BrigadeError):
             prepare_task_worktree(
-                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
             )
 
         # Assert
@@ -436,7 +432,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
         # Act
         with self.assertRaises(BrigadeError):
             prepare_task_worktree(
-                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
             )
 
         # Assert
@@ -474,7 +470,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
             prepare_task_worktree(
-                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
             )
 
         # Assert
@@ -491,7 +487,7 @@ class PrepareTaskWorktreeOfASetupLineInShellSyntaxTest(PrepareTaskWorktreeTestCa
 
         # Act
         prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
         )
 
         # Assert
@@ -533,7 +529,7 @@ class PrepareTaskWorktreeUnderTheLockTest(PrepareTaskWorktreeTestCase):
 
         # Act
         prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
         )
 
         # Assert
@@ -563,6 +559,9 @@ def read_cli_environment(key: str) -> dict:
     return {"cli": CLI_ENVIRONMENT}[key]
 
 
+CLI_FORGE = TickForge(read_environment=read_cli_environment, list_check_runs=list_no_check_run)
+
+
 class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
     def test_should_cut_the_task_branch_from_the_wave_branch_of_the_forge_and_check_the_setup_against_it(self):
         # Arrange
@@ -570,7 +569,7 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
 
         # Act
         prepared = prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_cli_environment
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, CLI_FORGE
         )
 
         # Assert
@@ -610,7 +609,7 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
 
         # Act
         prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_cli_environment
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, CLI_FORGE
         )
 
         # Assert
@@ -647,14 +646,11 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
         self.record_commit_checks(TASK_HEAD, exit_code=0)
         self.record_commit_checks(WAVE_HEAD, exit_code=0)
         runner = self.create_runner_of_a_branch_off_the_wave_branch_of_the_forge()
-        forge = CheckRunsForgeDouble(no_check_run)
+        forge = TickForge(read_environment=read_cli_environment, list_check_runs=list_no_check_run)
 
         # Act
         prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner, resolve_plugin=resolve_the_forge(forge)),
-            Configuration(),
-            ACTION,
-            read_cli_environment,
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, forge
         )
 
         # Assert
@@ -664,15 +660,13 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
         # Arrange
         self.record_commit_checks(TASK_HEAD, exit_code=0)
         runner = self.create_runner_of_a_branch_off_the_wave_branch_of_the_forge()
-        forge = CheckRunsForgeDouble([create_wave_head_check_run("success")])
+        listing = CheckRunsListingDouble([create_wave_head_check_run("success")])
+        forge = TickForge(read_environment=read_cli_environment, list_check_runs=listing.list_check_runs)
         checkout_of_the_wave_head = str(self.paths.state_root / "head-checks" / "shop" / WAVE_HEAD)
 
         # Act
         prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner, resolve_plugin=resolve_the_forge(forge)),
-            Configuration(),
-            ACTION,
-            read_cli_environment,
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, forge
         )
 
         # Assert
@@ -684,14 +678,12 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
         # Arrange
         self.record_commit_checks(TASK_HEAD, exit_code=0)
         runner = self.create_runner_of_a_branch_off_the_wave_branch_of_the_forge()
-        forge = CheckRunsForgeDouble([create_wave_head_check_run("failure")])
+        listing = CheckRunsListingDouble([create_wave_head_check_run("failure")])
+        forge = TickForge(read_environment=read_cli_environment, list_check_runs=listing.list_check_runs)
 
         # Act
         prepared = prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner, resolve_plugin=resolve_the_forge(forge)),
-            Configuration(),
-            ACTION,
-            read_cli_environment,
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, forge
         )
 
         # Assert
@@ -712,7 +704,7 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
 
         # Act
         prepared = prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
         )
 
         # Assert
@@ -734,7 +726,7 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
 
         # Act
         prepared = prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
         )
 
         # Assert
@@ -759,7 +751,7 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
             create_test_runtime(self.paths, run_process=runner),
             Configuration(),
             ACTION_WITH_PASSED_PULL_REQUEST_CHECKS,
-            read_no_environment,
+            NO_FORGE,
         )
 
         # Assert
@@ -775,7 +767,7 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
             create_test_runtime(self.paths, run_process=runner),
             Configuration(),
             ACTION_WITH_PULL_REQUEST_CHECKS_OF_AN_OLDER_HEAD,
-            read_no_environment,
+            NO_FORGE,
         )
 
         # Assert
@@ -801,7 +793,7 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
             create_test_runtime(self.paths, run_process=runner),
             Configuration(),
             ACTION_WITH_PENDING_PULL_REQUEST_CHECKS,
-            read_no_environment,
+            NO_FORGE,
         )
 
         # Assert
@@ -827,7 +819,7 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
 
         # Act
         prepared = prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
         )
 
         # Assert
@@ -852,7 +844,7 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
 
         # Act
         prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
         )
 
         # Assert
@@ -868,7 +860,7 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
 
         # Act
         prepared = prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
         )
 
         # Assert
@@ -889,7 +881,7 @@ class PrepareTaskWorktreeOfARedBranchOffTheWaveBranchTest(PrepareTaskWorktreeTes
 
         # Act
         prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
         )
 
         # Assert
@@ -903,7 +895,7 @@ class PrepareTaskWorktreeOfARedBranchOffTheWaveBranchTest(PrepareTaskWorktreeTes
 
         # Act
         prepared = prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
         )
 
         # Assert
@@ -932,7 +924,7 @@ class PrepareTaskWorktreeOfATaskLaunchedAgainAfterACancelTest(PrepareTaskWorktre
 
         # Act
         prepared = prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, read_no_environment
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
         )
 
         # Assert
