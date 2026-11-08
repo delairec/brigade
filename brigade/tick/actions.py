@@ -52,7 +52,7 @@ class LaunchVerification:
     project: str
     wave: str
     task: str
-    pr: int
+    pr: int | None
     worktree: str
 
 

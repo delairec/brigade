@@ -55,6 +55,7 @@ MERGED_STATE = "merged"
 RUNNING_STATE = "running"
 PR_OPEN_STATE = "pr_open"
 VERIFYING_STATE = "verifying"
+NO_PULL_REQUEST = None
 VERIFIED_STATE = "verified"
 CHANGES_REQUESTED_STATE = "changes_requested"
 FIXING_STATE = "fixing"
@@ -102,6 +103,7 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_resumes(snapshot)
         + _plan_followed_pull_requests(snapshot)
         + _plan_delivered_head_preflights(snapshot)
+        + _plan_delivered_head_verifications(snapshot)
         + _plan_failed_preflight_parkings(snapshot)
         + _plan_blocked_task_parkings(snapshot)
         + _plan_dead_run_parkings(snapshot)
@@ -565,6 +567,45 @@ def _plan_delivered_head_preflights(snapshot: Snapshot) -> tuple:
         for task in wave.tasks
         if _is_delivered_head_due(wave, task, live_tasks)
     )
+
+
+def _is_delivered_head_preflighted(wave: WaveFacts, task: TaskFacts) -> bool:
+    return (
+        wave.states.get(task.name) == VERIFYING_STATE
+        and task.pull_request is None
+        and task.delivered_head is not None
+        and task.delivered_head == task.preflighted_head
+    )
+
+
+def _decide_delivered_head_verification(
+    wave: WaveFacts, task: TaskFacts, occupancy: _Occupancy
+) -> RecordTaskState | LaunchVerification | None:
+    if task.verdict is not None and task.verdict.head == task.delivered_head:
+        return RecordTaskState(
+            wave=wave.wave, task=task.name, state=STATES_BY_VERDICT[task.verdict.verdict], reason=None
+        )
+    if (
+        task.reviewed_head != task.delivered_head
+        and task.worktree is not None
+        and task.worktree not in occupancy.worktrees
+        and (wave.wave, task.name) not in occupancy.tasks
+    ):
+        return LaunchVerification(
+            project=wave.project, wave=wave.wave, task=task.name, pr=NO_PULL_REQUEST, worktree=task.worktree
+        )
+    return None
+
+
+def _plan_delivered_head_verifications(snapshot: Snapshot) -> tuple:
+    occupancy = _read_occupancy(snapshot)
+    decided = (
+        _decide_delivered_head_verification(wave, task, occupancy)
+        for wave in snapshot.waves
+        for task in wave.tasks
+        if _is_delivered_head_preflighted(wave, task)
+    )
+    return tuple(action for action in decided if action is not None)
 
 
 def _describe_failed_preflight(task: TaskFacts) -> str:
