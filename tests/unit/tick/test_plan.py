@@ -2930,3 +2930,27 @@ class PlanVerificationOfATaskWithoutAForgeTest(unittest.TestCase):
                 self.assertEqual(
                     actions, (RecordTaskState(wave="shop_w1", task="S3", state=expected_state, reason=None),)
                 )
+
+    def test_should_verify_no_task_whose_delivered_head_is_not_held_for_verification(self):
+        for case, state, preflighted, worktree in [
+            ("still running", "running", DELIVERED_HEAD, WORKTREE_S3),
+            ("preflighted before its last delivery", "verifying", PREFLIGHTED_BEFORE_A_PUSH, WORKTREE_S3),
+            ("without a worktree", "verifying", DELIVERED_HEAD, NO_WORKTREE),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    branch="feature/S3-task",
+                    worktree=worktree,
+                    last_run=LAST_RUN_OF_S3,
+                    delivered_head=DELIVERED_HEAD,
+                    preflighted_head=preflighted,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, ())
