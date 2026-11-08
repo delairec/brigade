@@ -23,18 +23,20 @@ class ClassCleanupRegistrarOfACallNeverRecordedTest(unittest.TestCase):
         class CallingAwawaTest(unittest.TestCase):
             @classmethod
             def setUpClass(cls):
-                search_path = provide_awawa_from(ClassCleanupRegistrar(cls), {"PATH": os.environ["PATH"]}, recordings)
+                cls.search_path = provide_awawa_from(
+                    ClassCleanupRegistrar(cls), {"PATH": os.environ["PATH"]}, recordings
+                )
+
+            def test_call(self):
+                # Act
                 ProcessLauncher.run(
                     ["awawa", *arguments],
                     cwd=directory,
-                    env={**os.environ, "PATH": search_path},
+                    env={**os.environ, "PATH": self.search_path},
                     capture_output=True,
                     text=True,
                     check=False,
                 )
-
-            def test_call(self):
-                pass
 
         result = unittest.TestResult()
         unittest.TestSuite([CallingAwawaTest("test_call")]).run(result)
