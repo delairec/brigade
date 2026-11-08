@@ -7,6 +7,7 @@ from pathlib import Path
 from brigade.commands.rebase_context import COMMAND
 from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_corpus_double, write_ledger
+from tests.unit.commands.create_plugin_resolver import create_plugin_resolver
 from tests.unit.commands.test_verify_preflight import (
     M4_BRANCH_CUT,
     TASK_PR_OPENED,
@@ -174,6 +175,7 @@ TIDES_BRANCH_CUT = {
 }
 MILESTONE_WITHOUT_FORGE = (("PATH", "/srv/tidepool"), ("MAIN", "main"))
 MILESTONE_ON_GITHUB = (("PATH", "/srv/tidepool"), ("MAIN", "main"), ("FORGE", "github"))
+MILESTONE_ON_FORGEJO = (("PATH", "/srv/tidepool"), ("MAIN", "main"), ("FORGE", "forgejo"))
 TASK_OF_THE_MILESTONE = (("MILESTONE", "@MILESTONE.M4"),)
 HARDENING_BRANCH_CUT = {**TIDES_BRANCH_CUT, "milestone": "M6", "branch": "integration/hardening-the-tick"}
 WAVE_STARTED_ON_A_BRANCH = {**WAVE_STARTED, "branch": "integration/tidepool_w16"}
@@ -300,7 +302,7 @@ class RebaseContextOfARedHeadTest(unittest.TestCase):
         (self.root / "config").mkdir()
         (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
 
-    def _create_runtime(self, project: tuple, branch: str, forge: object = None):
+    def _create_runtime(self, project: tuple, branch: str, forge: object = None, resolve_plugin=None):
         answers = {
             ("git", "rev-parse", "--show-toplevel"): ProcessAnswer(stdout="/srv/tidepool-branch\n"),
             ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): ProcessAnswer(
@@ -312,7 +314,9 @@ class RebaseContextOfARedHeadTest(unittest.TestCase):
         corpus = {"PROJECT": {"tidepool": project}}
         machine = ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus))
         return create_test_runtime(
-            create_test_paths(self.root), run_process=machine.run, resolve_plugin=lambda kind, name: forge
+            create_test_paths(self.root),
+            run_process=machine.run,
+            resolve_plugin=resolve_plugin or (lambda kind, name: forge),
         )
 
     def test_should_name_the_milestone_branch_repaired_in_place_its_red_commit_and_the_command_that_failed(self):
@@ -379,6 +383,23 @@ class RebaseContextOfARedHeadTest(unittest.TestCase):
                 "failed": ["ci / tests"],
             },
         )
+
+    def test_should_list_the_check_runs_of_the_red_head_through_the_forge_of_the_project(self):
+        # Arrange
+        forge = CheckRunsByBranchForgeDouble(
+            {"main": [{"name": "ci / tests", "conclusion": "failure", "head": "c0ffee1"}]}
+        )
+        runtime = self._create_runtime(
+            MILESTONE_ON_FORGEJO,
+            "fix/repair-main-c0ffee1",
+            resolve_plugin=create_plugin_resolver({("forge", "forgejo"): forge}),
+        )
+
+        # Act
+        document = COMMAND.run(Namespace(pr=NO_PULL_REQUEST, head=RED_HEAD, into="main"), runtime)
+
+        # Assert
+        self.assertEqual(document["failed"], ["ci / tests"])
 
 
 class RebaseContextTextOfARedHeadTest(unittest.TestCase):
