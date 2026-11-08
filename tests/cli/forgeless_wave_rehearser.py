@@ -41,7 +41,7 @@ class ForgelessWaveRehearser(WaveRehearser):
         return (plays / "planner").read_text().split("<<'PLAN'\n", 1)[1].split("PLAN\n", 1)[0]
 
     def register_sandbox(self):
-        self.run_brigade("project", "add", str(self.project.path), "--acceptance", "true")
+        self.run_brigade("project", "add", str(self.project.path), "--corpus-mode", "control", "--acceptance", "true")
 
     def is_milestone_reported(self) -> bool:
         events = self.read_events()
