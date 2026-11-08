@@ -6,7 +6,7 @@ from brigade.corpus.read_entities import Entity
 from brigade.git.check_ancestor import check_ancestor
 from brigade.git.fetch_branches import REMOTE
 from brigade.git.resolve_commit import resolve_commit
-from brigade.registry.is_on_github import is_on_github
+from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.tick.actions import LaunchTask, RebaseMilestone, RebaseTask
@@ -31,7 +31,7 @@ class _HeldAction:
 
 
 def _locate_branch_ref(project: Entity, branch: str) -> str:
-    if is_on_github(project):
+    if is_on_a_forge(project):
         return f"{REMOTE}/{branch}"
     return branch
 
