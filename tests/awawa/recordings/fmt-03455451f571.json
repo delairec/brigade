@@ -1,0 +1,23 @@
+{
+  "call": {
+    "arguments": [
+      "fmt",
+      "<tmp:0>/cache/brigade/plans/R1/corpus/milestones.awawa",
+      "<tmp:0>/cache/brigade/plans/R1/corpus/tasks.awawa"
+    ],
+    "cwd": "<tmp:0>/cache/brigade/plans/R1/corpus",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/cache/brigade/plans/R1/corpus/milestones.awawa": "MILESTONE W1\n\tTITLE \"Empty cart\"\n\tSTATUS active\n",
+      "<tmp:0>/cache/brigade/plans/R1/corpus/tasks.awawa": "TASK S1\n\tTITLE \"Empty the cart in one click\"\n\tSTATUS todo\n\tTYPE feat\n\tMILESTONE @MILESTONE.W1\n\tSPEC \"the cart empties in one click\"\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": ""
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}
