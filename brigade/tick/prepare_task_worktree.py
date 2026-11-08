@@ -1,5 +1,4 @@
 import shlex
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 

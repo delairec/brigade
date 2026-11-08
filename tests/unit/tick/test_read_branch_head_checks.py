@@ -38,7 +38,9 @@ def create_check_run(head: str, conclusion: str) -> dict:
 class ReadBranchHeadChecksTest(unittest.TestCase):
     def test_should_read_the_check_runs_of_the_forge_on_the_commit_of_the_branch_head(self):
         # Arrange
-        listing = CheckRunsListingDouble([create_check_run("c0ffee", "success"), create_check_run("0ld4ead", "failure")])
+        listing = CheckRunsListingDouble(
+            [create_check_run("c0ffee", "success"), create_check_run("0ld4ead", "failure")]
+        )
         query = BranchHeadQuery(
             project=GITHUB_PROJECT, branch="integration/w1", commit="c0ffee", list_check_runs=listing.list_check_runs
         )

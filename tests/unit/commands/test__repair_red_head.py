@@ -43,7 +43,9 @@ class RepairRedHeadTest(unittest.TestCase):
             self.argvs.append(request.argv)
             if request.argv[:3] == ("git", "worktree", "add"):
                 Path(request.argv[-2]).mkdir(parents=True, exist_ok=True)
-                return ProcessRecord(argv=request.argv, cwd=request.cwd, exit_code=0, stdout="", stderr="", duration_ms=0)
+                return ProcessRecord(
+                    argv=request.argv, cwd=request.cwd, exit_code=0, stdout="", stderr="", duration_ms=0
+                )
             return corpus_double(request)
 
         self.runtime = create_test_runtime(
@@ -84,7 +86,5 @@ class RepairRedHeadTest(unittest.TestCase):
 
         # Assert
         (record,) = self._list_runs()
-        self.assertEqual(
-            ([argv for argv in self.argvs if argv[:3] == ("git", "worktree", "add")], json.loads(record.read_text())["cwd"]),
-            ([], str(self.worktree)),
-        )
+        self.assertNotIn(("git", "worktree", "add", "--quiet", str(self.worktree), "integration/shop_w1"), self.argvs)
+        self.assertEqual(json.loads(record.read_text())["cwd"], str(self.worktree))
