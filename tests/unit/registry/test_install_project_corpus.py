@@ -16,7 +16,7 @@ LOGIN_ENVIRONMENT = {"GH_TOKEN": "octo-cli"}
 LINT_REFUSAL = ProcessAnswer(stdout="L002 refused", exit_code=1)
 
 
-class _RecordingForge:
+class _RecordingForgeDouble:
     def __init__(self):
         self.requests = []
 
@@ -132,7 +132,7 @@ class InstallProjectCorpusWithoutAForgeTest(InstallProjectCorpusTestCase):
 class InstallProjectCorpusOnAForgeTest(InstallProjectCorpusTestCase):
     def test_should_cut_the_branch_from_the_main_branch_of_the_forge(self):
         # Act
-        self._install("github", _RecordingForge())
+        self._install("github", _RecordingForgeDouble())
 
         # Assert
         self.assertIn(
@@ -141,14 +141,14 @@ class InstallProjectCorpusOnAForgeTest(InstallProjectCorpusTestCase):
 
     def test_should_push_the_branch(self):
         # Act
-        self._install("github", _RecordingForge())
+        self._install("github", _RecordingForgeDouble())
 
         # Assert
         self.assertIn(("git", "push", "--quiet", "origin", BRANCH), self.processes.argvs)
 
     def test_should_open_a_pull_request_into_the_main_branch(self):
         # Arrange
-        forge = _RecordingForge()
+        forge = _RecordingForgeDouble()
 
         # Act
         self._install("github", forge)
@@ -171,7 +171,7 @@ class InstallProjectCorpusOnAForgeTest(InstallProjectCorpusTestCase):
 
     def test_should_name_the_branch_and_the_pull_request(self):
         # Act
-        installed = self._install("github", _RecordingForge())
+        installed = self._install("github", _RecordingForgeDouble())
 
         # Assert
         self.assertEqual(installed, {"branch": BRANCH, "pull_request": 12, "merge_command": None})
