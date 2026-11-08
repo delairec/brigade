@@ -381,15 +381,15 @@ class RecordPlanInAnAreaTest(RecordPlanTestCase):
         self.workspace.mkdir()
         (self.workspace / "tasks.awawa").write_text('TASK B19\n\tTITLE "the parser"\n', encoding="utf-8")
 
-    def script_area_recording(self) -> None:
-        files = ("brigade/milestones.awawa", "brigade/tasks.awawa")
+    def script_area_recording(self, tasks_file: str = "tasks.awawa") -> None:
+        files = ("brigade/milestones.awawa", f"brigade/{tasks_file}")
         self.script_plan_entities([{"type": "MILESTONE", "name": "F1"}, {"type": "TASK", "name": "B20"}])
         self.script_plan_entity("@MILESTONE.F1", [{"name": "TITLE", "atoms": ['"Printer"']}])
         self.script_plan_entity(
             "@TASK.B20",
             [{"name": "TITLE", "atoms": ['"the printer"']}, {"name": "MILESTONE", "atoms": ["@MILESTONE.F1"]}],
         )
-        self.script_corpus_sites([{"type": "TASK", "name": "B19", "file": "tasks.awawa", "line": 1}])
+        self.script_corpus_sites([{"type": "TASK", "name": "B19", "file": tasks_file, "line": 1}])
         self.script_skeletons()
         self.script_plan_branch(BRANCH_NOT_FOUND)
         self.processes.answer_corpus_change(self.worktree, files, f"brigade plan record: {BRANCH}")
@@ -409,6 +409,29 @@ class RecordPlanInAnAreaTest(RecordPlanTestCase):
         # Assert
         self.assertIn("TASK B20", (self.workspace / "tasks.awawa").read_text(encoding="utf-8"))
         self.assertIn("MILESTONE F1", (self.workspace / "milestones.awawa").read_text(encoding="utf-8"))
+
+    def test_should_lint_the_area_and_never_the_whole_repository(self):
+        # Arrange
+        self.script_area_recording()
+
+        # Act
+        record_plan(self.runtime, self.create_recording(corpus_fields=AREA_CORPUS))
+
+        # Assert
+        linted = select_argvs_opening_on(self.processes.list_argvs(), ("awawa", "lint", "--strict"))
+        self.assertIn(("awawa", "lint", "--strict", str(self.workspace)), linted)
+        self.assertNotIn(("awawa", "lint", "--strict", str(self.worktree)), linted)
+
+    def test_should_append_to_the_file_of_the_area_already_holding_the_type(self):
+        # Arrange
+        (self.workspace / "backlog.awawa").write_text('TASK B19\n\tTITLE "the parser"\n', encoding="utf-8")
+        self.script_area_recording(tasks_file="backlog.awawa")
+
+        # Act
+        record_plan(self.runtime, self.create_recording(corpus_fields=AREA_CORPUS))
+
+        # Assert
+        self.assertIn("TASK B20", (self.workspace / "backlog.awawa").read_text(encoding="utf-8"))
 
 
 class RecordPlanWithoutForgeTest(RecordPlanTestCase):

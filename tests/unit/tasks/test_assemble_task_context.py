@@ -8,6 +8,7 @@ from brigade.system.parse_configuration import Configuration
 from brigade.tasks.assemble_task_context import TaskContextDemand, assemble_task_context
 from brigade.tasks.locate_task_worktree import TaskWorktree
 from tests.unit.scripted_processes import ScriptedProcesses
+from tests.unit.select_requests_opening_on import select_requests_opening_on
 
 PROJECT = Entity(
     name="oak",
@@ -324,8 +325,7 @@ class AssembleTaskContextInAnAreaTest(unittest.TestCase):
     def setUp(self):
         AssembleTaskContextTest.setUp(self)
 
-    def test_should_read_the_task_in_the_folder_of_the_area(self):
-        # Arrange
+    def create_area(self) -> tuple:
         project = Entity(
             name="oak",
             fields=(
@@ -352,6 +352,11 @@ class AssembleTaskContextInAnAreaTest(unittest.TestCase):
         tree = self.root / "cache" / "refs" / "oak" / "c0ffee" / "brigade"
         tree.mkdir(parents=True)
         self.processes.answer_json(("awawa", "status", "--json", str(tree)), {"entities": []})
+        return runtime, worktree
+
+    def test_should_read_the_task_in_the_folder_of_the_area(self):
+        # Arrange
+        runtime, worktree = self.create_area()
 
         # Act
         context = assemble_task_context(
@@ -369,3 +374,31 @@ class AssembleTaskContextInAnAreaTest(unittest.TestCase):
         read_of_the_task = self.processes.requests[1]
         self.assertEqual(read_of_the_task.argv, ("awawa", "context", "@TASK.B12", "--with-schema", "."))
         self.assertEqual(read_of_the_task.cwd, str(self.worktree_path / "brigade"))
+
+    def test_should_lint_the_closure_of_the_task_in_the_folder_of_the_area(self):
+        # Arrange
+        runtime, worktree = self.create_area()
+
+        # Act
+        assemble_task_context(runtime, Configuration(), worktree, ATTRIBUTION)
+
+        # Assert
+        closure_lint = select_requests_opening_on(self.processes.requests, ("awawa", "lint"))[0]
+        self.assertEqual(closure_lint.cwd, str(self.worktree_path / "brigade"))
+
+    def test_should_read_the_files_the_rules_apply_to_in_the_folder_of_the_area(self):
+        # Arrange
+        runtime, worktree = self.create_area()
+        instructions = str(self.instructions)
+        self.processes.answer_json(
+            ("awawa", "show", "@TASK.B12", "--json", str(self.worktree_path / "brigade")), TASK_SHOWN
+        )
+        self.processes.answer_json(
+            ("awawa", "status", "TRIGGER", "--where", "KIND==path", "--json", instructions), {"entities": []}
+        )
+
+        # Act
+        context = assemble_task_context(runtime, Configuration(instructions=instructions), worktree, ATTRIBUTION)
+
+        # Assert
+        self.assertEqual(context["rules"], [])
