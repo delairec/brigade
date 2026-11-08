@@ -1845,7 +1845,7 @@ TASK B17
 		IMPL "tests/unit/tick/test_plan.py::def"
 			+ "test_should_park_rather_than_merge_a_task_whose_pull_request_is_based_on_another_branch(self):"
 	SPEC "the ledger event of a merge carries the login the merge ran as"
-		IMPL "brigade/commands/tick.py::login = ask_forge_account(forge, FORGE_NAME, environment,"
+		IMPL "brigade/commands/tick.py::login = ask_forge_account(forge, forge_name, environment,"
 			+ "runtime).login"
 		IMPL "brigade/ledger/pr_merged.py::login: str | None"
 		IMPL "tests/unit/commands/test_tick.py::def"

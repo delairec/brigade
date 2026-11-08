@@ -23,7 +23,7 @@ class ReadCliLoginTest(unittest.TestCase):
         )
 
         # Act
-        login = read_cli_login(Configuration(), runtime)
+        login = read_cli_login(Configuration(), "github", runtime)
 
         # Assert
         self.assertEqual(login, "octo-cli")

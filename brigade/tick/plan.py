@@ -570,10 +570,7 @@ def _plan_delivered_head_preflights(snapshot: Snapshot) -> tuple:
 
 
 def _is_delivered_head_preflighted(wave: WaveFacts, task: TaskFacts) -> bool:
-    return (
-        wave.states.get(task.name) == VERIFYING_STATE
-        and task.delivered_head == task.preflighted_head
-    )
+    return wave.states.get(task.name) == VERIFYING_STATE and task.delivered_head == task.preflighted_head
 
 
 def _decide_delivered_head_verification(

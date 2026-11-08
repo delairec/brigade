@@ -83,7 +83,9 @@ def plan_context(request: argparse.Namespace, runtime: Runtime) -> dict:
     if read_project_field(project, "CORPUS") is None:
         raise BrigadeError(f"@PROJECT.{project.name} declares no corpus")
     configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)
-    read_environment = cache(lambda key: read_forge_environment(configuration, ForgeSlot(read_project_forge(project), key), runtime))
+    read_environment = cache(
+        lambda key: read_forge_environment(configuration, ForgeSlot(read_project_forge(project), key), runtime)
+    )
     main = locate_project_main(runtime.run_process, project, read_environment)
     query = argparse.Namespace(project=project.name, ref=main, worktree=None)
     root = prepare_project_tree(query, configuration, runtime).root
