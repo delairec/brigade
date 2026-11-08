@@ -1,5 +1,5 @@
-from brigade.runtime import Runtime
 from brigade.git.resolve_commit import resolve_commit
+from brigade.runtime import Runtime
 from brigade.tick.head_proof import HeadEvidence, HeadProof
 from brigade.tick.judge_head import judge_head
 from brigade.tick.prove_branch_head import NO_TASK_CHECK, BranchHead
