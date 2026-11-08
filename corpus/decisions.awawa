@@ -6481,3 +6481,23 @@ DECISION AHeadIsGreenOnceOneOfItsProofsPassedAndRedOnlyWhenNoneDid
 		+ "the tick ran on the commit itself is as strong as one the forge ran"
 	SOURCE "the build run of @TASK.B238 on 2026-11-08, reading the « or » of its SPEC 1"
 		REF @TASK.B238
+
+DECISION TheRunRepairingARedHeadIsNamedByItsBranchAndItsCommit
+	TITLE "the run of the rebase slot repairing a red head takes the arguments branch and head, the"
+		+ "red commit, and into naming PROJECT.MAIN when it repairs PROJECT.MAIN on"
+		+ "fix/repair-<main>-<commit>; the tick finds it by those two arguments and launches none"
+		+ "again for that head once one lives, ended done or ended blocked"
+	STATUS active
+	DESC "binds @TASK.B238: brigade/commands/_repair_red_head.py launches the run,"
+		+ "brigade/runs/find_head_repair.py reads the latest run of the head"
+		REF @TASK.B238
+	DESC "a run that died without its result, or ended failed, is not a repair: the next tick"
+		+ "launches one again"
+	REJECTED "finding the repair by the worktree it runs in: the worktree of a milestone branch"
+		+ "also holds the runs of its rebase onto PROJECT.MAIN, and a fix branch per commit is the"
+		+ "only key of a repair of PROJECT.MAIN"
+	REJECTED "launching a repair again once the previous one ended done on a head still red: a"
+		+ "repair of PROJECT.MAIN ends done on a pull request the user merges, and the head stays"
+		+ "red until that merge"
+	SOURCE "the build run of @TASK.B238 on 2026-11-08, wording SPEC 7 into arguments"
+		REF @TASK.B238
