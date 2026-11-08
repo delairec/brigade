@@ -86,6 +86,9 @@ class TaskPromoteOutsideATaskTest(unittest.TestCase):
         self.assertEqual(str(raised.exception), "the branch main is not a <prefix>/<task>-<slug> branch")
 
 
+OAK_PROJECT = (("PATH", "/srv/oak"), ("MAIN", "main"))
+
+
 class TaskPromotePushTest(unittest.TestCase):
     def setUp(self):
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
@@ -105,7 +108,7 @@ class TaskPromotePushTest(unittest.TestCase):
             ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"), stdout="/srv/oak/.git\n"
         )
         self.processes.answer_entities(
-            self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("MAIN", "main"))}
+            self.runtime.paths.config_root, "PROJECT", {"oak": (*OAK_PROJECT, ("FORGE", "github"))}
         )
         append_event(
             self.runtime.paths,
@@ -156,3 +159,22 @@ class TaskPromotePushTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(pushed_environments, [{"GH_TOKEN": "token-of-octo-bot"}])
+
+    def test_should_push_the_promotion_with_no_login_environment_on_a_project_of_forge_none(self):
+        # Arrange
+        pushed_environments = []
+
+        def record_push(request):
+            pushed_environments.append(request.environment)
+            return 0, "", ""
+
+        self.processes.answer_by(("git", "push", "--quiet", "origin", "feature/B12-the-parser"), record_push)
+        self.processes.answer_entities(
+            self.runtime.paths.config_root, "PROJECT", {"oak": (*OAK_PROJECT, ("FORGE", "none"))}
+        )
+
+        # Act
+        COMMAND.run(Namespace(task=THE_TASK_OF_THE_BRANCH, pr=42), self.runtime)
+
+        # Assert
+        self.assertEqual(pushed_environments, [{}])
