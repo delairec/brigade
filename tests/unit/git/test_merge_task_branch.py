@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 
 from brigade.errors import CommandFailed
-from brigade.tick.merge_task_branch import TaskBranchMerge, merge_task_branch
+from brigade.git.merge_task_branch import TaskBranchMerge, merge_task_branch
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
 MERGE = TaskBranchMerge(
