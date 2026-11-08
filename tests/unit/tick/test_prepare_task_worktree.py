@@ -304,9 +304,7 @@ class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
         runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND)
 
         # Act
-        prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
-        )
+        prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE)
 
         # Assert
         self.assertEqual(
@@ -322,9 +320,7 @@ class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
         runner = self.create_runner(MAKE_DEPS, worktrees=TASK_BRANCH_LISTED_ELSEWHERE, branch=TASK_BRANCH_FOUND)
 
         # Act
-        prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
-        )
+        prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE)
 
         # Assert
         self.assertEqual(
@@ -486,9 +482,7 @@ class PrepareTaskWorktreeOfASetupLineInShellSyntaxTest(PrepareTaskWorktreeTestCa
         runner = self.create_runner(TOUCH_THE_WORKTREE)
 
         # Act
-        prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
-        )
+        prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE)
 
         # Assert
         self.assertEqual(
@@ -528,9 +522,7 @@ class PrepareTaskWorktreeUnderTheLockTest(PrepareTaskWorktreeTestCase):
         runner = LockObservingRunner(self.create_runner(MAKE_DEPS), lock, ADD_TASK_WORKTREE)
 
         # Act
-        prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
-        )
+        prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE)
 
         # Assert
         self.assertEqual(runner.lock_free_at_the_command, [False])
@@ -608,9 +600,7 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
         runner = self.create_runner(MAKE_DEPS, forge=ON_GITHUB)
 
         # Act
-        prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, CLI_FORGE
-        )
+        prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, CLI_FORGE)
 
         # Assert
         self.assertIn(
@@ -649,9 +639,7 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
         forge = TickForge(read_environment=read_cli_environment, list_check_runs=list_no_check_run)
 
         # Act
-        prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, forge
-        )
+        prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, forge)
 
         # Assert
         self.assertIn((str(WORKTREE), ("git", "rebase", "--fork-point", "origin/integration/w1")), runner.commands)
@@ -665,9 +653,7 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
         checkout_of_the_wave_head = str(self.paths.state_root / "head-checks" / "shop" / WAVE_HEAD)
 
         # Act
-        prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, forge
-        )
+        prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, forge)
 
         # Assert
         self.assertNotIn(
@@ -843,9 +829,7 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
         runner = self.create_runner(MAKE_DEPS, worktrees=TASK_WORKTREE_LISTED, branch=TASK_BRANCH_FOUND)
 
         # Act
-        prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
-        )
+        prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE)
 
         # Assert
         self.assertNotIn((str(WORKTREE), REBASE_ON_THE_WAVE_BRANCH), runner.commands)
@@ -880,9 +864,7 @@ class PrepareTaskWorktreeOfARedBranchOffTheWaveBranchTest(PrepareTaskWorktreeTes
         )
 
         # Act
-        prepare_task_worktree(
-            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
-        )
+        prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE)
 
         # Assert
         self.assertNotIn((str(WORKTREE), REBASE_ON_THE_WAVE_BRANCH), runner.commands)

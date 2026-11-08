@@ -3135,27 +3135,28 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (select_argvs_opening_on(self.machine.argvs, ("git", "worktree", "add", "--quiet", "-b")), self.spawn.argvs),
-            (
-                [("git", "worktree", "add", "--quiet", "-b", f"fix/repair-main-{WAVE_HEAD}", str(repair), WAVE_HEAD)],
-                [
-                    (
-                        "run",
-                        "rebase-on-base",
-                        f"branch=fix/repair-main-{WAVE_HEAD}",
-                        f"head={WAVE_HEAD}",
-                        "into=main",
-                        "--slot",
-                        "rebase",
-                        "--cwd",
-                        str(repair),
-                        "--project",
-                        "tidepool",
-                        "--run-id",
-                        ANY,
-                    )
-                ],
-            ),
+            select_argvs_opening_on(self.machine.argvs, ("git", "worktree", "add", "--quiet", "-b")),
+            [("git", "worktree", "add", "--quiet", "-b", f"fix/repair-main-{WAVE_HEAD}", str(repair), WAVE_HEAD)],
+        )
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "rebase-on-base",
+                    f"branch=fix/repair-main-{WAVE_HEAD}",
+                    f"head={WAVE_HEAD}",
+                    "into=main",
+                    "--slot",
+                    "rebase",
+                    "--cwd",
+                    str(repair),
+                    "--project",
+                    "tidepool",
+                    "--run-id",
+                    ANY,
+                )
+            ],
         )
 
     def test_should_rebase_the_milestone_branch_onto_main_before_the_wave_of_its_candidates_starts_on_it(self):
@@ -3422,7 +3423,9 @@ class TickLaunchingATaskWhoseChecksPassedAndWhoseBranchConflictsWithTheWaveBranc
                 OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT, fallback=create_corpus_double(corpus)
             ).run,
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([GREEN_PULL_REQUEST_AT_THE_T7_HEAD])),
+            resolve_plugin=create_plugin_resolution(
+                STEP_COUNTING_PROBE, RebasingForgeDouble([GREEN_PULL_REQUEST_AT_THE_T7_HEAD])
+            ),
         )
 
     def test_should_launch_the_rebase_slot_on_the_worktree_of_the_task_instead_of_its_build(self):
@@ -3646,12 +3649,10 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
             COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Assert
+        self.assertEqual(self.spawn.argvs, [])
         self.assertEqual(
-            (self.spawn.argvs, errors.getvalue().splitlines()[-1]),
-            (
-                [],
-                "brigade tick: the repair of integration/M4 is blocked: Drop the flaky tide test or fix its clock?",
-            ),
+            errors.getvalue().splitlines()[-1],
+            "brigade tick: the repair of integration/M4 is blocked: Drop the flaky tide test or fix its clock?",
         )
 
     def test_should_name_the_red_wave_branch_its_commit_and_the_command_that_failed_on_stderr(self):
@@ -3702,18 +3703,16 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
         document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
 
         # Assert
-        self.assertEqual(
-            [entry for entry in document["plan"] if entry.get("task") == "T7"],
-            [
-                {
-                    "project": "tidepool",
-                    "wave": "tidepool_w16",
-                    "branch": "integration/M4",
-                    "task": "T7",
-                    "task_branch": "feature/T7-tide-table",
-                    "pull_request_checks": None,
-                }
-            ],
+        self.assertIn(
+            {
+                "project": "tidepool",
+                "wave": "tidepool_w16",
+                "branch": "integration/M4",
+                "task": "T7",
+                "task_branch": "feature/T7-tide-table",
+                "pull_request_checks": None,
+            },
+            document["plan"],
         )
 
 
@@ -4052,8 +4051,23 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            [argv[:4] for argv in self.spawn.argvs],
-            [("run", "rebase-on-base", "branch=integration/M4", f"head={WAVE_HEAD}")],
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "rebase-on-base",
+                    "branch=integration/M4",
+                    f"head={WAVE_HEAD}",
+                    "--slot",
+                    "rebase",
+                    "--cwd",
+                    ANY,
+                    "--project",
+                    "tidepool",
+                    "--run-id",
+                    ANY,
+                )
+            ],
         )
 
     def test_should_rebase_the_task_branch_in_its_worktree_and_push_it_with_a_lease_on_its_head(self):
