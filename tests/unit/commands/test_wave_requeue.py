@@ -158,7 +158,8 @@ def create_main_tree_runtime(
         ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{main}^{{commit}}"): ProcessAnswer(
             stdout=f"{MAIN_HEAD}\n"
         ),
-        ("git", "fetch", "--quiet", "origin", "main"): ProcessAnswer(),
+        ("git", "fetch", "--quiet", "origin"): ProcessAnswer(),
+        ("git", "ls-remote"): ProcessAnswer(),
         IMPLEMENTED_TASKS_QUERY: ProcessAnswer(stdout=NO_TASK_IMPLEMENTED),
         ("awawa", "show", "@TASK.T7", "--json", main_root): task_on_main,
     }
@@ -330,7 +331,7 @@ class WaveRequeueRefusalTest(unittest.TestCase):
                 TIDEPOOL_ON_GITHUB,
                 "origin/main",
                 (
-                    "the task T7 of the wave tidepool_w16 differs between origin/main and integration/tidepool:"
+                    "the task T7 of the wave tidepool_w16 differs between origin/main and origin/integration/tidepool:"
                     " the ruling on main reaches it through brigade wave cancel tidepool_w16"
                     " and a new wave cut from origin/main"
                 ),

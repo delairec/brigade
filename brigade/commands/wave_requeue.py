@@ -20,7 +20,7 @@ from brigade.system.parse_configuration import Configuration
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
 from brigade.waves.locate_project_main import locate_project_main
-from brigade.waves.prepare_wave_tree import prepare_wave_tree
+from brigade.waves.prepare_wave_tree import WaveTreeReading, prepare_wave_tree
 from brigade.waves.read_task_state import PARKED_STATE
 from brigade.waves.read_task_states import read_task_states
 from brigade.waves.require_wave_summary import require_wave_summary
@@ -84,7 +84,10 @@ def wave_requeue(request: argparse.Namespace, runtime: Runtime) -> dict:
     if state != PARKED_STATE:
         raise BrigadeError(f"the task {request.task} of the wave {request.wave} is {state}, not parked")
     configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
-    tree = prepare_wave_tree(runtime, configuration, summary.started)
+    reading = WaveTreeReading(
+        configuration=configuration, read_environment=lambda key: read_forge_environment(configuration, key, runtime)
+    )
+    tree = prepare_wave_tree(runtime, reading, summary.started)
     if request.task in read_implemented_tasks(runtime.run_process, tree.root):
         raise BrigadeError(f"the task {request.task} of the wave {request.wave} is already implemented on {tree.ref}")
     on_wave = read_entity(runtime.run_process, tree.root, TASK_TYPE, request.task)

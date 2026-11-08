@@ -6418,3 +6418,24 @@ DECISION UnderAutoMergeNoneTheUserMergesATaskOfForgeNoneIntoItsMilestoneBranchWi
 		+ "respects AUTO_MERGE none: it does not merge, names a manual merge command toward the"
 		+ "branch of the milestone, then records merged once the head of the task is an ancestor of"
 		+ "that branch; option B, under FORGE none AUTO_MERGE ignored and the tick always merging"
+
+DECISION TheBranchOfAMilestoneIsReadAtItsRemoteRefFetchedAtEachReadAndABranchTheForgeNoLongerHoldsStaysLocal
+	TITLE "on a project of FORGE github, the tree of a wave and the milestone it belongs to are"
+		+ "read at origin/<branch>, fetched at each read; a branch the forge no longer holds is"
+		+ "read at its local branch; a project of FORGE none keeps its local branch"
+	STATUS active
+	DESC "the branch of the milestone and PROJECT.MAIN both, each located on the forge through"
+		+ "brigade/waves/locate_forge_branch.py; no local branch of the clone is advanced"
+		REF @TASK.B242
+	DESC "a branch ls-remote does not find is read at its local branch, so a milestone branch"
+		+ "deleted on the forge leaves the waves of the project readable"
+		REF @DECISION.TheTreeOfAWaveIsReadAtTheBranchOfTheMilestoneHoldingItsTasksOrAtMain
+	REJECTED "the local branch advanced to origin/<branch> before the read: it fails on a branch"
+		+ "checked out in a worktree a run holds or whose tree is dirty"
+	REJECTED "falling back to PROJECT.MAIN when the forge no longer holds the branch: the tasks of"
+		+ "the wave are not on main and the read would miss them"
+	RATIONALE "the merges of the forge advance origin/<branch> alone; ruled by the build run of"
+		+ "@TASK.B242 on 2026-11-08, which leaves the choice to the delivery"
+		REF @TASK.B242
+	SOURCE "@TASK.B242, its DESC 2 leaving the read to the delivery"
+		REF @TASK.B242

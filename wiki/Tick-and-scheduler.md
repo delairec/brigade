@@ -108,6 +108,9 @@ The tick launches no run of a paused wave.
 - On a project of `FORGE github`, the launch fetches the base of the task, the branch of its milestone or the main
   branch for a task naming none, and cuts the task branch from `origin/<base>`, its setup checking that
   `origin/<base>` is an ancestor of `HEAD`. A project of `FORGE none` keeps its local base.
+- On a project of `FORGE github`, the tick reads the tasks of a wave and what is implemented at the branch of its
+  milestone as the forge holds it, fetched at each read, never at the local branch of the clone. A project of
+  `FORGE none` keeps its local branch.
 - An existing task branch that does not descend from that base is rebased onto it before the setup only when its pull
   request is open and its check runs all passed. A rebase stopped on a conflict is aborted, and the tick starts a
   detached run of the slot `rebase` in the worktree of the task, with the arguments `task` and `base` and no `pr`, the

@@ -1,4 +1,6 @@
 import argparse
+from collections.abc import Callable
+from dataclasses import dataclass
 
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.prepare_tree import Tree
@@ -13,15 +15,33 @@ from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
 from brigade.system.parse_configuration import Configuration
+from brigade.waves.is_milestone_branch_off_the_forge import RecordedMilestoneBranch, is_milestone_branch_off_the_forge
+from brigade.waves.locate_forge_branch import locate_forge_branch
 
 TASK_TYPE = "TASK"
 MAIN_FIELD = "MAIN"
 MILESTONE_PREFIX = "@MILESTONE."
 
 
-def _prepare_tree_at(runtime: Runtime, configuration: Configuration, project: str, ref: str) -> Tree:
-    query = argparse.Namespace(project=project, ref=ref, worktree=None)
-    return prepare_project_tree(query, configuration, runtime)
+@dataclass(frozen=True)
+class WaveTreeReading:
+    configuration: Configuration
+    read_environment: Callable[[str], dict]
+
+
+def _locate_branch_ref(runtime: Runtime, reading: WaveTreeReading, project: str, branch: str) -> str:
+    entity = find_project(read_projects(runtime), project)
+    recorded = RecordedMilestoneBranch(project=entity, branch=branch, read_environment=reading.read_environment)
+    if is_milestone_branch_off_the_forge(runtime.run_process, recorded):
+        return branch
+    return locate_forge_branch(runtime.run_process, entity, branch, reading.read_environment)
+
+
+def _prepare_tree_at(runtime: Runtime, reading: WaveTreeReading, project: str, branch: str) -> Tree:
+    query = argparse.Namespace(
+        project=project, ref=_locate_branch_ref(runtime, reading, project, branch), worktree=None
+    )
+    return prepare_project_tree(query, reading.configuration, runtime)
 
 
 def _list_milestone_cuts(entries: tuple[LedgerEntry, ...], project: str) -> tuple[MilestoneBranchCut, ...]:
@@ -53,26 +73,26 @@ def _holds_the_wave(runtime: Runtime, tree: Tree, cut: MilestoneBranchCut, start
     return set(started.tasks) <= {task.name for task in of_milestone}
 
 
-def prepare_wave_tree(runtime: Runtime, configuration: Configuration, started: WaveStarted) -> Tree:
+def prepare_wave_tree(runtime: Runtime, reading: WaveTreeReading, started: WaveStarted) -> Tree:
     entries = runtime.read_ledger(runtime.paths.state_root).entries
     for cut in _list_open_milestone_cuts(entries, started.project):
-        tree = _prepare_tree_at(runtime, configuration, started.project, cut.branch)
+        tree = _prepare_tree_at(runtime, reading, started.project, cut.branch)
         if _holds_the_wave(runtime, tree, cut, started):
             return tree
-    return _prepare_tree_at(runtime, configuration, started.project, _read_main(runtime, started.project))
+    return _prepare_tree_at(runtime, reading, started.project, _read_main(runtime, started.project))
 
 
-def _prepare_cut_tree(runtime: Runtime, configuration: Configuration, cut: MilestoneBranchCut, main: str) -> Tree:
+def _prepare_cut_tree(runtime: Runtime, reading: WaveTreeReading, cut: MilestoneBranchCut, main: str) -> Tree:
     try:
-        return _prepare_tree_at(runtime, configuration, cut.project, cut.branch)
+        return _prepare_tree_at(runtime, reading, cut.project, cut.branch)
     except BrigadeError:
-        return _prepare_tree_at(runtime, configuration, cut.project, main)
+        return _prepare_tree_at(runtime, reading, cut.project, main)
 
 
-def locate_wave_branch_base(runtime: Runtime, configuration: Configuration, started: WaveStarted) -> str:
+def locate_wave_branch_base(runtime: Runtime, reading: WaveTreeReading, started: WaveStarted) -> str:
     entries = runtime.read_ledger(runtime.paths.state_root).entries
     main = _read_main(runtime, started.project)
     for cut in _list_milestone_cuts(entries, started.project):
-        if _holds_the_wave(runtime, _prepare_cut_tree(runtime, configuration, cut, main), cut, started):
+        if _holds_the_wave(runtime, _prepare_cut_tree(runtime, reading, cut, main), cut, started):
             return cut.branch
     return main
