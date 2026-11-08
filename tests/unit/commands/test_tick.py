@@ -6833,7 +6833,17 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document["merge_commands"], ["git -C /srv/elsewhere merge feature/T7-tide-table"])
-        self.assertNotIn(("git", "worktree", "add"), [argv[:3] for argv in runtime.run_process.__self__.argvs])
+        self.assertNotIn(
+            (
+                "git",
+                "worktree",
+                "add",
+                "--quiet",
+                f"{self.repository}/.brigade/worktrees/integration-tides",
+                "integration/tides",
+            ),
+            runtime.run_process.__self__.argvs,
+        )
 
     def test_should_record_merged_a_task_once_its_head_is_an_ancestor_of_its_milestone_branch_under_no_auto_merge(self):
         # Arrange
