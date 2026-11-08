@@ -6351,7 +6351,10 @@ class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
         delivered_run = {**create_run_record(FIRST_RUN, WAVE, "T7"), "project": "tidepool"}
         write_run(self.root / "state", delivered_run, create_run_result(FIRST_RUN, "done", "2026-10-18T10:30:00Z"))
         delivered = {**create_run_result(FIRST_RUN, "done", "2026-10-18T10:30:00Z"), "wave": WAVE, "task": "T7"}
+        self.delivered = delivered
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("running"), delivered])
+        self.worktree = self.repository / ".brigade" / "worktrees" / "T7"
+        self.spawn = SpawnRecorderDouble()
 
     def _create_runtime(self, acceptance_outputs: dict) -> Runtime:
         project = (
@@ -6364,6 +6367,7 @@ class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
         return create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **acceptance_outputs}),
+            spawn_process=self.spawn.spawn,
             resolve_plugin=_resolve_the_collectors_beside(
                 create_plugin_resolution(STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)),
                 self.root,
@@ -6421,5 +6425,42 @@ class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
                     "task": "T7",
                     "state": "verifying",
                 },
+            ],
+        )
+
+    def test_should_launch_the_verification_of_its_delivered_head_naming_no_pull_request(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        preflighted = {**TASK_PREFLIGHTED_AT_THE_HEAD, "pr": None}
+        write_ledger(
+            self.root,
+            [WAVE_STARTED, _record_task_state("running"), self.delivered, preflighted, _record_task_state("verifying")],
+        )
+        no_acceptance_run = {}
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(no_acceptance_run))
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "verify-pr",
+                    "task=@TASK.T7",
+                    "--slot",
+                    "review",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                )
             ],
         )
