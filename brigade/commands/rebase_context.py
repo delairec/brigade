@@ -14,6 +14,7 @@ from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.read_project_field import read_project_field
+from brigade.registry.read_project_forge import read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
 from brigade.runtime import Runtime
@@ -113,7 +114,9 @@ def _read_red_head(runtime: Runtime, worktree: Path, request: argparse.Namespace
             repository=worktree,
             branch=request.into or branch,
             ref=request.head,
-            list_check_runs=list_branch_check_runs(runtime, read_configuration(runtime, CONFIGURATION_OPTIONAL)),
+            list_check_runs=list_branch_check_runs(
+                runtime, read_configuration(runtime, CONFIGURATION_OPTIONAL), read_project_forge(project)
+            ),
         ),
     )
     return {
