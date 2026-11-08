@@ -3396,6 +3396,7 @@ def write_commit_checks(root: Path, commit: str, exit_code: int) -> None:
         encoding="utf-8",
     )
 
+
 OUTPUTS_OF_A_LAUNCH_FROM_THE_FORGE_STOPPED_ON_A_CONFLICT = {
     **OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT,
     ("git", "merge-base", "--is-ancestor", "origin/integration/M4", "feature/T7-tide-table"): ProcessAnswer(
@@ -3458,9 +3459,7 @@ class TickLaunchingATaskWhoseChecksPassedAndWhoseBranchConflictsWithTheWaveBranc
             ).run,
             spawn_process=self.spawn.spawn,
             resolve_plugin=_resolve_the_collectors_beside(
-                create_plugin_resolution(
-                    STEP_COUNTING_PROBE, RebasingForgeDouble([GREEN_PULL_REQUEST_AT_THE_T7_HEAD])
-                ),
+                create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([GREEN_PULL_REQUEST_AT_THE_T7_HEAD])),
                 self.root,
             ),
         )

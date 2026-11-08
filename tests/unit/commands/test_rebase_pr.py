@@ -90,7 +90,9 @@ class RebasePrOfARepairBranchTest(unittest.TestCase):
             ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"), stdout="/srv/oak/.git\n"
         )
         self.processes.answer_entities(
-            self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("MAIN", "main"), ("FORGE", "github"))}
+            self.runtime.paths.config_root,
+            "PROJECT",
+            {"oak": (("PATH", "/srv/oak"), ("MAIN", "main"), ("FORGE", "github"))},
         )
         self.processes.answer(("git", "branch", "--show-current"), stdout=f"{FIX_BRANCH}\n")
         self.processes.answer(
