@@ -23,9 +23,7 @@ def _render_text(document: dict) -> str:
 
 def wave_start(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
-    read_forge_name = functools.cache(
-        lambda: read_project_forge(find_project(read_projects(runtime), request.project))
-    )
+    read_forge_name = functools.cache(lambda: read_project_forge(find_project(read_projects(runtime), request.project)))
     start = WaveStart(
         project=request.project,
         tasks=tuple(request.tasks),
@@ -33,7 +31,7 @@ def wave_start(request: argparse.Namespace, runtime: Runtime) -> dict:
         read_environment=functools.cache(
             lambda key: read_forge_environment(configuration, ForgeSlot(read_forge_name(), key), runtime)
         ),
-        read_login=functools.cache(lambda: read_cli_login(configuration, runtime)),
+        read_login=functools.cache(lambda: read_cli_login(configuration, read_forge_name(), runtime)),
     )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "waves": list(start_project_waves(runtime, start))}
 
