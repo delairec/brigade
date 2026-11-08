@@ -2,10 +2,11 @@ import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
-from brigade.commands._read_forge_environment import FORGE_NAME, ForgeSlot, read_forge_environment
+from brigade.commands._read_forge_environment import ForgeSlot, read_forge_environment
 from brigade.git.locate_main_checkout import locate_main_checkout
 from brigade.git.locate_worktree_root import locate_worktree_root
 from brigade.registry.read_project_field import read_project_field
+from brigade.registry.read_project_forge import read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
 from brigade.review.assemble_review_context import ReviewDemand, assemble_review_context
@@ -40,12 +41,13 @@ def review_context(request: argparse.Namespace, runtime: Runtime) -> dict:
     project = require_project_at(
         read_projects(runtime), locate_main_checkout(run_process, locate_worktree_root(run_process, Path.cwd()))
     )
+    forge_name = read_project_forge(project)
     demand = ReviewDemand(
         opened=find_opened_task(runtime, project.name, request.pr).opened,
         project_path=read_project_field(project, PATH_FIELD),
-        forge=runtime.resolve_plugin("forge", FORGE_NAME),
-        forge_name=FORGE_NAME,
-        environment=read_forge_environment(configuration, ForgeSlot(FORGE_NAME, CLI_KEY), runtime),
+        forge=runtime.resolve_plugin("forge", forge_name),
+        forge_name=forge_name,
+        environment=read_forge_environment(configuration, ForgeSlot(forge_name, CLI_KEY), runtime),
     )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, **assemble_review_context(runtime, demand)}
 
