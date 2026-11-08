@@ -58,9 +58,9 @@ class RebaseDoneOfAPullRequestTest(unittest.TestCase):
 
     def _create_runtime(self, ancestry: ProcessAnswer):
         answers = {
-            ("git", "rev-parse", "--show-toplevel"): ProcessAnswer(stdout="/home/user/tidepool-T7\n"),
+            ("git", "rev-parse", "--show-toplevel"): ProcessAnswer(stdout="/srv/tidepool-T7\n"),
             ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): ProcessAnswer(
-                stdout="/home/user/tidepool/.git\n"
+                stdout="/srv/tidepool/.git\n"
             ),
             ("git", "fetch"): ProcessAnswer(),
             ("git", "merge-base", "--is-ancestor", "origin/integration/M4-tides", "HEAD"): ancestry,

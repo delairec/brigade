@@ -16,7 +16,7 @@ from tests.unit.scripted_processes import ScriptedProcesses
 
 THE_TASK_OF_THE_BRANCH = None
 MAIN_BRANCH_CHECKOUT = {
-    ("git", "rev-parse", "--show-toplevel"): "/home/user/tidepool\n",
+    ("git", "rev-parse", "--show-toplevel"): "/srv/tidepool\n",
     ("git", "branch", "--show-current"): "main\n",
 }
 BOUND_ACCOUNTS = (

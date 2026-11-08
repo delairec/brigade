@@ -128,7 +128,7 @@ class WaveCancelOfAnOpenWaveTest(unittest.TestCase):
                     {
                         "task": "S3",
                         "stopped_run": None,
-                        "worktree": "/home/user/tidepool",
+                        "worktree": "/srv/tidepool",
                         "branch": None,
                         "pull_request": None,
                     },
