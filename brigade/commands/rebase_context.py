@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
+from brigade.commands._list_branch_check_runs import list_branch_check_runs
 from brigade.corpus.read_entity import read_entity
 from brigade.errors import BrigadeError
 from brigade.git.list_conflicting_files import list_conflicting_files
@@ -16,8 +17,11 @@ from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
 from brigade.runtime import Runtime
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.tasks.find_task_base import find_task_base
 from brigade.tasks.locate_task_worktree import TASK_BRANCH, locate_task_worktree
+from brigade.tick.judge_branch_head import judge_branch_head
+from brigade.tick.prove_branch_head import BranchHead
 from brigade.verify.find_opened_task import find_opened_task
 from brigade.waves.find_milestone_branch import find_milestone_branch
 from brigade.waves.locate_forge_branch import locate_forge_branch
@@ -30,7 +34,15 @@ TASK_TYPE = "TASK"
 MAIN_FIELD = "MAIN"
 
 
+def _render_red_head(document: dict) -> str:
+    into = "" if document["into"] is None else f"# into\n{document['into']}\n\n"
+    failed = "\n".join(document["failed"])
+    return f"# branch\n{document['branch']}\n\n# head\n{document['head']}\n\n{into}# failed\n{failed}"
+
+
 def _render_text(document: dict) -> str:
+    if "head" in document:
+        return _render_red_head(document)
     conflicts = "\n".join(document["conflicts"])
     return f"# branch\n{document['branch']}\n\n# base\n{document['base']}\n\n# conflicts\n{conflicts}"
 
@@ -91,8 +103,35 @@ def _read_unopened_branch(runtime: Runtime, worktree: Path, branch: str) -> dict
     }
 
 
+def _read_red_head(runtime: Runtime, worktree: Path, request: argparse.Namespace) -> dict:
+    project = require_project_at(read_projects(runtime), locate_main_checkout(runtime.run_process, worktree))
+    branch = read_current_branch(runtime.run_process, worktree)
+    proof = judge_branch_head(
+        runtime,
+        BranchHead(
+            project=project,
+            repository=worktree,
+            branch=request.into or branch,
+            ref=request.head,
+            list_check_runs=list_branch_check_runs(runtime, read_configuration(runtime, CONFIGURATION_OPTIONAL)),
+        ),
+    )
+    return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
+        "project": project.name,
+        "pr": None,
+        "task": None,
+        "branch": branch,
+        "head": proof.commit,
+        "into": request.into,
+        "failed": list(proof.failed_commands),
+    }
+
+
 def rebase_context(request: argparse.Namespace, runtime: Runtime) -> dict:
     worktree = locate_worktree_root(runtime.run_process, Path.cwd())
+    if request.head is not None:
+        return _read_red_head(runtime, worktree, request)
     if request.pr is None:
         branch = read_current_branch(runtime.run_process, worktree)
         if TASK_BRANCH.fullmatch(branch) is None:
@@ -114,13 +153,18 @@ def rebase_context(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("rebase", "context"),
-    help="print in one read the branch of a task, a wave or a milestone, its base and the files in conflict",
+    help=(
+        "print in one read the branch of a task, a wave or a milestone, its base and the files in conflict,"
+        " or the red head a run repairs and the commands that failed on it"
+    ),
     group_help="put the pull request of a task back on its base",
     arguments=(
         Argument(
             ("pr",),
             {"type": int, "nargs": "?", "help": "the number of the pull request, none for a branch without one"},
         ),
+        Argument(("--head",), {"help": "the red commit a run repairs, the argument head of that run"}),
+        Argument(("--into",), {"help": "with --head, the main branch the run repairs on a fix branch"}),
     ),
     run=rebase_context,
     render_text=_render_text,
