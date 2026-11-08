@@ -3,7 +3,10 @@ import functools
 
 from brigade.command import Argument, Command
 from brigade.commands._read_cli_login import read_cli_login
-from brigade.commands._read_forge_environment import FORGE_NAME, ForgeSlot, read_forge_environment
+from brigade.commands._read_forge_environment import ForgeSlot, read_forge_environment
+from brigade.registry.find_project import find_project
+from brigade.registry.read_project_forge import read_project_forge
+from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.waves.start_project_wave import WaveStart
@@ -20,12 +23,15 @@ def _render_text(document: dict) -> str:
 
 def wave_start(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
+    read_forge_name = functools.cache(
+        lambda: read_project_forge(find_project(read_projects(runtime), request.project))
+    )
     start = WaveStart(
         project=request.project,
         tasks=tuple(request.tasks),
         configuration=configuration,
         read_environment=functools.cache(
-            lambda key: read_forge_environment(configuration, ForgeSlot(FORGE_NAME, key), runtime)
+            lambda key: read_forge_environment(configuration, ForgeSlot(read_forge_name(), key), runtime)
         ),
         read_login=functools.cache(lambda: read_cli_login(configuration, runtime)),
     )

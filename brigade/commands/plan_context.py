@@ -2,7 +2,7 @@ import argparse
 from functools import cache, partial
 
 from brigade.command import Argument, Command
-from brigade.commands._read_forge_environment import FORGE_NAME, ForgeSlot, read_forge_environment
+from brigade.commands._read_forge_environment import ForgeSlot, read_forge_environment
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_awawa_document import read_awawa_document
 from brigade.corpus.read_schema import read_schema
@@ -11,6 +11,7 @@ from brigade.planning.assemble_plan_context import assemble_plan_context
 from brigade.planning.read_planning_request import read_planning_request
 from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
+from brigade.registry.read_project_forge import read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
@@ -82,7 +83,7 @@ def plan_context(request: argparse.Namespace, runtime: Runtime) -> dict:
     if read_project_field(project, "CORPUS") is None:
         raise BrigadeError(f"@PROJECT.{project.name} declares no corpus")
     configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)
-    read_environment = cache(lambda key: read_forge_environment(configuration, ForgeSlot(FORGE_NAME, key), runtime))
+    read_environment = cache(lambda key: read_forge_environment(configuration, ForgeSlot(read_project_forge(project), key), runtime))
     main = locate_project_main(runtime.run_process, project, read_environment)
     query = argparse.Namespace(project=project.name, ref=main, worktree=None)
     root = prepare_project_tree(query, configuration, runtime).root
