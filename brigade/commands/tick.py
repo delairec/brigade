@@ -101,6 +101,7 @@ from brigade.tick.ledger_reading_keeper import LedgerReadingKeeper
 from brigade.tick.plan import plan
 from brigade.tick.plan_connectors import plan_connectors
 from brigade.tick.describe_holding_head import describe_holding_head
+from brigade.tick.find_holding_base import find_holding_base
 from brigade.tick.prepare_task_worktree import prepare_task_worktree
 from brigade.tick.read_ruled_task import read_ruled_task
 from brigade.tick.rebase_task import rebase_task
@@ -806,14 +807,32 @@ def _tick_once(runtime: Runtime) -> dict:
     }
 
 
+HELD_REBASES = (LaunchTask, RebaseTask, RebaseMilestone)
+
+
+def _describe_planned_action(runtime: Runtime, list_check_runs: Callable[[str, str], list[dict]], action) -> dict:
+    planned = dataclasses.asdict(action)
+    if not isinstance(action, HELD_REBASES):
+        return planned
+    project = find_project(read_projects(runtime), action.project)
+    held_by = find_holding_base(runtime, project, action, list_check_runs)
+    if held_by is None:
+        return planned
+    return {**planned, "waits": describe_holding_head(held_by)}
+
+
 def _plan_dry(runtime: Runtime) -> dict:
     configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     snapshot = build_snapshot(runtime, configuration, _read_the_forge(runtime, configuration))
+    list_check_runs = _list_branch_check_runs(runtime, configuration)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "mode": "dry-run",
         "snapshot": snapshot.to_document(),
-        "plan": [dataclasses.asdict(action) for action in (*plan(snapshot), *_plan_registered_connectors(runtime))],
+        "plan": [
+            _describe_planned_action(runtime, list_check_runs, action)
+            for action in (*plan(snapshot), *_plan_registered_connectors(runtime))
+        ],
     }
 
 
