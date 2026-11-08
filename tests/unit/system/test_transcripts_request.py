@@ -11,6 +11,4 @@ class TranscriptsRequestTest(unittest.TestCase):
         document = TranscriptsRequest.from_document(TRANSCRIPTS_DOCUMENT).to_document()
 
         # Assert
-        self.assertEqual(
-            document, {"schema_version": 1, "session_id": "session-b74", "worktree": "/srv/tidepool"}
-        )
+        self.assertEqual(document, {"schema_version": 1, "session_id": "session-b74", "worktree": "/srv/tidepool"})
