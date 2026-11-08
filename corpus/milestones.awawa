@@ -122,3 +122,18 @@ MILESTONE M10
 		+ "revérifiant bien que tout ce qui était attendu est livré, pas de tâche encore en draft"
 		+ "ou quoi) » and « livrée = sur main »; tasks B217 to B222 implemented, delivered on main"
 		+ "by pull request 286 (merge commit 59bde2d7)"
+
+MILESTONE M11
+	TITLE "Waves read at the forge branch"
+	SUBJECT "read the branch of a milestone as the forge holds it"
+	STATUS active
+	DESC "a milestone delivered alone, as DESC 5 of"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce provides for"
+		+ "a change the tick itself needs: @TASK.B242, without which a wave of @MILESTONE.M7 waits"
+		+ "on a merge of the forge until the local branch is advanced by hand"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+		REF @TASK.B242
+		REF @MILESTONE.M7
+	SOURCE "the user's ruling of 2026-11-08 on pull request 382, « on lui met une nouvele milestone"
+		+ "et on la passe todo si plus de question »"
+		REF @TASK.B242
