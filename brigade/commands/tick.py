@@ -65,6 +65,7 @@ from brigade.system.run_reporting_failure import run_reporting_failure
 from brigade.system.trail_locations import TICKS_DIRECTORY, TRAIL_SUFFIX
 from brigade.system.write_json_atomically import write_json_atomically
 from brigade.tick.actions import (
+    CarryOpenedPullRequest,
     CloseMilestone,
     CloseWave,
     CollectCheckRuns,
@@ -403,6 +404,10 @@ def _record_task_state(runtime: Runtime, action: RecordTaskState) -> None:
     )
 
 
+def _carry_opened_pull_request(runtime: Runtime, action: CarryOpenedPullRequest) -> None:
+    append_event(runtime.paths, runtime.now, dataclasses.replace(action.opened, wave=action.wave))
+
+
 def _run_preflight(runtime: Runtime, configuration: Configuration, action: RunPreflight) -> None:
     findings = preflight_pull_request(
         runtime,
@@ -628,6 +633,7 @@ def _list_task_run_executors(runtime: Runtime, configuration: Configuration) -> 
 def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
     return {
         RecordTaskState: lambda action: _record_task_state(runtime, action),
+        CarryOpenedPullRequest: lambda action: _carry_opened_pull_request(runtime, action),
         ParkTask: lambda action: _park_task(runtime, action),
         RemoveTaskWorktree: lambda action: remove_task_worktree(runtime, action),
         RemoveIntegrationBranch: lambda action: remove_integration_branch(runtime, action),

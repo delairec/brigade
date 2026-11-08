@@ -4,12 +4,14 @@ from datetime import UTC, datetime
 
 from brigade.corpus.read_entity import Entity, EntityField
 from brigade.errors import BrigadeError
+from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.read_live_study_runs import LiveStudyRun
 from brigade.studies.task_report_order import TaskReportOrder
 from brigade.system.pull_request_facts import CheckVerdict, PullRequestFacts
 from brigade.system.reset_hour import ResetHour
 from brigade.tick.actions import (
+    CarryOpenedPullRequest,
     CloseMilestone,
     CloseWave,
     CutMilestoneBranch,
@@ -344,6 +346,80 @@ class PlanPreflightTest(unittest.TestCase):
                     preflighted_head=preflighted,
                 )
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+
+NOT_OPENED_IN_ITS_WAVE = None
+NOT_OPENED_ELSEWHERE = None
+OPENED_IN_AN_EARLIER_WAVE = TaskPrOpened(
+    project="shop", task="S3", wave="shop_w0", branch="feature/S3-task", pr=42, login="shop-bot"
+)
+CARRY_THE_OPENING_OF_S3 = CarryOpenedPullRequest(wave="shop_w1", opened=OPENED_IN_AN_EARLIER_WAVE)
+RECORD_PR_OPEN = RecordTaskState(wave="shop_w1", task="S3", state="pr_open", reason=None)
+
+
+class PlanPullRequestOpenedInAnotherWaveTest(unittest.TestCase):
+    def test_should_carry_the_opening_onto_the_wave_only_while_the_task_runs_there_on_that_open_pull_request(self):
+        for case, state, pull_request, opened, elsewhere, expected in [
+            (
+                "a task awaiting its preflight",
+                "pr_open",
+                OPEN,
+                NOT_OPENED_IN_ITS_WAVE,
+                OPENED_IN_AN_EARLIER_WAVE,
+                (CARRY_THE_OPENING_OF_S3,),
+            ),
+            (
+                "a task still running",
+                "running",
+                OPEN,
+                NOT_OPENED_IN_ITS_WAVE,
+                OPENED_IN_AN_EARLIER_WAVE,
+                (RECORD_PR_OPEN, CARRY_THE_OPENING_OF_S3),
+            ),
+            (
+                "a wave already holding its opening",
+                "pr_open",
+                OPEN,
+                OPENED_BY_THE_TASK,
+                OPENED_IN_AN_EARLIER_WAVE,
+                (PREFLIGHT_S3,),
+            ),
+            ("no opening elsewhere", "pr_open", OPEN, NOT_OPENED_IN_ITS_WAVE, NOT_OPENED_ELSEWHERE, ()),
+            (
+                "a task parked in the wave",
+                "parked",
+                OPEN,
+                NOT_OPENED_IN_ITS_WAVE,
+                OPENED_IN_AN_EARLIER_WAVE,
+                (CLOSE_SHOP_W1,),
+            ),
+            ("a task still queued", "queued", OPEN, NOT_OPENED_IN_ITS_WAVE, OPENED_IN_AN_EARLIER_WAVE, ()),
+            (
+                "a pull request merged",
+                "pr_open",
+                MERGED,
+                NOT_OPENED_IN_ITS_WAVE,
+                OPENED_IN_AN_EARLIER_WAVE,
+                (RECORD_MERGED,),
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    branch="feature/S3-task",
+                    pull_request=pull_request,
+                    opened_pull_request=opened,
+                    opening_of_its_pull_request=elsewhere,
+                )
+                wave = create_wave((task,), {"S3": state}, implemented=("S3",))
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
                 # Act
                 actions = plan(snapshot)
