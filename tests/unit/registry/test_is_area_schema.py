@@ -20,31 +20,37 @@ class IsAreaSchemaTest(unittest.TestCase):
         recognised = is_area_schema(installed)
 
         # Assert
-        self.assertIs(recognised, True)
+        self.assertTrue(recognised)
 
     def test_should_recognise_the_schema_an_earlier_brigade_installed(self):
         # Act
         recognised = is_area_schema(SCHEMA_OF_AN_EARLIER_AREA)
 
         # Assert
-        self.assertIs(recognised, True)
+        self.assertTrue(recognised)
 
     def test_should_refuse_a_schema_that_is_not_the_one_of_an_area(self):
         for case, schema in [
             (
                 "IMPL an anchor, as in control",
-                "SCHEMA MILESTONE\n\nSCHEMA TASK\n\tFIELD SPEC string\n\t\tFIELD IMPL anchor\n\n"
-                "SCHEMA DECISION\n\nSCHEMA OPEN_QUESTION\n",
+                (
+                    "SCHEMA MILESTONE\n\nSCHEMA TASK\n\tFIELD SPEC string\n\t\tFIELD IMPL anchor\n\n"
+                    "SCHEMA DECISION\n\nSCHEMA OPEN_QUESTION\n"
+                ),
             ),
             (
                 "IMPL a string on another type than the task",
-                "SCHEMA MILESTONE\n\nSCHEMA TASK\n\tFIELD SPEC string\n\n"
-                "SCHEMA DECISION\n\tFIELD SPEC string\n\t\tFIELD IMPL string\n\nSCHEMA OPEN_QUESTION\n",
+                (
+                    "SCHEMA MILESTONE\n\nSCHEMA TASK\n\tFIELD SPEC string\n\n"
+                    "SCHEMA DECISION\n\tFIELD SPEC string\n\t\tFIELD IMPL string\n\nSCHEMA OPEN_QUESTION\n"
+                ),
             ),
             (
                 "a type brigade never declared",
-                "SCHEMA MILESTONE\n\nSCHEMA TASK\n\tFIELD SPEC string\n\t\tFIELD IMPL string\n\n"
-                "SCHEMA DECISION\n\nSCHEMA OPEN_QUESTION\n\nSCHEMA RULE\n",
+                (
+                    "SCHEMA MILESTONE\n\nSCHEMA TASK\n\tFIELD SPEC string\n\t\tFIELD IMPL string\n\n"
+                    "SCHEMA DECISION\n\nSCHEMA OPEN_QUESTION\n\nSCHEMA RULE\n"
+                ),
             ),
             (
                 "a type of the area missing",
@@ -57,4 +63,4 @@ class IsAreaSchemaTest(unittest.TestCase):
                 recognised = is_area_schema(schema)
 
                 # Assert
-                self.assertIs(recognised, False)
+                self.assertFalse(recognised)
