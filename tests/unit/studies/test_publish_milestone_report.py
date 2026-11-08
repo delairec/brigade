@@ -21,6 +21,7 @@ from tests.unit.studies.create_study_equipment import create_study_equipment
 
 RUN_ID = "20261022T150000Z-aaaaaa"
 BRANCH = "integration/hardening"
+PUSHED_HEAD = "HEAD:refs/heads/integration/hardening"
 REPORT_PATH = "corpus/milestones/M6-report.md"
 MILESTONES_PATH = "corpus/milestones.awawa"
 MILESTONE_M6_ACTIVE = 'MILESTONE M6\n\tTITLE "Hardening"\n\tSTATUS active\n'
@@ -81,7 +82,12 @@ class PublishMilestoneReportTest(unittest.TestCase):
         self.checkout = self.run_directory / "checkout"
         self.forge = create_forge()
         self.processes.answer(("git", "fetch", "--quiet", "origin", BRANCH))
-        self.processes.answer(("git", "worktree", "add", "--quiet", "--detach", str(self.checkout), f"origin/{BRANCH}"))
+        self.processes.answer(("git", "worktree", "prune"))
+        self.processes.answer_by(
+            ("git", "worktree", "add", "--quiet", "--detach", str(self.checkout), f"origin/{BRANCH}"),
+            self.create_checkout,
+        )
+        self.processes.answer(("git", "worktree", "list", "--porcelain", "-z"))
         self.processes.answer(("git", "switch", "--quiet", "--force-create", BRANCH))
         self.processes.answer(("git", "add", "--", REPORT_PATH))
         self.processes.answer(("git", "diff", "--cached", "--quiet", "--", REPORT_PATH), exit_code=1)
@@ -98,10 +104,8 @@ class PublishMilestoneReportTest(unittest.TestCase):
             },
         )
         self.processes.answer_corpus_change(self.checkout, (MILESTONES_PATH,), REACHED_MESSAGE)
-        self.processes.answer(("git", "push", "--quiet", "origin", BRANCH))
+        self.processes.answer(("git", "push", "--quiet", "origin", PUSHED_HEAD))
         self.processes.answer(("git", "worktree", "remove", "--force", str(self.checkout)))
-        (self.checkout / "corpus").mkdir(parents=True)
-        (self.checkout / MILESTONES_PATH).write_text(MILESTONE_M6_ACTIVE, encoding="utf-8")
         self.processes.answer(("git", "rev-parse", "HEAD"), stdout="8885daa\n")
         self.processes.answer_entities(
             self.checkout,
@@ -109,6 +113,11 @@ class PublishMilestoneReportTest(unittest.TestCase):
             {"B17": (("TYPE", "feat"), ("COMPONENT", "tick"), ("MILESTONE", "@MILESTONE.M6"))},
             ("STATUS==implemented",),
         )
+
+    def create_checkout(self, request: ProcessRequest) -> tuple[int, str, str]:
+        (self.checkout / "corpus").mkdir(parents=True)
+        (self.checkout / MILESTONES_PATH).write_text(MILESTONE_M6_ACTIVE, encoding="utf-8")
+        return (0, "", "")
 
     def create_context(self, forge: str, configuration: Configuration = NOTHING_BOUND) -> StudyRunContext:
         self.processes.answer_entities(
@@ -264,7 +273,7 @@ class PublishMilestoneReportTest(unittest.TestCase):
         # Assert
         self.assertIn(
             ProcessRequest(
-                argv=("git", "push", "--quiet", "origin", BRANCH),
+                argv=("git", "push", "--quiet", "origin", PUSHED_HEAD),
                 cwd=str(self.checkout),
                 timeout_s=120.0,
                 environment={"GH_TOKEN": "cli-token"},
@@ -320,7 +329,9 @@ class PublishMilestoneReportTest(unittest.TestCase):
                 ("awawa", "status", "PROJECT", "--json", str(self.runtime.paths.config_root)),
                 ("awawa", "show", "@PROJECT.oak", "--json", str(self.runtime.paths.config_root)),
                 ("git", "fetch", "--quiet", "origin", BRANCH),
+                ("git", "worktree", "prune"),
                 ("git", "worktree", "add", "--quiet", "--detach", str(self.checkout), f"origin/{BRANCH}"),
+                ("git", "worktree", "list", "--porcelain", "-z"),
                 ("git", "switch", "--quiet", "--force-create", BRANCH),
                 ("git", "add", "--", REPORT_PATH),
                 ("git", "diff", "--cached", "--quiet", "--", REPORT_PATH),
@@ -331,7 +342,7 @@ class PublishMilestoneReportTest(unittest.TestCase):
                 ("git", "add", "--", MILESTONES_PATH),
                 ("git", "diff", "--cached", "--quiet", "--", MILESTONES_PATH),
                 ("git", "commit", "--quiet", "-m", REACHED_MESSAGE),
-                ("git", "push", "--quiet", "origin", BRANCH),
+                ("git", "push", "--quiet", "origin", PUSHED_HEAD),
                 ("awawa", "show", "@MILESTONE.M6", "--json", str(self.checkout)),
                 ("awawa", "status", "TASK", "--where", "STATUS==implemented", "--json", str(self.checkout)),
                 ("awawa", "show", "@TASK.B17", "--json", str(self.checkout)),
@@ -359,7 +370,7 @@ class PublishMilestoneReportTest(unittest.TestCase):
             processes_before_opening[-5:],
             [
                 ("git", "commit", "--quiet", "-m", REACHED_MESSAGE),
-                ("git", "push", "--quiet", "origin", BRANCH),
+                ("git", "push", "--quiet", "origin", PUSHED_HEAD),
                 ("awawa", "show", "@MILESTONE.M6", "--json", str(self.checkout)),
                 ("awawa", "status", "TASK", "--where", "STATUS==implemented", "--json", str(self.checkout)),
                 ("awawa", "show", "@TASK.B17", "--json", str(self.checkout)),
@@ -368,7 +379,7 @@ class PublishMilestoneReportTest(unittest.TestCase):
 
     def test_should_remove_its_checkout_from_the_project_when_the_push_fails(self):
         # Arrange
-        self.processes.answer(("git", "push", "--quiet", "origin", BRANCH), exit_code=1)
+        self.processes.answer(("git", "push", "--quiet", "origin", PUSHED_HEAD), exit_code=1)
         context = self.create_context("github")
 
         # Act
@@ -384,7 +395,9 @@ class PublishMilestoneReportTest(unittest.TestCase):
                 ("awawa", "status", "PROJECT", "--json", str(self.runtime.paths.config_root)),
                 ("awawa", "show", "@PROJECT.oak", "--json", str(self.runtime.paths.config_root)),
                 ("git", "fetch", "--quiet", "origin", BRANCH),
+                ("git", "worktree", "prune"),
                 ("git", "worktree", "add", "--quiet", "--detach", str(self.checkout), f"origin/{BRANCH}"),
+                ("git", "worktree", "list", "--porcelain", "-z"),
                 ("git", "switch", "--quiet", "--force-create", BRANCH),
                 ("git", "add", "--", REPORT_PATH),
                 ("git", "diff", "--cached", "--quiet", "--", REPORT_PATH),
@@ -395,7 +408,7 @@ class PublishMilestoneReportTest(unittest.TestCase):
                 ("git", "add", "--", MILESTONES_PATH),
                 ("git", "diff", "--cached", "--quiet", "--", MILESTONES_PATH),
                 ("git", "commit", "--quiet", "-m", REACHED_MESSAGE),
-                ("git", "push", "--quiet", "origin", BRANCH),
+                ("git", "push", "--quiet", "origin", PUSHED_HEAD),
                 ("git", "worktree", "remove", "--force", str(self.checkout)),
             ],
         )

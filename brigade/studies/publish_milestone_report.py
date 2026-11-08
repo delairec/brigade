@@ -1,9 +1,12 @@
 from dataclasses import dataclass
 
 from brigade.git.add_detached_worktree import add_detached_worktree
+from brigade.git.clear_worktree_path import clear_worktree_path
 from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.fetch_branches import BranchesFetch, fetch_branches
-from brigade.git.push_branch import BranchPush, push_branch
+from brigade.git.list_worktrees import list_worktrees
+from brigade.git.push_branch import BranchPush
+from brigade.git.push_head_to_branch import push_head_to_branch
 from brigade.git.read_head import read_head
 from brigade.git.remove_worktree import remove_worktree
 from brigade.git.reset_branch import reset_branch
@@ -107,10 +110,15 @@ def _publish_pull_request(context: StudyRunContext, publication: MilestonePublic
     return opened
 
 
+def _is_branch_held_by_a_worktree(run_process, checkout, branch: str) -> bool:
+    return any(worktree.branch == branch for worktree in list_worktrees(run_process, checkout))
+
+
 def _commit_report(context: StudyRunContext, publication: MilestonePublication, report: str, checkout) -> None:
     run_process = context.runtime.run_process
     branch = context.study.milestone.branch
-    reset_branch(run_process, checkout, branch)
+    if not _is_branch_held_by_a_worktree(run_process, checkout, branch):
+        reset_branch(run_process, checkout, branch)
     create_directory((checkout / report).parent)
     write_text_file(checkout / report, publication.markdown)
     commit_files(
@@ -122,7 +130,9 @@ def _commit_report(context: StudyRunContext, publication: MilestonePublication, 
         ),
     )
     mark_milestone_reached(context.runtime, checkout, context.study.milestone.milestone)
-    push_branch(run_process, BranchPush(repository=checkout, branch=branch, environment=publication.environment))
+    push_head_to_branch(
+        run_process, BranchPush(repository=checkout, branch=branch, environment=publication.environment)
+    )
 
 
 def publish_milestone_report(context: StudyRunContext) -> dict:
@@ -143,6 +153,7 @@ def publish_milestone_report(context: StudyRunContext) -> dict:
     fetch_branches(
         run_process, BranchesFetch(repository=located.path, branches=(order.branch,), environment=environment)
     )
+    clear_worktree_path(run_process, located.path, checkout)
     add_detached_worktree(run_process, located.path, checkout, f"{REMOTE_PREFIX}{order.branch}")
     try:
         _commit_report(context, publication, report, checkout)
