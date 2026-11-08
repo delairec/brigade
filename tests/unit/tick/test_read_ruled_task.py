@@ -1,9 +1,11 @@
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
 
+from brigade.git.add_branch_worktree import BranchWorktree
 from brigade.system.parse_configuration import Configuration
+from brigade.tick.actions import LaunchTask
+from brigade.tick.prepare_task_worktree import PreparedWorktree
 from brigade.tick.read_ruled_task import read_ruled_task
 from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
@@ -36,8 +38,19 @@ class ReadRuledTaskTest(unittest.TestCase):
         worktree = Path("/srv/oak-b12")
         processes.answer_entity(tree, "TASK", "B12", (("STATUS", "todo"),))
         processes.answer_entity(worktree / "brigade", "TASK", "B12", (("STATUS", "draft"),))
-        action = SimpleNamespace(project="oak", task="B12")
-        prepared = SimpleNamespace(on_start=False, worktree=SimpleNamespace(start="integration/w1", path=worktree))
+        action = LaunchTask(
+            project="oak",
+            wave="oak_w1",
+            branch="integration/w1",
+            task="B12",
+            task_branch="feature/B12-the-parser",
+            pull_request_checks=None,
+        )
+        prepared = PreparedWorktree(
+            worktree=BranchWorktree(path=worktree, branch="feature/B12-the-parser", start="integration/w1"),
+            conflicted=False,
+            on_start=False,
+        )
 
         # Act
         ruled = read_ruled_task(runtime, Configuration(), action, prepared)
