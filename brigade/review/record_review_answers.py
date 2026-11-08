@@ -4,13 +4,14 @@ from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_review_answered import TaskReviewAnswered
+from brigade.registry.read_project_forge import NO_FORGE
 from brigade.review.assemble_review_context import ReviewDemand, assemble_review_context
 from brigade.review.validate_answers import validate_answers
 from brigade.runtime import Runtime
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_thread_reply import ThreadReply, ask_thread_reply
 from brigade.system.parse_configuration import Configuration
-from brigade.system.read_account_environment import ForgeAccount, read_account_environment
+from brigade.system.read_account_environment import UNBOUND_ENVIRONMENT, ForgeAccount, read_account_environment
 from brigade.system.validate_document import DocumentInvalid
 from brigade.verify.read_review_mode import APPROVAL_REVIEW
 
@@ -29,6 +30,8 @@ class AnswersDemand:
 
 
 def _read_environment(runtime: Runtime, demand: AnswersDemand, key: str) -> dict:
+    if demand.forge_name == NO_FORGE:
+        return UNBOUND_ENVIRONMENT
     account = ForgeAccount(forge=demand.forge, forge_name=demand.forge_name, key=key)
     return read_account_environment(account, demand.configuration, runtime)
 
