@@ -7,8 +7,11 @@ ANCHOR_DECLARATION = "FIELD IMPL anchor\n"
 STRING_DECLARATION = "FIELD IMPL string\n"
 
 
+def render_area_schema() -> str:
+    return SHIPPED_PROJECT_SCHEMA.read_text(encoding="utf-8").replace(ANCHOR_DECLARATION, STRING_DECLARATION)
+
+
 def render_project_schema(project: Entity) -> str:
-    schema = SHIPPED_PROJECT_SCHEMA.read_text(encoding="utf-8")
     if read_project_field(project, MODE_FIELD) == AREA_MODE:
-        return schema.replace(ANCHOR_DECLARATION, STRING_DECLARATION)
-    return schema
+        return render_area_schema()
+    return SHIPPED_PROJECT_SCHEMA.read_text(encoding="utf-8")

@@ -5,7 +5,7 @@ import posixpath
 import re
 import sys
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from brigade.command import Argument, Command
 from brigade.commands._read_forge_environment import ForgeSlot, read_forge_environment
@@ -14,6 +14,7 @@ from brigade.corpus.read_entities import Entity, EntityField
 from brigade.errors import BrigadeError, UsageError
 from brigade.git.detect_repository import detect_repository
 from brigade.git.list_tracked_files import list_tracked_files
+from brigade.git.read_file_at import read_file_at
 from brigade.registry.change_registry import change_registry
 from brigade.registry.derive_project_name import derive_project_name
 from brigade.registry.discover_project import CORPUS_FILES, ProjectDiscovery, discover_project
@@ -23,6 +24,7 @@ from brigade.registry.read_project_forge import read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.registry.remove_project_entity import remove_project_entity
 from brigade.registry.render_project_entity import render_project_entity
+from brigade.registry.render_project_schema import render_area_schema
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
@@ -139,11 +141,18 @@ def _confirm_corpus_folder(request, runtime: Runtime, proposed: str) -> str:
     return _validate_corpus_folder(runtime.ask_on_terminal(f"Corpus folder [{proposed}]: ") or proposed)
 
 
+def _refuse_the_corpus_of_the_project(runtime: Runtime, path: Path, tracked: tuple[str, ...], folder: str) -> None:
+    held = [file for file in tracked if PurePosixPath(file).is_relative_to(folder)]
+    if held and read_file_at(runtime.run_process, path, f"HEAD:{folder}/{SCHEMA_FILE}") != render_area_schema():
+        raise UsageError(f"{folder} holds {held[0]}, a corpus that is not brigade's: --corpus names another folder")
+
+
 def _adopt_tracked_corpus(request, runtime: Runtime, path: Path, discovery: ProjectDiscovery) -> ProjectDiscovery:
     tracked = list_tracked_files(runtime.run_process, path, CORPUS_FILES)
     mode = _choose_corpus_mode(request, runtime, path, tracked)
     if mode == AREA_MODE:
         folder = _confirm_corpus_folder(request, runtime, DEFAULT_AREA_FOLDER)
+        _refuse_the_corpus_of_the_project(runtime, path, tracked, folder)
         return dataclasses.replace(discovery, corpus=folder, mode=AREA_MODE)
     return dataclasses.replace(discovery, corpus=_confirm_corpus_folder(request, runtime, discovery.corpus))
 

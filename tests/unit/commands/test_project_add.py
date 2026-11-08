@@ -8,6 +8,7 @@ from pathlib import Path
 
 from brigade.commands.project_add import COMMAND, project_add
 from brigade.errors import BrigadeError, UsageError
+from brigade.registry.render_project_schema import render_area_schema
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -630,12 +631,40 @@ class ProjectAddOnATrackedCorpusTest(unittest.TestCase):
     def test_should_not_install_an_area_already_holding_its_schema(self):
         # Arrange
         self.answers[("git", "ls-files")] = ProcessAnswer(stdout="specs/tasks.awawa\0brigade/_schema.awawa\0")
+        self.answers[("git", "cat-file")] = ProcessAnswer(stdout=render_area_schema())
 
         # Act
         document = self.add(corpus_mode="area")
 
         # Assert
         self.assertIsNone(document["installed_corpus"])
+
+    def test_should_refuse_an_area_on_the_corpus_the_project_tracks(self):
+        for case, tracked, schema, corpus in [
+            ("its schema in the folder", "specs/_schema.awawa\0specs/tasks.awawa\0", "SCHEMA TASK\n", "specs"),
+            ("no schema in the folder", "specs/tasks.awawa\0", "", "specs"),
+            ("its corpus nested in the folder", "docs/specs/tasks.awawa\0", "", "docs"),
+            ("the root of the repository", "specs/tasks.awawa\0", "", "."),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.answers[("git", "ls-files")] = ProcessAnswer(stdout=tracked)
+                self.answers[("git", "cat-file")] = ProcessAnswer(stdout=schema)
+
+                # Act
+                with self.assertRaises(UsageError) as raised:
+                    self.add(corpus_mode="area", corpus=corpus)
+
+                # Assert
+                self.assertIn("a corpus that is not brigade's", str(raised.exception))
+                self.assertIn("--corpus", str(raised.exception))
+
+    def test_should_accept_an_area_next_to_the_corpus_the_project_tracks(self):
+        # Act
+        document = self.add(corpus_mode="area", corpus="specs-of-brigade")
+
+        # Assert
+        self.assert_registered_field(document, "MODE", "area")
 
 
 class ProjectAddWithoutATrackedCorpusTest(unittest.TestCase):
