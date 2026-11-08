@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
-from brigade.corpus.read_entities import read_entities
+from brigade.corpus.read_entities import Entity, read_entities
 from brigade.git.describe_merge_command import describe_merge_command
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.ledger_entry import LedgerEntry
@@ -40,6 +40,7 @@ TASK_COLUMNS = ("task", "state", "pull_request", "run", "reason")
 FIXING_STATE = "fixing"
 TASK_TYPE = "TASK"
 POLICY_TYPE = "POLICY"
+PATH_FIELD = "PATH"
 AUTO_MERGE_FIELD = "AUTO_MERGE"
 NO_AUTO_MERGE = "none"
 NO_POLICY = None
@@ -90,6 +91,18 @@ def _read_merge_command(runtime: Runtime, entries: tuple[LedgerEntry, ...], star
     return describe_milestone_merge(entries, find_project(read_projects(runtime), started.project), milestone)
 
 
+def _leaves_the_milestone_merge_to_the_user(runtime: Runtime, project: Entity) -> bool:
+    policies = read_entities(runtime.run_process, runtime.paths.config_root, POLICY_TYPE)
+    return read_policy_field(policies, project.name, AUTO_MERGE_FIELD, NO_POLICY) == NO_AUTO_MERGE
+
+
+def _locate_task_merge(runtime: Runtime, project: Entity, worktree_root: str | None, branch: str | None) -> Path:
+    repository = Path(read_project_field(project, PATH_FIELD))
+    if branch is None:
+        return repository
+    return locate_merge_worktree(runtime.run_process, repository, worktree_root, branch).path
+
+
 def _read_task_merge_commands(
     runtime: Runtime, entries: tuple[LedgerEntry, ...], started: WaveStarted, states: dict[str, str]
 ) -> list[str]:
@@ -97,20 +110,17 @@ def _read_task_merge_commands(
     if not verified:
         return []
     project = find_project(read_projects(runtime), started.project)
-    policies = read_entities(runtime.run_process, runtime.paths.config_root, POLICY_TYPE)
-    if (
-        is_on_a_forge(project)
-        or read_policy_field(policies, project.name, AUTO_MERGE_FIELD, NO_POLICY) != NO_AUTO_MERGE
-    ):
+    if is_on_a_forge(project):
         return []
     configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     tasks = read_entities(runtime.run_process, prepare_wave_tree(runtime, configuration, started).root, TASK_TYPE)
     of_wave = {task.name: task for task in tasks if task.name in started.tasks}
-    branch = find_milestone_branch(entries, started.project, read_wave_milestone(started.wave, of_wave.values()))
-    worktree = locate_merge_worktree(
-        runtime.run_process, Path(read_project_field(project, "PATH")), configuration.worktree_root, branch
-    ).path
-    return [describe_merge_command(worktree, name_branch_of_task(of_wave[task])) for task in verified]
+    milestone = read_wave_milestone(started.wave, of_wave.values())
+    if milestone is not None and not _leaves_the_milestone_merge_to_the_user(runtime, project):
+        return []
+    branch = find_milestone_branch(entries, started.project, milestone)
+    target = _locate_task_merge(runtime, project, configuration.worktree_root, branch)
+    return [describe_merge_command(target, name_branch_of_task(of_wave[task])) for task in verified]
 
 
 def wave_show(request: argparse.Namespace, runtime: Runtime) -> dict:

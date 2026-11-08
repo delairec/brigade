@@ -315,6 +315,15 @@ CORPUS_ON_A_FORGE = {
     **CORPUS_OF_NO_AUTO_MERGE,
     "PROJECT": {"tidepool": (("PATH", REPOSITORY), ("MAIN", "main"), ("FORGE", "github"))},
 }
+CORPUS_OF_A_TASK_OF_NO_MILESTONE = {**CORPUS, "TASK": {"T7": (("TITLE", "Tide table"), ("TYPE", "feat"))}}
+CORPUS_OF_A_TASK_OF_NO_MILESTONE_UNDER_NO_AUTO_MERGE = {
+    **CORPUS_OF_NO_AUTO_MERGE,
+    "TASK": CORPUS_OF_A_TASK_OF_NO_MILESTONE["TASK"],
+}
+CORPUS_OF_A_TASK_OF_NO_MILESTONE_ON_A_FORGE = {
+    **CORPUS_ON_A_FORGE,
+    "TASK": CORPUS_OF_A_TASK_OF_NO_MILESTONE["TASK"],
+}
 TASK_VERIFIED = {
     "schema_version": 1,
     "ts": "2026-10-18T11:00:00Z",
@@ -394,6 +403,38 @@ class WaveShowOfAProjectWithoutAForgeTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(document["task_merge_commands"], [])
+
+    def test_should_print_the_command_merging_a_verified_task_of_no_milestone_at_the_clone(self):
+        for case, corpus in [
+            ("under the policy that merges", CORPUS_OF_A_TASK_OF_NO_MILESTONE),
+            ("under no auto merge", CORPUS_OF_A_TASK_OF_NO_MILESTONE_UNDER_NO_AUTO_MERGE),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.runtime = create_test_runtime(
+                    create_test_paths(self.root), run_process=create_machine_double(corpus, MACHINE_OUTPUTS)
+                )
+
+                # Act
+                document = self._show([FORGELESS_WAVE_STARTED, TASK_VERIFIED])
+
+                # Assert
+                command = "git -C /srv/tidepool merge feature/T7-tide-table"
+                self.assertEqual(document["task_merge_commands"], [command])
+                self.assertIn(f"to merge: {command}", COMMAND.render_text(document).splitlines())
+
+    def test_should_name_no_task_merge_for_a_task_of_no_milestone_on_a_forge(self):
+        # Arrange
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_machine_double(CORPUS_OF_A_TASK_OF_NO_MILESTONE_ON_A_FORGE, MACHINE_OUTPUTS),
+        )
+
+        # Act
+        document = self._show([FORGELESS_WAVE_STARTED, TASK_VERIFIED])
+
+        # Assert
+        self.assertEqual(document["task_merge_commands"], [])
 
     def test_should_print_no_command_before_the_report_of_the_milestone(self):
         # Act
