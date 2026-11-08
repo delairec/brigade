@@ -7,7 +7,14 @@ from pathlib import Path
 from brigade.commands.review_reply import COMMAND
 from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import create_machine_double, write_ledger
-from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
+from tests.unit.commands.test_verify_preflight import (
+    GITHUB_PROJECT,
+    TASK_PR_OPENED,
+    TASK_WORKTREE,
+    TIDEPOOL_PROJECT,
+    WAVE_STARTED,
+    ForgeBindingItsLoginsDouble,
+)
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.review.test_assemble_review_context import VERDICT_CHANGES
@@ -75,7 +82,7 @@ class ReviewReplyOfAPullRequestTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, TASK_PR_OPENED, VERDICT_CHANGES])
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
-            run_process=create_machine_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}, "POLICY": {}}, TASK_WORKTREE),
+            run_process=create_machine_double({"PROJECT": {"tidepool": GITHUB_PROJECT}, "POLICY": {}}, TASK_WORKTREE),
             resolve_plugin=lambda kind, name, **places: create_replying_forge(),
         )
         self.answers_file = self.root / "answers.json"
@@ -111,3 +118,28 @@ class ReviewReplyOfAPullRequestTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), f"cannot read {missing_file}: No such file or directory")
+
+
+class ReviewReplyOfAProjectOfForgeNoneTest(unittest.TestCase):
+    def test_should_read_no_login_environment(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (root / "config").mkdir()
+        (root / "config" / "config.toml").write_text('[forge_accounts]\ncli = "octo-cli"\n', encoding="utf-8")
+        write_ledger(root, [WAVE_STARTED, TASK_PR_OPENED, VERDICT_CHANGES])
+        forge = ForgeBindingItsLoginsDouble()
+        local_project = (*TIDEPOOL_PROJECT, ("FORGE", "none"))
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_machine_double({"PROJECT": {"tidepool": local_project}, "POLICY": {}}, TASK_WORKTREE),
+            resolve_plugin=lambda kind, name, **places: forge,
+        )
+        answers_file = root / "answers.json"
+        answers_file.write_text(json.dumps({"answers": [{"finding": "1", "answer": "fixed by 8885daa"}]}))
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            COMMAND.run(Namespace(pr=42, file=str(answers_file)), runtime)
+
+        # Assert
+        self.assertEqual(forge.questions[0][1]["environment"], {})
