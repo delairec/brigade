@@ -11,7 +11,7 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.plugin_double import PluginDouble
 
-TIDEPOOL_PROJECT = (("PATH", "/home/user/tidepool"),)
+TIDEPOOL_PROJECT = (("PATH", "/srv/tidepool"),)
 MACHINE_WIDE = None
 CORPUS_CHANGE_OUTPUTS = {
     ("awawa", "show", "ANSWER"): "",

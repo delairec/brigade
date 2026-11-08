@@ -47,7 +47,7 @@ class RecordReviewAnswersTestCase(unittest.TestCase):
             runtime,
             AnswersDemand(
                 opened=OPENED,
-                project_path="/home/user/tidepool",
+                project_path="/srv/tidepool",
                 answers=answers,
                 forge=self.forge,
                 forge_name=self.forge_name,
@@ -228,7 +228,7 @@ class RecordReviewAnswersUnderTheApprovalModeTest(RecordReviewAnswersTestCase):
             [
                 {
                     "schema_version": 1,
-                    "repository": "/home/user/tidepool",
+                    "repository": "/srv/tidepool",
                     "thread": "PRRT_kwDOA1",
                     "body": "fixed by 8885daa",
                     "environment": {"GH_TOKEN": "token-of-tidepool-remediate"},

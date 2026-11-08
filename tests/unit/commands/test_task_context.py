@@ -12,7 +12,7 @@ from tests.unit.forge_double import ForgeDouble
 
 THE_TASK_OF_THE_BRANCH = None
 MAIN_BRANCH_CHECKOUT = {
-    ("git", "rev-parse", "--show-toplevel"): "/home/user/tidepool\n",
+    ("git", "rev-parse", "--show-toplevel"): "/srv/tidepool\n",
     ("git", "branch", "--show-current"): "main\n",
 }
 WORKTREE = {
@@ -152,9 +152,9 @@ class TaskContextOutsideATaskTest(unittest.TestCase):
 
 
 TASK_CHECKOUT = {
-    ("git", "rev-parse", "--show-toplevel"): "/home/user/tidepool-T7\n",
+    ("git", "rev-parse", "--show-toplevel"): "/srv/tidepool-T7\n",
     ("git", "branch", "--show-current"): "feature/T7-tides\n",
-    ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): "/home/user/tidepool/.git\n",
+    ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): "/srv/tidepool/.git\n",
     ("git", "rev-parse", "--verify"): "8885daa\n",
     ("git", "merge-base", "--is-ancestor"): "",
     ("awawa", "context"): "TASK T7\n",
@@ -162,7 +162,7 @@ TASK_CHECKOUT = {
     ("awawa", "status", "--json"): '{"entities": [{"type": "TASK", "name": "T190"}]}',
 }
 TIDEPOOL_CORPUS = {
-    "PROJECT": {"tidepool": (("PATH", "/home/user/tidepool"), ("ACCEPTANCE", "python3 -m unittest"))},
+    "PROJECT": {"tidepool": (("PATH", "/srv/tidepool"), ("ACCEPTANCE", "python3 -m unittest"))},
     "TASK": {"T7": (("MILESTONE", "@MILESTONE.M4"),)},
 }
 TIDEPOOL_MILESTONE_BRANCH_CUT = {
