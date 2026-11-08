@@ -60,6 +60,10 @@ def verify_verdict(request: argparse.Namespace, runtime: Runtime) -> dict:
     if forge_name == NO_FORGE:
         worktree = locate_task_worktree(runtime, Path.cwd(), NAMED_BY_THE_BRANCH)
         return {"schema_version": DOCUMENT_SCHEMA_VERSION, **record_local_verdict(runtime, worktree, verdict)}
+    if request.pr is None:
+        raise BrigadeError(
+            f"@PROJECT.{project.name} acts through the forge {forge_name}: the verdict names its pull request"
+        )
     demand = VerdictDemand(
         project_path=read_project_field(project, "PATH"),
         opened=find_opened_task(runtime, project.name, request.pr).opened,
