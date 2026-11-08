@@ -659,6 +659,20 @@ class ProjectAddOnATrackedCorpusTest(unittest.TestCase):
                 self.assertIn("a corpus that is not brigade's", str(raised.exception))
                 self.assertIn("--corpus", str(raised.exception))
 
+    def test_should_accept_an_area_installed_by_an_earlier_brigade(self):
+        # Arrange
+        self.answers[("git", "ls-files")] = ProcessAnswer(stdout="specs/tasks.awawa\0brigade/_schema.awawa\0")
+        self.answers[("git", "cat-file")] = ProcessAnswer(
+            stdout="SCHEMA MILESTONE\n\nSCHEMA TASK\n\tFIELD SPEC string\n\t\tFIELD IMPL string\n\n"
+            "SCHEMA DECISION\n\nSCHEMA OPEN_QUESTION\n"
+        )
+
+        # Act
+        document = self.add(corpus_mode="area")
+
+        # Assert
+        self.assert_registered_field(document, "MODE", "area")
+
     def test_should_accept_an_area_next_to_the_corpus_the_project_tracks(self):
         # Act
         document = self.add(corpus_mode="area", corpus="specs-of-brigade")
