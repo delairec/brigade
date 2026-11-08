@@ -16923,8 +16923,9 @@ TASK B242
 		+ "belongs to are read at origin/<branch>, never at a local ref the merges of the forge"
 		+ "leave behind, and a wave whose task waits on a task an earlier wave merged launches it"
 		+ "at the next tick with no manual step"
-	STATUS draft
+	STATUS todo
 	TYPE fix
+	MILESTONE @MILESTONE.M11
 	COMPONENT "the tick"
 	ROLE ada
 	DESC "refines @DECISION.TheTreeOfAWaveIsReadAtTheBranchOfTheMilestoneHoldingItsTasksOrAtMain,"
@@ -16959,12 +16960,10 @@ TASK B242
 		+ "there by the pull request of a task of an earlier wave, is startable at the next tick,"
 		+ "brigade/tick/plan.py:709-715, and brigade tick --dry-run plans its launch, where today"
 		+ "the implemented set is read at the local branch and, on 2026-11-08, the wave brigade_w31"
-		+ "held @TASK.B240 AFTER @TASK.B46 unlaunched from the merge of pull request 379 into"
+		+ "held TASK B240 AFTER TASK B46 unlaunched from the merge of pull request 379 into"
 		+ "integration/portability at 06:46Z to 13:26Z, the local integration/portability at"
 		+ "3e75cf2a, B46 todo, 93 commits behind origin/integration/portability at 49b37c79, B46"
 		+ "implemented, until the session fast-forwarded it by hand"
-		REF @TASK.B240
-		REF @TASK.B46
 	SPEC "the milestone a wave belongs to, _holds_the_wave over the open cuts of"
 		+ "prepare_wave_tree.py:49-62, and the base of a wave branch, locate_wave_branch_base at"
 		+ "prepare_wave_tree.py:65-78, read by brigade/tick/read_integration_branches.py:117-120,"
@@ -17034,3 +17033,7 @@ TASK B242
 	SOURCE "the user's words of 2026-11-08, « pas normal de devoir le faire manuellement », once"
 		+ "the session had fast-forwarded the local integration/portability by hand to unblock the"
 		+ "wave brigade_w31"
+	SOURCE "the user's ruling of 2026-11-08 on pull request 382, « on lui met une nouvele milestone"
+		+ "et on la passe todo si plus de question », the milestone of the task being its one open"
+		+ "point: ratified todo in @MILESTONE.M11, delivered alone"
+		REF @MILESTONE.M11
