@@ -17,6 +17,7 @@ NO_PULL_REQUEST = "no pull request"
 @dataclass(frozen=True)
 class PromotionFacts:
     head_tree: Path
+    repository_tree: Path
     task: str
     pr: int | None
 
@@ -30,9 +31,9 @@ def _read_value(fields: list, name: str) -> str | None:
     return next((_read_atom(field) for field in fields if field["name"] == name), None)
 
 
-def _resolves(head_tree: Path, anchor: str) -> bool:
+def _resolves(repository_tree: Path, anchor: str) -> bool:
     path, _separator, text = anchor.partition(ANCHOR_SEPARATOR)
-    file = head_tree / path
+    file = repository_tree / path
     return file.is_file() and text in file.read_text(encoding="utf-8", errors="replace")
 
 
@@ -50,6 +51,6 @@ def check_promotion(run_process: Callable[[ProcessRequest], ProcessRecord], fact
         )
     specs = [field for field in fields if field["name"] == "SPEC"]
     for rank, spec in enumerate(specs, start=1):
-        if not any(_resolves(facts.head_tree, anchor) for anchor in collect_anchors(spec["fields"])):
+        if not any(_resolves(facts.repository_tree, anchor) for anchor in collect_anchors(spec["fields"])):
             findings.append(f"SPEC {rank} has no IMPL whose anchor resolves: {_read_atom(spec)}")
     return judge_findings(NAME, findings)

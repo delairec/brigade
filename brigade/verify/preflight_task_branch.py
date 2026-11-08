@@ -51,6 +51,7 @@ class _ComparedHead:
     head: str
     base: str
     changed: tuple[ChangedFile, ...]
+    checkout: Path
 
 
 def _run_corpus_checks(runtime: Runtime, demand: BranchPreflightDemand, compared: _ComparedHead) -> list[dict]:
@@ -60,7 +61,12 @@ def _run_corpus_checks(runtime: Runtime, demand: BranchPreflightDemand, compared
     base_tree = prepare_project_tree(TreeDemand(project=project, ref=compared.base), demand.configuration, runtime).root
     return [
         check_corpus_at_head(run_process, head_tree),
-        check_promotion(run_process, PromotionFacts(head_tree=head_tree, task=demand.task, pr=NO_PULL_REQUEST)),
+        check_promotion(
+            run_process,
+            PromotionFacts(
+                head_tree=head_tree, repository_tree=compared.checkout, task=demand.task, pr=NO_PULL_REQUEST
+            ),
+        ),
         check_untouched_files(
             run_process,
             UntouchedFilesFacts(
@@ -95,7 +101,9 @@ def preflight_task_branch(runtime: Runtime, demand: BranchPreflightDemand) -> di
             check_acceptance(
                 run_process, AcceptanceFacts(head_tree=checkout, commands=_read_acceptance(demand.project))
             ),
-            *_run_corpus_checks(runtime, demand, _ComparedHead(head=head, base=base, changed=changed)),
+            *_run_corpus_checks(
+                runtime, demand, _ComparedHead(head=head, base=base, changed=changed, checkout=checkout)
+            ),
             check_privacy(read_privacy_patterns(demand.project), list_added_lines(run_process, repository, base, head)),
             measure_size(changed),
         ],

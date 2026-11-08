@@ -3,7 +3,9 @@ import unittest
 from pathlib import Path
 
 from brigade.corpus.lint_corpus import lint_corpus
+from brigade.corpus.read_entities import Entity, EntityField
 from brigade.corpus.shipped_data import SHIPPED_PROJECT_SCHEMA
+from brigade.registry.render_project_schema import render_project_schema
 from tests.awawa.provide_awawa import provide_awawa
 from tests.create_process_runner import create_process_runner
 
@@ -23,6 +25,11 @@ DELIVERED_WITH_NO_PULL_REQUEST = (
     'TASK T1\n\tTITLE "Delivered"\n\tSTATUS implemented\n\tTYPE fix\n'
     '\tSPEC "delivered"\n\t\tIMPL "src/cart.py::def add_item"\n'
 )
+DELIVERED_WITH_AN_ANCHOR_OUTSIDE_THE_AREA = (
+    'TASK T1\n\tTITLE "Delivered"\n\tSTATUS implemented\n\tTYPE fix\n'
+    '\tSPEC "delivered"\n\t\tIMPL "src/cart.py::def add_item"\n'
+)
+DELIVERED_WITH_NO_ANCHOR = 'TASK T1\n\tTITLE "Delivered"\n\tSTATUS implemented\n\tTYPE fix\n\tSPEC "delivered"\n'
 
 
 class ProjectSchemaTemplateTest(unittest.TestCase):
@@ -78,3 +85,35 @@ class ProjectSchemaTemplateTest(unittest.TestCase):
         ]:
             with self.subTest(declaration=declaration):
                 self.assertIn(declaration, schema)
+
+
+class ProjectSchemaOfAnAreaTest(unittest.TestCase):
+    def setUp(self):
+        self.run_process = create_process_runner(provide_awawa(self))
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.area = self.root / "brigade"
+        self.area.mkdir()
+        project = Entity(name="app", fields=(EntityField(name="MODE", value="area"),))
+        (self.area / "_schema.awawa").write_text(render_project_schema(project))
+
+    def test_should_pass_the_strict_lint_of_a_task_anchored_outside_the_area(self):
+        # Arrange
+        (self.area / "plan.awawa").write_text(DELIVERED_WITH_AN_ANCHOR_OUTSIDE_THE_AREA)
+
+        # Act
+        report = lint_corpus(self.run_process, self.area)
+
+        # Assert
+        self.assertTrue(report.clean, report.output)
+
+    def test_should_still_require_an_impl_on_each_spec_of_an_implemented_task(self):
+        # Arrange
+        (self.area / "plan.awawa").write_text(DELIVERED_WITH_NO_ANCHOR)
+
+        # Act
+        report = lint_corpus(self.run_process, self.area)
+
+        # Assert
+        self.assertFalse(report.clean, report.output)
