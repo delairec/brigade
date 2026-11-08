@@ -4614,7 +4614,8 @@ TASK B54
 
 TASK B55
 	TITLE "brigade project add --init-corpus: a corpus for a project that has none"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 380
 	TYPE feat
 	MILESTONE @MILESTONE.M7
 	COMPONENT "registry"
