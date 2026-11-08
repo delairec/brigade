@@ -1,7 +1,8 @@
+import dataclasses
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from brigade.corpus.change_corpus_file import CorpusChange, change_corpus_file
 from brigade.corpus.locate_corpus_lock import locate_corpus_lock
@@ -29,11 +30,12 @@ from brigade.planning.mark_request_planned import ENTITY_TYPE as REQUEST_TYPE
 from brigade.planning.mark_request_planned import mark_request_planned
 from brigade.planning.plan_publication import PlanPublication
 from brigade.planning.publish_plan import publish_plan
-from brigade.planning.read_entity_sites import read_entity_sites
+from brigade.planning.read_entity_sites import EntitySite, read_entity_sites
 from brigade.planning.read_plan import PlanEntity, read_plan
 from brigade.planning.read_planning_request import PlanningRequest
 from brigade.planning.review_plan_pull_request import review_plan_pull_request
 from brigade.registry.is_on_a_forge import is_on_a_forge
+from brigade.registry.read_corpus_workspace import read_corpus_workspace
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_project_forge import read_project_forge
 from brigade.runtime import Runtime
@@ -113,10 +115,16 @@ def _append_blocks(text: str, blocks: list[str]) -> str:
     return "\n".join([text.rstrip("\n") + "\n", *blocks] if text.strip() else blocks)
 
 
+def _read_project_sites(runtime: Runtime, recording: PlanRecording, worktree: Path) -> tuple[EntitySite, ...]:
+    folder = read_corpus_workspace(recording.project)
+    sites = read_entity_sites(partial(read_awawa_document, runtime.run_process), worktree / folder)
+    return tuple(dataclasses.replace(site, file=(PurePosixPath(folder) / site.file).as_posix()) for site in sites)
+
+
 def _build_change(runtime: Runtime, recording: PlanRecording, worktree: Path, write: _PlanWrite) -> CorpusChange:
     plan = write.plan
     corpus = read_project_field(recording.project, "CORPUS")
-    files = locate_entity_files(read_entity_sites(partial(read_awawa_document, runtime.run_process), worktree), corpus)
+    files = locate_entity_files(_read_project_sites(runtime, recording, worktree), corpus)
     destinations = [
         files.get(plan_entity.type, f"{corpus}/{plan_entity.type.lower()}{FILE_SUFFIX}") for plan_entity in plan
     ]
@@ -139,6 +147,7 @@ def _build_change(runtime: Runtime, recording: PlanRecording, worktree: Path, wr
         file_names=file_names,
         describe_message=lambda: f"brigade plan record: {write.branch}",
         rewrite=rewrite,
+        workspace=read_corpus_workspace(recording.project),
     )
 
 
@@ -152,12 +161,12 @@ def _write_on_branch(runtime: Runtime, recording: PlanRecording, worktree: Path,
 
 
 def _check_against_corpus(runtime: Runtime, recording: PlanRecording, worktree: Path, plan) -> PlanEntity:
-    collisions = list_name_collisions(
-        read_entity_sites(partial(read_awawa_document, runtime.run_process), worktree), plan
-    )
+    collisions = list_name_collisions(_read_project_sites(runtime, recording, worktree), plan)
     if collisions:
         raise BrigadeError(", ".join(collisions))
-    undeclared = list_undeclared(partial(read_entity_template, runtime.run_process), worktree, plan)
+    undeclared = list_undeclared(
+        partial(read_entity_template, runtime.run_process), worktree / read_corpus_workspace(recording.project), plan
+    )
     if undeclared:
         raise BrigadeError(
             f"the schema of the corpus of @PROJECT.{recording.project.name} does not declare {', '.join(undeclared)}"

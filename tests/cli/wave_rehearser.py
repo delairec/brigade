@@ -136,7 +136,7 @@ class WaveRehearser:
         )
 
     def register_sandbox(self) -> None:
-        self.run_brigade("project", "add", str(self.project.path), "--acceptance", "true")
+        self.run_brigade("project", "add", str(self.project.path), "--corpus-mode", "control", "--acceptance", "true")
         projects = self.machine.corpus / "projects.awawa"
         projects.write_text(projects.read_text().replace('\tFORGE "none"\n', '\tFORGE "github"\n\tCHECK_RUNS none\n'))
 

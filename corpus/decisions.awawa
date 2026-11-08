@@ -2547,6 +2547,9 @@ DECISION BrigadeRunsAwawaOnAProjectFromThePathItsAnchorsResolveFrom
 		+ "corpus"
 		REF @TASK.B10
 		REF @TASK.B55
+	DESC "a project in MODE area is the exception:"
+		+ "@DECISION.AnAreaIsTheAwawaWorkspaceOfItsProjectAndAProjectInModeNoneIsRefusedAsAToolFailure"
+		REF @DECISION.AnAreaIsTheAwawaWorkspaceOfItsProjectAndAProjectInModeNoneIsRefusedAsAToolFailure
 	REJECTED "PATH joined to CORPUS as the workspace: the anchors of this repository resolve from"
 		+ "its root, not from corpus/, and a narrower workspace reports every anchor broken (L016)"
 	RATIONALE "awawa walks the workspace it is given and skips what git ignores, so PATH reads the"
@@ -6569,8 +6572,8 @@ DECISION ProjectAddInitCorpusCommitsTheSchemaAloneOnABranchOfADetachedWorktree
 	DESC "the installation runs fmt, lint --strict and the commit through change_corpus_file in a"
 		+ "worktree under the cache of brigade; the branch already existing, or the project already"
 		+ "registered without --force, is refused before anything is written"
-	DESC "--corpus without --init-corpus exits 2: until @TASK.B140 no other path of project add"
-		+ "reads it"
+	DESC "--corpus without --init-corpus exits 2 on a repository tracking no .awawa file, where"
+		+ "@TASK.B140 gives it a reader on a repository that tracks one"
 		REF @TASK.B140
 	DESC "binds @TASK.B55"
 		REF @TASK.B55
@@ -6580,3 +6583,43 @@ DECISION ProjectAddInitCorpusCommitsTheSchemaAloneOnABranchOfADetachedWorktree
 		+ "brigade plan record creates each file at its first entity"
 	SOURCE "the build run of @TASK.B55, step 3, on 2026-11-08, the design its SPEC lines leave open"
 		REF @TASK.B55
+
+DECISION AnAreaIsTheAwawaWorkspaceOfItsProjectAndAProjectInModeNoneIsRefusedAsAToolFailure
+	TITLE "a project in MODE area is read through the folder CORPUS names as its awawa workspace,"
+		+ "its repository root staying the place of its acceptance commands and of git; a project"
+		+ "in MODE none is refused with a ToolFailure"
+	STATUS active
+	DESC "prepare_project_tree answers the area as the root of the tree of a project in MODE area,"
+		+ "and prepare_project_checkout the root of the repository, which the acceptance commands"
+		+ "of a preflight alone read"
+	DESC "a corpus file brigade writes stays named from the root of the repository, and only the"
+		+ "strict lint of the change runs on the area"
+	DESC "a folder of the area absent from the tree read, the branch of project add not merged, is"
+		+ "a ToolFailure naming that folder"
+	DESC "MODE none raises a ToolFailure naming the mode: a command exits 1, and the tick skips"
+		+ "that project and names the mode on stderr, one project in MODE none stopping no other"
+	REJECTED "PATH as the workspace of an area: awawa would read the corpus of the project with the"
+		+ "one of brigade, two SCHEMA * colliding in one workspace"
+	RATIONALE "the area was ruled a workspace of its own in"
+		+ "@DECISION.AProjectChoosesHowBrigadeUsesItsCorpus, after"
+		+ "@DECISION.BrigadeRunsAwawaOnAProjectFromThePathItsAnchorsResolveFrom, which keeps"
+		+ "binding the projects in control"
+		REF @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus
+		REF @DECISION.BrigadeRunsAwawaOnAProjectFromThePathItsAnchorsResolveFrom
+	SOURCE "the build run of @TASK.B140 on 2026-11-08, the design its SPEC lines leave open"
+		REF @TASK.B140
+
+DECISION ProjectAddTakesTheProposedFolderWhenNoTerminalAnswers
+	TITLE "brigade project add confirms the corpus folder on a terminal alone: with no terminal it"
+		+ "takes the folder it proposes, --corpus overriding it"
+	STATUS active
+	DESC "the folder proposed is the common path of the tracked .awawa files in control and brigade"
+		+ "in area; an empty answer on the terminal keeps it"
+	DESC "--corpus-mode on a repository tracking no .awawa file exits 2, the option having no"
+		+ "corpus to apply to"
+	DESC "a repository tracking a .awawa file and registered in area installs the template unless"
+		+ "the folder already tracks its schema, so that project add --force does not rewrite it"
+	REJECTED "exit 2 naming --corpus when no terminal answers: the proposal stands on its own, and"
+		+ "the test of the task registers an area with --corpus-mode alone"
+	SOURCE "the build run of @TASK.B140 on 2026-11-08, the design its SPEC lines leave open"
+		REF @TASK.B140

@@ -47,3 +47,36 @@ class CheckUntouchedFilesTest(unittest.TestCase):
                 "findings": ["corpus/rules.awawa changes while none of its entities does"],
             },
         )
+
+    def test_should_judge_the_corpus_files_of_the_area_alone(self):
+        # Arrange
+        root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, root)
+        base_tree, head_tree = root / "base" / "brigade", root / "head" / "brigade"
+        moved = {"added": [], "changed": [{"file": "tasks.awawa"}], "removed": []}
+        awawa = RecordingProcessRunner(
+            {
+                ("awawa", "diff", str(base_tree), str(head_tree), "--json"): ProcessAnswer(stdout=json.dumps(moved)),
+            }
+        )
+        changed = (
+            ChangedFile(path="brigade/tasks.awawa", insertions=4, deletions=0),
+            ChangedFile(path="brigade/rules.awawa", insertions=2, deletions=2),
+            ChangedFile(path="corpus/rules-of-the-project.awawa", insertions=1, deletions=1),
+        )
+
+        # Act
+        check = check_untouched_files(
+            awawa,
+            UntouchedFilesFacts(base_tree=base_tree, head_tree=head_tree, changed=changed, folder=Path("brigade")),
+        )
+
+        # Assert
+        self.assertEqual(
+            check,
+            {
+                "name": "untouched_files",
+                "verdict": "fail",
+                "findings": ["brigade/rules.awawa changes while none of its entities does"],
+            },
+        )

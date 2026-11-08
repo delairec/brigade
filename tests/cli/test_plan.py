@@ -105,7 +105,9 @@ class PlanContextTestCase(unittest.TestCase):
     def register_project(self, schema: str, tasks: str = TASKS, decisions: str = DECISIONS) -> None:
         self.write_corpus(schema, tasks, decisions)
         self.commit_corpus()
-        self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(self.project.path))
+        self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "project", "add", str(self.project.path), "--corpus-mode", "control"
+        )
 
     def write_request(self, status: str) -> None:
         (self.machine.corpus / "requests.awawa").write_text(
@@ -230,6 +232,69 @@ FAKE_GH = (
     "esac\n"
 )
 FORGE_ACCOUNTS = '[forge_accounts]\ncli = "octo-cli"\nreview = "octo-review"\n'
+
+
+class BrigadeProjectAddInAnAreaThenPlanTest(PlanContextTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_corpus(TASK_SCHEMA, TASKS, DECISIONS)
+        self.commit_corpus()
+        self.write_request("planning")
+
+    def add_in_an_area(self):
+        return self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "project", "add", str(self.project.path), "--corpus-mode", "area", request=""
+        )
+
+    def run_merge_command(self, command: str) -> None:
+        ProcessLauncher.run(
+            shlex.split(command), env=self.machine.describe_environment(), capture_output=True, check=True
+        )
+
+    def test_should_hand_the_planner_the_schema_of_the_area_and_no_entity_of_the_project_corpus(self):
+        # Arrange
+        self.run_merge_command(self.add_in_an_area().stdout.splitlines()[-1])
+
+        # Act
+        completed = self.run_plan_context("R1", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        package = json.loads(completed.stdout)
+        self.assertEqual(package["tasks"], [])
+        self.assertEqual(package["decisions"], [])
+        self.assertIn("DELIVERED_BY", package["schemas"]["TASK"])
+
+    def test_should_exit_2_naming_the_option_with_stdin_closed_and_no_option(self):
+        # Act
+        completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(self.project.path), request="")
+
+        # Assert
+        self.assertEqual(completed.returncode, 2, completed.stderr)
+        self.assertIn("--corpus-mode", completed.stderr)
+
+
+class BrigadePlanOfAProjectWhoseCorpusModeIsNoneTest(PlanContextTestCase):
+    def setUp(self):
+        super().setUp()
+        self.register_project(TASK_SCHEMA)
+        self.write_request("planning")
+        registry = self.machine.corpus / "projects.awawa"
+        registry.write_text(
+            registry.read_text()
+            .replace('\tCORPUS "corpus"\n', "")
+            .replace("\tSTATUS active", "\tMODE none\n\tSTATUS active")
+        )
+
+    def test_should_refuse_each_planning_command_with_exit_1_naming_the_mode(self):
+        for command in [("plan", "context", "R1"), ("plan", "record", "R1", "--file", "/dev/null")]:
+            with self.subTest(command=command):
+                # Act
+                completed = self.machine.run_brigade(CLONE_ENTRY_POINT, *command)
+
+                # Assert
+                self.assertEqual(completed.returncode, 1, completed.stderr)
+                self.assertIn("MODE none", completed.stderr)
 
 
 class BrigadeProjectAddInitCorpusThenPlanTest(PlanContextTestCase):

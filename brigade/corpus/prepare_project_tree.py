@@ -1,39 +1,25 @@
 import argparse
-from pathlib import Path
+import dataclasses
 
-from brigade.corpus.prepare_tree import FILESYSTEM_READ_TIME_KEEPER, Tree, TreeRequest, prepare_tree
+from brigade.corpus.prepare_project_checkout import prepare_project_checkout
+from brigade.corpus.prepare_tree import Tree
+from brigade.errors import ToolFailure
 from brigade.registry.find_project import find_project
-from brigade.registry.read_project_field import read_project_field
+from brigade.registry.read_corpus_workspace import read_corpus_workspace
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runtime import Runtime
 from brigade.system.parse_configuration import Configuration
 
-REPOSITORY_FIELD = "PATH"
-MAIN_FIELD = "MAIN"
-REFS_CACHE_DIRECTORY = "refs"
-BYTES_PER_MB = 1024 * 1024
-CACHE_LOCK_FILE = "refs-cache.lock"
-
 
 def prepare_project_tree(request: argparse.Namespace, configuration: Configuration, runtime: Runtime) -> Tree:
     require_operational_corpus(runtime.paths)
     project = find_project(read_projects(runtime), request.project)
-    repository = next(field.value for field in project.fields if field.name == REPOSITORY_FIELD)
-    worktree = request.worktree.absolute() if request.worktree is not None else None
-    reads_the_main_branch = request.ref is None and worktree is None
-    ref = read_project_field(project, MAIN_FIELD) if reads_the_main_branch else request.ref
-    return prepare_tree(
-        runtime.run_process,
-        FILESYSTEM_READ_TIME_KEEPER,
-        TreeRequest(
-            project=project.name,
-            repository=Path(repository),
-            ref=ref,
-            worktree=worktree,
-            cache=runtime.paths.cache_root / REFS_CACHE_DIRECTORY,
-            cache_bound_bytes=configuration.refs_cache_mb * BYTES_PER_MB,
-            cache_lock=runtime.paths.lock_directory / CACHE_LOCK_FILE,
-            now=runtime.now,
-        ),
-    )
+    folder = read_corpus_workspace(project)
+    tree = prepare_project_checkout(project, request, configuration, runtime)
+    workspace = tree.root / folder
+    if workspace != tree.root and not workspace.is_dir():
+        raise ToolFailure(
+            f"the area {folder} of @PROJECT.{project.name} is absent at {tree.sha}: its branch is not merged"
+        )
+    return dataclasses.replace(tree, root=workspace)

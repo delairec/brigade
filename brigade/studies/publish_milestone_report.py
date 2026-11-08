@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from brigade.corpus.read_entities import Entity
 from brigade.git.add_detached_worktree import add_detached_worktree
 from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.fetch_branches import BranchesFetch, fetch_branches
@@ -40,6 +41,7 @@ class MilestonePublication:
     forge_name: str
     repository: str
     main: str
+    project: Entity
     markdown: str
     environment: dict
 
@@ -121,7 +123,7 @@ def _commit_report(context: StudyRunContext, publication: MilestonePublication, 
             message=f"docs(milestones): add the report of {context.study.milestone.milestone}",
         ),
     )
-    mark_milestone_reached(context.runtime, checkout, context.study.milestone.milestone)
+    mark_milestone_reached(context.runtime, checkout, publication.project, context.study.milestone.milestone)
     push_branch(run_process, BranchPush(repository=checkout, branch=branch, environment=publication.environment))
 
 
@@ -136,6 +138,7 @@ def publish_milestone_report(context: StudyRunContext) -> dict:
         forge_name=located.forge,
         repository=read_project_field(project, PATH_FIELD),
         main=read_project_field(project, MAIN_FIELD),
+        project=project,
         markdown=present_answer(context).markdown,
         environment=environment,
     )

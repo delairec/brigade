@@ -8,6 +8,7 @@ from pathlib import Path
 
 from brigade.ledger.read_ledger import LedgerReading, read_ledger
 from brigade.mining.read_text_scrubber import read_text_scrubber
+from brigade.system.ask_on_terminal import ask_on_terminal
 from brigade.system.paths import Paths, build_paths
 from brigade.system.poll_until_signalled import poll_until_signalled
 from brigade.system.process_trace import ProcessTrace
@@ -40,6 +41,7 @@ class Runtime:
     poll_until_signalled: Callable[[Callable[[], bool], float], bool]
     read_ledger: Callable[[Path], LedgerReading]
     read_live_blockers: Callable[[Callable[[ProcessRequest], ProcessRecord], Path, str], tuple[str, ...]]
+    ask_on_terminal: Callable[[str], str | None]
 
 
 def _report_nothing(trace: ProcessTrace) -> None:
@@ -74,4 +76,5 @@ def build_runtime(invocation: Invocation, environment: Mapping[str, str]) -> Run
         poll_until_signalled=poll_until_signalled,
         read_ledger=read_ledger,
         read_live_blockers=read_live_blockers,
+        ask_on_terminal=functools.partial(ask_on_terminal, sys.stdin, sys.stderr),
     )

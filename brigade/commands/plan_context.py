@@ -10,6 +10,7 @@ from brigade.errors import BrigadeError
 from brigade.planning.assemble_plan_context import assemble_plan_context
 from brigade.planning.read_planning_request import read_planning_request
 from brigade.registry.find_project import find_project
+from brigade.registry.read_corpus_workspace import read_corpus_workspace
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_project_forge import read_project_forge
 from brigade.registry.read_projects import read_projects
@@ -80,6 +81,7 @@ def _render_text(document: dict) -> str:
 def plan_context(request: argparse.Namespace, runtime: Runtime) -> dict:
     planning_request = read_planning_request(runtime, request.request)
     project = find_project(read_projects(runtime), planning_request.project)
+    read_corpus_workspace(project)
     if read_project_field(project, "CORPUS") is None:
         raise BrigadeError(f"@PROJECT.{project.name} declares no corpus")
     configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)

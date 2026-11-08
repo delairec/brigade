@@ -232,3 +232,40 @@ class PromoteTaskTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), "the TASK schema of the corpus of oak declares no DELIVERED_BY")
+
+
+class PromoteTaskInAnAreaTest(unittest.TestCase):
+    def setUp(self):
+        PromoteTaskTest.setUp(self)
+        (self.worktree / "brigade").mkdir()
+        (self.worktree / "brigade" / "tasks.awawa").write_text(TASKS, encoding="utf-8")
+        config_root = self.runtime.paths.config_root
+        area = self.worktree / "brigade"
+        self.processes.answer_entities(
+            config_root,
+            "PROJECT",
+            {"oak": (("PATH", "/srv/oak"), ("MAIN", "main"), ("CORPUS", "brigade"), ("MODE", "area"))},
+        )
+        self.processes.answer_json(
+            ("awawa", "show", "@TASK.B12", "--json", str(area)), {"file": str(area / "tasks.awawa"), "fields": []}
+        )
+        self.processes.answer_json(("awawa", "show", "TASK", "--json", str(area)), DECLARED_SCHEMA)
+        self.processes.answer_corpus_change(self.worktree, ("brigade/tasks.awawa",), MESSAGE)
+        self.processes.answer(("awawa", "lint", "--strict", str(area)))
+
+    def test_should_promote_the_task_in_the_file_of_the_area_and_lint_the_area(self):
+        # Act
+        promote_task(
+            self.runtime,
+            TaskPromotionDemand(
+                path=self.worktree,
+                task=None,
+                pr=42,
+                environment={},
+                attribution=("Co-Authored-By: Ada <ada@example.org>",),
+            ),
+        )
+
+        # Assert
+        self.assertIn("STATUS implemented", (self.worktree / "brigade" / "tasks.awawa").read_text(encoding="utf-8"))
+        self.assertIn(("awawa", "lint", "--strict", str(self.worktree / "brigade")), self.processes.list_argvs())

@@ -65,7 +65,9 @@ class RequestTestCase(FileWaitingTestCase):
         self.project.write("corpus/tasks.awawa", MAIN_TASKS)
         self.project.track("corpus")
         self.project.run_git("commit", "--quiet", "-m", "the corpus")
-        self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(self.project.path))
+        self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "project", "add", str(self.project.path), "--corpus-mode", "control"
+        )
         self.runs = self.machine.state_home / "brigade" / "runs"
 
     def tearDown(self):
@@ -156,7 +158,7 @@ class BrigadeRequestListTest(RequestTestCase):
         )
         cafe.write("corpus/_schema.awawa", PROJECT_SCHEMA)
         cafe.track("corpus")
-        self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(cafe.path))
+        self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(cafe.path), "--corpus-mode", "control")
         self.write_requests(f"{PLANNED_REQUEST}\n{PLANNING_REQUEST}\n{CAFE_REQUEST}")
 
     def test_should_print_one_row_per_request(self):

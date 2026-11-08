@@ -27,6 +27,10 @@ def _keep_no_trace(trace) -> None:
     pass
 
 
+def _answer_from_no_terminal(question: str) -> None:
+    return None
+
+
 def create_test_runtime(
     paths: Paths = UNWRITTEN_PATHS,
     run_process=refuse_to_run,
@@ -37,6 +41,7 @@ def create_test_runtime(
     poll_until_signalled=poll_until_really_signalled,
     read_ledger=read_the_ledger,
     read_live_blockers=read_the_live_blockers,
+    ask_on_terminal=_answer_from_no_terminal,
 ) -> Runtime:
     return Runtime(
         run_process=run_process,
@@ -51,4 +56,5 @@ def create_test_runtime(
         poll_until_signalled=poll_until_signalled,
         read_ledger=read_ledger,
         read_live_blockers=read_live_blockers,
+        ask_on_terminal=ask_on_terminal,
     )

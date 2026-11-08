@@ -111,6 +111,26 @@ class OpenTaskPullRequestTestCase(unittest.TestCase):
         )
 
 
+class OpenTaskPullRequestInAnAreaTest(OpenTaskPullRequestTestCase):
+    def test_should_read_the_task_and_its_milestone_in_the_area(self):
+        # Arrange
+        self.record_check(PASSING_CHECK)
+        self.processes.answer_entities(
+            self.runtime.paths.config_root,
+            "PROJECT",
+            {"oak": (("PATH", "/srv/oak"), ("MAIN", "main"), ("CORPUS", "brigade"), ("MODE", "area"))},
+        )
+        area = Path("/srv/oak-b12/brigade")
+        self.processes.answer_entity(area, "TASK", "B12", TASK_FIELDS)
+        self.processes.answer_entity(area, "MILESTONE", "F0", (("TITLE", "Parser"),))
+
+        # Act
+        opened = open_task_pull_request(self.runtime, self.create_demand(create_forge(["Parser"])))
+
+        # Assert
+        self.assertEqual(opened["pr"], 42)
+
+
 class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
     def setUp(self):
         super().setUp()

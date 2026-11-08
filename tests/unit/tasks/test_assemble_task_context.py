@@ -279,3 +279,47 @@ class AssembleTaskContextTest(unittest.TestCase):
                 }
             ],
         )
+
+
+class AssembleTaskContextInAnAreaTest(unittest.TestCase):
+    def setUp(self):
+        AssembleTaskContextTest.setUp(self)
+
+    def test_should_read_the_task_in_the_folder_of_the_area(self):
+        # Arrange
+        project = Entity(
+            name="oak",
+            fields=(
+                EntityField(name="PATH", value="/srv/oak"),
+                EntityField(name="CORPUS", value="brigade"),
+                EntityField(name="MODE", value="area"),
+            ),
+        )
+        (self.worktree_path / "brigade").mkdir()
+        worktree = TaskWorktree(
+            path=self.worktree_path, task="B12", project=project, wave="oak_w1", base="integration/harvest"
+        )
+        write_operational_corpus(self.root)
+        runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
+        self.processes.answer_entities(
+            runtime.paths.config_root,
+            "PROJECT",
+            {"oak": (("PATH", "/srv/oak"), ("CORPUS", "brigade"), ("MODE", "area"))},
+        )
+        self.processes.answer(
+            ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "integration/harvest^{commit}"),
+            stdout="c0ffee\n",
+        )
+        tree = self.root / "cache" / "refs" / "oak" / "c0ffee" / "brigade"
+        tree.mkdir(parents=True)
+        self.processes.answer_json(("awawa", "status", "--json", str(tree)), {"entities": []})
+
+        # Act
+        context = assemble_task_context(runtime, Configuration(), worktree, ATTRIBUTION)
+
+        # Assert
+        self.assertEqual(context["project"], None)
+        self.assertEqual(
+            [request.cwd for request in self.processes.requests if request.argv[0:2] == ("awawa", "context")],
+            [str(self.worktree_path / "brigade")],
+        )

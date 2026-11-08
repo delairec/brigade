@@ -2,7 +2,7 @@ from brigade.corpus.quote_awawa_string import quote_awawa_string
 from brigade.corpus.read_entities import Entity, EntityField
 
 ENTITY_TYPE = "PROJECT"
-BARE_FIELDS = ("STATUS",)
+BARE_FIELDS = ("STATUS", "MODE")
 
 
 def _render_field(field: EntityField) -> str:

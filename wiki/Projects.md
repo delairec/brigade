@@ -5,7 +5,7 @@ and how a project is listed, shown, paused and resumed.
 
 ```
 brigade project add <path> [--name N] [--acceptance CMD]... [--heavy CMD]... [--setup CMD]... [--force]
-                           [--init-corpus [--corpus FOLDER]]
+                           [--init-corpus] [--corpus-mode control|area] [--corpus FOLDER]
 brigade project list
 brigade project show <name>
 brigade project pause <name>     # pause and resume set the status of a project
@@ -35,6 +35,26 @@ The heavy suites left to continuous integration (`--heavy`) are never guessed.
 > `PATH`.
 
 > **Watch out:** a path or a name already registered is refused unless `--force` replaces it.
+
+## A repository that already holds a corpus
+
+A repository tracking a `.awawa` file is registered in one of two corpus modes, the `MODE` field of its `PROJECT`
+entity, `control` when absent.
+
+| `--corpus-mode` | How brigade uses the corpus |
+|---|---|
+| `control` | it writes its milestones and tasks in the corpus of the project, whose folder is the common path of the tracked `.awawa` files |
+| `area` | it keeps to a folder of its own, `brigade/` at the root by default, holding its own schema and read as the awawa workspace: the corpus of the project is never read |
+
+Without the option, `project add` asks on a terminal, then proposes the folder to confirm, `--corpus` overriding it;
+with stdin not a terminal, it exits 2 naming `--corpus-mode`. `area` installs the template on a branch and pull request
+or merge command, as `--init-corpus` does.
+
+A project whose `MODE` is `none` is refused by every command that reads its corpus, exit 1 naming the mode, and the tick
+skips it on stderr.
+
+> **Watch out:** `brigade init` leaves a schema it finds in place: a machine installed before `MODE` keeps the old
+> one, which refuses `area`, and `brigade doctor` reports that it differs from the shipped schema.
 
 ## A corpus for a project that has none
 
