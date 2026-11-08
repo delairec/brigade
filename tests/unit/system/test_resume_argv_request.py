@@ -4,7 +4,7 @@ from brigade.system.resume_argv_request import ResumeArgvRequest
 
 RESUME_DOCUMENT = {
     "schema_version": 1,
-    "worktree": "/home/user/tidepool",
+    "worktree": "/srv/tidepool",
     "brief": "Resume the task.",
     "role": {
         "name": "builder",
@@ -30,7 +30,7 @@ class ResumeArgvRequestTest(unittest.TestCase):
             document,
             {
                 "schema_version": 1,
-                "worktree": "/home/user/tidepool",
+                "worktree": "/srv/tidepool",
                 "brief": "Resume the task.",
                 "role": {
                     "name": "builder",
