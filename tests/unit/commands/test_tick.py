@@ -3895,6 +3895,56 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
         events = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
         self.assertEqual(json.loads(events[-1])["event"], "wave.started")
 
+    def test_should_launch_the_held_task_at_the_tick_that_reads_its_base_green(self):
+        # Arrange
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+        write_commit_checks(self.root, WAVE_HEAD, PASSED)
+
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs[-1],
+            (
+                "run",
+                "rebase-on-base",
+                "task=@TASK.T7",
+                "base=integration/M4",
+                "--slot",
+                "rebase",
+                "--cwd",
+                str(self.repository / ".brigade" / "worktrees" / "T7"),
+                "--project",
+                "tidepool",
+                "--wave",
+                "tidepool_w16",
+                "--task",
+                "T7",
+                "--run-id",
+                ANY,
+            ),
+        )
+
+    def test_should_check_an_unproven_base_once_and_hold_the_launch_on_its_record_at_the_next_tick(self):
+        # Arrange
+        (self.root / "state" / "commit-checks" / "tidepool" / f"{WAVE_HEAD}.json").unlink()
+        checkout = str(self.root / "state" / "head-checks" / "tidepool" / WAVE_HEAD)
+        self.machine.answers[("awawa", "lint", "--strict", ".")] = ProcessAnswer(exit_code=1)
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.machine.argvs.count(("git", "worktree", "add", "--quiet", "--detach", checkout, WAVE_HEAD)), 1
+        )
+
     def test_should_name_the_red_wave_branch_holding_the_launch_in_the_plan_of_a_dry_run(self):
         # Act
         document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
