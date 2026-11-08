@@ -47,8 +47,9 @@ entity, `control` when absent.
 | `area` | it keeps to a folder of its own, `brigade/` at the root by default, holding its own schema and read as the awawa workspace: the corpus of the project is never read |
 
 Without the option, `project add` asks on a terminal, then proposes the folder to confirm, `--corpus` overriding it;
-with stdin not a terminal, it exits 2 naming `--corpus-mode`. `area` installs the template on a branch and pull request
-or merge command, as `--init-corpus` does.
+with stdin not a terminal, it exits 2 naming `--corpus-mode`. `area` refuses a folder holding a corpus that is not
+brigade's own, its schema differing from the template, and installs the template on a branch and pull request or merge
+command, as `--init-corpus` does.
 
 > **Watch out:** in `area` the schema of the folder declares `IMPL` a string, an awawa anchor resolving only inside its
 > workspace, so the lint does not check the anchors: the promotion check at the preflight, which resolves each `IMPL`
