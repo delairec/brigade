@@ -3881,6 +3881,9 @@ TASK B46
 			+ "test_should_equip_the_collector_with_the_forge_of_the_project_at_its_directory(self):"
 		IMPL "tests/unit/commands/test_study_run.py::def"
 			+ "test_should_resolve_the_forge_of_the_project_its_study_names(self):"
+		IMPL "brigade/commands/_list_branch_check_runs.py::def list_branch_check_runs("
+		IMPL "tests/unit/commands/test__list_branch_check_runs.py::def"
+			+ "test_should_list_the_check_runs_through_the_forge_it_names(self):"
 	SPEC "on a project of FORGE none the tick runs the preflight of a task on the head of its"
 		+ "branch without the check of the check runs, where today"
 		+ "brigade/verify/preflight_pull_request.py:89 checks them and brigade/tick/plan.py:428-449"
@@ -3912,7 +3915,7 @@ TASK B46
 		IMPL "brigade/commands/doctor.py::FORGE_FALLBACK = \"local mode without a forge\""
 		IMPL "tests/unit/commands/test_doctor.py::def"
 			+ "test_should_check_the_forge_as_the_cli_login(self):"
-		IMPL "brigade/commands/project_list.py::\"forge\": _read_field(project, \"FORGE\"),"
+		IMPL "brigade/commands/project_list.py::\"forge\": read_project_forge(project),"
 		IMPL "tests/unit/commands/test_project_list.py::def"
 			+ "test_should_list_each_project_with_its_status_its_path_and_its_forge(self):"
 	AFTER @TASK.B02
