@@ -25,11 +25,12 @@ from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
 from brigade.system.write_text_atomically import write_text_atomically
 from brigade.tick.actions import LaunchTask
-from brigade.tick.head_proof import GREEN, RED, ForgeCheck, HeadProof, HoldingHead
+from brigade.tick.head_proof import GREEN, RED, HeadProof, HoldingHead
 from brigade.tick.ignore_worktrees import ignore_worktrees
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
 from brigade.tick.prove_branch_head import BranchHead, prove_branch_head
 from brigade.tick.prove_head import HeadQuery, prove_head
+from brigade.tick.read_pull_request_checks import read_pull_request_checks
 from brigade.tick.read_task_check import read_task_check
 from brigade.tick.tick_forge import TickForge
 from brigade.waves.locate_forge_branch import locate_forge_branch
@@ -42,7 +43,6 @@ SETUP_PROMPT = "$ "
 SETUP_FAILED_REASON = "setup failed"
 DESCENDING = 0
 WHOLE_WORKTREE = "."
-NO_FORGE_CHECK = ()
 
 
 @dataclass(frozen=True)
@@ -95,13 +95,6 @@ class _Launch:
     forge: TickForge
 
 
-def _read_pull_request_checks(action: LaunchTask, commit: str) -> tuple[ForgeCheck, ...]:
-    checked = action.pull_request_checks
-    if checked is None or checked.head != commit:
-        return NO_FORGE_CHECK
-    return checked.checks
-
-
 def _prove_task_head(runtime: Runtime, launch: _Launch) -> HeadProof:
     commit = read_head(runtime.run_process, launch.worktree.path)
     return prove_head(
@@ -111,7 +104,7 @@ def _prove_task_head(runtime: Runtime, launch: _Launch) -> HeadProof:
             repository=launch.repository,
             commit=commit,
             task_check=read_task_check(runtime.paths.state_root, launch.project.name, launch.action.task),
-            forge_checks=_read_pull_request_checks(launch.action, commit),
+            forge_checks=read_pull_request_checks(launch.action, commit),
         ),
     )
 

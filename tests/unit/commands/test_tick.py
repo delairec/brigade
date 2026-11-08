@@ -3427,6 +3427,9 @@ OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT = {
     ("git", "rev-parse", "--quiet", "--verify", "REBASE_HEAD"): ProcessAnswer(stdout="f02da32\n"),
     ("git", "rebase", "--abort"): ProcessAnswer(),
     ("git", "rev-parse", "HEAD"): ProcessAnswer(stdout="4c0e214\n"),
+    ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "feature/T7-tide-table^{commit}"): ProcessAnswer(
+        stdout="4c0e214\n"
+    ),
 }
 T7_HEAD = "4c0e214"
 GREEN_PULL_REQUEST_AT_THE_T7_HEAD = {**GREEN_PULL_REQUEST, "head": "4c0e214"}

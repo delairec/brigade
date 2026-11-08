@@ -99,7 +99,7 @@ from brigade.tick.actions import (
 from brigade.tick.apply_actions import apply_actions
 from brigade.tick.build_snapshot import ForgeReaders, Snapshot, build_snapshot
 from brigade.tick.describe_holding_head import describe_holding_head
-from brigade.tick.find_holding_base import find_holding_base
+from brigade.tick.find_holding_head import find_holding_head
 from brigade.tick.head_proof import HoldingHead
 from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.ledger_reading_keeper import LedgerReadingKeeper
@@ -820,7 +820,7 @@ def _describe_planned_action(runtime: Runtime, list_check_runs: Callable[[str, s
     if not isinstance(action, HELD_REBASES):
         return planned
     project = find_project(read_projects(runtime), action.project)
-    held_by = find_holding_base(runtime, project, action, list_check_runs)
+    held_by = find_holding_head(runtime, project, action, list_check_runs)
     if held_by is None:
         return planned
     return {**planned, "waits": describe_holding_head(held_by)}
