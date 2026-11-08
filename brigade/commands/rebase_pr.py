@@ -4,7 +4,7 @@ from pathlib import Path
 
 from brigade.command import Argument, Command
 from brigade.commands._read_attribution import read_attribution
-from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME, read_forge_environment
+from brigade.commands._read_forge_environment import FORGE_KIND, ForgeSlot, read_forge_environment
 from brigade.commands._repair_red_head import REBASE_SLOT
 from brigade.git.locate_main_checkout import locate_main_checkout
 from brigade.git.locate_worktree_root import locate_worktree_root
@@ -13,6 +13,7 @@ from brigade.git.read_current_branch import read_current_branch
 from brigade.git.read_head_subject import read_head_subject
 from brigade.ledger.append_event import append_event
 from brigade.ledger.repair_pr_opened import RepairPrOpened
+from brigade.registry.read_project_forge import read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
 from brigade.runtime import Runtime
@@ -46,9 +47,10 @@ def _open_session(runtime: Runtime) -> tuple[_RepairSession, Configuration]:
     worktree = locate_worktree_root(runtime.run_process, Path.cwd())
     project = require_project_at(read_projects(runtime), locate_main_checkout(runtime.run_process, worktree))
     configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)
-    forge = runtime.resolve_plugin(FORGE_KIND, FORGE_NAME)
-    environment = read_forge_environment(configuration, REBASE_SLOT, runtime)
-    login = ask_forge_account(forge, FORGE_NAME, environment, runtime).login
+    forge_name = read_project_forge(project)
+    forge = runtime.resolve_plugin(FORGE_KIND, forge_name)
+    environment = read_forge_environment(configuration, ForgeSlot(forge_name, REBASE_SLOT), runtime)
+    login = ask_forge_account(forge, forge_name, environment, runtime).login
     session = _RepairSession(worktree=worktree, project=project.name, forge=forge, environment=environment, login=login)
     return session, configuration
 
