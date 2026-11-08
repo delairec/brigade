@@ -392,6 +392,8 @@ class ProjectAddInitCorpusTest(unittest.TestCase):
                 self.assertEqual(
                     document["project"]["fields"][3], {"name": "CORPUS", "value": registered, "guessed": False}
                 )
+                schema = self.paths.cache_root / "corpus-installs" / "app" / registered / "_schema.awawa"
+                self.assertTrue(schema.is_file(), schema)
 
     def test_should_refuse_a_repository_already_tracking_a_corpus_file(self):
         # Arrange
