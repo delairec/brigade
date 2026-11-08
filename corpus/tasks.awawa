@@ -3859,7 +3859,8 @@ TASK B46
 		+ "PROJECT entity, the tick preflights a task on the ACCEPTANCE commands of the project at"
 		+ "the head of its branch, the prudence verdict is kept in the ledger with no pull request,"
 		+ "and brigade doctor and project list report the forge"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 379
 	TYPE feat
 	MILESTONE @MILESTONE.M7
 	COMPONENT "adapters"
