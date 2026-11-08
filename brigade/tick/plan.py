@@ -22,6 +22,7 @@ from brigade.tick.actions import (
     MergePullRequest,
     MergeTaskBranch,
     NameMergeCommand,
+    OpenMergeWorktree,
     ParkTask,
     PauseWave,
     RebaseMilestone,
@@ -107,6 +108,7 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_followed_pull_requests(snapshot)
         + _plan_delivered_head_preflights(snapshot)
         + _plan_delivered_head_verifications(snapshot)
+        + _plan_merge_worktree_openings(snapshot)
         + _plan_delivered_head_merges(snapshot)
         + _plan_failed_preflight_parkings(snapshot)
         + _plan_blocked_task_parkings(snapshot)
@@ -631,18 +633,22 @@ def _is_delivered_head_accepted(wave: WaveFacts, task: TaskFacts) -> bool:
 
 
 def _decide_user_merge(wave: WaveFacts, task: TaskFacts) -> RecordTaskState | NameMergeCommand:
-    if task.merged_into_main:
+    if task.merged_into_target:
         return RecordTaskState(wave=wave.wave, task=task.name, state=MERGED_STATE, reason=None)
     return NameMergeCommand(command=task.merge_command)
+
+
+def _is_the_users_merge(wave: WaveFacts, project: ProjectFacts) -> bool:
+    return wave.milestone_branch is None or project.auto_merge == NO_AUTO_MERGE
 
 
 def _decide_delivered_head_merge(
     wave: WaveFacts, task: TaskFacts, project: ProjectFacts, rebasing: frozenset
 ) -> MergeTaskBranch | RecordTaskState | NameMergeCommand | None:
-    if task.merge_command is not None:
-        return _decide_user_merge(wave, task)
-    if project.auto_merge == NO_AUTO_MERGE or (wave.project, wave.milestone_branch) in rebasing:
+    if (wave.project, wave.milestone_branch) in rebasing:
         return None
+    if _is_the_users_merge(wave, project):
+        return _decide_user_merge(wave, task)
     return MergeTaskBranch(
         project=wave.project,
         wave=wave.wave,
@@ -654,11 +660,15 @@ def _decide_delivered_head_merge(
     )
 
 
-def _plan_delivered_head_merges(snapshot: Snapshot) -> tuple:
-    projects = {project.name: project for project in snapshot.projects}
-    rebasing = frozenset(
+def _read_rebasing_branches(snapshot: Snapshot) -> frozenset:
+    return frozenset(
         (milestone.project, milestone.branch) for milestone in snapshot.milestones if milestone.rebase_run_live
     )
+
+
+def _plan_delivered_head_merges(snapshot: Snapshot) -> tuple:
+    projects = {project.name: project for project in snapshot.projects}
+    rebasing = _read_rebasing_branches(snapshot)
     decided = (
         _decide_delivered_head_merge(wave, task, projects[wave.project], rebasing)
         for wave in snapshot.waves
@@ -666,6 +676,28 @@ def _plan_delivered_head_merges(snapshot: Snapshot) -> tuple:
         if _is_delivered_head_accepted(wave, task)
     )
     return tuple(action for action in decided if action is not None)
+
+
+def _is_merge_worktree_due(wave: WaveFacts, task: TaskFacts, project: ProjectFacts, rebasing: frozenset) -> bool:
+    return (
+        _is_delivered_head_accepted(wave, task)
+        and task.merge_worktree_to_open is not None
+        and project.auto_merge == NO_AUTO_MERGE
+        and not task.merged_into_target
+        and (wave.project, wave.milestone_branch) not in rebasing
+    )
+
+
+def _plan_merge_worktree_openings(snapshot: Snapshot) -> tuple:
+    projects = {project.name: project for project in snapshot.projects}
+    rebasing = _read_rebasing_branches(snapshot)
+    openings = (
+        OpenMergeWorktree(project=wave.project, branch=wave.milestone_branch, path=task.merge_worktree_to_open)
+        for wave in snapshot.waves
+        for task in wave.tasks
+        if _is_merge_worktree_due(wave, task, projects[wave.project], rebasing)
+    )
+    return tuple(dict.fromkeys(openings))
 
 
 def _describe_failed_preflight(task: TaskFacts) -> str:

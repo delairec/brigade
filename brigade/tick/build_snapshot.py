@@ -55,7 +55,7 @@ from brigade.tasks.read_task_field import read_task_field
 from brigade.tick.decide_resume_at import decide_resume_at
 from brigade.tick.describe_study_facts import describe_study_facts
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
-from brigade.tick.name_task_branch import name_task_branch
+from brigade.tick.name_branch_of_task import name_branch_of_task
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
 from brigade.tick.read_integration_branches import (
     IntegrationBranchFacts,
@@ -71,6 +71,7 @@ from brigade.waves.list_candidate_waves import CandidateWave, list_candidate_wav
 from brigade.waves.list_tasks_of_reached_milestones import list_tasks_of_reached_milestones
 from brigade.waves.locate_branch_worktree import locate_branch_worktree
 from brigade.waves.locate_forge_branch import locate_forge_branch
+from brigade.waves.locate_merge_worktree import locate_merge_worktree
 from brigade.waves.name_milestone_branch import name_milestone_branch
 from brigade.waves.prepare_wave_tree import locate_wave_branch_base, prepare_wave_tree
 from brigade.waves.read_active_milestones import read_active_milestones
@@ -89,12 +90,10 @@ NO_CHECK_RUNS = "none"
 AFTER_FIELD = "AFTER"
 TASK_PREFIX = "@TASK."
 MILESTONE_FIELD = "MILESTONE"
-TYPE_FIELD = "TYPE"
 TITLE_FIELD = "TITLE"
 MILESTONE_PREFIX = "@MILESTONE."
 MILESTONE_TYPE = "MILESTONE"
 NO_MILESTONE = None
-TITLE_FIELD = "TITLE"
 PROJECT_SLOTS = 4
 QUEUED_STATE = "queued"
 SETTLED_STATES = ("merged", "parked")
@@ -192,7 +191,8 @@ class TaskFacts:
     reported: bool = False
     delivered_head: str | None = None
     merge_command: str | None = None
-    merged_into_main: bool = False
+    merged_into_target: bool = False
+    merge_worktree_to_open: str | None = None
 
     def to_document(self) -> dict:
         return {
@@ -386,17 +386,10 @@ def _read_milestone(task: Entity) -> str | None:
     return None if milestone is None else milestone.removeprefix(MILESTONE_PREFIX)
 
 
-def _name_task_branch(task: Entity) -> str:
-    task_type = read_project_field(task, TYPE_FIELD)
-    if task_type is None:
-        raise TaskTypeMissing(f"@TASK.{task.name} carries no TYPE to name its branch")
-    return name_task_branch(task_type, task.name, read_project_field(task, TITLE_FIELD))
-
-
 def _read_task_facts(runtime: Runtime, root: Path, task: Entity) -> TaskFacts:
     return TaskFacts(
         name=task.name,
-        branch=_name_task_branch(task),
+        branch=name_branch_of_task(task),
         after=tuple(field.value.removeprefix(TASK_PREFIX) for field in task.fields if field.name == AFTER_FIELD),
         blocked_by=runtime.read_live_blockers(runtime.run_process, root, task.name),
         milestone=_read_milestone(task),
@@ -728,19 +721,40 @@ def _is_delivered_by_a_build_run(reading: WaveReading, open_wave: _OpenWave, tas
     )
 
 
+def _note_head_delivered_for_a_milestone(
+    reading: WaveReading, open_wave: _OpenWave, task: TaskFacts, head: str
+) -> TaskFacts:
+    followed = open_wave.followed
+    branch = find_milestone_branch(reading.entries, open_wave.started.project, task.milestone)
+    if branch is None:
+        return dataclasses.replace(task, delivered_head=head)
+    worktree = locate_merge_worktree(
+        followed.run_process, followed.repository, reading.configuration.worktree_root, branch
+    )
+    return dataclasses.replace(
+        task,
+        delivered_head=head,
+        merge_command=describe_merge_command(worktree.path, task.branch),
+        merged_into_target=check_ancestor(followed.run_process, followed.repository, head, branch).exit_code
+        == DESCENDING,
+        merge_worktree_to_open=None if worktree.opened else str(worktree.path),
+    )
+
+
 def _note_delivered_head(reading: WaveReading, open_wave: _OpenWave, task: TaskFacts) -> TaskFacts:
     if not _is_delivered_by_a_build_run(reading, open_wave, task):
         return task
     followed = open_wave.followed
     head = resolve_commit(followed.run_process, followed.repository, task.branch)
     if task.milestone is not None:
-        return dataclasses.replace(task, delivered_head=head)
+        return _note_head_delivered_for_a_milestone(reading, open_wave, task, head)
     main = read_project_field(find_project(reading.projects, open_wave.started.project), MAIN_FIELD)
     return dataclasses.replace(
         task,
         delivered_head=head,
         merge_command=describe_merge_command(followed.repository, task.branch),
-        merged_into_main=check_ancestor(followed.run_process, followed.repository, head, main).exit_code == DESCENDING,
+        merged_into_target=check_ancestor(followed.run_process, followed.repository, head, main).exit_code
+        == DESCENDING,
     )
 
 

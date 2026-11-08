@@ -25,6 +25,7 @@ from brigade.tick.actions import (
     MergePullRequest,
     MergeTaskBranch,
     NameMergeCommand,
+    OpenMergeWorktree,
     ParkTask,
     PauseWave,
     RebaseMilestone,
@@ -2969,6 +2970,10 @@ DELIVERED_S3 = "d3l1v3r"
 PASS_AT_THE_DELIVERED_S3 = RecordedVerdict(head=DELIVERED_S3, verdict="pass")
 MERGE_COMMAND_OF_S3 = "git -C /projects/shop merge feature/S3-task"
 MERGE_COMMAND_OF_THE_MILESTONE = "git -C /projects/shop merge integration/empty-cart"
+MILESTONE_WORKTREE = "/projects/shop/.brigade/worktrees/integration-empty-cart"
+MERGE_COMMAND_INTO_THE_MILESTONE = f"git -C {MILESTONE_WORKTREE} merge feature/S3-task"
+MERGE_COMMAND_OF_S4_INTO_THE_MILESTONE = f"git -C {MILESTONE_WORKTREE} merge feature/S4-task"
+OPEN_THE_MILESTONE_WORKTREE = OpenMergeWorktree(project="shop", branch=TASK_BASE, path=MILESTONE_WORKTREE)
 MERGE_S3_BRANCH = MergeTaskBranch(
     project="shop",
     wave="shop_w1",
@@ -3054,11 +3059,139 @@ class PlanMergingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
         # Assert
         self.assertNotIn(MERGE_S3_BRANCH, actions)
 
-    def test_should_not_merge_a_project_that_merges_nothing_by_itself(self):
+    def test_should_name_the_merge_command_under_no_auto_merge_and_merge_nothing(self):
         # Arrange
-        task = create_verified_task_delivered_without_a_forge()
+        task = create_verified_task_delivered_without_a_forge(merge_command=MERGE_COMMAND_INTO_THE_MILESTONE)
         snapshot = Snapshot(
             now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP_WITHOUT_AUTO_MERGE,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (NameMergeCommand(command=MERGE_COMMAND_INTO_THE_MILESTONE),))
+
+    def test_should_record_merged_under_no_auto_merge_once_the_head_is_an_ancestor_of_the_milestone_branch(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge(
+            merge_command=MERGE_COMMAND_INTO_THE_MILESTONE, merged_into_target=True
+        )
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP_WITHOUT_AUTO_MERGE,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (RecordTaskState(wave="shop_w1", task="S3", state="merged", reason=None),))
+
+    def test_should_open_the_worktree_of_the_milestone_branch_before_naming_the_merge_under_no_auto_merge(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge(
+            merge_command=MERGE_COMMAND_INTO_THE_MILESTONE, merge_worktree_to_open=MILESTONE_WORKTREE
+        )
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP_WITHOUT_AUTO_MERGE,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions, (OPEN_THE_MILESTONE_WORKTREE, NameMergeCommand(command=MERGE_COMMAND_INTO_THE_MILESTONE))
+        )
+
+    def test_should_open_the_worktree_of_the_milestone_branch_once_for_two_tasks_awaiting_their_merge(self):
+        # Arrange
+        s3 = create_verified_task_delivered_without_a_forge(
+            merge_command=MERGE_COMMAND_INTO_THE_MILESTONE, merge_worktree_to_open=MILESTONE_WORKTREE
+        )
+        s4 = create_verified_task_delivered_without_a_forge(
+            name="S4",
+            branch="feature/S4-task",
+            merge_command=MERGE_COMMAND_OF_S4_INTO_THE_MILESTONE,
+            merge_worktree_to_open=MILESTONE_WORKTREE,
+        )
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(create_wave((s3, s4), {"S3": "verified", "S4": "verified"}),),
+            projects=(SHOP_WITHOUT_AUTO_MERGE,),
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                OPEN_THE_MILESTONE_WORKTREE,
+                NameMergeCommand(command=MERGE_COMMAND_INTO_THE_MILESTONE),
+                NameMergeCommand(command=MERGE_COMMAND_OF_S4_INTO_THE_MILESTONE),
+            ),
+        )
+
+    def test_should_open_no_worktree_for_a_task_not_yet_accepted_under_no_auto_merge(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge(
+            merge_command=MERGE_COMMAND_INTO_THE_MILESTONE,
+            merge_worktree_to_open=MILESTONE_WORKTREE,
+            reviewed_head=DELIVERED_S3,
+        )
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP_WITHOUT_AUTO_MERGE,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertNotIn(OPEN_THE_MILESTONE_WORKTREE, actions)
+
+    def test_should_merge_by_itself_a_task_of_its_milestone_where_the_project_merges(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge(
+            merge_command=MERGE_COMMAND_INTO_THE_MILESTONE, merge_worktree_to_open=MILESTONE_WORKTREE
+        )
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (MERGE_S3_BRANCH,))
+
+    def test_should_open_no_worktree_for_a_task_already_merged_by_the_user(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge(
+            merge_command=MERGE_COMMAND_INTO_THE_MILESTONE,
+            merged_into_target=True,
+            merge_worktree_to_open=MILESTONE_WORKTREE,
+        )
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP_WITHOUT_AUTO_MERGE,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (RecordTaskState(wave="shop_w1", task="S3", state="merged", reason=None),))
+
+    def test_should_open_nothing_and_name_nothing_on_a_milestone_branch_a_rebase_run_holds_under_no_auto_merge(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge(
+            merge_command=MERGE_COMMAND_INTO_THE_MILESTONE, merge_worktree_to_open=MILESTONE_WORKTREE
+        )
+        rebasing = MilestoneFacts(project="shop", milestone="M1", branch=TASK_BASE, rebase_run_live=True)
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(create_wave((task,), {"S3": "verified"}),),
+            projects=(SHOP_WITHOUT_AUTO_MERGE,),
+            milestones=(rebasing,),
         )
 
         # Act
@@ -3096,7 +3229,9 @@ class PlanMergingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
 
     def test_should_record_merged_a_task_of_no_milestone_once_the_user_merged_it(self):
         # Arrange
-        task = create_verified_task_delivered_without_a_forge(merge_command=MERGE_COMMAND_OF_S3, merged_into_main=True)
+        task = create_verified_task_delivered_without_a_forge(
+            merge_command=MERGE_COMMAND_OF_S3, merged_into_target=True
+        )
         snapshot = Snapshot(
             now=NOW, waves=(create_wave_of_no_milestone((task,), {"S3": "verified"}),), projects=(SHOP,)
         )

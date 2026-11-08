@@ -112,6 +112,7 @@ class BrigadeWaveShowTest(WaveTestCase):
                     {"task": "S5", "state": None, "pull_request": None, "run": None, "reason": None},
                 ],
                 "merge_command": None,
+                "task_merge_commands": [],
             },
         )
 

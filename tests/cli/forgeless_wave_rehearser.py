@@ -1,6 +1,10 @@
-from tests.cli.wave_rehearser import AWAIT_THE_RELEASE, READ_THE_BRIEF, WaveRehearser
+import time
+
+from tests.cli.wave_rehearser import AWAIT_THE_RELEASE, READ_THE_BRIEF, REHEARSAL_WAIT_S, WaveRehearser
 
 MILESTONE_BRANCH = "integration/empty-cart"
+NO_AUTO_MERGE_POLICY = "POLICY shop_policy\n\tPROJECT @PROJECT.shop\n\tAUTO_MERGE none\n"
+MERGE_LINE_PREFIX = "to merge: "
 ONE_TASK_PLAN = (
     'MILESTONE M1\n\tTITLE "Empty cart"\n\tSTATUS active\n\n'
     'TASK S1\n\tTITLE "Empty the cart in one click"\n\tSTATUS todo\n\tTYPE feat\n\tMILESTONE @MILESTONE.M1\n'
@@ -51,3 +55,32 @@ class ForgelessWaveRehearser(WaveRehearser):
     def find_event(self, name: str) -> dict:
         [event] = [event for event in self.read_events() if event["event"] == name]
         return event
+
+    def read_states_of(self, task: str) -> list[str]:
+        return [
+            event["state"] for event in self.read_events() if event["event"] == "task.state" and event["task"] == task
+        ]
+
+
+class ForgelessWaveRehearserUnderNoAutoMerge(ForgelessWaveRehearser):
+    def register_sandbox(self):
+        super().register_sandbox()
+        (self.machine.corpus / "policies.awawa").write_text(NO_AUTO_MERGE_POLICY)
+
+    def tick_until_the_task_is_verified(self) -> None:
+        deadline = time.monotonic() + REHEARSAL_WAIT_S
+        while "verified" not in self.read_states_of("S1"):
+            if time.monotonic() > deadline:
+                self.registrar.fail(f"the task was never verified: {self.run_brigade('tick', '--dry-run').stdout}")
+            completed = self.run_brigade("tick", "--once")
+            if completed.returncode != 0:
+                self.registrar.fail(completed.stderr)
+            self.list_finished_runs()
+
+    def read_the_command_named(self, tick_output: str) -> str:
+        [command] = [
+            line.removeprefix(MERGE_LINE_PREFIX)
+            for line in tick_output.splitlines()
+            if line.startswith(MERGE_LINE_PREFIX)
+        ]
+        return command
