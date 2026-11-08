@@ -33,7 +33,7 @@ from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.find_project import find_project
-from brigade.registry.is_on_github import is_on_github
+from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_policy_field import read_policy_field
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
@@ -642,7 +642,7 @@ def _read_no_pull_request(repository: str, branch: str) -> None:
 
 
 def _choose_pull_request_reader(reading: WaveReading, started: WaveStarted) -> Callable:
-    if is_on_github(find_project(reading.projects, started.project)):
+    if is_on_a_forge(find_project(reading.projects, started.project)):
         return reading.forge.read_pull_request
     return _read_no_pull_request
 
@@ -716,7 +716,7 @@ def _note_amendment(task: TaskFacts, on_pull_request: Entity | None, on_wave: En
 def _is_delivered_by_a_build_run(reading: WaveReading, open_wave: _OpenWave, task: TaskFacts) -> bool:
     finished = [event for event in reading.events if isinstance(event, RunFinished) and event.run == task.last_run]
     return (
-        not is_on_github(find_project(reading.projects, open_wave.started.project))
+        not is_on_a_forge(find_project(reading.projects, open_wave.started.project))
         and not task.last_run_is_a_rebase
         and bool(finished)
         and finished[-1].outcome == DONE_OUTCOME
@@ -872,7 +872,7 @@ def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity,
         verify_rounds=int(
             read_policy_field(policies, project.name, VERIFY_ROUNDS_FIELD, str(VERIFY_ROUNDS_BY_DEFAULT))
         ),
-        on_github=is_on_github(project),
+        on_github=is_on_a_forge(project),
         uncut_milestones=wave_making.uncut_milestones,
     )
 

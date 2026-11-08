@@ -4,7 +4,7 @@ from pathlib import Path
 
 from brigade.corpus.read_entities import Entity
 from brigade.git.find_remote_branch import RemoteBranch, find_remote_branch
-from brigade.registry.is_on_github import is_on_github
+from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_project_field import read_project_field
 from brigade.system.parse_configuration import CLI_KEY
 from brigade.system.run_process import ProcessRecord, ProcessRequest
@@ -20,7 +20,7 @@ class RecordedMilestoneBranch:
 def is_milestone_branch_off_the_forge(
     run_process: Callable[[ProcessRequest], ProcessRecord], recorded: RecordedMilestoneBranch
 ) -> bool:
-    if not is_on_github(recorded.project):
+    if not is_on_a_forge(recorded.project):
         return False
     remote_branch = RemoteBranch(
         repository=Path(read_project_field(recorded.project, "PATH")),

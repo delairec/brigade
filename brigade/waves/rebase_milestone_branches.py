@@ -13,7 +13,7 @@ from brigade.git.reset_worktree import reset_worktree
 from brigade.git.resolve_commit import resolve_commit
 from brigade.ledger.milestone_rebase_launched import MilestoneRebaseLaunched
 from brigade.ledger.milestone_rebased import MilestoneRebased
-from brigade.registry.is_on_github import is_on_github
+from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.system.hold_lock import hold_lock
@@ -98,7 +98,7 @@ def _read_rebased_head(runtime: Runtime, worktree: Path, upstream: str) -> str |
 
 
 def _push_branch(runtime: Runtime, rebase: MilestoneBranchesRebase, run: BranchRebaseRun, head: str) -> None:
-    if is_on_github(rebase.project):
+    if is_on_a_forge(rebase.project):
         push = LeasedPush(
             worktree=run.worktree,
             branch=run.branch,
@@ -165,7 +165,7 @@ def rebase_milestone_branches(
     with hold_lock(locate_worktrees_lock(runtime.paths.lock_directory, project)):
         main_branch = read_project_field(rebase.project, MAIN_FIELD)
         main = locate_forge_branch(runtime.run_process, rebase.project, main_branch, rebase.read_environment)
-        login = rebase.read_login() if is_on_github(rebase.project) else NO_LOGIN
+        login = rebase.read_login() if is_on_a_forge(rebase.project) else NO_LOGIN
         outcome = _rebase_milestone(runtime, rebase, rebase.branch, main)
     if outcome is None:
         return None
