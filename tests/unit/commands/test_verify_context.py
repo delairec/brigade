@@ -246,11 +246,13 @@ LOCAL_TASK_WORKTREE = {
     _resolve(TASK_HEAD): f"{TASK_HEAD}\n",
     _resolve(MERGE_BASE): f"{MERGE_BASE}\n",
     ("git", "merge-base", "--end-of-options", MAIN_HEAD, TASK_HEAD): f"{MERGE_BASE}\n",
+    ("git", "merge-base", "--is-ancestor"): "",
     ("git", "diff", "--numstat"): "1\t0\tsrc/tides.py\n",
     ("git", "diff"): "+def tide():\n",
     ("awawa", "diff"): '{"added": [], "changed": [], "removed": []}',
     ("awawa", "context"): "TASK T7\n",
     ("awawa", "lint"): "",
+    ("awawa", "fmt"): "",
 }
 
 
