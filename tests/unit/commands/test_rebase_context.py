@@ -199,8 +199,21 @@ class RebaseContextOfAMilestoneOrWaveBranchTest(unittest.TestCase):
             (*MERGE_TREE[:-1], base): CONFLICTING_MERGE,
         }
         corpus = {"PROJECT": {"tidepool": project}, "TASK": {"T7": TASK_OF_THE_MILESTONE}}
-        machine = ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus))
-        return create_test_runtime(create_test_paths(self.root), run_process=machine.run)
+        self.machine = ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus))
+        return create_test_runtime(create_test_paths(self.root), run_process=self.machine.run)
+
+    def test_should_read_the_tasks_of_the_wave_in_the_area_of_the_project(self):
+        # Arrange
+        project_in_an_area = (*MILESTONE_WITHOUT_FORGE, ("CORPUS", "brigade"), ("MODE", "area"))
+        runtime = self._create_runtime(project_in_an_area, "integration/tidepool_w16", "integration/tides")
+
+        # Act
+        document = COMMAND.run(Namespace(pr=NO_PULL_REQUEST, head=NO_RED_HEAD, into=NO_MAIN_REPAIR), runtime)
+
+        # Assert
+        self.assertEqual(document["base"], "integration/tides")
+        self.assertIn(("awawa", "show", "@TASK.T7", "--json", "/srv/tidepool-branch/brigade"), self.machine.argvs)
+        self.assertNotIn(("awawa", "show", "@TASK.T7", "--json", "/srv/tidepool-branch"), self.machine.argvs)
 
     def test_should_describe_the_branch_its_base_and_its_conflicts_with_that_base(self):
         for case, project, branch, base, upstream in [
