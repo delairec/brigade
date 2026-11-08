@@ -35,13 +35,14 @@ class TickOfAWaveWaitingOnATaskAnEarlierWaveMergedOnTheForgeTest(unittest.TestCa
         project.run_git("-C", str(clone), "commit", "--quiet", "-m", "docs: plan the task that follows S1")
         project.run_git("-C", str(clone), "push", "--quiet", "origin", MILESTONE_BRANCH)
 
-    def test_should_leave_the_local_branch_of_the_milestone_behind_the_forge(self):
-        # Arrange
+    def read_the_local_and_forge_heads_of_the_milestone_branch(self) -> tuple[str, str]:
         project = self.rehearser.project
-
-        # Act
         local_head = project.run_git("rev-parse", MILESTONE_BRANCH)
-        remote_head = project.run_git("--git-dir", str(self.rehearser.remote), "rev-parse", MILESTONE_BRANCH)
+        return local_head, project.run_git("--git-dir", str(self.rehearser.remote), "rev-parse", MILESTONE_BRANCH)
+
+    def test_should_leave_the_local_branch_of_the_milestone_behind_the_forge(self):
+        # Act
+        local_head, remote_head = self.read_the_local_and_forge_heads_of_the_milestone_branch()
 
         # Assert
         self.assertNotEqual(local_head, remote_head)
