@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import tempfile
 import unittest
@@ -5,8 +6,8 @@ from pathlib import Path
 
 from brigade.corpus.read_entities import Entity, EntityField
 from brigade.tick.actions import LaunchTask, RebaseMilestone, RebaseTask
-from brigade.tick.find_holding_base import find_holding_base
-from brigade.tick.head_proof import HeadProof, HoldingHead
+from brigade.tick.find_holding_head import find_holding_head
+from brigade.tick.head_proof import ForgeCheck, HeadChecks, HeadProof, HoldingHead
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
@@ -67,21 +68,21 @@ def list_a_pending_check_run(repository: str, branch: str) -> list[dict]:
     return [{"head": BASE_HEAD, "name": "unit", "conclusion": "pending"}]
 
 
-class FindHoldingBaseTest(unittest.TestCase):
+class FindHoldingHeadTest(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.paths = create_test_paths(Path(directory.name))
 
-    def _record_checks(self, exit_code: int) -> None:
-        record = self.paths.state_root / "commit-checks" / "oak" / f"{BASE_HEAD}.json"
-        record.parent.mkdir(parents=True)
+    def _record_checks(self, exit_code: int, commit: str = BASE_HEAD) -> None:
+        record = self.paths.state_root / "commit-checks" / "oak" / f"{commit}.json"
+        record.parent.mkdir(parents=True, exist_ok=True)
         record.write_text(
             json.dumps(
                 {
                     "schema_version": 1,
                     "project": "oak",
-                    "commit": BASE_HEAD,
+                    "commit": commit,
                     "checks": [{"command": "make test", "exit_code": exit_code}],
                 }
             ),
@@ -90,7 +91,7 @@ class FindHoldingBaseTest(unittest.TestCase):
 
     def _find(self, project: Entity, action, answers: dict, list_check_runs=list_no_check_run) -> HoldingHead | None:
         runtime = create_test_runtime(self.paths, run_process=RecordingProcessRunner(answers))
-        return find_holding_base(runtime, project, action, list_check_runs)
+        return find_holding_head(runtime, project, action, list_check_runs)
 
     def test_should_name_the_red_base_of_a_task_branch_off_it(self):
         # Arrange
@@ -143,6 +144,37 @@ class FindHoldingBaseTest(unittest.TestCase):
         # Assert
         self.assertIsNone(held_by)
 
+    def test_should_hold_nothing_for_a_red_task_branch_off_a_red_base_built_as_it_stands(self):
+        # Arrange
+        self._record_checks(1)
+        self._record_checks(1, TASK_HEAD)
+
+        # Act
+        held_by = self._find(LOCAL_PROJECT, LAUNCH, TASK_BRANCH_OFF_THE_BASE)
+
+        # Assert
+        self.assertIsNone(held_by)
+
+    def test_should_name_the_task_branch_whose_pull_request_has_a_pending_check_run(self):
+        # Arrange
+        self._record_checks(1)
+        pending_launch = dataclasses.replace(
+            LAUNCH,
+            pull_request_checks=HeadChecks(head=TASK_HEAD, checks=(ForgeCheck(name="unit", verdict="pending"),)),
+        )
+
+        # Act
+        held_by = self._find(LOCAL_PROJECT, pending_launch, TASK_BRANCH_OFF_THE_BASE)
+
+        # Assert
+        self.assertEqual(
+            held_by,
+            HoldingHead(
+                branch="feature/T7-tide-table",
+                proof=HeadProof(commit=TASK_HEAD, state="pending", failed_commands=()),
+            ),
+        )
+
     def test_should_name_the_red_base_of_a_catch_up(self):
         # Arrange
         self._record_checks(1)
@@ -164,6 +196,27 @@ class FindHoldingBaseTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(held_by.branch, "main")
+
+    def test_should_name_the_red_milestone_branch_of_its_rebase_onto_a_green_main_branch(self):
+        # Arrange
+        self._record_checks(0)
+        self._record_checks(1, TASK_HEAD)
+        both_heads = {
+            resolve("main"): ProcessAnswer(stdout=f"{BASE_HEAD}\n"),
+            resolve("integration/M4"): ProcessAnswer(stdout=f"{TASK_HEAD}\n"),
+        }
+
+        # Act
+        held_by = self._find(LOCAL_PROJECT, MILESTONE_REBASE, both_heads)
+
+        # Assert
+        self.assertEqual(
+            held_by,
+            HoldingHead(
+                branch="integration/M4",
+                proof=HeadProof(commit=TASK_HEAD, state="red", failed_commands=("make test",)),
+            ),
+        )
 
     def test_should_name_the_base_of_the_forge_whose_check_run_is_pending(self):
         # Arrange
