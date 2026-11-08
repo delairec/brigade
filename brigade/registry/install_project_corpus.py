@@ -5,7 +5,6 @@ from pathlib import Path
 from brigade.corpus.change_corpus_file import CorpusChange, change_corpus_file
 from brigade.corpus.locate_corpus_lock import locate_corpus_lock
 from brigade.corpus.read_entities import Entity
-from brigade.corpus.shipped_data import SHIPPED_PROJECT_SCHEMA
 from brigade.errors import BrigadeError
 from brigade.git.add_detached_worktree import add_detached_worktree
 from brigade.git.create_branch import create_branch
@@ -16,6 +15,7 @@ from brigade.git.remove_worktree import remove_worktree
 from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_corpus_workspace import read_corpus_workspace
 from brigade.registry.read_project_field import read_project_field
+from brigade.registry.render_project_schema import render_project_schema
 from brigade.runtime import Runtime
 from brigade.system.parse_configuration import CLI_KEY
 from brigade.waves.locate_project_main import locate_project_main
@@ -48,7 +48,7 @@ def _commit_on_branch(runtime: Runtime, installation: CorpusInstallation, root: 
                 lock=locate_corpus_lock(runtime.paths.lock_directory, root),
                 file_names=(f"{read_project_field(project, 'CORPUS')}/{SCHEMA_FILE}",),
                 describe_message=lambda: SUBJECT,
-                rewrite=lambda texts: (SHIPPED_PROJECT_SCHEMA.read_text(encoding="utf-8"),),
+                rewrite=lambda texts: (render_project_schema(project),),
                 workspace=read_corpus_workspace(project),
             ),
         )

@@ -83,11 +83,32 @@ class InstallProjectCorpusInAnAreaTest(InstallProjectCorpusTestCase):
         )
 
         # Assert
-        self.assertEqual((self.worktree / "brigade" / "_schema.awawa").read_text(), SHIPPED_PROJECT_SCHEMA.read_text())
         self.assertIn(
             ("awawa", "lint", "--strict", str(self.worktree / "brigade")),
             self.processes.argvs,
         )
+
+    def test_should_write_a_schema_declaring_impl_a_string(self):
+        # Arrange
+        project = Entity(
+            name="app",
+            fields=(
+                EntityField(name="PATH", value="/srv/app"),
+                EntityField(name="MAIN", value="trunk"),
+                EntityField(name="CORPUS", value="brigade"),
+                EntityField(name="MODE", value="area"),
+                EntityField(name="FORGE", value="none"),
+            ),
+        )
+
+        # Act
+        install_project_corpus(
+            self.runtime,
+            CorpusInstallation(project=project, forge=None, read_environment=lambda key: LOGIN_ENVIRONMENT),
+        )
+
+        # Assert
+        self.assertIn("\t\tFIELD IMPL string\n", (self.worktree / "brigade" / "_schema.awawa").read_text())
 
 
 class InstallProjectCorpusWithoutAForgeTest(InstallProjectCorpusTestCase):

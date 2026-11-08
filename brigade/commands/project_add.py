@@ -3,6 +3,7 @@ import dataclasses
 import functools
 import posixpath
 import re
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -41,6 +42,10 @@ AREA_MODE = "area"
 CORPUS_MODES = (CONTROL_MODE, AREA_MODE)
 DEFAULT_AREA_FOLDER = "brigade"
 MODE_QUESTION = "Corpus mode, control or area: "
+AREA_ANCHORS_WARNING = (
+    "brigade project add: in area the lint does not check the IMPL anchors;"
+    " the promotion check at the preflight is their only check"
+)
 
 
 @dataclass(frozen=True)
@@ -223,6 +228,8 @@ def project_add(request: argparse.Namespace, runtime: Runtime) -> dict:
         registration.find_registered()
         installed = _install_corpus(runtime, project)
     change_registry(runtime, f"brigade project add: {name}", registration.rewrite)
+    if discovery.mode == AREA_MODE:
+        sys.stderr.write(f"{AREA_ANCHORS_WARNING}\n")
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "action": "replaced" if registration.replaced else "added",

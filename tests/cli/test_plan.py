@@ -265,6 +265,15 @@ class BrigadeProjectAddInAnAreaThenPlanTest(PlanContextTestCase):
         self.assertEqual(package["decisions"], [])
         self.assertIn("DELIVERED_BY", package["schemas"]["TASK"])
 
+    def test_should_warn_that_the_preflight_alone_checks_the_anchors_and_still_succeed(self):
+        # Act
+        completed = self.add_in_an_area()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("the lint does not check the IMPL anchors", completed.stderr)
+        self.assertIn("the promotion check at the preflight is their only check", completed.stderr)
+
     def test_should_exit_2_naming_the_option_with_stdin_closed_and_no_option(self):
         # Act
         completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(self.project.path), request="")
