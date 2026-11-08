@@ -2364,6 +2364,17 @@ class PlanMilestoneReportTest(unittest.TestCase):
         # Assert
         self.assertEqual(actions, (REPORT_M4,))
 
+    def test_should_report_none_while_a_rebase_run_is_live_on_the_branch_of_the_milestone(self):
+        # Arrange
+        milestone = dataclasses.replace(create_milestone(WAVES_OF_M4_CLOSED, NO_TASK_TODO), rebase_run_live=True)
+        snapshot = Snapshot(now=NOW, projects=(SHOP,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
     def test_should_report_none_once_the_milestone_is_reported(self):
         # Arrange
         milestone = dataclasses.replace(create_milestone(WAVES_OF_M4_CLOSED, NO_TASK_TODO), reported=True)
