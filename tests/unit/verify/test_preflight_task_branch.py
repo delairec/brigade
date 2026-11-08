@@ -151,8 +151,7 @@ class PreflightTaskBranchOfAnAreaTest(unittest.TestCase):
         (self.head_tree / "brigade").mkdir(parents=True)
         (self.base_tree / "brigade").mkdir(parents=True)
 
-    def test_should_read_the_area_and_run_the_acceptance_at_the_root_of_the_repository(self):
-        # Arrange
+    def run_preflight(self, task_fields: list[dict]) -> tuple[RecordingProcessRunner, dict]:
         head_area = self.head_tree / "brigade"
         fields = {"PATH": "/srv/shop", "CORPUS": "brigade", "MODE": "area"}
         runner = RecordingProcessRunner(
@@ -165,7 +164,7 @@ class PreflightTaskBranchOfAnAreaTest(unittest.TestCase):
                 _resolve(BASE): ProcessAnswer(stdout=f"{BASE}\n"),
                 ("git", "diff", "--numstat", "--text", "--end-of-options", BASE, HEAD, "--"): ProcessAnswer(stdout=""),
                 ("awawa", "show", "@TASK.B1", "--json", str(head_area)): ProcessAnswer(
-                    stdout=json.dumps({"fields": [{"name": "STATUS", "atoms": ["implemented"], "fields": []}]})
+                    stdout=json.dumps({"fields": task_fields})
                 ),
                 ("awawa", "diff", str(self.base_tree / "brigade"), str(head_area), "--json"): ProcessAnswer(
                     stdout=json.dumps({"added": [], "changed": [], "removed": []})
@@ -189,10 +188,34 @@ class PreflightTaskBranchOfAnAreaTest(unittest.TestCase):
             base_branch=MILESTONE_BRANCH,
             configuration=Configuration(),
         )
+        return runner, preflight_task_branch(create_test_runtime(self.paths, run_process=runner), demand)
+
+    def test_should_read_the_area_and_run_the_acceptance_at_the_root_of_the_repository(self):
+        # Arrange
+        implemented = [{"name": "STATUS", "atoms": ["implemented"], "fields": []}]
 
         # Act
-        preflight_task_branch(create_test_runtime(self.paths, run_process=runner), demand)
+        runner, _document = self.run_preflight(implemented)
 
         # Assert
         self.assertIn((str(self.head_tree), ("python3", "-m", "unittest")), runner.commands)
-        self.assertIn((str(head_area), ("awawa", "fmt", "--check", ".")), runner.commands)
+        self.assertIn((str(self.head_tree / "brigade"), ("awawa", "fmt", "--check", ".")), runner.commands)
+
+    def test_should_resolve_the_anchors_of_the_task_from_the_root_of_the_repository(self):
+        # Arrange
+        (self.head_tree / "src").mkdir()
+        (self.head_tree / "src" / "cart.py").write_text("def add_item():\n")
+        anchored_outside_the_area = [
+            {"name": "STATUS", "atoms": ["implemented"], "fields": []},
+            {
+                "name": "SPEC",
+                "atoms": ['"adds an item"'],
+                "fields": [{"name": "IMPL", "atoms": ['"src/cart.py::def add_item"'], "fields": []}],
+            },
+        ]
+
+        # Act
+        _runner, document = self.run_preflight(anchored_outside_the_area)
+
+        # Assert
+        self.assertIn({"name": "promotion", "verdict": "pass", "findings": []}, document["checks"])

@@ -50,6 +50,10 @@ Without the option, `project add` asks on a terminal, then proposes the folder t
 with stdin not a terminal, it exits 2 naming `--corpus-mode`. `area` installs the template on a branch and pull request
 or merge command, as `--init-corpus` does.
 
+> **Watch out:** in `area` the schema of the folder declares `IMPL` a string, an awawa anchor resolving only inside its
+> workspace, so the lint does not check the anchors: the promotion check at the preflight, which resolves each `IMPL`
+> from the root of the repository, is their only check, and `project add` says so on stderr.
+
 A project whose `MODE` is `none` is refused by every command that reads its corpus, exit 1 naming the mode, and the tick
 skips it on stderr.
 

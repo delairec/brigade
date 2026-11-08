@@ -42,8 +42,7 @@ class PreflightPullRequestOfAnAreaTest(unittest.TestCase):
     def setUp(self):
         PreflightPullRequestTest.setUp(self)
 
-    def test_should_judge_the_corpus_files_of_the_area_alone(self):
-        # Arrange
+    def run_preflight(self) -> dict:
         (self.head_tree / "brigade").mkdir(exist_ok=True)
         (self.base_tree / "brigade").mkdir(parents=True)
         (self.head_tree / "brigade" / "tasks.awawa").write_text("")
@@ -80,14 +79,23 @@ class PreflightPullRequestOfAnAreaTest(unittest.TestCase):
             environment={"GH_TOKEN": "token-of-octo-builder"},
             configuration=Configuration(),
         )
-
-        # Act
-        document = preflight_pull_request(
+        return preflight_pull_request(
             create_test_runtime(self.paths, run_process=RecordingProcessRunner(answers)), demand
         )
 
+    def test_should_judge_the_corpus_files_of_the_area_alone(self):
+        # Act
+        document = self.run_preflight()
+
         # Assert
         self.assertIn({"name": "untouched_files", "verdict": "pass", "findings": []}, document["checks"])
+
+    def test_should_resolve_the_anchors_of_the_task_from_the_root_of_the_repository(self):
+        # Act
+        document = self.run_preflight()
+
+        # Assert
+        self.assertIn({"name": "promotion", "verdict": "pass", "findings": []}, document["checks"])
 
 
 class PreflightPullRequestTest(unittest.TestCase):

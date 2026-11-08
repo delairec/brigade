@@ -31,7 +31,9 @@ class CheckPromotionTest(unittest.TestCase):
                 )
             }
         )
-        return check_promotion(awawa, PromotionFacts(head_tree=self.head_tree, task="B1", pr=160))
+        return check_promotion(
+            awawa, PromotionFacts(head_tree=self.head_tree, repository_tree=self.head_tree, task="B1", pr=160)
+        )
 
     def test_should_pass_a_task_implemented_delivered_by_the_pull_request_and_anchored(self):
         # Act
@@ -120,10 +122,70 @@ class CheckPromotionTest(unittest.TestCase):
                 )
             }
         )
-        facts = PromotionFacts(head_tree=self.head_tree, task="B1", pr=no_pull_request)
+        facts = PromotionFacts(head_tree=self.head_tree, repository_tree=self.head_tree, task="B1", pr=no_pull_request)
 
         # Act
         check = check_promotion(awawa, facts)
 
         # Assert
         self.assertEqual(check, {"name": "promotion", "verdict": "pass", "findings": []})
+
+
+class CheckPromotionOfAnAreaTest(unittest.TestCase):
+    def setUp(self):
+        self.repository_tree = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.repository_tree)
+        self.area_tree = self.repository_tree / "brigade"
+        self.area_tree.mkdir()
+        (self.repository_tree / "src").mkdir()
+        (self.repository_tree / "src" / "cart.py").write_text("def add_item():\n")
+        (self.area_tree / "notes.py").write_text("def only_in_the_area():\n")
+
+    def check(self, anchor: str) -> dict:
+        awawa = RecordingProcessRunner(
+            {
+                ("awawa", "show", "@TASK.B1", "--json", str(self.area_tree)): ProcessAnswer(
+                    stdout=json.dumps(
+                        {
+                            "fields": [
+                                {"name": "STATUS", "atoms": ["implemented"], "fields": []},
+                                create_spec("adds an item", anchor),
+                            ]
+                        }
+                    )
+                )
+            }
+        )
+        no_pull_request = None
+        facts = PromotionFacts(
+            head_tree=self.area_tree, repository_tree=self.repository_tree, task="B1", pr=no_pull_request
+        )
+        return check_promotion(awawa, facts)
+
+    def test_should_pass_a_task_anchored_on_a_file_outside_the_area(self):
+        # Act
+        check = self.check("src/cart.py::def add_item")
+
+        # Assert
+        self.assertEqual(check, {"name": "promotion", "verdict": "pass", "findings": []})
+
+    def test_should_refuse_an_anchor_read_from_the_area_instead_of_the_repository(self):
+        # Act
+        check = self.check("notes.py::def only_in_the_area")
+
+        # Assert
+        self.assertEqual(check["findings"], ["SPEC 1 has no IMPL whose anchor resolves: adds an item"])
+
+    def test_should_refuse_a_file_absent_from_the_repository(self):
+        # Act
+        check = self.check("src/absent.py::def add_item")
+
+        # Assert
+        self.assertEqual(check["findings"], ["SPEC 1 has no IMPL whose anchor resolves: adds an item"])
+
+    def test_should_refuse_a_text_absent_from_the_file(self):
+        # Act
+        check = self.check("src/cart.py::def remove_item")
+
+        # Assert
+        self.assertEqual(check["findings"], ["SPEC 1 has no IMPL whose anchor resolves: adds an item"])

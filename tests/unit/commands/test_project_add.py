@@ -1,4 +1,6 @@
 import argparse
+import contextlib
+import io
 import json
 import tempfile
 import unittest
@@ -7,6 +9,8 @@ from pathlib import Path
 from brigade.commands.project_add import COMMAND, project_add
 from brigade.errors import BrigadeError, UsageError
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 NO_PROJECT = json.dumps({"entities": []})
 APP_PROJECT = json.dumps({"entities": [{"type": "PROJECT", "name": "app"}]})
@@ -14,8 +18,10 @@ ELSEWHERE = json.dumps({"fields": [{"name": "PATH", "atoms": ['"/srv/elsewhere"'
 LIB_AND_APP = (
     'PROJECT lib\n\tPATH "/srv/lib"\n\tSTATUS active\n\nPROJECT app\n\tPATH "/srv/elsewhere"\n\tSTATUS active\n'
 )
-from tests.unit.create_test_paths import create_test_paths
-from tests.unit.create_test_runtime import create_test_runtime
+AREA_ANCHORS_WARNING = (
+    "brigade project add: in area the lint does not check the IMPL anchors;"
+    " the promotion check at the preflight is their only check"
+)
 
 
 def _create_request(path: Path, **options) -> argparse.Namespace:
@@ -531,6 +537,28 @@ class ProjectAddOnATrackedCorpusTest(unittest.TestCase):
         # Assert
         self.assert_registered_field(document, "CORPUS", "brigade")
         self.assert_registered_field(document, "MODE", "area")
+
+    def test_should_warn_that_the_preflight_is_the_only_check_of_the_anchors_in_an_area(self):
+        # Arrange
+        warnings = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(warnings):
+            self.add(corpus_mode="area")
+
+        # Assert
+        self.assertEqual(warnings.getvalue(), f"{AREA_ANCHORS_WARNING}\n")
+
+    def test_should_not_warn_of_the_anchors_in_control(self):
+        # Arrange
+        warnings = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(warnings):
+            self.add(corpus_mode="control")
+
+        # Assert
+        self.assertEqual(warnings.getvalue(), "")
 
     def test_should_take_the_folder_of_the_corpus_option_over_the_default(self):
         for mode, expected in [("control", "docs/spec"), ("area", "docs/spec")]:

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.corpus.prepare_project_checkout import prepare_project_checkout
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity
 from brigade.git.count_changed_lines import count_changed_lines
@@ -76,6 +77,13 @@ def _compare_commits(runtime: Runtime, repository: Path, base_branch: str, head:
     return _ComparedCommits(repository=repository, base_head=base_head, base=base, head=head)
 
 
+def _check_promotion(runtime: Runtime, demand: PreflightDemand, head: str, head_tree: Path) -> dict:
+    head_demand = TreeDemand(project=demand.project.name, ref=head)
+    repository_tree = prepare_project_checkout(demand.project, head_demand, demand.configuration, runtime).root
+    facts = PromotionFacts(head_tree=head_tree, repository_tree=repository_tree, task=demand.task, pr=demand.pr)
+    return check_promotion(runtime.run_process, facts)
+
+
 def _run_checks(runtime: Runtime, demand: PreflightDemand, pull_request: dict, commits: _ComparedCommits) -> list:
     run_process = runtime.run_process
     project = demand.project.name
@@ -89,7 +97,7 @@ def _run_checks(runtime: Runtime, demand: PreflightDemand, pull_request: dict, c
         check_ancestry(run_process, ancestry),
         check_check_runs(pull_request["checks"]),
         check_corpus_at_head(run_process, head_tree),
-        check_promotion(run_process, PromotionFacts(head_tree=head_tree, task=demand.task, pr=demand.pr)),
+        _check_promotion(runtime, demand, commits.head, head_tree),
         check_untouched_files(
             run_process,
             UntouchedFilesFacts(
