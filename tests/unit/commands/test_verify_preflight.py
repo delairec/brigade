@@ -10,10 +10,10 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
 TASK_WORKTREE = {
-    ("git", "rev-parse", "--show-toplevel"): "/home/user/tidepool-T7\n",
-    ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): "/home/user/tidepool/.git\n",
+    ("git", "rev-parse", "--show-toplevel"): "/srv/tidepool-T7\n",
+    ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): "/srv/tidepool/.git\n",
 }
-TIDEPOOL_PROJECT = (("PATH", "/home/user/tidepool"),)
+TIDEPOOL_PROJECT = (("PATH", "/srv/tidepool"),)
 GITHUB_PROJECT = (*TIDEPOOL_PROJECT, ("FORGE", "github"))
 TIDEPOOL_TASKS = {"T7": (("MILESTONE", "@MILESTONE.M4"),)}
 M4_BRANCH_CUT = {
@@ -136,7 +136,7 @@ class VerifyPreflightOfAPullRequestTest(unittest.TestCase):
             [
                 (
                     "read_pull_request",
-                    {"schema_version": 1, "repository": "/home/user/tidepool", "number": 42, "environment": {}},
+                    {"schema_version": 1, "repository": "/srv/tidepool", "number": 42, "environment": {}},
                 )
             ],
         )
@@ -180,7 +180,7 @@ class VerifyPreflightAsTheLoginOfTheCliKeyTest(unittest.TestCase):
                     "read_pull_request",
                     {
                         "schema_version": 1,
-                        "repository": "/home/user/tidepool",
+                        "repository": "/srv/tidepool",
                         "number": 42,
                         "environment": {"GH_TOKEN": "token-of-octo-cli"},
                     },
@@ -214,7 +214,7 @@ class VerifyPreflightAsTheLoginOfTheCliKeyTest(unittest.TestCase):
             [
                 (
                     "read_pull_request",
-                    {"schema_version": 1, "repository": "/home/user/tidepool", "number": 42, "environment": {}},
+                    {"schema_version": 1, "repository": "/srv/tidepool", "number": 42, "environment": {}},
                 )
             ],
         )
