@@ -16676,7 +16676,7 @@ TASK B238
 		+ "command that failed on stderr at each tick, as brigade/commands/tick.py names a blocked"
 		+ "milestone rebase, and brigade tick --dry-run names it in its plan; the rebases onto the"
 		+ "base resume once its head is green"
-		IMPL "brigade/tick/find_holding_base.py::def find_holding_base("
+		IMPL "brigade/tick/find_holding_head.py::def find_holding_head("
 		IMPL "brigade/tick/describe_holding_head.py::def describe_holding_head("
 		IMPL "tests/unit/commands/test_tick.py::class"
 			+ "TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):"
