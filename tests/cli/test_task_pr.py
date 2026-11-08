@@ -60,7 +60,10 @@ class TaskPrTestCase(TaskCheckTestCase):
         self.remote = root / "remotes" / "shop.git"
         self.project.run_git("init", "--quiet", "--bare", str(self.remote))
         self.project.run_git("remote", "add", "origin", str(self.remote))
+        self.project.run_git("push", "--quiet", "origin", MILESTONE_BRANCH)
         self.configure(keys=PR_KEYS)
+        projects = self.machine.corpus / "projects.awawa"
+        projects.write_text(projects.read_text().replace('\tFORGE "none"\n', '\tFORGE "github"\n'))
         self.write_task(TYPED_TASKS)
 
     def describe_environment(self) -> dict:
