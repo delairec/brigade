@@ -48,8 +48,9 @@ entity, `control` when absent.
 
 Without the option, `project add` asks on a terminal, then proposes the folder to confirm, `--corpus` overriding it;
 with stdin not a terminal, it exits 2 naming `--corpus-mode`. `area` refuses a folder holding a corpus that is not
-brigade's own, its schema differing from the template, and installs the template on a branch and pull request or merge
-command, as `--init-corpus` does.
+brigade's own, its schema lacking the types of the template, declaring another, or leaving the `IMPL` of a task an
+anchor; a schema an earlier brigade installed is brigade's own. It installs the template on a branch and pull request
+or merge command, as `--init-corpus` does.
 
 > **Watch out:** in `area` the schema of the folder declares `IMPL` a string, an awawa anchor resolving only inside its
 > workspace, so the lint does not check the anchors: the promotion check at the preflight, which resolves each `IMPL`
