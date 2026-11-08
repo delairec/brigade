@@ -13,11 +13,12 @@ from brigade.command import Argument, Command, ExclusiveArguments
 from brigade.commands._launch_branch_rebase import launch_branch_rebase
 from brigade.commands._list_branch_check_runs import list_branch_check_runs
 from brigade.commands._read_cli_login import read_cli_login
-from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME, ForgeSlot, read_forge_environment
+from brigade.commands._read_forge_environment import FORGE_KIND, ForgeSlot, read_forge_environment
 from brigade.commands._remember_forge_logins import remember_forge_logins
 from brigade.commands._repair_red_head import repair_red_head
 from brigade.commands.run import run
 from brigade.corpus.prepare_project_tree import prepare_project_tree
+from brigade.corpus.read_entities import Entity
 from brigade.corpus.read_entity import read_entity
 from brigade.errors import StandingDown, UsageError
 from brigade.inbox.record_check_runs import CheckRunsRecording, record_check_runs
@@ -38,6 +39,7 @@ from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.registry.find_project import find_project
+from brigade.registry.find_project_at import find_project_at
 from brigade.registry.is_on_github import is_on_github
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_project_forge import NO_FORGE, read_project_forge
@@ -62,6 +64,7 @@ from brigade.system.collector_places import locate_collectors
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT
 from brigade.system.parse_configuration import Configuration
+from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.remove_expired_trails import remove_expired_trails
 from brigade.system.repeat_until_signalled import repeat_until_signalled
@@ -148,6 +151,7 @@ VERIFYING_STATE = "verifying"
 MERGED_STATE = "merged"
 PATH_FIELD = "PATH"
 NO_LOGIN = None
+NO_PULL_REQUEST_OFF_A_FORGE = None
 FAILED_VERDICT = "fail"
 TICK_INTERVAL_S = 300
 ROUND_CAP = 10
@@ -195,7 +199,7 @@ def _launch_rebase_of_the_branch(runtime: Runtime, configuration: Configuration,
 
 def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchTask) -> None:
     forge = TickForge(
-        read_environment=_cache_forge_environment(runtime, configuration),
+        read_environment=_cache_forge_environment(runtime, configuration, _read_forge_of(runtime, action.project)),
         list_check_runs=list_branch_check_runs(runtime, configuration),
     )
     prepared = prepare_task_worktree(runtime, configuration, action, forge)
@@ -266,16 +270,22 @@ def _launch_remediation(runtime: Runtime, configuration: Configuration, action: 
     append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=FIXING_STATE))
 
 
+def _read_forge_of(runtime: Runtime, project_name: str) -> str:
+    return read_project_forge(find_project(read_projects(runtime), project_name))
+
+
 def _launch_check_repair(runtime: Runtime, configuration: Configuration, action: LaunchCheckRepair) -> None:
+    project = find_project(read_projects(runtime), action.project)
+    forge_name = read_project_forge(project)
     logs = ask_check_logs(
-        runtime.resolve_plugin("forge", FORGE_NAME),
-        FORGE_NAME,
+        runtime.resolve_plugin("forge", forge_name),
+        forge_name,
         CheckLogsQuery(
-            repository=read_project_field(find_project(read_projects(runtime), action.project), PATH_FIELD),
+            repository=read_project_field(project, PATH_FIELD),
             number=action.pr,
             checks=action.checks,
             lines=CHECK_LOG_LINES,
-            environment=read_forge_environment(configuration, ForgeSlot(FORGE_NAME, CLI_KEY), runtime),
+            environment=read_forge_environment(configuration, ForgeSlot(forge_name, CLI_KEY), runtime),
         ),
         runtime,
     )
@@ -337,8 +347,9 @@ def _launch_rebase(runtime: Runtime, configuration: Configuration, action: Rebas
 
 
 def _rebase_task(runtime: Runtime, configuration: Configuration, action: RebaseTask) -> None:
-    environment = read_forge_environment(configuration, ForgeSlot(FORGE_NAME, CLI_KEY), runtime)
-    login = ask_forge_account(runtime.resolve_plugin("forge", FORGE_NAME), FORGE_NAME, environment, runtime).login
+    forge_name = _read_forge_of(runtime, action.project)
+    environment = read_forge_environment(configuration, ForgeSlot(forge_name, CLI_KEY), runtime)
+    login = ask_forge_account(runtime.resolve_plugin("forge", forge_name), forge_name, environment, runtime).login
     rebase = rebase_task(runtime, action, environment, list_branch_check_runs(runtime, configuration))
     if rebase.held_by is not None:
         sys.stderr.write(
@@ -401,7 +412,7 @@ def _report_milestone(runtime: Runtime, configuration: Configuration, action: Re
     start_study_run(runtime, study, run_id)
     detach_study_run(runtime, study.name, run_id, record_run_pid)
     project = find_project(read_projects(runtime), order.project)
-    login = read_cli_login(configuration, runtime) if is_on_github(project) else NO_LOGIN
+    login = read_cli_login(configuration, read_project_forge(project), runtime) if is_on_github(project) else NO_LOGIN
     append_event(
         runtime.paths,
         runtime.now,
@@ -416,7 +427,7 @@ def _report_task(runtime: Runtime, configuration: Configuration, action: ReportT
     start_study_run(runtime, study, run_id)
     detach_study_run(runtime, study.name, run_id, record_run_pid)
     project = find_project(read_projects(runtime), order.project)
-    login = read_cli_login(configuration, runtime) if is_on_github(project) else NO_LOGIN
+    login = read_cli_login(configuration, read_project_forge(project), runtime) if is_on_github(project) else NO_LOGIN
     append_event(
         runtime.paths, runtime.now, TaskReported(project=order.project, task=order.task, run=run_id, login=login)
     )
@@ -458,8 +469,8 @@ def _preflight(runtime: Runtime, configuration: Configuration, action: RunPrefli
             task=action.task,
             base_branch=action.branch,
             pr=action.pr,
-            forge=runtime.resolve_plugin("forge", FORGE_NAME),
-            environment=read_forge_environment(configuration, ForgeSlot(FORGE_NAME, CLI_KEY), runtime),
+            forge=runtime.resolve_plugin("forge", read_project_forge(project)),
+            environment=read_forge_environment(configuration, ForgeSlot(read_project_forge(project), CLI_KEY), runtime),
             configuration=configuration,
         ),
     )
@@ -494,10 +505,11 @@ def _count_review_rounds(runtime: Runtime, action: MergePullRequest) -> int:
 
 
 def _merge_on_the_forge(runtime: Runtime, configuration: Configuration, action: MergePullRequest) -> str:
-    forge = runtime.resolve_plugin("forge", FORGE_NAME)
-    environment = read_forge_environment(configuration, ForgeSlot(FORGE_NAME, CLI_KEY), runtime)
     project = find_project(read_projects(runtime), action.project)
-    login = ask_forge_account(forge, FORGE_NAME, environment, runtime).login
+    forge_name = read_project_forge(project)
+    forge = runtime.resolve_plugin("forge", forge_name)
+    environment = read_forge_environment(configuration, ForgeSlot(forge_name, CLI_KEY), runtime)
+    login = ask_forge_account(forge, forge_name, environment, runtime).login
     forge.merge_pull_request(
         {
             "repository": read_project_field(project, PATH_FIELD),
@@ -538,25 +550,20 @@ def _close_milestone(runtime: Runtime, action: CloseMilestone) -> None:
 def _describe_milestone_pull_request(
     runtime: Runtime, configuration: Configuration, action: DescribeMilestonePullRequest
 ) -> None:
-    forge = runtime.resolve_plugin(FORGE_KIND, FORGE_NAME)
-    environment = read_forge_environment(configuration, ForgeSlot(FORGE_NAME, CLI_KEY), runtime)
     project = find_project(read_projects(runtime), action.project)
+    forge_name = read_project_forge(project)
+    forge = runtime.resolve_plugin(FORGE_KIND, forge_name)
+    environment = read_forge_environment(configuration, ForgeSlot(forge_name, CLI_KEY), runtime)
     repository = read_project_field(project, PATH_FIELD)
-    locate_forge_branch(runtime.run_process, project, action.branch, _cache_forge_environment(runtime, configuration))
-    query = argparse.Namespace(project=action.project, ref=action.head, worktree=None)
+    read_environment = _cache_forge_environment(runtime, configuration, forge_name)
+    locate_forge_branch(runtime.run_process, project, action.branch, read_environment)
     pull_requests = PullRequestTitles(forge=forge, repository=repository, environment=environment, runtime=runtime)
-    title = compose_milestone_title(
-        MilestoneTitleDemand(
-            run_process=runtime.run_process,
-            root=prepare_project_tree(query, configuration, runtime).root,
-            milestone=action.milestone,
-        )
-    )
+    title = _compose_the_milestone_title(runtime, configuration, action)
     if pull_requests.read_title(action.pr) != title:
         forge.edit_pull_request(
             {"repository": repository, "number": action.pr, "title": title, "environment": environment}, runtime
         )
-    login = ask_forge_account(forge, FORGE_NAME, environment, runtime).login
+    login = ask_forge_account(forge, forge_name, environment, runtime).login
     append_event(
         runtime.paths,
         runtime.now,
@@ -566,18 +573,31 @@ def _describe_milestone_pull_request(
     )
 
 
-def _cache_forge_environment(runtime: Runtime, configuration: Configuration) -> Callable[[str], dict]:
-    return functools.cache(lambda key: read_forge_environment(configuration, ForgeSlot(FORGE_NAME, key), runtime))
+def _compose_the_milestone_title(
+    runtime: Runtime, configuration: Configuration, action: DescribeMilestonePullRequest
+) -> str:
+    query = argparse.Namespace(project=action.project, ref=action.head, worktree=None)
+    return compose_milestone_title(
+        MilestoneTitleDemand(
+            run_process=runtime.run_process,
+            root=prepare_project_tree(query, configuration, runtime).root,
+            milestone=action.milestone,
+        )
+    )
+
+
+def _cache_forge_environment(runtime: Runtime, configuration: Configuration, forge_name: str) -> Callable[[str], dict]:
+    return functools.cache(lambda key: read_forge_environment(configuration, ForgeSlot(forge_name, key), runtime))
 
 
 def _start_wave(runtime: Runtime, configuration: Configuration, action: StartWave) -> None:
-    read_environment = _cache_forge_environment(runtime, configuration)
+    forge_name = _read_forge_of(runtime, action.project)
     start = WaveStart(
         project=action.project,
         tasks=(),
         configuration=configuration,
-        read_environment=read_environment,
-        read_login=functools.cache(lambda: read_cli_login(configuration, runtime)),
+        read_environment=_cache_forge_environment(runtime, configuration, forge_name),
+        read_login=functools.cache(lambda: read_cli_login(configuration, forge_name, runtime)),
     )
     start_project_wave(runtime, start, action.milestone)
 
@@ -590,15 +610,17 @@ def _hold_milestone_rebase(
 
 
 def _rebase_milestone(runtime: Runtime, configuration: Configuration, action: RebaseMilestone) -> None:
+    project = find_project(read_projects(runtime), action.project)
+    forge_name = read_project_forge(project)
     rebase = MilestoneBranchesRebase(
-        project=find_project(read_projects(runtime), action.project),
+        project=project,
         milestone=action.milestone,
         branch=action.branch,
         worktree_root=configuration.worktree_root,
-        read_environment=_cache_forge_environment(runtime, configuration),
+        read_environment=_cache_forge_environment(runtime, configuration, forge_name),
         is_run_live_on=lambda worktree: is_run_live_on(runtime.paths.state_root, worktree, is_recorded_process_alive),
         launch_rebase_run=lambda run: launch_branch_rebase(runtime, configuration, run),
-        read_login=lambda: read_cli_login(configuration, runtime),
+        read_login=lambda: read_cli_login(configuration, forge_name, runtime),
         name_holding_head=lambda held_by: _hold_milestone_rebase(runtime, configuration, action, held_by),
         list_check_runs=list_branch_check_runs(runtime, configuration),
     )
@@ -609,7 +631,8 @@ def _rebase_milestone(runtime: Runtime, configuration: Configuration, action: Re
 
 def _cut_milestone_branch(runtime: Runtime, configuration: Configuration, action: CutMilestoneBranch) -> None:
     project = find_project(read_projects(runtime), action.project)
-    read_environment = _cache_forge_environment(runtime, configuration)
+    forge_name = read_project_forge(project)
+    read_environment = _cache_forge_environment(runtime, configuration, forge_name)
     main = locate_project_main(runtime.run_process, project, read_environment)
     query = argparse.Namespace(project=project.name, ref=main, worktree=None)
     root = prepare_project_tree(query, configuration, runtime).root
@@ -617,7 +640,7 @@ def _cut_milestone_branch(runtime: Runtime, configuration: Configuration, action
         project=project,
         milestone=read_entity(runtime.run_process, root, MILESTONE_TYPE, action.milestone),
         read_environment=read_environment,
-        read_login=lambda: read_cli_login(configuration, runtime),
+        read_login=lambda: read_cli_login(configuration, forge_name, runtime),
     )
     cut_milestone_branch(runtime, demand)
 
@@ -637,7 +660,8 @@ def _pause_wave(runtime: Runtime, action: PauseWave) -> None:
 
 
 def _collect_check_runs(runtime: Runtime, configuration: Configuration, action: CollectCheckRuns) -> None:
-    path = Path(read_project_field(find_project(read_projects(runtime), action.project), PATH_FIELD))
+    project = find_project(read_projects(runtime), action.project)
+    path = Path(read_project_field(project, PATH_FIELD))
     record_check_runs(
         runtime,
         CheckRunsRecording(
@@ -648,8 +672,8 @@ def _collect_check_runs(runtime: Runtime, configuration: Configuration, action: 
             ),
             equipment=CollectorEquipment(
                 configuration=configuration,
-                forge=runtime.resolve_plugin("forge", FORGE_NAME),
-                forge_name=FORGE_NAME,
+                forge=runtime.resolve_plugin("forge", read_project_forge(project)),
+                forge_name=read_project_forge(project),
                 resolve_client=lambda name: runtime.resolve_plugin(CLIENT_KIND, name),
             ),
         ),
@@ -657,14 +681,15 @@ def _collect_check_runs(runtime: Runtime, configuration: Configuration, action: 
 
 
 def _collect_review_threads(runtime: Runtime, configuration: Configuration, action: CollectReviewThreads) -> None:
-    repository = Path(read_project_field(find_project(read_projects(runtime), action.project), PATH_FIELD))
+    project = find_project(read_projects(runtime), action.project)
+    repository = Path(read_project_field(project, PATH_FIELD))
     collector = runtime.resolve_plugin(
         COLLECTOR_KIND, REVIEW_THREADS_COLLECTOR, places=locate_collectors(repository, runtime.paths)
     )
     equipment = CollectorEquipment(
         configuration=configuration,
-        forge=runtime.resolve_plugin(FORGE_KIND, FORGE_NAME),
-        forge_name=FORGE_NAME,
+        forge=runtime.resolve_plugin(FORGE_KIND, read_project_forge(project)),
+        forge_name=read_project_forge(project),
         resolve_client=lambda name: runtime.resolve_plugin(CLIENT_KIND, name),
     )
     inputs = CollectorInputs(project=repository, since=BEGINNING, parameters=NO_PARAMETERS)
@@ -715,22 +740,38 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
 
 
 def _follow_pull_requests(runtime: Runtime, configuration: Configuration) -> Callable:
-    forge = runtime.resolve_plugin("forge", FORGE_NAME)
+    read_forge_name = functools.cache(
+        lambda repository: read_project_forge(find_project_at(read_projects(runtime), Path(repository)))
+    )
     read_environment = functools.cache(
-        lambda: read_forge_environment(configuration, ForgeSlot(FORGE_NAME, CLI_KEY), runtime)
+        lambda forge_name: read_forge_environment(configuration, ForgeSlot(forge_name, CLI_KEY), runtime)
     )
-    return lambda repository, branch: ask_pull_request(
-        forge,
-        FORGE_NAME,
-        PullRequestQuery(repository=repository, branch=branch, environment=read_environment()),
-        runtime,
+
+    def follow_pull_request(repository: str, branch: str) -> PullRequestFacts | None:
+        forge_name = read_forge_name(repository)
+        if forge_name == NO_FORGE:
+            return NO_PULL_REQUEST_OFF_A_FORGE
+        return ask_pull_request(
+            runtime.resolve_plugin(FORGE_KIND, forge_name),
+            forge_name,
+            PullRequestQuery(repository=repository, branch=branch, environment=read_environment(forge_name)),
+            runtime,
+        )
+
+    return follow_pull_request
+
+
+def _read_environment_of_project(runtime: Runtime, configuration: Configuration) -> Callable[[Entity, str], dict]:
+    read_environment = functools.cache(
+        lambda forge_name, key: read_forge_environment(configuration, ForgeSlot(forge_name, key), runtime)
     )
+    return lambda project, key: read_environment(read_project_forge(project), key)
 
 
 def _read_the_forge(runtime: Runtime, configuration: Configuration) -> ForgeReaders:
     return ForgeReaders(
         read_pull_request=_follow_pull_requests(runtime, configuration),
-        read_environment=_cache_forge_environment(runtime, configuration),
+        read_environment=_read_environment_of_project(runtime, configuration),
     )
 
 

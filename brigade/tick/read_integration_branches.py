@@ -1,3 +1,4 @@
+import functools
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -67,7 +68,7 @@ class IntegrationBranchReading:
     worktree_root: str | None
     state_root: Path
     read_pull_request: Callable[[str, str], PullRequestFacts | None]
-    read_environment: Callable[[str], dict]
+    read_environment: Callable[[Entity, str], dict]
     locate_wave_base: Callable[[WaveStarted], str]
     is_alive: Callable[[Path], bool]
 
@@ -129,7 +130,7 @@ def _has_reached_forge(
         branch_reading.run_process,
         branch_reading.project,
         _locate_base(branch_reading, recorded),
-        branch_reading.reading.read_environment,
+        functools.partial(branch_reading.reading.read_environment, branch_reading.project),
     )
     return _is_within(branch_reading, head, base)
 

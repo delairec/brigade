@@ -1,5 +1,6 @@
 import argparse
 import dataclasses
+import functools
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -449,7 +450,7 @@ def _list_preflight_failures(preflighted: TaskPreflighted) -> tuple[PreflightFai
 @dataclass(frozen=True)
 class ForgeReaders:
     read_pull_request: Callable[[str, str], PullRequestFacts | None]
-    read_environment: Callable[[str], dict]
+    read_environment: Callable[[Entity, str], dict]
 
 
 @dataclass(frozen=True)
@@ -821,13 +822,17 @@ def _list_uncut_milestones(
     )
 
 
+def _read_environment_of(reading: WaveReading, project: Entity) -> Callable[[str], dict]:
+    return functools.partial(reading.forge.read_environment, project)
+
+
 def _read_wave_making(runtime: Runtime, reading: WaveReading, project: Entity) -> _WaveMaking:
     if read_project_field(project, PROJECT_STATUS_FIELD) == PAUSED_PROJECT_STATUS:
         return NO_WAVE_MAKING
     tasks_reading = ProjectTasksReading(
         configuration=reading.configuration,
         project=project,
-        read_environment=reading.forge.read_environment,
+        read_environment=_read_environment_of(reading, project),
         entries=reading.entries,
     )
     main = read_project_tasks(runtime, tasks_reading, NO_MILESTONE)
@@ -965,7 +970,7 @@ def _list_open_waves(reading: WaveReading, project: str, of_milestone: set[str])
 def _is_behind_main(runtime: Runtime, reading: WaveReading, cut: MilestoneBranchCut, ref: str) -> bool:
     project = find_project(reading.projects, cut.project)
     main = locate_forge_branch(
-        runtime.run_process, project, read_project_field(project, MAIN_FIELD), reading.forge.read_environment
+        runtime.run_process, project, read_project_field(project, MAIN_FIELD), _read_environment_of(reading, project)
     )
     query = argparse.Namespace(project=cut.project, ref=main, worktree=None)
     active = read_active_milestones(
@@ -1010,7 +1015,7 @@ def _read_milestone_facts(runtime: Runtime, reading: WaveReading, cut: Milestone
             pull_request=reading.forge.read_pull_request(read_project_field(project, PATH_FIELD), cut.branch),
             described_head=_find_described_head(reading, cut.project, cut.milestone),
         )
-    ref = locate_forge_branch(runtime.run_process, project, cut.branch, reading.forge.read_environment)
+    ref = locate_forge_branch(runtime.run_process, project, cut.branch, _read_environment_of(reading, project))
     rebase_runs = _list_branch_rebase_runs(reading, project, cut.branch)
     of_milestone = _read_tasks_of_milestone(runtime, reading, cut, ref)
     names = {task.name for task in of_milestone}
