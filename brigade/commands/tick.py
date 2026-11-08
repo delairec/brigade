@@ -21,6 +21,7 @@ from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity
 from brigade.corpus.read_entity import read_entity
 from brigade.errors import StandingDown, UsageError
+from brigade.git.merge_task_branch import TaskBranchMerge, merge_task_branch
 from brigade.inbox.record_check_runs import CheckRunsRecording, record_check_runs
 from brigade.ledger.append_event import append_event
 from brigade.ledger.format_instant import format_instant
@@ -112,7 +113,6 @@ from brigade.tick.find_holding_head import find_holding_head
 from brigade.tick.head_proof import HoldingHead
 from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.ledger_reading_keeper import LedgerReadingKeeper
-from brigade.tick.merge_task_branch import TaskBranchMerge, merge_task_branch
 from brigade.tick.plan import plan
 from brigade.tick.plan_connectors import plan_connectors
 from brigade.tick.prepare_task_worktree import prepare_task_worktree

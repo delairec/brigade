@@ -17089,7 +17089,7 @@ TASK B240
 		+ "fork point: a task branch once merged is never rebased again"
 		IMPL "brigade/tick/plan.py::def _decide_delivered_head_merge("
 		IMPL "brigade/commands/tick.py::def _merge_task_branch("
-		IMPL "brigade/tick/merge_task_branch.py::def merge_task_branch("
+		IMPL "brigade/git/merge_task_branch.py::def merge_task_branch("
 		IMPL "brigade/tick/prepare_task_worktree.py::def _is_merged_locally("
 		IMPL "tests/cli/test_rehearsal_without_a_forge.py::def"
 			+ "test_should_merge_the_task_into_the_branch_of_its_milestone(self):"
