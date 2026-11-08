@@ -61,10 +61,22 @@ class ProjectListTest(unittest.TestCase):
                 "schema_version": 1,
                 "projects": [
                     {"name": "app", "path": "/srv/app", "status": "active", "forge": "none"},
-                    {"name": "lib", "path": "/srv/lib", "status": "", "forge": ""},
+                    {"name": "lib", "path": "/srv/lib", "status": "", "forge": "none"},
                 ],
             },
         )
+
+    def test_should_list_a_project_naming_no_forge_with_the_forge_none_the_commands_act_on(self):
+        # Arrange
+        self.runtime.paths.config_root.mkdir(parents=True)
+        self.runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
+        no_option = argparse.Namespace()
+
+        # Act
+        document = project_list(no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(document["projects"][1]["forge"], "none")
 
     def test_should_refuse_without_the_operational_corpus(self):
         # Arrange
