@@ -71,9 +71,10 @@ launches no other repair of that head.
 With the arguments `branch`, `head` and `into`. `brigade rebase context --head <head> --into <into>`, from the
 worktree, prints the fix branch, the red commit of the main branch and each check that failed at it. The worktree
 holds the branch `branch`, cut from that commit: repair the failures there as section 4 does, commit as
-`fix(<scope>): <what the repair restores>`, run the project's tests, and once they pass push the branch with
-`git push --set-upstream origin <branch>` and open its pull request into `<into>` with `gh pr create --base <into>
---head <branch>`, its title the subject of the commit. End done on the pull request, which the user merges: every
+`fix(<scope>): <what the repair restores>`, run the project's tests, and once they pass
+`brigade rebase pr --into <into>`: it pushes the branch and opens its pull request into `<into>`, its title the subject
+of the commit, as the login of the run, and records that login in the ledger; never `git push` nor `gh pr create`
+yourself. End done on the pull request, which the user merges: every
 rebase onto the main branch waits until its head is green again. On a project with no forge, push nothing and
 end done naming the branch, which the user merges. A repair that needs a decision is not made: push
 nothing and end blocked as section 4 does.
