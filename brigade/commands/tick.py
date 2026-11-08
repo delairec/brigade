@@ -197,11 +197,16 @@ def _launch_rebase_of_the_branch(runtime: Runtime, configuration: Configuration,
     run(rebasing, runtime)
 
 
-def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchTask) -> None:
-    forge = TickForge(
-        read_environment=_cache_forge_environment(runtime, configuration, _read_forge_of(runtime, action.project)),
-        list_check_runs=list_branch_check_runs(runtime, configuration),
+def _equip_tick_forge(runtime: Runtime, configuration: Configuration, project_name: str) -> TickForge:
+    forge_name = _read_forge_of(runtime, project_name)
+    return TickForge(
+        read_environment=_cache_forge_environment(runtime, configuration, forge_name),
+        list_check_runs=list_branch_check_runs(runtime, configuration, forge_name),
     )
+
+
+def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchTask) -> None:
+    forge = _equip_tick_forge(runtime, configuration, action.project)
     prepared = prepare_task_worktree(runtime, configuration, action, forge)
     if prepared.conflicted:
         _launch_rebase_of_the_branch(runtime, configuration, action, prepared.worktree.path)
@@ -350,7 +355,7 @@ def _rebase_task(runtime: Runtime, configuration: Configuration, action: RebaseT
     forge_name = _read_forge_of(runtime, action.project)
     environment = read_forge_environment(configuration, ForgeSlot(forge_name, CLI_KEY), runtime)
     login = ask_forge_account(runtime.resolve_plugin("forge", forge_name), forge_name, environment, runtime).login
-    rebase = rebase_task(runtime, action, environment, list_branch_check_runs(runtime, configuration))
+    rebase = rebase_task(runtime, action, environment, list_branch_check_runs(runtime, configuration, forge_name))
     if rebase.held_by is not None:
         sys.stderr.write(
             f"brigade tick: the catch-up of @TASK.{action.task} waits: {describe_holding_head(rebase.held_by)}\n"
@@ -622,7 +627,7 @@ def _rebase_milestone(runtime: Runtime, configuration: Configuration, action: Re
         launch_rebase_run=lambda run: launch_branch_rebase(runtime, configuration, run),
         read_login=lambda: read_cli_login(configuration, forge_name, runtime),
         name_holding_head=lambda held_by: _hold_milestone_rebase(runtime, configuration, action, held_by),
-        list_check_runs=list_branch_check_runs(runtime, configuration),
+        list_check_runs=list_branch_check_runs(runtime, configuration, forge_name),
     )
     outcome = rebase_milestone_branches(runtime, rebase)
     if outcome is not None:
@@ -884,12 +889,14 @@ def _tick_once(runtime: Runtime) -> dict:
 HELD_REBASES = (LaunchTask, RebaseTask, RebaseMilestone)
 
 
-def _describe_planned_action(runtime: Runtime, list_check_runs: Callable[[str, str], list[dict]], action) -> dict:
+def _describe_planned_action(
+    runtime: Runtime, list_check_runs_of: Callable[[str], Callable[[str, str], list[dict]]], action
+) -> dict:
     planned = dataclasses.asdict(action)
     if not isinstance(action, HELD_REBASES):
         return planned
     project = find_project(read_projects(runtime), action.project)
-    held_by = find_holding_head(runtime, project, action, list_check_runs)
+    held_by = find_holding_head(runtime, project, action, list_check_runs_of(read_project_forge(project)))
     if held_by is None:
         return planned
     return {**planned, "waits": describe_holding_head(held_by)}
@@ -898,13 +905,13 @@ def _describe_planned_action(runtime: Runtime, list_check_runs: Callable[[str, s
 def _plan_dry(runtime: Runtime) -> dict:
     configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     snapshot = build_snapshot(runtime, configuration, _read_the_forge(runtime, configuration))
-    list_check_runs = list_branch_check_runs(runtime, configuration)
+    list_check_runs_of = functools.cache(lambda forge_name: list_branch_check_runs(runtime, configuration, forge_name))
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "mode": "dry-run",
         "snapshot": snapshot.to_document(),
         "plan": [
-            _describe_planned_action(runtime, list_check_runs, action)
+            _describe_planned_action(runtime, list_check_runs_of, action)
             for action in (*plan(snapshot), *_plan_registered_connectors(runtime))
         ],
     }
