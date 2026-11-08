@@ -33,7 +33,9 @@ from brigade.planning.read_entity_sites import read_entity_sites
 from brigade.planning.read_plan import PlanEntity, read_plan
 from brigade.planning.read_planning_request import PlanningRequest
 from brigade.planning.review_plan_pull_request import review_plan_pull_request
+from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_project_field import read_project_field
+from brigade.registry.read_project_forge import read_project_forge
 from brigade.runtime import Runtime
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
 from brigade.system.parse_configuration import CLI_KEY
@@ -41,7 +43,6 @@ from brigade.waves.locate_project_main import locate_project_main
 
 MILESTONE_TYPE = "MILESTONE"
 TASK_TYPE = "TASK"
-GITHUB_FORGE = "github"
 WORKTREES_DIRECTORY = "plans"
 FILE_SUFFIX = "s.awawa"
 PLAN_BRANCH_PREFIX = "plan/"
@@ -198,13 +199,13 @@ def _describe_publication(recording: PlanRecording, milestone: PlanEntity, branc
         title=f"docs(plan): {read_project_field(milestone.entity, 'TITLE')} (@{REQUEST_TYPE}.{recording.request.name})",
         body=recording.request.text,
         forge=recording.forge,
-        forge_name=read_project_field(recording.project, "FORGE"),
+        forge_name=read_project_forge(recording.project),
         read_environment=recording.read_environment,
     )
 
 
 def _deliver(runtime: Runtime, recording: PlanRecording, milestone: PlanEntity, branch: str) -> int | None:
-    if read_project_field(recording.project, "FORGE") != GITHUB_FORGE:
+    if not is_on_a_forge(recording.project):
         _merge_into_main(runtime, recording, branch)
         return None
     return publish_plan(runtime, _describe_publication(recording, milestone, branch))
@@ -217,8 +218,7 @@ def _holds_the_plan(runtime: Runtime, recording: PlanRecording, branch: str) -> 
 
 
 def _complete_delivery(runtime: Runtime, recording: PlanRecording, milestone: PlanEntity, branch: str) -> int | None:
-    forge_name = read_project_field(recording.project, "FORGE")
-    if forge_name != GITHUB_FORGE:
+    if not is_on_a_forge(recording.project):
         if not _holds_the_plan(runtime, recording, branch):
             _merge_into_main(runtime, recording, branch)
         return None
@@ -227,7 +227,7 @@ def _complete_delivery(runtime: Runtime, recording: PlanRecording, milestone: Pl
         branch=branch,
         environment=recording.read_environment(CLI_KEY),
     )
-    pull_request = ask_pull_request(recording.forge, forge_name, query, runtime)
+    pull_request = ask_pull_request(recording.forge, read_project_forge(recording.project), query, runtime)
     if pull_request is None:
         return _deliver(runtime, recording, milestone, branch)
     if pull_request.state == OPEN_PULL_REQUEST:
