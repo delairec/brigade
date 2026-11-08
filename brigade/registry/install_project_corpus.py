@@ -1,4 +1,3 @@
-import shlex
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,6 +9,7 @@ from brigade.corpus.shipped_data import SHIPPED_PROJECT_SCHEMA
 from brigade.errors import BrigadeError
 from brigade.git.add_detached_worktree import add_detached_worktree
 from brigade.git.create_branch import create_branch
+from brigade.git.describe_merge_command import describe_merge_command
 from brigade.git.find_branch import find_branch
 from brigade.git.push_branch import BranchPush, push_branch
 from brigade.git.remove_worktree import remove_worktree
@@ -82,7 +82,7 @@ def install_project_corpus(runtime: Runtime, installation: CorpusInstallation) -
         return {
             "branch": BRANCH,
             "pull_request": None,
-            "merge_command": shlex.join(("git", "-C", str(root), "merge", BRANCH)),
+            "merge_command": describe_merge_command(root, BRANCH),
         }
     return {
         "branch": BRANCH,

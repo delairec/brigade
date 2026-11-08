@@ -274,6 +274,7 @@ class BrigadeProjectAddInitCorpusThenPlanTest(PlanContextTestCase):
         # Act
         completed = ProcessLauncher.run(
             ["awawa", "lint", "--strict", str(self.project.path)],
+            cwd=self.project.path,
             env=self.machine.describe_environment(),
             capture_output=True,
             text=True,
