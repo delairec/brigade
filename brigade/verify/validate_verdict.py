@@ -1,5 +1,5 @@
 from brigade.system.validate_document import DocumentInvalid, Field, validate_document
-from brigade.verify.assemble_verify_context import GRADES
+from brigade.verify.describe_judged_task import GRADES
 
 PASSING_VERDICT = "pass"
 CHANGES_VERDICT = "changes"

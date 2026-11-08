@@ -13949,7 +13949,7 @@ TASK B209
 	SPEC "on a pull request with no task.verdict of its task recorded, brigade verify context <pr>"
 		+ "prints the sections it prints today and the procedure verify-pr.md judges the whole pull"
 		+ "request as today"
-		IMPL "brigade/verify/assemble_verify_context.py::def _read_repair("
+		IMPL "brigade/verify/describe_judged_task.py::def _read_repair("
 		IMPL "brigade/commands/verify_context.py::def _render_re_verification("
 		IMPL "tests/unit/verify/test_assemble_verify_context.py::def"
 			+ "test_should_hold_neither_a_previous_verdict_nor_a_repair_diff_when_no_verdict_is_recorded(self):"
