@@ -1,4 +1,6 @@
 import argparse
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.corpus.collect_anchors import collect_anchors
@@ -19,6 +21,7 @@ from brigade.tasks.describe_command import describe_command
 from brigade.tasks.list_trigger_rules import list_trigger_rules
 from brigade.tasks.locate_task_worktree import TaskWorktree
 from brigade.tasks.reserve_task_number import reserve_task_number
+from brigade.waves.locate_forge_branch import locate_forge_branch
 
 HEAD = "HEAD"
 SPEC_FIELD = "SPEC"
@@ -28,6 +31,14 @@ AGENTS_FILE = "AGENTS.md"
 TEMPORARY_DIRECTORY = "tmp"
 WORKTREE_ROOT = "."
 WHEN_DONE = ["brigade task check", "brigade task pr", "brigade task promote"]
+
+
+@dataclass(frozen=True)
+class TaskContextDemand:
+    configuration: Configuration
+    worktree: TaskWorktree
+    attribution: list[str]
+    read_environment: Callable[[str], dict]
 
 
 def _describe_ancestry(runtime: Runtime, worktree: TaskWorktree) -> dict:
@@ -78,9 +89,11 @@ def _read_commands(project: Entity, field_name: str) -> list[str]:
     return [field.value for field in project.fields if field.name == field_name]
 
 
-def _count_next_wave_number(runtime: Runtime, configuration: Configuration, worktree: TaskWorktree) -> int:
-    query = argparse.Namespace(project=worktree.project.name, ref=worktree.base, worktree=None)
-    tree = prepare_project_tree(query, configuration, runtime)
+def _count_next_wave_number(runtime: Runtime, demand: TaskContextDemand) -> int:
+    worktree = demand.worktree
+    ref = locate_forge_branch(runtime.run_process, worktree.project, worktree.base, demand.read_environment)
+    query = argparse.Namespace(project=worktree.project.name, ref=ref, worktree=None)
+    tree = prepare_project_tree(query, demand.configuration, runtime)
     return count_next_task_number(read_awawa_document(runtime.run_process, tree.root, ("status",))["entities"])
 
 
@@ -92,9 +105,8 @@ def _reserve_temporary_directory(runtime: Runtime) -> str | None:
     return str(temporary_directory)
 
 
-def assemble_task_context(
-    runtime: Runtime, configuration: Configuration, worktree: TaskWorktree, attribution: list[str]
-) -> dict:
+def assemble_task_context(runtime: Runtime, demand: TaskContextDemand) -> dict:
+    worktree = demand.worktree
     target = f"@TASK.{worktree.task}"
     return {
         "worktree": {"ancestry": _describe_ancestry(runtime, worktree), "setup": _read_setup(runtime, worktree)},
@@ -104,7 +116,7 @@ def assemble_task_context(
                 run_awawa(runtime.run_process, worktree.path, ("lint", "--closure", target, WORKTREE_ROOT))
             ),
         ],
-        "rules": _list_rules(runtime, configuration, worktree),
+        "rules": _list_rules(runtime, demand.configuration, worktree),
         "project": _read_agents(worktree),
         "acceptance": {
             "acceptance": _read_commands(worktree.project, "ACCEPTANCE"),
@@ -112,10 +124,10 @@ def assemble_task_context(
         },
         "reserved": {
             "task_number": reserve_task_number(
-                runtime.paths, worktree.project.name, _count_next_wave_number(runtime, configuration, worktree)
+                runtime.paths, worktree.project.name, _count_next_wave_number(runtime, demand)
             ),
             "temporary_directory": _reserve_temporary_directory(runtime),
-            "attribution": attribution,
+            "attribution": demand.attribution,
         },
         "when_done": WHEN_DONE,
     }

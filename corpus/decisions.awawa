@@ -6518,3 +6518,24 @@ DECISION ATaskParkedOnTheQuestionOfItsRunIsHeldUntilItsEntityChangesOrARequeueRe
 	SOURCE "the user's approval in session of the plan « Ada corrige le défaut qui relance une"
 		+ "tâche parquée (PR séparée vers main) » : « mets tout en pause, on reprendra le travail"
 		+ "plus tard », then « on reprend »"
+
+DECISION TheBranchOfAMilestoneIsReadAtItsRemoteRefFetchedAtEachReadAndABranchTheForgeNoLongerHoldsStaysLocal
+	TITLE "on a project of FORGE github, the tree of a wave and the milestone it belongs to are"
+		+ "read at origin/<branch>, fetched at each read; a branch the forge no longer holds is"
+		+ "read at its local branch; a project of FORGE none keeps its local branch"
+	STATUS active
+	DESC "the branch of the milestone and PROJECT.MAIN both, each located on the forge through"
+		+ "brigade/waves/locate_forge_branch.py; no local branch of the clone is advanced"
+		REF @TASK.B242
+	DESC "a branch ls-remote does not find is read at its local branch, so a milestone branch"
+		+ "deleted on the forge leaves the waves of the project readable"
+		REF @DECISION.TheTreeOfAWaveIsReadAtTheBranchOfTheMilestoneHoldingItsTasksOrAtMain
+	REJECTED "the local branch advanced to origin/<branch> before the read: it fails on a branch"
+		+ "checked out in a worktree a run holds or whose tree is dirty"
+	REJECTED "falling back to PROJECT.MAIN when the forge no longer holds the branch: the tasks of"
+		+ "the wave are not on main and the read would miss them"
+	RATIONALE "the merges of the forge advance origin/<branch> alone; ruled by the build run of"
+		+ "@TASK.B242 on 2026-11-08, which leaves the choice to the delivery"
+		REF @TASK.B242
+	SOURCE "@TASK.B242, its DESC 2 leaving the read to the delivery"
+		REF @TASK.B242

@@ -5,7 +5,7 @@ from pathlib import Path
 from brigade.corpus.read_entity import Entity, EntityField
 from brigade.errors import CommandFailed
 from brigade.system.parse_configuration import Configuration
-from brigade.tasks.assemble_task_context import assemble_task_context
+from brigade.tasks.assemble_task_context import TaskContextDemand, assemble_task_context
 from brigade.tasks.locate_task_worktree import TaskWorktree
 from tests.unit.scripted_processes import ScriptedProcesses
 
@@ -22,6 +22,7 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
 ATTRIBUTION = ["Co-Authored-By: Ada <ada@example.org>"]
+FORGE_ENVIRONMENT = {"GH_TOKEN": "token-of-the-cli-slot"}
 TASK_SHOWN = {
     "fields": [
         {"name": "SPEC", "atoms": ['"edit brigade/parse.py, then docs."'], "fields": []},
@@ -78,6 +79,14 @@ class AssembleTaskContextTest(unittest.TestCase):
             stdout="RULE python\n",
         )
 
+    def create_demand(self, configuration: Configuration) -> TaskContextDemand:
+        return TaskContextDemand(
+            configuration=configuration,
+            worktree=self.worktree,
+            attribution=ATTRIBUTION,
+            read_environment=lambda key: FORGE_ENVIRONMENT,
+        )
+
     def create_runtime(self, run_directory: Path | None = None):
         write_operational_corpus(self.root)
         runtime = create_test_runtime(
@@ -91,7 +100,7 @@ class AssembleTaskContextTest(unittest.TestCase):
         runtime = self.create_runtime()
 
         # Act
-        context = assemble_task_context(runtime, Configuration(), self.worktree, ATTRIBUTION)
+        context = assemble_task_context(runtime, self.create_demand(Configuration()))
 
         # Assert
         self.assertEqual(
@@ -125,7 +134,7 @@ class AssembleTaskContextTest(unittest.TestCase):
         configuration = Configuration(instructions=str(self.instructions))
 
         # Act
-        context = assemble_task_context(runtime, configuration, self.worktree, ATTRIBUTION)
+        context = assemble_task_context(runtime, self.create_demand(configuration))
 
         # Assert
         self.assertEqual(
@@ -155,7 +164,7 @@ class AssembleTaskContextTest(unittest.TestCase):
         configuration = Configuration(instructions=instructions)
 
         # Act
-        context = assemble_task_context(runtime, configuration, self.worktree, ATTRIBUTION)
+        context = assemble_task_context(runtime, self.create_demand(configuration))
 
         # Assert
         self.assertEqual(
@@ -184,7 +193,7 @@ class AssembleTaskContextTest(unittest.TestCase):
         self.processes.answer(("git", "merge-base", "--is-ancestor", "integration/harvest", "HEAD"), exit_code=1)
 
         # Act
-        context = assemble_task_context(runtime, Configuration(), self.worktree, ATTRIBUTION)
+        context = assemble_task_context(runtime, self.create_demand(Configuration()))
 
         # Assert
         self.assertEqual(
@@ -200,7 +209,7 @@ class AssembleTaskContextTest(unittest.TestCase):
         setup_log.write_text("npm ci\n", encoding="utf-8")
 
         # Act
-        context = assemble_task_context(runtime, Configuration(), self.worktree, ATTRIBUTION)
+        context = assemble_task_context(runtime, self.create_demand(Configuration()))
 
         # Assert
         self.assertEqual(context["worktree"]["setup"], "npm ci\n")
@@ -211,7 +220,7 @@ class AssembleTaskContextTest(unittest.TestCase):
         (self.worktree_path / "AGENTS.md").write_text("# oak\n", encoding="utf-8")
 
         # Act
-        context = assemble_task_context(runtime, Configuration(), self.worktree, ATTRIBUTION)
+        context = assemble_task_context(runtime, self.create_demand(Configuration()))
 
         # Assert
         self.assertEqual(context["project"], "# oak\n")
@@ -221,7 +230,7 @@ class AssembleTaskContextTest(unittest.TestCase):
         runtime = self.create_runtime(self.root / "run")
 
         # Act
-        context = assemble_task_context(runtime, Configuration(), self.worktree, ATTRIBUTION)
+        context = assemble_task_context(runtime, self.create_demand(Configuration()))
 
         # Assert
         self.assertEqual(context["reserved"]["temporary_directory"], str(self.root / "run" / "tmp"))
@@ -231,7 +240,7 @@ class AssembleTaskContextTest(unittest.TestCase):
         runtime = self.create_runtime(self.root / "run")
 
         # Act
-        assemble_task_context(runtime, Configuration(), self.worktree, ATTRIBUTION)
+        assemble_task_context(runtime, self.create_demand(Configuration()))
 
         # Assert
         self.assertEqual(list((self.root / "run" / "tmp").iterdir()), [])
@@ -246,7 +255,7 @@ class AssembleTaskContextTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(CommandFailed) as refusal:
-            assemble_task_context(runtime, Configuration(), self.worktree, ATTRIBUTION)
+            assemble_task_context(runtime, self.create_demand(Configuration()))
 
         # Assert
         self.assertEqual(
@@ -264,7 +273,7 @@ class AssembleTaskContextTest(unittest.TestCase):
         configuration = Configuration(instructions=str(self.instructions))
 
         # Act
-        context = assemble_task_context(runtime, configuration, self.worktree, ATTRIBUTION)
+        context = assemble_task_context(runtime, self.create_demand(configuration))
 
         # Assert
         self.assertEqual(
@@ -279,3 +288,34 @@ class AssembleTaskContextTest(unittest.TestCase):
                 }
             ],
         )
+
+    def test_should_count_the_next_task_number_on_the_base_as_the_forge_holds_it_on_github(self):
+        # Arrange
+        runtime = self.create_runtime()
+        project_on_github = Entity(name="oak", fields=(*PROJECT.fields, EntityField(name="FORGE", value="github")))
+        worktree = TaskWorktree(
+            path=self.worktree_path, task="B12", project=project_on_github, wave="oak_w1", base="integration/harvest"
+        )
+        self.processes.answer(("git", "fetch", "--quiet", "origin", "integration/harvest"))
+        self.processes.answer(
+            ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "origin/integration/harvest^{commit}"),
+            stdout="f0e1d2\n",
+        )
+        forge_tree = self.root / "cache" / "refs" / "oak" / "f0e1d2"
+        forge_tree.mkdir(parents=True)
+        self.processes.answer_json(
+            ("awawa", "status", "--json", str(forge_tree)),
+            {"entities": [{"type": "TASK", "name": "B12"}, {"type": "TASK", "name": "B40"}]},
+        )
+        demand = TaskContextDemand(
+            configuration=Configuration(),
+            worktree=worktree,
+            attribution=ATTRIBUTION,
+            read_environment=lambda key: FORGE_ENVIRONMENT,
+        )
+
+        # Act
+        context = assemble_task_context(runtime, demand)
+
+        # Assert
+        self.assertEqual(context["reserved"]["task_number"], 41)

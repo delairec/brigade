@@ -3,10 +3,11 @@ from pathlib import Path
 
 from brigade.command import Argument, Command
 from brigade.commands._read_attribution import read_attribution
+from brigade.commands._read_forge_environment import read_forge_environment
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 from brigade.system.write_text_atomically import write_text_atomically
-from brigade.tasks.assemble_task_context import assemble_task_context
+from brigade.tasks.assemble_task_context import TaskContextDemand, assemble_task_context
 from brigade.tasks.locate_task_worktree import locate_task_worktree
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -61,10 +62,13 @@ def _render_text(document: dict) -> str:
 def task_context(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)
     worktree = locate_task_worktree(runtime, Path.cwd(), request.task)
-    document = {
-        "schema_version": DOCUMENT_SCHEMA_VERSION,
-        **assemble_task_context(runtime, configuration, worktree, read_attribution(configuration, runtime)),
-    }
+    demand = TaskContextDemand(
+        configuration=configuration,
+        worktree=worktree,
+        attribution=read_attribution(configuration, runtime),
+        read_environment=lambda key: read_forge_environment(configuration, key, runtime),
+    )
+    document = {"schema_version": DOCUMENT_SCHEMA_VERSION, **assemble_task_context(runtime, demand)}
     if runtime.paths.run_directory is not None:
         write_text_atomically(runtime.paths.run_directory / PACKAGE_FILE, f"{_render_text(document)}\n")
     return document

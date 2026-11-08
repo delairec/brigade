@@ -30,6 +30,7 @@ from brigade.ledger.wave_started import WaveStarted
 from brigade.runs.record_run_pid import record_run_pid
 from brigade.system.parse_configuration import Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
+from brigade.tick.actions import LaunchTask
 from brigade.tick.build_snapshot import (
     BlockedRun,
     ForgeReaders,
@@ -46,6 +47,7 @@ from brigade.tick.build_snapshot import (
     WaveFacts,
     build_snapshot,
 )
+from brigade.tick.plan import plan
 from brigade.tick.read_integration_branches import IntegrationBranchFacts
 from brigade.waves.list_candidate_waves import CandidateWave
 from tests.unit.commands.run_directories import FIRST_RUN, SECOND_RUN, create_run_record, create_run_result, write_run
@@ -1440,6 +1442,55 @@ class BuildSnapshotOfTheBaseOfTheTasksOfAWaveTest(BuildSnapshotTestCase):
 
         # Assert
         self.assertEqual(snapshot.waves[0].base, "main")
+
+
+class PlanOfAWaveWaitingOnATaskImplementedOnTheForgeTest(BuildSnapshotTestCase):
+    def test_should_launch_a_task_whose_after_is_implemented_at_the_branch_of_its_milestone_on_the_forge(self):
+        # Arrange
+        self.write_operational_corpus()
+        self.shop_forge = "github"
+        local_tree = self.paths.cache_root / "refs" / "shop" / "1oca1"
+        local_tree.mkdir(parents=True)
+        of_milestone = [{"name": "MILESTONE", "atoms": ["@MILESTONE.M4"]}]
+        waiting = [*AWAWA_ANSWERS.describe_task("todo", "B2"), *of_milestone]
+        implemented = [*AWAWA_ANSWERS.describe_task("implemented"), *of_milestone]
+        not_yet_implemented = [*AWAWA_ANSWERS.describe_task("todo"), *of_milestone]
+        self.remote_answers = {
+            **answer_main_of_the_forge(MAIN_SHA),
+            **answer_tree("integration/tides", "1oca1"),
+            **AWAWA_ANSWERS.answer_entities(local_tree, "TASK", {"B2": not_yet_implemented, "B3": waiting}),
+            **AWAWA_ANSWERS.answer_entities(
+                local_tree, "TASK", {"B2": not_yet_implemented, "B3": waiting}, "MILESTONE==@MILESTONE.M4"
+            ),
+            **AWAWA_ANSWERS.answer_no_incoming_refs(local_tree, "B3"),
+            **AWAWA_ANSWERS.answer_entities(local_tree, "TASK", {}, "STATUS==implemented"),
+            **answer_tree("origin/integration/tides", MILESTONE_SHA),
+            **AWAWA_ANSWERS.answer_entities(self.milestone_tree, "TASK", {"B2": implemented, "B3": waiting}),
+            **AWAWA_ANSWERS.answer_entities(
+                self.milestone_tree, "TASK", {"B2": implemented, "B3": waiting}, "MILESTONE==@MILESTONE.M4"
+            ),
+            **AWAWA_ANSWERS.answer_no_incoming_refs(self.milestone_tree, "B3"),
+            **AWAWA_ANSWERS.answer_entities(self.milestone_tree, "TASK", {"B2": implemented}, "STATUS==implemented"),
+        }
+        self.record(70, MilestoneBranchCut(project="shop", milestone="M4", branch="integration/tides", login=None))
+        self.record(60, WaveStarted(wave="w2", project="shop", tasks=("B3",)))
+        snapshot, _ = self.build()
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertIn(
+            LaunchTask(
+                project="shop",
+                wave="w2",
+                branch="integration/tides",
+                task="B3",
+                task_branch="feature/B3-task",
+                checks_passed=False,
+            ),
+            actions,
+        )
 
 
 class BuildSnapshotOfAWaveStartedAfterTheForgeAccountBecameUnavailableTest(BuildSnapshotTestCase):
