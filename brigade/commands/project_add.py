@@ -20,11 +20,11 @@ from brigade.registry.derive_project_name import derive_project_name
 from brigade.registry.discover_project import CORPUS_FILES, ProjectDiscovery, discover_project
 from brigade.registry.guess_commands import CommandGuess, guess_commands
 from brigade.registry.install_project_corpus import SCHEMA_FILE, CorpusInstallation, install_project_corpus
+from brigade.registry.is_area_schema import is_area_schema
 from brigade.registry.read_project_forge import read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.registry.remove_project_entity import remove_project_entity
 from brigade.registry.render_project_entity import render_project_entity
-from brigade.registry.render_project_schema import render_area_schema
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
@@ -143,7 +143,7 @@ def _confirm_corpus_folder(request, runtime: Runtime, proposed: str) -> str:
 
 def _refuse_the_corpus_of_the_project(runtime: Runtime, path: Path, tracked: tuple[str, ...], folder: str) -> None:
     held = [file for file in tracked if PurePosixPath(file).is_relative_to(folder)]
-    if held and read_file_at(runtime.run_process, path, f"HEAD:{folder}/{SCHEMA_FILE}") != render_area_schema():
+    if held and not is_area_schema(read_file_at(runtime.run_process, path, f"HEAD:{folder}/{SCHEMA_FILE}")):
         raise UsageError(f"{folder} holds {held[0]}, a corpus that is not brigade's: --corpus names another folder")
 
 
