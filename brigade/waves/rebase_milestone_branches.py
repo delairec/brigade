@@ -17,6 +17,8 @@ from brigade.runtime import Runtime
 from brigade.system.hold_lock import hold_lock
 from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.system.parse_configuration import CLI_KEY
+from brigade.tick.head_proof import GREEN, HoldingHead
+from brigade.tick.prove_branch_head import BranchHead, prove_branch_head
 from brigade.tick.run_commit_checks import run_commit_checks
 from brigade.waves.locate_branch_worktree import locate_branch_worktree
 from brigade.waves.locate_forge_branch import locate_forge_branch
@@ -53,6 +55,8 @@ class MilestoneBranchesRebase:
     is_run_live_on: Callable[[Path], bool]
     launch_rebase_run: Callable[[BranchRebaseRun], None]
     read_login: Callable[[], str]
+    name_holding_head: Callable[[HoldingHead], None]
+    list_check_runs: Callable[[str, str], list[dict]]
 
 
 def _locate_branch_worktree(rebase: MilestoneBranchesRebase, branch: str) -> Path:
@@ -104,9 +108,32 @@ def _pass_project_checks(runtime: Runtime, rebase: MilestoneBranchesRebase, work
     return all(result.exit_code == PASSED_EXIT_CODE for result in checks.results)
 
 
+def _find_holding_head(
+    runtime: Runtime, rebase: MilestoneBranchesRebase, worktree: BranchWorktree, main: str
+) -> HoldingHead | None:
+    for branch, ref in ((read_project_field(rebase.project, MAIN_FIELD), main), (worktree.branch, worktree.start)):
+        proof = prove_branch_head(
+            runtime,
+            BranchHead(
+                project=rebase.project,
+                repository=worktree.path,
+                branch=branch,
+                ref=ref,
+                list_check_runs=rebase.list_check_runs,
+            ),
+        )
+        if proof.state != GREEN:
+            return HoldingHead(branch=branch, proof=proof)
+    return None
+
+
 def _rebase_milestone(runtime: Runtime, rebase: MilestoneBranchesRebase, branch: str, main: str) -> MovedHead | None:
     worktree = _take_branch(runtime, rebase, branch)
     if worktree is None:
+        return None
+    held_by = _find_holding_head(runtime, rebase, worktree, main)
+    if held_by is not None:
+        rebase.name_holding_head(held_by)
         return None
     base = read_project_field(rebase.project, MAIN_FIELD)
     run = BranchRebaseRun(project=rebase.project.name, worktree=worktree.path, branch=branch, base=base, wave=None)

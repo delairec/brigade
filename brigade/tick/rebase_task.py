@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -6,7 +7,6 @@ from brigade.git.fetch_branches import REMOTE, BranchesFetch, fetch_branches
 from brigade.git.push_with_lease import LeasedPush, push_with_lease
 from brigade.git.read_head import read_head
 from brigade.git.rebase_onto import rebase_onto
-from brigade.git.resolve_commit import resolve_commit
 from brigade.registry.find_project import find_project
 from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
@@ -14,11 +14,9 @@ from brigade.system.hold_lock import hold_lock
 from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.tick.actions import RebaseTask
 from brigade.tick.head_proof import GREEN, HeadProof, HoldingHead
-from brigade.tick.prove_head import HeadQuery, prove_head
-from brigade.tick.read_branch_head_checks import BranchHeadQuery, read_branch_head_checks
+from brigade.tick.prove_branch_head import BranchHead, prove_branch_head
 
 WHOLE_WORKTREE = "."
-NO_TASK_CHECK = None
 
 
 @dataclass(frozen=True)
@@ -27,37 +25,43 @@ class TaskRebase:
     held_by: HoldingHead | None = None
 
 
-def _prove_base_head(runtime: Runtime, action: RebaseTask, worktree: Path, environment: dict) -> HeadProof:
-    project = find_project(read_projects(runtime), action.project)
-    commit = resolve_commit(runtime.run_process, worktree, f"{REMOTE}/{action.branch}")
-    forge_checks = read_branch_head_checks(
+def _prove_base_head(
+    runtime: Runtime, action: RebaseTask, worktree: Path, list_check_runs: Callable[[str, str], list[dict]]
+) -> HeadProof:
+    return prove_branch_head(
         runtime,
-        BranchHeadQuery(project=project, branch=action.branch, commit=commit, read_environment=lambda key: environment),
-    )
-    return prove_head(
-        runtime,
-        HeadQuery(
-            project=project, repository=worktree, commit=commit, task_check=NO_TASK_CHECK, forge_checks=forge_checks
+        BranchHead(
+            project=find_project(read_projects(runtime), action.project),
+            repository=worktree,
+            branch=action.branch,
+            ref=f"{REMOTE}/{action.branch}",
+            list_check_runs=list_check_runs,
         ),
     )
 
 
-def rebase_task(runtime: Runtime, action: RebaseTask, environment: dict) -> TaskRebase:
+def _keep_uncommitted_changes(runtime: Runtime, action: RebaseTask, worktree: Path) -> None:
+    commit_files(
+        runtime.run_process,
+        CommitRequest(
+            repository=worktree,
+            files=(WHOLE_WORKTREE,),
+            message=f"chore(tick): keep the changes of @TASK.{action.task} left uncommitted before its rebase",
+        ),
+    )
+
+
+def rebase_task(
+    runtime: Runtime, action: RebaseTask, environment: dict, list_check_runs: Callable[[str, str], list[dict]]
+) -> TaskRebase:
     worktree = Path(action.worktree)
     with hold_lock(locate_worktrees_lock(runtime.paths.lock_directory, action.project)):
         if action.holds_uncommitted_changes:
-            commit_files(
-                runtime.run_process,
-                CommitRequest(
-                    repository=worktree,
-                    files=(WHOLE_WORKTREE,),
-                    message=f"chore(tick): keep the changes of @TASK.{action.task} left uncommitted before its rebase",
-                ),
-            )
+            _keep_uncommitted_changes(runtime, action, worktree)
         fetch_branches(
             runtime.run_process, BranchesFetch(repository=worktree, branches=(action.branch,), environment=environment)
         )
-        base_head = _prove_base_head(runtime, action, worktree, environment)
+        base_head = _prove_base_head(runtime, action, worktree, list_check_runs)
         if base_head.state != GREEN:
             return TaskRebase(head=None, held_by=HoldingHead(branch=action.branch, proof=base_head))
         if not rebase_onto(runtime.run_process, worktree, f"{REMOTE}/{action.branch}"):
