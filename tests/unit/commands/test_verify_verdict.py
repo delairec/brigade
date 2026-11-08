@@ -48,7 +48,6 @@ class VerifyVerdictTextTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(text, expected_text)
 
-
     def test_should_name_the_verdict_the_task_and_its_head_of_a_task_without_a_pull_request(self):
         # Arrange
         document = {"task": "T7", "head": "8885daa", "verdict": "pass", "findings": [], "login": None}
@@ -278,5 +277,6 @@ class VerifyVerdictOfATaskWithoutAForgeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            str(raised.exception), "the verdict judged 4c1d2e0, no longer the head of feature/T7-tide-table, now 8885daa"
+            str(raised.exception),
+            "the verdict judged 4c1d2e0, no longer the head of feature/T7-tide-table, now 8885daa",
         )
