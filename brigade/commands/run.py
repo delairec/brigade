@@ -2,7 +2,8 @@ import argparse
 import dataclasses
 
 from brigade.command import Argument, Command
-from brigade.commands._read_forge_environment import FORGE_NAME, ForgeSlot, read_forge_environment
+from brigade.commands._read_forge_environment import ForgeSlot, read_forge_environment
+from brigade.registry.read_project_forge import read_project_forge
 from brigade.runs.create_run_directory import create_run_directory
 from brigade.runs.decide_run_exit_code import decide_run_exit_code
 from brigade.runs.describe_skipped_runs import describe_skipped_runs
@@ -75,8 +76,9 @@ def _describe_diagnostics(document: dict) -> list[str]:
 
 def _prepare_run(request, configuration: Configuration, runtime: Runtime) -> RunPlan:
     run_request = _read_run_request(request)
-    forge_environment = read_forge_environment(configuration, ForgeSlot(FORGE_NAME, run_request.slot), runtime)
     setting = read_run_setting(run_request.project, run_request.slot, configuration, runtime)
+    forge_slot = ForgeSlot(read_project_forge(setting.project), run_request.slot)
+    forge_environment = read_forge_environment(configuration, forge_slot, runtime)
     plugins = RunPlugins(
         client_adapter=runtime.resolve_plugin("client", setting.client),
         document=runtime.resolve_plugin("document", configuration.document),
