@@ -4190,7 +4190,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
-            "TASK": {"T7": TASK_DELIVERED},
+            "TASK": {"T7": TASK_DELIVERED, "T8": TASK_DELIVERED},
         }
         self.machine = ScriptedProcessRunner(outputs, fallback=create_corpus_double(corpus))
         forge = RebasingForgeDouble(found)
@@ -4283,6 +4283,55 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
                     ANY,
                 )
             ],
+        )
+
+    def test_should_launch_one_run_repairing_the_red_wave_branch_two_catch_ups_wait_on(self):
+        # Arrange
+        write_ledger(
+            self.root,
+            [
+                CUT_OF_M4_ON_THE_WAVE_BRANCH,
+                {**WAVE_STARTED, "tasks": ["T7", "T8"]},
+                TASK_PR_OPENED,
+                {**TASK_PR_OPENED, "task": "T8", "branch": "feature/T8-tide-chart", "pr": 43},
+                TASK_PREFLIGHTED_AT_THE_HEAD,
+                {**TASK_PREFLIGHTED_AT_THE_HEAD, "task": "T8", "pr": 43},
+                _record_task_state("verifying"),
+                {**_record_task_state("verifying"), "task": "T8"},
+            ],
+        )
+        write_commit_checks(self.root, WAVE_HEAD, FAILED)
+        (self.repository / ".brigade" / "worktrees" / "T8").mkdir(parents=True)
+        runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST])
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "rebase-on-base",
+                    "branch=integration/M4",
+                    f"head={WAVE_HEAD}",
+                    "--slot",
+                    "rebase",
+                    "--cwd",
+                    ANY,
+                    "--project",
+                    "tidepool",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
+        self.assertIn(
+            "brigade tick: the catch-up of @TASK.T8 waits: integration/M4 is red at 8885daa, `make test` failed\n",
+            errors.getvalue(),
         )
 
     def test_should_rebase_the_task_branch_in_its_worktree_and_push_it_with_a_lease_on_its_head(self):
