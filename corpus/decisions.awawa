@@ -6321,3 +6321,48 @@ DECISION TheReportOfATaskIsCommittedOnADetachedCheckoutAndPushedToTheBranchOfThe
 		+ "the report must reach the forge without touching that worktree; ruled by the build run"
 		+ "of @TASK.B232 on 2026-11-03"
 		REF @TASK.B232
+
+DECISION InAreaImplIsAStringAndThePromotionCheckResolvesItFromTheRootOfTheRepository
+	TITLE "in area, the schema of the area declares IMPL a string, not an anchor, and the promotion"
+		+ "check resolves each IMPL from the root of the repository; the strict lint no longer"
+		+ "checks the IMPL anchors of an area, the promotion check at the preflight of the pull"
+		+ "request is their only check"
+	STATUS active
+	DESC "the schema brigade installs in the folder of the area declares IMPL a string where the"
+		+ "template of B55 declares it an anchor, and still requires it on each SPEC of an"
+		+ "implemented task"
+	DESC "the promotion check of a project in area reads the task from the area and resolves each"
+		+ "IMPL from the root of the repository; an IMPL naming a file absent from the repository,"
+		+ "or a text absent from that file, is a finding"
+	DESC "brigade project add, once the mode is area, warns on stderr that in this mode the lint"
+		+ "does not check the IMPL anchors and that the promotion check at the preflight is their"
+		+ "only check, and succeeds"
+	DESC "the limitation this carries: in area the strict lint does not check the IMPL anchors,"
+		+ "where in control it checks them too; wiki/Projects.md states it where the area mode is"
+		+ "documented; @TASK.B140 delivers the four"
+		REF @TASK.B140
+		REF @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus
+	REJECTED "the awawa workspace at the root of the repository, the project's own corpus listed in"
+		+ ".git/info/exclude: it contradicts SPEC 2 of B140, the area being the workspace, and the"
+		+ "exclusion is local git state, not versioned, absent from a fresh clone"
+	REJECTED "IMPL optional in the area: a task of an area would be delivered with no anchored"
+		+ "proof, which empties the promotion check of its purpose"
+	RATIONALE "in area the awawa workspace is the folder of the area, by"
+		+ "@DECISION.AProjectChoosesHowBrigadeUsesItsCorpus, no longer the root the anchors resolve"
+		+ "from as @DECISION.BrigadeRunsAwawaOnAProjectFromThePathItsAnchorsResolveFrom has it for"
+		+ "control: the blocked repair run 20261108T091506Z-6f152d of @TASK.B140 found awawa lint"
+		+ "--strict on the area refusing src/app.py and ../src/app.py alike with L016, so no task"
+		+ "of an area could reach implemented; brigade/verify/check_promotion.py selects IMPL by"
+		+ "its field name, not by its type, so a string IMPL is read; the corpus declares no"
+		+ "LIMITATION type, this decision records the limitation"
+		REF @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus
+		REF @DECISION.BrigadeRunsAwawaOnAProjectFromThePathItsAnchorsResolveFrom
+		REF @TASK.B140
+	SOURCE "the user's ruling of 2026-11-08, in session, on finding 1 of pull request #381: « ok,"
+		+ "donc du coup on va partir sur A comme tu recommandes, et enregistrer une limitation (je"
+		+ "ne sais plus si on a ce type d'entité dans le corpus). Il faudra un warning et"
+		+ "documenter la chose là où on documente le mode area (c'est le cas?) », option A as put"
+		+ "to the user: « Dans l'aire, IMPL devient string et check_promotion résout depuis la"
+		+ "racine du dépôt »"
+	SOURCE "the place of the warning, stderr of brigade project add once the mode is area, is the"
+		+ "session's reading of « Il faudra un warning », not the user's words"
