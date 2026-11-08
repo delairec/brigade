@@ -224,6 +224,12 @@ def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchT
     run(building, runtime)
 
 
+def _name_verified(action: LaunchVerification) -> tuple[str, ...]:
+    if action.pr is None:
+        return (f"task=@TASK.{action.task}",)
+    return (f"pr={action.pr}", f"task=@TASK.{action.task}")
+
+
 def _launch_verification(runtime: Runtime, configuration: Configuration, action: LaunchVerification) -> None:
     verifying = argparse.Namespace(
         procedure=configuration.procedures.get(REVIEW_SLOT, VERIFY_PROCEDURE),
@@ -231,7 +237,7 @@ def _launch_verification(runtime: Runtime, configuration: Configuration, action:
         project=action.project,
         cwd=action.worktree,
         brief=None,
-        arguments=(f"pr={action.pr}", f"task=@TASK.{action.task}"),
+        arguments=_name_verified(action),
         run_id=None,
         wave=action.wave,
         task=action.task,
