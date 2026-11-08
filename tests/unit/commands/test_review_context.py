@@ -6,11 +6,18 @@ from pathlib import Path
 from brigade.commands.review_context import COMMAND
 from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import create_machine_double, write_ledger
-from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
+from tests.unit.commands.test_verify_preflight import (
+    TASK_PR_OPENED,
+    TASK_WORKTREE,
+    TIDEPOOL_PROJECT,
+    WAVE_STARTED,
+    ForgeBindingItsLoginsDouble,
+)
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.verify.test_record_verdict import create_review_forge
 
+GITHUB_PROJECT = (*TIDEPOOL_PROJECT, ("FORGE", "github"))
 VERDICT_FINDING = {"id": "1", "grade": "high", "file": "src/tides.py", "line": 12, "broken": "SPEC 2 of @TASK.T7"}
 CHANGES_REQUESTED = {
     "schema_version": 1,
@@ -93,7 +100,7 @@ class ReviewContextOfAPullRequestTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, TASK_PR_OPENED, CHANGES_REQUESTED])
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
-            run_process=create_machine_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}, "POLICY": {}}, TASK_WORKTREE),
+            run_process=create_machine_double({"PROJECT": {"tidepool": GITHUB_PROJECT}, "POLICY": {}}, TASK_WORKTREE),
             resolve_plugin=lambda kind, name, **places: create_review_forge(),
         )
 
@@ -123,3 +130,26 @@ class ReviewContextOfAPullRequestTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(raised.exception), "no task.pr_opened of @PROJECT.tidepool names the pull request #41")
+
+
+class ReviewContextOfAProjectOfForgeNoneTest(unittest.TestCase):
+    def test_should_read_no_login_environment(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (root / "config").mkdir()
+        (root / "config" / "config.toml").write_text('[forge_accounts]\ncli = "octo-cli"\n', encoding="utf-8")
+        write_ledger(root, [WAVE_STARTED, TASK_PR_OPENED, CHANGES_REQUESTED])
+        forge = ForgeBindingItsLoginsDouble()
+        local_project = (*TIDEPOOL_PROJECT, ("FORGE", "none"))
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_machine_double({"PROJECT": {"tidepool": local_project}, "POLICY": {}}, TASK_WORKTREE),
+            resolve_plugin=lambda kind, name, **places: forge,
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            COMMAND.run(Namespace(pr=42), runtime)
+
+        # Assert
+        self.assertEqual(forge.questions[0][1]["environment"], {})
