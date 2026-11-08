@@ -168,7 +168,18 @@ class TaskPromotePushTest(unittest.TestCase):
             pushed_environments.append(request.environment)
             return 0, "", ""
 
-        self.processes.answer_by(("git", "push", "--quiet", "origin", "feature/B12-the-parser"), record_push)
+        self.processes.answer(("git", "rev-parse", "--verify", "--quiet", "refs/remotes/origin/feature/B12-the-parser"))
+        self.processes.answer_by(
+            (
+                "git",
+                "push",
+                "--quiet",
+                "--force-with-lease=feature/B12-the-parser:",
+                "origin",
+                "feature/B12-the-parser",
+            ),
+            record_push,
+        )
         self.processes.answer_entities(
             self.runtime.paths.config_root, "PROJECT", {"oak": (*OAK_PROJECT, ("FORGE", "none"))}
         )
