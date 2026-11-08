@@ -3566,6 +3566,46 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
         events = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
         self.assertEqual(json.loads(events[-1])["event"], "wave.started")
 
+    def test_should_name_the_red_wave_branch_holding_the_launch_in_the_plan_of_a_dry_run(self):
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "project": "tidepool",
+                "wave": "tidepool_w16",
+                "branch": "integration/M4",
+                "task": "T7",
+                "task_branch": "feature/T7-tide-table",
+                "pull_request_checks": None,
+                "waits": "integration/M4 is red at 8885daa, `make test` failed",
+            },
+            document["plan"],
+        )
+
+    def test_should_run_no_command_of_the_project_on_a_dry_run(self):
+        # Arrange
+        (self.root / "state" / "commit-checks" / "tidepool" / f"{WAVE_HEAD}.json").unlink()
+
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            [entry for entry in document["plan"] if entry.get("task") == "T7"],
+            [
+                {
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "branch": "integration/M4",
+                    "task": "T7",
+                    "task_branch": "feature/T7-tide-table",
+                    "pull_request_checks": None,
+                }
+            ],
+        )
+
 
 IS_T7_ON_THE_WAVE_BRANCH = ("git", "merge-base", "--is-ancestor", "integration/M4", "feature/T7-tide-table")
 BRANCH_OFF_THE_WAVE_BRANCH = ProcessAnswer(exit_code=1)
