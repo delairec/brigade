@@ -23,8 +23,8 @@ def _create_project(forge: str = "none") -> Entity:
     )
 
 
-def _record(*events) -> tuple[LedgerEntry, ...]:
-    return tuple(LedgerEntry(instant=INSTANT, event=event) for event in events)
+def _entry(event) -> LedgerEntry:
+    return LedgerEntry(instant=INSTANT, event=event)
 
 
 CUT = MilestoneBranchCut(project="shop", milestone="M1", branch=BRANCH, login=None)
@@ -37,7 +37,11 @@ CLOSED = MilestoneClosed(project="shop", milestone="M1")
 class DescribeMilestoneMergeTest(unittest.TestCase):
     def test_should_name_the_command_once_the_report_of_the_milestone_is_committed(self):
         # Arrange
-        entries = _record(CUT, REPORTED, REPORT_COMMITTED)
+        entries = (
+            _entry(CUT),
+            _entry(REPORTED),
+            _entry(REPORT_COMMITTED),
+        )
 
         # Act
         command = describe_milestone_merge(entries, _create_project(), "M1")
@@ -47,11 +51,43 @@ class DescribeMilestoneMergeTest(unittest.TestCase):
 
     def test_should_name_no_command_before_the_report_is_committed_or_after_the_close_or_on_a_forge(self):
         for case, entries, project in [
-            ("no report ran", _record(CUT), _create_project()),
-            ("the report still runs", _record(CUT, REPORTED), _create_project()),
-            ("another run ended", _record(CUT, REPORTED, OTHER_RUN_DONE), _create_project()),
-            ("the milestone closed", _record(CUT, REPORTED, REPORT_COMMITTED, CLOSED), _create_project()),
-            ("a project on a forge", _record(CUT, REPORTED, REPORT_COMMITTED), _create_project("github")),
+            ("no report ran", (_entry(CUT),), _create_project()),
+            (
+                "the report still runs",
+                (
+                    _entry(CUT),
+                    _entry(REPORTED),
+                ),
+                _create_project(),
+            ),
+            (
+                "another run ended",
+                (
+                    _entry(CUT),
+                    _entry(REPORTED),
+                    _entry(OTHER_RUN_DONE),
+                ),
+                _create_project(),
+            ),
+            (
+                "the milestone closed",
+                (
+                    _entry(CUT),
+                    _entry(REPORTED),
+                    _entry(REPORT_COMMITTED),
+                    _entry(CLOSED),
+                ),
+                _create_project(),
+            ),
+            (
+                "a project on a forge",
+                (
+                    _entry(CUT),
+                    _entry(REPORTED),
+                    _entry(REPORT_COMMITTED),
+                ),
+                _create_project("github"),
+            ),
         ]:
             with self.subTest(case=case):
                 # Act
@@ -62,7 +98,15 @@ class DescribeMilestoneMergeTest(unittest.TestCase):
 
     def test_should_name_no_command_for_a_wave_of_no_milestone(self):
         # Act
-        command = describe_milestone_merge(_record(CUT, REPORTED, REPORT_COMMITTED), _create_project(), None)
+        command = describe_milestone_merge(
+            (
+                _entry(CUT),
+                _entry(REPORTED),
+                _entry(REPORT_COMMITTED),
+            ),
+            _create_project(),
+            None,
+        )
 
         # Assert
         self.assertIsNone(command)

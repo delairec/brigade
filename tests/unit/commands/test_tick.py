@@ -6707,11 +6707,11 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
             "TASK": {"T7": task},
             "MILESTONE": milestones or {},
         }
-        machine = {**MACHINE_OUTPUTS, **MERGE_AND_TREE_OUTPUTS}
-        scripted = {prefix: ProcessAnswer(stdout=stdout) for prefix, stdout in machine.items()}
+        machine = create_machine_double(corpus, {**MACHINE_OUTPUTS, **MERGE_AND_TREE_OUTPUTS})
+        machine.__self__.answers.update(answers)
         return create_test_runtime(
             create_test_paths(self.root),
-            run_process=ScriptedProcessRunner({**scripted, **answers}, fallback=create_corpus_double(corpus)).run,
+            run_process=machine,
             spawn_process=SpawnRecorderDouble().spawn,
             resolve_plugin=_resolve_the_collectors_beside(
                 create_plugin_resolution(STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)),
@@ -6879,5 +6879,5 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
         COMMAND.run(Namespace(mode="once"), self._create_runtime(TASK_DELIVERED, {}))
 
         # Assert
-        report_runs = [path for path in (self.root / "state" / "runs").iterdir() if (path / "study.json").exists()]
-        self.assertFalse(json.loads((report_runs[0] / "study.json").read_text())["milestone"]["reads_pull_requests"])
+        report_run = next((self.root / "state" / "runs").glob("*/study.json"))
+        self.assertFalse(json.loads(report_run.read_text())["milestone"]["reads_pull_requests"])
