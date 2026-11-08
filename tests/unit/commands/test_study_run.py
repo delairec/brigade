@@ -36,7 +36,7 @@ def _resolve_any_plugin(kind: str, name: str, **places):
     return PluginDouble(kind=kind, name=name)
 
 
-class RecordingPluginResolver:
+class PluginResolverDouble:
     def __init__(self):
         self.resolved = []
 
@@ -199,7 +199,7 @@ class StudyRunForgeTest(unittest.TestCase):
                     ' "oak", "milestone": "M6", "branch": "integration/hardening", "waves": ["oak_w2"], "tasks":'
                     ' ["B17"]}}',
                 )
-                resolver = RecordingPluginResolver()
+                resolver = PluginResolverDouble()
                 runtime = create_test_runtime(
                     create_test_paths(root),
                     run_process=create_corpus_double({"PROJECT": {"oak": (("PATH", "/srv/oak"), ("FORGE", forge))}}),
@@ -218,7 +218,7 @@ class StudyRunForgeTest(unittest.TestCase):
         self.enterContext(contextlib.chdir(root))
         write_operational_corpus(root)
         _write_steps_done(root, '{"schema_version": 1, "study": "mine_transcripts", "project": null}')
-        resolver = RecordingPluginResolver()
+        resolver = PluginResolverDouble()
         runtime = create_test_runtime(
             create_test_paths(root),
             run_process=create_corpus_double({"PROJECT": {"oak": (("PATH", str(root)), ("FORGE", "github"))}}),

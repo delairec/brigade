@@ -6,7 +6,6 @@ from brigade.system.parse_configuration import Configuration
 from brigade.system.read_account_environment import UNBOUND_ENVIRONMENT, ForgeAccount, read_account_environment
 
 FORGE_KIND = "forge"
-FORGE_NAME = "github"
 BUILD_SLOT = "build"
 
 
