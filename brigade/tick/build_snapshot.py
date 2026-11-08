@@ -12,6 +12,7 @@ from brigade.corpus.read_entities import Entity, read_entities
 from brigade.corpus.read_entity import read_entity
 from brigade.errors import BrigadeError, CommandFailed, TaskTypeMissing, ToolFailure
 from brigade.git.check_ancestor import check_ancestor
+from brigade.git.describe_merge_command import describe_merge_command
 from brigade.git.has_uncommitted_changes import has_uncommitted_changes
 from brigade.git.resolve_commit import resolve_commit
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
@@ -64,6 +65,7 @@ from brigade.tick.read_integration_branches import (
 )
 from brigade.tick.study_facts import StudyFacts
 from brigade.waves.count_repair_rounds import count_repair_rounds
+from brigade.waves.describe_milestone_merge import describe_milestone_merge
 from brigade.waves.find_milestone_branch import find_milestone_branch
 from brigade.waves.is_requeue import is_requeue
 from brigade.waves.list_candidate_waves import CandidateWave, list_candidate_waves
@@ -190,6 +192,8 @@ class TaskFacts:
     amendment: TaskAmendment | None = None
     reported: bool = False
     delivered_head: str | None = None
+    merge_command: str | None = None
+    merged_into_main: bool = False
 
     def to_document(self) -> dict:
         return {
@@ -325,6 +329,8 @@ class MilestoneFacts:
     tasks: tuple[str, ...] = ()
     reported: bool = False
     described_head: str | None = None
+    merge_command: str | None = None
+    merged_into_main: bool = False
 
     def to_document(self) -> dict:
         return {
@@ -727,8 +733,15 @@ def _note_delivered_head(reading: WaveReading, open_wave: _OpenWave, task: TaskF
     if not _is_delivered_by_a_build_run(reading, open_wave, task):
         return task
     followed = open_wave.followed
+    head = resolve_commit(followed.run_process, followed.repository, task.branch)
+    if task.milestone is not None:
+        return dataclasses.replace(task, delivered_head=head)
+    main = read_project_field(find_project(reading.projects, open_wave.started.project), MAIN_FIELD)
     return dataclasses.replace(
-        task, delivered_head=resolve_commit(followed.run_process, followed.repository, task.branch)
+        task,
+        delivered_head=head,
+        merge_command=describe_merge_command(followed.repository, task.branch),
+        merged_into_main=check_ancestor(followed.run_process, followed.repository, head, main).exit_code == DESCENDING,
     )
 
 
@@ -1034,6 +1047,17 @@ def _read_tasks_of_milestone(runtime: Runtime, reading: WaveReading, cut: Milest
     return [task for task in tasks if _read_milestone(task) == cut.milestone]
 
 
+def _note_milestone_merge(runtime: Runtime, reading: WaveReading, cut: MilestoneBranchCut, facts: MilestoneFacts):
+    project = find_project(reading.projects, cut.project)
+    command = describe_milestone_merge(reading.entries, project, cut.milestone)
+    if command is None:
+        return facts
+    repository = Path(read_project_field(project, PATH_FIELD))
+    main = read_project_field(project, MAIN_FIELD)
+    merged = check_ancestor(runtime.run_process, repository, cut.branch, main).exit_code == DESCENDING
+    return dataclasses.replace(facts, merge_command=command, merged_into_main=merged)
+
+
 def _read_milestone_facts(runtime: Runtime, reading: WaveReading, cut: MilestoneBranchCut) -> MilestoneFacts:
     project = find_project(reading.projects, cut.project)
     opened = _find_milestone_pull_request(reading, cut.project, cut.milestone)
@@ -1051,7 +1075,7 @@ def _read_milestone_facts(runtime: Runtime, reading: WaveReading, cut: Milestone
     of_milestone = _read_tasks_of_milestone(runtime, reading, cut, ref)
     names = {task.name for task in of_milestone}
     refs = _locate_milestone_refs(runtime, reading, project, ref)
-    return MilestoneFacts(
+    facts = MilestoneFacts(
         project=cut.project,
         milestone=cut.milestone,
         branch=cut.branch,
@@ -1064,6 +1088,7 @@ def _read_milestone_facts(runtime: Runtime, reading: WaveReading, cut: Milestone
         tasks=tuple(task.name for task in of_milestone),
         reported=_is_milestone_reported(reading, cut),
     )
+    return _note_milestone_merge(runtime, reading, cut, facts)
 
 
 def _read_readable_milestone_facts(

@@ -17,6 +17,7 @@ class Rounds:
 class RoundsOutcome:
     actions_applied: int
     actions_failed: int
+    merge_commands: tuple[str, ...] = ()
 
 
 def run_rounds(rounds: Rounds) -> RoundsOutcome:

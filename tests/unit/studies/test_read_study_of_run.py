@@ -8,6 +8,7 @@ from brigade.studies.describe_milestone_report import describe_milestone_report
 from brigade.studies.describe_task_report import describe_task_report
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.read_study_of_run import read_study_of_run
+from brigade.studies.study_run_context import STUDY_RECORD_FILE
 from brigade.studies.task_report_order import TaskReportOrder
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -76,6 +77,33 @@ class ReadStudyOfRunTest(unittest.TestCase):
                 )
             ),
         )
+
+    def test_should_read_the_milestone_report_of_a_run_that_reads_no_pull_request(self):
+        # Arrange
+        (self.run_directory / STUDY_RECORD_FILE).write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "study": "milestone-report",
+                    "milestone": {
+                        "project": "oak",
+                        "milestone": "M6",
+                        "branch": "integration/hardening",
+                        "waves": [],
+                        "tasks": ["B17"],
+                        "reads_pull_requests": False,
+                    },
+                    "task": None,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        # Act
+        study = read_study_of_run(self.runtime, self.run_directory)
+
+        # Assert
+        self.assertFalse(study.milestone.reads_pull_requests)
 
     def test_should_refuse_a_run_that_records_no_study(self):
         # Act

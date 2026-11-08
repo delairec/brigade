@@ -1,0 +1,21 @@
+{
+  "call": {
+    "arguments": [
+      "fmt",
+      "<tmp:0>/projects/shop/.brigade/worktrees/integration-empty-cart/corpus/milestones.awawa"
+    ],
+    "cwd": "<tmp:0>/projects/shop/.brigade/worktrees/integration-empty-cart/corpus",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/projects/shop/.brigade/worktrees/integration-empty-cart/corpus/milestones.awawa": "MILESTONE M1\n\tTITLE \"Empty cart\"\n\tSTATUS reached\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": ""
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}

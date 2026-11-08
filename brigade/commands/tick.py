@@ -61,8 +61,10 @@ from brigade.system.ask_check_logs import CheckLogsQuery, ask_check_logs
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
 from brigade.system.collector_places import locate_collectors
+from brigade.system.hold_lock import hold_lock
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT
+from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.system.parse_configuration import Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
@@ -86,6 +88,8 @@ from brigade.tick.actions import (
     LaunchTask,
     LaunchVerification,
     MergePullRequest,
+    MergeTaskBranch,
+    NameMergeCommand,
     ParkTask,
     PauseWave,
     RebaseMilestone,
@@ -108,6 +112,7 @@ from brigade.tick.find_holding_head import find_holding_head
 from brigade.tick.head_proof import HoldingHead
 from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.ledger_reading_keeper import LedgerReadingKeeper
+from brigade.tick.merge_task_branch import TaskBranchMerge, merge_task_branch
 from brigade.tick.plan import plan
 from brigade.tick.plan_connectors import plan_connectors
 from brigade.tick.prepare_task_worktree import prepare_task_worktree
@@ -127,6 +132,7 @@ from brigade.verify.preflight_task_branch import BranchPreflightDemand, prefligh
 from brigade.verify.record_verdict import REVIEW_SLOT
 from brigade.waves.compose_milestone_title import MilestoneTitleDemand, compose_milestone_title
 from brigade.waves.cut_milestone_branch import MilestoneBranchDemand, cut_milestone_branch
+from brigade.waves.locate_branch_worktree import locate_branch_worktree
 from brigade.waves.locate_forge_branch import locate_forge_branch
 from brigade.waves.locate_project_main import locate_project_main
 from brigade.waves.pull_request_titles import PullRequestTitles
@@ -411,12 +417,12 @@ def _launch_study(runtime: Runtime, action: LaunchStudy) -> None:
 
 
 def _report_milestone(runtime: Runtime, configuration: Configuration, action: ReportMilestone) -> None:
-    order = action.order
+    project = find_project(read_projects(runtime), action.order.project)
+    order = dataclasses.replace(action.order, reads_pull_requests=is_on_a_forge(project))
     study = describe_milestone_report(order)
     run_id = create_run_id(runtime.now)
     start_study_run(runtime, study, run_id)
     detach_study_run(runtime, study.name, run_id, record_run_pid)
-    project = find_project(read_projects(runtime), order.project)
     login = read_cli_login(configuration, read_project_forge(project), runtime) if is_on_a_forge(project) else NO_LOGIN
     append_event(
         runtime.paths,
@@ -501,7 +507,7 @@ def _run_preflight(runtime: Runtime, configuration: Configuration, action: RunPr
         )
 
 
-def _count_review_rounds(runtime: Runtime, action: MergePullRequest) -> int:
+def _count_review_rounds(runtime: Runtime, action: MergePullRequest | MergeTaskBranch) -> int:
     return sum(
         1
         for entry in runtime.read_ledger(runtime.paths.state_root).entries
@@ -540,6 +546,42 @@ def _merge_pull_request(runtime: Runtime, configuration: Configuration, action: 
             pr=action.pr,
             rounds=_count_review_rounds(runtime, action),
             login=login,
+        ),
+    )
+    _record_task_state(runtime, RecordTaskState(wave=action.wave, task=action.task, state=MERGED_STATE, reason=None))
+
+
+def _park_a_conflicted_merge(runtime: Runtime, action: MergeTaskBranch) -> None:
+    _park_task(
+        runtime,
+        ParkTask(wave=action.wave, task=action.task, reason=f"the merge into {action.branch} conflicted", blockers=()),
+    )
+
+
+def _merge_task_branch(runtime: Runtime, configuration: Configuration, action: MergeTaskBranch) -> None:
+    repository = Path(read_project_field(find_project(read_projects(runtime), action.project), PATH_FIELD))
+    merge = TaskBranchMerge(
+        repository=repository,
+        worktree=locate_branch_worktree(repository, configuration.worktree_root, action.branch),
+        branch=action.branch,
+        head=action.head,
+        method=action.method,
+        message=f"merge @TASK.{action.task} into {action.branch}",
+    )
+    with hold_lock(locate_worktrees_lock(runtime.paths.lock_directory, action.project)):
+        merged = merge_task_branch(runtime.run_process, merge)
+    if not merged:
+        _park_a_conflicted_merge(runtime, action)
+        return
+    append_event(
+        runtime.paths,
+        runtime.now,
+        PrMerged(
+            project=action.project,
+            wave=action.wave,
+            task=action.task,
+            rounds=_count_review_rounds(runtime, action),
+            login=NO_LOGIN,
         ),
     )
     _record_task_state(runtime, RecordTaskState(wave=action.wave, task=action.task, state=MERGED_STATE, reason=None))
@@ -724,6 +766,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         RemoveIntegrationBranch: lambda action: remove_integration_branch(runtime, action),
         RunPreflight: lambda action: _run_preflight(runtime, configuration, action),
         MergePullRequest: lambda action: _merge_pull_request(runtime, configuration, action),
+        MergeTaskBranch: lambda action: _merge_task_branch(runtime, configuration, action),
         **_list_task_run_executors(runtime, configuration),
         LaunchStudy: lambda action: _launch_study(runtime, action),
         PauseWave: lambda action: _pause_wave(runtime, action),
@@ -809,9 +852,16 @@ def _name_the_kept_integration_branches(named: set[KeepIntegrationBranch], actio
     return tuple(action for action in actions if action not in kept)
 
 
+def _name_the_merge_commands(named: set[str], actions: tuple) -> tuple:
+    commands = [action for action in actions if isinstance(action, NameMergeCommand)]
+    named.update(command.command for command in commands)
+    return tuple(action for action in actions if action not in commands)
+
+
 def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuration) -> RoundsOutcome:
     forge = _read_the_forge(runtime, configuration)
     named: set[KeepIntegrationBranch] = set()
+    merge_commands: set[str] = set()
     apply = functools.partial(
         apply_actions,
         executors=_list_executors(runtime, configuration),
@@ -820,7 +870,9 @@ def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuratio
     outcome = run_rounds(
         Rounds(
             build_snapshot=lambda: _name_the_blocked_milestone_rebases(build_snapshot(runtime, configuration, forge)),
-            plan=lambda snapshot: _name_the_kept_integration_branches(named, plan(snapshot)),
+            plan=lambda snapshot: _name_the_merge_commands(
+                merge_commands, _name_the_kept_integration_branches(named, plan(snapshot))
+            ),
             apply=apply,
             cap=ROUND_CAP,
         )
@@ -829,6 +881,7 @@ def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuratio
     return RoundsOutcome(
         actions_applied=outcome.actions_applied + connectors.applied,
         actions_failed=outcome.actions_failed + len(connectors.failed),
+        merge_commands=tuple(sorted(merge_commands)),
     )
 
 
@@ -852,7 +905,13 @@ def _remember_the_readings_of_the_tick(runtime: Runtime) -> Runtime:
     )
 
 
-def _tick(runtime: Runtime) -> Heartbeat | None:
+@dataclasses.dataclass(frozen=True)
+class _TickEnd:
+    heartbeat: Heartbeat
+    merge_commands: tuple[str, ...]
+
+
+def _tick(runtime: Runtime) -> _TickEnd | None:
     started = runtime.read_monotonic()
     with hold_lock_without_waiting(_locate_lock(runtime)) as acquired:
         if not acquired:
@@ -868,13 +927,14 @@ def _tick(runtime: Runtime) -> Heartbeat | None:
             actions_failed=outcome.actions_failed,
         )
         write_json_atomically(_locate_heartbeat(runtime), heartbeat.to_document())
-    return heartbeat
+    return _TickEnd(heartbeat=heartbeat, merge_commands=outcome.merge_commands)
 
 
 def _tick_once(runtime: Runtime) -> dict:
-    heartbeat = _tick(runtime)
-    if heartbeat is None:
+    ended = _tick(runtime)
+    if ended is None:
         raise StandingDown(f"another tick holds {_locate_lock(runtime)}")
+    heartbeat = ended.heartbeat
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "mode": "once",
@@ -883,6 +943,7 @@ def _tick_once(runtime: Runtime) -> dict:
         "actions_applied": heartbeat.actions_applied,
         "actions_failed": heartbeat.actions_failed,
         "heartbeat": str(_locate_heartbeat(runtime)),
+        "merge_commands": list(ended.merge_commands),
     }
 
 
@@ -920,10 +981,13 @@ def _plan_dry(runtime: Runtime) -> dict:
 def _tick_and_report(create_runtime: Callable[[], Runtime]) -> None:
     runtime = create_runtime()
     remove_expired_trails(runtime.paths, runtime.now)
-    heartbeat = _tick(runtime)
-    if heartbeat is None:
+    ended = _tick(runtime)
+    if ended is None:
         sys.stderr.write(f"brigade tick: another tick holds {_locate_lock(runtime)}\n")
         return
+    heartbeat = ended.heartbeat
+    for command in ended.merge_commands:
+        sys.stderr.write(f"brigade tick: to merge: {command}\n")
     sys.stderr.write(
         f"brigade tick: {heartbeat.ts}: {heartbeat.actions_applied} actions applied,"
         f" {heartbeat.actions_failed} failed in {heartbeat.duration_ms} ms\n"
@@ -940,7 +1004,10 @@ def _tick_in_loop(create_runtime: Callable[[], Runtime]) -> dict:
 
 def _render_once(document: dict) -> list[str]:
     applied = f"{document['actions_applied']} actions applied, {document['actions_failed']} failed"
-    return [f"tick {document['ts']}: {applied} in {document['duration_ms']} ms"]
+    return [
+        f"tick {document['ts']}: {applied} in {document['duration_ms']} ms",
+        *(f"to merge: {command}" for command in document["merge_commands"]),
+    ]
 
 
 def _render_dry_run(document: dict) -> list[str]:

@@ -20,6 +20,8 @@ from brigade.tick.actions import (
     LaunchTask,
     LaunchVerification,
     MergePullRequest,
+    MergeTaskBranch,
+    NameMergeCommand,
     ParkTask,
     PauseWave,
     RebaseMilestone,
@@ -106,6 +108,7 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_followed_pull_requests(snapshot)
         + _plan_delivered_head_preflights(snapshot)
         + _plan_delivered_head_verifications(snapshot)
+        + _plan_delivered_head_merges(snapshot)
         + _plan_failed_preflight_parkings(snapshot)
         + _plan_blocked_task_parkings(snapshot)
         + _plan_dead_run_parkings(snapshot)
@@ -113,6 +116,7 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_milestone_reports(snapshot)
         + _plan_task_reports(snapshot)
         + _plan_milestone_closes(snapshot)
+        + _plan_milestone_merge_commands(snapshot)
         + _plan_milestone_describes(snapshot)
         + _plan_launches(snapshot, paused)
         + _plan_milestone_cuts(snapshot)
@@ -617,6 +621,54 @@ def _plan_delivered_head_verifications(snapshot: Snapshot) -> tuple:
     return tuple(action for action in decided if action is not None)
 
 
+def _is_delivered_head_accepted(wave: WaveFacts, task: TaskFacts) -> bool:
+    return (
+        wave.states.get(task.name) == VERIFIED_STATE
+        and task.delivered_head == task.preflighted_head
+        and task.verdict is not None
+        and task.verdict.verdict == PASSING_VERDICT
+        and task.verdict.head == task.delivered_head
+    )
+
+
+def _decide_user_merge(wave: WaveFacts, task: TaskFacts) -> RecordTaskState | NameMergeCommand:
+    if task.merged_into_main:
+        return RecordTaskState(wave=wave.wave, task=task.name, state=MERGED_STATE, reason=None)
+    return NameMergeCommand(command=task.merge_command)
+
+
+def _decide_delivered_head_merge(
+    wave: WaveFacts, task: TaskFacts, project: ProjectFacts, rebasing: frozenset
+) -> MergeTaskBranch | RecordTaskState | NameMergeCommand | None:
+    if task.merge_command is not None:
+        return _decide_user_merge(wave, task)
+    if project.auto_merge == NO_AUTO_MERGE or (wave.project, wave.milestone_branch) in rebasing:
+        return None
+    return MergeTaskBranch(
+        project=wave.project,
+        wave=wave.wave,
+        task=task.name,
+        task_branch=task.branch,
+        branch=wave.milestone_branch,
+        method=project.merge,
+        head=task.delivered_head,
+    )
+
+
+def _plan_delivered_head_merges(snapshot: Snapshot) -> tuple:
+    projects = {project.name: project for project in snapshot.projects}
+    rebasing = frozenset(
+        (milestone.project, milestone.branch) for milestone in snapshot.milestones if milestone.rebase_run_live
+    )
+    decided = (
+        _decide_delivered_head_merge(wave, task, projects[wave.project], rebasing)
+        for wave in snapshot.waves
+        for task in wave.tasks
+        if _is_delivered_head_accepted(wave, task)
+    )
+    return tuple(action for action in decided if action is not None)
+
+
 def _describe_failed_preflight(task: TaskFacts) -> str:
     findings = "; ".join(
         f"{failure.name}: {finding}" for failure in task.preflight_failures for finding in failure.findings
@@ -734,11 +786,25 @@ def _plan_task_reports(snapshot: Snapshot) -> tuple:
     )
 
 
+def _is_milestone_merged(milestone: MilestoneFacts) -> bool:
+    return milestone.merged_into_main or (
+        milestone.pull_request is not None and milestone.pull_request.state == MERGED_PULL_REQUEST
+    )
+
+
 def _plan_milestone_closes(snapshot: Snapshot) -> tuple:
     return tuple(
         CloseMilestone(project=milestone.project, milestone=milestone.milestone, pr=milestone.opened_pull_request)
         for milestone in snapshot.milestones
-        if milestone.pull_request is not None and milestone.pull_request.state == MERGED_PULL_REQUEST
+        if _is_milestone_merged(milestone)
+    )
+
+
+def _plan_milestone_merge_commands(snapshot: Snapshot) -> tuple:
+    return tuple(
+        NameMergeCommand(command=milestone.merge_command)
+        for milestone in snapshot.milestones
+        if milestone.merge_command is not None and not milestone.merged_into_main
     )
 
 

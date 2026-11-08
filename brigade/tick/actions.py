@@ -96,6 +96,22 @@ class MergePullRequest:
 
 
 @dataclass(frozen=True)
+class MergeTaskBranch:
+    project: str
+    wave: str
+    task: str
+    task_branch: str
+    branch: str
+    method: str
+    head: str
+
+
+@dataclass(frozen=True)
+class NameMergeCommand:
+    command: str
+
+
+@dataclass(frozen=True)
 class RemoveTaskWorktree:
     project: str
     task: str
@@ -163,7 +179,7 @@ class CloseWave:
 class CloseMilestone:
     project: str
     milestone: str
-    pr: int
+    pr: int | None
 
 
 @dataclass(frozen=True)

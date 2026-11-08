@@ -6826,3 +6826,37 @@ DECISION ProjectAddTakesTheProposedFolderWhenNoTerminalAnswers
 		+ "the test of the task registers an area with --corpus-mode alone"
 	SOURCE "the build run of @TASK.B140 on 2026-11-08, the design its SPEC lines leave open"
 		REF @TASK.B140
+
+DECISION ATaskOfForgeNoneIsMergedInTheWorktreeOfItsMilestoneBranchAndAConflictingMergeParksIt
+	TITLE "a task of FORGE none is merged by the tick with git merge in a worktree on the branch of"
+		+ "its milestone, PROJECT.MERGE merge a merge commit, squash a squash commit and rebase a"
+		+ "plain git merge, fast-forwarding where the branch has not moved; a merge that conflicts"
+		+ "is aborted and parks the task on the name of that branch"
+	STATUS active
+	DESC "binds @TASK.B240"
+		REF @TASK.B240
+	REJECTED "git rebase for PROJECT.MERGE rebase: it would rewrite the head the preflight and the"
+		+ "verdict read"
+	REJECTED "leaving a conflicting merge half done: the next tick could not start a merge in that"
+		+ "worktree, and the task would stay verified for good"
+	RATIONALE "SPEC 1 of @TASK.B240 sets git merge with PROJECT.MERGE and leaves open what rebase"
+		+ "means off a forge and where a merge conflicts"
+		REF @TASK.B240
+	SOURCE "the build run of @TASK.B240, step 3, on 2026-11-08"
+		REF @TASK.B240
+
+DECISION TheMilestoneReportOfForgeNoneCollectsNoPullRequestAndCommitsOnTheClone
+	TITLE "the milestone report of a project of FORGE none collects no pull request and is"
+		+ "committed on the branch of the milestone in a worktree of the clone, pushed nowhere"
+	STATUS active
+	DESC "binds @TASK.B240"
+		REF @TASK.B240
+	REJECTED "a pr-list collector answering nothing under FORGE none: the collector is absent there"
+		+ "by brigade/collecting/find_absence.py and an absence fails the study"
+	RATIONALE "SPEC 3 of @TASK.B240 commits the report on the branch as SPEC 8 of @TASK.B232 does,"
+		+ "and off a forge the milestone branch exists only in the clone, so it has no origin to"
+		+ "fetch nor to push"
+		REF @TASK.B240
+		REF @TASK.B232
+	SOURCE "the build run of @TASK.B240, step 3, on 2026-11-08"
+		REF @TASK.B240

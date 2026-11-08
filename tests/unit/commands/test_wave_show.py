@@ -5,7 +5,7 @@ from pathlib import Path
 
 from brigade.commands.wave_show import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import write_ledger
+from tests.unit.commands.command_runtime import create_machine_double, write_ledger, write_operational_corpus
 from tests.unit.commands.run_directories import create_run_result
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -75,6 +75,7 @@ class WaveShowTextTest(unittest.TestCase):
             "branch": "integration/tidepool_w16",
             "started_at": "2026-09-30T22:00:00Z",
             "last_event": "wave.started",
+            "merge_command": None,
             "pull_request": 77,
             "tasks": [
                 {"task": "T7", "state": "pr_open", "pull_request": 42, "run": "20261001T090000Z-a1", "reason": None},
@@ -145,6 +146,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
                 "started_at": "2026-09-30T22:00:00Z",
                 "last_event": "wave.started",
                 "pull_request": None,
+                "merge_command": None,
                 "tasks": [
                     {
                         "task": "T7",
@@ -244,3 +246,85 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(raised.exception), "no wave.started names the wave tidepool_w17")
+
+
+REPOSITORY = "/srv/tidepool"
+WAVE_HEAD = "8885daa"
+RUN = "20261018T120000Z-a1b2c3"
+FORGELESS_WAVE_STARTED = {
+    "schema_version": 2,
+    "ts": "2026-10-18T09:00:00Z",
+    "event": "wave.started",
+    "wave": "tidepool_w16",
+    "project": "tidepool",
+    "tasks": ["T7"],
+}
+CUT = {
+    "schema_version": 1,
+    "ts": "2026-10-18T08:00:00Z",
+    "event": "milestone.branch_cut",
+    "project": "tidepool",
+    "milestone": "M4",
+    "branch": "integration/tides",
+    "login": None,
+}
+REPORTED = {
+    "schema_version": 1,
+    "ts": "2026-10-18T12:00:00Z",
+    "event": "milestone.reported",
+    "project": "tidepool",
+    "milestone": "M4",
+    "run": RUN,
+    "login": None,
+}
+REPORT_DONE = {
+    "schema_version": 1,
+    "ts": "2026-10-18T12:05:00Z",
+    "event": "order.done",
+    "project": "tidepool",
+    "kind": "study",
+    "order": None,
+    "run": RUN,
+}
+OTHER_REPORTED = {**REPORTED, "project": "elsewhere"}
+MACHINE_OUTPUTS = {
+    ("git", "rev-parse", "--verify"): f"{WAVE_HEAD}\n",
+    ("git", "worktree", "list"): "",
+}
+CORPUS = {
+    "PROJECT": {"tidepool": (("PATH", REPOSITORY), ("MAIN", "main"), ("FORGE", "none"))},
+    "TASK": {"T7": (("TITLE", "Tide table"), ("TYPE", "feat"), ("MILESTONE", "@MILESTONE.M4"))},
+    "POLICY": {},
+}
+
+
+class WaveShowOfAProjectWithoutAForgeTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root), run_process=create_machine_double(CORPUS, MACHINE_OUTPUTS)
+        )
+
+    def _show(self, events: list[dict]) -> dict:
+        write_ledger(self.root, events)
+        return COMMAND.run(Namespace(wave="tidepool_w16"), self.runtime)
+
+    def test_should_print_the_command_merging_the_milestone_of_the_wave_once_its_report_is_committed(self):
+        # Act
+        document = self._show([CUT, FORGELESS_WAVE_STARTED, REPORTED, REPORT_DONE])
+
+        # Assert
+        self.assertEqual(document["merge_command"], "git -C /srv/tidepool merge integration/tides")
+        self.assertIn(
+            "to merge: git -C /srv/tidepool merge integration/tides", COMMAND.render_text(document).splitlines()
+        )
+
+    def test_should_print_no_command_before_the_report_of_the_milestone(self):
+        # Act
+        document = self._show([CUT, FORGELESS_WAVE_STARTED, OTHER_REPORTED])
+
+        # Assert
+        self.assertIsNone(document["merge_command"])
+        self.assertNotIn("to merge", COMMAND.render_text(document))
