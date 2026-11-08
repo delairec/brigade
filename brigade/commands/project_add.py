@@ -117,6 +117,16 @@ def _refuse_a_corpus_already_tracked(runtime: Runtime, path: Path) -> None:
         raise BrigadeError(f"{path} already tracks {tracked[0]}; --init-corpus would add a second corpus")
 
 
+def _discover(request, runtime: Runtime, path: Path) -> ProjectDiscovery:
+    if request.corpus is not None and not request.init_corpus:
+        raise UsageError("--corpus names the folder of --init-corpus and needs it")
+    discovery = discover_project(runtime.run_process, path)
+    if not request.init_corpus:
+        return discovery
+    _refuse_a_corpus_already_tracked(runtime, path)
+    return dataclasses.replace(discovery, corpus=_choose_corpus_folder(request))
+
+
 def _install_corpus(runtime: Runtime, project: Entity) -> dict:
     configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)
     forge_name = read_project_forge(project)
@@ -158,14 +168,8 @@ def project_add(request: argparse.Namespace, runtime: Runtime) -> dict:
     name = _choose_name(request, path)
     if not detect_repository(runtime.run_process, path):
         raise BrigadeError(f"{path} is not a git repository")
-    if request.corpus is not None and not request.init_corpus:
-        raise UsageError("--corpus names the folder of --init-corpus and needs it")
-    discovery = discover_project(runtime.run_process, path)
-    if request.init_corpus:
-        discovery = dataclasses.replace(discovery, corpus=_choose_corpus_folder(request))
-        _refuse_a_corpus_already_tracked(runtime, path)
     guess = guess_commands(path)
-    fields = _describe_fields(request, discovery, guess)
+    fields = _describe_fields(request, _discover(request, runtime, path), guess)
     project = Entity(name=name, fields=tuple(EntityField(name=field.name, value=field.value) for field in fields))
     registration = _Registration(runtime, project, force=request.force)
     installed = NOTHING_INSTALLED
