@@ -254,9 +254,7 @@ class TaskContextOfABuildRunTest(unittest.TestCase):
 CLI_ACCOUNT_BOUND = '[forge_accounts]\ncli = "octo-bot"\n'
 TIDEPOOL_ON_GITHUB_CORPUS = {
     **TIDEPOOL_CORPUS,
-    "PROJECT": {
-        "tidepool": (("PATH", "/home/user/tidepool"), ("FORGE", "github"), ("ACCEPTANCE", "python3 -m unittest")),
-    },
+    "PROJECT": {"tidepool": (*TIDEPOOL_CORPUS["PROJECT"]["tidepool"], ("FORGE", "github"))},
 }
 TASK_CHECKOUT_ON_GITHUB = {**TASK_CHECKOUT, ("git", "fetch"): ""}
 
