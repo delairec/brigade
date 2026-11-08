@@ -23,6 +23,9 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
 COLLECTOR_DIRECTORY = "/srv/app"
+GITHUB_FORGE = object()
+NO_FORGE_PLUGIN = None
+NO_PROJECT_REGISTERED = {}
 IN_THE_WINDOW = datetime(2026, 10, 18, 8, 0, tzinfo=UTC)
 SESSION_BRIEF = {
     "role": "user",
@@ -42,9 +45,11 @@ class ScriptedCollectorDouble:
 
     def __init__(self):
         self.environments = []
+        self.equipments = []
 
     def collect(self, environment: dict, runtime, equipment):
         self.environments.append(environment)
+        self.equipments.append(equipment)
         return ProcessRecord(
             argv=self.command, cwd=COLLECTOR_DIRECTORY, exit_code=0, stdout=NOTES_DOCUMENT, stderr="", duration_ms=40
         )
@@ -59,10 +64,14 @@ class CollectTest(unittest.TestCase):
         self.project.mkdir()
         self.enterContext(contextlib.chdir(self.project))
         self.collector = ScriptedCollectorDouble()
+        paths = create_test_paths(root)
+        self.processes = ScriptedProcesses()
+        self.processes.answer_entities(paths.config_root, "PROJECT", NO_PROJECT_REGISTERED)
         self.runtime = create_test_runtime(
-            create_test_paths(root),
+            paths,
+            run_process=self.processes,
             resolve_plugin=create_plugin_resolver(
-                {("collector", "notes"): self.collector, ("forge", "github"): object()}
+                {("collector", "notes"): self.collector, ("forge", "github"): GITHUB_FORGE}
             ),
         )
 
@@ -109,6 +118,25 @@ class CollectTest(unittest.TestCase):
                         "BRIGADE_PARAMS": '{"kind": "todo"}',
                     },
                 )
+
+    def test_should_equip_the_collector_with_the_forge_of_the_project_at_its_directory(self):
+        # Arrange
+        rows = [
+            ("a project of FORGE github", (("PATH", str(self.project)), ("FORGE", "github")), GITHUB_FORGE, "github"),
+            ("a project of FORGE none", (("PATH", str(self.project)), ("FORGE", "none")), NO_FORGE_PLUGIN, "none"),
+            ("a project at another directory", (("PATH", "/srv/oak"), ("FORGE", "github")), NO_FORGE_PLUGIN, "none"),
+        ]
+        for case, fields, expected_forge, expected_forge_name in rows:
+            with self.subTest(case=case):
+                self.processes.answer_entities(self.runtime.paths.config_root, "PROJECT", {"app": fields})
+                request = argparse.Namespace(name="notes", since=None, refresh=True, extra_arguments=[])
+
+                # Act
+                collect(request, self.runtime)
+
+                # Assert
+                self.assertIs(self.collector.equipments[-1].forge, expected_forge)
+                self.assertEqual(self.collector.equipments[-1].forge_name, expected_forge_name)
 
 
 class CollectTranscriptsTest(unittest.TestCase):
