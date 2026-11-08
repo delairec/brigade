@@ -16948,7 +16948,8 @@ TASK B242
 		+ "belongs to are read at origin/<branch>, never at a local ref the merges of the forge"
 		+ "leave behind, and a wave whose task waits on a task an earlier wave merged launches it"
 		+ "at the next tick with no manual step"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 385
 	TYPE fix
 	MILESTONE @MILESTONE.M11
 	COMPONENT "the tick"
