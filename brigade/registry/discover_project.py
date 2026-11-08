@@ -21,6 +21,7 @@ class ProjectDiscovery:
     main: str
     corpus: str | None
     forge: str
+    mode: str | None = None
 
 
 def _locate_corpus(files: tuple[str, ...]) -> str | None:

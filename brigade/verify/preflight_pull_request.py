@@ -8,6 +8,7 @@ from brigade.git.fetch_branches import BranchesFetch, fetch_branches
 from brigade.git.find_merge_base import find_merge_base
 from brigade.git.list_added_lines import list_added_lines
 from brigade.git.resolve_commit import resolve_commit
+from brigade.registry.read_corpus_workspace import read_corpus_workspace
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_project_forge import read_project_forge
 from brigade.runtime import Runtime
@@ -90,7 +91,13 @@ def _run_checks(runtime: Runtime, demand: PreflightDemand, pull_request: dict, c
         check_corpus_at_head(run_process, head_tree),
         check_promotion(run_process, PromotionFacts(head_tree=head_tree, task=demand.task, pr=demand.pr)),
         check_untouched_files(
-            run_process, UntouchedFilesFacts(base_tree=base_tree, head_tree=head_tree, changed=changed)
+            run_process,
+            UntouchedFilesFacts(
+                base_tree=base_tree,
+                head_tree=head_tree,
+                changed=changed,
+                folder=read_corpus_workspace(demand.project),
+            ),
         ),
         check_privacy(
             read_privacy_patterns(demand.project),

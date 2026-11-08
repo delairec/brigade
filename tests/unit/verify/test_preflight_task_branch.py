@@ -137,3 +137,62 @@ class PreflightTaskBranchTest(unittest.TestCase):
                 "commands": [{"command": "python3 -m unittest", "exit_code": 1}],
             },
         )
+
+
+class PreflightTaskBranchOfAnAreaTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.root)
+        self.paths = create_test_paths(self.root)
+        self.paths.config_root.mkdir(parents=True)
+        self.paths.schema_file.write_text("SCHEMA PROJECT\n")
+        self.head_tree = self.paths.cache_root / "refs" / "shop" / HEAD
+        self.base_tree = self.paths.cache_root / "refs" / "shop" / BASE
+        (self.head_tree / "brigade").mkdir(parents=True)
+        (self.base_tree / "brigade").mkdir(parents=True)
+
+    def test_should_read_the_area_and_run_the_acceptance_at_the_root_of_the_repository(self):
+        # Arrange
+        head_area = self.head_tree / "brigade"
+        fields = {"PATH": "/srv/shop", "CORPUS": "brigade", "MODE": "area"}
+        runner = RecordingProcessRunner(
+            {
+                **create_registry_answers(self.paths.config_root, {"shop": fields}),
+                _resolve(TASK_BRANCH): ProcessAnswer(stdout=f"{HEAD}\n"),
+                _resolve(MILESTONE_BRANCH): ProcessAnswer(stdout=f"{MILESTONE_HEAD}\n"),
+                ("git", "merge-base", "--end-of-options", MILESTONE_HEAD, HEAD): ProcessAnswer(stdout=f"{BASE}\n"),
+                _resolve(HEAD): ProcessAnswer(stdout=f"{HEAD}\n"),
+                _resolve(BASE): ProcessAnswer(stdout=f"{BASE}\n"),
+                ("git", "diff", "--numstat", "--text", "--end-of-options", BASE, HEAD, "--"): ProcessAnswer(stdout=""),
+                ("awawa", "show", "@TASK.B1", "--json", str(head_area)): ProcessAnswer(
+                    stdout=json.dumps({"fields": [{"name": "STATUS", "atoms": ["implemented"], "fields": []}]})
+                ),
+                ("awawa", "diff", str(self.base_tree / "brigade"), str(head_area), "--json"): ProcessAnswer(
+                    stdout=json.dumps({"added": [], "changed": [], "removed": []})
+                ),
+                ("python3", "-m", "unittest"): ProcessAnswer(),
+            }
+        )
+        demand = BranchPreflightDemand(
+            project=Entity(
+                name="shop",
+                fields=(
+                    EntityField(name="PATH", value="/srv/shop"),
+                    EntityField(name="CORPUS", value="brigade"),
+                    EntityField(name="MODE", value="area"),
+                    EntityField(name="FORGE", value="none"),
+                    EntityField(name="ACCEPTANCE", value="python3 -m unittest"),
+                ),
+            ),
+            task="B1",
+            task_branch=TASK_BRANCH,
+            base_branch=MILESTONE_BRANCH,
+            configuration=Configuration(),
+        )
+
+        # Act
+        preflight_task_branch(create_test_runtime(self.paths, run_process=runner), demand)
+
+        # Assert
+        self.assertIn((str(self.head_tree), ("python3", "-m", "unittest")), runner.commands)
+        self.assertIn((str(head_area), ("awawa", "fmt", "--check", ".")), runner.commands)

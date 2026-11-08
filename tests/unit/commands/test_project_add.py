@@ -28,6 +28,7 @@ def _create_request(path: Path, **options) -> argparse.Namespace:
         force=options.get("force", False),
         init_corpus=options.get("init_corpus", False),
         corpus=options.get("corpus"),
+        corpus_mode=options.get("corpus_mode"),
     )
 
 
@@ -62,7 +63,7 @@ class ProjectAddTest(unittest.TestCase):
 
     def test_should_register_the_repository_with_what_it_discovered(self):
         # Arrange
-        request = _create_request(self.repository)
+        request = _create_request(self.repository, corpus_mode="control")
 
         # Act
         document = project_add(request, self.runtime)
@@ -92,7 +93,7 @@ class ProjectAddTest(unittest.TestCase):
 
     def test_should_write_the_project_entity_in_the_registry(self):
         # Arrange
-        request = _create_request(self.repository, name="tidepool")
+        request = _create_request(self.repository, name="tidepool", corpus_mode="control")
 
         # Act
         project_add(request, self.runtime)
@@ -109,7 +110,7 @@ class ProjectAddTest(unittest.TestCase):
         self.answers["awawa", "status", "PROJECT"] = ProcessAnswer(stdout=APP_PROJECT)
         self.answers["awawa", "show", "@PROJECT.app"] = ProcessAnswer(stdout=ELSEWHERE)
         self.registry.write_text(LIB_AND_APP)
-        request = _create_request(self.repository, force=True)
+        request = _create_request(self.repository, force=True, corpus_mode="control")
 
         # Act
         document = project_add(request, self.runtime)
@@ -127,7 +128,7 @@ class ProjectAddTest(unittest.TestCase):
         # Arrange
         self.answers["awawa", "status", "PROJECT"] = ProcessAnswer(stdout=APP_PROJECT)
         self.answers["awawa", "show", "@PROJECT.app"] = ProcessAnswer(stdout=ELSEWHERE)
-        request = _create_request(self.repository)
+        request = _create_request(self.repository, corpus_mode="control")
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -144,7 +145,7 @@ class ProjectAddTest(unittest.TestCase):
         self.answers["awawa", "show", "@PROJECT.old"] = ProcessAnswer(
             stdout=json.dumps({"fields": [{"name": "PATH", "atoms": [json.dumps(str(self.repository))]}]})
         )
-        request = _create_request(self.repository)
+        request = _create_request(self.repository, corpus_mode="control")
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -157,7 +158,7 @@ class ProjectAddTest(unittest.TestCase):
 
     def test_should_refuse_a_name_that_is_not_an_identifier(self):
         # Arrange
-        request = _create_request(self.repository, name="my app")
+        request = _create_request(self.repository, name="my app", corpus_mode="control")
 
         # Act
         with self.assertRaises(UsageError) as refusal:
@@ -169,7 +170,7 @@ class ProjectAddTest(unittest.TestCase):
     def test_should_refuse_a_path_that_is_not_a_git_repository(self):
         # Arrange
         absent = self.repository.parent / "absent"
-        request = _create_request(absent)
+        request = _create_request(absent, corpus_mode="control")
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -192,6 +193,7 @@ class ProjectAddTest(unittest.TestCase):
             force=False,
             init_corpus=False,
             corpus=None,
+            corpus_mode="control",
         )
 
         # Act
@@ -448,6 +450,188 @@ class ProjectAddInitCorpusTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), "--corpus names the folder of --init-corpus and needs it")
+
+
+class _TerminalDouble:
+    def __init__(self, *answers: str):
+        self.answers = list(answers)
+        self.questions = []
+
+    def ask(self, question: str) -> str:
+        self.questions.append(question)
+        return self.answers.pop(0)
+
+
+class ProjectAddOnATrackedCorpusTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name).resolve()
+        self.repository = root / "app"
+        self.repository.mkdir()
+        self.answers = {
+            ("git", "rev-parse", "--git-dir"): ProcessAnswer(stdout=".git\n"),
+            ("git", "rev-parse", "--verify"): ProcessAnswer(exit_code=1),
+            ("git", "symbolic-ref"): ProcessAnswer(stdout="origin/main\n"),
+            ("git", "remote", "get-url"): ProcessAnswer(stdout="https://git.example.org/acme/app.git\n"),
+            ("git", "ls-files"): ProcessAnswer(stdout="specs/tasks.awawa\0specs/rules.awawa\0"),
+            ("awawa", "status", "PROJECT"): ProcessAnswer(stdout=NO_PROJECT),
+            ("awawa", "fmt"): ProcessAnswer(),
+            ("awawa", "lint"): ProcessAnswer(),
+            ("git", "worktree"): ProcessAnswer(),
+            ("git", "switch"): ProcessAnswer(),
+            ("git", "fetch"): ProcessAnswer(),
+            ("git", "add"): ProcessAnswer(),
+            ("git", "diff"): ProcessAnswer(exit_code=1),
+            ("git", "commit"): ProcessAnswer(),
+        }
+        self.root = root
+
+    def add(self, terminal=None, **options) -> dict:
+        request = _create_request(self.repository, **options)
+        arguments = {} if terminal is None else {"ask_on_terminal": terminal.ask}
+        runtime = create_test_runtime(
+            create_test_paths(self.root), run_process=ScriptedProcessRunner(self.answers).run, **arguments
+        )
+        runtime.paths.config_root.mkdir(parents=True, exist_ok=True)
+        runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
+        runtime.paths.configuration_file.write_text("")
+        return project_add(request, runtime)
+
+    def read_fields(self, document: dict) -> dict:
+        return {field["name"]: field["value"] for field in document["project"]["fields"]}
+
+    def test_should_exit_2_naming_the_option_when_no_terminal_can_answer(self):
+        # Arrange
+        no_terminal = None
+
+        # Act
+        with self.assertRaises(UsageError) as refusal:
+            self.add(no_terminal)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            f"{self.repository} tracks specs/tasks.awawa: --corpus-mode control|area says how brigade uses it",
+        )
+
+    def test_should_keep_the_corpus_of_the_project_in_control_when_the_option_says_so(self):
+        # Act
+        document = self.add(corpus_mode="control")
+
+        # Assert
+        self.assertEqual(self.read_fields(document)["CORPUS"], "specs")
+        self.assertNotIn("MODE", self.read_fields(document))
+        self.assertIsNone(document["installed_corpus"])
+
+    def test_should_confine_brigade_to_its_own_folder_when_the_option_says_area(self):
+        # Act
+        document = self.add(corpus_mode="area")
+
+        # Assert
+        self.assertEqual(self.read_fields(document)["CORPUS"], "brigade")
+        self.assertEqual(self.read_fields(document)["MODE"], "area")
+
+    def test_should_take_the_folder_of_the_corpus_option_over_the_default(self):
+        for mode, expected in [("control", "docs/spec"), ("area", "docs/spec")]:
+            with self.subTest(mode=mode):
+                # Act
+                document = self.add(corpus_mode=mode, corpus="docs/spec")
+
+                # Assert
+                self.assertEqual(self.read_fields(document)["CORPUS"], expected)
+
+    def test_should_ask_the_mode_then_the_folder_on_a_terminal(self):
+        # Arrange
+        terminal = _TerminalDouble("area", "atelier")
+
+        # Act
+        document = self.add(terminal)
+
+        # Assert
+        self.assertEqual(terminal.questions, ["Corpus mode, control or area: ", "Corpus folder [brigade]: "])
+        self.assertEqual(self.read_fields(document)["CORPUS"], "atelier")
+
+    def test_should_keep_the_folder_proposed_when_the_terminal_answer_is_empty(self):
+        # Arrange
+        terminal = _TerminalDouble("control", "")
+
+        # Act
+        document = self.add(terminal)
+
+        # Assert
+        self.assertEqual(terminal.questions[1], "Corpus folder [specs]: ")
+        self.assertEqual(self.read_fields(document)["CORPUS"], "specs")
+
+    def test_should_not_ask_the_folder_the_corpus_option_names(self):
+        # Arrange
+        terminal = _TerminalDouble("area")
+
+        # Act
+        document = self.add(terminal, corpus="atelier")
+
+        # Assert
+        self.assertEqual(terminal.questions, ["Corpus mode, control or area: "])
+        self.assertEqual(self.read_fields(document)["CORPUS"], "atelier")
+
+    def test_should_refuse_a_mode_the_terminal_answers_outside_the_two_modes(self):
+        # Arrange
+        terminal = _TerminalDouble("elsewhere")
+
+        # Act
+        with self.assertRaises(UsageError) as refusal:
+            self.add(terminal)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "elsewhere is not a corpus mode: --corpus-mode control|area")
+
+    def test_should_install_the_template_in_the_area_on_a_branch(self):
+        # Act
+        document = self.add(corpus_mode="area")
+
+        # Assert
+        self.assertEqual(
+            document["installed_corpus"],
+            {
+                "branch": "brigade/init-corpus",
+                "pull_request": None,
+                "merge_command": f"git -C {self.repository} merge brigade/init-corpus",
+            },
+        )
+
+    def test_should_not_install_an_area_already_holding_its_schema(self):
+        # Arrange
+        self.answers[("git", "ls-files")] = ProcessAnswer(stdout="specs/tasks.awawa\0brigade/_schema.awawa\0")
+
+        # Act
+        document = self.add(corpus_mode="area")
+
+        # Assert
+        self.assertIsNone(document["installed_corpus"])
+
+
+class ProjectAddWithoutATrackedCorpusTest(unittest.TestCase):
+    def setUp(self):
+        ProjectAddInitCorpusTest.setUp(self)
+
+    def test_should_register_the_project_with_no_question_and_no_corpus_mode(self):
+        # Act
+        document = project_add(_create_request(self.repository), self.runtime)
+
+        # Assert
+        self.assertNotIn("MODE", [field["name"] for field in document["project"]["fields"]])
+
+    def test_should_refuse_a_corpus_mode_with_nothing_tracked_to_apply_it_to(self):
+        for options in [{"corpus_mode": "area"}, {"corpus_mode": "control", "init_corpus": True}]:
+            with self.subTest(options=options):
+                # Act
+                with self.assertRaises(UsageError) as refusal:
+                    project_add(_create_request(self.repository, **options), self.runtime)
+
+                # Assert
+                self.assertEqual(
+                    str(refusal.exception), f"--corpus-mode reads a corpus {self.repository} does not track"
+                )
 
 
 class ProjectAddBeforeInitTest(unittest.TestCase):

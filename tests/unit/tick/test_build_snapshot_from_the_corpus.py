@@ -145,6 +145,7 @@ class PullRequestReaderFailingOnOneWaveDouble(PullRequestReaderDouble):
 
 class BuildSnapshotTestCase(unittest.TestCase):
     def setUp(self):
+        self.attic_fields = {}
         self.root = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.root)
         self.paths = create_test_paths(self.root)
@@ -183,7 +184,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
                             "MERGE": "squash",
                         },
                         "depot": {"PATH": str(self.root / "depot"), "STATUS": "paused"},
-                        "attic": {"PATH": str(self.root / "attic"), "MAIN": "trunk"},
+                        "attic": {"PATH": str(self.root / "attic"), "MAIN": "trunk", **self.attic_fields},
                     },
                 ),
                 **AWAWA_ANSWERS.answer_entities(
@@ -1168,6 +1169,21 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         self.assertEqual(
             snapshot.waves,
             (),
+        )
+
+    def test_should_skip_a_project_whose_corpus_mode_is_none_and_name_the_mode(self):
+        # Arrange
+        self.attic_fields = {"MODE": "none"}
+
+        # Act
+        _, stderr = self.build()
+
+        # Assert
+        self.assertEqual(
+            stderr.splitlines(),
+            [
+                "brigade tick: the project attic skipped: @PROJECT.attic is in MODE none, which brigade does not deliver yet"
+            ],
         )
 
     def test_should_skip_a_project_whose_tree_cannot_be_read(self):

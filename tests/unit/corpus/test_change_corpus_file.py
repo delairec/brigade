@@ -1,3 +1,4 @@
+import dataclasses
 import shutil
 import tempfile
 import unittest
@@ -46,6 +47,28 @@ class ChangeCorpusFileLeftUnchangedTest(ChangeCorpusFileTestCase):
         # Assert
         self.assertEqual(changed, False)
         self.assertEqual(runner.commands, [])
+
+
+class ChangeCorpusFileOfAnAreaTest(ChangeCorpusFileTestCase):
+    def test_should_lint_the_folder_of_the_area_alone(self):
+        # Arrange
+        area_tasks = self.repository / "brigade" / "tasks.awawa"
+        area_tasks.parent.mkdir()
+        area_tasks.write_text("TASK B1\n")
+        staged = ("git", "diff", "--cached", "--quiet", "--", "brigade/tasks.awawa")
+        runner = RecordingProcessRunner({staged: ProcessAnswer(exit_code=1)})
+        change = dataclasses.replace(
+            self.create_change(append_a_task, "brigade/tasks.awawa"), workspace=Path("brigade")
+        )
+
+        # Act
+        change_corpus_file(runner, change)
+
+        # Assert
+        self.assertIn(
+            (str(self.repository / "brigade"), ("awawa", "lint", "--strict", str(self.repository / "brigade"))),
+            runner.commands,
+        )
 
 
 class ChangeCorpusFileRewrittenTest(ChangeCorpusFileTestCase):

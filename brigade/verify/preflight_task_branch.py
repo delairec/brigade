@@ -1,12 +1,14 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.corpus.prepare_project_checkout import prepare_project_checkout
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity
 from brigade.git.count_changed_lines import count_changed_lines
 from brigade.git.find_merge_base import find_merge_base
 from brigade.git.list_added_lines import list_added_lines
 from brigade.git.resolve_commit import resolve_commit
+from brigade.registry.read_corpus_workspace import read_corpus_workspace
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.system.parse_configuration import Configuration
@@ -53,6 +55,10 @@ def preflight_task_branch(runtime: Runtime, demand: BranchPreflightDemand) -> di
     base = find_merge_base(run_process, repository, base_head, head)
     head_tree = prepare_project_tree(TreeDemand(project=project, ref=head), demand.configuration, runtime).root
     base_tree = prepare_project_tree(TreeDemand(project=project, ref=base), demand.configuration, runtime).root
+    checkout = prepare_project_checkout(
+        demand.project, TreeDemand(project=project, ref=head), demand.configuration, runtime
+    ).root
+    folder = read_corpus_workspace(demand.project)
     changed = count_changed_lines(run_process, repository, base, head)
     ancestry = AncestryFacts(repository=repository, base_branch=demand.base_branch, base_head=base_head, head=head)
     return {
@@ -63,12 +69,13 @@ def preflight_task_branch(runtime: Runtime, demand: BranchPreflightDemand) -> di
         "checks": [
             check_ancestry(run_process, ancestry),
             check_acceptance(
-                run_process, AcceptanceFacts(head_tree=head_tree, commands=_read_acceptance(demand.project))
+                run_process, AcceptanceFacts(head_tree=checkout, commands=_read_acceptance(demand.project))
             ),
             check_corpus_at_head(run_process, head_tree),
             check_promotion(run_process, PromotionFacts(head_tree=head_tree, task=demand.task, pr=NO_PULL_REQUEST)),
             check_untouched_files(
-                run_process, UntouchedFilesFacts(base_tree=base_tree, head_tree=head_tree, changed=changed)
+                run_process,
+                UntouchedFilesFacts(base_tree=base_tree, head_tree=head_tree, changed=changed, folder=folder),
             ),
             check_privacy(read_privacy_patterns(demand.project), list_added_lines(run_process, repository, base, head)),
             measure_size(changed),
