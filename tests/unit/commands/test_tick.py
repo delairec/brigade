@@ -1006,9 +1006,10 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **WAVE_TREE_HOLDING_T7_IMPLEMENTED_OUTPUTS}),
             spawn_process=self.spawn.spawn,
-            resolve_plugin=_resolve_the_collectors_beside(create_plugin_resolution(
-                STEP_COUNTING_PROBE, create_forge(MERGED_PULL_REQUEST, NO_DETAILS_ASKED)
-            ), self.root),
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, create_forge(MERGED_PULL_REQUEST, NO_DETAILS_ASKED)),
+                self.root,
+            ),
         )
 
         # Act
@@ -1765,9 +1766,10 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **BLOCKING_QUESTION_OUTPUTS}),
             spawn_process=self.spawn.spawn,
-            resolve_plugin=_resolve_the_collectors_beside(create_plugin_resolution(
-                STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
-            ), self.root),
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)),
+                self.root,
+            ),
         )
 
         # Act
@@ -2550,7 +2552,9 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, MACHINE_OUTPUTS),
             spawn_process=self.spawn.spawn,
-            resolve_plugin=_resolve_the_collectors_beside(create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root),
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
+            ),
         )
 
     def _read_events(self) -> list[dict]:
@@ -4281,7 +4285,9 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=create_the_worktree_at_its_addition(self._observe_the_lock(self.machine.run)),
             spawn_process=self.spawn.spawn,
-            resolve_plugin=_resolve_the_collectors_beside(create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root),
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
+            ),
         )
 
     def _observe_the_lock(self, run_process):
@@ -4752,7 +4758,9 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
         return create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, MACHINE_OUTPUTS),
-            resolve_plugin=_resolve_the_collectors_beside(create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root),
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
+            ),
         )
 
     def test_should_read_the_pull_request_of_a_running_task_as_the_login_of_the_key_cli(self):
@@ -5707,7 +5715,9 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=self.machine.run,
             spawn_process=self.spawn.spawn,
-            resolve_plugin=_resolve_the_collectors_beside(create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([BEHIND_PULL_REQUEST])), self.root),
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([BEHIND_PULL_REQUEST])), self.root
+            ),
         )
 
     def test_should_launch_the_build_slot_on_the_worktree_of_the_task_and_rebase_nothing(self):
@@ -5833,9 +5843,10 @@ class TickBoundingItsReadsTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=self.processes.run,
             spawn_process=SpawnRecorderDouble().spawn,
-            resolve_plugin=_resolve_the_collectors_beside(create_plugin_resolution(
-                STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
-            ), self.root),
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)),
+                self.root,
+            ),
             read_ledger=self.readings.read,
         )
 

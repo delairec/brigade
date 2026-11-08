@@ -123,7 +123,7 @@ def answer_unreadable_tree(ref: str) -> dict:
     return {argv: ProcessAnswer(exit_code=128, stderr="fatal: bad revision")}
 
 
-def _read_forge_environment(slot: str) -> dict:
+def _read_forge_environment(project: Entity, slot: str) -> dict:
     return FORGE_ENVIRONMENT
 
 

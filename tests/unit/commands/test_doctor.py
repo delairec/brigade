@@ -35,10 +35,22 @@ APPROVAL_POLICY = json.dumps(
 )
 PROJECTS = json.dumps({"entities": [{"type": "PROJECT", "name": "app"}, {"type": "PROJECT", "name": "lib"}]})
 PROJECT_ON_GITHUB = json.dumps(
-    {"fields": [{"name": "PATH", "atoms": ["/"]}, {"name": "MAIN", "atoms": ["main"]}, {"name": "FORGE", "atoms": ["github"]}]}
+    {
+        "fields": [
+            {"name": "PATH", "atoms": ["/"]},
+            {"name": "MAIN", "atoms": ["main"]},
+            {"name": "FORGE", "atoms": ["github"]},
+        ]
+    }
 )
 PROJECT_OF_NO_FORGE = json.dumps(
-    {"fields": [{"name": "PATH", "atoms": ["/"]}, {"name": "MAIN", "atoms": ["main"]}, {"name": "FORGE", "atoms": ["none"]}]}
+    {
+        "fields": [
+            {"name": "PATH", "atoms": ["/"]},
+            {"name": "MAIN", "atoms": ["main"]},
+            {"name": "FORGE", "atoms": ["none"]},
+        ]
+    }
 )
 COMMENT_POLICY = json.dumps(
     {"fields": [{"name": "PROJECT", "atoms": ["@PROJECT.lib"]}, {"name": "REVIEW", "atoms": ["comment"]}]}

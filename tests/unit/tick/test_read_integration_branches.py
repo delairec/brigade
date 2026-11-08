@@ -90,7 +90,7 @@ class ReadIntegrationBranchesTestCase(unittest.TestCase):
             worktree_root=None,
             state_root=self.state_root,
             read_pull_request=PullRequestReaderDouble(pull_requests),
-            read_environment=lambda slot: {},
+            read_environment=lambda project, slot: {},
             locate_wave_base=lambda started: "integration/currents",
             is_alive=lambda run_directory: True,
         )

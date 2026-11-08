@@ -2872,7 +2872,14 @@ PASS_BEFORE_A_DELIVERY = RecordedVerdict(head="fedcba9", verdict="pass")
 class PlanVerificationOfATaskWithoutAForgeTest(unittest.TestCase):
     def test_should_verify_the_delivered_head_once_its_preflight_passed(self):
         for case, preflighted, verdict, reviewed, live_runs, expected in [
-            ("preflighted at its delivered head", DELIVERED_HEAD, NO_VERDICT, NOT_REVIEWED, (), (LOCAL_VERIFICATION_S3,)),
+            (
+                "preflighted at its delivered head",
+                DELIVERED_HEAD,
+                NO_VERDICT,
+                NOT_REVIEWED,
+                (),
+                (LOCAL_VERIFICATION_S3,),
+            ),
             (
                 "judged before its last delivery",
                 DELIVERED_HEAD,
