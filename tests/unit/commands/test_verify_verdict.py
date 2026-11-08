@@ -219,7 +219,7 @@ class VerifyVerdictOfAPullRequestTest(unittest.TestCase):
         )
 
 
-LOCAL_PROJECT = (("PATH", "/home/user/tidepool"), ("MAIN", "main"), ("FORGE", "none"))
+LOCAL_PROJECT = (("PATH", "/srv/tidepool"), ("MAIN", "main"), ("FORGE", "none"))
 LOCAL_TASK_WORKTREE = {
     **TASK_WORKTREE,
     ("git", "branch", "--show-current"): "feature/T7-tide-table\n",
