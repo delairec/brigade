@@ -6670,6 +6670,7 @@ REPORT_ORDER_DONE = {
     "run": FORGELESS_RUN,
 }
 TO_MAIN_NOT_MERGED = {("git", "merge-base", "--is-ancestor"): ProcessAnswer(exit_code=1)}
+POLICY_OF_NO_AUTO_MERGE = {"tidepool_policy": (("PROJECT", "@PROJECT.tidepool"), ("AUTO_MERGE", "none"))}
 MERGE_AND_TREE_OUTPUTS = {
     ("git", "merge", "--quiet"): "",
     ("git", "reset"): "",
@@ -6699,13 +6700,16 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
             _record_task_state("verified"),
         ]
 
-    def _create_runtime(self, task: tuple, answers: dict, milestones: dict | None = None) -> Runtime:
+    def _create_runtime(
+        self, task: tuple, answers: dict, milestones: dict | None = None, policies: dict | None = None
+    ) -> Runtime:
         project = (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "none"))
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
             "PROJECT": {"tidepool": project},
             "TASK": {"T7": task},
             "MILESTONE": milestones or {},
+            "POLICY": policies or {},
         }
         machine = create_machine_double(corpus, {**MACHINE_OUTPUTS, **MERGE_AND_TREE_OUTPUTS})
         machine.__self__.answers.update(answers)
@@ -6796,6 +6800,56 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
                 "reason": "the merge into integration/tides conflicted",
                 "blockers": [],
             },
+        )
+
+    def test_should_open_the_worktree_of_its_milestone_and_name_the_merge_under_no_auto_merge(self):
+        # Arrange
+        written = self._write_events([CUT_OF_M4, *self.verified_events])
+        runtime = self._create_runtime(TASK_DELIVERED, TO_MAIN_NOT_MERGED, policies=POLICY_OF_NO_AUTO_MERGE)
+
+        # Act
+        document = COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        worktree = f"{self.repository}/.brigade/worktrees/integration-tides"
+        self.assertEqual(document["merge_commands"], [f"git -C {worktree} merge feature/T7-tide-table"])
+        self.assertIn(
+            ("git", "worktree", "add", "--quiet", worktree, "integration/tides"),
+            runtime.run_process.__self__.argvs,
+        )
+        self.assertEqual(self._read_events_since(written), [])
+
+    def test_should_name_the_worktree_already_holding_its_milestone_branch_and_open_none_under_no_auto_merge(self):
+        # Arrange
+        self._write_events([CUT_OF_M4, *self.verified_events])
+        holding_the_branch = ProcessAnswer(
+            stdout="worktree /srv/elsewhere\0HEAD 8885daa\0branch refs/heads/integration/tides\0\0"
+        )
+        answers = {**TO_MAIN_NOT_MERGED, ("git", "worktree", "list"): holding_the_branch}
+        runtime = self._create_runtime(TASK_DELIVERED, answers, policies=POLICY_OF_NO_AUTO_MERGE)
+
+        # Act
+        document = COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(document["merge_commands"], ["git -C /srv/elsewhere merge feature/T7-tide-table"])
+        self.assertNotIn(("git", "worktree", "add"), [argv[:3] for argv in runtime.run_process.__self__.argvs])
+
+    def test_should_record_merged_a_task_once_its_head_is_an_ancestor_of_its_milestone_branch_under_no_auto_merge(self):
+        # Arrange
+        written = self._write_events([CUT_OF_M4, *self.verified_events])
+        in_the_milestone_branch = {("git", "merge-base", "--is-ancestor"): ProcessAnswer()}
+        runtime = self._create_runtime(TASK_DELIVERED, in_the_milestone_branch, policies=POLICY_OF_NO_AUTO_MERGE)
+
+        # Act
+        document = COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self._read_events_since(written)[0]["state"], "merged")
+        self.assertEqual(document["merge_commands"], [])
+        self.assertIn(
+            ("git", "merge-base", "--is-ancestor", "8885daa", "integration/tides"),
+            runtime.run_process.__self__.argvs,
         )
 
     def test_should_name_the_command_merging_a_task_of_no_milestone_and_record_nothing(self):

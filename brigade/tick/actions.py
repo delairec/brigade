@@ -112,6 +112,13 @@ class NameMergeCommand:
 
 
 @dataclass(frozen=True)
+class OpenMergeWorktree:
+    project: str
+    branch: str
+    path: str
+
+
+@dataclass(frozen=True)
 class RemoveTaskWorktree:
     project: str
     task: str

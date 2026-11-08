@@ -1,8 +1,13 @@
 import json
+import shlex
 import unittest
 from unittest.mock import ANY
 
-from tests.cli.forgeless_wave_rehearser import MILESTONE_BRANCH, ForgelessWaveRehearser
+from tests.cli.forgeless_wave_rehearser import (
+    MILESTONE_BRANCH,
+    ForgelessWaveRehearser,
+    ForgelessWaveRehearserUnderNoAutoMerge,
+)
 from tests.cli.wave_rehearser import ClassCleanupRegistrar
 
 
@@ -59,6 +64,7 @@ class BrigadeRehearsalOfAOneTaskWaveOfAProjectWithoutAForgeTest(unittest.TestCas
                 "pull_request": None,
                 "tasks": [{"task": "S1", "state": "merged", "pull_request": None, "run": ANY, "reason": None}],
                 "merge_command": self.merge_command,
+                "task_merge_commands": [],
             },
         )
 
@@ -78,3 +84,57 @@ class BrigadeRehearsalOfAOneTaskWaveOfAProjectWithoutAForgeTest(unittest.TestCas
             closed,
             {"schema_version": 1, "ts": ANY, "event": "milestone.closed", "project": "shop", "milestone": "M1"},
         )
+
+
+class BrigadeRehearsalOfAOneTaskWaveUnderNoAutoMergeTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.rehearser = ForgelessWaveRehearserUnderNoAutoMerge(ClassCleanupRegistrar(cls))
+        cls.rehearser.run_brigade("request", "new", "shop", "Let the customer empty the cart")
+        cls.rehearser.tick_until_the_task_is_verified()
+        cls.tick_before_the_merge = cls.rehearser.run_brigade("tick", "--once")
+        cls.shown_before_the_merge = cls.rehearser.run_brigade("wave", "show", "shop_w1", "--json")
+        cls.command = cls.rehearser.read_the_command_named(cls.tick_before_the_merge.stdout)
+        cls.files_on_the_branch_before_the_merge = cls.rehearser.project.run_git(
+            "ls-tree", "--name-only", MILESTONE_BRANCH
+        )
+        cls.rehearser.project.run_git("checkout", "--quiet", "-b", "elsewhere")
+        cls.rehearser.project.run_git(*shlex.split(cls.command)[1:])
+        cls.rehearser.run_brigade("tick", "--once")
+
+    def test_should_merge_nothing_before_the_user_runs_the_command(self):
+        # Act
+        files = self.files_on_the_branch_before_the_merge
+
+        # Assert
+        self.assertNotIn("delivered-S1.txt", files.splitlines())
+
+    def test_should_merge_into_the_milestone_branch_whatever_branch_is_checked_out_at_the_clone(self):
+        # Act
+        delivered = self.rehearser.project.run_git("show", f"{MILESTONE_BRANCH}:delivered-S1.txt")
+
+        # Assert
+        self.assertEqual(delivered, "S1\n")
+
+    def test_should_leave_the_branch_checked_out_at_the_clone_as_it_was(self):
+        # Act
+        files = self.rehearser.project.run_git("ls-tree", "--name-only", "elsewhere")
+
+        # Assert
+        self.assertNotIn("delivered-S1.txt", files.splitlines())
+
+    def test_should_show_the_command_in_the_wave(self):
+        # Act
+        shown = json.loads(self.shown_before_the_merge.stdout)
+
+        # Assert
+        self.assertEqual(shown["task_merge_commands"], [self.command])
+
+    def test_should_record_the_task_merged_and_close_its_wave_once_its_head_is_in_the_milestone_branch(self):
+        # Act
+        names = self.rehearser.list_event_names()
+        states = self.rehearser.read_states_of("S1")
+
+        # Assert
+        self.assertIn("wave.closed", names)
+        self.assertEqual(states[-1], "merged")

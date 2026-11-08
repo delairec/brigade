@@ -21,6 +21,8 @@ from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity
 from brigade.corpus.read_entity import read_entity
 from brigade.errors import StandingDown, UsageError
+from brigade.git.add_branch_worktree import BranchWorktree
+from brigade.git.add_worktree_on_branch import add_worktree_on_branch
 from brigade.git.merge_task_branch import TaskBranchMerge, merge_task_branch
 from brigade.inbox.record_check_runs import CheckRunsRecording, record_check_runs
 from brigade.ledger.append_event import append_event
@@ -91,6 +93,7 @@ from brigade.tick.actions import (
     MergePullRequest,
     MergeTaskBranch,
     NameMergeCommand,
+    OpenMergeWorktree,
     ParkTask,
     PauseWave,
     RebaseMilestone,
@@ -587,6 +590,13 @@ def _merge_task_branch(runtime: Runtime, configuration: Configuration, action: M
     _record_task_state(runtime, RecordTaskState(wave=action.wave, task=action.task, state=MERGED_STATE, reason=None))
 
 
+def _open_merge_worktree(runtime: Runtime, action: OpenMergeWorktree) -> None:
+    repository = Path(read_project_field(find_project(read_projects(runtime), action.project), PATH_FIELD))
+    worktree = BranchWorktree(path=Path(action.path), branch=action.branch, start=action.branch)
+    with hold_lock(locate_worktrees_lock(runtime.paths.lock_directory, action.project)):
+        add_worktree_on_branch(runtime.run_process, repository, worktree)
+
+
 def _close_milestone(runtime: Runtime, action: CloseMilestone) -> None:
     deliver_patterns(runtime, WaveDelivery(project=action.project, milestones=(action.milestone,)))
     append_event(
@@ -767,6 +777,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         RunPreflight: lambda action: _run_preflight(runtime, configuration, action),
         MergePullRequest: lambda action: _merge_pull_request(runtime, configuration, action),
         MergeTaskBranch: lambda action: _merge_task_branch(runtime, configuration, action),
+        OpenMergeWorktree: lambda action: _open_merge_worktree(runtime, action),
         **_list_task_run_executors(runtime, configuration),
         LaunchStudy: lambda action: _launch_study(runtime, action),
         PauseWave: lambda action: _pause_wave(runtime, action),
