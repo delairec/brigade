@@ -83,6 +83,9 @@ class ClassCleanupRegistrar:
     def fail(self, message: str) -> None:
         raise self.test_class.failureException(message)
 
+    def id(self) -> str:
+        return f"{self.test_class.__module__}.{self.test_class.__qualname__}"
+
 
 class WaveRehearser:
     def __init__(self, registrar: ClassCleanupRegistrar):
