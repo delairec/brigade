@@ -535,13 +535,16 @@ READ_THE_TASK_HEAD = ("git", "rev-parse", "HEAD")
 READ_THE_WAVE_HEAD = ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "integration/w1^{commit}")
 OFF_THE_WAVE_BRANCH = {
     TASK_BRANCH_DESCENDS: ProcessAnswer(exit_code=1),
+    ("git", "merge-base", "--is-ancestor", "feature/B1-task", "integration/w1"): ProcessAnswer(exit_code=1),
     READ_THE_TASK_HEAD: ProcessAnswer(stdout=f"{TASK_HEAD}\n"),
     READ_THE_WAVE_HEAD: ProcessAnswer(stdout=f"{WAVE_HEAD}\n"),
 }
 ADD_A_CHECKOUT_OF_THE_TASK_HEAD = ("git", "worktree", "add", "--quiet", "--detach")
 REBASE_ON_THE_WAVE_BRANCH = ("git", "rebase", "--fork-point", "integration/w1")
+TASK_BRANCH_MERGED = ("git", "merge-base", "--is-ancestor", "feature/B1-task", "integration/w1")
 STOPPED_ON_A_CONFLICT = {
     TASK_BRANCH_DESCENDS: ProcessAnswer(exit_code=1),
+    TASK_BRANCH_MERGED: ProcessAnswer(exit_code=1),
     REBASE_ON_THE_WAVE_BRANCH: ProcessAnswer(exit_code=1),
     ("git", "rev-parse", "--quiet", "--verify", "REBASE_HEAD"): ProcessAnswer(stdout="5c1d2e0\n"),
 }
@@ -927,3 +930,26 @@ class PrepareTaskWorktreeOfATaskLaunchedAgainAfterACancelTest(PrepareTaskWorktre
                 (str(WORKTREE), REQUIRE_THE_WAVE_BRANCH),
             ],
         )
+
+
+class PrepareTaskWorktreeOfAMergedTaskBranchTest(PrepareTaskWorktreeTestCase):
+    def test_should_fast_forward_a_task_branch_merged_into_the_wave_branch_and_never_rebase_it(self):
+        # Arrange
+        runner = self.create_runner(
+            MAKE_DEPS,
+            branch=TASK_BRANCH_FOUND,
+            answers={TASK_BRANCH_DESCENDS: ProcessAnswer(exit_code=1)},
+        )
+
+        # Act
+        prepared = prepare_task_worktree(
+            create_test_runtime(self.paths, run_process=runner),
+            Configuration(),
+            ACTION,
+            TickForge(read_environment=read_cli_environment, list_check_runs=list_no_check_run),
+        )
+
+        # Assert
+        self.assertIn((str(WORKTREE), ("git", "merge", "--quiet", "--ff-only", "integration/w1")), runner.commands)
+        self.assertNotIn(("git", "rebase", "--fork-point", "integration/w1"), runner.list_argvs())
+        self.assertTrue(prepared.on_start)

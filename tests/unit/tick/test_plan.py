@@ -23,6 +23,8 @@ from brigade.tick.actions import (
     LaunchTask,
     LaunchVerification,
     MergePullRequest,
+    MergeTaskBranch,
+    NameMergeCommand,
     ParkTask,
     PauseWave,
     RebaseMilestone,
@@ -2961,3 +2963,176 @@ class PlanVerificationOfATaskWithoutAForgeTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, ())
+
+
+DELIVERED_S3 = "d3l1v3r"
+PASS_AT_THE_DELIVERED_S3 = RecordedVerdict(head=DELIVERED_S3, verdict="pass")
+MERGE_COMMAND_OF_S3 = "git -C /projects/shop merge feature/S3-task"
+MERGE_COMMAND_OF_THE_MILESTONE = "git -C /projects/shop merge integration/empty-cart"
+MERGE_S3_BRANCH = MergeTaskBranch(
+    project="shop",
+    wave="shop_w1",
+    task="S3",
+    task_branch="feature/S3-task",
+    branch=TASK_BASE,
+    method="rebase",
+    head=DELIVERED_S3,
+)
+
+
+def create_verified_task_delivered_without_a_forge(**changes) -> TaskFacts:
+    return dataclasses.replace(
+        TaskFacts(
+            name="S3",
+            branch="feature/S3-task",
+            delivered_head=DELIVERED_S3,
+            preflighted_head=DELIVERED_S3,
+            verdict=PASS_AT_THE_DELIVERED_S3,
+        ),
+        **changes,
+    )
+
+
+class PlanMergingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
+    def test_should_merge_into_its_milestone_branch_the_head_its_preflight_and_its_verdict_passed(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge()
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (MERGE_S3_BRANCH,))
+
+    def test_should_merge_by_the_method_of_the_project(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge()
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP_MERGING_BY_SQUASH,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (dataclasses.replace(MERGE_S3_BRANCH, method="squash"),))
+
+    def test_should_not_merge_a_head_its_preflight_or_its_verdict_did_not_pass(self):
+        for case, task in [
+            ("no verdict", create_verified_task_delivered_without_a_forge(verdict=None)),
+            (
+                "a verdict asking for changes",
+                create_verified_task_delivered_without_a_forge(
+                    verdict=RecordedVerdict(head=DELIVERED_S3, verdict="changes")
+                ),
+            ),
+            (
+                "a verdict of an older head",
+                create_verified_task_delivered_without_a_forge(verdict=RecordedVerdict(head="0ld", verdict="pass")),
+            ),
+            ("a preflight of an older head", create_verified_task_delivered_without_a_forge(preflighted_head="0ld")),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, ())
+
+    def test_should_not_merge_a_task_still_awaiting_its_verification(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge(reviewed_head=DELIVERED_S3)
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertNotIn(MERGE_S3_BRANCH, actions)
+
+    def test_should_not_merge_a_project_that_merges_nothing_by_itself(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge()
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP_WITHOUT_AUTO_MERGE,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_not_merge_into_a_milestone_branch_a_rebase_run_holds(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge()
+        rebasing = MilestoneFacts(project="shop", milestone="M1", branch=TASK_BASE, rebase_run_live=True)
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP,), milestones=(rebasing,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_name_the_merge_command_of_a_task_of_no_milestone_and_merge_nothing(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge(merge_command=MERGE_COMMAND_OF_S3)
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave_of_no_milestone((task,), {"S3": "verified"}),), projects=(SHOP,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (NameMergeCommand(command=MERGE_COMMAND_OF_S3),))
+
+    def test_should_record_merged_a_task_of_no_milestone_once_the_user_merged_it(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge(merge_command=MERGE_COMMAND_OF_S3, merged_into_main=True)
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave_of_no_milestone((task,), {"S3": "verified"}),), projects=(SHOP,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (RecordTaskState(wave="shop_w1", task="S3", state="merged", reason=None),))
+
+
+class PlanEndingAMilestoneOfAProjectWithoutAForgeTest(unittest.TestCase):
+    def test_should_name_the_command_that_merges_the_milestone_into_main(self):
+        # Arrange
+        milestone = MilestoneFacts(
+            project="shop", milestone="M1", branch=TASK_BASE, merge_command=MERGE_COMMAND_OF_THE_MILESTONE
+        )
+
+        # Act
+        actions = plan(Snapshot(now=NOW, projects=(SHOP,), milestones=(milestone,)))
+
+        # Assert
+        self.assertEqual(actions, (NameMergeCommand(command=MERGE_COMMAND_OF_THE_MILESTONE),))
+
+    def test_should_close_the_milestone_with_no_pull_request_once_its_branch_is_merged_into_main(self):
+        # Arrange
+        milestone = MilestoneFacts(
+            project="shop",
+            milestone="M1",
+            branch=TASK_BASE,
+            merge_command=MERGE_COMMAND_OF_THE_MILESTONE,
+            merged_into_main=True,
+        )
+
+        # Act
+        actions = plan(Snapshot(now=NOW, projects=(SHOP,), milestones=(milestone,)))
+
+        # Assert
+        self.assertEqual(actions, (CloseMilestone(project="shop", milestone="M1", pr=None),))

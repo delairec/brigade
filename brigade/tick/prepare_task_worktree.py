@@ -9,12 +9,14 @@ from brigade.git.add_worktree_on_branch import add_worktree_on_branch
 from brigade.git.check_ancestor import check_ancestor
 from brigade.git.find_branch import find_branch
 from brigade.git.list_worktrees import list_worktrees
+from brigade.git.merge_fast_forward import merge_fast_forward
 from brigade.git.read_head import read_head
 from brigade.git.rebase_onto import rebase_onto
 from brigade.git.require_ancestor import require_ancestor
 from brigade.ledger.append_event import append_event
 from brigade.ledger.task_state import TaskState
 from brigade.registry.find_project import find_project
+from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
@@ -122,10 +124,20 @@ def _prove_start_head(runtime: Runtime, launch: _Launch) -> HeadProof:
     )
 
 
+def _is_merged_locally(runtime: Runtime, launch: _Launch) -> bool:
+    worktree = launch.worktree
+    if is_on_a_forge(launch.project):
+        return False
+    return check_ancestor(runtime.run_process, worktree.path, worktree.branch, worktree.start).exit_code == DESCENDING
+
+
 def _put_on_start(runtime: Runtime, launch: _Launch) -> PreparedWorktree:
     worktree = launch.worktree
     descent = check_ancestor(runtime.run_process, worktree.path, worktree.start, worktree.branch)
     if descent.exit_code == DESCENDING:
+        return PreparedWorktree(worktree=worktree, conflicted=False, on_start=True)
+    if _is_merged_locally(runtime, launch):
+        merge_fast_forward(runtime.run_process, worktree.path, worktree.start)
         return PreparedWorktree(worktree=worktree, conflicted=False, on_start=True)
     task_head = _prove_task_head(runtime, launch)
     if task_head.state == RED:

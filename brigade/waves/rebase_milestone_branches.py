@@ -4,12 +4,10 @@ from pathlib import Path
 
 from brigade.corpus.read_entities import Entity
 from brigade.git.add_branch_worktree import BranchWorktree
-from brigade.git.add_worktree_on_branch import add_worktree_on_branch
-from brigade.git.list_worktrees import list_worktrees
+from brigade.git.open_branch_worktree import open_branch_worktree
 from brigade.git.push_with_lease import LeasedPush, push_with_lease
 from brigade.git.read_head import read_head
 from brigade.git.rebase_onto import rebase_onto
-from brigade.git.reset_worktree import reset_worktree
 from brigade.ledger.milestone_rebased import MilestoneRebased
 from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_project_field import read_project_field
@@ -64,21 +62,13 @@ def _locate_branch_worktree(rebase: MilestoneBranchesRebase, branch: str) -> Pat
     return locate_branch_worktree(repository, rebase.worktree_root, branch)
 
 
-def _open_branch_worktree(runtime: Runtime, rebase: MilestoneBranchesRebase, worktree: BranchWorktree) -> None:
-    repository = Path(read_project_field(rebase.project, PATH_FIELD))
-    listed = list_worktrees(runtime.run_process, repository)
-    if not any(found.path == worktree.path and found.branch == worktree.branch for found in listed):
-        add_worktree_on_branch(runtime.run_process, repository, worktree)
-    reset_worktree(runtime.run_process, worktree.path, worktree.start)
-
-
 def _take_branch(runtime: Runtime, rebase: MilestoneBranchesRebase, branch: str) -> BranchWorktree | None:
     path = _locate_branch_worktree(rebase, branch)
     if rebase.is_run_live_on(path):
         return None
     start = locate_forge_branch(runtime.run_process, rebase.project, branch, rebase.read_environment)
     worktree = BranchWorktree(path=path, branch=branch, start=start)
-    _open_branch_worktree(runtime, rebase, worktree)
+    open_branch_worktree(runtime.run_process, Path(read_project_field(rebase.project, PATH_FIELD)), worktree)
     return worktree
 
 
