@@ -1,11 +1,17 @@
+import argparse
 import tempfile
 import unittest
 from argparse import Namespace
 from pathlib import Path
 
+from brigade.add_command_parsers import add_command_parsers
 from brigade.commands.verify_context import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_machine_double, write_ledger
+from tests.unit.commands.command_runtime import (
+    create_machine_double,
+    write_ledger,
+    write_operational_corpus,
+)
 from tests.unit.commands.test_verify_preflight import (
     M4_BRANCH_CUT,
     TASK_PR_OPENED,
@@ -34,6 +40,7 @@ RULES = [
         "output": "RULE pure\n",
     }
 ]
+GITHUB_PROJECT = (*TIDEPOOL_PROJECT, ("FORGE", "github"))
 FAILED_CHECK = {"verdict": "fail", "name": "scope", "findings": ["brigade/cli.py is outside the task"]}
 
 
@@ -155,6 +162,17 @@ class VerifyContextRequestTest(unittest.TestCase):
         # Assert
         self.assertIs(request, options)
 
+    def test_should_take_a_context_naming_no_pull_request(self):
+        # Arrange
+        parser = argparse.ArgumentParser(prog="brigade")
+        add_command_parsers(parser, (COMMAND,), argparse.ArgumentParser(add_help=False))
+
+        # Act
+        options = parser.parse_args(["verify", "context"])
+
+        # Assert
+        self.assertIsNone(options.pr)
+
 
 class VerifyContextOfAPullRequestTest(unittest.TestCase):
     def setUp(self):
@@ -168,7 +186,7 @@ class VerifyContextOfAPullRequestTest(unittest.TestCase):
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double(
-                {"PROJECT": {"tidepool": TIDEPOOL_PROJECT}, "TASK": TIDEPOOL_TASKS}, TASK_WORKTREE
+                {"PROJECT": {"tidepool": GITHUB_PROJECT}, "TASK": TIDEPOOL_TASKS}, TASK_WORKTREE
             ),
             resolve_plugin=lambda kind, name, **places: self.forge,
         )
@@ -196,3 +214,85 @@ class VerifyContextOfAPullRequestTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(raised.exception), "no task.pr_opened of @PROJECT.tidepool names the pull request #41")
+
+    def test_should_refuse_a_context_naming_no_pull_request_on_a_project_with_a_forge(self):
+        # Arrange
+        no_pull_request = None
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            COMMAND.run(Namespace(pr=no_pull_request), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception),
+            "@PROJECT.tidepool acts through the forge github: the context names its pull request",
+        )
+
+
+def _resolve(ref: str) -> tuple[str, ...]:
+    return ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}^{{commit}}")
+
+
+TASK_HEAD = "8885daa"
+MAIN_HEAD = "4c1d2e0"
+MERGE_BASE = "0000000"
+LOCAL_PROJECT = (("PATH", "/home/user/tidepool"), ("MAIN", "main"), ("FORGE", "none"))
+LOCAL_TASK_WORKTREE = {
+    **TASK_WORKTREE,
+    ("git", "branch", "--show-current"): "feature/T7-tide-table\n",
+    _resolve("feature/T7-tide-table"): f"{TASK_HEAD}\n",
+    _resolve("main"): f"{MAIN_HEAD}\n",
+    _resolve(TASK_HEAD): f"{TASK_HEAD}\n",
+    _resolve(MERGE_BASE): f"{MERGE_BASE}\n",
+    ("git", "merge-base", "--end-of-options", MAIN_HEAD, TASK_HEAD): f"{MERGE_BASE}\n",
+    ("git", "diff", "--numstat"): "1\t0\tsrc/tides.py\n",
+    ("git", "diff"): "+def tide():\n",
+    ("awawa", "diff"): '{"added": [], "changed": [], "removed": []}',
+    ("awawa", "context"): "TASK T7\n",
+    ("awawa", "lint"): "",
+}
+
+
+class RefusingForgeResolver:
+    def __call__(self, kind: str, name: str, **places):
+        raise AssertionError(f"the command resolved the {kind} {name}")
+
+
+class VerifyContextOfATaskWithoutAForgeTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
+        for ref in (TASK_HEAD, MERGE_BASE):
+            (self.root / "cache" / "refs" / "tidepool" / ref).mkdir(parents=True)
+        write_ledger(self.root, [WAVE_STARTED])
+        corpus = {"PROJECT": {"tidepool": LOCAL_PROJECT}, "TASK": {"T7": ()}, "POLICY": {}}
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_machine_double(corpus, LOCAL_TASK_WORKTREE),
+            resolve_plugin=RefusingForgeResolver(),
+        )
+        self.no_pull_request = None
+
+    def test_should_judge_the_head_of_the_task_branch_with_no_pull_request(self):
+        # Act
+        document = COMMAND.run(Namespace(pr=self.no_pull_request), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            (document["project"], document["pr"], document["task"], document["head"]),
+            ("tidepool", None, "T7", TASK_HEAD),
+        )
+
+    def test_should_print_the_diff_of_the_task_branch_from_its_merge_base_with_the_branch_of_its_milestone(self):
+        # Act
+        document = COMMAND.run(Namespace(pr=self.no_pull_request), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["diff"],
+            {"command": f"git diff {MERGE_BASE} {TASK_HEAD}", "exit_code": 0, "stderr": "", "output": "+def tide():\n"},
+        )
