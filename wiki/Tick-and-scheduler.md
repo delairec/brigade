@@ -49,7 +49,7 @@ closed, as below, and a parked task of a closed wave keeps its worktree and its 
 | preflight | once every check run completed, runs `brigade verify preflight`; no failing check moves the task on | `verifying` |
 | review | starts a detached run of the slot `review`, of `verify-pr`; its `task.verdict` decides | `verified` on `pass`, `changes_requested` on `changes` |
 | repair | starts a detached run of the slot `remediate`, of `remediate-pr`, or of the slot `build` for a failing check | `fixing`, back to `pr_open` on a push |
-| rebase | rebases a pull request behind its base once its check runs all passed; a conflict starts a run of the slot `rebase` | back to `pr_open`, or `fixing` |
+| rebase | rebases a pull request behind its base once its check runs all passed and the heads of its branch and of its base are green; a conflict starts a run of the slot `rebase`; a red head launches one run of that slot repairing it, a red main branch on `fix/repair-<main>-<commit>` with its pull request, a red milestone branch in place | back to `pr_open`, or `fixing` |
 | merge | merges a verified pull request into the branch of its milestone, never into the main branch, then removes the task's worktree once its pull request is merged or closed | `merged` |
 
 The procedure of each run is the one brigade ships, or the one the key of its slot (`build`, `review`, `remediate`,
@@ -111,14 +111,28 @@ The tick launches no run of a paused wave.
 - On a project of `FORGE github`, the tick reads the tasks of a wave and what is implemented at the branch of its
   milestone as the forge holds it, fetched at each read, never at the local branch of the clone. A project of
   `FORGE none` keeps its local branch.
-- An existing task branch that does not descend from that base is rebased onto it before the setup only when its pull
-  request is open and its check runs all passed. A rebase stopped on a conflict is aborted, and the tick starts a
-  detached run of the slot `rebase` in the worktree of the task, with the arguments `task` and `base` and no `pr`, the
-  task staying `running`. Once that run ends done, the next tick launches the build run; a run that ends blocked parks
-  the task on its question.
-- Any other such branch is built as it stands: the tick rebases nothing, its setup checks no ancestry, and the brief
-  tells the build not to rebase it. The build opens its pull request behind its base, and the tick rebases it once its
-  check runs pass.
+- An existing task branch that does not descend from that base is rebased onto the head of the base before the setup
+  once both heads are green, with or without a pull request; its setup then checks that the base is an ancestor of
+  `HEAD`, and the brief names the branch as put on the head of the base. A rebase stopped on a conflict is aborted, and
+  the tick starts a detached run of the slot `rebase` in the worktree of the task, with the arguments `task` and
+  `base` and no `pr`, the task staying `running`. Once that run ends done, the next tick launches the build run; a run
+  that ends blocked parks the task on its question.
+- A head is green once one of its proofs passed whole: the check runs of the forge on its commit, the record of
+  `brigade task check` of the task at that commit, or the record the tick kept for that commit. A check run of the
+  forge pending on the commit is waited for. A head with none of them is checked by the tick on a checkout of its
+  commit: the `SETUP` lines, the `ACCEPTANCE` lines and the checks of the corpus, as `brigade task check` runs them,
+  written to `<state root>/commit-checks/<project>/<commit>.json`, each command with its exit code; a later tick reads
+  that record and runs nothing again on that commit.
+- A red base holds the launch: the task is not launched while the head of its base is red, the tick names on stderr
+  at each tick the base, its commit and the command that failed (`@TASK.T7 waits: integration/M4 is red at 8885daa,
+  `make test` failed`), and `brigade tick --dry-run` names it in its plan. The red head launches one detached run of the
+  slot `rebase` that repairs it, one per red head whatever the tasks waiting on it, launched again neither while it
+  lives nor once it ended blocked, its question named on stderr at each tick. The launches resume at the tick that
+  reads the head of the base green.
+- A task branch whose head is red is built as it stands: the tick rebases nothing, its setup checks no ancestry, and
+  the brief names each command that failed at that head and tells the build to repair those failures first and not to
+  rebase the branch. The brief carries the entity of the task as it reads on `origin/<base>` whenever it differs from
+  the one of the worktree, marked as the one that prevails.
 - The tick follows the pull request of each task past its launch, read as the login of the key `cli` of
   `[forge_accounts]`. The worktree of a task is never removed while a run holds it.
 
@@ -169,6 +183,9 @@ dies before it records a `run.finished` does.
 
 - A task whose open pull request is behind its base, from `pr_open` to `fixing`, is rebased by git when
   no run holds its worktree, and waits for the next tick otherwise.
+- The catch-up waits while a check run of the pull request is pending or failed, and while the head of the base is
+  red or pending: the tick names on stderr at each tick the red base, its commit and the command that failed (`the
+  catch-up of @TASK.T7 waits: …`), and the red head launches the one run that repairs it.
 - Under the lock of the project's worktrees, the tick fetches the base, rebases the worktree onto it and pushes
   with `--force-with-lease` on the head it read, as the login of the key `cli` of `[forge_accounts]`. It then records
   `task.rebased`, the head before and after and that login, and moves the task back to `pr_open`.
@@ -184,15 +201,21 @@ dies before it records a `run.finished` does.
 
 <details><summary>Rebasing the branch of a milestone</summary>
 
-- The tick rebases the branch of a milestone onto the main branch once the main branch has outrun it.
+- The tick rebases the branch of a milestone onto the main branch once the main branch has outrun it, and only
+  once the head of the main branch and the head of the milestone branch are green, proven as at the launch of a task.
+  A red head holds the rebase, is named on stderr at each tick (`the rebase of <branch> waits: …`) and in
+  `brigade tick --dry-run`, and launches one detached run of the slot `rebase`: a red main branch is repaired on a
+  branch `fix/repair-<main>-<commit>` cut from its head, whose pull request into the main branch the user merges; a red
+  milestone branch is repaired in place in its worktree, with no rebase, and pushed with a lease once its tests pass.
 - Every rebase of the tick, of a milestone or task branch, is `git rebase --fork-point`: it replays only the commits
   the branch holds past the head of its base it was last cut from or rebased onto, read from the reflog of that base.
   When the reflog no longer holds that head, git falls back to the merge base.
 - A conflict is aborted and handed to a detached run of the slot `rebase`.
 - A milestone branch git rebased cleanly is checked before it is pushed: in its worktree the tick runs the `SETUP`
   lines of the project, then its `ACCEPTANCE` lines and `awawa fmt --check .` and `awawa lint --strict .`, as
-  `brigade task check` does. A failing one pushes nothing: the rebased head stays in the worktree and a detached run of
-  the slot `rebase` repairs it there, then pushes it once its tests pass.
+  `brigade task check` does, and writes the result to the record of that commit. A failing one pushes nothing: the
+  rebased head stays in the worktree and a detached run of the slot `rebase` repairs it there, then pushes it once its
+  tests pass.
 - Each launch of that run is recorded as `milestone.rebase_launched`, with the run and the commits the main branch
   and the milestone branch stood at. A run that ends `blocked` holds the rebase of its branch while both heads stand:
   the tick plans none and names the branch and the question on stderr at each tick. Once the main branch or the

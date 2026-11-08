@@ -6,8 +6,8 @@ open the pull request and promote the task.
 ```
 brigade task context [<task>]                  # the starting package of the run
 brigade task check [<task>]                    # the acceptance commands and the corpus checks; exit 1 when one fails
-brigade task pr [<task>] --subject <subject>   # push the branch and open the pull request on its base
-brigade task promote [<task>] [--pr <n>]       # STATUS implemented and DELIVERED_BY, committed and pushed
+brigade task pr [<task>] --subject <subject>   # push the branch with a lease and open the pull request on its base
+brigade task promote [<task>] [--pr <n>]       # STATUS implemented and DELIVERED_BY, committed and pushed with a lease
 ```
 
 A build run works in the worktree of its task, on the branch `<prefix>/<id>-<slug>` the tick cut from the branch of
@@ -16,6 +16,9 @@ of the task, `feat` becoming `feature`, the slug its `TITLE` lowercased, each ru
 letters and digits made one hyphen, cut at a hyphen within 40 characters (`feature/B46-local-mode`). Its pull request
 goes to that base. Every command runs from that worktree, takes the task of the branch when `<task>` is left out,
 and its wave from the open wave of the ledger that holds the task. Each prints text or, with `--json`, a JSON document.
+`task pr` and `task promote` push the branch with `--force-with-lease`, never with `--force`: the lease is the head of
+`origin/<branch>` they read, or that the branch is absent from `origin`, so a branch the tick rebased since its last
+push is pushed, and one another push moved is refused.
 
 A task `draft` or `todo` at the branch of its milestone, a parked task being `todo`, holds the pull request of that
 milestone until it is merged, moved to another milestone or archived. A milestone is reached once the user merges its
