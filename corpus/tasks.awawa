@@ -16603,7 +16603,8 @@ TASK B238
 		+ "catch-up of its pull request and for a milestone branch onto PROJECT.MAIN; a red target"
 		+ "is named at each tick, a red task branch is built as it stands, and a task branch is"
 		+ "pushed with --force-with-lease"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 377
 	TYPE fix
 	MILESTONE @MILESTONE.M7
 	COMPONENT "the tick"
