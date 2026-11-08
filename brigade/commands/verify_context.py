@@ -11,6 +11,7 @@ from brigade.registry.read_project_forge import NO_FORGE, read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
 from brigade.runtime import Runtime
+from brigade.system.parse_configuration import Configuration
 from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 from brigade.tasks.find_task_base import find_task_base
 from brigade.tasks.locate_task_worktree import locate_task_worktree
@@ -71,6 +72,18 @@ def _render_text(document: dict) -> str:
     return "\n".join(sections).removesuffix("\n")
 
 
+def _assemble_task_branch_context(runtime: Runtime, configuration: Configuration, worktree: Path) -> dict:
+    located = locate_task_worktree(runtime, worktree, NAMED_BY_THE_BRANCH)
+    branch_demand = BranchPreflightDemand(
+        project=located.project,
+        task=located.task,
+        task_branch=read_current_branch(runtime.run_process, located.path),
+        base_branch=located.base,
+        configuration=configuration,
+    )
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, **assemble_local_verify_context(runtime, branch_demand)}
+
+
 def verify_context(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)
     run_process = runtime.run_process
@@ -78,15 +91,7 @@ def verify_context(request: argparse.Namespace, runtime: Runtime) -> dict:
     project = require_project_at(read_projects(runtime), locate_main_checkout(run_process, worktree))
     forge_name = read_project_forge(project)
     if forge_name == NO_FORGE:
-        located = locate_task_worktree(runtime, worktree, NAMED_BY_THE_BRANCH)
-        branch_demand = BranchPreflightDemand(
-            project=located.project,
-            task=located.task,
-            task_branch=read_current_branch(run_process, located.path),
-            base_branch=located.base,
-            configuration=configuration,
-        )
-        return {"schema_version": DOCUMENT_SCHEMA_VERSION, **assemble_local_verify_context(runtime, branch_demand)}
+        return _assemble_task_branch_context(runtime, configuration, worktree)
     if request.pr is None:
         raise BrigadeError(
             f"@PROJECT.{project.name} acts through the forge {forge_name}: the context names its pull request"
