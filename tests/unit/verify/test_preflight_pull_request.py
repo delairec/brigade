@@ -87,8 +87,7 @@ class PreflightPullRequestOfAnAreaTest(unittest.TestCase):
         )
 
         # Assert
-        untouched = next(check for check in document["checks"] if check["name"] == "untouched_files")
-        self.assertEqual(untouched["verdict"], "pass")
+        self.assertIn({"name": "untouched_files", "verdict": "pass", "findings": []}, document["checks"])
 
 
 class PreflightPullRequestTest(unittest.TestCase):

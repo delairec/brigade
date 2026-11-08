@@ -318,8 +318,7 @@ class AssembleTaskContextInAnAreaTest(unittest.TestCase):
         context = assemble_task_context(runtime, Configuration(), worktree, ATTRIBUTION)
 
         # Assert
-        self.assertEqual(context["project"], None)
-        self.assertEqual(
-            [request.cwd for request in self.processes.requests if request.argv[0:2] == ("awawa", "context")],
-            [str(self.worktree_path / "brigade")],
-        )
+        self.assertIsNone(context["project"])
+        read_of_the_task = self.processes.requests[1]
+        self.assertEqual(read_of_the_task.argv, ("awawa", "context", "@TASK.B12", "--with-schema", "."))
+        self.assertEqual(read_of_the_task.cwd, str(self.worktree_path / "brigade"))
