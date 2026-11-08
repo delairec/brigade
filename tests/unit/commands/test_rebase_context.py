@@ -74,9 +74,9 @@ class RebaseContextOfAPullRequestTest(unittest.TestCase):
 
     def _create_runtime(self, merge: ProcessAnswer, tasks: dict = TIDEPOOL_TASKS, base: str = "integration/M4-tides"):
         answers = {
-            ("git", "rev-parse", "--show-toplevel"): ProcessAnswer(stdout="/home/user/tidepool-T7\n"),
+            ("git", "rev-parse", "--show-toplevel"): ProcessAnswer(stdout="/srv/tidepool-T7\n"),
             ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): ProcessAnswer(
-                stdout="/home/user/tidepool/.git\n"
+                stdout="/srv/tidepool/.git\n"
             ),
             (*MERGE_TREE[:-1], f"origin/{base}"): merge,
         }
