@@ -634,7 +634,7 @@ class RunOfAProjectWithoutAForgeTest(unittest.TestCase):
             f'{CLIENT_AND_DOCUMENT_CONFIGURATION}[forge_accounts]\nbuild = "octo-build"\n', encoding="utf-8"
         )
         forge = ForgeRecordingItsQuestionsDouble()
-        local_project = (("PATH", "/home/user/tidepool"), ("FORGE", "none"))
+        local_project = (("PATH", "/srv/tidepool"), ("FORGE", "none"))
         runtime = create_test_runtime(
             create_test_paths(root),
             run_process=create_machine_double({"PROJECT": {"tidepool": local_project}}, {}),
