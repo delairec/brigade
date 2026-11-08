@@ -40,7 +40,7 @@ from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.registry.find_project import find_project
 from brigade.registry.find_project_at import find_project_at
-from brigade.registry.is_on_github import is_on_github
+from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_project_forge import NO_FORGE, read_project_forge
 from brigade.registry.read_projects import read_projects
@@ -411,7 +411,7 @@ def _report_milestone(runtime: Runtime, configuration: Configuration, action: Re
     start_study_run(runtime, study, run_id)
     detach_study_run(runtime, study.name, run_id, record_run_pid)
     project = find_project(read_projects(runtime), order.project)
-    login = read_cli_login(configuration, read_project_forge(project), runtime) if is_on_github(project) else NO_LOGIN
+    login = read_cli_login(configuration, read_project_forge(project), runtime) if is_on_a_forge(project) else NO_LOGIN
     append_event(
         runtime.paths,
         runtime.now,
@@ -426,7 +426,7 @@ def _report_task(runtime: Runtime, configuration: Configuration, action: ReportT
     start_study_run(runtime, study, run_id)
     detach_study_run(runtime, study.name, run_id, record_run_pid)
     project = find_project(read_projects(runtime), order.project)
-    login = read_cli_login(configuration, read_project_forge(project), runtime) if is_on_github(project) else NO_LOGIN
+    login = read_cli_login(configuration, read_project_forge(project), runtime) if is_on_a_forge(project) else NO_LOGIN
     append_event(
         runtime.paths, runtime.now, TaskReported(project=order.project, task=order.task, run=run_id, login=login)
     )
