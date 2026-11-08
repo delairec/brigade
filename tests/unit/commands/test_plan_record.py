@@ -40,13 +40,6 @@ from tests.unit.create_test_runtime import create_test_runtime
 
 CORPUS_SITES = json.dumps({"entities": [{"type": "TASK", "name": "T1", "file": "corpus/tasks.awawa", "line": 1}]})
 REQUEST_SITES = json.dumps({"entities": [{"type": "REQUEST", "name": "r1", "file": "requests.awawa", "line": 1}]})
-FORGE = object()
-
-
-def resolve_forge(kind: str, name: str, **places):
-    return FORGE
-
-
 REQUESTS = 'REQUEST r1\n\tPROJECT @PROJECT.app\n\tTEXT "Let the tides be planned"\n\tSTATUS planning\n'
 
 
@@ -77,9 +70,7 @@ class PlanRecordTest(unittest.TestCase):
             ("git", "commit"): ProcessAnswer(),
             ("git", "fetch"): ProcessAnswer(),
         }
-        self.runtime = create_test_runtime(
-            create_test_paths(root), run_process=ScriptedProcessRunner(self.answers).run, resolve_plugin=resolve_forge
-        )
+        self.runtime = create_test_runtime(create_test_paths(root), run_process=ScriptedProcessRunner(self.answers).run)
         config_root = self.runtime.paths.config_root
         self.answers["awawa", "status", "--json", str(config_root)] = ProcessAnswer(stdout=REQUEST_SITES)
         config_root.mkdir(parents=True)
