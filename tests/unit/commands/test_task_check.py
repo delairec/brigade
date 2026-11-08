@@ -11,7 +11,7 @@ from tests.unit.create_test_runtime import create_test_runtime
 
 THE_TASK_OF_THE_BRANCH = None
 MAIN_BRANCH_CHECKOUT = {
-    ("git", "rev-parse", "--show-toplevel"): "/home/user/tidepool\n",
+    ("git", "rev-parse", "--show-toplevel"): "/srv/tidepool\n",
     ("git", "branch", "--show-current"): "main\n",
 }
 PASSED_CHECK = {"command": "python3 -m unittest", "passed": True, "duration_ms": 1200, "tail": []}

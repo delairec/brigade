@@ -66,7 +66,7 @@ class RecordVerdictTestCase(unittest.TestCase):
         return record_verdict(
             runtime,
             VerdictDemand(
-                project_path="/home/user/tidepool",
+                project_path="/srv/tidepool",
                 opened=OPENED,
                 verdict=verdict,
                 forge=self.forge,
@@ -184,7 +184,7 @@ class RecordVerdictUnderTheApprovalModeTest(RecordVerdictTestCase):
             [
                 {
                     "schema_version": 1,
-                    "repository": "/home/user/tidepool",
+                    "repository": "/srv/tidepool",
                     "number": 42,
                     "event": "request_changes",
                     "commit": "8885daa",
@@ -204,7 +204,7 @@ class RecordVerdictUnderTheApprovalModeTest(RecordVerdictTestCase):
             [
                 {
                     "schema_version": 1,
-                    "repository": "/home/user/tidepool",
+                    "repository": "/srv/tidepool",
                     "number": 42,
                     "event": "approve",
                     "commit": "8885daa",
