@@ -11,8 +11,10 @@ from brigade.collecting.collector_environment import CollectorInputs
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.command import Argument, Command, ExclusiveArguments
 from brigade.commands._launch_branch_rebase import launch_branch_rebase
+from brigade.commands._list_branch_check_runs import list_branch_check_runs
 from brigade.commands._read_cli_login import read_cli_login
 from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME, read_forge_environment
+from brigade.commands._repair_red_head import repair_red_head
 from brigade.commands.run import run
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entity import read_entity
@@ -52,7 +54,6 @@ from brigade.studies.detach_study_run import detach_study_run
 from brigade.studies.read_study import read_study
 from brigade.studies.start_study_run import start_study_run
 from brigade.system.ask_check_logs import CheckLogsQuery, ask_check_logs
-from brigade.system.ask_check_runs import CheckRunsQuery, ask_check_runs
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
 from brigade.system.collector_places import locate_collectors
@@ -97,14 +98,13 @@ from brigade.tick.actions import (
 )
 from brigade.tick.apply_actions import apply_actions
 from brigade.tick.build_snapshot import ForgeReaders, Snapshot, build_snapshot
+from brigade.tick.describe_holding_head import describe_holding_head
+from brigade.tick.find_holding_base import find_holding_base
+from brigade.tick.head_proof import HoldingHead
 from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.ledger_reading_keeper import LedgerReadingKeeper
 from brigade.tick.plan import plan
 from brigade.tick.plan_connectors import plan_connectors
-from brigade.tick.describe_holding_head import describe_holding_head
-from brigade.tick.head_proof import HoldingHead
-from brigade.tick.find_holding_base import find_holding_base
-from brigade.commands._repair_red_head import repair_red_head
 from brigade.tick.prepare_task_worktree import prepare_task_worktree
 from brigade.tick.read_ruled_task import read_ruled_task
 from brigade.tick.rebase_task import rebase_task
@@ -193,7 +193,7 @@ def _launch_rebase_of_the_branch(runtime: Runtime, configuration: Configuration,
 def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchTask) -> None:
     forge = TickForge(
         read_environment=_cache_forge_environment(runtime, configuration),
-        list_check_runs=_list_branch_check_runs(runtime, configuration),
+        list_check_runs=list_branch_check_runs(runtime, configuration),
     )
     prepared = prepare_task_worktree(runtime, configuration, action, forge)
     if prepared.conflicted:
@@ -330,7 +330,7 @@ def _launch_rebase(runtime: Runtime, configuration: Configuration, action: Rebas
 def _rebase_task(runtime: Runtime, configuration: Configuration, action: RebaseTask) -> None:
     environment = read_forge_environment(configuration, CLI_KEY, runtime)
     login = ask_forge_account(runtime.resolve_plugin("forge", FORGE_NAME), FORGE_NAME, environment, runtime).login
-    rebase = rebase_task(runtime, action, environment, _list_branch_check_runs(runtime, configuration))
+    rebase = rebase_task(runtime, action, environment, list_branch_check_runs(runtime, configuration))
     if rebase.held_by is not None:
         sys.stderr.write(
             f"brigade tick: the catch-up of @TASK.{action.task} waits: {describe_holding_head(rebase.held_by)}\n"
@@ -575,7 +575,7 @@ def _rebase_milestone(runtime: Runtime, configuration: Configuration, action: Re
         launch_rebase_run=lambda run: launch_branch_rebase(runtime, configuration, run),
         read_login=lambda: read_cli_login(configuration, runtime),
         name_holding_head=lambda held_by: _hold_milestone_rebase(runtime, configuration, action, held_by),
-        list_check_runs=_list_branch_check_runs(runtime, configuration),
+        list_check_runs=list_branch_check_runs(runtime, configuration),
     )
     rebased = rebase_milestone_branches(runtime, rebase)
     if rebased is not None:
@@ -687,16 +687,6 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         CollectCheckRuns: lambda action: _collect_check_runs(runtime, configuration, action),
         CollectReviewThreads: lambda action: _collect_review_threads(runtime, configuration, action),
     }
-
-
-def _list_branch_check_runs(runtime: Runtime, configuration: Configuration) -> Callable[[str, str], list[dict]]:
-    read_environment = _cache_forge_environment(runtime, configuration)
-    return lambda repository, branch: ask_check_runs(
-        runtime.resolve_plugin(FORGE_KIND, FORGE_NAME),
-        FORGE_NAME,
-        CheckRunsQuery(repository=repository, branch=branch, environment=read_environment(CLI_KEY)),
-        runtime,
-    )
 
 
 def _follow_pull_requests(runtime: Runtime, configuration: Configuration) -> Callable:
@@ -839,7 +829,7 @@ def _describe_planned_action(runtime: Runtime, list_check_runs: Callable[[str, s
 def _plan_dry(runtime: Runtime) -> dict:
     configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     snapshot = build_snapshot(runtime, configuration, _read_the_forge(runtime, configuration))
-    list_check_runs = _list_branch_check_runs(runtime, configuration)
+    list_check_runs = list_branch_check_runs(runtime, configuration)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "mode": "dry-run",
