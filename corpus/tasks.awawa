@@ -4665,6 +4665,8 @@ TASK B55
 		+ "a project that declares no corpus"
 		IMPL "tests/integration/corpus/test_project_schema_template.py::def"
 			+ "test_should_pass_the_strict_lint_of_every_status_and_field_a_plan_and_a_tick_read(self):"
+		IMPL "tests/integration/corpus/test_project_schema_template.py::def"
+			+ "test_should_pass_the_strict_lint_of_a_task_delivered_with_no_pull_request(self):"
 		IMPL "tests/cli/test_plan.py::def"
 			+ "test_should_pass_the_strict_lint_once_the_branch_is_merged(self):"
 		IMPL "tests/cli/test_plan.py::def"
