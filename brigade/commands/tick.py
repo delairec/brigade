@@ -101,7 +101,9 @@ from brigade.tick.ledger_reading_keeper import LedgerReadingKeeper
 from brigade.tick.plan import plan
 from brigade.tick.plan_connectors import plan_connectors
 from brigade.tick.describe_holding_head import describe_holding_head
+from brigade.tick.head_proof import HoldingHead
 from brigade.tick.find_holding_base import find_holding_base
+from brigade.commands._repair_red_head import repair_red_head
 from brigade.tick.prepare_task_worktree import prepare_task_worktree
 from brigade.tick.read_ruled_task import read_ruled_task
 from brigade.tick.rebase_task import rebase_task
@@ -198,6 +200,7 @@ def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchT
         return
     if prepared.held_by is not None:
         sys.stderr.write(f"brigade tick: @TASK.{action.task} waits: {describe_holding_head(prepared.held_by)}\n")
+        repair_red_head(runtime, configuration, find_project(read_projects(runtime), action.project), prepared.held_by)
         return
     worktree = prepared.worktree
     ruled_task = read_ruled_task(runtime, configuration, action, prepared)
@@ -331,6 +334,7 @@ def _rebase_task(runtime: Runtime, configuration: Configuration, action: RebaseT
         sys.stderr.write(
             f"brigade tick: the catch-up of @TASK.{action.task} waits: {describe_holding_head(rebase.held_by)}\n"
         )
+        repair_red_head(runtime, configuration, find_project(read_projects(runtime), action.project), rebase.held_by)
         return
     head = rebase.head
     if head is not None:
@@ -548,6 +552,13 @@ def _start_wave(runtime: Runtime, configuration: Configuration, action: StartWav
     start_project_wave(runtime, start, action.milestone)
 
 
+def _hold_milestone_rebase(
+    runtime: Runtime, configuration: Configuration, action: RebaseMilestone, held_by: HoldingHead
+) -> None:
+    sys.stderr.write(f"brigade tick: the rebase of {action.branch} waits: {describe_holding_head(held_by)}\n")
+    repair_red_head(runtime, configuration, find_project(read_projects(runtime), action.project), held_by)
+
+
 def _rebase_milestone(runtime: Runtime, configuration: Configuration, action: RebaseMilestone) -> None:
     rebase = MilestoneBranchesRebase(
         project=find_project(read_projects(runtime), action.project),
@@ -558,9 +569,7 @@ def _rebase_milestone(runtime: Runtime, configuration: Configuration, action: Re
         is_run_live_on=lambda worktree: is_run_live_on(runtime.paths.state_root, worktree, is_recorded_process_alive),
         launch_rebase_run=lambda run: launch_branch_rebase(runtime, configuration, run),
         read_login=lambda: read_cli_login(configuration, runtime),
-        name_holding_head=lambda held_by: sys.stderr.write(
-            f"brigade tick: the rebase of {action.branch} waits: {describe_holding_head(held_by)}\n"
-        ),
+        name_holding_head=lambda held_by: _hold_milestone_rebase(runtime, configuration, action, held_by),
         list_check_runs=_list_branch_check_runs(runtime, configuration),
     )
     rebased = rebase_milestone_branches(runtime, rebase)

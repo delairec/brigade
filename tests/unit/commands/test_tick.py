@@ -3086,7 +3086,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         )
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
-            run_process=self.machine.run,
+            run_process=create_the_worktree_at_its_addition(self.machine.run),
             spawn_process=self.spawn.spawn,
             resolve_plugin=_resolve_the_collectors_beside(
                 create_plugin_resolution(STEP_COUNTING_PROBE, forge_double), self.root
@@ -3123,6 +3123,40 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
             errors.getvalue(),
         )
         self.assertNotIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
+
+    def test_should_launch_one_run_repairing_the_red_main_branch_on_a_fix_branch_cut_from_its_head(self):
+        # Arrange
+        write_commit_checks(self.root, WAVE_HEAD, FAILED)
+        repair = self.root / "tidepool" / ".brigade" / "worktrees" / f"fix-repair-main-{WAVE_HEAD}"
+
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            (select_argvs_opening_on(self.machine.argvs, ("git", "worktree", "add", "--quiet", "-b")), self.spawn.argvs),
+            (
+                [("git", "worktree", "add", "--quiet", "-b", f"fix/repair-main-{WAVE_HEAD}", str(repair), WAVE_HEAD)],
+                [
+                    (
+                        "run",
+                        "rebase-on-base",
+                        f"branch=fix/repair-main-{WAVE_HEAD}",
+                        f"head={WAVE_HEAD}",
+                        "into=main",
+                        "--slot",
+                        "rebase",
+                        "--cwd",
+                        str(repair),
+                        "--project",
+                        "tidepool",
+                        "--run-id",
+                        ANY,
+                    )
+                ],
+            ),
+        )
 
     def test_should_rebase_the_milestone_branch_onto_main_before_the_wave_of_its_candidates_starts_on_it(self):
         # Act
@@ -3509,6 +3543,15 @@ class TickLaunchingATaskWithoutAPullRequestWhoseBranchConflictsWithTheWaveBranch
         )
 
 
+def create_the_worktree_at_its_addition(run_process):
+    def run(request):
+        if request.argv[:3] == ("git", "worktree", "add"):
+            Path(request.argv[-2]).mkdir(parents=True, exist_ok=True)
+        return run_process(request)
+
+    return run
+
+
 class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
@@ -3531,18 +3574,85 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
         )
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
-            run_process=self.machine.run,
+            run_process=create_the_worktree_at_its_addition(self.machine.run),
             spawn_process=self.spawn.spawn,
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([None])),
         )
 
-    def test_should_launch_no_run(self):
+    def test_should_launch_one_run_repairing_the_red_wave_branch_in_its_worktree_and_no_build(self):
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "rebase-on-base",
+                    "branch=integration/M4",
+                    f"head={WAVE_HEAD}",
+                    "--slot",
+                    "rebase",
+                    "--cwd",
+                    str(self.repository / ".brigade" / "worktrees" / "integration-M4"),
+                    "--project",
+                    "tidepool",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
+
+    def test_should_launch_no_second_repair_while_the_first_lives(self):
+        # Arrange
+        live_repair = {
+            **create_run_record(FIRST_RUN, None, None),
+            "slot": "rebase",
+            "arguments": {"branch": "integration/M4", "head": WAVE_HEAD},
+            "project": "tidepool",
+            "cwd": str(self.repository / ".brigade" / "worktrees" / "integration-M4"),
+            "worktree": str(self.repository / ".brigade" / "worktrees" / "integration-M4"),
+        }
+        record_run_pid(write_run(self.root / "state", live_repair, None), os.getpid())
+
         # Act
         with contextlib.redirect_stderr(io.StringIO()):
             COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(self.spawn.argvs, [])
+
+    def test_should_name_the_question_of_the_repair_ended_blocked_at_each_tick_and_launch_no_other(self):
+        # Arrange
+        blocked_repair = {
+            **create_run_record(FIRST_RUN, None, None),
+            "slot": "rebase",
+            "arguments": {"branch": "integration/M4", "head": WAVE_HEAD},
+            "project": "tidepool",
+            "cwd": str(self.repository / ".brigade" / "worktrees" / "integration-M4"),
+            "worktree": str(self.repository / ".brigade" / "worktrees" / "integration-M4"),
+        }
+        blocked = {
+            **create_run_result(FIRST_RUN, "blocked", "2026-10-18T10:30:00Z"),
+            "message": "Drop the flaky tide test or fix its clock?\nbrigade-end: blocked",
+        }
+        write_run(self.root / "state", blocked_repair, blocked)
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            (self.spawn.argvs, errors.getvalue().splitlines()[-1]),
+            (
+                [],
+                "brigade tick: the repair of integration/M4 is blocked: Drop the flaky tide test or fix its clock?",
+            ),
+        )
 
     def test_should_name_the_red_wave_branch_its_commit_and_the_command_that_failed_on_stderr(self):
         # Arrange
@@ -3872,7 +3982,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         forge = RebasingForgeDouble(found)
         return create_test_runtime(
             create_test_paths(self.root),
-            run_process=self._observe_the_lock(self.machine.run),
+            run_process=create_the_worktree_at_its_addition(self._observe_the_lock(self.machine.run)),
             spawn_process=self.spawn.spawn,
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
         )
@@ -3928,6 +4038,22 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         self.assertIn(
             "brigade tick: the catch-up of @TASK.T7 waits: integration/M4 is red at 8885daa, `make test` failed\n",
             errors.getvalue(),
+        )
+
+    def test_should_launch_one_run_repairing_the_red_wave_branch_holding_the_catch_up(self):
+        # Arrange
+        write_ledger(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
+        write_commit_checks(self.root, WAVE_HEAD, FAILED)
+        runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST])
+
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            [argv[:4] for argv in self.spawn.argvs],
+            [("run", "rebase-on-base", "branch=integration/M4", f"head={WAVE_HEAD}")],
         )
 
     def test_should_rebase_the_task_branch_in_its_worktree_and_push_it_with_a_lease_on_its_head(self):
