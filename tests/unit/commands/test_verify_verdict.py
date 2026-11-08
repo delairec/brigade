@@ -1,3 +1,4 @@
+import argparse
 import json
 import tempfile
 import unittest
@@ -5,6 +6,7 @@ from argparse import Namespace
 from datetime import UTC, datetime
 from pathlib import Path
 
+from brigade.add_command_parsers import add_command_parsers
 from brigade.commands.verify_verdict import COMMAND
 from brigade.errors import BrigadeError
 from brigade.ledger.ledger_entry import LedgerEntry
@@ -77,6 +79,17 @@ class VerifyVerdictRequestTest(unittest.TestCase):
 
         # Assert
         self.assertIs(request, options)
+
+    def test_should_take_a_verdict_naming_no_pull_request(self):
+        # Arrange
+        parser = argparse.ArgumentParser(prog="brigade")
+        add_command_parsers(parser, (COMMAND,), argparse.ArgumentParser(add_help=False))
+
+        # Act
+        options = parser.parse_args(["verify", "verdict", "--file", "verdict.json"])
+
+        # Assert
+        self.assertIsNone(options.pr)
 
 
 class VerifyVerdictOfAPullRequestTest(unittest.TestCase):
