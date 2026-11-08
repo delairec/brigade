@@ -16,6 +16,7 @@ from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.pattern_ratified import PatternRatified
 from brigade.ledger.plan_lint_failed import PlanLintFailed
 from brigade.ledger.pr_merged import PrMerged
+from brigade.ledger.repair_pr_opened import RepairPrOpened
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.signal_recorded import SignalRecorded
 from brigade.ledger.step_done import StepDone
@@ -75,6 +76,7 @@ DECLARED_EVENTS = {
         MilestoneCreated,
         MilestoneBranchCut,
         MilestonePrOpened,
+        RepairPrOpened,
         MilestonePrDescribed,
         MilestoneRebased,
         MilestoneClosed,
