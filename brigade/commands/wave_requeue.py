@@ -2,7 +2,7 @@ import argparse
 from dataclasses import dataclass
 
 from brigade.command import Argument, Command
-from brigade.commands._read_forge_environment import FORGE_NAME, ForgeSlot, read_forge_environment
+from brigade.commands._read_forge_environment import ForgeSlot, read_forge_environment
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.prepare_tree import Tree
 from brigade.corpus.read_entity import Entity, read_entity
@@ -14,6 +14,7 @@ from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_state import REQUEUE_REASON, TaskState
 from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.find_project import find_project
+from brigade.registry.read_project_forge import read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
 from brigade.system.parse_configuration import Configuration
@@ -41,7 +42,7 @@ def _read_task_on_main(runtime: Runtime, configuration: Configuration, started: 
     main = locate_project_main(
         runtime.run_process,
         project,
-        lambda key: read_forge_environment(configuration, ForgeSlot(FORGE_NAME, key), runtime),
+        lambda key: read_forge_environment(configuration, ForgeSlot(read_project_forge(project), key), runtime),
     )
     query = argparse.Namespace(project=started.project, ref=main, worktree=NO_WORKTREE)
     try:
