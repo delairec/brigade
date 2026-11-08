@@ -102,6 +102,9 @@ class TaskPrOutsideATaskTest(unittest.TestCase):
         self.assertEqual(str(raised.exception), "the branch main is not a <prefix>/<task>-<slug> branch")
 
 
+OAK_PROJECT = (("PATH", "/srv/oak"), ("MAIN", "main"))
+
+
 class TaskPrPushTest(unittest.TestCase):
     def setUp(self):
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
@@ -128,7 +131,7 @@ class TaskPrPushTest(unittest.TestCase):
             ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"), stdout="/srv/oak/.git\n"
         )
         self.processes.answer_entities(
-            self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("MAIN", "main"))}
+            self.runtime.paths.config_root, "PROJECT", {"oak": (*OAK_PROJECT, ("FORGE", "github"))}
         )
         append_event(
             self.runtime.paths,
@@ -165,6 +168,19 @@ class TaskPrPushTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(self.pushed_environments, [{"GH_TOKEN": "token-of-octo-bot"}])
+
+    def test_should_refuse_to_open_a_pull_request_for_a_task_of_a_project_of_forge_none(self):
+        # Arrange
+        self.processes.answer_entities(
+            self.runtime.paths.config_root, "PROJECT", {"oak": (*OAK_PROJECT, ("FORGE", "none"))}
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            COMMAND.run(Namespace(task=THE_TASK_OF_THE_BRANCH, subject="add the parser"), self.runtime)
+
+        # Assert
+        self.assertEqual(str(raised.exception), "@PROJECT.oak acts through no forge: @TASK.B12 opens no pull request")
 
     def test_should_open_the_pull_request_as_the_login_of_the_build_slot(self):
         # Act
