@@ -498,8 +498,8 @@ class ProjectAddOnATrackedCorpusTest(unittest.TestCase):
         runtime.paths.configuration_file.write_text("")
         return project_add(request, runtime)
 
-    def read_fields(self, document: dict) -> dict:
-        return {field["name"]: field["value"] for field in document["project"]["fields"]}
+    def assert_registered_field(self, document: dict, name: str, value: str) -> None:
+        self.assertIn({"name": name, "value": value, "guessed": False}, document["project"]["fields"])
 
     def test_should_exit_2_naming_the_option_when_no_terminal_can_answer(self):
         # Arrange
@@ -520,8 +520,8 @@ class ProjectAddOnATrackedCorpusTest(unittest.TestCase):
         document = self.add(corpus_mode="control")
 
         # Assert
-        self.assertEqual(self.read_fields(document)["CORPUS"], "specs")
-        self.assertNotIn("MODE", self.read_fields(document))
+        self.assert_registered_field(document, "CORPUS", "specs")
+        self.assertNotIn({"name": "MODE", "value": "control", "guessed": False}, document["project"]["fields"])
         self.assertIsNone(document["installed_corpus"])
 
     def test_should_confine_brigade_to_its_own_folder_when_the_option_says_area(self):
@@ -529,8 +529,8 @@ class ProjectAddOnATrackedCorpusTest(unittest.TestCase):
         document = self.add(corpus_mode="area")
 
         # Assert
-        self.assertEqual(self.read_fields(document)["CORPUS"], "brigade")
-        self.assertEqual(self.read_fields(document)["MODE"], "area")
+        self.assert_registered_field(document, "CORPUS", "brigade")
+        self.assert_registered_field(document, "MODE", "area")
 
     def test_should_take_the_folder_of_the_corpus_option_over_the_default(self):
         for mode, expected in [("control", "docs/spec"), ("area", "docs/spec")]:
@@ -539,7 +539,7 @@ class ProjectAddOnATrackedCorpusTest(unittest.TestCase):
                 document = self.add(corpus_mode=mode, corpus="docs/spec")
 
                 # Assert
-                self.assertEqual(self.read_fields(document)["CORPUS"], expected)
+                self.assert_registered_field(document, "CORPUS", expected)
 
     def test_should_ask_the_mode_then_the_folder_on_a_terminal(self):
         # Arrange
@@ -550,7 +550,7 @@ class ProjectAddOnATrackedCorpusTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(terminal.questions, ["Corpus mode, control or area: ", "Corpus folder [brigade]: "])
-        self.assertEqual(self.read_fields(document)["CORPUS"], "atelier")
+        self.assert_registered_field(document, "CORPUS", "atelier")
 
     def test_should_keep_the_folder_proposed_when_the_terminal_answer_is_empty(self):
         # Arrange
@@ -561,7 +561,7 @@ class ProjectAddOnATrackedCorpusTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(terminal.questions[1], "Corpus folder [specs]: ")
-        self.assertEqual(self.read_fields(document)["CORPUS"], "specs")
+        self.assert_registered_field(document, "CORPUS", "specs")
 
     def test_should_not_ask_the_folder_the_corpus_option_names(self):
         # Arrange
@@ -572,7 +572,7 @@ class ProjectAddOnATrackedCorpusTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(terminal.questions, ["Corpus mode, control or area: "])
-        self.assertEqual(self.read_fields(document)["CORPUS"], "atelier")
+        self.assert_registered_field(document, "CORPUS", "atelier")
 
     def test_should_refuse_a_mode_the_terminal_answers_outside_the_two_modes(self):
         # Arrange
@@ -619,7 +619,17 @@ class ProjectAddWithoutATrackedCorpusTest(unittest.TestCase):
         document = project_add(_create_request(self.repository), self.runtime)
 
         # Assert
-        self.assertNotIn("MODE", [field["name"] for field in document["project"]["fields"]])
+        self.assertEqual(
+            document["project"]["fields"],
+            [
+                {"name": "PATH", "value": str(self.repository), "guessed": False},
+                {"name": "REMOTE", "value": "acme/app", "guessed": False},
+                {"name": "MAIN", "value": "main", "guessed": False},
+                {"name": "ACCEPTANCE", "value": "python3 -m unittest", "guessed": False},
+                {"name": "FORGE", "value": "none", "guessed": False},
+                {"name": "STATUS", "value": "active", "guessed": False},
+            ],
+        )
 
     def test_should_refuse_a_corpus_mode_with_nothing_tracked_to_apply_it_to(self):
         for options in [{"corpus_mode": "area"}, {"corpus_mode": "control", "init_corpus": True}]:
