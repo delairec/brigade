@@ -66,7 +66,7 @@ class ProjectSchemaTemplateTest(unittest.TestCase):
         self.assertTrue(report.clean, report.output)
 
     def test_should_declare_the_status_ladders_the_tick_reads(self):
-        # Arrange
+        # Act
         schema = SHIPPED_PROJECT_SCHEMA.read_text()
 
         # Assert
