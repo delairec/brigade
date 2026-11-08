@@ -1,0 +1,24 @@
+{
+  "call": {
+    "arguments": [
+      "show",
+      "TASK",
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>"
+    ],
+    "cwd": "<tmp:0>/cache/brigade/refs/shop/<commit:1>",
+    "directories": [
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>"
+    ],
+    "inputs": {
+      "<tmp:0>/cache/brigade/refs/shop/<commit:1>/corpus/_schema.awawa": "SCHEMA *\n\tDESC \"fields legal on every entity of this corpus\"\n\tFIELD DESC string\n\t\tREPEATABLE\n\t\tFIELD REF reference\n\t\t\tREPEATABLE\n\t\t\tDESC \"an entity the prose above names, indexed\"\n\tFIELD RATIONALE string\n\t\tREPEATABLE\n\t\tCATEGORY reasoning\n\t\tFIELD REF reference\n\t\t\tREPEATABLE\n\t\t\tDESC \"an entity the prose above names, indexed\"\n\tFIELD SOURCE string\n\t\tREPEATABLE\n\t\tDESC \"where this was decided or read\"\n\t\tFIELD REF reference\n\t\t\tREPEATABLE\n\t\t\tDESC \"an entity the prose above names, indexed\"\n\nSCHEMA MILESTONE\n\tDESC \"a delivery the tasks are planned against\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD SUBJECT string\n\t\tDESC \"the subject of its pull request, opening on a verb in the imperative\"\n\tFIELD STATUS planned|active|reached\n\t\tREQUIRED\n\tWHEN STATUS reached\n\t\tGATE error\n\nSCHEMA TASK\n\tDESC \"a unit of work delivered by one pull request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\t\tDESC \"what the task delivers, in one line\"\n\tFIELD STATUS draft|todo|implemented|archived\n\t\tREQUIRED\n\t\tDESC \"draft: not ratified; todo: ratified; implemented: merged; archived: retired\"\n\tFIELD TYPE build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test\n\t\tDESC \"the Conventional Commits type of the pull request that delivers it\"\n\tFIELD SPEC string\n\t\tREQUIRED\n\t\tREPEATABLE\n\t\tDESC \"one acceptance criterion, observable once delivered\"\n\t\tFIELD IMPL anchor\n\t\t\tREPEATABLE\n\t\t\tDESC \"the test or the code where the criterion is proven; written at delivery\"\n\tFIELD MILESTONE @MILESTONE\n\t\tCONVERSE COMPRISES\n\tFIELD COMPONENT string\n\t\tDESC \"the part of the project the task touches\"\n\tFIELD AFTER @TASK\n\t\tREPEATABLE\n\t\tCONVERSE BEFORE\n\t\tDESC \"the task that must merge before this one\"\n\tFIELD DELIVERED_BY uint\n\t\tDESC \"the number of the pull request that delivers it\"\n\tWHEN STATUS draft\n\t\tGATE suppressed\n\tWHEN STATUS todo\n\t\tGATE error\n\t\tFIELD TYPE\n\t\t\tREQUIRED\n\tWHEN STATUS implemented\n\t\tGATE error\n\t\tFIELD TYPE\n\t\t\tREQUIRED\n\t\tFIELD SPEC\n\t\t\tREQUIRED\n\t\t\tREPEATABLE\n\t\t\tFIELD IMPL\n\t\t\t\tREQUIRED\n\t\t\t\tREPEATABLE\n\t\tFIELD DELIVERED_BY\n\t\t\tREQUIRED\n\tWHEN STATUS archived\n\t\tGATE suppressed\n\nSCHEMA DECISION\n\tDESC \"a ruling of the project, and what it turned down\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS active|archived\n\t\tREQUIRED\n\tFIELD REJECTED string\n\t\tREPEATABLE\n\t\tDESC \"an alternative, then why it was refused\"\n\tFIELD CLOSES @OPEN_QUESTION\n\t\tREPEATABLE\n\t\tCONVERSE CLOSED_BY\n\tWHEN STATUS active\n\t\tGATE error\n\tWHEN STATUS archived\n\t\tGATE suppressed\n\nSCHEMA OPEN_QUESTION\n\tDESC \"a project-level fact left undecided\"\n\tFIELD QUESTION string\n\t\tREQUIRED\n\tFIELD STATUS open|closed\n\t\tREQUIRED\n\tFIELD BLOCKS @TASK\n\t\tREPEATABLE\n\t\tCONVERSE BLOCKED_BY\n\t\tDESC \"a task that cannot be ratified until the question is ruled\"\n\tWHEN STATUS closed\n\t\tGATE suppressed\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "SCHEMA TASK\n\tDESC \"a unit of work delivered by one pull request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\t\tDESC \"what the task delivers, in one line\"\n\tFIELD STATUS draft|todo|implemented|archived\n\t\tREQUIRED\n\t\tDESC \"draft: not ratified; todo: ratified; implemented: merged; archived: retired\"\n\tFIELD TYPE build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test\n\t\tDESC \"the Conventional Commits type of the pull request that delivers it\"\n\tFIELD SPEC string\n\t\tREQUIRED\n\t\tREPEATABLE\n\t\tDESC \"one acceptance criterion, observable once delivered\"\n\t\tFIELD IMPL anchor\n\t\t\tREPEATABLE\n\t\t\tDESC \"the test or the code where the criterion is proven; written at delivery\"\n\tFIELD MILESTONE @MILESTONE\n\t\tCONVERSE COMPRISES\n\tFIELD COMPONENT string\n\t\tDESC \"the part of the project the task touches\"\n\tFIELD AFTER @TASK\n\t\tREPEATABLE\n\t\tCONVERSE BEFORE\n\t\tDESC \"the task that must merge before this one\"\n\tFIELD DELIVERED_BY uint\n\t\tDESC \"the number of the pull request that delivers it\"\n\tWHEN STATUS draft\n\t\tGATE suppressed\n\tWHEN STATUS todo\n\t\tGATE error\n\t\tFIELD TYPE\n\t\t\tREQUIRED\n\tWHEN STATUS implemented\n\t\tGATE error\n\t\tFIELD TYPE\n\t\t\tREQUIRED\n\t\tFIELD SPEC\n\t\t\tREQUIRED\n\t\t\tREPEATABLE\n\t\t\tFIELD IMPL\n\t\t\t\tREQUIRED\n\t\t\t\tREPEATABLE\n\t\tFIELD DELIVERED_BY\n\t\t\tREQUIRED\n\tWHEN STATUS archived\n\t\tGATE suppressed\n"
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}
