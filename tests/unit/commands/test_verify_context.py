@@ -202,7 +202,7 @@ class VerifyContextOfAPullRequestTest(unittest.TestCase):
             [
                 (
                     "read_pull_request",
-                    {"schema_version": 1, "repository": "/home/user/tidepool", "number": 42, "environment": {}},
+                    {"schema_version": 1, "repository": "/srv/tidepool", "number": 42, "environment": {}},
                 )
             ],
         )
@@ -237,7 +237,7 @@ def _resolve(ref: str) -> tuple[str, ...]:
 TASK_HEAD = "8885daa"
 MAIN_HEAD = "4c1d2e0"
 MERGE_BASE = "0000000"
-LOCAL_PROJECT = (("PATH", "/home/user/tidepool"), ("MAIN", "main"), ("FORGE", "none"))
+LOCAL_PROJECT = (("PATH", "/srv/tidepool"), ("MAIN", "main"), ("FORGE", "none"))
 LOCAL_TASK_WORKTREE = {
     **TASK_WORKTREE,
     ("git", "branch", "--show-current"): "feature/T7-tide-table\n",
