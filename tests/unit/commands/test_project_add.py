@@ -26,7 +26,14 @@ def _create_request(path: Path, **options) -> argparse.Namespace:
         heavy=[],
         setup=[],
         force=options.get("force", False),
+        init_corpus=options.get("init_corpus", False),
+        corpus=options.get("corpus"),
     )
+
+
+class _ForgeOpeningPullRequest12:
+    def open_pull_request(self, request: dict, runtime) -> dict:
+        return {"number": 12}
 
 
 class ProjectAddTest(unittest.TestCase):
@@ -79,6 +86,7 @@ class ProjectAddTest(unittest.TestCase):
                     ],
                 },
                 "configurations": [],
+                "installed_corpus": None,
             },
         )
 
@@ -182,6 +190,8 @@ class ProjectAddTest(unittest.TestCase):
             heavy=["make e2e"],
             setup=["make deps", "make tools"],
             force=False,
+            init_corpus=False,
+            corpus=None,
         )
 
         # Act
@@ -237,6 +247,7 @@ class ProjectAddTextTest(unittest.TestCase):
                 ],
             },
             "configurations": [],
+            "installed_corpus": None,
         }
 
         # Act
@@ -255,6 +266,7 @@ class ProjectAddTextTest(unittest.TestCase):
             "action": "replaced",
             "project": {"name": "app", "fields": [{"name": "PATH", "value": "/srv/app", "guessed": False}]},
             "configurations": ["Makefile"],
+            "installed_corpus": None,
         }
 
         # Act
@@ -262,6 +274,178 @@ class ProjectAddTextTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(text, "replaced @PROJECT.app\nPATH        /srv/app")
+
+
+class ProjectAddInstalledCorpusTextTest(unittest.TestCase):
+    def test_should_print_the_branch_and_what_delivers_it(self):
+        for delivery, expected in [
+            ({"pull_request": 12, "merge_command": None}, "pull request #12"),
+            ({"pull_request": None, "merge_command": "git -C /srv/app merge corpus"}, "git -C /srv/app merge corpus"),
+        ]:
+            with self.subTest(expected=expected):
+                # Arrange
+                document = {
+                    "action": "added",
+                    "project": {"name": "app", "fields": []},
+                    "configurations": ["Makefile"],
+                    "installed_corpus": {"branch": "corpus", **delivery},
+                }
+
+                # Act
+                text = COMMAND.render_text(document)
+
+                # Assert
+                self.assertEqual(text, f"added @PROJECT.app\nbranch corpus\n{expected}")
+
+
+class ProjectAddInitCorpusTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name).resolve()
+        self.repository = root / "app"
+        self.repository.mkdir()
+        self.answers = {
+            ("git", "rev-parse", "--git-dir"): ProcessAnswer(stdout=".git\n"),
+            ("git", "rev-parse", "--verify"): ProcessAnswer(exit_code=1),
+            ("git", "symbolic-ref"): ProcessAnswer(stdout="origin/main\n"),
+            ("git", "remote", "get-url"): ProcessAnswer(stdout="https://git.example.org/acme/app.git\n"),
+            ("git", "ls-files"): ProcessAnswer(),
+            ("awawa", "status", "PROJECT"): ProcessAnswer(stdout=NO_PROJECT),
+            ("awawa", "fmt"): ProcessAnswer(),
+            ("awawa", "lint"): ProcessAnswer(),
+            ("git", "worktree"): ProcessAnswer(),
+            ("git", "switch"): ProcessAnswer(),
+            ("git", "fetch"): ProcessAnswer(),
+            ("git", "push"): ProcessAnswer(),
+            ("git", "add"): ProcessAnswer(),
+            ("git", "diff"): ProcessAnswer(exit_code=1),
+            ("git", "commit"): ProcessAnswer(),
+        }
+        self.forge = _ForgeOpeningPullRequest12()
+        self.paths = create_test_paths(root)
+        self.runtime = create_test_runtime(
+            self.paths,
+            run_process=ScriptedProcessRunner(self.answers).run,
+            resolve_plugin=lambda kind, name, **places: self.forge,
+        )
+        self.runtime.paths.config_root.mkdir(parents=True)
+        self.runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
+        self.runtime.paths.configuration_file.write_text("")
+        self.registry = self.runtime.paths.config_root / "projects.awawa"
+
+    def test_should_register_the_folder_of_the_corpus_it_installed(self):
+        # Arrange
+        request = _create_request(self.repository, init_corpus=True)
+
+        # Act
+        project_add(request, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.registry.read_text(),
+            f'PROJECT app\n\tPATH "{self.repository}"\n\tREMOTE "acme/app"\n\tMAIN "main"\n\tCORPUS "corpus"\n'
+            '\tACCEPTANCE "python3 -m unittest"\n\tFORGE "none"\n\tSTATUS active\n',
+        )
+
+    def test_should_report_the_branch_and_the_merge_command_on_no_forge(self):
+        # Arrange
+        request = _create_request(self.repository, init_corpus=True)
+
+        # Act
+        document = project_add(request, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["installed_corpus"],
+            {
+                "branch": "brigade/init-corpus",
+                "pull_request": None,
+                "merge_command": f"git -C {self.repository} merge brigade/init-corpus",
+            },
+        )
+
+    def test_should_report_the_pull_request_opened_on_the_forge(self):
+        # Arrange
+        self.answers["git", "remote", "get-url"] = ProcessAnswer(stdout="git@github.com:acme/app.git\n")
+        request = _create_request(self.repository, init_corpus=True)
+
+        # Act
+        document = project_add(request, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["installed_corpus"],
+            {"branch": "brigade/init-corpus", "pull_request": 12, "merge_command": None},
+        )
+
+    def test_should_write_the_corpus_in_the_folder_named(self):
+        for given, registered in [("docs/spec/", "docs/spec"), (".", ".")]:
+            with self.subTest(given=given):
+                # Arrange
+                request = _create_request(self.repository, init_corpus=True, corpus=given, force=True)
+
+                # Act
+                document = project_add(request, self.runtime)
+
+                # Assert
+                self.assertEqual(
+                    document["project"]["fields"][3], {"name": "CORPUS", "value": registered, "guessed": False}
+                )
+
+    def test_should_refuse_a_repository_already_tracking_a_corpus_file(self):
+        # Arrange
+        self.answers["git", "ls-files"] = ProcessAnswer(stdout="specs/tasks.awawa\0specs/_schema.awawa\0")
+        del self.answers["git", "worktree"]
+        request = _create_request(self.repository, init_corpus=True)
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            project_add(request, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            f"{self.repository} already tracks specs/tasks.awawa; --init-corpus would add a second corpus",
+        )
+
+    def test_should_refuse_a_project_already_registered_before_writing_a_branch(self):
+        # Arrange
+        self.answers["awawa", "status", "PROJECT"] = ProcessAnswer(stdout=APP_PROJECT)
+        self.answers["awawa", "show", "@PROJECT.app"] = ProcessAnswer(stdout=ELSEWHERE)
+        del self.answers["git", "worktree"]
+        request = _create_request(self.repository, init_corpus=True)
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            project_add(request, self.runtime)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "@PROJECT.app is already registered; --force replaces it")
+
+    def test_should_refuse_a_corpus_folder_outside_the_repository(self):
+        for folder in ["/srv/specs", "../specs", ".."]:
+            with self.subTest(folder=folder):
+                # Arrange
+                request = _create_request(self.repository, init_corpus=True, corpus=folder)
+
+                # Act
+                with self.assertRaises(UsageError) as refusal:
+                    project_add(request, self.runtime)
+
+                # Assert
+                self.assertEqual(str(refusal.exception), f"--corpus {folder} is not a folder inside the repository")
+
+    def test_should_refuse_a_corpus_folder_without_the_installation(self):
+        # Arrange
+        request = _create_request(self.repository, corpus="specs")
+
+        # Act
+        with self.assertRaises(UsageError) as refusal:
+            project_add(request, self.runtime)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "--corpus names the folder of --init-corpus and needs it")
 
 
 class ProjectAddBeforeInitTest(unittest.TestCase):

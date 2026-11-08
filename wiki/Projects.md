@@ -5,6 +5,7 @@ and how a project is listed, shown, paused and resumed.
 
 ```
 brigade project add <path> [--name N] [--acceptance CMD]... [--heavy CMD]... [--setup CMD]... [--force]
+                           [--init-corpus [--corpus FOLDER]]
 brigade project list
 brigade project show <name>
 brigade project pause <name>     # pause and resume set the status of a project
@@ -34,6 +35,23 @@ The heavy suites left to continuous integration (`--heavy`) are never guessed.
 > `PATH`.
 
 > **Watch out:** a path or a name already registered is refused unless `--force` replaces it.
+
+## A corpus for a project that has none
+
+`brigade plan` and the tick read the awawa corpus of a project. `--init-corpus` gives one to a repository that tracks
+no `.awawa` file: it commits the schema brigade reads as `_schema.awawa` of the folder `--corpus` names, `corpus/` by
+default, on the branch `brigade/init-corpus` cut from the main branch, and registers the project with that folder. The
+checkout of the project is left as it is.
+
+| The forge of the project | What delivers the branch |
+|---|---|
+| `github` | a pull request into the main branch, whose number is printed |
+| `none` | the branch stays local and the command prints `git -C <path> merge brigade/init-corpus` |
+
+Once the branch is merged, `brigade plan context` and `brigade plan record` accept the project.
+
+> **Watch out:** a repository already tracking a `.awawa` file exits 1 naming it, and so does a branch
+> `brigade/init-corpus` that already exists.
 
 <details><summary>How a write reaches the registry</summary>
 

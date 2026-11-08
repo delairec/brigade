@@ -6560,3 +6560,23 @@ DECISION ATaskOfForgeNoneWhoseLocalPreflightFailsIsParkedOnItsFindings
 	SOURCE "the build run of @TASK.B46, step 3, on 2026-11-07, the path of a failed local preflight"
 		+ "left open by SPEC 2"
 		REF @TASK.B46
+
+DECISION ProjectAddInitCorpusCommitsTheSchemaAloneOnABranchOfADetachedWorktree
+	TITLE "brigade project add --init-corpus commits the schema alone as <corpus>/_schema.awawa on"
+		+ "brigade/init-corpus, from a detached worktree of MAIN, and leaves the checkout of the"
+		+ "project untouched"
+	STATUS active
+	DESC "the installation runs fmt, lint --strict and the commit through change_corpus_file in a"
+		+ "worktree under the cache of brigade; the branch already existing, or the project already"
+		+ "registered without --force, is refused before anything is written"
+	DESC "--corpus without --init-corpus exits 2: until @TASK.B140 no other path of project add"
+		+ "reads it"
+		REF @TASK.B140
+	DESC "binds @TASK.B55"
+		REF @TASK.B55
+	REJECTED "switching the checkout of the project to the new branch: it would move the work the"
+		+ "user has in progress there"
+	REJECTED "installing empty tasks.awawa, milestones.awawa and decisions.awawa beside the schema:"
+		+ "brigade plan record creates each file at its first entity"
+	SOURCE "the build run of @TASK.B55, step 3, on 2026-11-08, the design its SPEC lines leave open"
+		REF @TASK.B55
