@@ -8,7 +8,7 @@ from brigade.git.resolve_commit import resolve_commit
 from brigade.registry.is_on_github import is_on_github
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
-from brigade.tick.actions import LaunchTask, RebaseMilestone
+from brigade.tick.actions import LaunchTask, RebaseMilestone, RebaseTask
 from brigade.tick.head_proof import PENDING, RED, HoldingHead
 from brigade.tick.judge_branch_head import judge_branch_head
 from brigade.tick.prove_branch_head import BranchHead
@@ -38,7 +38,10 @@ def _is_launched_off_its_base(runtime: Runtime, repository: Path, base_ref: str,
 
 
 def find_holding_base(
-    runtime: Runtime, project: Entity, action, list_check_runs: Callable[[str, str], list[dict]]
+    runtime: Runtime,
+    project: Entity,
+    action: LaunchTask | RebaseTask | RebaseMilestone,
+    list_check_runs: Callable[[str, str], list[dict]],
 ) -> HoldingHead | None:
     repository = Path(read_project_field(project, "PATH"))
     base = _read_base(project, action)
