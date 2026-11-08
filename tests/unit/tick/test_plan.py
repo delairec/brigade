@@ -2859,3 +2859,74 @@ class PlanPreflightOfATaskWithoutAForgeTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, expected)
+
+
+LOCAL_VERIFICATION_S3 = LaunchVerification(project="shop", wave="shop_w1", task="S3", pr=None, worktree=WORKTREE_S3)
+NO_VERDICT = None
+NOT_REVIEWED = None
+PASS_AT_THE_DELIVERED_HEAD = RecordedVerdict(head=DELIVERED_HEAD, verdict="pass")
+CHANGES_AT_THE_DELIVERED_HEAD = RecordedVerdict(head=DELIVERED_HEAD, verdict="changes")
+PASS_BEFORE_A_DELIVERY = RecordedVerdict(head="fedcba9", verdict="pass")
+
+
+class PlanVerificationOfATaskWithoutAForgeTest(unittest.TestCase):
+    def test_should_verify_the_delivered_head_once_its_preflight_passed(self):
+        for case, preflighted, verdict, reviewed, live_runs, expected in [
+            ("preflighted at its delivered head", DELIVERED_HEAD, NO_VERDICT, NOT_REVIEWED, (), (LOCAL_VERIFICATION_S3,)),
+            (
+                "judged before its last delivery",
+                DELIVERED_HEAD,
+                PASS_BEFORE_A_DELIVERY,
+                NOT_REVIEWED,
+                (),
+                (LOCAL_VERIFICATION_S3,),
+            ),
+            ("reviewed at its delivered head with no verdict", DELIVERED_HEAD, NO_VERDICT, DELIVERED_HEAD, (), ()),
+            ("named by a live run", DELIVERED_HEAD, NO_VERDICT, NOT_REVIEWED, (LIVE_RUN_OF_S3,), ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    branch="feature/S3-task",
+                    worktree=WORKTREE_S3,
+                    last_run=LAST_RUN_OF_S3,
+                    delivered_head=DELIVERED_HEAD,
+                    preflighted_head=preflighted,
+                    verdict=verdict,
+                    reviewed_head=reviewed,
+                )
+                project = dataclasses.replace(SHOP, live_runs=live_runs)
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_record_the_state_the_verdict_of_its_delivered_head_decides(self):
+        for verdict, expected_state in [
+            (PASS_AT_THE_DELIVERED_HEAD, "verified"),
+            (CHANGES_AT_THE_DELIVERED_HEAD, "changes_requested"),
+        ]:
+            with self.subTest(verdict=verdict.verdict):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    branch="feature/S3-task",
+                    worktree=WORKTREE_S3,
+                    last_run=LAST_RUN_OF_S3,
+                    delivered_head=DELIVERED_HEAD,
+                    preflighted_head=DELIVERED_HEAD,
+                    verdict=verdict,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(
+                    actions, (RecordTaskState(wave="shop_w1", task="S3", state=expected_state, reason=None),)
+                )
