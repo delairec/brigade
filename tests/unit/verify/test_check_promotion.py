@@ -189,3 +189,32 @@ class CheckPromotionOfAnAreaTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(check["findings"], ["SPEC 1 has no IMPL whose anchor resolves: adds an item"])
+
+    def test_should_refuse_an_anchor_leaving_the_repository(self):
+        # Arrange
+        outside = self.repository_tree.parent / f"{self.repository_tree.name}-outside.py"
+        outside.write_text("def add_item():\n")
+        self.addCleanup(outside.unlink)
+        (self.repository_tree / "src" / "link.py").symlink_to(outside)
+        for case, anchor in [
+            ("an absolute path", f"{outside}::def add_item"),
+            ("an absolute path with no text", str(outside)),
+            ("a path climbing out of the repository", f"../{outside.name}::def add_item"),
+            ("a symbolic link to a file outside", "src/link.py::def add_item"),
+        ]:
+            with self.subTest(case=case):
+                # Act
+                check = self.check(anchor)
+
+                # Assert
+                self.assertEqual(check["findings"], ["SPEC 1 has no IMPL whose anchor resolves: adds an item"])
+
+    def test_should_pass_a_symbolic_link_staying_in_the_repository(self):
+        # Arrange
+        (self.repository_tree / "src" / "alias.py").symlink_to(self.repository_tree / "src" / "cart.py")
+
+        # Act
+        check = self.check("src/alias.py::def add_item")
+
+        # Assert
+        self.assertEqual(check, {"name": "promotion", "verdict": "pass", "findings": []})
