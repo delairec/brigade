@@ -28,21 +28,12 @@ REBASE_ONTO_THE_WAVE_BRANCH = ("git", "rebase", "--fork-point", "origin/integrat
 CLI_ENVIRONMENT = {"GH_TOKEN": "token-of-the-cli"}
 
 
-class CheckRunsForgeDouble:
+class CheckRunsListingDouble:
     def __init__(self, check_runs: list[dict]):
         self.check_runs = check_runs
 
-    def list_check_runs(self, request: dict, runtime) -> dict:
-        return {"schema_version": 1, "check_runs": self.check_runs}
-
-
-def resolve_the_forge(forge: CheckRunsForgeDouble):
-    def resolve_plugin(kind: str, name: str):
-        if (kind, name) != ("forge", "github"):
-            raise AssertionError(f"the {kind} plugin {name} should not be resolved")
-        return forge
-
-    return resolve_plugin
+    def list_check_runs(self, repository: str, branch: str) -> list[dict]:
+        return self.check_runs
 
 
 class RebaseTaskBehindAWaveBranchOfTheForgeTest(unittest.TestCase):
@@ -79,7 +70,7 @@ class RebaseTaskBehindAWaveBranchOfTheForgeTest(unittest.TestCase):
 
     def test_should_rebase_once_the_check_runs_of_the_forge_passed_on_the_head_of_the_wave_branch(self):
         # Arrange
-        forge = CheckRunsForgeDouble(
+        listing = CheckRunsListingDouble(
             [
                 {
                     "pull_request": None,
@@ -91,10 +82,10 @@ class RebaseTaskBehindAWaveBranchOfTheForgeTest(unittest.TestCase):
                 }
             ]
         )
-        runtime = create_test_runtime(self.paths, run_process=self.runner, resolve_plugin=resolve_the_forge(forge))
+        runtime = create_test_runtime(self.paths, run_process=self.runner)
 
         # Act
-        rebase_task(runtime, ACTION, CLI_ENVIRONMENT)
+        rebase_task(runtime, ACTION, CLI_ENVIRONMENT, listing.list_check_runs)
 
         # Assert
         self.assertIn((WORKTREE, REBASE_ONTO_THE_WAVE_BRANCH), self.runner.commands)

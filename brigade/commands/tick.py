@@ -52,6 +52,7 @@ from brigade.studies.detach_study_run import detach_study_run
 from brigade.studies.read_study import read_study
 from brigade.studies.start_study_run import start_study_run
 from brigade.system.ask_check_logs import CheckLogsQuery, ask_check_logs
+from brigade.system.ask_check_runs import CheckRunsQuery, ask_check_runs
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
 from brigade.system.collector_places import locate_collectors
@@ -108,6 +109,7 @@ from brigade.tick.record_review_threads import record_review_threads
 from brigade.tick.remove_integration_branch import remove_integration_branch
 from brigade.tick.remove_task_worktree import remove_task_worktree
 from brigade.tick.run_rounds import Rounds, RoundsOutcome, run_rounds
+from brigade.tick.tick_forge import TickForge
 from brigade.tick.write_build_brief import write_build_brief
 from brigade.tick.write_rebuild_brief import write_rebuild_brief
 from brigade.tick.write_repair_brief import write_repair_brief
@@ -186,7 +188,11 @@ def _launch_rebase_of_the_branch(runtime: Runtime, configuration: Configuration,
 
 
 def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchTask) -> None:
-    prepared = prepare_task_worktree(runtime, configuration, action, _cache_forge_environment(runtime, configuration))
+    forge = TickForge(
+        read_environment=_cache_forge_environment(runtime, configuration),
+        list_check_runs=_list_branch_check_runs(runtime, configuration),
+    )
+    prepared = prepare_task_worktree(runtime, configuration, action, forge)
     if prepared.conflicted:
         _launch_rebase_of_the_branch(runtime, configuration, action, prepared.worktree.path)
         return
@@ -320,7 +326,7 @@ def _launch_rebase(runtime: Runtime, configuration: Configuration, action: Rebas
 def _rebase_task(runtime: Runtime, configuration: Configuration, action: RebaseTask) -> None:
     environment = read_forge_environment(configuration, CLI_KEY, runtime)
     login = ask_forge_account(runtime.resolve_plugin("forge", FORGE_NAME), FORGE_NAME, environment, runtime).login
-    rebase = rebase_task(runtime, action, environment)
+    rebase = rebase_task(runtime, action, environment, _list_branch_check_runs(runtime, configuration))
     if rebase.held_by is not None:
         sys.stderr.write(
             f"brigade tick: the catch-up of @TASK.{action.task} waits: {describe_holding_head(rebase.held_by)}\n"
@@ -556,6 +562,10 @@ def _rebase_milestone(runtime: Runtime, configuration: Configuration, action: Re
         is_run_live_on=lambda worktree: is_run_live_on(runtime.paths.state_root, worktree, is_recorded_process_alive),
         launch_rebase_run=lambda run: launch_branch_rebase(runtime, configuration, run),
         read_login=lambda: read_cli_login(configuration, runtime),
+        name_holding_head=lambda held_by: sys.stderr.write(
+            f"brigade tick: the rebase of {action.branch} waits: {describe_holding_head(held_by)}\n"
+        ),
+        list_check_runs=_list_branch_check_runs(runtime, configuration),
     )
     rebased = rebase_milestone_branches(runtime, rebase)
     if rebased is not None:
@@ -667,6 +677,16 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         CollectCheckRuns: lambda action: _collect_check_runs(runtime, configuration, action),
         CollectReviewThreads: lambda action: _collect_review_threads(runtime, configuration, action),
     }
+
+
+def _list_branch_check_runs(runtime: Runtime, configuration: Configuration) -> Callable[[str, str], list[dict]]:
+    read_environment = _cache_forge_environment(runtime, configuration)
+    return lambda repository, branch: ask_check_runs(
+        runtime.resolve_plugin(FORGE_KIND, FORGE_NAME),
+        FORGE_NAME,
+        CheckRunsQuery(repository=repository, branch=branch, environment=read_environment(CLI_KEY)),
+        runtime,
+    )
 
 
 def _follow_pull_requests(runtime: Runtime, configuration: Configuration) -> Callable:

@@ -3186,6 +3186,22 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         write_run(self.root / "state", blocked_run, BLOCKED_REBASE_OF_THE_MILESTONE_BRANCH)
         write_ledger(self.root, [CUT_OF_M4, BLOCKED_REBASE_OF_THE_MILESTONE_BRANCH])
 
+    def test_should_name_on_stderr_the_red_main_branch_holding_the_rebase_of_the_milestone_branch(self):
+        # Arrange
+        write_commit_checks(self.root, WAVE_HEAD, FAILED)
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertIn(
+            f"brigade tick: the rebase of integration/tides waits: main is red at {WAVE_HEAD}, `make test` failed\n",
+            errors.getvalue(),
+        )
+        self.assertNotIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
+
     def test_should_rebase_the_milestone_branch_onto_main_before_the_wave_of_its_candidates_starts_on_it(self):
         # Act
         COMMAND.run(Namespace(mode="once"), self.runtime)
