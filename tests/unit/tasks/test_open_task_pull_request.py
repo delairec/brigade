@@ -129,6 +129,8 @@ class OpenTaskPullRequestInAnAreaTest(OpenTaskPullRequestTestCase):
 
         # Assert
         self.assertEqual(opened["pr"], 42)
+        self.assertIn(("awawa", "show", "@MILESTONE.F0", "--json", str(area)), self.processes.list_argvs())
+        self.assertNotIn(("awawa", "show", "@MILESTONE.F0", "--json", "/srv/oak-b12"), self.processes.list_argvs())
 
 
 class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):

@@ -151,7 +151,9 @@ class PreflightTaskBranchOfAnAreaTest(unittest.TestCase):
         (self.head_tree / "brigade").mkdir(parents=True)
         (self.base_tree / "brigade").mkdir(parents=True)
 
-    def run_preflight(self, task_fields: list[dict]) -> tuple[RecordingProcessRunner, dict]:
+    def run_preflight(
+        self, task_fields: list[dict], numstat: str = "", moved: list[dict] | None = None
+    ) -> tuple[RecordingProcessRunner, dict]:
         head_area = self.head_tree / "brigade"
         fields = {"PATH": "/srv/shop", "CORPUS": "brigade", "MODE": "area"}
         runner = RecordingProcessRunner(
@@ -162,12 +164,14 @@ class PreflightTaskBranchOfAnAreaTest(unittest.TestCase):
                 ("git", "merge-base", "--end-of-options", MILESTONE_HEAD, HEAD): ProcessAnswer(stdout=f"{BASE}\n"),
                 _resolve(HEAD): ProcessAnswer(stdout=f"{HEAD}\n"),
                 _resolve(BASE): ProcessAnswer(stdout=f"{BASE}\n"),
-                ("git", "diff", "--numstat", "--text", "--end-of-options", BASE, HEAD, "--"): ProcessAnswer(stdout=""),
+                ("git", "diff", "--numstat", "--text", "--end-of-options", BASE, HEAD, "--"): ProcessAnswer(
+                    stdout=numstat
+                ),
                 ("awawa", "show", "@TASK.B1", "--json", str(head_area)): ProcessAnswer(
                     stdout=json.dumps({"fields": task_fields})
                 ),
                 ("awawa", "diff", str(self.base_tree / "brigade"), str(head_area), "--json"): ProcessAnswer(
-                    stdout=json.dumps({"added": [], "changed": [], "removed": []})
+                    stdout=json.dumps({"added": [], "changed": moved or [], "removed": []})
                 ),
                 ("python3", "-m", "unittest"): ProcessAnswer(),
             }
@@ -200,6 +204,18 @@ class PreflightTaskBranchOfAnAreaTest(unittest.TestCase):
         # Assert
         self.assertIn((str(self.head_tree), ("python3", "-m", "unittest")), runner.commands)
         self.assertIn((str(self.head_tree / "brigade"), ("awawa", "fmt", "--check", ".")), runner.commands)
+
+    def test_should_match_the_files_changed_in_the_area_with_the_entities_moved_there(self):
+        # Arrange
+        implemented = [{"name": "STATUS", "atoms": ["implemented"], "fields": []}]
+
+        # Act
+        _runner, document = self.run_preflight(
+            implemented, numstat="1\t1\tbrigade/tasks.awawa\n", moved=[{"file": "tasks.awawa"}]
+        )
+
+        # Assert
+        self.assertIn({"name": "untouched_files", "verdict": "pass", "findings": []}, document["checks"])
 
     def test_should_resolve_the_anchors_of_the_task_from_the_root_of_the_repository(self):
         # Arrange
