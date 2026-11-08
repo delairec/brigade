@@ -17072,7 +17072,8 @@ TASK B240
 		+ "preflight and verdict passed into the branch of its milestone, closes its wave with no"
 		+ "pull request, names the command that merges the milestone into main, and a test of"
 		+ "tests/cli runs a one-task wave on it"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 384
 	TYPE feat
 	MILESTONE @MILESTONE.M7
 	COMPONENT "the tick"
