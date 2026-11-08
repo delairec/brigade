@@ -182,6 +182,20 @@ class VerifyVerdictOfAPullRequestTest(unittest.TestCase):
         # Assert
         self.assertEqual(str(raised.exception), "no task.pr_opened of @PROJECT.tidepool names the pull request #41")
 
+    def test_should_refuse_a_verdict_naming_no_pull_request_on_a_project_with_a_forge(self):
+        # Arrange
+        self.verdict.write_text(json.dumps(PASS), encoding="utf-8")
+        no_pull_request = None
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            COMMAND.run(Namespace(pr=no_pull_request, file=str(self.verdict)), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception), "@PROJECT.tidepool acts through the forge github: the verdict names its pull request"
+        )
+
     def test_should_give_the_recorded_verdict_of_the_task_of_the_pull_request(self):
         # Arrange
         self.verdict.write_text(json.dumps(PASS), encoding="utf-8")
