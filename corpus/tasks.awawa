@@ -10336,7 +10336,8 @@ TASK B139
 TASK B140
 	TITLE "A project's corpus mode, MODE of the PROJECT entity: control, or area, brigade confined"
 		+ "to a folder of its own in the repository"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 381
 	TYPE feat
 	MILESTONE @MILESTONE.M7
 	COMPONENT "registry"
