@@ -251,6 +251,14 @@ class WriteAnswerTest(unittest.TestCase):
     def test_should_publish_the_report_of_a_milestone_on_its_branch_once_its_entity_is_written(self):
         # Arrange
         checkout = self.run_directory / "checkout"
+
+        def create_checkout(request):
+            (checkout / "corpus").mkdir(parents=True)
+            (checkout / MILESTONES_PATH).write_text(
+                'MILESTONE M6\n\tTITLE "Hardening"\n\tSTATUS active\n', encoding="utf-8"
+            )
+            return (0, "", "")
+
         (self.run_directory / "answer.awawa").write_text(REPORTED, encoding="utf-8")
         self.processes.answer_corpus_change(
             self.config_root, ("reports.awawa",), "brigade study run: the answer of @STUDY.milestone-report"
@@ -261,9 +269,12 @@ class WriteAnswerTest(unittest.TestCase):
             {"oak": (("PATH", "/srv/oak"), ("FORGE", "none"), ("CORPUS", "corpus"), ("MAIN", "main"))},
         )
         self.processes.answer(("git", "fetch", "--quiet", "origin", "integration/hardening"))
-        self.processes.answer(
-            ("git", "worktree", "add", "--quiet", "--detach", str(checkout), "origin/integration/hardening")
+        self.processes.answer(("git", "worktree", "prune"))
+        self.processes.answer_by(
+            ("git", "worktree", "add", "--quiet", "--detach", str(checkout), "origin/integration/hardening"),
+            create_checkout,
         )
+        self.processes.answer(("git", "worktree", "list", "--porcelain", "-z"))
         self.processes.answer(("git", "switch", "--quiet", "--force-create", "integration/hardening"))
         self.processes.answer(("git", "add", "--", "corpus/milestones/M6-report.md"))
         self.processes.answer(("git", "diff", "--cached", "--quiet", "--", "corpus/milestones/M6-report.md"))
@@ -271,12 +282,8 @@ class WriteAnswerTest(unittest.TestCase):
             ("awawa", "show", "@MILESTONE.M6", "--json", str(checkout)), {"file": str(checkout / MILESTONES_PATH)}
         )
         self.processes.answer_corpus_change(checkout, (MILESTONES_PATH,), "docs(corpus): mark @MILESTONE.M6 reached")
-        self.processes.answer(("git", "push", "--quiet", "origin", "integration/hardening"))
+        self.processes.answer(("git", "push", "--quiet", "origin", "HEAD:refs/heads/integration/hardening"))
         self.processes.answer(("git", "worktree", "remove", "--force", str(checkout)))
-        (checkout / "corpus").mkdir(parents=True)
-        (checkout / MILESTONES_PATH).write_text(
-            'MILESTONE M6\n\tTITLE "Hardening"\n\tSTATUS active\n', encoding="utf-8"
-        )
 
         # Act
         written = write_answer(self.create_context("entity:REPORT", MILESTONE_REPORT))
