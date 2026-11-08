@@ -19,6 +19,10 @@ EVERY_STATUS_AND_FIELD = (
     'DECISION CartLivesInMemory\n\tTITLE "the cart lives in memory"\n\tSTATUS active\n\n'
     'OPEN_QUESTION WhereTheCartLives\n\tQUESTION "where does the cart live?"\n\tSTATUS open\n\tBLOCKS @TASK.T1\n'
 )
+DELIVERED_WITH_NO_PULL_REQUEST = (
+    'TASK T1\n\tTITLE "Delivered"\n\tSTATUS implemented\n\tTYPE fix\n'
+    '\tSPEC "delivered"\n\t\tIMPL "src/cart.py::def add_item"\n'
+)
 
 
 class ProjectSchemaTemplateTest(unittest.TestCase):
@@ -42,6 +46,18 @@ class ProjectSchemaTemplateTest(unittest.TestCase):
         (self.root / "src").mkdir()
         (self.root / "src" / "cart.py").write_text("def add_item(): pass\n")
         (self.root / "corpus" / "plan.awawa").write_text(EVERY_STATUS_AND_FIELD)
+
+        # Act
+        report = lint_corpus(self.run_process, self.root)
+
+        # Assert
+        self.assertTrue(report.clean, report.output)
+
+    def test_should_pass_the_strict_lint_of_a_task_delivered_with_no_pull_request(self):
+        # Arrange
+        (self.root / "src").mkdir()
+        (self.root / "src" / "cart.py").write_text("def add_item(): pass\n")
+        (self.root / "corpus" / "plan.awawa").write_text(DELIVERED_WITH_NO_PULL_REQUEST)
 
         # Act
         report = lint_corpus(self.run_process, self.root)
