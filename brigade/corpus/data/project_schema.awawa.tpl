@@ -55,7 +55,7 @@ SCHEMA TASK
 		CONVERSE BEFORE
 		DESC "the task that must merge before this one"
 	FIELD DELIVERED_BY uint
-		DESC "the number of the pull request that delivers it"
+		DESC "the number of the pull request that delivers it; absent on a project with no forge"
 	WHEN STATUS draft
 		GATE suppressed
 	WHEN STATUS todo
@@ -72,8 +72,6 @@ SCHEMA TASK
 			FIELD IMPL
 				REQUIRED
 				REPEATABLE
-		FIELD DELIVERED_BY
-			REQUIRED
 	WHEN STATUS archived
 		GATE suppressed
 
