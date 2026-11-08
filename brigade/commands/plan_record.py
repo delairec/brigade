@@ -3,12 +3,12 @@ import functools
 from pathlib import Path
 
 from brigade.command import Argument, Command
-from brigade.commands._read_forge_environment import FORGE_KIND, ForgeSlot, read_forge_environment
+from brigade.commands._read_forge_environment import ForgeSlot, read_forge_environment
+from brigade.commands._resolve_project_forge import resolve_project_forge
 from brigade.errors import BrigadeError
 from brigade.planning.read_planning_request import read_planning_request
 from brigade.planning.record_plan import PlanRecording, record_plan
 from brigade.registry.find_project import find_project
-from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_project_forge import read_project_forge
 from brigade.registry.read_projects import read_projects
@@ -16,17 +16,10 @@ from brigade.runtime import Runtime
 from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 
 DOCUMENT_SCHEMA_VERSION = 1
-NO_FORGE_PLUGIN = None
 
 
 def _render_text(document: dict) -> str:
     return f"recorded @REQUEST.{document['request']} as @MILESTONE.{document['milestone']} on {document['branch']}"
-
-
-def _resolve_project_forge(project, runtime: Runtime) -> object:
-    if not is_on_a_forge(project):
-        return NO_FORGE_PLUGIN
-    return runtime.resolve_plugin(FORGE_KIND, read_project_forge(project))
 
 
 def plan_record(request: argparse.Namespace, runtime: Runtime) -> dict:
@@ -40,7 +33,7 @@ def plan_record(request: argparse.Namespace, runtime: Runtime) -> dict:
         request=planning_request,
         project=project,
         plan_file=Path(request.file).absolute(),
-        forge=_resolve_project_forge(project, runtime),
+        forge=resolve_project_forge(project, runtime),
         read_environment=functools.cache(
             lambda key: read_forge_environment(configuration, ForgeSlot(forge_name, key), runtime)
         ),
