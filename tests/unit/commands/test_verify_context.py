@@ -256,7 +256,7 @@ LOCAL_TASK_WORKTREE = {
 }
 
 
-class RefusingForgeResolver:
+class RefusingForgeResolverDouble:
     def __call__(self, kind: str, name: str, **places):
         raise AssertionError(f"the command resolved the {kind} {name}")
 
@@ -275,7 +275,7 @@ class VerifyContextOfATaskWithoutAForgeTest(unittest.TestCase):
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, LOCAL_TASK_WORKTREE),
-            resolve_plugin=RefusingForgeResolver(),
+            resolve_plugin=RefusingForgeResolverDouble(),
         )
         self.no_pull_request = None
 
@@ -284,10 +284,10 @@ class VerifyContextOfATaskWithoutAForgeTest(unittest.TestCase):
         document = COMMAND.run(Namespace(pr=self.no_pull_request), self.runtime)
 
         # Assert
-        self.assertEqual(
-            (document["project"], document["pr"], document["task"], document["head"]),
-            ("tidepool", None, "T7", TASK_HEAD),
-        )
+        self.assertEqual(document["project"], "tidepool")
+        self.assertIsNone(document["pr"])
+        self.assertEqual(document["task"], "T7")
+        self.assertEqual(document["head"], TASK_HEAD)
 
     def test_should_print_the_diff_of_the_task_branch_from_its_merge_base_with_the_branch_of_its_milestone(self):
         # Act
