@@ -76,7 +76,10 @@ COMMAND = Command(
     help="validate the verdict of the verification of the pull request of a task and record it",
     group_help="check the pull request of a task",
     arguments=(
-        Argument(("pr",), {"type": int, "help": "the number of the pull request"}),
+        Argument(
+            ("pr",),
+            {"type": int, "nargs": "?", "help": "the number of the pull request, none on a project without a forge"},
+        ),
         Argument(("--file",), {"required": True, "help": "the file holding the verdict, a JSON document"}),
     ),
     run=verify_verdict,
