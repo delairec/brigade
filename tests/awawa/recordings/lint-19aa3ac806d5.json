@@ -5,7 +5,7 @@
       "--strict",
       "<tmp:0>/projects/shop"
     ],
-    "cwd": "/home/chillie/Web/brigade/.brigade/worktrees/B55",
+    "cwd": "<tmp:0>/projects/shop",
     "directories": [
       "<tmp:0>/projects/shop"
     ],

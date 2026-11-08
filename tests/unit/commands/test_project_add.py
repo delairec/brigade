@@ -31,7 +31,7 @@ def _create_request(path: Path, **options) -> argparse.Namespace:
     )
 
 
-class _ForgeOpeningPullRequest12:
+class _ForgeOpeningPullRequest12Double:
     def open_pull_request(self, request: dict, runtime) -> dict:
         return {"number": 12}
 
@@ -322,7 +322,7 @@ class ProjectAddInitCorpusTest(unittest.TestCase):
             ("git", "diff"): ProcessAnswer(exit_code=1),
             ("git", "commit"): ProcessAnswer(),
         }
-        self.forge = _ForgeOpeningPullRequest12()
+        self.forge = _ForgeOpeningPullRequest12Double()
         self.paths = create_test_paths(root)
         self.runtime = create_test_runtime(
             self.paths,
@@ -367,7 +367,7 @@ class ProjectAddInitCorpusTest(unittest.TestCase):
 
     def test_should_report_the_pull_request_opened_on_the_forge(self):
         # Arrange
-        self.answers["git", "remote", "get-url"] = ProcessAnswer(stdout="git@github.com:acme/app.git\n")
+        self.answers["git", "remote", "get-url"] = ProcessAnswer(stdout="https://github.com/acme/app.git\n")
         request = _create_request(self.repository, init_corpus=True)
 
         # Act
