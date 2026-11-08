@@ -25,6 +25,8 @@ from brigade.studies.read_publication_environment import read_publication_enviro
 from brigade.studies.study_run_context import StudyRunContext
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.create_directory import create_directory
+from brigade.system.hold_lock import hold_lock
+from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.system.write_text_file import write_text_file
 from brigade.waves.compose_milestone_title import MilestoneTitleDemand, compose_milestone_title
 from brigade.waves.locate_branch_worktree import locate_branch_worktree
@@ -152,8 +154,9 @@ def _open_detached_checkout(context: StudyRunContext, located: StudyProject, env
 
 
 def _publish_on_the_clone(context: StudyRunContext, publication: MilestonePublication, report: str, located) -> None:
-    checkout = _open_branch_of_the_clone(context, located)
-    _commit_report(context, publication, report, checkout)
+    with hold_lock(locate_worktrees_lock(context.runtime.paths.lock_directory, context.study.project)):
+        checkout = _open_branch_of_the_clone(context, located)
+        _commit_report(context, publication, report, checkout)
 
 
 def _publish_on_the_forge(

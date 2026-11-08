@@ -772,6 +772,7 @@ def _is_milestone_report_due(milestone: MilestoneFacts, snapshot: Snapshot, proj
         and bool(milestone.closed_waves)
         and not milestone.open_waves
         and not milestone.open_tasks
+        and not milestone.rebase_run_live
         and not any(
             wave.project == milestone.project and wave.milestone_branch == milestone.branch for wave in snapshot.waves
         )

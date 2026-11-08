@@ -1,3 +1,4 @@
+import fcntl
 import tempfile
 import unittest
 from collections.abc import Callable
@@ -13,6 +14,7 @@ from brigade.studies.convert_study import Study
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.publish_milestone_report import publish_milestone_report
 from brigade.studies.study_run_context import StudyRunContext
+from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
 from brigade.waves.locate_branch_worktree import locate_branch_worktree
@@ -404,6 +406,17 @@ class PublishMilestoneReportTest(unittest.TestCase):
         )
 
 
+def is_lock_held(path: Path) -> bool:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as probe:
+        try:
+            fcntl.flock(probe, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        fcntl.flock(probe, fcntl.LOCK_UN)
+        return False
+
+
 class PublishMilestoneReportOfAProjectWithoutAForgeTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
@@ -461,3 +474,22 @@ class PublishMilestoneReportOfAProjectWithoutAForgeTest(unittest.TestCase):
         self.assertNotIn(("git", "push", "--quiet", "origin", BRANCH), self.processes.list_argvs())
         self.assertNotIn(("git", "worktree", "remove", "--force", str(self.checkout)), self.processes.list_argvs())
         self.assertIn(("git", "commit", "--quiet", "-m", REACHED_MESSAGE), self.processes.list_argvs())
+
+    def test_should_hold_the_worktrees_lock_from_the_opening_of_the_worktree_to_the_reached_milestone(self):
+        # Arrange
+        context = self.create_context()
+        lock = locate_worktrees_lock(self.runtime.paths.lock_directory, "oak")
+        held = []
+
+        def note_the_lock(request: ProcessRequest) -> tuple[int, str, str]:
+            held.append(is_lock_held(lock))
+            return 0, "", ""
+
+        self.processes.answer_by(("git", "worktree", "add", "--quiet", str(self.checkout), BRANCH), note_the_lock)
+        self.processes.answer_by(("git", "commit", "--quiet", "-m", REACHED_MESSAGE), note_the_lock)
+
+        # Act
+        publish_milestone_report(context)
+
+        # Assert
+        self.assertEqual(held, [True, True])
