@@ -17062,3 +17062,240 @@ TASK B242
 		+ "et on la passe todo si plus de question », the milestone of the task being its one open"
 		+ "point: ratified todo in @MILESTONE.M11, delivered alone"
 		REF @MILESTONE.M11
+
+TASK B243
+	TITLE "Milestones are delivered in a chosen order: MILESTONE declares AFTER, and the tick cuts"
+		+ "no branch, starts no wave and launches no task of a milestone whose AFTER is not reached"
+		+ "at PROJECT.MAIN, naming it on stderr at each tick"
+	STATUS draft
+	TYPE feat
+	MILESTONE @MILESTONE.M12
+	COMPONENT "the tick"
+	ROLE ada
+	DESC "binds @DECISION.AMilestoneIsServedByItsStatusAndOrderedByItsAfter"
+		REF @DECISION.AMilestoneIsServedByItsStatusAndOrderedByItsAfter
+	DESC "leaves open whether an AFTER added to a milestone that already has open waves stops them"
+	DESC "the active milestones are read in brigade/waves/read_active_milestones.py and"
+		+ "brigade/waves/list_candidate_waves.py, the uncut ones in _list_uncut_milestones of"
+		+ "brigade/tick/build_snapshot.py, a planned milestone in brigade/tick/plan.py, at fafeb90a"
+	SPEC "SCHEMA MILESTONE of corpus/_schema.awawa declares FIELD AFTER @MILESTONE, REPEATABLE,"
+		+ "CONVERSE BEFORE, DESC the milestone that must be reached before this one"
+	SPEC "the tick cuts no branch, starts no wave and launches no task of a milestone one AFTER of"
+		+ "which is not STATUS reached at PROJECT.MAIN, and names it on stderr at each tick, as"
+		+ "@TASK.B233 names the task of a reached milestone"
+	SPEC "a planned milestone stays unserved whatever its AFTER"
+	SPEC "a milestone with no AFTER is served as today"
+	SPEC "a cycle of AFTER serves none of its milestones, each named on stderr at each tick"
+	SPEC "the pull request that delivers the task writes AFTER @MILESTONE.M12 on @MILESTONE.M8 and"
+		+ "AFTER @MILESTONE.M8 on @MILESTONE.ADD0"
+	SPEC "a test of tests/unit/tick proves an active milestone with an AFTER not reached unserved"
+		+ "and named, one whose AFTER is reached served, a planned one unserved whatever its AFTER,"
+		+ "and a cycle serving none"
+	RATIONALE "on 2026-11-09 the user wanted @MILESTONE.M12 delivered before @MILESTONE.M8 and"
+		+ "@MILESTONE.ADD0, whose DESC says planned after M8 in prose a command reads nothing from;"
+		+ "STATUS alone orders milestones by the user activating each in its turn"
+		REF @MILESTONE.M12
+		REF @MILESTONE.M8
+		REF @MILESTONE.ADD0
+	SOURCE "the user's words of 2026-11-09, « je pense qu'on devrait aussi ajouter un after sur les"
+		+ "milestone pour qu'elles soient livrées dans un ordre donné si on le souhaite, plutôt que"
+		+ "de gérer un statut », then « enfin il faut les deux plutôt »"
+
+TASK B244
+	TITLE "The tick signals a task of an open wave it has taken no action on for N minutes: one"
+		+ "inbox signal, fingerprinted so that a recurrence folds, so that a stall is seen without"
+		+ "a human reading the ledger"
+	STATUS draft
+	TYPE feat
+	MILESTONE @MILESTONE.M12
+	COMPONENT "the tick and the inbox"
+	ROLE ada
+	DESC "leaves open N, and what counts as an action of the tick on a task"
+	DESC "@TASK.B168 parks the task of a dead run; a task of an open wave with no run and no action"
+		+ "is reported by nothing, the ledger apart"
+		REF @TASK.B168
+	SPEC "a task of an open wave on which the tick has taken no action for N minutes raises one"
+		+ "signal in the inbox, of a kind of its own, fingerprinted by the project, the wave and"
+		+ "the task, so that the same stall at the next tick folds into it as"
+		+ "@DECISION.TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint folds a signal"
+	SPEC "a test of tests/unit/tick proves the signal raised once the delay is passed and not"
+		+ "before, and the same fingerprint recorded at the next tick"
+	RATIONALE "on 2026-11-08 @TASK.B240 and @TASK.B177 stayed blocked for hours with no signal,"
+		+ "read in the ledger by the session; for B177 the tick read a local milestone branch 11"
+		+ "commits behind origin, the cause @TASK.B242 fixes, not the absence of a signal"
+		REF @TASK.B240
+		REF @TASK.B177
+		REF @TASK.B242
+	SOURCE "the user's ruling of 2026-11-09 that the tasks resolving the signals of the inbox"
+		+ "review of 2026-11-08 go draft into @MILESTONE.M12, quoted there"
+		REF @MILESTONE.M12
+
+TASK B245
+	TITLE "The triage completes an existing pattern instead of proposing a new one at each"
+		+ "recurrence of its subject"
+	STATUS draft
+	TYPE fix
+	MILESTONE @MILESTONE.M12
+	COMPONENT "the study triage"
+	ROLE ada
+	DESC "starts from"
+		+ "@DECISION.TheTriageGroupsSignalsByKeyAndAPatternCitesASignalByOpeningAnEvidenceOnItsFingerprint,"
+		+ "which refuses a PATTERN of an answer that is not new and checks none the operational"
+		+ "corpus already holds; what completing an existing pattern is, an EVIDENCE added or its"
+		+ "signals cited, is left to the refinement"
+		REF @DECISION.TheTriageGroupsSignalsByKeyAndAPatternCitesASignalByOpeningAnEvidenceOnItsFingerprint
+	SPEC "a triage run whose families match the subject of a PATTERN the operational corpus already"
+		+ "holds, ratified or not, completes that pattern with the new signals and proposes no new"
+		+ "one on that subject"
+	SPEC "a test of tests/unit/studies proves a second run on signals of a subject with an existing"
+		+ "pattern writing no new PATTERN and citing the new signals on the existing one"
+	RATIONALE "the inbox of the machine read on 2026-11-08: 207 signals and 24 patterns, none"
+		+ "ratified, for about 8 subjects; 6 patterns named merge_leaves_branch…, 4 vulture…, 3"
+		+ "pytest…, among them"
+		+ "pytest_suite_fails_on_both_python_legs_recurs_on_six_more_pull_requests and"
+		+ "closed_pull_request_branch_kept_recurs_on_pr_364"
+	SOURCE "the user's ruling of 2026-11-09 that the tasks resolving the signals of the inbox"
+		+ "review of 2026-11-08 go draft into @MILESTONE.M12, quoted there"
+		REF @MILESTONE.M12
+
+TASK B246
+	TITLE "A branch is pushed only once the checks of the CI that can run locally pass: the"
+		+ "ACCEPTANCE commands of the project, ruff and coverage included, in a run of the tick as"
+		+ "in a role launched by hand"
+	STATUS draft
+	TYPE fix
+	MILESTONE @MILESTONE.M12
+	COMPONENT "the build procedure"
+	ROLE ada
+	DESC "leaves open whether the gap is only the runs launched outside the tick, and whether a run"
+		+ "of the tick still pushes without them"
+	DESC "the PROJECT brigade of the operational corpus, awawa show @PROJECT.brigade on 2026-11-09,"
+		+ "carries the ACCEPTANCE lines uvx ruff@0.17.2 check ., uvx ruff@0.17.2 format --check .,"
+		+ "uvx --from coverage==7.17.0 coverage run -m unittest discover -s tests/unit -t . and uvx"
+		+ "--from coverage==7.17.0 coverage report, and brigade task check runs them; ruff and"
+		+ "coverage are not on PATH, uv and uvx are"
+	SPEC "a run that builds a task pushes its branch only once every ACCEPTANCE command of the"
+		+ "project passes on its worktree, coverage report included; a failing command is repaired"
+		+ "before the push, or reported as a blocker with its output"
+	SPEC "the project instructions of brigade name the commands a run launched outside the tick"
+		+ "runs before its push, the uvx forms included, so that coverage is provable locally with"
+		+ "neither ruff nor coverage on PATH"
+	SPEC "a test of tests/unit proves a build run whose ACCEPTANCE command fails pushing nothing"
+	RATIONALE "the pattern coverage_report_unchecked_before_push of the inbox cites pull requests"
+		+ "233 and 241; on 2026-11-08 pull request 388 failed coverage at 99%, pushed by a role"
+		+ "launched by hand outside a tick run, which reported coverage as unprovable locally"
+	SOURCE "the user's ruling of 2026-11-09 that the tasks resolving the signals of the inbox"
+		+ "review of 2026-11-08 go draft into @MILESTONE.M12, quoted there"
+		REF @MILESTONE.M12
+
+TASK B247
+	TITLE "Runs stop re-reading an oversized output they already hold"
+	STATUS draft
+	TYPE fix
+	MILESTONE @MILESTONE.M12
+	COMPONENT "the runs"
+	ROLE ada
+	DESC "the cause has not been examined: the first work of the task is that examination, on the"
+		+ "transcripts the pattern cites, and its SPEC is refined from the finding; no cause is"
+		+ "assumed here"
+	SPEC "the examination names, over the 16 claude-code runs the pattern cites, where each re-read"
+		+ "output came from and what the run did with it, and this task is refined or archived from"
+		+ "that finding"
+	SPEC "once delivered, the pattern oversized_output_re_read_in_runs raises no new signal on the"
+		+ "runs launched after the delivery"
+	RATIONALE "the pattern oversized_output_re_read_in_runs of the inbox read on 2026-11-08: 56"
+		+ "re-reads across 17 sessions of 16 claude-code runs"
+	SOURCE "the user's ruling of 2026-11-09 that the tasks resolving the signals of the inbox"
+		+ "review of 2026-11-08 go draft into @MILESTONE.M12, quoted there"
+		REF @MILESTONE.M12
+
+TASK B248
+	TITLE "One cleaning order clears what the merges leave behind, local branches and worktrees,"
+		+ "their signals fold, and a base branch gone from the forge writes no error at each tick"
+	STATUS draft
+	TYPE feat
+	MILESTONE @MILESTONE.M12
+	COMPONENT "the tick and the scans"
+	ROLE ada
+	DESC "not urgent"
+	DESC "@TASK.B234 removes a branch with nothing left to do and keeps one with a commit outside"
+		+ "its merged pull request; @TASK.B104, draft, plans brigade clean by kind; this task is"
+		+ "the one action over the leftovers the scans signal, reconciled with B104 at refinement"
+		REF @TASK.B234
+		REF @TASK.B104
+	SPEC "one command, or one action of the tick, removes every local branch the scan"
+		+ "stale_branches signals and every worktree the scan worktrees signals, and their signals"
+		+ "fold at the next scan"
+	SPEC "a branch kept for a commit outside its merged pull request is named with that commit"
+		+ "once, not at each tick"
+	SPEC "an integration branch whose base the forge no longer holds writes no error at each tick:"
+		+ "the tick records the fact once and compares no more"
+	SPEC "a test of tests/unit proves the order removing a stale branch and its worktree, keeping a"
+		+ "branch with a commit outside its merged pull request, and a base gone from the forge"
+		+ "named once"
+	RATIONALE "the inbox read on 2026-11-08: 119 stale_branches_brigade signals, 43"
+		+ "worktrees_brigade signals, 8 patterns; on 2026-11-09 git branch --list | wc -l printed"
+		+ "188 and git branch -r | wc -l 38 in the clone of brigade, delete_branch_on_merge on, so"
+		+ "the leftovers are local; the plan of the tick keeps integration/brigade_w3,"
+		+ "integration/brigade_w5 and integration/brigade_w20 for a commit outside the merged pull"
+		+ "request, and writes at each tick the branch integration/brigade_w14 of brigade skipped:"
+		+ "gh api .../compare/integration/repair-rounds-that-converge...: Not Found (HTTP 404),"
+		+ "likewise integration/brigade_w21, w22, w25, w26 and w27 against integration/hardening"
+	SOURCE "the user's ruling of 2026-11-09 that the tasks resolving the signals of the inbox"
+		+ "review of 2026-11-08 go draft into @MILESTONE.M12, quoted there"
+		REF @MILESTONE.M12
+
+TASK B249
+	TITLE "A cut by the usage limit launches no further run until its reset, and a study it parked"
+		+ "resumes once the limit has passed"
+	STATUS draft
+	TYPE fix
+	MILESTONE @MILESTONE.M12
+	COMPONENT "the tick"
+	ROLE ada
+	DESC "leaves open whether the pause of"
+		+ "@DECISION.ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset held during the cut of"
+		+ "2026-11-02, 24 runs of verify-pr having been launched into the limit on that one day;"
+		+ "the classification of @TASK.B220 worked on each of them"
+		REF @DECISION.ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset
+		REF @TASK.B220
+	SPEC "once a run of the machine ends on error_class rate_limit, the tick launches no run of any"
+		+ "slot until the reset that run names, verify-pr included"
+	SPEC "a study whose run was cut by the usage limit is due again once the reset has passed,"
+		+ "instead of staying parked as failed"
+	SPEC "a test of tests/unit/tick proves no run launched between a run.finished on rate_limit and"
+		+ "its reset, and a study cut by it due again after the reset"
+	RATIONALE "read in ~/.local/state/brigade/ledger on 2026-11-09: the 24 verify-pr run.finished"
+		+ "events with outcome failed are all dated 2026-11-02 and each carries error_class"
+		+ "rate_limit, as the run 20261102T235517Z-dcb28a of @TASK.B226 in the wave brigade_w24, 1"
+		+ "step, 1516 ms, cost 0, message You've hit your 5-hour limit · resets 1am (Europe/Paris);"
+		+ "pull request 254 of @TASK.B220 merged on 2026-10-29T20:15:52Z, before them; the study"
+		+ "triage is parked since a quota cut, its last run 20261108T175056Z-7d24ef"
+		REF @TASK.B226
+		REF @TASK.B220
+	SOURCE "the user's ruling of 2026-11-09 that the tasks resolving the signals of the inbox"
+		+ "review of 2026-11-08 go draft into @MILESTONE.M12, quoted there"
+		REF @MILESTONE.M12
+
+TASK B250
+	TITLE "brigade doctor reads the linger of the user: with linger on, doctor and brigade"
+		+ "scheduler install report ok"
+	STATUS draft
+	TYPE fix
+	MILESTONE @MILESTONE.M12
+	COMPONENT "brigade doctor"
+	ROLE ada
+	DESC "corrects @TASK.B172"
+		REF @TASK.B172
+	SPEC "brigade/system/describe_linger_warning.py asks loginctl for the user of the run, loginctl"
+		+ "show-user <user> --property=Linger, where at fafeb90a line 14 runs loginctl show-user -p"
+		+ "Linger with no user"
+	SPEC "with linger on, brigade doctor and brigade scheduler install report linger ok and warn no"
+		+ "linger no more"
+	SPEC "a test of tests/unit/system proves the user passed to loginctl and Linger=yes read as ok"
+	RATIONALE "on 2026-11-09 loginctl show-user -p Linger printed nothing, exit 0, while loginctl"
+		+ "show-user <user> --property=Linger printed Linger=yes and /var/lib/systemd/linger/<user>"
+		+ "exists, so doctor and brigade scheduler install warned no linger falsely"
+	SOURCE "the user's ruling of 2026-11-09 that the tasks resolving the signals of the inbox"
+		+ "review of 2026-11-08 go draft into @MILESTONE.M12, quoted there"
+		REF @MILESTONE.M12

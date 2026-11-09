@@ -6418,3 +6418,41 @@ DECISION UnderAutoMergeNoneTheUserMergesATaskOfForgeNoneIntoItsMilestoneBranchWi
 		+ "respects AUTO_MERGE none: it does not merge, names a manual merge command toward the"
 		+ "branch of the milestone, then records merged once the head of the task is an ancestor of"
 		+ "that branch; option B, under FORGE none AUTO_MERGE ignored and the tick always merging"
+
+DECISION AMilestoneIsServedByItsStatusAndOrderedByItsAfter
+	TITLE "a milestone is served by its STATUS and ordered by an optional AFTER: STATUS says"
+		+ "whether the tick may serve it, planned never, and AFTER names the milestones that must"
+		+ "be reached first"
+	STATUS active
+	DESC "the tick serves a milestone only when its STATUS allows it: a planned milestone is served"
+		+ "never, whatever its AFTER"
+	DESC "a milestone with an AFTER is served only once every milestone its AFTER names is STATUS"
+		+ "reached at PROJECT.MAIN"
+	DESC "a milestone with no AFTER is served as today"
+	DESC "refines DESC 10 of"
+		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce, the active"
+		+ "milestones served none before another: that order holds among the milestones whose AFTER"
+		+ "is reached or absent; a priority among the active ones stays rejected, AFTER being a"
+		+ "dependency, not a rank"
+		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
+	DESC "binds @TASK.B243"
+		REF @TASK.B243
+	REJECTED "STATUS alone, the user activating each milestone in its turn: the user ruled an AFTER"
+		+ "on the milestones, « je pense qu'on devrait aussi ajouter un after sur les milestone"
+		+ "pour qu'elles soient livrées dans un ordre donné si on le souhaite, plutôt que de gérer"
+		+ "un statut »"
+	REJECTED "AFTER alone, STATUS no longer gating the tick: the user ruled both, « enfin il faut"
+		+ "les deux plutôt »"
+	RATIONALE "@MILESTONE.M12 is to be delivered before @MILESTONE.M8 and @MILESTONE.ADD0, whose"
+		+ "DESC says planned after M8, an order no field carried on 2026-11-09; with STATUS alone"
+		+ "the order rests on the user activating each milestone in its turn, with AFTER alone a"
+		+ "milestone planned and not yet wanted would be served"
+		REF @MILESTONE.M12
+		REF @MILESTONE.M8
+		REF @MILESTONE.ADD0
+	SOURCE "the user's words of 2026-11-09, « tâche en draft dans une nouvelle milestone non active"
+		+ "(planned je crois), on y mets les tâches qui résolvent les signaux relevés. On la"
+		+ "lancera avant les prochaines milestone »"
+	SOURCE "the user's words of 2026-11-09, « je pense qu'on devrait aussi ajouter un after sur les"
+		+ "milestone pour qu'elles soient livrées dans un ordre donné si on le souhaite, plutôt que"
+		+ "de gérer un statut », then « enfin il faut les deux plutôt »"
