@@ -137,3 +137,15 @@ MILESTONE M11
 	SOURCE "the user's ruling of 2026-11-08 on pull request 382, « on lui met une nouvele milestone"
 		+ "et on la passe todo si plus de question »"
 		REF @TASK.B242
+
+MILESTONE M12
+	TITLE "Inbox signals and milestone order"
+	SUBJECT "resolve the inbox signals and order the milestones"
+	STATUS planned
+	DESC "holds the tasks that resolve the signals the inbox raised on 2026-11-08 and the ordering"
+		+ "of milestones; activated before @MILESTONE.M8 and @MILESTONE.ADD0"
+		REF @MILESTONE.M8
+		REF @MILESTONE.ADD0
+	SOURCE "the user's words of 2026-11-09, « tâche en draft dans une nouvelle milestone non active"
+		+ "(planned je crois), on y mets les tâches qui résolvent les signaux relevés. On la"
+		+ "lancera avant les prochaines milestone », then « tâches au pluriel pardon »"
