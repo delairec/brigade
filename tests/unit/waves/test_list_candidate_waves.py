@@ -1,3 +1,5 @@
+import contextlib
+import io
 import tempfile
 import unittest
 from datetime import UTC, datetime
@@ -6,6 +8,9 @@ from pathlib import Path
 from brigade.corpus.read_entities import Entity, EntityField
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
+from brigade.ledger.task_parked import TaskParked
+from brigade.ledger.task_state import TaskState
+from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.system.parse_configuration import Configuration
 from brigade.waves.list_candidate_waves import CandidateWave, list_candidate_waves
@@ -35,6 +40,18 @@ CUT_OF_M9 = LedgerEntry(
 WAVE_HOLDING_S3 = LedgerEntry(
     instant=datetime(2026, 10, 29, 10, 0, tzinfo=UTC),
     event=WaveStarted(wave="shop_w4", project="shop", branch="integration/shop_w4", tasks=("S3",)),
+)
+DIGEST_OF_S3_AT_MAIN = "21b807323b879dff2247378dd129efd4c59248cf48c93498e31ce3e7709eca31"
+WAVE_PARKING_S3_ON_A_QUESTION = (
+    LedgerEntry(
+        instant=datetime(2026, 10, 29, 10, 0, tzinfo=UTC),
+        event=WaveStarted(wave="shop_w3", project="shop", tasks=("S3",), task_digests={"S3": DIGEST_OF_S3_AT_MAIN}),
+    ),
+    LedgerEntry(
+        instant=datetime(2026, 10, 29, 10, 30, tzinfo=UTC),
+        event=TaskParked(wave="shop_w3", task="S3", reason="run r1 blocked: Which forge?", blockers=()),
+    ),
+    LedgerEntry(instant=datetime(2026, 10, 29, 10, 30, tzinfo=UTC), event=WaveClosed(wave="shop_w3")),
 )
 TASKS_AT_MAIN = {
     "S1": (("STATUS", "todo"), ("MILESTONE", "@MILESTONE.M9")),
@@ -142,6 +159,70 @@ class ListCandidateWavesOfTheActiveMilestonesTest(ListCandidateWavesTestCase):
         self.assertEqual(
             waves, (CandidateWave(milestone="M9", tasks=("S2",)), CandidateWave(milestone="M10", tasks=("S4",)))
         )
+
+
+class ListCandidateWavesOfATaskParkedOnAQuestionTest(ListCandidateWavesTestCase):
+    def setUp(self):
+        super().setUp()
+        self.answer_tree(MILESTONE_BRANCH, MILESTONE_SHA, S1_IMPLEMENTED_ON_THE_MILESTONE_BRANCH)
+
+    def list_waves_and_stderr(self, *entries: LedgerEntry) -> tuple[tuple[CandidateWave, ...], str]:
+        errors = io.StringIO()
+        with contextlib.redirect_stderr(errors):
+            waves = self.list_waves(*entries)
+        return waves, errors.getvalue()
+
+    def test_should_leave_out_a_task_whose_closed_wave_parked_it_on_the_question_of_its_run(self):
+        # Act
+        waves, _ = self.list_waves_and_stderr(*WAVE_PARKING_S3_ON_A_QUESTION)
+
+        # Assert
+        self.assertEqual(
+            waves, (CandidateWave(milestone="M9", tasks=("S2",)), CandidateWave(milestone="M10", tasks=("S4",)))
+        )
+
+    def test_should_name_on_stderr_the_task_held_with_its_wave_and_its_question(self):
+        # Act
+        _, stderr = self.list_waves_and_stderr(*WAVE_PARKING_S3_ON_A_QUESTION)
+
+        # Assert
+        self.assertEqual(
+            stderr,
+            "brigade tick: @TASK.S3 is held since the wave shop_w3: it waits for an answer to: Which forge?\n",
+        )
+
+    def test_should_admit_again_the_task_once_its_entity_differs_from_the_one_its_run_read(self):
+        # Arrange
+        amended_s3 = {"S3": (("STATUS", "todo"), ("SPEC", "the forge is github"))}
+        self.answer_tree("main", MAIN_SHA, {**TASKS_AT_MAIN, **amended_s3})
+
+        # Act
+        waves, stderr = self.list_waves_and_stderr(*WAVE_PARKING_S3_ON_A_QUESTION)
+
+        # Assert
+        self.assertEqual(waves[-1], CandidateWave(milestone=None, tasks=("S3",)))
+        self.assertEqual(stderr, "")
+
+    def test_should_admit_again_the_task_queued_again_by_the_requeue(self):
+        # Arrange
+        requeued = LedgerEntry(
+            instant=datetime(2026, 10, 29, 12, 0, tzinfo=UTC),
+            event=TaskState(wave="shop_w3", task="S3", state="queued", reason="brigade wave requeue"),
+        )
+
+        # Act
+        waves, stderr = self.list_waves_and_stderr(*WAVE_PARKING_S3_ON_A_QUESTION, requeued)
+
+        # Assert
+        self.assertEqual(waves[-1], CandidateWave(milestone=None, tasks=("S3",)))
+        self.assertEqual(stderr, "")
+
+    def test_should_name_nothing_when_no_task_waits_for_an_answer(self):
+        # Act
+        _, stderr = self.list_waves_and_stderr()
+
+        # Assert
+        self.assertEqual(stderr, "")
 
 
 class ListCandidateWavesOfTasksNamingNoMilestoneTest(ListCandidateWavesTestCase):

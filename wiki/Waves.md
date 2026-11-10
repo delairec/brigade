@@ -54,8 +54,10 @@ The tasks join in the order of their number; `--task` takes exactly the tasks na
 `wave show` prints each task of a wave with its state, its pull request, its last run and, for a parked task, its
 reason. `wave list` prints one row per wave, the open waves first.
 
-> **Watch out:** the tick never queues a parked task again by itself: run `brigade wave requeue <wave> <task>`, and
-> the next tick launches it again in its existing worktree.
+> **Watch out:** a task parked in a closed wave is `todo` again for the tick, which serves it in a new wave, unless
+> that wave parked it on the question of a run that ended `blocked`: such a task waits, named on stderr at each tick
+> with its wave and its question, until its entity at the branch read differs from the one the wave read, or until
+> `brigade wave requeue <wave> <task>` queues it; the next tick then launches it again in its existing worktree.
 
 > **Watch out:** `wave cancel` leaves every worktree, branch and pull request of the wave in place, and the tasks of a
 > cancelled wave are candidates of the next wave.

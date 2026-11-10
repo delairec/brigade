@@ -55,6 +55,28 @@ OPEN_WAVE = {
     "tasks": ["S7"],
 }
 EVERY_STARTABLE_TASK = ()
+LEDGER_HOLDING_S10_ON_A_QUESTION = [
+    OPEN_WAVE,
+    {
+        "schema_version": 2,
+        "ts": "2026-10-13T09:30:00Z",
+        "event": "wave.started",
+        "wave": "shop_w0",
+        "project": "shop",
+        "tasks": ["S10"],
+        "task_digests": {"S10": "21b807323b879dff2247378dd129efd4c59248cf48c93498e31ce3e7709eca31"},
+    },
+    {
+        "schema_version": 1,
+        "ts": "2026-10-13T10:00:00Z",
+        "event": "task.parked",
+        "wave": "shop_w0",
+        "task": "S10",
+        "reason": "run r1 blocked: Which forge?",
+        "blockers": [],
+    },
+    {"schema_version": 1, "ts": "2026-10-13T10:00:00Z", "event": "wave.closed", "wave": "shop_w0"},
+]
 NO_MILESTONE = None
 MILESTONE_SHA = "7d3e1b0"
 MILESTONE_BRANCH = "integration/milestone-integration-branch"
@@ -169,9 +191,40 @@ class StartProjectWaveOfTheStartableTasksTest(StartProjectWaveTestCase):
                     "wave": "shop_w2",
                     "project": "shop",
                     "tasks": ["S3", "S4", "S10"],
+                    "task_digests": {
+                        "S3": "1c3134ed584c604809d0179d3fd106e1c65a12007fadb70b8fad3374390628b9",
+                        "S4": "5a8689afaf45bcc4b5d97c2034d902f2c1a2ac5f5d9057cf75bb199f32587ad2",
+                        "S10": "21b807323b879dff2247378dd129efd4c59248cf48c93498e31ce3e7709eca31",
+                    },
                 },
             ],
         )
+
+    def test_should_leave_out_of_a_composed_wave_a_task_held_on_the_question_of_its_blocked_run(self):
+        # Arrange
+        write_ledger(
+            self.root,
+            LEDGER_HOLDING_S10_ON_A_QUESTION,
+        )
+
+        # Act
+        started = self.start_wave(EVERY_STARTABLE_TASK)
+
+        # Assert
+        self.assertEqual(started["tasks"], ["S3", "S4"])
+
+    def test_should_take_a_named_task_though_it_is_held(self):
+        # Arrange
+        write_ledger(
+            self.root,
+            LEDGER_HOLDING_S10_ON_A_QUESTION,
+        )
+
+        # Act
+        started = self.start_wave(("S10",))
+
+        # Assert
+        self.assertEqual(started["tasks"], ["S10"])
 
     def test_should_cut_no_branch_for_a_wave_of_tasks_naming_no_milestone(self):
         # Act

@@ -2980,6 +2980,7 @@ class TickCuttingTheBranchOfAMilestoneTest(unittest.TestCase):
         self.assertIn({**CUT_OF_M4, "ts": ANY}, self._read_events())
 
 
+DIGEST_OF_T7_TO_DELIVER = "ea6114be5c96ba7d91c8603bbf8a7722c0fe6cab82bc413c1fa9476a8c24c2c8"
 WAVE_PR_OPENED = {
     "schema_version": 1,
     "ts": "2026-10-18T12:30:00Z",
@@ -3039,6 +3040,7 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
                 "wave": "tidepool_w1",
                 "project": "tidepool",
                 "tasks": ["T7"],
+                "task_digests": {"T7": DIGEST_OF_T7_TO_DELIVER},
             },
         )
 
@@ -3086,6 +3088,68 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
             " milestone.branch_cut records it\n",
             errors.getvalue(),
         )
+
+
+WAVE_STARTED_ON_T7_AS_ITS_RUN_READ = {**WAVE_STARTED, "task_digests": {"T7": DIGEST_OF_T7_TO_DELIVER}}
+BUILD_RUN_OF_T7_BLOCKED_ON_A_QUESTION = {
+    **create_run_result(FIRST_RUN, "blocked", "2026-10-18T10:00:00Z"),
+    "wave": "tidepool_w16",
+    "task": "T7",
+    "message": "Which forge does the check run against?\nbrigade-end: blocked",
+}
+
+
+class TickServingATaskWhoseRunEndedBlockedOnAQuestionTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        corpus = {
+            "STUDY": PAUSED_BUILT_IN_STUDIES,
+            "PROJECT": {"tidepool": (("PATH", str(self.root / "tidepool")), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_TO_DELIVER},
+            "MILESTONE": {"M4": MILESTONE_M4},
+        }
+        machine = ScriptedProcessRunner(MACHINE_ANSWERS, fallback=create_corpus_double(corpus))
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=machine.run,
+            spawn_process=SpawnRecorderDouble().spawn,
+            resolve_plugin=create_plugin_resolution(
+                STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
+            ),
+        )
+        blocked_run = {**create_run_record(FIRST_RUN, "tidepool_w16", "T7"), "project": "tidepool"}
+        write_run(self.root / "state", blocked_run, BUILD_RUN_OF_T7_BLOCKED_ON_A_QUESTION)
+        write_ledger(
+            self.root,
+            [
+                CUT_OF_M4,
+                WAVE_STARTED_ON_T7_AS_ITS_RUN_READ,
+                _record_task_state("running"),
+                BUILD_RUN_OF_T7_BLOCKED_ON_A_QUESTION,
+            ],
+        )
+
+    def _read_ledger_text(self) -> str:
+        return (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8")
+
+    def test_should_start_no_second_wave_for_the_same_blocked_task_over_two_ticks(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(self._read_ledger_text().count('"event": "wave.started"'), 1)
+
+    def test_should_park_the_task_on_the_question_and_close_its_wave(self):
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertIn("blocked: Which forge does the check run against?", self._read_ledger_text())
+        self.assertIn('"event": "wave.closed"', self._read_ledger_text())
 
 
 MILESTONE_BRANCH_DESCENT = ("git", "merge-base", "--is-ancestor", "main", "integration/tides")
@@ -3201,6 +3265,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
                 "wave": "tidepool_w1",
                 "project": "tidepool",
                 "tasks": ["T7"],
+                "task_digests": {"T7": DIGEST_OF_T7_TO_DELIVER},
             },
         )
         self.assertIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)

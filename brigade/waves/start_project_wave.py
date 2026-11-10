@@ -11,9 +11,11 @@ from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runtime import Runtime
 from brigade.system.parse_configuration import Configuration
+from brigade.tasks.digest_task_entity import digest_task_entity
 from brigade.tasks.find_task_number import find_task_number
 from brigade.tasks.read_task_after import read_task_after
 from brigade.waves.admit_candidates import admit_candidates
+from brigade.waves.list_held_tasks import list_held_tasks
 from brigade.waves.locate_wave_base import WaveBaseDemand, locate_wave_base
 from brigade.waves.map_open_tasks import map_open_tasks
 from brigade.waves.name_next_wave import name_next_wave
@@ -54,7 +56,8 @@ def _compose_tasks(runtime: Runtime, start: WaveStart, tasks: ProjectTasks, read
     if start.tasks:
         chosen = _take_named_tasks(start, tasks, open_tasks)
     else:
-        chosen = admit_candidates(runtime, tasks, open_tasks)
+        held = {hold.task: hold.wave for hold in list_held_tasks(reading.entries, start.project, tasks)}
+        chosen = admit_candidates(runtime, tasks, {**open_tasks, **held})
     if not chosen:
         raise BrigadeError(f"@PROJECT.{start.project} has no task to start")
     return tuple(sorted(chosen, key=find_task_number))
@@ -83,7 +86,12 @@ def start_project_wave(runtime: Runtime, start: WaveStart, milestone: str | None
 
     def name_wave(reading: LedgerReading) -> WaveStarted:
         chosen = _compose_tasks(runtime, start, tasks, reading)
-        return WaveStarted(wave=name_next_wave(start.project, reading.entries), project=start.project, tasks=chosen)
+        return WaveStarted(
+            wave=name_next_wave(start.project, reading.entries),
+            project=start.project,
+            tasks=chosen,
+            task_digests={task: digest_task_entity(tasks.by_name[task]) for task in chosen},
+        )
 
     started = append_derived_event(runtime.paths, runtime.now, name_wave)
     wave = WaveStarted(wave=started["wave"], project=started["project"], tasks=tuple(started["tasks"]))

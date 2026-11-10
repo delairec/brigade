@@ -228,6 +228,9 @@ dies before it records a `run.finished` does.
   milestone.
 - A task `draft` or `todo` whose `MILESTONE` is `reached` at the main branch is served never: the tick starts no wave
   holding it and names the task and the milestone on stderr at each tick.
+- A `todo` task whose latest wave is closed and parked it on the question of a run that ended `blocked` enters no new
+  wave until its entity at the branch read differs from the one that wave read, or `brigade wave requeue` queues it;
+  the tick names the task, its wave and the first line of its question on stderr at each tick.
 - For a task naming no milestone, once its pull request is ready to merge or the task is parked, the tick runs the
   study `task-report` and records `task.reported`; that run commits the report on the branch of the task and
   replaces the body of its pull request with it. The user merges that pull request into the main branch.

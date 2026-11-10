@@ -47,6 +47,7 @@ from brigade.tick.build_snapshot import (
 from brigade.tick.decide_resume_at import decide_resume_at
 from brigade.tick.is_study_due import is_study_due
 from brigade.tick.read_integration_branches import IntegrationBranchFacts
+from brigade.waves.read_parked_question import BLOCKED_RUN_REASON
 from brigade.waves.read_task_state import PARKED_STATE
 
 BUILD_SLOT = "build"
@@ -560,7 +561,7 @@ def _plan_blocked_task_parkings(snapshot: Snapshot) -> tuple:
 
 
 def _describe_blocked_run(blocked: BlockedRun) -> str:
-    return f"run {blocked.run} blocked: {blocked.question}"
+    return BLOCKED_RUN_REASON.format(run=blocked.run, question=blocked.question)
 
 
 def _describe_dead_run(task: TaskFacts) -> str:
