@@ -45,6 +45,16 @@ PARKED_ON_A_DEAD_RUN = {
     "reason": "run dead: 20261019T080500Z-a1b2c3",
     "blockers": [],
 }
+PARKED_ON_A_BLOCKED_RUN = {
+    "schema_version": 1,
+    "ts": "2026-10-19T08:30:00Z",
+    "event": "task.parked",
+    "wave": "tidepool_w16",
+    "task": "T7",
+    "reason": "run 20261019T080500Z-a1b2c3 blocked: Which forge?",
+    "blockers": [],
+}
+WAVE_CLOSED = {"schema_version": 1, "ts": "2026-10-19T08:30:00Z", "event": "wave.closed", "wave": "tidepool_w16"}
 PARKED_ON_A_FAILED_SETUP = {
     "schema_version": 1,
     "ts": "2026-10-19T08:30:00Z",
@@ -243,6 +253,42 @@ class WaveRequeueOfAParkedTaskTheMainBranchDoesNotHoldTest(unittest.TestCase):
         root = Path(directory.name)
         runtime = create_main_tree_runtime(root, T7_ABSENT_FROM_MAIN)
         write_ledger(root, [MILESTONE_BRANCH_CUT, WAVE_STARTED, PARKED_ON_A_DEAD_RUN])
+
+        # Act
+        COMMAND.run(Namespace(wave="tidepool_w16", task="T7"), runtime)
+
+        # Assert
+        self.assertEqual(
+            read_ledger(runtime.paths.state_root).entries[-1].event,
+            TaskState(wave="tidepool_w16", task="T7", state="queued", reason="brigade wave requeue"),
+        )
+
+
+class WaveRequeueOfATaskOfAClosedWaveTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.closed_wave_parking_t7 = [MILESTONE_BRANCH_CUT, WAVE_STARTED, PARKED_ON_A_BLOCKED_RUN, WAVE_CLOSED]
+
+    def test_should_record_the_parked_task_queued(self):
+        # Arrange
+        runtime = create_main_tree_runtime(self.root, T7_ABSENT_FROM_MAIN)
+        write_ledger(self.root, self.closed_wave_parking_t7)
+
+        # Act
+        COMMAND.run(Namespace(wave="tidepool_w16", task="T7"), runtime)
+
+        # Assert
+        self.assertEqual(
+            read_ledger(runtime.paths.state_root).entries[-1].event,
+            TaskState(wave="tidepool_w16", task="T7", state="queued", reason="brigade wave requeue"),
+        )
+
+    def test_should_queue_the_task_though_its_entity_differs_between_the_main_branch_and_the_wave_tree(self):
+        # Arrange
+        runtime = create_main_tree_runtime(self.root, T7_RULED_ON_MAIN)
+        write_ledger(self.root, self.closed_wave_parking_t7)
 
         # Act
         COMMAND.run(Namespace(wave="tidepool_w16", task="T7"), runtime)

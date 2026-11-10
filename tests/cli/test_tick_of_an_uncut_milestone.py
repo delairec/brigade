@@ -37,6 +37,7 @@ WAVE_OF_S1_STARTED = {
     "wave": "shop_w1",
     "project": "shop",
     "tasks": ["S1"],
+    "task_digests": {"S1": "8392611874c4c01f5dbd5f54d67d958c41ca2effda0311f330d653712f2b221f"},
 }
 
 

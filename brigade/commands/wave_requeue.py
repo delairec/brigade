@@ -88,7 +88,8 @@ def wave_requeue(request: argparse.Namespace, runtime: Runtime) -> dict:
     if request.task in read_implemented_tasks(runtime.run_process, tree.root):
         raise BrigadeError(f"the task {request.task} of the wave {request.wave} is already implemented on {tree.ref}")
     on_wave = read_entity(runtime.run_process, tree.root, TASK_TYPE, request.task)
-    _require_unruled_on_main(runtime, configuration, TaskOfWave(started=summary.started, tree=tree, entity=on_wave))
+    if summary.is_open:
+        _require_unruled_on_main(runtime, configuration, TaskOfWave(started=summary.started, tree=tree, entity=on_wave))
     requeued = _decide_requeued_state(entries, request.wave, request.task)
     append_event(
         runtime.paths,
