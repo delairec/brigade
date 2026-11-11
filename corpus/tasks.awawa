@@ -12703,7 +12703,8 @@ TASK B177
 	TITLE "brigade init probes the client adapters present, writes the client key, prints the next"
 		+ "steps and takes the remote of the configuration repository; a fresh account installs"
 		+ "from dist/brigade.pyz and runs a one-task wave, proven by a test of tests/cli"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 399
 	TYPE feat
 	MILESTONE @MILESTONE.M7
 	COMPONENT "install"
