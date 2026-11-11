@@ -3,7 +3,7 @@
 # brigade keeps its state in $state_root and its caches in $cache_root.
 
 # The client adapter that runs the agents: a built-in adapter, or an executable brigade-client-<name> on PATH.
-# client = "claude-code"
+$client_line
 
 # What fires the tick: systemd, cron or loop.
 # scheduler = "systemd"
