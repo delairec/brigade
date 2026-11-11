@@ -10,6 +10,7 @@ from brigade.git.read_current_branch import read_current_branch
 from brigade.registry.read_project_forge import NO_FORGE, read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
+from brigade.runs.locate_source_worktree import locate_source_worktree
 from brigade.runtime import Runtime
 from brigade.system.parse_configuration import Configuration
 from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
@@ -73,7 +74,7 @@ def _render_text(document: dict) -> str:
 
 
 def _assemble_task_branch_context(runtime: Runtime, configuration: Configuration, worktree: Path) -> dict:
-    located = locate_task_worktree(runtime, worktree, NAMED_BY_THE_BRANCH)
+    located = locate_task_worktree(runtime, locate_source_worktree(runtime.paths, worktree), NAMED_BY_THE_BRANCH)
     branch_demand = BranchPreflightDemand(
         project=located.project,
         task=located.task,
