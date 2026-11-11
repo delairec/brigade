@@ -2,6 +2,8 @@ import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
+from brigade.commands._read_forge_environment import ForgeSlot, read_forge_environment
+from brigade.corpus.prepare_tree import Tree
 from brigade.corpus.read_entities import Entity, read_entities
 from brigade.git.describe_merge_command import describe_merge_command
 from brigade.ledger.format_instant import format_instant
@@ -17,8 +19,10 @@ from brigade.registry.find_project import find_project
 from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_policy_field import read_policy_field
 from brigade.registry.read_project_field import read_project_field
+from brigade.registry.read_project_forge import read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
+from brigade.system.parse_configuration import Configuration
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.render_table import render_table
 from brigade.tick.name_branch_of_task import name_branch_of_task
@@ -27,7 +31,7 @@ from brigade.waves.find_integration_pull_request import find_integration_pull_re
 from brigade.waves.find_last_task_event import find_last_task_event
 from brigade.waves.find_milestone_branch import find_milestone_branch
 from brigade.waves.locate_merge_worktree import locate_merge_worktree
-from brigade.waves.prepare_wave_tree import prepare_wave_tree
+from brigade.waves.prepare_wave_tree import WaveTreeReading, prepare_wave_tree
 from brigade.waves.read_task_state import TASK_EVENTS
 from brigade.waves.read_task_states import read_task_states
 from brigade.waves.read_wave_milestone import read_wave_milestone
@@ -80,13 +84,24 @@ def _describe_task(events: tuple, states: dict[str, str], wave: str, task: str) 
     }
 
 
+def _prepare_tree(runtime: Runtime, configuration: Configuration, started: WaveStarted) -> Tree:
+    project = find_project(read_projects(runtime), started.project)
+    reading = WaveTreeReading(
+        configuration=configuration,
+        read_environment=lambda key: read_forge_environment(
+            configuration, ForgeSlot(read_project_forge(project), key), runtime
+        ),
+    )
+    return prepare_wave_tree(runtime, reading, started)
+
+
 def _read_merge_command(runtime: Runtime, entries: tuple[LedgerEntry, ...], started: WaveStarted) -> str | None:
     if not any(
         isinstance(entry.event, MilestoneReported) and entry.event.project == started.project for entry in entries
     ):
         return None
     configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
-    tasks = read_entities(runtime.run_process, prepare_wave_tree(runtime, configuration, started).root, TASK_TYPE)
+    tasks = read_entities(runtime.run_process, _prepare_tree(runtime, configuration, started).root, TASK_TYPE)
     milestone = read_wave_milestone(started.wave, (task for task in tasks if task.name in started.tasks))
     return describe_milestone_merge(entries, find_project(read_projects(runtime), started.project), milestone)
 
@@ -113,7 +128,7 @@ def _read_task_merge_commands(
     if is_on_a_forge(project):
         return []
     configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
-    tasks = read_entities(runtime.run_process, prepare_wave_tree(runtime, configuration, started).root, TASK_TYPE)
+    tasks = read_entities(runtime.run_process, _prepare_tree(runtime, configuration, started).root, TASK_TYPE)
     of_wave = {task.name: task for task in tasks if task.name in started.tasks}
     milestone = read_wave_milestone(started.wave, of_wave.values())
     if milestone is not None and not _leaves_the_milestone_merge_to_the_user(runtime, project):

@@ -15,6 +15,7 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
+from tests.unit.studies.test_publish_milestone_report import create_forge
 
 RUN_ID = "20261108T170002Z-0a1e3b"
 BRANCH = "integration/hardening"
@@ -95,9 +96,16 @@ class PublishMilestoneReportTest(RepositoryTestCase):
                 "file": str(self.checkout / MILESTONES_PATH),
                 "fields": [
                     {"name": "TITLE", "atoms": ['"Hardening"']},
+                    {"name": "SUBJECT", "atoms": ['"harden the tick against moved heads"']},
                     {"name": "STATUS", "atoms": ['"reached"']},
                 ],
             },
+        )
+        scripted.answer_entities(
+            self.checkout,
+            "TASK",
+            {"B17": (("TYPE", "feat"), ("COMPONENT", "tick"), ("MILESTONE", "@MILESTONE.M6"))},
+            ("STATUS==implemented",),
         )
         scripted.answer(("awawa", "fmt", str(self.checkout / MILESTONES_PATH)))
         scripted.answer(("awawa", "lint", "--strict", str(self.checkout)))
@@ -106,7 +114,7 @@ class PublishMilestoneReportTest(RepositoryTestCase):
         scripted.answer_entities(
             self.runtime.paths.config_root,
             "PROJECT",
-            {"oak": (("PATH", str(self.repository)), ("FORGE", "none"), ("CORPUS", "corpus"), ("MAIN", "main"))},
+            {"oak": (("PATH", str(self.repository)), ("FORGE", "github"), ("CORPUS", "corpus"), ("MAIN", "main"))},
         )
 
     def create_context(self) -> StudyRunContext:
@@ -115,7 +123,7 @@ class PublishMilestoneReportTest(RepositoryTestCase):
                 configuration=Configuration(), forge=None, forge_name="github", resolve_client=None
             ),
             document=DocumentDouble(),
-            resolve_forge={}.__getitem__,
+            resolve_forge={"github": create_forge()}.__getitem__,
         )
         return StudyRunContext(
             runtime=self.runtime, study=STUDY, run_id=RUN_ID, run_directory=self.run_directory, equipment=equipment

@@ -508,6 +508,7 @@ MACHINE_OUTPUTS = {
     ("git", "branch", "--quiet", "-D"): "",
     ("git", "merge-base"): "",
     ("git", "fetch"): "",
+    ("git", "ls-remote"): "",
     ("git", "diff"): "",
     ("git", "status", "--porcelain", "--untracked-files=no"): "",
     ("awawa", "status", "TASK", "--where", "STATUS==implemented"): '{"entities": []}',

@@ -6625,6 +6625,7 @@ DECISION TheMilestoneReportOfForgeNoneIsPublishedOnTheLocalBranchesWhetherOrNotT
 		REF @DECISION.ATaskBranchIsCutRebasedAndCheckedAgainstTheIntegrationBranchOfTheForge
 		REF @TASK.B240
 		REF @MILESTONE.M7
+
 DECISION TheVibeAdapterClassifiesAStreamWithoutEntryByStderrEvenOnExitZero
 	TITLE "the vibe adapter classifies a stream holding no entry by the last line of stderr, even"
 		+ "on exit 0, and takes the message of a cut segment from stderr and that of a blocked"

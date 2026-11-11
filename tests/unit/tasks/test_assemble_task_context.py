@@ -380,7 +380,12 @@ class AssembleTaskContextInAnAreaTest(unittest.TestCase):
         runtime, worktree = self.create_area()
 
         # Act
-        assemble_task_context(runtime, Configuration(), worktree, ATTRIBUTION)
+        assemble_task_context(
+            runtime,
+            TaskContextDemand(
+                configuration=Configuration(), worktree=worktree, attribution=ATTRIBUTION, read_environment=lambda key: {}
+            ),
+        )
 
         # Assert
         closure_lint = select_requests_opening_on(self.processes.requests, ("awawa", "lint"))[0]
@@ -398,7 +403,15 @@ class AssembleTaskContextInAnAreaTest(unittest.TestCase):
         )
 
         # Act
-        context = assemble_task_context(runtime, Configuration(instructions=instructions), worktree, ATTRIBUTION)
+        context = assemble_task_context(
+            runtime,
+            TaskContextDemand(
+                configuration=Configuration(instructions=instructions),
+                worktree=worktree,
+                attribution=ATTRIBUTION,
+                read_environment=lambda key: {},
+            ),
+        )
 
         # Assert
         self.assertEqual(context["rules"], [])

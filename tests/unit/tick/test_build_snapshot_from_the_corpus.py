@@ -1506,7 +1506,7 @@ class PlanOfAWaveWaitingOnATaskImplementedOnTheForgeTest(BuildSnapshotTestCase):
                 branch="integration/tides",
                 task="B3",
                 task_branch="feature/B3-task",
-                checks_passed=False,
+                pull_request_checks=None,
             ),
             actions,
         )

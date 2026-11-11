@@ -789,7 +789,7 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveSta
     project = find_project(reading.projects, started.project)
     tree = prepare_wave_tree(
         runtime,
-        WaveTreeReading(configuration=reading.configuration, read_environment=reading.forge.read_environment),
+        WaveTreeReading(configuration=reading.configuration, read_environment=_read_environment_of(reading, project)),
         started,
     )
     tasks = {task.name: task for task in read_entities(runtime.run_process, tree.root, TASK_TYPE)}
@@ -1019,7 +1019,7 @@ def _is_behind_main(runtime: Runtime, reading: WaveReading, cut: MilestoneBranch
 
 def _locate_milestone_refs(runtime: Runtime, reading: WaveReading, project: Entity, ref: str) -> MilestoneRefs:
     main = locate_forge_branch(
-        runtime.run_process, project, read_project_field(project, MAIN_FIELD), reading.forge.read_environment
+        runtime.run_process, project, read_project_field(project, MAIN_FIELD), _read_environment_of(reading, project)
     )
     return MilestoneRefs(main=main, branch=ref)
 
@@ -1072,18 +1072,24 @@ def _note_milestone_merge(runtime: Runtime, reading: WaveReading, cut: Milestone
     return dataclasses.replace(facts, merge_command=command, merged_into_main=merged)
 
 
+def _read_opened_milestone_facts(
+    reading: WaveReading, cut: MilestoneBranchCut, project: Entity, opened: int
+) -> MilestoneFacts:
+    return MilestoneFacts(
+        project=cut.project,
+        milestone=cut.milestone,
+        branch=cut.branch,
+        opened_pull_request=opened,
+        pull_request=reading.forge.read_pull_request(read_project_field(project, PATH_FIELD), cut.branch),
+        described_head=_find_described_head(reading, cut.project, cut.milestone),
+    )
+
+
 def _read_milestone_facts(runtime: Runtime, reading: WaveReading, cut: MilestoneBranchCut) -> MilestoneFacts:
     project = find_project(reading.projects, cut.project)
     opened = _find_milestone_pull_request(reading, cut.project, cut.milestone)
     if opened is not None:
-        return MilestoneFacts(
-            project=cut.project,
-            milestone=cut.milestone,
-            branch=cut.branch,
-            opened_pull_request=opened,
-            pull_request=reading.forge.read_pull_request(read_project_field(project, PATH_FIELD), cut.branch),
-            described_head=_find_described_head(reading, cut.project, cut.milestone),
-        )
+        return _read_opened_milestone_facts(reading, cut, project, opened)
     ref = locate_forge_branch(runtime.run_process, project, cut.branch, _read_environment_of(reading, project))
     rebase_runs = _list_branch_rebase_runs(reading, project, cut.branch)
     of_milestone = _read_tasks_of_milestone(runtime, reading, cut, ref)
@@ -1145,7 +1151,10 @@ def _read_integration_branches(
             read_environment=reading.forge.read_environment,
             locate_wave_base=lambda started: locate_wave_branch_base(
                 runtime,
-                WaveTreeReading(configuration=configuration, read_environment=reading.forge.read_environment),
+                WaveTreeReading(
+                    configuration=configuration,
+                    read_environment=_read_environment_of(reading, find_project(reading.projects, started.project)),
+                ),
                 started,
             ),
             is_alive=is_recorded_process_alive,
