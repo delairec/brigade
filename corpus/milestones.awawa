@@ -53,7 +53,7 @@ MILESTONE M6
 MILESTONE M7
 	TITLE "Portability"
 	SUBJECT "port brigade to other machines, clients and forges"
-	STATUS active
+	STATUS reached
 	SOURCE "the SUBJECT written on 2026-11-07 from the tasks of the milestone, under the user's"
 		+ "ruling « Écrit dans le jalon » recorded in"
 		+ "@DECISION.TheSubjectOfAMilestonePullRequestIsWrittenOnTheMilestoneAndItsTypeAndScopeComeFromTheTasksAtItsHead"
