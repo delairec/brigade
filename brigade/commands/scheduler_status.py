@@ -2,10 +2,10 @@ import argparse
 from datetime import datetime, timedelta
 
 from brigade.command import Command
+from brigade.commands._find_installed_scheduler import find_installed_scheduler
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.read_ledger import read_ledger
 from brigade.runtime import Runtime
-from brigade.system.find_installed_scheduler import find_installed_scheduler
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.scheduler_state import SchedulerState
 from brigade.tick.describe_heartbeat import describe_heartbeat

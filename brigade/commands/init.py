@@ -3,6 +3,8 @@ from pathlib import Path
 from string import Template
 
 from brigade.command import Argument, Command
+from brigade.commands._find_answering_clients import find_answering_clients
+from brigade.commands._find_installed_scheduler import find_installed_scheduler
 from brigade.corpus.shipped_data import SHIPPED_DATA, SHIPPED_SCHEMA
 from brigade.errors import BrigadeError, ToolFailure
 from brigade.git.add_origin import add_origin
@@ -13,9 +15,7 @@ from brigade.git.read_origin_url import read_origin_url
 from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
 from brigade.system.create_directory import create_directory
-from brigade.system.find_answering_clients import find_answering_clients
-from brigade.system.find_installed_scheduler import find_installed_scheduler
-from brigade.system.parse_configuration import parse_configuration
+from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 from brigade.system.write_bytes_file import write_bytes_file
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -80,7 +80,7 @@ def _render_configuration(runtime: Runtime, clients: tuple[str, ...]) -> str:
 
 def _read_configured_client(runtime: Runtime) -> str | None:
     try:
-        return parse_configuration(runtime.paths.configuration_file).client
+        return read_configuration(runtime, CONFIGURATION_REQUIRED).client
     except BrigadeError:
         return None
 
@@ -145,11 +145,7 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
-def init(request: argparse.Namespace, runtime: Runtime) -> dict:
-    _require_identity(runtime)
-    repository = _ensure_repository(runtime)
-    remote = [] if request.remote is None else [_ensure_remote(request.remote, runtime)]
-    clients = find_answering_clients(runtime)
+def _ensure_shipped_files(runtime: Runtime, clients: tuple[str, ...]) -> list[dict]:
     gitignore = runtime.paths.config_root / GITIGNORE_FILE
     shipped_files = [
         ("schema", runtime.paths.schema_file, SHIPPED_SCHEMA.read_bytes()),
@@ -168,6 +164,15 @@ def init(request: argparse.Namespace, runtime: Runtime) -> dict:
             runtime.run_process,
             CommitRequest(repository=runtime.paths.config_root, files=created_to_commit, message=COMMIT_MESSAGE),
         )
+    return file_items
+
+
+def init(request: argparse.Namespace, runtime: Runtime) -> dict:
+    _require_identity(runtime)
+    repository = _ensure_repository(runtime)
+    remote = [] if request.remote is None else [_ensure_remote(request.remote, runtime)]
+    clients = find_answering_clients(runtime)
+    file_items = _ensure_shipped_files(runtime, clients)
     client = _read_configured_client(runtime)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,

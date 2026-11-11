@@ -2,8 +2,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.commands._find_answering_clients import find_answering_clients
 from brigade.errors import BrigadeError, ToolFailure, ToolNotFound
-from brigade.system.find_answering_clients import find_answering_clients
 from tests.unit.client_double import ClientDouble, create_built_in_clients
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
 from tests.unit.commands.create_plugin_resolver import create_plugin_resolver
