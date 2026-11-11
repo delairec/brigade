@@ -321,6 +321,7 @@ class AssembleTaskContextTest(unittest.TestCase):
         # Assert
         self.assertEqual(context["reserved"]["task_number"], 41)
 
+
 class AssembleTaskContextInAnAreaTest(unittest.TestCase):
     def setUp(self):
         AssembleTaskContextTest.setUp(self)
@@ -383,7 +384,10 @@ class AssembleTaskContextInAnAreaTest(unittest.TestCase):
         assemble_task_context(
             runtime,
             TaskContextDemand(
-                configuration=Configuration(), worktree=worktree, attribution=ATTRIBUTION, read_environment=lambda key: {}
+                configuration=Configuration(),
+                worktree=worktree,
+                attribution=ATTRIBUTION,
+                read_environment=lambda key: {},
             ),
         )
 
