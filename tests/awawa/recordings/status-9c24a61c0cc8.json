@@ -1,0 +1,23 @@
+{
+  "call": {
+    "arguments": [
+      "status",
+      "PROJECT",
+      "--json",
+      "<tmp:0>/config/brigade"
+    ],
+    "cwd": "<tmp:0>/config/brigade",
+    "directories": [
+      "<tmp:0>/config/brigade"
+    ],
+    "inputs": {}
+  },
+  "outcome": {
+    "exit_code": 2,
+    "rewritten": {},
+    "stderr": "awawa status: `PROJECT` is not an entity type in this workspace\n",
+    "stdout": ""
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}
