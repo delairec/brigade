@@ -10,6 +10,8 @@ from brigade.git.push_with_lease import LeasedPush, push_with_lease
 from brigade.git.read_head import read_head
 from brigade.git.rebase_onto import rebase_onto
 from brigade.git.reset_worktree import reset_worktree
+from brigade.git.resolve_commit import resolve_commit
+from brigade.ledger.milestone_rebase_launched import MilestoneRebaseLaunched
 from brigade.ledger.milestone_rebased import MilestoneRebased
 from brigade.registry.is_on_github import is_on_github
 from brigade.registry.read_project_field import read_project_field
@@ -48,6 +50,13 @@ class MovedHead:
 
 
 @dataclass(frozen=True)
+class LaunchedRun:
+    run: str
+    main_head: str | None
+    branch_head: str
+
+
+@dataclass(frozen=True)
 class MilestoneBranchesRebase:
     project: Entity
     milestone: str
@@ -55,7 +64,7 @@ class MilestoneBranchesRebase:
     worktree_root: str | None
     read_environment: Callable[[str], dict]
     is_run_live_on: Callable[[Path], bool]
-    launch_rebase_run: Callable[[BranchRebaseRun], None]
+    launch_rebase_run: Callable[[BranchRebaseRun], str]
     read_login: Callable[[], str]
 
 
@@ -82,14 +91,10 @@ def _take_branch(runtime: Runtime, rebase: MilestoneBranchesRebase, branch: str)
     return worktree
 
 
-def _rebase_branch(
-    runtime: Runtime, rebase: MilestoneBranchesRebase, run: BranchRebaseRun, upstream: str
-) -> str | None:
-    head = read_head(runtime.run_process, run.worktree)
-    if not rebase_onto(runtime.run_process, run.worktree, upstream):
-        rebase.launch_rebase_run(run)
+def _read_rebased_head(runtime: Runtime, worktree: Path, upstream: str) -> str | None:
+    if not rebase_onto(runtime.run_process, worktree, upstream):
         return None
-    return head
+    return read_head(runtime.run_process, worktree)
 
 
 def _push_branch(runtime: Runtime, rebase: MilestoneBranchesRebase, run: BranchRebaseRun, head: str) -> None:
@@ -118,40 +123,54 @@ def _pass_project_checks(runtime: Runtime, rebase: MilestoneBranchesRebase, work
     return all(record.exit_code == PASSED_EXIT_CODE for record in records)
 
 
-def _rebase_milestone(runtime: Runtime, rebase: MilestoneBranchesRebase, branch: str, main: str) -> MovedHead | None:
+def _rebase_milestone(
+    runtime: Runtime, rebase: MilestoneBranchesRebase, branch: str, main: str
+) -> MovedHead | LaunchedRun | None:
     worktree = _take_branch(runtime, rebase, branch)
     if worktree is None:
         return None
     base = read_project_field(rebase.project, MAIN_FIELD)
     run = BranchRebaseRun(project=rebase.project.name, worktree=worktree.path, branch=branch, base=base, wave=None)
-    before = _rebase_branch(runtime, rebase, run, main)
-    if before is None:
-        return None
-    after = read_head(runtime.run_process, worktree.path)
-    if after != before and not _pass_project_checks(runtime, rebase, worktree.path):
-        rebase.launch_rebase_run(run)
-        return None
+    before = read_head(runtime.run_process, worktree.path)
+    after = _read_rebased_head(runtime, worktree.path, main)
+    if after is None or (after != before and not _pass_project_checks(runtime, rebase, worktree.path)):
+        return LaunchedRun(
+            run=rebase.launch_rebase_run(run),
+            main_head=resolve_commit(runtime.run_process, worktree.path, main),
+            branch_head=before,
+        )
     _push_branch(runtime, rebase, run, before)
     if after == before:
         return None
     return MovedHead(before=before, after=after)
 
 
-def rebase_milestone_branches(runtime: Runtime, rebase: MilestoneBranchesRebase) -> MilestoneRebased | None:
+def rebase_milestone_branches(
+    runtime: Runtime, rebase: MilestoneBranchesRebase
+) -> MilestoneRebased | MilestoneRebaseLaunched | None:
     project = rebase.project.name
     with hold_lock(locate_worktrees_lock(runtime.paths.lock_directory, project)):
         main_branch = read_project_field(rebase.project, MAIN_FIELD)
         main = locate_forge_branch(runtime.run_process, rebase.project, main_branch, rebase.read_environment)
         login = rebase.read_login() if is_on_github(rebase.project) else NO_LOGIN
-        moved = _rebase_milestone(runtime, rebase, rebase.branch, main)
-    if moved is None:
+        outcome = _rebase_milestone(runtime, rebase, rebase.branch, main)
+    if outcome is None:
         return None
+    if isinstance(outcome, LaunchedRun):
+        return MilestoneRebaseLaunched(
+            project=project,
+            milestone=rebase.milestone,
+            branch=rebase.branch,
+            run=outcome.run,
+            main_head=outcome.main_head,
+            branch_head=outcome.branch_head,
+        )
     return MilestoneRebased(
         project=project,
         milestone=rebase.milestone,
         branch=rebase.branch,
-        before=moved.before,
-        after=moved.after,
+        before=outcome.before,
+        after=outcome.after,
         waves=NO_WAVE_REBASED,
         login=login,
     )

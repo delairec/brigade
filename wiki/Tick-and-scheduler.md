@@ -193,6 +193,13 @@ dies before it records a `run.finished` does.
   lines of the project, then its `ACCEPTANCE` lines and `awawa fmt --check .` and `awawa lint --strict .`, as
   `brigade task check` does. A failing one pushes nothing: the rebased head stays in the worktree and a detached run of
   the slot `rebase` repairs it there, then pushes it once its tests pass.
+- Each launch of that run is recorded as `milestone.rebase_launched`, with the run and the commits the main branch
+  and the milestone branch stood at. A run that ends `blocked` holds the rebase of its branch while both heads stand:
+  the tick plans none and names the branch and the question on stderr at each tick. Once the main branch or the
+  milestone branch has moved since that launch, the next tick rebases the branch again. A blocked run whose launch
+  recorded no heads, launched before brigade recorded them, holds nothing.
+- No command names a milestone to rebase it again: `brigade wave requeue` takes a wave and a task, and
+  `brigade rebase context|done` the pull request of a task. A push to the milestone branch releases the hold.
 - No rebase is planned for a wave that is paused, or whose rebase run lives or ended blocked; a blocked rebase run
   pauses its wave on its question.
 - `brigade wave resume` answers every rebase run of the wave that ended blocked before it, one that ended while the

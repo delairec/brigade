@@ -14906,7 +14906,7 @@ TASK B223
 		+ "appends nothing on a rebase stopped on a conflict, the run it launches recording its own"
 		+ "outcome, nothing on a branch whose worktree a live run holds, and nothing when the"
 		+ "rebase left the head where it was"
-		IMPL "brigade/commands/tick.py::    rebased = rebase_milestone_branches(runtime, rebase)"
+		IMPL "brigade/commands/tick.py::    outcome = rebase_milestone_branches(runtime, rebase)"
 		IMPL "brigade/waves/rebase_milestone_branches.py::def _rebase_milestone("
 	SPEC "brigade ledger counts milestone.rebased among the events of its overview and reads it"
 		+ "back as every declared event, through brigade/ledger/declared_events.py"

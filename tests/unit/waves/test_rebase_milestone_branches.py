@@ -4,6 +4,7 @@ from pathlib import Path
 
 from brigade.corpus.read_entities import Entity, EntityField
 from brigade.errors import BrigadeError
+from brigade.ledger.milestone_rebase_launched import MilestoneRebaseLaunched
 from brigade.ledger.milestone_rebased import MilestoneRebased
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 from brigade.system.run_process import ProcessRequest
@@ -24,6 +25,8 @@ MILESTONE_HEAD = "5e2a7c1"
 WAVE_HEAD = "c3d9f04"
 REBASED_MILESTONE_HEAD = "9b41d08"
 REBASED_WAVE_HEAD = "e70f3a2"
+MAIN_HEAD = "7d3f9a2"
+LAUNCHED_RUN = "20261111T090000Z-1a2b3c"
 STOPPED_ON_A_CONFLICT = 1
 REBASE_IN_PROGRESS = 0
 GIT_REBASE = ("git", "rebase")
@@ -117,6 +120,10 @@ class RebaseMilestoneBranchesTestCase(unittest.TestCase):
                 ("git", "push", "--quiet", f"--force-with-lease={branch}:{head}", "origin", f"HEAD:{branch}")
             )
 
+    def launch_rebase_run(self, run: BranchRebaseRun) -> str:
+        self.launched.append(run)
+        return LAUNCHED_RUN
+
     def answer_head(self, request: ProcessRequest) -> tuple[int, str, str]:
         if request.cwd in self.rebased_worktrees:
             return 0, f"{self.heads_after_rebase[request.cwd]}\n", ""
@@ -142,6 +149,11 @@ class RebaseMilestoneBranchesTestCase(unittest.TestCase):
         self.processes.answer(("git", "reset", "--quiet", "--hard", "integration/shop_w1"))
         self.processes.answer_by(("git", "rebase", "--fork-point", "origin/main"), self.answer_rebase)
         self.processes.answer_by(("git", "rebase", "--fork-point", "main"), self.answer_rebase)
+        for main in ("origin/main", "main"):
+            self.processes.answer(
+                ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{main}^{{commit}}"),
+                stdout=f"{MAIN_HEAD}\n",
+            )
         for milestone in (MILESTONE_BRANCH, FORGE_MILESTONE_BRANCH):
             self.processes.answer_by(("git", "rebase", "--fork-point", milestone), self.answer_rebase)
         return _create_project(forge)
@@ -155,7 +167,7 @@ class RebaseMilestoneBranchesTestCase(unittest.TestCase):
             worktree_root=None,
             read_environment=_read_forge_environment,
             is_run_live_on=lambda worktree: worktree in self.live_worktrees,
-            launch_rebase_run=self.launched.append,
+            launch_rebase_run=self.launch_rebase_run,
             read_login=self.read_login,
         )
         return rebase_milestone_branches(self.runtime, rebase)
@@ -269,7 +281,7 @@ class RebaseMilestoneBranchesOntoTheMainBranchTest(RebaseMilestoneBranchesTestCa
             worktree_root=None,
             read_environment=_read_forge_environment,
             is_run_live_on=lambda worktree: False,
-            launch_rebase_run=self.launched.append,
+            launch_rebase_run=self.launch_rebase_run,
             read_login=_read_login,
         )
 
@@ -376,7 +388,7 @@ class RebaseMilestoneBranchesFailingTheirChecksTest(RebaseMilestoneBranchesTestC
         # Assert
         self.assertEqual(select_argvs_run_in(self.processes.requests, WAVE_WORKTREE), [])
 
-    def test_should_answer_no_rebase_when_the_rebased_milestone_branch_fails_a_check(self):
+    def test_should_answer_the_launch_of_the_rebase_run_with_the_head_the_milestone_branch_had_before_its_rebase(self):
         # Arrange
         self.failing_check = NPM_TEST
 
@@ -384,7 +396,17 @@ class RebaseMilestoneBranchesFailingTheirChecksTest(RebaseMilestoneBranchesTestC
         rebased = self.rebase()
 
         # Assert
-        self.assertIsNone(rebased)
+        self.assertEqual(
+            rebased,
+            MilestoneRebaseLaunched(
+                project="shop",
+                milestone="M3",
+                branch=MILESTONE_BRANCH,
+                run="20261111T090000Z-1a2b3c",
+                main_head="7d3f9a2",
+                branch_head="5e2a7c1",
+            ),
+        )
 
 
 class RebaseMilestoneBranchesBesideAnOpenWaveTest(RebaseMilestoneBranchesTestCase):
@@ -469,15 +491,28 @@ class RebaseMilestoneBranchesRecordedTest(RebaseMilestoneBranchesTestCase):
             ),
         )
 
-    def test_should_answer_no_rebase_when_the_rebase_of_the_milestone_branch_stopped_on_a_conflict(self):
-        # Arrange
-        self.rebase_exit_codes[MILESTONE_WORKTREE] = STOPPED_ON_A_CONFLICT
+    def test_should_answer_the_launch_of_the_rebase_run_with_the_heads_of_the_main_and_milestone_branches(self):
+        for case, forge in [("on the forge", "github"), ("without a forge", "none")]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                self.rebase_exit_codes[MILESTONE_WORKTREE] = STOPPED_ON_A_CONFLICT
 
-        # Act
-        rebased = self.rebase()
+                # Act
+                rebased = self.rebase(forge)
 
-        # Assert
-        self.assertIsNone(rebased)
+                # Assert
+                self.assertEqual(
+                    rebased,
+                    MilestoneRebaseLaunched(
+                        project="shop",
+                        milestone="M3",
+                        branch=MILESTONE_BRANCH,
+                        run="20261111T090000Z-1a2b3c",
+                        main_head="7d3f9a2",
+                        branch_head="5e2a7c1",
+                    ),
+                )
 
     def test_should_answer_no_rebase_when_a_live_run_holds_the_worktree_of_the_milestone_branch(self):
         # Arrange

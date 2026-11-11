@@ -547,9 +547,9 @@ def _rebase_milestone(runtime: Runtime, configuration: Configuration, action: Re
         launch_rebase_run=lambda run: launch_branch_rebase(runtime, configuration, run),
         read_login=lambda: read_cli_login(configuration, runtime),
     )
-    rebased = rebase_milestone_branches(runtime, rebase)
-    if rebased is not None:
-        append_event(runtime.paths, runtime.now, rebased)
+    outcome = rebase_milestone_branches(runtime, rebase)
+    if outcome is not None:
+        append_event(runtime.paths, runtime.now, outcome)
 
 
 def _cut_milestone_branch(runtime: Runtime, configuration: Configuration, action: CutMilestoneBranch) -> None:
