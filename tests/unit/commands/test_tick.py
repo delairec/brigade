@@ -3173,6 +3173,22 @@ BLOCKED_REBASE_OF_THE_MILESTONE_BRANCH = {
     **create_run_result(FIRST_RUN, "blocked", "2026-10-18T10:00:00Z"),
     "message": "Keep the guard of plan.py or drop it?\nbrigade-end: blocked",
 }
+LAUNCH_OF_THE_BLOCKED_REBASE_RUN_ON_THE_HEADS_THAT_STAND = {
+    "schema_version": 1,
+    "ts": "2026-10-18T09:45:00Z",
+    "event": "milestone.rebase_launched",
+    "project": "tidepool",
+    "milestone": "M4",
+    "branch": "integration/tides",
+    "run": FIRST_RUN,
+    "main_head": "8885daa",
+    "branch_head": "8885daa",
+}
+LAUNCH_OF_THE_BLOCKED_REBASE_RUN_BEFORE_MAIN_MOVED = {
+    **LAUNCH_OF_THE_BLOCKED_REBASE_RUN_ON_THE_HEADS_THAT_STAND,
+    "main_head": "4c1d2e0",
+}
+NO_LAUNCH_RECORDED = ()
 
 
 class MilestoneBranchRebasingRunnerDouble(ScriptedProcessRunner):
@@ -3240,7 +3256,9 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
             exit_code=1, stderr="CONFLICT (content): Merge conflict in src/tides.py"
         )
 
-    def _block_the_last_rebase_run(self) -> None:
+    def _block_the_last_rebase_run(
+        self, launches: tuple[dict, ...] = (LAUNCH_OF_THE_BLOCKED_REBASE_RUN_ON_THE_HEADS_THAT_STAND,)
+    ) -> None:
         blocked_run = {
             **create_run_record(FIRST_RUN, None, None),
             "slot": "rebase",
@@ -3248,7 +3266,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
             "worktree": str(self.worktree),
         }
         write_run(self.root / "state", blocked_run, BLOCKED_REBASE_OF_THE_MILESTONE_BRANCH)
-        write_ledger(self.root, [CUT_OF_M4, BLOCKED_REBASE_OF_THE_MILESTONE_BRANCH])
+        write_ledger(self.root, [CUT_OF_M4, *launches, BLOCKED_REBASE_OF_THE_MILESTONE_BRANCH])
 
     def test_should_rebase_the_milestone_branch_onto_main_before_the_wave_of_its_candidates_starts_on_it(self):
         # Act
@@ -3402,6 +3420,60 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         # Assert
         self.assertIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
         self.assertNotIn(REBASE_OF_THE_WAVE_BRANCH, self.machine.argvs)
+
+    def test_should_record_the_launch_of_the_rebase_run_of_the_milestone_branch_with_the_heads_it_starts_from(self):
+        # Arrange
+        self._stop_the_rebase_on_a_conflict()
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(
+            json.loads(ledger[1]),
+            {
+                "schema_version": 1,
+                "ts": ANY,
+                "event": "milestone.rebase_launched",
+                "project": "tidepool",
+                "milestone": "M4",
+                "branch": "integration/tides",
+                "run": self.spawn.argvs[0][-1],
+                "main_head": "8885daa",
+                "branch_head": "8885daa",
+            },
+        )
+
+    def test_should_rebase_no_milestone_branch_whose_rebase_run_ended_blocked_on_the_heads_that_stand(self):
+        # Arrange
+        self._block_the_last_rebase_run()
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertNotIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
+
+    def test_should_rebase_again_the_milestone_branch_whose_rebase_run_ended_blocked_once_main_moved(self):
+        # Arrange
+        self._block_the_last_rebase_run((LAUNCH_OF_THE_BLOCKED_REBASE_RUN_BEFORE_MAIN_MOVED,))
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
+
+    def test_should_rebase_again_the_milestone_branch_whose_blocked_rebase_run_recorded_no_heads(self):
+        # Arrange
+        self._block_the_last_rebase_run(NO_LAUNCH_RECORDED)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
 
     def test_should_name_on_stderr_the_milestone_branch_whose_rebase_run_ended_blocked_with_its_question(self):
         # Arrange

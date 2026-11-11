@@ -6539,3 +6539,38 @@ DECISION TheBranchOfAMilestoneIsReadAtItsRemoteRefFetchedAtEachReadAndABranchThe
 		REF @TASK.B242
 	SOURCE "@TASK.B242, its DESC 2 leaving the read to the delivery"
 		REF @TASK.B242
+
+DECISION ABlockedMilestoneRebaseIsHeldUntilTheMainOrTheMilestoneBranchMovesSinceItsLaunch
+	TITLE "a rebase run of a milestone branch that ended blocked holds the rebase of that branch"
+		+ "while the main branch and the milestone branch stand at the commits its launch recorded;"
+		+ "once either has moved, the next tick plans the rebase again"
+	STATUS active
+	DESC "each launch of a rebase run of a milestone branch, on a conflict or on a rebased head"
+		+ "that fails its checks, records milestone.rebase_launched with the run, the commit of the"
+		+ "main ref the rebase used and the commit of the milestone branch before the rebase"
+	DESC "the snapshot carries the blocked rebase of a milestone only when its last rebase run"
+		+ "ended blocked, a milestone.rebase_launched names that run, and the main ref and the"
+		+ "milestone ref resolve now to the commits it recorded; the plan rebases a milestone"
+		+ "branch behind main whose snapshot carries none"
+	DESC "a blocked run whose launch recorded no heads holds nothing: nothing says what it was"
+		+ "blocked on, so the branch is rebased once more and its next launch records them"
+	DESC "no command names a milestone: brigade wave requeue takes a wave and a task, brigade"
+		+ "rebase context and done the pull request of a task; a push to the milestone branch"
+		+ "releases the hold"
+	REJECTED "the blocked rebase of a milestone held for good, as"
+		+ "brigade/tick/plan.py:_is_rebase_due did: nothing answers it, and the milestone stays"
+		+ "behind main with no rebase planned"
+	REJECTED "the start time of the run compared with the dates of the commits of the two branches:"
+		+ "a commit date says when it was written, not when it reached the branch"
+	RATIONALE "the wave path releases a blocked rebase run on wave.resumed; a milestone rebase run"
+		+ "carries no wave, and its blocked end was read from the last run of the branch worktree"
+		+ "with nothing that ever cleared it"
+		REF @DECISION.AResumeOfAWaveAnswersEveryRebaseRunOfItEndedBlockedBeforeIt
+	RATIONALE "the analog of the hold of a parked task, released by a change of what its run read"
+		REF @DECISION.ATaskParkedOnTheQuestionOfItsRunIsHeldUntilItsEntityChangesOrARequeueReleasesIt
+	SOURCE "the ledger of 2026-11-09 to 2026-11-11: the rebase run 20261109T005056Z-1a10d2 of"
+		+ "integration/portability, @MILESTONE.M7, ended blocked on 2026-11-09, and every tick"
+		+ "since kept M7 behind main with no rebase planned"
+		REF @MILESTONE.M7
+	SOURCE "the session's brief of 2026-11-11 on the defect, with no TASK entity, as pull request"
+		+ "#396"

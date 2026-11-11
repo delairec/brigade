@@ -58,3 +58,15 @@ class LaunchBranchRebaseTest(unittest.TestCase):
         self.assertEqual(record["arguments"], {"base": "integration/dashboard"})
         self.assertEqual(record["wave"], "shop_w1")
         self.assertIsNone(record["task"])
+
+    def test_should_answer_the_id_of_the_run_it_started(self):
+        # Arrange
+        rebase = BranchRebaseRun(
+            project="shop", worktree=self.worktree, branch="integration/dashboard", base="main", wave=None
+        )
+
+        # Act
+        run = launch_branch_rebase(self.runtime, Configuration(), rebase)
+
+        # Assert
+        self.assertEqual(run, self.read_record()["run"])

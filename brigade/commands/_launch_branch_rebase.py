@@ -9,7 +9,7 @@ REBASE_PROCEDURE = "rebase-on-base"
 REBASE_SLOT = "rebase"
 
 
-def launch_branch_rebase(runtime: Runtime, configuration: Configuration, rebase: BranchRebaseRun) -> None:
+def launch_branch_rebase(runtime: Runtime, configuration: Configuration, rebase: BranchRebaseRun) -> str:
     rebasing = argparse.Namespace(
         procedure=configuration.procedures.get(REBASE_SLOT, REBASE_PROCEDURE),
         slot=REBASE_SLOT,
@@ -23,4 +23,4 @@ def launch_branch_rebase(runtime: Runtime, configuration: Configuration, rebase:
         detach=True,
         resume=False,
     )
-    run(rebasing, runtime)
+    return run(rebasing, runtime)["run"]

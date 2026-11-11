@@ -10,6 +10,7 @@ from brigade.ledger.milestone_closed import MilestoneClosed
 from brigade.ledger.milestone_created import MilestoneCreated
 from brigade.ledger.milestone_pr_described import MilestonePrDescribed
 from brigade.ledger.milestone_pr_opened import MilestonePrOpened
+from brigade.ledger.milestone_rebase_launched import MilestoneRebaseLaunched
 from brigade.ledger.milestone_rebased import MilestoneRebased
 from brigade.ledger.milestone_reported import MilestoneReported
 from brigade.ledger.order_done import OrderDone
@@ -59,6 +60,7 @@ AppendedEvent = (
     | MilestonePrOpened
     | MilestonePrDescribed
     | MilestoneRebased
+    | MilestoneRebaseLaunched
     | MilestoneClosed
     | MilestoneReported
     | TaskReported
