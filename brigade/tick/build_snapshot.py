@@ -68,7 +68,7 @@ from brigade.waves.list_tasks_of_reached_milestones import list_tasks_of_reached
 from brigade.waves.locate_branch_worktree import locate_branch_worktree
 from brigade.waves.locate_forge_branch import locate_forge_branch
 from brigade.waves.name_milestone_branch import name_milestone_branch
-from brigade.waves.prepare_wave_tree import locate_wave_branch_base, prepare_wave_tree
+from brigade.waves.prepare_wave_tree import WaveTreeReading, locate_wave_branch_base, prepare_wave_tree
 from brigade.waves.read_active_milestones import read_active_milestones
 from brigade.waves.read_project_tasks import ProjectTasks, ProjectTasksReading, read_project_tasks
 from brigade.waves.read_task_states import read_task_states
@@ -726,7 +726,11 @@ def _find_wave_base(project: Entity, tasks: tuple[TaskFacts, ...], milestone_bra
 
 def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveStarted) -> WaveFacts:
     project = find_project(reading.projects, started.project)
-    tree = prepare_wave_tree(runtime, reading.configuration, started)
+    tree = prepare_wave_tree(
+        runtime,
+        WaveTreeReading(configuration=reading.configuration, read_environment=reading.forge.read_environment),
+        started,
+    )
     tasks = {task.name: task for task in read_entities(runtime.run_process, tree.root, TASK_TYPE)}
     open_wave = _open_wave(runtime, reading, started, tree.root)
     wave_tasks = tuple(_read_wave_task(runtime, reading, open_wave, tasks[task]) for task in started.tasks)
@@ -1035,7 +1039,11 @@ def _read_integration_branches(
             state_root=runtime.paths.state_root,
             read_pull_request=reading.forge.read_pull_request,
             read_environment=reading.forge.read_environment,
-            locate_wave_base=lambda started: locate_wave_branch_base(runtime, configuration, started),
+            locate_wave_base=lambda started: locate_wave_branch_base(
+                runtime,
+                WaveTreeReading(configuration=configuration, read_environment=reading.forge.read_environment),
+                started,
+            ),
             is_alive=is_recorded_process_alive,
         ),
     )

@@ -158,15 +158,26 @@ class WaveRehearser:
         ended = [event["run"] for event in events if event["event"] in ("order.done", "order.parked")]
         return reported["run"] in ended
 
-    def tick_until_the_milestone_is_reported(self) -> None:
+    def read_task_states(self, task: str) -> list[str]:
+        return [
+            event["state"] for event in self.read_events() if event["event"] == "task.state" and event["task"] == task
+        ]
+
+    def has_the_wave_closed(self, wave: str) -> bool:
+        return any(event["event"] == "wave.closed" and event["wave"] == wave for event in self.read_events())
+
+    def tick_until(self, condition, failure: str) -> None:
         deadline = time.monotonic() + REHEARSAL_WAIT_S
-        while not self.is_milestone_reported():
+        while not condition():
             if time.monotonic() > deadline:
-                self.registrar.fail(f"the milestone was never reported: {self.run_brigade('tick', '--dry-run').stdout}")
+                self.registrar.fail(f"{failure}: {self.run_brigade('tick', '--dry-run').stdout}")
             completed = self.run_brigade("tick", "--once")
             if completed.returncode != 0:
                 self.registrar.fail(completed.stderr)
             self.list_finished_runs()
+
+    def tick_until_the_milestone_is_reported(self) -> None:
+        self.tick_until(self.is_milestone_reported, "the milestone was never reported")
         self.wait_until(self.has_the_report_ended, "the report of the milestone never ended")
 
     def read_remote_file(self, branch: str, path: str) -> str:

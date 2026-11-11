@@ -8,6 +8,7 @@ from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import create_machine_double, write_ledger
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.forge_double import ForgeDouble
 
 THE_TASK_OF_THE_BRANCH = None
 MAIN_BRANCH_CHECKOUT = {
@@ -247,4 +248,57 @@ class TaskContextOfABuildRunTest(unittest.TestCase):
                 "reserved": {"task_number": 191, "temporary_directory": None, "attribution": []},
                 "when_done": ["brigade task check", "brigade task pr", "brigade task promote"],
             },
+        )
+
+
+CLI_ACCOUNT_BOUND = '[forge_accounts]\ncli = "octo-bot"\n'
+TIDEPOOL_ON_GITHUB_CORPUS = {
+    **TIDEPOOL_CORPUS,
+    "PROJECT": {"tidepool": (*TIDEPOOL_CORPUS["PROJECT"]["tidepool"], ("FORGE", "github"))},
+}
+TASK_CHECKOUT_ON_GITHUB = {**TASK_CHECKOUT, ("git", "fetch"): ""}
+
+
+def _answer_the_token_of_the_login(request: dict) -> dict:
+    return {"schema_version": 1, "environment": {"GH_TOKEN": f"token-of-{request['login']}"}}
+
+
+def _answer_the_login_of_the_token(request: dict) -> dict:
+    return {"schema_version": 1, "login": request["environment"]["GH_TOKEN"].removeprefix("token-of-")}
+
+
+class TaskContextOfABuildRunOnGithubTest(unittest.TestCase):
+    def setUp(self):
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (root / "config").mkdir()
+        (root / "config" / "config.toml").write_text(CLI_ACCOUNT_BOUND, encoding="utf-8")
+        (root / "config" / "_schema.awawa").write_text("", encoding="utf-8")
+        (root / "cache" / "refs" / "tidepool" / "8885daa").mkdir(parents=True)
+        write_ledger(root, [TIDEPOOL_MILESTONE_BRANCH_CUT, TIDEPOOL_WAVE_STARTED])
+        self.answer_process = create_machine_double(TIDEPOOL_ON_GITHUB_CORPUS, TASK_CHECKOUT_ON_GITHUB)
+        self.environments = {}
+        forge = ForgeDouble(
+            {
+                "read_login_environment": _answer_the_token_of_the_login,
+                "describe_account": _answer_the_login_of_the_token,
+            }
+        )
+        self.runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=self.record_and_answer,
+            resolve_plugin=lambda kind, name, **places: forge,
+        )
+
+    def record_and_answer(self, request):
+        self.environments[request.argv] = request.environment
+        return self.answer_process(request)
+
+    def test_should_fetch_the_base_of_the_task_as_the_login_bound_to_the_cli_account(self):
+        # Act
+        COMMAND.run(Namespace(task=THE_TASK_OF_THE_BRANCH), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.environments[("git", "fetch", "--quiet", "origin", "integration/tides")],
+            {"GH_TOKEN": "token-of-octo-bot"},
         )

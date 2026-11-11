@@ -126,7 +126,7 @@ MILESTONE M10
 MILESTONE M11
 	TITLE "Waves read at the forge branch"
 	SUBJECT "read the branch of a milestone as the forge holds it"
-	STATUS active
+	STATUS reached
 	DESC "a milestone delivered alone, as DESC 5 of"
 		+ "@DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce provides for"
 		+ "a change the tick itself needs: @TASK.B242, without which a wave of @MILESTONE.M7 waits"
