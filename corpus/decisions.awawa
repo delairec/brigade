@@ -6861,3 +6861,21 @@ DECISION TheMilestoneReportOfForgeNoneCollectsNoPullRequestAndCommitsOnTheClone
 		REF @TASK.B232
 	SOURCE "the build run of @TASK.B240, step 3, on 2026-11-08"
 		REF @TASK.B240
+
+DECISION InitRefusesToReplaceAnOriginAtAnotherUrl
+	TITLE "brigade init --remote <url> refuses a configuration repository whose origin is set at"
+		+ "another url, exits 1 and names git -C <config root> remote set-url origin <url>; an"
+		+ "origin already at the url is reported present"
+	STATUS active
+	DESC "binds SPEC 4 of @TASK.B177"
+		REF @TASK.B177
+	REJECTED "init replacing the origin with the url given: the origin of the configuration"
+		+ "repository may hold the history of another machine, and init rewrites nothing it did not"
+		+ "create"
+	RATIONALE "brigade init leaves a file that differs from the shipped one as it is and reports"
+		+ "it, never overwriting what the user set; an origin set at another url is the same case,"
+		+ "and the command that replaces it is the user's to run"
+		REF @TASK.B177
+	SOURCE "the build run of @TASK.B177 of 2026-11-11, SPEC 4 naming no behaviour for an origin"
+		+ "already set"
+		REF @TASK.B177
