@@ -6574,3 +6574,51 @@ DECISION ABlockedMilestoneRebaseIsHeldUntilTheMainOrTheMilestoneBranchMovesSince
 		REF @MILESTONE.M7
 	SOURCE "the session's brief of 2026-11-11 on the defect, with no TASK entity, as pull request"
 		+ "#396"
+
+DECISION TheMilestoneReportOfForgeNoneIsPublishedOnTheLocalBranchesWhetherOrNotTheCloneHasAnOrigin
+	TITLE "on a project of FORGE none the milestone report and STATUS reached are published on the"
+		+ "local branches of the clone, with no fetch and no push, whether or not the clone has an"
+		+ "origin; on a project of FORGE github they are committed on a detached checkout of"
+		+ "origin/<branch> and pushed to origin"
+	STATUS active
+	DESC "on both forges the publication succeeds while a worktree holds the branch of the"
+		+ "milestone, and publishes over what an interrupted attempt left behind"
+	DESC "under FORGE github the publication is that of pull request #388, fafeb90a:"
+		+ ".brigade/worktrees/integration-<slug> holds the branch and its checkout is left as it"
+		+ "stands, the detached checkout is cut from origin/<branch> over the one an interrupted"
+		+ "attempt left behind, and its head pushed to origin"
+	DESC "under FORGE none the publication is the local one of @TASK.B240: it commits in the"
+		+ "worktree that holds the branch of the milestone, opened where none holds it, over what"
+		+ "an interrupted attempt left in it"
+		REF @TASK.B240
+	DESC "the tests of the detached checkout pushed to origin, the four of"
+		+ "tests/integration/studies/test_publish_milestone_report.py since #388, keep their goals"
+		+ "and run on a fixture of FORGE github, the fake forge over a bare remote that"
+		+ "tests/cli/wave_rehearser.py runs; a worktree holding the branch and what an interrupted"
+		+ "attempt left each have a counterpart of FORGE none against the code of @TASK.B240"
+		REF @TASK.B240
+	DESC "refines DESC 3 of"
+		+ "@DECISION.AMilestoneReportIsBuiltOnceItsTasksAreMergedOrParkedAndIsTheBodyOfItsPullRequest:"
+		+ "the fetch from origin and the push it names are those of FORGE github"
+		REF @DECISION.AMilestoneReportIsBuiltOnceItsTasksAreMergedOrParkedAndIsTheBodyOfItsPullRequest
+	REJECTED "the fetch and the push of #388 under FORGE none where the clone has an origin: a"
+		+ "project of FORGE none keeps its local integration branch, as already ruled"
+	REJECTED "a publication that depends on the presence of origin: two publication modes for one"
+		+ "value of FORGE, and FORGE none would push to a remote the project declared absent"
+	RATIONALE "#388, written on main with fixtures of FORGE none that have an origin, and"
+		+ "@TASK.B240, written on integration/portability, each publish the report of a project of"
+		+ "FORGE none their own way, and the rebase of the branch of @MILESTONE.M7 onto main met"
+		+ "both; the report follows the integration branch, which"
+		+ "@DECISION.ATaskBranchIsCutRebasedAndCheckedAgainstTheIntegrationBranchOfTheForge keeps"
+		+ "local under FORGE none"
+		REF @TASK.B240
+		REF @MILESTONE.M7
+		REF @DECISION.ATaskBranchIsCutRebasedAndCheckedAgainstTheIntegrationBranchOfTheForge
+	SOURCE "the session's ruling of 2026-11-11 on the question of run 20261109T005056Z-1a10d2, the"
+		+ "rebase of integration/portability onto origin/main, « Il faut décider lequel gagne dans"
+		+ "ce cas, ou si le comportement dépend de la présence de `origin`. »: read from"
+		+ "@DECISION.ATaskBranchIsCutRebasedAndCheckedAgainstTheIntegrationBranchOfTheForge, the"
+		+ "only alternative the recorded decisions leave"
+		REF @DECISION.ATaskBranchIsCutRebasedAndCheckedAgainstTheIntegrationBranchOfTheForge
+		REF @TASK.B240
+		REF @MILESTONE.M7
