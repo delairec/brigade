@@ -10,6 +10,7 @@ from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_project_forge import NO_FORGE, read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
+from brigade.runs.locate_source_worktree import locate_source_worktree
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 from brigade.system.read_text_file import read_text_file
@@ -53,12 +54,12 @@ def _read_verdict(path: Path) -> dict:
 def verify_verdict(request: argparse.Namespace, runtime: Runtime) -> dict:
     verdict = _read_verdict(Path(request.file))
     run_process = runtime.run_process
-    project = require_project_at(
-        read_projects(runtime), locate_main_checkout(run_process, locate_worktree_root(run_process, Path.cwd()))
-    )
+    root = locate_worktree_root(run_process, Path.cwd())
+    project = require_project_at(read_projects(runtime), locate_main_checkout(run_process, root))
     forge_name = read_project_forge(project)
     if forge_name == NO_FORGE:
-        worktree = locate_task_worktree(runtime, Path.cwd(), NAMED_BY_THE_BRANCH)
+        source = locate_source_worktree(runtime.paths, root)
+        worktree = locate_task_worktree(runtime, source, NAMED_BY_THE_BRANCH)
         return {"schema_version": DOCUMENT_SCHEMA_VERSION, **record_local_verdict(runtime, worktree, verdict)}
     if request.pr is None:
         raise BrigadeError(

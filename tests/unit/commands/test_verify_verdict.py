@@ -14,7 +14,8 @@ from brigade.ledger.read_ledger import LedgerReading, read_ledger
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_started import WaveStarted
-from tests.unit.commands.command_runtime import create_machine_double, write_ledger
+from tests.unit.commands.command_runtime import create_machine_double, create_worktrees_double, write_ledger
+from tests.unit.commands.run_directories import create_run_record
 from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -280,3 +281,82 @@ class VerifyVerdictOfATaskWithoutAForgeTest(unittest.TestCase):
             str(raised.exception),
             "the verdict judged 4c1d2e0, no longer the head of feature/T7-tide-table, now 8885daa",
         )
+
+
+class VerifyVerdictFromTheDisposableWorktreeOfAReadingRunTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        (self.root / "config").mkdir()
+        (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
+        write_ledger(self.root, [WAVE_STARTED])
+        self.verdict = self.root / "verdict.json"
+        self.verdict.write_text(json.dumps(PASS), encoding="utf-8")
+        self.run_directory = self.root / "state" / "runs" / "20261111T090000Z-e10d04"
+        self.run_directory.mkdir(parents=True)
+        self.disposable_worktree = self.run_directory / "worktree"
+        self.corpus = {"PROJECT": {"tidepool": LOCAL_PROJECT}, "TASK": {"T7": ()}, "POLICY": {}}
+        self.no_pull_request = None
+
+    def write_run_record(self, worktree: str) -> None:
+        record = {
+            **create_run_record("20261111T090000Z-e10d04", "tidepool_w16", "T7"),
+            "slot": "review",
+            "cwd": "/srv/tidepool-T7",
+            "worktree": worktree,
+        }
+        (self.run_directory / "run.json").write_text(json.dumps(record), encoding="utf-8")
+
+    def create_runtime(self, shell_worktree: str):
+        detached = {
+            ("git", "rev-parse", "--show-toplevel"): f"{shell_worktree}\n",
+            ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): "/srv/tidepool/.git\n",
+            ("git", "branch", "--show-current"): "\n",
+            ("git", "rev-parse", "HEAD"): "8885daa\n",
+        }
+        run_process = create_worktrees_double(
+            self.corpus,
+            {
+                str(Path.cwd()): detached,
+                shell_worktree: detached,
+            },
+            LOCAL_TASK_WORKTREE,
+        )
+        paths = create_test_paths(self.root, run_directory=self.run_directory)
+        return create_test_runtime(paths, run_process=run_process)
+
+    def test_should_record_the_verdict_of_the_task_of_the_worktree_the_run_was_cut_from(self):
+        # Arrange
+        self.write_run_record(str(self.disposable_worktree))
+        runtime = self.create_runtime(str(self.disposable_worktree))
+
+        # Act
+        COMMAND.run(Namespace(pr=self.no_pull_request, file=str(self.verdict)), runtime)
+
+        # Assert
+        self.assertEqual(
+            read_ledger(self.root / "state").entries[-1].event,
+            TaskVerdict(
+                project="tidepool",
+                wave="tidepool_w16",
+                task="T7",
+                pr=None,
+                head="8885daa",
+                verdict="pass",
+                findings=(),
+                login=None,
+            ),
+        )
+
+    def test_should_read_the_branch_of_a_worktree_the_run_does_not_read(self):
+        # Arrange
+        self.write_run_record(str(self.disposable_worktree))
+        runtime = self.create_runtime("/srv/tidepool-scratch")
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            COMMAND.run(Namespace(pr=self.no_pull_request, file=str(self.verdict)), runtime)
+
+        # Assert
+        self.assertEqual(str(raised.exception), "the branch  is not a <prefix>/<task>-<slug> branch")

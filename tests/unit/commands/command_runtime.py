@@ -66,6 +66,12 @@ def create_machine_double(entities: dict, outputs: dict):
     return ScriptedProcessRunner(answers, fallback=create_corpus_double(entities)).run
 
 
+def create_worktrees_double(corpus: dict, outputs_of_each_worktree: dict, outputs_elsewhere: dict):
+    runners = {cwd: create_machine_double(corpus, outputs) for cwd, outputs in outputs_of_each_worktree.items()}
+    run_elsewhere = create_machine_double(corpus, outputs_elsewhere)
+    return lambda request: runners.get(request.cwd, run_elsewhere)(request)
+
+
 def write_operational_corpus(root: Path) -> None:
     (root / "config").mkdir(parents=True, exist_ok=True)
     (root / "config" / "_schema.awawa").write_text("", encoding="utf-8")

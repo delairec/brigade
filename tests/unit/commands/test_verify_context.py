@@ -1,4 +1,5 @@
 import argparse
+import json
 import tempfile
 import unittest
 from argparse import Namespace
@@ -9,6 +10,7 @@ from brigade.commands.verify_context import COMMAND
 from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import (
     create_machine_double,
+    create_worktrees_double,
     write_ledger,
     write_operational_corpus,
 )
@@ -21,6 +23,7 @@ from tests.unit.commands.test_verify_preflight import (
     WAVE_STARTED,
     ForgeDeclineDouble,
 )
+from tests.unit.commands.run_directories import create_run_record
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
@@ -298,3 +301,48 @@ class VerifyContextOfATaskWithoutAForgeTest(unittest.TestCase):
             document["diff"],
             {"command": f"git diff {MERGE_BASE} {TASK_HEAD}", "exit_code": 0, "stderr": "", "output": "+def tide():\n"},
         )
+
+
+class VerifyContextFromTheDisposableWorktreeOfAReadingRunTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
+        for ref in (TASK_HEAD, MERGE_BASE):
+            (self.root / "cache" / "refs" / "tidepool" / ref).mkdir(parents=True)
+        write_ledger(self.root, [WAVE_STARTED])
+        run_directory = self.root / "state" / "runs" / "20261111T090000Z-e10d04"
+        run_directory.mkdir(parents=True)
+        disposable_worktree = str(run_directory / "worktree")
+        record = {
+            **create_run_record("20261111T090000Z-e10d04", "tidepool_w16", "T7"),
+            "slot": "review",
+            "cwd": "/srv/tidepool-T7",
+            "worktree": disposable_worktree,
+        }
+        (run_directory / "run.json").write_text(json.dumps(record), encoding="utf-8")
+        detached = {
+            ("git", "rev-parse", "--show-toplevel"): f"{disposable_worktree}\n",
+            ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): "/srv/tidepool/.git\n",
+            ("git", "branch", "--show-current"): "\n",
+        }
+        corpus = {"PROJECT": {"tidepool": LOCAL_PROJECT}, "TASK": {"T7": ()}, "POLICY": {}}
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root, run_directory=run_directory),
+            run_process=create_worktrees_double(
+                corpus,
+                {str(Path.cwd()): detached, disposable_worktree: detached},
+                LOCAL_TASK_WORKTREE,
+            ),
+            resolve_plugin=RefusingForgeResolverDouble(),
+        )
+        self.no_pull_request = None
+
+    def test_should_judge_the_task_of_the_worktree_the_run_was_cut_from(self):
+        # Act
+        document = COMMAND.run(Namespace(pr=self.no_pull_request), self.runtime)
+
+        # Assert
+        self.assertEqual(document["task"], "T7")
