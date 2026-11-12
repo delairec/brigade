@@ -7,6 +7,7 @@ ANSWER_TYPE = "REPORT"
 ACTIVE = "active"
 TASK_REFERENCE_PREFIX = "@TASK."
 ENTITY_SEPARATOR = ","
+PULL_REQUEST_COLLECTORS = {True: ("pr-list state=all",), False: ()}
 
 
 def describe_milestone_report(order: MilestoneReportOrder) -> Study:
@@ -20,7 +21,7 @@ def describe_milestone_report(order: MilestoneReportOrder) -> Study:
         ),
         collectors=(
             *(f"ledger wave={wave}" for wave in order.waves),
-            "pr-list state=all",
+            *PULL_REQUEST_COLLECTORS[order.reads_pull_requests],
             f"corpus ref={order.branch} entities={tasks}",
             f"git-diff-stat to={order.branch}",
         ),

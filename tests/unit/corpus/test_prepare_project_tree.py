@@ -10,7 +10,7 @@ from pathlib import Path
 
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.prepare_tree import Tree
-from brigade.errors import BrigadeError
+from brigade.errors import BrigadeError, ToolFailure
 from brigade.system.parse_configuration import Configuration
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -30,6 +30,57 @@ class ArchivingProcessRunnerDouble(RecordingProcessRunner):
                 member.size = len(b"# shop\n")
                 archive.addfile(member, io.BytesIO(b"# shop\n"))
         return record
+
+
+class PrepareProjectTreeOfACorpusModeTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.root)
+        self.worktree = self.root / "b42"
+        self.worktree.mkdir()
+        self.paths = create_test_paths(self.root)
+        self.paths.config_root.mkdir(parents=True)
+        self.paths.schema_file.write_text("SCHEMA PROJECT\n")
+        self.request = Namespace(project="shop", ref=None, worktree=self.worktree)
+
+    def prepare(self, fields: dict):
+        runner = RecordingProcessRunner(
+            {
+                **create_registry_answers(self.paths.config_root, {"shop": {"PATH": "/srv/shop", **fields}}),
+                ("git", "worktree", "list", "--porcelain", "-z"): ProcessAnswer(
+                    stdout=f"worktree {self.worktree}\0HEAD 2222222\0branch refs/heads/feat/b42\0\0"
+                ),
+            }
+        )
+        return prepare_project_tree(self.request, Configuration(), create_test_runtime(self.paths, run_process=runner))
+
+    def test_should_answer_the_folder_of_the_area_as_the_root_of_the_tree(self):
+        # Arrange
+        (self.worktree / "brigade").mkdir()
+
+        # Act
+        tree = self.prepare({"MODE": "area", "CORPUS": "brigade"})
+
+        # Assert
+        self.assertEqual(tree.root, self.worktree / "brigade")
+
+    def test_should_refuse_an_area_absent_from_the_tree(self):
+        # Act
+        with self.assertRaises(ToolFailure) as refusal:
+            self.prepare({"MODE": "area", "CORPUS": "brigade"})
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception), "the area brigade of @PROJECT.shop is absent at 2222222: its branch is not merged"
+        )
+
+    def test_should_refuse_a_project_whose_corpus_mode_is_none(self):
+        # Act
+        with self.assertRaises(ToolFailure) as refusal:
+            self.prepare({"MODE": "none"})
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "@PROJECT.shop is in MODE none, which brigade does not deliver yet")
 
 
 class PrepareProjectTreeTest(unittest.TestCase):

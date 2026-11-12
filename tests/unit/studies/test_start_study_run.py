@@ -74,6 +74,7 @@ class StartStudyRunTest(unittest.TestCase):
                     "branch": "integration/hardening",
                     "waves": ["oak_w2"],
                     "tasks": ["B17"],
+                    "reads_pull_requests": True,
                 },
                 "task": None,
             },

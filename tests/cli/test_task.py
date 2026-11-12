@@ -70,6 +70,8 @@ class TaskContextTestCase(unittest.TestCase):
             "project",
             "add",
             str(self.project.path),
+            "--corpus-mode",
+            "control",
             *self.describe_project_commands(),
         )
         self.wave_started = self.state / "ledger" / "2026-10.jsonl"

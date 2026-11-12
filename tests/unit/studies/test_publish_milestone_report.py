@@ -1,3 +1,4 @@
+import fcntl
 import tempfile
 import unittest
 from collections.abc import Callable
@@ -13,8 +14,10 @@ from brigade.studies.convert_study import Study
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.publish_milestone_report import publish_milestone_report
 from brigade.studies.study_run_context import StudyRunContext
+from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
+from brigade.waves.locate_branch_worktree import locate_branch_worktree
 from tests.unit.forge_double import ForgeDouble
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
@@ -302,17 +305,6 @@ class PublishMilestoneReportTest(unittest.TestCase):
             ],
         )
 
-    def test_should_open_no_pull_request_on_a_project_without_a_forge(self):
-        # Arrange
-        context = self.create_context("none")
-
-        # Act
-        published = publish_milestone_report(context)
-
-        # Assert
-        self.assertEqual(published, {"report": REPORT_PATH, "branch": BRANCH, "pull_request": None})
-        self.assertEqual(self.forge.list_operations(), [])
-
     def test_should_commit_the_report_then_the_reached_milestone_on_its_branch_push_both_and_remove_its_checkout(self):
         # Arrange
         context = self.create_context("github")
@@ -454,12 +446,91 @@ class PublishMilestoneReportTest(unittest.TestCase):
             'MILESTONE M6\n\tTITLE "Hardening"\n\tSTATUS reached\n',
         )
 
-    def test_should_commit_the_reached_milestone_on_its_branch_on_a_project_without_a_forge(self):
+
+def is_lock_held(path: Path) -> bool:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as probe:
+        try:
+            fcntl.flock(probe, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        fcntl.flock(probe, fcntl.LOCK_UN)
+        return False
+
+
+class PublishMilestoneReportOfAProjectWithoutAForgeTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        self.processes = ScriptedProcesses()
+        write_operational_corpus(self.root)
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
+        self.run_directory = self.root / "state" / "runs" / RUN_ID
+        self.worktree_root = str(self.root / "worktrees")
+        self.checkout = locate_branch_worktree(Path("/srv/oak"), self.worktree_root, BRANCH)
+        self.processes.answer(("git", "worktree", "list", "--porcelain", "-z"), stdout="")
+        self.processes.answer(("git", "worktree", "add", "--quiet", str(self.checkout), BRANCH))
+        self.processes.answer(("git", "reset", "--quiet", "--hard", BRANCH))
+        self.processes.answer(("git", "switch", "--quiet", "--force-create", BRANCH))
+        self.processes.answer(("git", "add", "--", REPORT_PATH))
+        self.processes.answer(("git", "diff", "--cached", "--quiet", "--", REPORT_PATH), exit_code=1)
+        self.processes.answer(("git", "commit", "--quiet", "-m", "docs(milestones): add the report of M6"))
+        self.processes.answer_json(
+            ("awawa", "show", "@MILESTONE.M6", "--json", str(self.checkout)),
+            {"file": str(self.checkout / MILESTONES_PATH), "fields": []},
+        )
+        self.processes.answer_corpus_change(self.checkout, (MILESTONES_PATH,), REACHED_MESSAGE)
+        (self.checkout / "corpus").mkdir(parents=True)
+        (self.checkout / MILESTONES_PATH).write_text(MILESTONE_M6_ACTIVE, encoding="utf-8")
+
+    def create_context(self) -> StudyRunContext:
+        self.processes.answer_entities(
+            self.runtime.paths.config_root,
+            "PROJECT",
+            {"oak": (("PATH", "/srv/oak"), ("FORGE", "none"), ("CORPUS", "corpus"), ("MAIN", "main"))},
+        )
+        equipment = create_study_equipment(
+            collector_equipment=CollectorEquipment(
+                configuration=Configuration(worktree_root=self.worktree_root),
+                forge=None,
+                forge_name="none",
+                resolve_client=None,
+            ),
+            document=DocumentDouble(),
+            resolve_forge={}.__getitem__,
+        )
+        return StudyRunContext(
+            runtime=self.runtime, study=STUDY, run_id=RUN_ID, run_directory=self.run_directory, equipment=equipment
+        )
+
+    def test_should_commit_the_report_on_the_branch_in_the_worktree_of_the_branch_and_push_nothing(self):
         # Arrange
-        context = self.create_context("none")
+        context = self.create_context()
+
+        # Act
+        published = publish_milestone_report(context)
+
+        # Assert
+        self.assertEqual(published, {"report": REPORT_PATH, "branch": BRANCH, "pull_request": None})
+        self.assertEqual((self.checkout / REPORT_PATH).read_text(encoding="utf-8"), MARKDOWN)
+        self.assertNotIn(("git", "push", "--quiet", "origin", BRANCH), self.processes.list_argvs())
+        self.assertNotIn(("git", "worktree", "remove", "--force", str(self.checkout)), self.processes.list_argvs())
+        self.assertIn(("git", "commit", "--quiet", "-m", REACHED_MESSAGE), self.processes.list_argvs())
+
+    def test_should_hold_the_worktrees_lock_from_the_opening_of_the_worktree_to_the_reached_milestone(self):
+        # Arrange
+        context = self.create_context()
+        lock = locate_worktrees_lock(self.runtime.paths.lock_directory, "oak")
+        held = []
+
+        def note_the_lock(request: ProcessRequest) -> tuple[int, str, str]:
+            held.append(is_lock_held(lock))
+            return 0, "", ""
+
+        self.processes.answer_by(("git", "worktree", "add", "--quiet", str(self.checkout), BRANCH), note_the_lock)
+        self.processes.answer_by(("git", "commit", "--quiet", "-m", REACHED_MESSAGE), note_the_lock)
 
         # Act
         publish_milestone_report(context)
 
         # Assert
-        self.assertIn(("git", "commit", "--quiet", "-m", REACHED_MESSAGE), self.processes.list_argvs())
+        self.assertEqual(held, [True, True])

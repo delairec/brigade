@@ -4,7 +4,7 @@ from brigade.git.find_merge_base import find_merge_base
 from brigade.git.list_added_lines import list_added_lines
 from brigade.git.list_changed_files import list_changed_files
 from brigade.git.resolve_commit import resolve_commit
-from brigade.registry.is_on_github import is_on_github
+from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.runtime import Runtime
 from brigade.system.run_process import ProcessRecord
 from brigade.system.write_json_atomically import write_json_atomically
@@ -56,7 +56,7 @@ def _require_worktree_at_head(runtime: Runtime, worktree: TaskWorktree) -> None:
 
 
 def _locate_start(worktree: TaskWorktree) -> str:
-    if is_on_github(worktree.project):
+    if is_on_a_forge(worktree.project):
         return f"{REMOTE}/{worktree.base}"
     return worktree.base
 

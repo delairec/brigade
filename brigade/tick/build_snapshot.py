@@ -1,5 +1,6 @@
 import argparse
 import dataclasses
+import functools
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -11,6 +12,7 @@ from brigade.corpus.read_entities import Entity, read_entities
 from brigade.corpus.read_entity import read_entity
 from brigade.errors import BrigadeError, CommandFailed, TaskTypeMissing, ToolFailure
 from brigade.git.check_ancestor import check_ancestor
+from brigade.git.describe_merge_command import describe_merge_command
 from brigade.git.has_uncommitted_changes import has_uncommitted_changes
 from brigade.git.resolve_commit import resolve_commit
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
@@ -32,7 +34,7 @@ from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.find_project import find_project
-from brigade.registry.is_on_github import is_on_github
+from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_policy_field import read_policy_field
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
@@ -54,7 +56,7 @@ from brigade.tick.decide_resume_at import decide_resume_at
 from brigade.tick.describe_study_facts import describe_study_facts
 from brigade.tick.is_milestone_rebase_held import MilestoneHeads, is_milestone_rebase_held
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
-from brigade.tick.name_task_branch import name_task_branch
+from brigade.tick.name_branch_of_task import name_branch_of_task
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
 from brigade.tick.read_integration_branches import (
     IntegrationBranchFacts,
@@ -63,12 +65,14 @@ from brigade.tick.read_integration_branches import (
 )
 from brigade.tick.study_facts import StudyFacts
 from brigade.waves.count_repair_rounds import count_repair_rounds
+from brigade.waves.describe_milestone_merge import describe_milestone_merge
 from brigade.waves.find_milestone_branch import find_milestone_branch
 from brigade.waves.is_requeue import is_requeue
 from brigade.waves.list_candidate_waves import CandidateWave, list_candidate_waves
 from brigade.waves.list_tasks_of_reached_milestones import list_tasks_of_reached_milestones
 from brigade.waves.locate_branch_worktree import locate_branch_worktree
 from brigade.waves.locate_forge_branch import locate_forge_branch
+from brigade.waves.locate_merge_worktree import locate_merge_worktree
 from brigade.waves.name_milestone_branch import name_milestone_branch
 from brigade.waves.prepare_wave_tree import WaveTreeReading, locate_wave_branch_base, prepare_wave_tree
 from brigade.waves.read_active_milestones import read_active_milestones
@@ -87,12 +91,10 @@ NO_CHECK_RUNS = "none"
 AFTER_FIELD = "AFTER"
 TASK_PREFIX = "@TASK."
 MILESTONE_FIELD = "MILESTONE"
-TYPE_FIELD = "TYPE"
 TITLE_FIELD = "TITLE"
 MILESTONE_PREFIX = "@MILESTONE."
 MILESTONE_TYPE = "MILESTONE"
 NO_MILESTONE = None
-TITLE_FIELD = "TITLE"
 PROJECT_SLOTS = 4
 QUEUED_STATE = "queued"
 SETTLED_STATES = ("merged", "parked")
@@ -188,6 +190,10 @@ class TaskFacts:
     milestone: str | None = None
     amendment: TaskAmendment | None = None
     reported: bool = False
+    delivered_head: str | None = None
+    merge_command: str | None = None
+    merged_into_target: bool = False
+    merge_worktree_to_open: str | None = None
 
     def to_document(self) -> dict:
         return {
@@ -323,6 +329,8 @@ class MilestoneFacts:
     tasks: tuple[str, ...] = ()
     reported: bool = False
     described_head: str | None = None
+    merge_command: str | None = None
+    merged_into_main: bool = False
 
     def to_document(self) -> dict:
         return {
@@ -379,17 +387,10 @@ def _read_milestone(task: Entity) -> str | None:
     return None if milestone is None else milestone.removeprefix(MILESTONE_PREFIX)
 
 
-def _name_task_branch(task: Entity) -> str:
-    task_type = read_project_field(task, TYPE_FIELD)
-    if task_type is None:
-        raise TaskTypeMissing(f"@TASK.{task.name} carries no TYPE to name its branch")
-    return name_task_branch(task_type, task.name, read_project_field(task, TITLE_FIELD))
-
-
 def _read_task_facts(runtime: Runtime, root: Path, task: Entity) -> TaskFacts:
     return TaskFacts(
         name=task.name,
-        branch=_name_task_branch(task),
+        branch=name_branch_of_task(task),
         after=tuple(field.value.removeprefix(TASK_PREFIX) for field in task.fields if field.name == AFTER_FIELD),
         blocked_by=runtime.read_live_blockers(runtime.run_process, root, task.name),
         milestone=_read_milestone(task),
@@ -449,7 +450,7 @@ def _list_preflight_failures(preflighted: TaskPreflighted) -> tuple[PreflightFai
 @dataclass(frozen=True)
 class ForgeReaders:
     read_pull_request: Callable[[str, str], PullRequestFacts | None]
-    read_environment: Callable[[str], dict]
+    read_environment: Callable[[Entity, str], dict]
 
 
 @dataclass(frozen=True)
@@ -635,6 +636,16 @@ def _locate_wave_repository(reading: WaveReading, started: WaveStarted) -> Path:
     return Path(read_project_field(find_project(reading.projects, started.project), PATH_FIELD))
 
 
+def _read_no_pull_request(repository: str, branch: str) -> None:
+    return None
+
+
+def _choose_pull_request_reader(reading: WaveReading, started: WaveStarted) -> Callable:
+    if is_on_a_forge(find_project(reading.projects, started.project)):
+        return reading.forge.read_pull_request
+    return _read_no_pull_request
+
+
 def _read_preflighted_heads(events: tuple, wave: str) -> dict:
     return {event.task: event.head for event in events if isinstance(event, TaskPreflighted) and event.wave == wave}
 
@@ -676,7 +687,7 @@ def _follow_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, s
         },
         repair_rounds=count_repair_rounds(reading.entries, reading.runs, wave),
         reported_tasks=_read_reported_tasks(reading.events, started.project),
-        read_pull_request=reading.forge.read_pull_request,
+        read_pull_request=_choose_pull_request_reader(reading, started),
         run_process=runtime.run_process,
     )
 
@@ -701,13 +712,61 @@ def _note_amendment(task: TaskFacts, on_pull_request: Entity | None, on_wave: En
     return dataclasses.replace(task, amendment=TaskAmendment(on_pull_request=on_pull_request, on_wave=on_wave))
 
 
+def _is_delivered_by_a_build_run(reading: WaveReading, open_wave: _OpenWave, task: TaskFacts) -> bool:
+    finished = [event for event in reading.events if isinstance(event, RunFinished) and event.run == task.last_run]
+    return (
+        not is_on_a_forge(find_project(reading.projects, open_wave.started.project))
+        and not task.last_run_is_a_rebase
+        and bool(finished)
+        and finished[-1].outcome == DONE_OUTCOME
+    )
+
+
+def _note_head_delivered_for_a_milestone(
+    reading: WaveReading, open_wave: _OpenWave, task: TaskFacts, head: str
+) -> TaskFacts:
+    followed = open_wave.followed
+    branch = find_milestone_branch(reading.entries, open_wave.started.project, task.milestone)
+    if branch is None:
+        return dataclasses.replace(task, delivered_head=head)
+    worktree = locate_merge_worktree(
+        followed.run_process, followed.repository, reading.configuration.worktree_root, branch
+    )
+    return dataclasses.replace(
+        task,
+        delivered_head=head,
+        merge_command=describe_merge_command(worktree.path, task.branch),
+        merged_into_target=check_ancestor(followed.run_process, followed.repository, head, branch).exit_code
+        == DESCENDING,
+        merge_worktree_to_open=None if worktree.opened else str(worktree.path),
+    )
+
+
+def _note_delivered_head(reading: WaveReading, open_wave: _OpenWave, task: TaskFacts) -> TaskFacts:
+    if not _is_delivered_by_a_build_run(reading, open_wave, task):
+        return task
+    followed = open_wave.followed
+    head = resolve_commit(followed.run_process, followed.repository, task.branch)
+    if task.milestone is not None:
+        return _note_head_delivered_for_a_milestone(reading, open_wave, task, head)
+    main = read_project_field(find_project(reading.projects, open_wave.started.project), MAIN_FIELD)
+    return dataclasses.replace(
+        task,
+        delivered_head=head,
+        merge_command=describe_merge_command(followed.repository, task.branch),
+        merged_into_target=check_ancestor(followed.run_process, followed.repository, head, main).exit_code
+        == DESCENDING,
+    )
+
+
 def _read_wave_task(runtime: Runtime, reading: WaveReading, open_wave: _OpenWave, task: Entity) -> TaskFacts:
     wave = open_wave.started.wave
     followed = _follow_task(
         _read_task_facts(runtime, open_wave.tree_root, task), open_wave.followed, open_wave.implemented
     )
     amended = _note_amendment(followed, _read_task_on_its_pull_request(runtime, reading, open_wave, followed), task)
-    return _note_last_run(_note_quota(amended, reading, wave, open_wave.followed.states), reading, wave)
+    noted = _note_last_run(_note_quota(amended, reading, wave, open_wave.followed.states), reading, wave)
+    return _note_delivered_head(reading, open_wave, noted)
 
 
 def _open_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, tree_root: Path) -> _OpenWave:
@@ -730,7 +789,7 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveSta
     project = find_project(reading.projects, started.project)
     tree = prepare_wave_tree(
         runtime,
-        WaveTreeReading(configuration=reading.configuration, read_environment=reading.forge.read_environment),
+        WaveTreeReading(configuration=reading.configuration, read_environment=_read_environment_of(reading, project)),
         started,
     )
     tasks = {task.name: task for task in read_entities(runtime.run_process, tree.root, TASK_TYPE)}
@@ -795,13 +854,17 @@ def _list_uncut_milestones(
     )
 
 
+def _read_environment_of(reading: WaveReading, project: Entity) -> Callable[[str], dict]:
+    return functools.partial(reading.forge.read_environment, project)
+
+
 def _read_wave_making(runtime: Runtime, reading: WaveReading, project: Entity) -> _WaveMaking:
     if read_project_field(project, PROJECT_STATUS_FIELD) == PAUSED_PROJECT_STATUS:
         return NO_WAVE_MAKING
     tasks_reading = ProjectTasksReading(
         configuration=reading.configuration,
         project=project,
-        read_environment=reading.forge.read_environment,
+        read_environment=_read_environment_of(reading, project),
         entries=reading.entries,
     )
     main = read_project_tasks(runtime, tasks_reading, NO_MILESTONE)
@@ -836,7 +899,7 @@ def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity,
         verify_rounds=int(
             read_policy_field(policies, project.name, VERIFY_ROUNDS_FIELD, str(VERIFY_ROUNDS_BY_DEFAULT))
         ),
-        on_github=is_on_github(project),
+        on_github=is_on_a_forge(project),
         uncut_milestones=wave_making.uncut_milestones,
     )
 
@@ -956,7 +1019,7 @@ def _is_behind_main(runtime: Runtime, reading: WaveReading, cut: MilestoneBranch
 
 def _locate_milestone_refs(runtime: Runtime, reading: WaveReading, project: Entity, ref: str) -> MilestoneRefs:
     main = locate_forge_branch(
-        runtime.run_process, project, read_project_field(project, MAIN_FIELD), reading.forge.read_environment
+        runtime.run_process, project, read_project_field(project, MAIN_FIELD), _read_environment_of(reading, project)
     )
     return MilestoneRefs(main=main, branch=ref)
 
@@ -998,24 +1061,41 @@ def _read_tasks_of_milestone(runtime: Runtime, reading: WaveReading, cut: Milest
     return [task for task in tasks if _read_milestone(task) == cut.milestone]
 
 
+def _note_milestone_merge(runtime: Runtime, reading: WaveReading, cut: MilestoneBranchCut, facts: MilestoneFacts):
+    project = find_project(reading.projects, cut.project)
+    command = describe_milestone_merge(reading.entries, project, cut.milestone)
+    if command is None:
+        return facts
+    repository = Path(read_project_field(project, PATH_FIELD))
+    main = read_project_field(project, MAIN_FIELD)
+    merged = check_ancestor(runtime.run_process, repository, cut.branch, main).exit_code == DESCENDING
+    return dataclasses.replace(facts, merge_command=command, merged_into_main=merged)
+
+
+def _read_opened_milestone_facts(
+    reading: WaveReading, cut: MilestoneBranchCut, project: Entity, opened: int
+) -> MilestoneFacts:
+    return MilestoneFacts(
+        project=cut.project,
+        milestone=cut.milestone,
+        branch=cut.branch,
+        opened_pull_request=opened,
+        pull_request=reading.forge.read_pull_request(read_project_field(project, PATH_FIELD), cut.branch),
+        described_head=_find_described_head(reading, cut.project, cut.milestone),
+    )
+
+
 def _read_milestone_facts(runtime: Runtime, reading: WaveReading, cut: MilestoneBranchCut) -> MilestoneFacts:
     project = find_project(reading.projects, cut.project)
     opened = _find_milestone_pull_request(reading, cut.project, cut.milestone)
     if opened is not None:
-        return MilestoneFacts(
-            project=cut.project,
-            milestone=cut.milestone,
-            branch=cut.branch,
-            opened_pull_request=opened,
-            pull_request=reading.forge.read_pull_request(read_project_field(project, PATH_FIELD), cut.branch),
-            described_head=_find_described_head(reading, cut.project, cut.milestone),
-        )
-    ref = locate_forge_branch(runtime.run_process, project, cut.branch, reading.forge.read_environment)
+        return _read_opened_milestone_facts(reading, cut, project, opened)
+    ref = locate_forge_branch(runtime.run_process, project, cut.branch, _read_environment_of(reading, project))
     rebase_runs = _list_branch_rebase_runs(reading, project, cut.branch)
     of_milestone = _read_tasks_of_milestone(runtime, reading, cut, ref)
     names = {task.name for task in of_milestone}
     refs = _locate_milestone_refs(runtime, reading, project, ref)
-    return MilestoneFacts(
+    facts = MilestoneFacts(
         project=cut.project,
         milestone=cut.milestone,
         branch=cut.branch,
@@ -1028,6 +1108,7 @@ def _read_milestone_facts(runtime: Runtime, reading: WaveReading, cut: Milestone
         tasks=tuple(task.name for task in of_milestone),
         reported=_is_milestone_reported(reading, cut),
     )
+    return _note_milestone_merge(runtime, reading, cut, facts)
 
 
 def _read_readable_milestone_facts(
@@ -1070,7 +1151,10 @@ def _read_integration_branches(
             read_environment=reading.forge.read_environment,
             locate_wave_base=lambda started: locate_wave_branch_base(
                 runtime,
-                WaveTreeReading(configuration=configuration, read_environment=reading.forge.read_environment),
+                WaveTreeReading(
+                    configuration=configuration,
+                    read_environment=_read_environment_of(reading, find_project(reading.projects, started.project)),
+                ),
                 started,
             ),
             is_alive=is_recorded_process_alive,

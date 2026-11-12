@@ -2547,6 +2547,9 @@ DECISION BrigadeRunsAwawaOnAProjectFromThePathItsAnchorsResolveFrom
 		+ "corpus"
 		REF @TASK.B10
 		REF @TASK.B55
+	DESC "a project in MODE area is the exception:"
+		+ "@DECISION.AnAreaIsTheAwawaWorkspaceOfItsProjectAndAProjectInModeNoneIsRefusedAsAToolFailure"
+		REF @DECISION.AnAreaIsTheAwawaWorkspaceOfItsProjectAndAProjectInModeNoneIsRefusedAsAToolFailure
 	REJECTED "PATH joined to CORPUS as the workspace: the anchors of this repository resolve from"
 		+ "its root, not from corpus/, and a narrower workspace reports every anchor broken (L016)"
 	RATIONALE "awawa walks the workspace it is given and skips what git ignores, so PATH reads the"
@@ -6622,3 +6625,257 @@ DECISION TheMilestoneReportOfForgeNoneIsPublishedOnTheLocalBranchesWhetherOrNotT
 		REF @DECISION.ATaskBranchIsCutRebasedAndCheckedAgainstTheIntegrationBranchOfTheForge
 		REF @TASK.B240
 		REF @MILESTONE.M7
+
+DECISION TheVibeAdapterClassifiesAStreamWithoutEntryByStderrEvenOnExitZero
+	TITLE "the vibe adapter classifies a stream holding no entry by the last line of stderr, even"
+		+ "on exit 0, and takes the message of a cut segment from stderr and that of a blocked"
+		+ "segment from its final message"
+	STATUS active
+	DESC "binds @TASK.B108"
+		REF @TASK.B108
+	DESC "a stream holding no entry names no session: with exit 0 it is classified as any other"
+		+ "exit, by the last line of stderr, unreadable_output when stderr holds none"
+	DESC "the message of a segment cut by its turn cap is the last line of stderr"
+	DESC "the message of a blocked segment is the text of its final message"
+	REJECTED "a stream holding no entry on exit 0 read as an ended segment, undeclared: it names no"
+		+ "session and no final message, so nothing shows the client ran the brief"
+	SOURCE "run 20261101T213054Z-33f56c of wave brigade_w20, delivering @TASK.B108"
+		REF @TASK.B108
+
+DECISION ADetachedBrigadeCarriesTheSessionBusAddressOfTheBrigadeThatDetachesIt
+	TITLE "a detached brigade, a run or a study, is spawned with the DBUS_SESSION_BUS_ADDRESS of"
+		+ "the brigade that detaches it, in the environment of its spawn request; the whitelist of"
+		+ "the process runner stays"
+	STATUS active
+	DESC "binds @TASK.B44"
+		REF @TASK.B44
+	DESC "brigade/runs/detach_brigade_command.py adds the variable when the paths of the detaching"
+		+ "brigade carry a session_bus_address, nothing when they carry none; the detached brigade"
+		+ "reads it back in brigade/system/paths.py, so the request its segments complete carries"
+		+ "it, and its own git, awawa and gh children still receive the whitelist alone"
+	REJECTED "DBUS_SESSION_BUS_ADDRESS in the whitelist of"
+		+ "brigade/system/build_process_environment.py: every git, awawa and gh call would carry"
+		+ "the bus, the alternative the ruling on the environment of a vibe launch already refused"
+	REJECTED "the address carried under a BRIGADE_ variable the whitelist passes: a second name for"
+		+ "one value, read in two places"
+	RATIONALE "on 2026-11-02 the rehearsal of @TASK.B44 launched the plan run"
+		+ "20261102T185619Z-de6fa0 on vibe from a shell carrying the address: the run, spawned"
+		+ "through the whitelist, read no address, its launch reached no keyring, Error:"
+		+ "session/start, exit 1; the tick and brigade request new start every run detached, so"
+		+ "without this the address never reaches a segment"
+		REF @TASK.B44
+	RATIONALE "the whitelist stays as"
+		+ "@DECISION.TheVibeAdapterAddsTheSessionBusAddressOfTheLaunchRequestToItsEnvironment"
+		+ "rules; this decision makes its session_bus_address hold in a detached run"
+		REF @DECISION.TheVibeAdapterAddsTheSessionBusAddressOfTheLaunchRequestToItsEnvironment
+	SOURCE "run 20261102T185023Z-f4126b of wave brigade_w20, delivering @TASK.B44"
+		REF @TASK.B44
+
+DECISION AHeadIsGreenOnceOneOfItsProofsPassedAndRedOnlyWhenNoneDid
+	TITLE "a head is green once one of its three proofs, the check runs of the forge on its commit,"
+		+ "the task check of that commit or the record the tick kept for it, passed whole; it is"
+		+ "pending while no proof passed and a check run of the forge is pending, red while no"
+		+ "proof passed and one failed, and unproven with none"
+	STATUS active
+	DESC "binds @TASK.B238: brigade/tick/judge_head.py decides the state of a head from the"
+		+ "evidence the tick gathers"
+		REF @TASK.B238
+	DESC "a task check proves only the commit it names as its head"
+	DESC "a red head names the failures of the first proof that failed, in the order forge, task"
+		+ "check, record by SHA"
+	REJECTED "a failed check run of the forge holding the head red whatever a record of that commit"
+		+ "says: SPEC 1 of the task it binds takes any of the three proofs as green, and a check"
+		+ "the tick ran on the commit itself is as strong as one the forge ran"
+	SOURCE "the build run of @TASK.B238 on 2026-11-08, reading the « or » of its SPEC 1"
+		REF @TASK.B238
+
+DECISION TheRunRepairingARedHeadIsNamedByItsBranchAndItsCommit
+	TITLE "the run of the rebase slot repairing a red head takes the arguments branch and head, the"
+		+ "red commit, and into naming PROJECT.MAIN when it repairs PROJECT.MAIN on"
+		+ "fix/repair-<main>-<commit>; the tick finds it by those two arguments and launches none"
+		+ "again for that head once one lives, ended done or ended blocked"
+	STATUS active
+	DESC "binds @TASK.B238: brigade/commands/_repair_red_head.py launches the run,"
+		+ "brigade/runs/find_head_repair.py reads the latest run of the head"
+		REF @TASK.B238
+	DESC "a run that died without its result, or ended failed, is not a repair: the next tick"
+		+ "launches one again"
+	REJECTED "finding the repair by the worktree it runs in: the worktree of a milestone branch"
+		+ "also holds the runs of its rebase onto PROJECT.MAIN, and a fix branch per commit is the"
+		+ "only key of a repair of PROJECT.MAIN"
+	REJECTED "launching a repair again once the previous one ended done on a head still red: a"
+		+ "repair of PROJECT.MAIN ends done on a pull request the user merges, and the head stays"
+		+ "red until that merge"
+	SOURCE "the build run of @TASK.B238 on 2026-11-08, wording SPEC 7 into arguments"
+		REF @TASK.B238
+
+DECISION AProjectOfForgeNoneTakesTheLocalPathAndResolvesNoForgePlugin
+	TITLE "the forge a command acts through is read from PROJECT.FORGE by"
+		+ "brigade/registry/read_project_forge.py, none when the field is absent; under github the"
+		+ "command resolves the forge plugin of that name and passes the name with it, under none"
+		+ "it resolves no forge plugin and takes the local path, branching on the forge of the"
+		+ "project as brigade/waves branches on is_on_github"
+	STATUS active
+	DESC "binds @TASK.B46"
+		REF @TASK.B46
+	REJECTED "a built-in forge plugin none answering read_pull_request and merge_pull_request from"
+		+ "the clone: no pull request exists under FORGE none and every event carries pr absent, so"
+		+ "the plugin would answer for objects that do not exist and add a second way to read the"
+		+ "branches of a task"
+	RATIONALE "@DECISION.AProjectOfForgeNoneMergesATaskOnItsAcceptanceAndItsVerdictAndTheUserMergesItsMilestoneByHand"
+		+ "sets what the local mode does; this ruling sets where it lives: the git operations of"
+		+ "the local mode are those brigade/waves already runs under FORGE none"
+		REF @DECISION.AProjectOfForgeNoneMergesATaskOnItsAcceptanceAndItsVerdictAndTheUserMergesItsMilestoneByHand
+	SOURCE "the build run of @TASK.B46, step 3, on 2026-11-01, the design left open by its"
+		+ "RATIONALE"
+		REF @TASK.B46
+
+DECISION DoctorChecksTheForgesTheRegisteredProjectsName
+	TITLE "brigade doctor checks each forge the registered projects name in their FORGE, none"
+		+ "excluded, once per forge, and the logins of the configuration through it; when no"
+		+ "registered project names a forge, it resolves no forge plugin, starts no subprocess of"
+		+ "one, and reports the item forge ok, no registered project on a forge, with its fallback,"
+		+ "local mode without a forge"
+	STATUS active
+	DESC "binds @TASK.B46"
+		REF @TASK.B46
+	REJECTED "checking every built-in forge plugin whatever the projects name: a machine whose"
+		+ "projects are all of FORGE none would still start gh, which SPEC 1 of the task forbids"
+		+ "for a project of FORGE none"
+	RATIONALE "doctor acts on no single project, so the forge it checks can only come from the"
+		+ "PROJECT entities, as"
+		+ "@DECISION.AProjectOfForgeNoneTakesTheLocalPathAndResolvesNoForgePlugin reads it for a"
+		+ "command acting on one"
+		REF @DECISION.AProjectOfForgeNoneTakesTheLocalPathAndResolvesNoForgePlugin
+	SOURCE "the build run of @TASK.B46, step 3, on 2026-11-01: brigade/commands/doctor.py:40 names"
+		+ "github, which SPEC 1 of the task forbids"
+		REF @TASK.B46
+
+DECISION ATaskOfForgeNoneWhoseLocalPreflightFailsIsParkedOnItsFindings
+	TITLE "a running task of FORGE none whose preflight failed at the head its build run delivered"
+		+ "is parked by the tick, the reason naming that head and each finding of the failed"
+		+ "checks; brigade wave requeue sends it back to a build run"
+	STATUS active
+	DESC "binds @TASK.B46"
+		REF @TASK.B46
+	REJECTED "a repair run launched from the findings, as LaunchCheckRepair does on GitHub: its"
+		+ "brief reads the logs of the check runs from the forge, and a repair from the acceptance"
+		+ "output alone has no procedure yet"
+	RATIONALE "SPEC 2 of @TASK.B46 fails the preflight on a failing ACCEPTANCE command and sets"
+		+ "nothing after it; a task left running with nothing planned holds its wave open for good"
+		REF @TASK.B46
+	SOURCE "the build run of @TASK.B46, step 3, on 2026-11-07, the path of a failed local preflight"
+		+ "left open by SPEC 2"
+		REF @TASK.B46
+
+DECISION ProjectAddInitCorpusCommitsTheSchemaAloneOnABranchOfADetachedWorktree
+	TITLE "brigade project add --init-corpus commits the schema alone as <corpus>/_schema.awawa on"
+		+ "brigade/init-corpus, from a detached worktree of MAIN, and leaves the checkout of the"
+		+ "project untouched"
+	STATUS active
+	DESC "the installation runs fmt, lint --strict and the commit through change_corpus_file in a"
+		+ "worktree under the cache of brigade; the branch already existing, or the project already"
+		+ "registered without --force, is refused before anything is written"
+	DESC "--corpus without --init-corpus exits 2 on a repository tracking no .awawa file, where"
+		+ "@TASK.B140 gives it a reader on a repository that tracks one"
+		REF @TASK.B140
+	DESC "binds @TASK.B55"
+		REF @TASK.B55
+	REJECTED "switching the checkout of the project to the new branch: it would move the work the"
+		+ "user has in progress there"
+	REJECTED "installing empty tasks.awawa, milestones.awawa and decisions.awawa beside the schema:"
+		+ "brigade plan record creates each file at its first entity"
+	SOURCE "the build run of @TASK.B55, step 3, on 2026-11-08, the design its SPEC lines leave open"
+		REF @TASK.B55
+
+DECISION AnAreaIsTheAwawaWorkspaceOfItsProjectAndAProjectInModeNoneIsRefusedAsAToolFailure
+	TITLE "a project in MODE area is read through the folder CORPUS names as its awawa workspace,"
+		+ "its repository root staying the place of its acceptance commands and of git; a project"
+		+ "in MODE none is refused with a ToolFailure"
+	STATUS active
+	DESC "prepare_project_tree answers the area as the root of the tree of a project in MODE area,"
+		+ "and prepare_project_checkout the root of the repository, which the acceptance commands"
+		+ "of a preflight alone read"
+	DESC "a corpus file brigade writes stays named from the root of the repository, and only the"
+		+ "strict lint of the change runs on the area"
+	DESC "a folder of the area absent from the tree read, the branch of project add not merged, is"
+		+ "a ToolFailure naming that folder"
+	DESC "MODE none raises a ToolFailure naming the mode: a command exits 1, and the tick skips"
+		+ "that project and names the mode on stderr, one project in MODE none stopping no other"
+	REJECTED "PATH as the workspace of an area: awawa would read the corpus of the project with the"
+		+ "one of brigade, two SCHEMA * colliding in one workspace"
+	RATIONALE "the area was ruled a workspace of its own in"
+		+ "@DECISION.AProjectChoosesHowBrigadeUsesItsCorpus, after"
+		+ "@DECISION.BrigadeRunsAwawaOnAProjectFromThePathItsAnchorsResolveFrom, which keeps"
+		+ "binding the projects in control"
+		REF @DECISION.AProjectChoosesHowBrigadeUsesItsCorpus
+		REF @DECISION.BrigadeRunsAwawaOnAProjectFromThePathItsAnchorsResolveFrom
+	SOURCE "the build run of @TASK.B140 on 2026-11-08, the design its SPEC lines leave open"
+		REF @TASK.B140
+
+DECISION ProjectAddTakesTheProposedFolderWhenNoTerminalAnswers
+	TITLE "brigade project add confirms the corpus folder on a terminal alone: with no terminal it"
+		+ "takes the folder it proposes, --corpus overriding it"
+	STATUS active
+	DESC "the folder proposed is the common path of the tracked .awawa files in control and brigade"
+		+ "in area; an empty answer on the terminal keeps it"
+	DESC "--corpus-mode on a repository tracking no .awawa file exits 2, the option having no"
+		+ "corpus to apply to"
+	DESC "a repository tracking a .awawa file and registered in area installs the template unless"
+		+ "the folder already tracks its schema, so that project add --force does not rewrite it"
+	REJECTED "exit 2 naming --corpus when no terminal answers: the proposal stands on its own, and"
+		+ "the test of the task registers an area with --corpus-mode alone"
+	SOURCE "the build run of @TASK.B140 on 2026-11-08, the design its SPEC lines leave open"
+		REF @TASK.B140
+
+DECISION ATaskOfForgeNoneIsMergedInTheWorktreeOfItsMilestoneBranchAndAConflictingMergeParksIt
+	TITLE "a task of FORGE none is merged by the tick with git merge in a worktree on the branch of"
+		+ "its milestone, PROJECT.MERGE merge a merge commit, squash a squash commit and rebase a"
+		+ "plain git merge, fast-forwarding where the branch has not moved; a merge that conflicts"
+		+ "is aborted and parks the task on the name of that branch"
+	STATUS active
+	DESC "binds @TASK.B240"
+		REF @TASK.B240
+	REJECTED "git rebase for PROJECT.MERGE rebase: it would rewrite the head the preflight and the"
+		+ "verdict read"
+	REJECTED "leaving a conflicting merge half done: the next tick could not start a merge in that"
+		+ "worktree, and the task would stay verified for good"
+	RATIONALE "SPEC 1 of @TASK.B240 sets git merge with PROJECT.MERGE and leaves open what rebase"
+		+ "means off a forge and where a merge conflicts"
+		REF @TASK.B240
+	SOURCE "the build run of @TASK.B240, step 3, on 2026-11-08"
+		REF @TASK.B240
+
+DECISION TheMilestoneReportOfForgeNoneCollectsNoPullRequestAndCommitsOnTheClone
+	TITLE "the milestone report of a project of FORGE none collects no pull request and is"
+		+ "committed on the branch of the milestone in a worktree of the clone, pushed nowhere"
+	STATUS active
+	DESC "binds @TASK.B240"
+		REF @TASK.B240
+	REJECTED "a pr-list collector answering nothing under FORGE none: the collector is absent there"
+		+ "by brigade/collecting/find_absence.py and an absence fails the study"
+	RATIONALE "SPEC 3 of @TASK.B240 commits the report on the branch as SPEC 8 of @TASK.B232 does,"
+		+ "and off a forge the milestone branch exists only in the clone, so it has no origin to"
+		+ "fetch nor to push"
+		REF @TASK.B240
+		REF @TASK.B232
+	SOURCE "the build run of @TASK.B240, step 3, on 2026-11-08"
+		REF @TASK.B240
+
+DECISION InitRefusesToReplaceAnOriginAtAnotherUrl
+	TITLE "brigade init --remote <url> refuses a configuration repository whose origin is set at"
+		+ "another url, exits 1 and names git -C <config root> remote set-url origin <url>; an"
+		+ "origin already at the url is reported present"
+	STATUS active
+	DESC "binds SPEC 4 of @TASK.B177"
+		REF @TASK.B177
+	REJECTED "init replacing the origin with the url given: the origin of the configuration"
+		+ "repository may hold the history of another machine, and init rewrites nothing it did not"
+		+ "create"
+	RATIONALE "brigade init leaves a file that differs from the shipped one as it is and reports"
+		+ "it, never overwriting what the user set; an origin set at another url is the same case,"
+		+ "and the command that replaces it is the user's to run"
+		REF @TASK.B177
+	SOURCE "the build run of @TASK.B177 of 2026-11-11, SPEC 4 naming no behaviour for an origin"
+		+ "already set"
+		REF @TASK.B177

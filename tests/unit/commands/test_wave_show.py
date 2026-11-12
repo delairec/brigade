@@ -5,7 +5,7 @@ from pathlib import Path
 
 from brigade.commands.wave_show import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import write_ledger
+from tests.unit.commands.command_runtime import create_machine_double, write_ledger, write_operational_corpus
 from tests.unit.commands.run_directories import create_run_result
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -75,6 +75,8 @@ class WaveShowTextTest(unittest.TestCase):
             "branch": "integration/tidepool_w16",
             "started_at": "2026-09-30T22:00:00Z",
             "last_event": "wave.started",
+            "merge_command": None,
+            "task_merge_commands": [],
             "pull_request": 77,
             "tasks": [
                 {"task": "T7", "state": "pr_open", "pull_request": 42, "run": "20261001T090000Z-a1", "reason": None},
@@ -145,6 +147,8 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
                 "started_at": "2026-09-30T22:00:00Z",
                 "last_event": "wave.started",
                 "pull_request": None,
+                "merge_command": None,
+                "task_merge_commands": [],
                 "tasks": [
                     {
                         "task": "T7",
@@ -244,3 +248,198 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(raised.exception), "no wave.started names the wave tidepool_w17")
+
+
+REPOSITORY = "/srv/tidepool"
+WAVE_HEAD = "8885daa"
+RUN = "20261018T120000Z-a1b2c3"
+FORGELESS_WAVE_STARTED = {
+    "schema_version": 2,
+    "ts": "2026-10-18T09:00:00Z",
+    "event": "wave.started",
+    "wave": "tidepool_w16",
+    "project": "tidepool",
+    "tasks": ["T7"],
+}
+CUT = {
+    "schema_version": 1,
+    "ts": "2026-10-18T08:00:00Z",
+    "event": "milestone.branch_cut",
+    "project": "tidepool",
+    "milestone": "M4",
+    "branch": "integration/tides",
+    "login": None,
+}
+REPORTED = {
+    "schema_version": 1,
+    "ts": "2026-10-18T12:00:00Z",
+    "event": "milestone.reported",
+    "project": "tidepool",
+    "milestone": "M4",
+    "run": RUN,
+    "login": None,
+}
+REPORT_DONE = {
+    "schema_version": 1,
+    "ts": "2026-10-18T12:05:00Z",
+    "event": "order.done",
+    "project": "tidepool",
+    "kind": "study",
+    "order": None,
+    "run": RUN,
+}
+OTHER_REPORTED = {**REPORTED, "project": "elsewhere"}
+MACHINE_OUTPUTS = {
+    ("git", "rev-parse", "--verify"): f"{WAVE_HEAD}\n",
+    ("git", "worktree", "list"): "",
+}
+CORPUS = {
+    "PROJECT": {"tidepool": (("PATH", REPOSITORY), ("MAIN", "main"), ("FORGE", "none"))},
+    "TASK": {"T7": (("TITLE", "Tide table"), ("TYPE", "feat"), ("MILESTONE", "@MILESTONE.M4"))},
+    "POLICY": {},
+}
+CORPUS_WITH_A_TASK_OF_ANOTHER_MILESTONE = {
+    **CORPUS,
+    "TASK": {
+        "T7": (("TITLE", "Tide table"), ("TYPE", "feat"), ("MILESTONE", "@MILESTONE.M4")),
+        "T9": (("TITLE", "Tide almanac"), ("TYPE", "feat"), ("MILESTONE", "@MILESTONE.M5")),
+    },
+}
+
+
+CORPUS_OF_NO_AUTO_MERGE = {
+    **CORPUS,
+    "POLICY": {"tidepool_policy": (("PROJECT", "@PROJECT.tidepool"), ("AUTO_MERGE", "none"))},
+}
+CORPUS_ON_A_FORGE = {
+    **CORPUS_OF_NO_AUTO_MERGE,
+    "PROJECT": {"tidepool": (("PATH", REPOSITORY), ("MAIN", "main"), ("FORGE", "github"))},
+}
+CORPUS_OF_A_TASK_OF_NO_MILESTONE = {**CORPUS, "TASK": {"T7": (("TITLE", "Tide table"), ("TYPE", "feat"))}}
+CORPUS_OF_A_TASK_OF_NO_MILESTONE_UNDER_NO_AUTO_MERGE = {
+    **CORPUS_OF_NO_AUTO_MERGE,
+    "TASK": CORPUS_OF_A_TASK_OF_NO_MILESTONE["TASK"],
+}
+CORPUS_OF_A_TASK_OF_NO_MILESTONE_ON_A_FORGE = {
+    **CORPUS_ON_A_FORGE,
+    "TASK": CORPUS_OF_A_TASK_OF_NO_MILESTONE["TASK"],
+}
+TASK_VERIFIED = {
+    "schema_version": 1,
+    "ts": "2026-10-18T11:00:00Z",
+    "event": "task.state",
+    "wave": "tidepool_w16",
+    "task": "T7",
+    "state": "verified",
+}
+TASK_MERGED = {**TASK_VERIFIED, "state": "merged"}
+
+
+class WaveShowOfAProjectWithoutAForgeTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root), run_process=create_machine_double(CORPUS, MACHINE_OUTPUTS)
+        )
+
+    def _show(self, events: list[dict]) -> dict:
+        write_ledger(self.root, events)
+        return COMMAND.run(Namespace(wave="tidepool_w16"), self.runtime)
+
+    def test_should_print_the_command_merging_the_milestone_of_the_wave_once_its_report_is_committed(self):
+        # Act
+        document = self._show([CUT, FORGELESS_WAVE_STARTED, REPORTED, REPORT_DONE])
+
+        # Assert
+        self.assertEqual(document["merge_command"], "git -C /srv/tidepool merge integration/tides")
+        self.assertIn(
+            "to merge: git -C /srv/tidepool merge integration/tides", COMMAND.render_text(document).splitlines()
+        )
+
+    def test_should_read_the_milestone_from_the_tasks_of_the_wave_alone(self):
+        # Arrange
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_machine_double(CORPUS_WITH_A_TASK_OF_ANOTHER_MILESTONE, MACHINE_OUTPUTS),
+        )
+
+        # Act
+        document = self._show([CUT, FORGELESS_WAVE_STARTED, REPORTED, REPORT_DONE])
+
+        # Assert
+        self.assertEqual(document["merge_command"], "git -C /srv/tidepool merge integration/tides")
+
+    def test_should_print_the_command_merging_a_verified_task_into_its_milestone_under_no_auto_merge(self):
+        # Arrange
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root), run_process=create_machine_double(CORPUS_OF_NO_AUTO_MERGE, MACHINE_OUTPUTS)
+        )
+
+        # Act
+        document = self._show([CUT, FORGELESS_WAVE_STARTED, TASK_VERIFIED])
+
+        # Assert
+        worktree = "/srv/tidepool/.brigade/worktrees/integration-tides"
+        command = f"git -C {worktree} merge feature/T7-tide-table"
+        self.assertEqual(document["task_merge_commands"], [command])
+        self.assertIn(f"to merge: {command}", COMMAND.render_text(document).splitlines())
+
+    def test_should_name_a_task_merge_only_for_a_verified_task_under_no_auto_merge(self):
+        for case, corpus, state in [
+            ("under the policy that merges", CORPUS, TASK_VERIFIED),
+            ("once merged", CORPUS_OF_NO_AUTO_MERGE, TASK_MERGED),
+            ("on a forge", CORPUS_ON_A_FORGE, TASK_VERIFIED),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.runtime = create_test_runtime(
+                    create_test_paths(self.root), run_process=create_machine_double(corpus, MACHINE_OUTPUTS)
+                )
+
+                # Act
+                document = self._show([CUT, FORGELESS_WAVE_STARTED, state])
+
+                # Assert
+                self.assertEqual(document["task_merge_commands"], [])
+
+    def test_should_print_the_command_merging_a_verified_task_of_no_milestone_at_the_clone(self):
+        for case, corpus in [
+            ("under the policy that merges", CORPUS_OF_A_TASK_OF_NO_MILESTONE),
+            ("under no auto merge", CORPUS_OF_A_TASK_OF_NO_MILESTONE_UNDER_NO_AUTO_MERGE),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.runtime = create_test_runtime(
+                    create_test_paths(self.root), run_process=create_machine_double(corpus, MACHINE_OUTPUTS)
+                )
+
+                # Act
+                document = self._show([FORGELESS_WAVE_STARTED, TASK_VERIFIED])
+
+                # Assert
+                command = "git -C /srv/tidepool merge feature/T7-tide-table"
+                self.assertEqual(document["task_merge_commands"], [command])
+                self.assertIn(f"to merge: {command}", COMMAND.render_text(document).splitlines())
+
+    def test_should_name_no_task_merge_for_a_task_of_no_milestone_on_a_forge(self):
+        # Arrange
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_machine_double(CORPUS_OF_A_TASK_OF_NO_MILESTONE_ON_A_FORGE, MACHINE_OUTPUTS),
+        )
+
+        # Act
+        document = self._show([FORGELESS_WAVE_STARTED, TASK_VERIFIED])
+
+        # Assert
+        self.assertEqual(document["task_merge_commands"], [])
+
+    def test_should_print_no_command_before_the_report_of_the_milestone(self):
+        # Act
+        document = self._show([CUT, FORGELESS_WAVE_STARTED, OTHER_REPORTED])
+
+        # Assert
+        self.assertIsNone(document["merge_command"])
+        self.assertNotIn("to merge", COMMAND.render_text(document))

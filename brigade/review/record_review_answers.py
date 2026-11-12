@@ -4,17 +4,17 @@ from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_review_answered import TaskReviewAnswered
+from brigade.registry.read_project_forge import NO_FORGE
 from brigade.review.assemble_review_context import ReviewDemand, assemble_review_context
 from brigade.review.validate_answers import validate_answers
 from brigade.runtime import Runtime
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_thread_reply import ThreadReply, ask_thread_reply
 from brigade.system.parse_configuration import Configuration
-from brigade.system.read_account_environment import ForgeAccount, read_account_environment
+from brigade.system.read_account_environment import UNBOUND_ENVIRONMENT, ForgeAccount, read_account_environment
 from brigade.system.validate_document import DocumentInvalid
 from brigade.verify.read_review_mode import APPROVAL_REVIEW
 
-FORGE_NAME = "github"
 CLI_KEY = "cli"
 REMEDIATE_SLOT = "remediate"
 
@@ -25,11 +25,14 @@ class AnswersDemand:
     project_path: str
     answers: dict
     forge: object
+    forge_name: str
     configuration: Configuration
 
 
 def _read_environment(runtime: Runtime, demand: AnswersDemand, key: str) -> dict:
-    account = ForgeAccount(forge=demand.forge, forge_name=FORGE_NAME, key=key)
+    if demand.forge_name == NO_FORGE:
+        return UNBOUND_ENVIRONMENT
+    account = ForgeAccount(forge=demand.forge, forge_name=demand.forge_name, key=key)
     return read_account_environment(account, demand.configuration, runtime)
 
 
@@ -39,8 +42,8 @@ def _reply_on_threads(runtime: Runtime, demand: AnswersDemand) -> str | None:
         reply = ThreadReply(
             repository=demand.project_path, thread=answer["finding"], body=answer["answer"], environment=environment
         )
-        ask_thread_reply(demand.forge, FORGE_NAME, reply, runtime)
-    return ask_forge_account(demand.forge, FORGE_NAME, environment, runtime).login
+        ask_thread_reply(demand.forge, demand.forge_name, reply, runtime)
+    return ask_forge_account(demand.forge, demand.forge_name, environment, runtime).login
 
 
 def record_review_answers(runtime: Runtime, demand: AnswersDemand) -> dict:
@@ -51,6 +54,7 @@ def record_review_answers(runtime: Runtime, demand: AnswersDemand) -> dict:
             opened=opened,
             project_path=demand.project_path,
             forge=demand.forge,
+            forge_name=demand.forge_name,
             environment=_read_environment(runtime, demand, CLI_KEY),
         ),
     )

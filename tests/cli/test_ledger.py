@@ -289,6 +289,21 @@ class BrigadeLedgerBudgetsTest(LedgerTestCase):
             ],
         )
 
+    def test_should_print_no_procedure_for_a_client_that_ran_nothing(self):
+        # Act
+        completed = self.run_ledger("budgets", "--client", "vibe")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stderr, "")
+        self.assertEqual(
+            completed.stdout.splitlines()[:2],
+            [
+                "steps over the last 20 runs finished of each procedure:",
+                "step cap of each role at its latest digests:",
+            ],
+        )
+
 
 class BrigadeLedgerCompareTest(LedgerTestCase):
     def setUp(self):

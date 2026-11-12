@@ -17,8 +17,9 @@ NO_PULL_REQUEST = "no pull request"
 @dataclass(frozen=True)
 class PromotionFacts:
     head_tree: Path
+    repository_tree: Path
     task: str
-    pr: int
+    pr: int | None
 
 
 def _read_atom(field: dict) -> str:
@@ -30,10 +31,14 @@ def _read_value(fields: list, name: str) -> str | None:
     return next((_read_atom(field) for field in fields if field["name"] == name), None)
 
 
-def _resolves(head_tree: Path, anchor: str) -> bool:
+def _resolves(repository_tree: Path, anchor: str) -> bool:
     path, _separator, text = anchor.partition(ANCHOR_SEPARATOR)
-    file = head_tree / path
-    return file.is_file() and text in file.read_text(encoding="utf-8", errors="replace")
+    file = (repository_tree / path).resolve()
+    return (
+        file.is_relative_to(repository_tree.resolve())
+        and file.is_file()
+        and text in file.read_text(encoding="utf-8", errors="replace")
+    )
 
 
 def check_promotion(run_process: Callable[[ProcessRequest], ProcessRecord], facts: PromotionFacts) -> dict:
@@ -44,12 +49,12 @@ def check_promotion(run_process: Callable[[ProcessRequest], ProcessRecord], fact
     if status != IMPLEMENTED:
         findings.append(f"{target} is STATUS {status}, not implemented")
     delivered_by = _read_value(fields, "DELIVERED_BY")
-    if delivered_by != str(facts.pr):
+    if facts.pr is not None and delivered_by != str(facts.pr):
         findings.append(
             f"{target} is delivered by {f'#{delivered_by}' if delivered_by else NO_PULL_REQUEST}, not by #{facts.pr}"
         )
     specs = [field for field in fields if field["name"] == "SPEC"]
     for rank, spec in enumerate(specs, start=1):
-        if not any(_resolves(facts.head_tree, anchor) for anchor in collect_anchors(spec["fields"])):
+        if not any(_resolves(facts.repository_tree, anchor) for anchor in collect_anchors(spec["fields"])):
             findings.append(f"SPEC {rank} has no IMPL whose anchor resolves: {_read_atom(spec)}")
     return judge_findings(NAME, findings)

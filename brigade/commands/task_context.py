@@ -3,7 +3,8 @@ from pathlib import Path
 
 from brigade.command import Argument, Command
 from brigade.commands._read_attribution import read_attribution
-from brigade.commands._read_forge_environment import read_forge_environment
+from brigade.commands._read_forge_environment import ForgeSlot, read_forge_environment
+from brigade.registry.read_project_forge import read_project_forge
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 from brigade.system.write_text_atomically import write_text_atomically
@@ -66,7 +67,9 @@ def task_context(request: argparse.Namespace, runtime: Runtime) -> dict:
         configuration=configuration,
         worktree=worktree,
         attribution=read_attribution(configuration, runtime),
-        read_environment=lambda key: read_forge_environment(configuration, key, runtime),
+        read_environment=lambda key: read_forge_environment(
+            configuration, ForgeSlot(read_project_forge(worktree.project), key), runtime
+        ),
     )
     document = {"schema_version": DOCUMENT_SCHEMA_VERSION, **assemble_task_context(runtime, demand)}
     if runtime.paths.run_directory is not None:

@@ -44,3 +44,20 @@ class DescribeMilestoneReportTest(unittest.TestCase):
                 milestone=order,
             ),
         )
+
+    def test_should_collect_no_pull_request_on_a_project_without_a_forge(self):
+        # Arrange
+        order = MilestoneReportOrder(
+            project="oak",
+            milestone="M6",
+            branch="integration/hardening",
+            waves=(),
+            tasks=("B17",),
+            reads_pull_requests=False,
+        )
+
+        # Act
+        study = describe_milestone_report(order)
+
+        # Assert
+        self.assertNotIn("pr-list state=all", study.collectors)

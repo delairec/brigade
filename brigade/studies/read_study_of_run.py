@@ -21,6 +21,7 @@ def _read_milestone_report_order(recorded: dict) -> MilestoneReportOrder:
         branch=recorded["branch"],
         waves=tuple(recorded["waves"]),
         tasks=tuple(recorded["tasks"]),
+        reads_pull_requests=recorded.get("reads_pull_requests", True),
     )
 
 

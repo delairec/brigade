@@ -83,6 +83,9 @@ class ClassCleanupRegistrar:
     def fail(self, message: str) -> None:
         raise self.test_class.failureException(message)
 
+    def id(self) -> str:
+        return f"{self.test_class.__module__}.{self.test_class.__qualname__}"
+
 
 class WaveRehearser:
     def __init__(self, registrar: ClassCleanupRegistrar):
@@ -136,7 +139,7 @@ class WaveRehearser:
         )
 
     def register_sandbox(self) -> None:
-        self.run_brigade("project", "add", str(self.project.path), "--acceptance", "true")
+        self.run_brigade("project", "add", str(self.project.path), "--corpus-mode", "control", "--acceptance", "true")
         projects = self.machine.corpus / "projects.awawa"
         projects.write_text(projects.read_text().replace('\tFORGE "none"\n', '\tFORGE "github"\n\tCHECK_RUNS none\n'))
 

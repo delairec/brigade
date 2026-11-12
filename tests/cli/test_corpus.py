@@ -41,7 +41,9 @@ class CorpusTestCase(unittest.TestCase):
         self.project.track("corpus/tasks.awawa")
         self.project.run_git("commit", "--quiet", "-m", "first")
         self.sha = self.project.run_git("rev-parse", "HEAD").strip()
-        self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(self.project.path))
+        self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "project", "add", str(self.project.path), "--corpus-mode", "control"
+        )
         self.refs = self.machine.cache_home / "brigade" / "refs"
 
     def tearDown(self):
@@ -102,7 +104,7 @@ class BrigadeCorpusThroughTheDashboardWithoutARefTest(unittest.TestCase):
         project.run_git("commit", "--quiet", "-m", "first")
         project.run_git("branch", "-m", "trunk")
         self.sha = project.run_git("rev-parse", "HEAD").strip()
-        self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(project.path))
+        self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(project.path), "--corpus-mode", "control")
         self.refs = self.machine.cache_home / "brigade" / "refs"
         self.url = self.start_serving()
 

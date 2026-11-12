@@ -123,7 +123,7 @@ def answer_unreadable_tree(ref: str) -> dict:
     return {argv: ProcessAnswer(exit_code=128, stderr="fatal: bad revision")}
 
 
-def _read_forge_environment(slot: str) -> dict:
+def _read_forge_environment(project: Entity, slot: str) -> dict:
     return FORGE_ENVIRONMENT
 
 
@@ -145,6 +145,7 @@ class PullRequestReaderFailingOnOneWaveDouble(PullRequestReaderDouble):
 
 class BuildSnapshotTestCase(unittest.TestCase):
     def setUp(self):
+        self.attic_fields = {}
         self.root = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.root)
         self.paths = create_test_paths(self.root)
@@ -183,7 +184,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
                             "MERGE": "squash",
                         },
                         "depot": {"PATH": str(self.root / "depot"), "STATUS": "paused"},
-                        "attic": {"PATH": str(self.root / "attic"), "MAIN": "trunk"},
+                        "attic": {"PATH": str(self.root / "attic"), "MAIN": "trunk", **self.attic_fields},
                     },
                 ),
                 **AWAWA_ANSWERS.answer_entities(
@@ -236,6 +237,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
                     {"B1": AWAWA_ANSWERS.describe_task("todo", "B0"), "B2": TASK_IDENTITY, "B4": TASK_IDENTITY},
                 ),
                 **answer_unreadable_tree("trunk"),
+                **answer_main_of_the_forge(MAIN_SHA),
                 **self.remote_answers,
             }
         )
@@ -337,6 +339,7 @@ class BuildSnapshotOfTheIntegrationBranchesTest(BuildSnapshotTestCase):
 class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
     def setUp(self):
         super().setUp()
+        self.shop_forge = "github"
         self.write_operational_corpus()
         self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B1", "B2", "B3", "B4")))
         self.record(50, TaskState(wave="w1", task="B1", state="running"))
@@ -748,6 +751,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     review="approval",
                     auto_merge="none",
                     verify_rounds=3,
+                    on_github=True,
                 ),
             ),
         )
@@ -1145,7 +1149,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     review="approval",
                     auto_merge="none",
                     verify_rounds=3,
-                    on_github=False,
+                    on_github=True,
                 ),
             ),
         )
@@ -1165,6 +1169,21 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         self.assertEqual(
             snapshot.waves,
             (),
+        )
+
+    def test_should_skip_a_project_whose_corpus_mode_is_none_and_name_the_mode(self):
+        # Arrange
+        self.attic_fields = {"MODE": "none"}
+
+        # Act
+        _, stderr = self.build()
+
+        # Assert
+        self.assertEqual(
+            stderr.splitlines(),
+            [
+                "brigade tick: the project attic skipped: @PROJECT.attic is in MODE none, which brigade does not deliver yet"
+            ],
         )
 
     def test_should_skip_a_project_whose_tree_cannot_be_read(self):
@@ -1487,7 +1506,7 @@ class PlanOfAWaveWaitingOnATaskImplementedOnTheForgeTest(BuildSnapshotTestCase):
                 branch="integration/tides",
                 task="B3",
                 task_branch="feature/B3-task",
-                checks_passed=False,
+                pull_request_checks=None,
             ),
             actions,
         )
@@ -1556,6 +1575,7 @@ class BuildSnapshotOfAWaveStartedAfterTheForgeAccountBecameUnavailableTest(Build
 class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
     def setUp(self):
         super().setUp()
+        self.shop_forge = "github"
         self.write_operational_corpus()
         self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B1", "B2", "B3", "B4")))
         self.record(60, WaveStarted(wave="w4", project="shop", tasks=("B1",)))
@@ -1701,6 +1721,7 @@ MEASURED_SIZE = {"name": "size", "verdict": "info", "findings": ["3 files"]}
 class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
     def setUp(self):
         super().setUp()
+        self.shop_forge = "github"
         self.write_operational_corpus()
         self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B1", "B2", "B3", "B4")))
         self.record(60, WaveStarted(wave="w4", project="shop", tasks=("B1",)))
@@ -2231,6 +2252,20 @@ class BuildSnapshotOfAWaveOfQueuedTasksTest(BuildSnapshotTestCase):
         self.assertEqual(self.reader.branches, [])
 
 
+class BuildSnapshotOfARunningTaskOfAProjectWithoutAForgeTest(BuildSnapshotTestCase):
+    def test_should_ask_no_forge_for_the_pull_request_of_the_task(self):
+        # Arrange
+        self.write_operational_corpus()
+        self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B1",)))
+        self.record(50, TaskState(wave="w1", task="B1", state="running"))
+
+        # Act
+        self.build()
+
+        # Assert
+        self.assertEqual(self.reader.branches, [])
+
+
 class BuildSnapshotOfAWaveBranchCutOnMainTest(BuildSnapshotTestCase):
     def test_should_read_each_task_of_a_tree_once_though_the_project_and_the_wave_both_read_it(self):
         # Arrange
@@ -2313,3 +2348,37 @@ class BuildSnapshotOfTheDescribedHeadOfAMilestoneTest(BuildSnapshotTestCase):
 
         # Assert
         self.assertIsNone(snapshot.milestones[0].described_head)
+
+
+DELIVERED_HEAD = "5e6f7a8"
+HEAD_OF_THE_BRANCH_OF_B1 = ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "feature/B1-task^{commit}")
+
+
+class BuildSnapshotOfATaskDeliveredWithoutAForgeTest(BuildSnapshotTestCase):
+    def test_should_note_the_head_of_the_task_branch_once_its_last_build_run_ended_done(self):
+        for case, forge, slot, outcome, expected in [
+            ("a build run delivered", "none", "build", "done", DELIVERED_HEAD),
+            ("a build run blocked", "none", "build", "blocked", None),
+            ("a rebase run delivered", "none", "rebase", "done", None),
+            ("a build run delivered on GitHub", "github", "build", "done", None),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                self.shop_forge = forge
+                self.write_operational_corpus()
+                self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B1",)))
+                self.record(50, TaskState(wave="w1", task="B1", state="running"))
+                write_run(
+                    self.paths.state_root,
+                    {**create_run_record("20261019T083000Z-b0d1e2", "w1", "B1"), "slot": slot},
+                    None,
+                )
+                self.record(5, create_run_finished("20261019T083000Z-b0d1e2", wave="w1", task="B1", outcome=outcome))
+                self.remote_answers = {HEAD_OF_THE_BRANCH_OF_B1: ProcessAnswer(stdout=f"{DELIVERED_HEAD}\n")}
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].tasks[0].delivered_head, expected)

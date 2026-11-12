@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from brigade.corpus.read_entities import Entity, EntityField
+from brigade.errors import BrigadeError
 from brigade.system.parse_configuration import Configuration
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
 from tests.unit.create_test_paths import create_test_paths
@@ -32,6 +33,71 @@ class ForgeDescribingThePullRequestDouble:
         }
 
 
+class ForgeAnsweringOutOfShapeDouble:
+    def read_pull_request(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1}
+
+
+class PreflightPullRequestOfAnAreaTest(unittest.TestCase):
+    def setUp(self):
+        PreflightPullRequestTest.setUp(self)
+
+    def run_preflight(self) -> dict:
+        (self.head_tree / "brigade").mkdir(exist_ok=True)
+        (self.base_tree / "brigade").mkdir(parents=True)
+        (self.head_tree / "brigade" / "tasks.awawa").write_text("")
+        answers = PreflightPullRequestTest.create_answers(self)
+        head_area = self.head_tree / "brigade"
+        base_area = self.base_tree / "brigade"
+        answers[("awawa", "show", "@TASK.B1", "--json", str(head_area))] = answers[
+            ("awawa", "show", "@TASK.B1", "--json", str(self.head_tree))
+        ]
+        answers[("awawa", "diff", str(base_area), str(head_area), "--json")] = ProcessAnswer(
+            stdout=json.dumps({"added": [], "changed": [{"file": "tasks.awawa"}], "removed": []})
+        )
+        answers[("git", "diff", "--numstat", "--text", "--end-of-options", BASE, HEAD, "--")] = ProcessAnswer(
+            stdout="1\t0\tbrigade/tasks.awawa\n"
+        )
+        answers.update(
+            create_registry_answers(
+                self.paths.config_root, {"shop": {"PATH": "/srv/shop", "CORPUS": "brigade", "MODE": "area"}}
+            )
+        )
+        demand = PreflightDemand(
+            project=Entity(
+                name="shop",
+                fields=(
+                    EntityField(name="PATH", value="/srv/shop"),
+                    EntityField(name="CORPUS", value="brigade"),
+                    EntityField(name="MODE", value="area"),
+                ),
+            ),
+            task="B1",
+            base_branch="integration/w1",
+            pr=160,
+            forge=ForgeDescribingThePullRequestDouble(),
+            environment={"GH_TOKEN": "token-of-octo-builder"},
+            configuration=Configuration(),
+        )
+        return preflight_pull_request(
+            create_test_runtime(self.paths, run_process=RecordingProcessRunner(answers)), demand
+        )
+
+    def test_should_judge_the_corpus_files_of_the_area_alone(self):
+        # Act
+        document = self.run_preflight()
+
+        # Assert
+        self.assertIn({"name": "untouched_files", "verdict": "pass", "findings": []}, document["checks"])
+
+    def test_should_resolve_the_anchors_of_the_task_from_the_root_of_the_repository(self):
+        # Act
+        document = self.run_preflight()
+
+        # Assert
+        self.assertIn({"name": "promotion", "verdict": "pass", "findings": []}, document["checks"])
+
+
 class PreflightPullRequestTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())
@@ -46,6 +112,9 @@ class PreflightPullRequestTest(unittest.TestCase):
         self.base_tree.mkdir(parents=True)
 
     def create_runner(self) -> RecordingProcessRunner:
+        return RecordingProcessRunner(self.create_answers())
+
+    def create_answers(self) -> dict:
         task = {
             "fields": [
                 {"name": "STATUS", "atoms": ["implemented"], "fields": []},
@@ -57,33 +126,31 @@ class PreflightPullRequestTest(unittest.TestCase):
                 },
             ]
         }
-        return RecordingProcessRunner(
-            {
-                **create_registry_answers(self.paths.config_root, {"shop": {"PATH": "/srv/shop"}}),
-                (
-                    "git",
-                    "rev-parse",
-                    "--verify",
-                    "--quiet",
-                    "--end-of-options",
-                    "refs/remotes/origin/integration/w1^{commit}",
-                ): ProcessAnswer(stdout=f"{WAVE_HEAD}\n"),
-                ("git", "merge-base", "--end-of-options", WAVE_HEAD, HEAD): ProcessAnswer(stdout=f"{BASE}\n"),
-                ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{HEAD}^{{commit}}"): ProcessAnswer(
-                    stdout=f"{HEAD}\n"
-                ),
-                ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{BASE}^{{commit}}"): ProcessAnswer(
-                    stdout=f"{BASE}\n"
-                ),
-                ("git", "diff", "--numstat", "--text", "--end-of-options", BASE, HEAD, "--"): ProcessAnswer(
-                    stdout="1\t0\tbrigade/cart.py\n"
-                ),
-                ("awawa", "show", "@TASK.B1", "--json", str(self.head_tree)): ProcessAnswer(stdout=json.dumps(task)),
-                ("awawa", "diff", str(self.base_tree), str(self.head_tree), "--json"): ProcessAnswer(
-                    stdout=json.dumps({"added": [], "changed": [], "removed": []})
-                ),
-            }
-        )
+        return {
+            **create_registry_answers(self.paths.config_root, {"shop": {"PATH": "/srv/shop"}}),
+            (
+                "git",
+                "rev-parse",
+                "--verify",
+                "--quiet",
+                "--end-of-options",
+                "refs/remotes/origin/integration/w1^{commit}",
+            ): ProcessAnswer(stdout=f"{WAVE_HEAD}\n"),
+            ("git", "merge-base", "--end-of-options", WAVE_HEAD, HEAD): ProcessAnswer(stdout=f"{BASE}\n"),
+            ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{HEAD}^{{commit}}"): ProcessAnswer(
+                stdout=f"{HEAD}\n"
+            ),
+            ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{BASE}^{{commit}}"): ProcessAnswer(
+                stdout=f"{BASE}\n"
+            ),
+            ("git", "diff", "--numstat", "--text", "--end-of-options", BASE, HEAD, "--"): ProcessAnswer(
+                stdout="1\t0\tbrigade/cart.py\n"
+            ),
+            ("awawa", "show", "@TASK.B1", "--json", str(self.head_tree)): ProcessAnswer(stdout=json.dumps(task)),
+            ("awawa", "diff", str(self.base_tree), str(self.head_tree), "--json"): ProcessAnswer(
+                stdout=json.dumps({"added": [], "changed": [], "removed": []})
+            ),
+        }
 
     def test_should_run_every_deterministic_check_of_the_pull_request(self):
         # Arrange
@@ -125,3 +192,25 @@ class PreflightPullRequestTest(unittest.TestCase):
                 ],
             },
         )
+
+    def test_should_name_the_forge_of_the_project_when_it_answers_out_of_shape(self):
+        # Arrange
+        demand = PreflightDemand(
+            project=Entity(
+                name="shop",
+                fields=(EntityField(name="PATH", value="/srv/shop"), EntityField(name="FORGE", value="gitlab")),
+            ),
+            task="B1",
+            base_branch="integration/w1",
+            pr=160,
+            forge=ForgeAnsweringOutOfShapeDouble(),
+            environment={"GH_TOKEN": "token-of-octo-builder"},
+            configuration=Configuration(),
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            preflight_pull_request(create_test_runtime(self.paths, run_process=self.create_runner()), demand)
+
+        # Assert
+        self.assertRegex(str(raised.exception), "^forge plugin gitlab answered read_pull_request")

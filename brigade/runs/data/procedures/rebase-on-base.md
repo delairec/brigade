@@ -12,7 +12,10 @@ the branch of its milestone or onto the main branch. You did not write the branc
 Arguments, which the Arguments section names: for the branch of a task, `task`, the TASK entity the branch delivers,
 and either `pr`, the number of the pull request a build run opened for it, or `base`, the branch of its wave, when
 the task has no pull request yet; for the branch of a wave or of a milestone, `base` alone, the branch it is rebased
-onto.
+onto. A run that repairs a red head rebases nothing and takes `branch` and `head`, the red commit, with no `base`:
+alone, they name a milestone branch red at that head, repaired in place in its worktree, section 4; with `into`, the
+main branch of the project, they name that main branch red at that head, repaired on the branch `branch` cut from it,
+section 5.
 
 **Budget**: the steps the Budget section names, the cap of your role. On reaching it, stop and
 summarise what is done, what is not, and what the next run picks up.
@@ -50,3 +53,28 @@ branch each meant where they meet, change the code so that both hold, commit it 
 `fix(<scope>): <what the repair restores>`, and run the tests again; push once they pass, as above. A repair that
 needs a decision the branch did not settle is not made: push nothing and end blocked, naming each failing test, its
 failure and the question on the lines above `brigade-end: blocked`; the tick names it at each tick.
+
+## 4. Repair a red branch in place
+
+With the arguments `branch` and `head` alone. `brigade rebase context --head <head>`, from the worktree, prints the
+branch, its red commit and each command that failed at it. The worktree holds the branch at that commit: rebase
+nothing. Run the failing commands, find what each failure breaks, change the code so that they pass, and commit it
+on the branch as `fix(<scope>): <what the repair restores>`. Run the project's tests; once they pass,
+`git push --force-with-lease origin <branch>`, never a bare force, nothing on a project with no forge, then end done:
+the tasks, the pull requests and the rebases waiting on the branch resume once the tick reads its head green. A
+repair that needs a decision the branch did not settle is not made: push nothing and end blocked, naming each failing
+command, its failure and the question on the lines above `brigade-end: blocked`; the tick names it at each tick and
+launches no other repair of that head.
+
+## 5. Repair the main branch on a fix branch
+
+With the arguments `branch`, `head` and `into`. `brigade rebase context --head <head> --into <into>`, from the
+worktree, prints the fix branch, the red commit of the main branch and each check that failed at it. The worktree
+holds the branch `branch`, cut from that commit: repair the failures there as section 4 does, commit as
+`fix(<scope>): <what the repair restores>`, run the project's tests, and once they pass
+`brigade rebase pr --into <into>`: it pushes the branch and opens its pull request into `<into>`, its title the subject
+of the commit, as the login of the run, and records that login in the ledger; never `git push` nor `gh pr create`
+yourself. End done on the pull request, which the user merges: every
+rebase onto the main branch waits until its head is green again. On a project with no forge, push nothing and
+end done naming the branch, which the user merges. A repair that needs a decision is not made: push
+nothing and end blocked as section 4 does.

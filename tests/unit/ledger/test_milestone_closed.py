@@ -24,6 +24,23 @@ class MilestoneClosedTest(unittest.TestCase):
         # Assert
         self.assertEqual(document, {"project": "shop", "milestone": "M3", "pr": 88})
 
+    def test_should_read_a_milestone_closed_with_no_pull_request(self):
+        # Act
+        event = MilestoneClosed.from_document({"event": "milestone.closed", "project": "shop", "milestone": "M3"})
+
+        # Assert
+        self.assertEqual(event, MilestoneClosed(project="shop", milestone="M3"))
+
+    def test_should_omit_the_absent_pull_request_from_its_document(self):
+        # Arrange
+        event = MilestoneClosed(project="shop", milestone="M3")
+
+        # Act
+        document = event.to_document()
+
+        # Assert
+        self.assertEqual(document, {"project": "shop", "milestone": "M3"})
+
     def test_should_be_declared_in_the_ledger(self):
         # Act
         declared = DECLARED_EVENTS.get("milestone.closed")

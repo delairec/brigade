@@ -16,7 +16,7 @@ from tests.unit.scripted_processes import ScriptedProcesses
 
 THE_TASK_OF_THE_BRANCH = None
 MAIN_BRANCH_CHECKOUT = {
-    ("git", "rev-parse", "--show-toplevel"): "/home/user/tidepool\n",
+    ("git", "rev-parse", "--show-toplevel"): "/srv/tidepool\n",
     ("git", "branch", "--show-current"): "main\n",
 }
 BOUND_ACCOUNTS = (
@@ -102,6 +102,9 @@ class TaskPrOutsideATaskTest(unittest.TestCase):
         self.assertEqual(str(raised.exception), "the branch main is not a <prefix>/<task>-<slug> branch")
 
 
+OAK_PROJECT = (("PATH", "/srv/oak"), ("MAIN", "main"))
+
+
 class TaskPrPushTest(unittest.TestCase):
     def setUp(self):
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
@@ -128,7 +131,7 @@ class TaskPrPushTest(unittest.TestCase):
             ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"), stdout="/srv/oak/.git\n"
         )
         self.processes.answer_entities(
-            self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("MAIN", "main"))}
+            self.runtime.paths.config_root, "PROJECT", {"oak": (*OAK_PROJECT, ("FORGE", "github"))}
         )
         append_event(
             self.runtime.paths,
@@ -142,7 +145,18 @@ class TaskPrPushTest(unittest.TestCase):
         self.processes.answer_entity(worktree, "TASK", "B12", TASK_FIELDS)
         self.processes.answer_entity(worktree, "MILESTONE", "F0", (("TITLE", "Parser"),))
         self.pushed_environments = []
-        self.processes.answer_by(("git", "push", "--quiet", "origin", "feature/B12-the-parser"), self.record_push)
+        self.processes.answer(("git", "rev-parse", "--verify", "--quiet", "refs/remotes/origin/feature/B12-the-parser"))
+        self.processes.answer_by(
+            (
+                "git",
+                "push",
+                "--quiet",
+                "--force-with-lease=feature/B12-the-parser:",
+                "origin",
+                "feature/B12-the-parser",
+            ),
+            self.record_push,
+        )
 
     def record_push(self, request):
         self.pushed_environments.append(request.environment)
@@ -154,6 +168,19 @@ class TaskPrPushTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(self.pushed_environments, [{"GH_TOKEN": "token-of-octo-bot"}])
+
+    def test_should_refuse_to_open_a_pull_request_for_a_task_of_a_project_of_forge_none(self):
+        # Arrange
+        self.processes.answer_entities(
+            self.runtime.paths.config_root, "PROJECT", {"oak": (*OAK_PROJECT, ("FORGE", "none"))}
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            COMMAND.run(Namespace(task=THE_TASK_OF_THE_BRANCH, subject="add the parser"), self.runtime)
+
+        # Assert
+        self.assertEqual(str(raised.exception), "@PROJECT.oak acts through no forge: @TASK.B12 opens no pull request")
 
     def test_should_open_the_pull_request_as_the_login_of_the_build_slot(self):
         # Act

@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 import unittest
 from pathlib import Path
@@ -89,6 +90,13 @@ class TemporaryMachine:
 
     def install_awawa(self, test_case: unittest.TestCase) -> None:
         self.search_path = provide_awawa(test_case)
+
+    def reduce_path_to(self, *programs: str) -> None:
+        directory = self.home.parent / "bin"
+        directory.mkdir(exist_ok=True)
+        for program in programs:
+            (directory / program).symlink_to(shutil.which(program, path=self.search_path))
+        self.search_path = str(directory)
 
     def pause_the_built_in_studies_of_shop(self) -> None:
         (self.corpus / "studies.awawa").write_text(PAUSED_BUILT_IN_STUDIES + PAUSED_SCANS_OF_SHOP)

@@ -33,6 +33,25 @@ POLICIES = json.dumps({"entities": [{"type": "POLICY", "name": "p1"}, {"type": "
 APPROVAL_POLICY = json.dumps(
     {"fields": [{"name": "PROJECT", "atoms": ["@PROJECT.app"]}, {"name": "REVIEW", "atoms": ["approval"]}]}
 )
+PROJECTS = json.dumps({"entities": [{"type": "PROJECT", "name": "app"}, {"type": "PROJECT", "name": "lib"}]})
+PROJECT_ON_GITHUB = json.dumps(
+    {
+        "fields": [
+            {"name": "PATH", "atoms": ["/"]},
+            {"name": "MAIN", "atoms": ["main"]},
+            {"name": "FORGE", "atoms": ["github"]},
+        ]
+    }
+)
+PROJECT_OF_NO_FORGE = json.dumps(
+    {
+        "fields": [
+            {"name": "PATH", "atoms": ["/"]},
+            {"name": "MAIN", "atoms": ["main"]},
+            {"name": "FORGE", "atoms": ["none"]},
+        ]
+    }
+)
 COMMENT_POLICY = json.dumps(
     {"fields": [{"name": "PROJECT", "atoms": ["@PROJECT.lib"]}, {"name": "REVIEW", "atoms": ["comment"]}]}
 )
@@ -74,9 +93,13 @@ def _create_doctor_answers() -> dict:
         ("awawa-web",): ProcessAnswer(),
         ("awawa", "lint"): ProcessAnswer(),
         ("git", "for-each-ref"): ProcessAnswer(),
+        ("git", "rev-parse", "--verify", "--quiet", "refs/heads/main"): ProcessAnswer(),
         ("awawa", "status", "POLICY"): ProcessAnswer(stdout=POLICIES),
         ("awawa", "show", "@POLICY.p1"): ProcessAnswer(stdout=APPROVAL_POLICY),
         ("awawa", "show", "@POLICY.p2"): ProcessAnswer(stdout=COMMENT_POLICY),
+        ("awawa", "status", "PROJECT"): ProcessAnswer(stdout=PROJECTS),
+        ("awawa", "show", "@PROJECT.app"): ProcessAnswer(stdout=PROJECT_ON_GITHUB),
+        ("awawa", "show", "@PROJECT.lib"): ProcessAnswer(stdout=PROJECT_OF_NO_FORGE),
     }
 
 
@@ -410,22 +433,8 @@ class DoctorLingerTest(DoctorTestCase):
                             "name": "forge",
                             "kind": "optional",
                             "state": "ok",
-                            "detail": "gh as ada-bot",
+                            "detail": "no registered project on a forge",
                             "fallback": "local mode without a forge",
-                        },
-                        {
-                            "name": "forge login",
-                            "kind": "optional",
-                            "state": "ok",
-                            "detail": "ada-bot for cli, build",
-                            "fallback": "the commands acting as it stop",
-                        },
-                        {
-                            "name": "forge login",
-                            "kind": "optional",
-                            "state": "ok",
-                            "detail": "rev-bot for review",
-                            "fallback": "the commands acting as it stop",
                         },
                         {
                             "name": "awawa-web",
@@ -457,6 +466,10 @@ class DoctorLingerTest(DoctorTestCase):
 
 
 class DoctorForgeTest(DoctorTestCase):
+    def setUp(self):
+        super().setUp()
+        self.runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
+
     def test_should_check_the_forge_as_the_cli_login(self):
         # Arrange
         self.configure(CONFIGURATION)
@@ -564,6 +577,62 @@ class DoctorForgeTest(DoctorTestCase):
         self.assertEqual(
             self.forge.questions,
             [("read_login_environment", "ada-bot"), ("read_login_environment", "rev-bot"), ("describe_account",)],
+        )
+
+
+class DoctorWithoutAProjectOnAForgeTest(DoctorTestCase):
+    def setUp(self):
+        super().setUp()
+        self.configure(CONFIGURATION)
+        self.runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
+        self.answers["awawa", "status", "PROJECT"] = ProcessAnswer(
+            stdout=json.dumps({"entities": [{"type": "PROJECT", "name": "lib"}]})
+        )
+
+    def test_should_report_the_local_mode_as_the_forge(self):
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "forge",
+                "kind": "optional",
+                "state": "ok",
+                "detail": "no registered project on a forge",
+                "fallback": "local mode without a forge",
+            },
+            document["items"],
+        )
+
+    def test_should_ask_the_forge_nothing(self):
+        # Act
+        doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(self.forge.questions, [])
+
+
+class DoctorOfAnUnreadableRegistryTest(DoctorTestCase):
+    def test_should_warn_that_the_projects_are_unreadable(self):
+        # Arrange
+        self.configure(CONFIGURATION)
+        self.runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
+        self.answers["awawa", "status", "PROJECT"] = ToolFailure("awawa status PROJECT timed out after 30 s")
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "forge",
+                "kind": "optional",
+                "state": "warning",
+                "detail": "PROJECT unreadable: awawa status PROJECT timed out after 30 s",
+                "fallback": "local mode without a forge",
+            },
+            document["items"],
         )
 
 
@@ -1024,6 +1093,8 @@ class DoctorProjectsTest(DoctorTestCase):
         super().setUp()
         self.configure(CONFIGURATION)
         self.runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
+        for registered in (("status", "PROJECT"), ("show", "@PROJECT.app"), ("show", "@PROJECT.lib")):
+            del self.answers["awawa", *registered]
         self.project = Path(self.root.name) / "app"
         self.project.mkdir()
         tools = Path(self.root.name) / "tools"

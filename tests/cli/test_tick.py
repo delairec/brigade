@@ -70,6 +70,7 @@ class BrigadeTickOnceTest(TickTestCase):
                 "actions_applied": 0,
                 "actions_failed": 0,
                 "heartbeat": str(self.heartbeat),
+                "merge_commands": [],
             },
         )
 

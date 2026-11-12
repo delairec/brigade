@@ -2,5 +2,8 @@
 case "$*" in
   "--version") echo "awawa 2.7.0" ;;
   "lint --strict "*) exit 0 ;;
+  "status PROJECT --json "*) echo '{"entities":[{"type":"PROJECT","name":"shop"}]}' ;;
+  "show @PROJECT.shop --json "*) echo '{"fields":[{"name":"PATH","atoms":["/"]},{"name":"MAIN","atoms":["main"]},{"name":"FORGE","atoms":["github"]}]}' ;;
+  "status POLICY --json "*) echo '{"entities":[]}' ;;
   *) exit 2 ;;
 esac

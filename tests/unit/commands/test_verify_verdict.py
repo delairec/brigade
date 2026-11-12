@@ -1,3 +1,4 @@
+import argparse
 import json
 import tempfile
 import unittest
@@ -5,13 +6,16 @@ from argparse import Namespace
 from datetime import UTC, datetime
 from pathlib import Path
 
+from brigade.add_command_parsers import add_command_parsers
 from brigade.commands.verify_verdict import COMMAND
 from brigade.errors import BrigadeError
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.read_ledger import LedgerReading, read_ledger
 from brigade.ledger.task_pr_opened import TaskPrOpened
+from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_started import WaveStarted
-from tests.unit.commands.command_runtime import create_machine_double, write_ledger
+from tests.unit.commands.command_runtime import create_machine_double, create_worktrees_double, write_ledger
+from tests.unit.commands.run_directories import create_run_record
 from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -19,6 +23,7 @@ from tests.unit.verify.test_record_verdict import create_review_forge
 
 PASS = {"head": "8885daa", "verdict": "pass", "findings": []}
 CHANGES_WITHOUT_A_FINDING = {"head": "8885daa", "verdict": "changes", "findings": []}
+GITHUB_PROJECT = (*TIDEPOOL_PROJECT, ("FORGE", "github"))
 
 
 def create_document(login: str | None) -> dict:
@@ -44,6 +49,16 @@ class VerifyVerdictTextTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(text, expected_text)
 
+    def test_should_name_the_verdict_the_task_and_its_head_of_a_task_without_a_pull_request(self):
+        # Arrange
+        document = {"task": "T7", "head": "8885daa", "verdict": "pass", "findings": [], "login": None}
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(text, "verdict pass of @TASK.T7 at 8885daa")
+
 
 class VerifyVerdictExitCodeTest(unittest.TestCase):
     def test_should_exit_0_once_the_verdict_is_recorded(self):
@@ -65,6 +80,17 @@ class VerifyVerdictRequestTest(unittest.TestCase):
         # Assert
         self.assertIs(request, options)
 
+    def test_should_take_a_verdict_naming_no_pull_request(self):
+        # Arrange
+        parser = argparse.ArgumentParser(prog="brigade")
+        add_command_parsers(parser, (COMMAND,), argparse.ArgumentParser(add_help=False))
+
+        # Act
+        options = parser.parse_args(["verify", "verdict", "--file", "verdict.json"])
+
+        # Assert
+        self.assertIsNone(options.pr)
+
 
 class VerifyVerdictOfAPullRequestTest(unittest.TestCase):
     def setUp(self):
@@ -78,7 +104,7 @@ class VerifyVerdictOfAPullRequestTest(unittest.TestCase):
         self.forge = create_review_forge()
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
-            run_process=create_machine_double({"PROJECT": {"tidepool": TIDEPOOL_PROJECT}, "POLICY": {}}, TASK_WORKTREE),
+            run_process=create_machine_double({"PROJECT": {"tidepool": GITHUB_PROJECT}, "POLICY": {}}, TASK_WORKTREE),
             resolve_plugin=lambda kind, name, **places: self.forge,
         )
 
@@ -156,6 +182,20 @@ class VerifyVerdictOfAPullRequestTest(unittest.TestCase):
         # Assert
         self.assertEqual(str(raised.exception), "no task.pr_opened of @PROJECT.tidepool names the pull request #41")
 
+    def test_should_refuse_a_verdict_naming_no_pull_request_on_a_project_with_a_forge(self):
+        # Arrange
+        self.verdict.write_text(json.dumps(PASS), encoding="utf-8")
+        no_pull_request = None
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            COMMAND.run(Namespace(pr=no_pull_request, file=str(self.verdict)), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception), "@PROJECT.tidepool acts through the forge github: the verdict names its pull request"
+        )
+
     def test_should_give_the_recorded_verdict_of_the_task_of_the_pull_request(self):
         # Arrange
         self.verdict.write_text(json.dumps(PASS), encoding="utf-8")
@@ -178,3 +218,145 @@ class VerifyVerdictOfAPullRequestTest(unittest.TestCase):
                 "login": None,
             },
         )
+
+
+LOCAL_PROJECT = (("PATH", "/srv/tidepool"), ("MAIN", "main"), ("FORGE", "none"))
+LOCAL_TASK_WORKTREE = {
+    **TASK_WORKTREE,
+    ("git", "branch", "--show-current"): "feature/T7-tide-table\n",
+    ("git", "rev-parse", "HEAD"): "8885daa\n",
+}
+
+
+class VerifyVerdictOfATaskWithoutAForgeTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        (self.root / "config").mkdir()
+        (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
+        write_ledger(self.root, [WAVE_STARTED])
+        self.verdict = self.root / "verdict.json"
+        corpus = {"PROJECT": {"tidepool": LOCAL_PROJECT}, "TASK": {"T7": ()}, "POLICY": {}}
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root), run_process=create_machine_double(corpus, LOCAL_TASK_WORKTREE)
+        )
+        self.no_pull_request = None
+
+    def test_should_record_the_verdict_of_the_head_of_the_task_branch_with_no_pull_request(self):
+        # Arrange
+        self.verdict.write_text(json.dumps(PASS), encoding="utf-8")
+
+        # Act
+        COMMAND.run(Namespace(pr=self.no_pull_request, file=str(self.verdict)), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            read_ledger(self.root / "state").entries[-1],
+            LedgerEntry(
+                instant=datetime(2026, 10, 19, 9, 0, tzinfo=UTC),
+                event=TaskVerdict(
+                    project="tidepool",
+                    wave="tidepool_w16",
+                    task="T7",
+                    pr=None,
+                    head="8885daa",
+                    verdict="pass",
+                    findings=(),
+                    login=None,
+                ),
+            ),
+        )
+
+    def test_should_refuse_a_verdict_of_a_head_no_longer_the_head_of_the_task_branch(self):
+        # Arrange
+        self.verdict.write_text(json.dumps({**PASS, "head": "4c1d2e0"}), encoding="utf-8")
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            COMMAND.run(Namespace(pr=self.no_pull_request, file=str(self.verdict)), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception),
+            "the verdict judged 4c1d2e0, no longer the head of feature/T7-tide-table, now 8885daa",
+        )
+
+
+class VerifyVerdictFromTheDisposableWorktreeOfAReadingRunTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        (self.root / "config").mkdir()
+        (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
+        write_ledger(self.root, [WAVE_STARTED])
+        self.verdict = self.root / "verdict.json"
+        self.verdict.write_text(json.dumps(PASS), encoding="utf-8")
+        self.run_directory = self.root / "state" / "runs" / "20261111T090000Z-e10d04"
+        self.run_directory.mkdir(parents=True)
+        self.disposable_worktree = self.run_directory / "worktree"
+        self.corpus = {"PROJECT": {"tidepool": LOCAL_PROJECT}, "TASK": {"T7": ()}, "POLICY": {}}
+        self.no_pull_request = None
+
+    def write_run_record(self, worktree: str) -> None:
+        record = {
+            **create_run_record("20261111T090000Z-e10d04", "tidepool_w16", "T7"),
+            "slot": "review",
+            "cwd": "/srv/tidepool-T7",
+            "worktree": worktree,
+        }
+        (self.run_directory / "run.json").write_text(json.dumps(record), encoding="utf-8")
+
+    def create_runtime(self, shell_worktree: str):
+        detached = {
+            ("git", "rev-parse", "--show-toplevel"): f"{shell_worktree}\n",
+            ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): "/srv/tidepool/.git\n",
+            ("git", "branch", "--show-current"): "\n",
+            ("git", "rev-parse", "HEAD"): "8885daa\n",
+        }
+        run_process = create_worktrees_double(
+            self.corpus,
+            {
+                str(Path.cwd()): detached,
+                shell_worktree: detached,
+            },
+            LOCAL_TASK_WORKTREE,
+        )
+        paths = create_test_paths(self.root, run_directory=self.run_directory)
+        return create_test_runtime(paths, run_process=run_process)
+
+    def test_should_record_the_verdict_of_the_task_of_the_worktree_the_run_was_cut_from(self):
+        # Arrange
+        self.write_run_record(str(self.disposable_worktree))
+        runtime = self.create_runtime(str(self.disposable_worktree))
+
+        # Act
+        COMMAND.run(Namespace(pr=self.no_pull_request, file=str(self.verdict)), runtime)
+
+        # Assert
+        self.assertEqual(
+            read_ledger(self.root / "state").entries[-1].event,
+            TaskVerdict(
+                project="tidepool",
+                wave="tidepool_w16",
+                task="T7",
+                pr=None,
+                head="8885daa",
+                verdict="pass",
+                findings=(),
+                login=None,
+            ),
+        )
+
+    def test_should_read_the_branch_of_a_worktree_the_run_does_not_read(self):
+        # Arrange
+        self.write_run_record(str(self.disposable_worktree))
+        runtime = self.create_runtime("/srv/tidepool-scratch")
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            COMMAND.run(Namespace(pr=self.no_pull_request, file=str(self.verdict)), runtime)
+
+        # Assert
+        self.assertEqual(str(raised.exception), "the branch  is not a <prefix>/<task>-<slug> branch")

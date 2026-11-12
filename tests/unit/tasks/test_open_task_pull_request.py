@@ -77,7 +77,19 @@ class OpenTaskPullRequestTestCase(unittest.TestCase):
         self.processes.answer(
             ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "HEAD^{commit}"), stdout="c0ffee\n"
         )
-        self.processes.answer(("git", "push", "--quiet", "origin", "feature/B12-the-parser"))
+        self.processes.answer(
+            ("git", "rev-parse", "--verify", "--quiet", "refs/remotes/origin/feature/B12-the-parser"), stdout="c0ffee\n"
+        )
+        self.processes.answer(
+            (
+                "git",
+                "push",
+                "--quiet",
+                "--force-with-lease=feature/B12-the-parser:c0ffee",
+                "origin",
+                "feature/B12-the-parser",
+            )
+        )
         self.processes.answer_entity(Path("/srv/oak-b12"), "MILESTONE", "F0", (("TITLE", "Parser"),))
         append_event(self.runtime.paths, WAVE_START, MILESTONE_BRANCH_CUT)
         append_event(self.runtime.paths, WAVE_START, WAVE_STARTED)
@@ -97,6 +109,28 @@ class OpenTaskPullRequestTestCase(unittest.TestCase):
             login="clauche-bot",
             attribution=("Co-Authored-By: Ada <ada@example.org>",),
         )
+
+
+class OpenTaskPullRequestInAnAreaTest(OpenTaskPullRequestTestCase):
+    def test_should_read_the_task_and_its_milestone_in_the_area(self):
+        # Arrange
+        self.record_check(PASSING_CHECK)
+        self.processes.answer_entities(
+            self.runtime.paths.config_root,
+            "PROJECT",
+            {"oak": (("PATH", "/srv/oak"), ("MAIN", "main"), ("CORPUS", "brigade"), ("MODE", "area"))},
+        )
+        area = Path("/srv/oak-b12/brigade")
+        self.processes.answer_entity(area, "TASK", "B12", TASK_FIELDS)
+        self.processes.answer_entity(area, "MILESTONE", "F0", (("TITLE", "Parser"),))
+
+        # Act
+        opened = open_task_pull_request(self.runtime, self.create_demand(create_forge(["Parser"])))
+
+        # Assert
+        self.assertEqual(opened["pr"], 42)
+        self.assertIn(("awawa", "show", "@MILESTONE.F0", "--json", str(area)), self.processes.list_argvs())
+        self.assertNotIn(("awawa", "show", "@MILESTONE.F0", "--json", "/srv/oak-b12"), self.processes.list_argvs())
 
 
 class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
@@ -240,7 +274,17 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
             pushed_environments.append(request.environment)
             return 0, "", ""
 
-        self.processes.answer_by(("git", "push", "--quiet", "origin", "feature/B12-the-parser"), record_push)
+        self.processes.answer_by(
+            (
+                "git",
+                "push",
+                "--quiet",
+                "--force-with-lease=feature/B12-the-parser:c0ffee",
+                "origin",
+                "feature/B12-the-parser",
+            ),
+            record_push,
+        )
 
         # Act
         open_task_pull_request(self.runtime, self.create_demand(create_forge(["Parser"])))
@@ -329,7 +373,17 @@ class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestTestCase):
             open_task_pull_request(self.runtime, self.create_demand(forge))
 
         # Assert
-        self.assertNotIn(("git", "push", "--quiet", "origin", "feature/B12-the-parser"), self.processes.list_argvs())
+        self.assertNotIn(
+            (
+                "git",
+                "push",
+                "--quiet",
+                "--force-with-lease=feature/B12-the-parser:c0ffee",
+                "origin",
+                "feature/B12-the-parser",
+            ),
+            self.processes.list_argvs(),
+        )
         self.assertEqual(forge.list_operations(), [])
         self.assertEqual(
             read_ledger(self.root / "state").entries,

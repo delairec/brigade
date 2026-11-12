@@ -6,14 +6,17 @@ from brigade.corpus.locate_corpus_lock import locate_corpus_lock
 from brigade.corpus.locate_entity_block import locate_entity_block
 from brigade.corpus.read_awawa_document import read_awawa_document
 from brigade.errors import BrigadeError
-from brigade.git.push_branch import BranchPush, push_branch
+from brigade.git.push_branch import BranchPush
+from brigade.git.push_branch_with_lease import push_branch_with_lease
 from brigade.git.read_current_branch import read_current_branch
 from brigade.git.resolve_commit import resolve_commit
 from brigade.ledger.append_event import append_event
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_promoted import TaskPromoted
+from brigade.registry.read_corpus_workspace import read_corpus_workspace
 from brigade.runtime import Runtime
+from brigade.tasks.locate_task_corpus import locate_task_corpus
 from brigade.tasks.locate_task_worktree import TaskWorktree, locate_task_worktree
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -52,7 +55,7 @@ def _refuse_undeclared(worktree: TaskWorktree, undeclared: str) -> BrigadeError:
 
 
 def _require_promotion_fields(runtime: Runtime, worktree: TaskWorktree) -> None:
-    schema = read_awawa_document(runtime.run_process, worktree.path, ("show", "TASK"))
+    schema = read_awawa_document(runtime.run_process, locate_task_corpus(worktree), ("show", "TASK"))
     declared = {field["atoms"][0]: field["atoms"][1] for field in schema["fields"] if field["name"] == "FIELD"}
     if IMPLEMENTED not in declared.get("STATUS", "").split(TYPE_SEPARATOR):
         raise _refuse_undeclared(worktree, f"STATUS {IMPLEMENTED}")
@@ -79,7 +82,7 @@ def _promote(text: str, task: str, pr: int) -> str:
 
 
 def _write_promotion(runtime: Runtime, worktree: TaskWorktree, pr: int, attribution: tuple[str, ...]) -> None:
-    shown = read_awawa_document(runtime.run_process, worktree.path, ("show", f"@TASK.{worktree.task}"))
+    shown = read_awawa_document(runtime.run_process, locate_task_corpus(worktree), ("show", f"@TASK.{worktree.task}"))
     file_name = str(Path(shown["file"]).relative_to(worktree.path))
     change_corpus_file(
         runtime.run_process,
@@ -91,6 +94,7 @@ def _write_promotion(runtime: Runtime, worktree: TaskWorktree, pr: int, attribut
                 (f"docs(corpus): mark @TASK.{worktree.task} implemented, delivered by #{pr}", "", *attribution)
             ),
             rewrite=lambda texts: (_promote(texts[0], worktree.task, pr),),
+            workspace=read_corpus_workspace(worktree.project),
         ),
     )
 
@@ -101,7 +105,7 @@ def promote_task(runtime: Runtime, demand: TaskPromotionDemand) -> dict:
     _require_promotion_fields(runtime, worktree)
     _write_promotion(runtime, worktree, pr, demand.attribution)
     branch = read_current_branch(runtime.run_process, worktree.path)
-    push_branch(
+    push_branch_with_lease(
         runtime.run_process, BranchPush(repository=worktree.path, branch=branch, environment=demand.environment)
     )
     commit = resolve_commit(runtime.run_process, worktree.path, HEAD)

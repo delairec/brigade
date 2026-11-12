@@ -10,10 +10,11 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
 TASK_WORKTREE = {
-    ("git", "rev-parse", "--show-toplevel"): "/home/user/tidepool-T7\n",
-    ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): "/home/user/tidepool/.git\n",
+    ("git", "rev-parse", "--show-toplevel"): "/srv/tidepool-T7\n",
+    ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): "/srv/tidepool/.git\n",
 }
-TIDEPOOL_PROJECT = (("PATH", "/home/user/tidepool"),)
+TIDEPOOL_PROJECT = (("PATH", "/srv/tidepool"),)
+GITHUB_PROJECT = (*TIDEPOOL_PROJECT, ("FORGE", "github"))
 TIDEPOOL_TASKS = {"T7": (("MILESTONE", "@MILESTONE.M4"),)}
 M4_BRANCH_CUT = {
     "schema_version": 1,
@@ -119,7 +120,7 @@ class VerifyPreflightOfAPullRequestTest(unittest.TestCase):
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double(
-                {"PROJECT": {"tidepool": TIDEPOOL_PROJECT}, "TASK": TIDEPOOL_TASKS}, TASK_WORKTREE
+                {"PROJECT": {"tidepool": GITHUB_PROJECT}, "TASK": TIDEPOOL_TASKS}, TASK_WORKTREE
             ),
             resolve_plugin=lambda kind, name, **places: self.forge,
         )
@@ -135,7 +136,7 @@ class VerifyPreflightOfAPullRequestTest(unittest.TestCase):
             [
                 (
                     "read_pull_request",
-                    {"schema_version": 1, "repository": "/home/user/tidepool", "number": 42, "environment": {}},
+                    {"schema_version": 1, "repository": "/srv/tidepool", "number": 42, "environment": {}},
                 )
             ],
         )
@@ -162,7 +163,7 @@ class VerifyPreflightAsTheLoginOfTheCliKeyTest(unittest.TestCase):
         runtime = create_test_runtime(
             create_test_paths(root),
             run_process=create_machine_double(
-                {"PROJECT": {"tidepool": TIDEPOOL_PROJECT}, "TASK": TIDEPOOL_TASKS}, TASK_WORKTREE
+                {"PROJECT": {"tidepool": GITHUB_PROJECT}, "TASK": TIDEPOOL_TASKS}, TASK_WORKTREE
             ),
             resolve_plugin=lambda kind, name, **places: forge,
         )
@@ -179,10 +180,41 @@ class VerifyPreflightAsTheLoginOfTheCliKeyTest(unittest.TestCase):
                     "read_pull_request",
                     {
                         "schema_version": 1,
-                        "repository": "/home/user/tidepool",
+                        "repository": "/srv/tidepool",
                         "number": 42,
                         "environment": {"GH_TOKEN": "token-of-octo-cli"},
                     },
+                )
+            ],
+        )
+
+    def test_should_read_no_login_environment_on_a_project_of_forge_none(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (root / "config").mkdir()
+        (root / "config" / "config.toml").write_text('[forge_accounts]\ncli = "octo-cli"\n', encoding="utf-8")
+        write_ledger(root, [M4_BRANCH_CUT, WAVE_STARTED, TASK_PR_OPENED])
+        forge = ForgeBindingItsLoginsDouble()
+        local_project = (*TIDEPOOL_PROJECT, ("FORGE", "none"))
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_machine_double(
+                {"PROJECT": {"tidepool": local_project}, "TASK": TIDEPOOL_TASKS}, TASK_WORKTREE
+            ),
+            resolve_plugin=lambda kind, name, **places: forge,
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            COMMAND.run(Namespace(pr=42), runtime)
+
+        # Assert
+        self.assertEqual(
+            forge.questions,
+            [
+                (
+                    "read_pull_request",
+                    {"schema_version": 1, "repository": "/srv/tidepool", "number": 42, "environment": {}},
                 )
             ],
         )

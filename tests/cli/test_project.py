@@ -44,7 +44,7 @@ class BrigadeProjectAddOnAGitHubRepositoryTest(ProjectTestCase):
 
     def test_should_register_the_project_commit_the_registry_alone_and_print_the_registration(self):
         # Act
-        completed = self.run_project("add", str(self.project.path))
+        completed = self.run_project("add", str(self.project.path), "--corpus-mode", "control")
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -103,9 +103,9 @@ class BrigadeProjectListTest(ProjectTestCase):
         self.assertEqual(
             completed.stdout.splitlines(),
             [
-                "name      status  path",
-                f"alpha     active  {self.alpha.path}",
-                f"the_beta  active  {self.beta.path}",
+                "name      status  forge  path",
+                f"alpha     active  none   {self.alpha.path}",
+                f"the_beta  active  none   {self.beta.path}",
             ],
         )
 

@@ -1,5 +1,4 @@
 import shlex
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -10,11 +9,14 @@ from brigade.git.add_worktree_on_branch import add_worktree_on_branch
 from brigade.git.check_ancestor import check_ancestor
 from brigade.git.find_branch import find_branch
 from brigade.git.list_worktrees import list_worktrees
+from brigade.git.merge_fast_forward import merge_fast_forward
+from brigade.git.read_head import read_head
 from brigade.git.rebase_onto import rebase_onto
 from brigade.git.require_ancestor import require_ancestor
 from brigade.ledger.append_event import append_event
 from brigade.ledger.task_state import TaskState
 from brigade.registry.find_project import find_project
+from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
@@ -25,8 +27,14 @@ from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
 from brigade.system.write_text_atomically import write_text_atomically
 from brigade.tick.actions import LaunchTask
+from brigade.tick.head_proof import GREEN, RED, HeadProof, HoldingHead
 from brigade.tick.ignore_worktrees import ignore_worktrees
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
+from brigade.tick.prove_branch_head import BranchHead, prove_branch_head
+from brigade.tick.prove_head import HeadQuery, prove_head
+from brigade.tick.read_pull_request_checks import read_pull_request_checks
+from brigade.tick.read_task_check import read_task_check
+from brigade.tick.tick_forge import TickForge
 from brigade.waves.locate_forge_branch import locate_forge_branch
 from brigade.waves.read_task_state import PARKED_STATE
 
@@ -44,6 +52,9 @@ class PreparedWorktree:
     worktree: BranchWorktree
     conflicted: bool
     on_start: bool
+    rebased: bool = False
+    failed_commands: tuple[str, ...] = ()
+    held_by: HoldingHead | None = None
 
 
 def _split_line(line: str) -> tuple[str, ...]:
@@ -77,14 +88,71 @@ def _open_worktree(runtime: Runtime, repository: Path, worktree: BranchWorktree)
     return found
 
 
-def _put_on_start(runtime: Runtime, worktree: BranchWorktree, action: LaunchTask) -> PreparedWorktree:
+@dataclass(frozen=True)
+class _Launch:
+    project: Entity
+    repository: Path
+    worktree: BranchWorktree
+    action: LaunchTask
+    forge: TickForge
+
+
+def _prove_task_head(runtime: Runtime, launch: _Launch) -> HeadProof:
+    commit = read_head(runtime.run_process, launch.worktree.path)
+    return prove_head(
+        runtime,
+        HeadQuery(
+            project=launch.project,
+            repository=launch.repository,
+            commit=commit,
+            task_check=read_task_check(runtime.paths.state_root, launch.project.name, launch.action.task),
+            forge_checks=read_pull_request_checks(launch.action, commit),
+        ),
+    )
+
+
+def _prove_start_head(runtime: Runtime, launch: _Launch) -> HeadProof:
+    return prove_branch_head(
+        runtime,
+        BranchHead(
+            project=launch.project,
+            repository=launch.worktree.path,
+            branch=launch.action.branch,
+            ref=launch.worktree.start,
+            list_check_runs=launch.forge.list_check_runs,
+        ),
+    )
+
+
+def _is_merged_locally(runtime: Runtime, launch: _Launch) -> bool:
+    worktree = launch.worktree
+    if is_on_a_forge(launch.project):
+        return False
+    return check_ancestor(runtime.run_process, worktree.path, worktree.branch, worktree.start).exit_code == DESCENDING
+
+
+def _put_on_start(runtime: Runtime, launch: _Launch) -> PreparedWorktree:
+    worktree = launch.worktree
     descent = check_ancestor(runtime.run_process, worktree.path, worktree.start, worktree.branch)
     if descent.exit_code == DESCENDING:
         return PreparedWorktree(worktree=worktree, conflicted=False, on_start=True)
-    if not action.checks_passed:
-        return PreparedWorktree(worktree=worktree, conflicted=False, on_start=False)
+    if _is_merged_locally(runtime, launch):
+        merge_fast_forward(runtime.run_process, worktree.path, worktree.start)
+        return PreparedWorktree(worktree=worktree, conflicted=False, on_start=True)
+    task_head = _prove_task_head(runtime, launch)
+    if task_head.state == RED:
+        return PreparedWorktree(
+            worktree=worktree, conflicted=False, on_start=False, failed_commands=task_head.failed_commands
+        )
+    if task_head.state != GREEN:
+        held_by = HoldingHead(branch=worktree.branch, proof=task_head)
+        return PreparedWorktree(worktree=worktree, conflicted=False, on_start=False, held_by=held_by)
+    start_head = _prove_start_head(runtime, launch)
+    if start_head.state != GREEN:
+        held_by = HoldingHead(branch=launch.action.branch, proof=start_head)
+        return PreparedWorktree(worktree=worktree, conflicted=False, on_start=False, held_by=held_by)
     rebased = rebase_onto(runtime.run_process, worktree.path, worktree.start)
-    return PreparedWorktree(worktree=worktree, conflicted=not rebased, on_start=rebased)
+    return PreparedWorktree(worktree=worktree, conflicted=not rebased, on_start=rebased, rebased=rebased)
 
 
 def _set_up_or_park(runtime: Runtime, project: Entity, action: LaunchTask, prepared: PreparedWorktree) -> None:
@@ -105,7 +173,7 @@ def _set_up_or_park(runtime: Runtime, project: Entity, action: LaunchTask, prepa
 
 
 def prepare_task_worktree(
-    runtime: Runtime, configuration: Configuration, action: LaunchTask, read_environment: Callable[[str], dict]
+    runtime: Runtime, configuration: Configuration, action: LaunchTask, forge: TickForge
 ) -> PreparedWorktree:
     project = find_project(read_projects(runtime), action.project)
     repository = Path(read_project_field(project, "PATH"))
@@ -114,16 +182,17 @@ def prepare_task_worktree(
         worktree = BranchWorktree(
             path=locate_scheduled_worktree(repository, configuration.worktree_root, action.task),
             branch=action.task_branch,
-            start=locate_forge_branch(runtime.run_process, project, action.branch, read_environment),
+            start=locate_forge_branch(runtime.run_process, project, action.branch, forge.read_environment),
         )
         if configuration.worktree_root is None and action.branch != read_project_field(project, MAIN_FIELD):
             ignore_worktrees(runtime.run_process, repository, action.branch)
+        launch = _Launch(project=project, repository=repository, worktree=worktree, action=action, forge=forge)
         prepared = (
-            _put_on_start(runtime, worktree, action)
+            _put_on_start(runtime, launch)
             if _open_worktree(runtime, repository, worktree)
             else PreparedWorktree(worktree=worktree, conflicted=False, on_start=True)
         )
-        if prepared.conflicted:
+        if prepared.conflicted or prepared.held_by is not None:
             return prepared
     _set_up_or_park(runtime, project, action, prepared)
     return prepared

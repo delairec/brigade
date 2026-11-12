@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.corpus.prepare_project_checkout import prepare_project_checkout
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity
 from brigade.git.count_changed_lines import count_changed_lines
@@ -8,7 +9,9 @@ from brigade.git.fetch_branches import BranchesFetch, fetch_branches
 from brigade.git.find_merge_base import find_merge_base
 from brigade.git.list_added_lines import list_added_lines
 from brigade.git.resolve_commit import resolve_commit
+from brigade.registry.read_corpus_workspace import read_corpus_workspace
 from brigade.registry.read_project_field import read_project_field
+from brigade.registry.read_project_forge import read_project_forge
 from brigade.runtime import Runtime
 from brigade.system.ask_pull_request_details import PullRequestDetailsQuery, ask_pull_request_details
 from brigade.system.parse_configuration import Configuration
@@ -23,7 +26,6 @@ from brigade.verify.measure_size import measure_size
 from brigade.verify.read_privacy_patterns import read_privacy_patterns
 
 DOCUMENT_SCHEMA_VERSION = 1
-FORGE_NAME = "github"
 REMOTE_BRANCH_PREFIX = "refs/remotes/origin/"
 
 
@@ -56,7 +58,7 @@ class _ComparedCommits:
 def _fetch_pull_request(runtime: Runtime, demand: PreflightDemand, repository: Path) -> dict:
     pull_request = ask_pull_request_details(
         demand.forge,
-        FORGE_NAME,
+        read_project_forge(demand.project),
         PullRequestDetailsQuery(repository=str(repository), number=demand.pr, environment=demand.environment),
         runtime,
     )
@@ -75,6 +77,13 @@ def _compare_commits(runtime: Runtime, repository: Path, base_branch: str, head:
     return _ComparedCommits(repository=repository, base_head=base_head, base=base, head=head)
 
 
+def _check_promotion(runtime: Runtime, demand: PreflightDemand, head: str, head_tree: Path) -> dict:
+    head_demand = TreeDemand(project=demand.project.name, ref=head)
+    repository_tree = prepare_project_checkout(demand.project, head_demand, demand.configuration, runtime).root
+    facts = PromotionFacts(head_tree=head_tree, repository_tree=repository_tree, task=demand.task, pr=demand.pr)
+    return check_promotion(runtime.run_process, facts)
+
+
 def _run_checks(runtime: Runtime, demand: PreflightDemand, pull_request: dict, commits: _ComparedCommits) -> list:
     run_process = runtime.run_process
     project = demand.project.name
@@ -88,9 +97,15 @@ def _run_checks(runtime: Runtime, demand: PreflightDemand, pull_request: dict, c
         check_ancestry(run_process, ancestry),
         check_check_runs(pull_request["checks"]),
         check_corpus_at_head(run_process, head_tree),
-        check_promotion(run_process, PromotionFacts(head_tree=head_tree, task=demand.task, pr=demand.pr)),
+        _check_promotion(runtime, demand, commits.head, head_tree),
         check_untouched_files(
-            run_process, UntouchedFilesFacts(base_tree=base_tree, head_tree=head_tree, changed=changed)
+            run_process,
+            UntouchedFilesFacts(
+                base_tree=base_tree,
+                head_tree=head_tree,
+                changed=changed,
+                folder=read_corpus_workspace(demand.project),
+            ),
         ),
         check_privacy(
             read_privacy_patterns(demand.project),

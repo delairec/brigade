@@ -2,11 +2,10 @@ import argparse
 from datetime import datetime, timedelta
 
 from brigade.command import Command
+from brigade.commands._find_installed_scheduler import find_installed_scheduler
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.read_ledger import read_ledger
 from brigade.runtime import Runtime
-from brigade.system.ask_scheduler import SchedulerQuestion, ask_scheduler
-from brigade.system.locate_unit_directory import locate_unit_directory
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.scheduler_state import SchedulerState
 from brigade.tick.describe_heartbeat import describe_heartbeat
@@ -17,23 +16,7 @@ from brigade.waves.read_wave_pause import read_wave_pause
 from brigade.waves.summarize_waves import summarize_waves
 
 DOCUMENT_SCHEMA_VERSION = 1
-SCHEDULERS_ASKED = ("systemd", "cron")
-NO_SCHEDULER = "none"
-NOT_INSTALLED = SchedulerState(installed=False, unit_files=(), cron_line=None, next_activation=None)
 STALE_EXIT_CODE = 1
-
-
-def _find_installed(runtime: Runtime):
-    request = {"schema_version": DOCUMENT_SCHEMA_VERSION, "unit_directory": str(locate_unit_directory(runtime.paths))}
-    for name in SCHEDULERS_ASKED:
-        status = ask_scheduler(
-            runtime.resolve_plugin("scheduler", name),
-            SchedulerQuestion(scheduler_name=name, operation="read_status", request=request),
-            runtime,
-        )
-        if status.installed:
-            return name, status
-    return NO_SCHEDULER, NOT_INSTALLED
 
 
 def _is_stale(heartbeat: Heartbeat | None, status: SchedulerState, now: datetime, minutes: int) -> bool:
@@ -108,7 +91,7 @@ def _decide_exit_code(document: dict) -> int:
 
 
 def scheduler_status(request: argparse.Namespace, runtime: Runtime) -> dict:
-    name, status = _find_installed(runtime)
+    name, status = find_installed_scheduler(runtime)
     minutes = read_configuration(runtime, CONFIGURATION_OPTIONAL).tick_stale_after
     heartbeat = read_heartbeat(runtime.paths.heartbeat_file)
     entries = read_ledger(runtime.paths.state_root).entries

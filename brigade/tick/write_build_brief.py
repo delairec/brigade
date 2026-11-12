@@ -10,10 +10,11 @@ from brigade.tick.prepare_task_worktree import PreparedWorktree
 
 BRIEF_TEMPLATE = files("brigade.tick") / "data" / "build-brief.md.tpl"
 BRIEFS_DIRECTORY = "briefs"
-ON_START = Template("cut from the head of $branch")
-OFF_START = Template(
-    "left as it stands, off the head of $branch: do not rebase it; the tick rebases it onto $branch"
-    " once the checks of its pull request pass"
+CUT = Template("cut from the head of $branch")
+REBASED = Template("put on the head of $branch")
+RED = Template(
+    "left as it stands, off the head of $branch: its head failed $commands;"
+    " repair those failures first, and do not rebase the branch"
 )
 RULED_TASK = Template(
     "\n@TASK.$task reads differently on $start than in the corpus of the worktree;"
@@ -32,6 +33,15 @@ def _describe_ruling(prepared: PreparedWorktree, ruled_task: Entity | None) -> s
     )
 
 
+def _describe_start(action: LaunchTask, prepared: PreparedWorktree) -> str:
+    if prepared.rebased:
+        return REBASED.substitute(branch=action.branch)
+    if prepared.on_start:
+        return CUT.substitute(branch=action.branch)
+    commands = ", ".join(f"`{command}`" for command in prepared.failed_commands)
+    return RED.substitute(branch=action.branch, commands=commands)
+
+
 def write_build_brief(
     state_root: Path, action: LaunchTask, prepared: PreparedWorktree, ruled_task: Entity | None
 ) -> Path:
@@ -43,7 +53,7 @@ def write_build_brief(
         branch=action.branch,
         worktree=prepared.worktree.path,
         task_branch=prepared.worktree.branch,
-        start=(ON_START if prepared.on_start else OFF_START).substitute(branch=action.branch),
+        start=_describe_start(action, prepared),
     )
     create_directory(path.parent)
     write_text_file(path, brief + _describe_ruling(prepared, ruled_task))

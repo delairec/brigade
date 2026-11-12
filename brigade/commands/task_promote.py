@@ -3,9 +3,11 @@ from pathlib import Path
 
 from brigade.command import Argument, Command
 from brigade.commands._read_attribution import read_attribution
-from brigade.commands._read_forge_environment import BUILD_SLOT, read_forge_environment
+from brigade.commands._read_forge_environment import BUILD_SLOT, ForgeSlot, read_forge_environment
+from brigade.registry.read_project_forge import read_project_forge
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
+from brigade.tasks.locate_task_worktree import locate_task_worktree
 from brigade.tasks.promote_task import TaskPromotionDemand, promote_task
 
 
@@ -15,13 +17,15 @@ def _render_text(document: dict) -> str:
 
 def task_promote(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)
+    located = locate_task_worktree(runtime, Path.cwd(), request.task)
+    forge_slot = ForgeSlot(read_project_forge(located.project), BUILD_SLOT)
     return promote_task(
         runtime,
         TaskPromotionDemand(
             path=Path.cwd(),
             task=request.task,
             pr=request.pr,
-            environment=read_forge_environment(configuration, BUILD_SLOT, runtime),
+            environment=read_forge_environment(configuration, forge_slot, runtime),
             attribution=tuple(read_attribution(configuration, runtime)),
         ),
     )

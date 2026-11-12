@@ -5,8 +5,14 @@ from pathlib import Path
 
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.command import Argument, Command
-from brigade.commands._read_forge_environment import FORGE_KIND, FORGE_NAME
+from brigade.commands._read_forge_environment import FORGE_KIND
+from brigade.commands._resolve_project_forge import resolve_project_forge
 from brigade.commands.run import run
+from brigade.corpus.read_entities import Entity
+from brigade.registry.find_project import find_project
+from brigade.registry.find_project_at import find_project_at
+from brigade.registry.read_project_forge import read_project_forge
+from brigade.registry.read_projects import read_projects
 from brigade.runs.create_run_id import create_run_id
 from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
 from brigade.runs.record_run_pid import record_run_pid
@@ -45,12 +51,21 @@ def _read_study_of_request(request: argparse.Namespace, runtime: Runtime) -> Stu
     return read_study_of_run(runtime, runtime.paths.state_root / RUNS_DIRECTORY / request.run_id)
 
 
+def _find_study_project(study: Study, runtime: Runtime) -> Entity | None:
+    projects = read_projects(runtime)
+    if study.project is None:
+        return find_project_at(projects, Path.cwd())
+    return find_project(projects, study.project)
+
+
 def study_run(request: argparse.Namespace, runtime: Runtime) -> dict:
+    study = _read_study_of_request(request, runtime)
+    project = _find_study_project(study, runtime)
     equipment = StudyEquipment(
         collector_equipment=CollectorEquipment(
             configuration=read_configuration(runtime, CONFIGURATION_OPTIONAL),
-            forge=runtime.resolve_plugin(FORGE_KIND, FORGE_NAME),
-            forge_name=FORGE_NAME,
+            forge=resolve_project_forge(project, runtime),
+            forge_name=read_project_forge(project),
             resolve_client=lambda name: runtime.resolve_plugin(CLIENT_KIND, name),
         ),
         resolve_collector=lambda name, project: runtime.resolve_plugin(
@@ -66,7 +81,7 @@ def study_run(request: argparse.Namespace, runtime: Runtime) -> dict:
     )
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
-        **run_study(runtime, _read_study_of_request(request, runtime), equipment, request.run_id),
+        **run_study(runtime, study, equipment, request.run_id),
     }
 
 

@@ -20,6 +20,7 @@ from brigade.errors import BrigadeError, ToolFailure
 from brigade.runtime import Runtime
 from brigade.system.resolve_plugin import PluginSources, resolve_plugin
 from brigade.system.run_process import ProcessRequest
+from tests.unit.commands.command_runtime import create_machine_double, write_operational_corpus
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
     CLOCK_PROBE,
@@ -613,3 +614,49 @@ class RunParserTest(unittest.TestCase):
 
         # Assert
         self.assertIn("key=value words, follow it before or after the options", " ".join(page.getvalue().split()))
+
+
+class ForgeRecordingItsQuestionsDouble:
+    def __init__(self):
+        self.questions = []
+
+    def read_login_environment(self, request: dict, runtime) -> dict:
+        self.questions.append(("read_login_environment", request))
+        return {"schema_version": 1, "environment": {"GH_TOKEN": "token-of-octo-build"}}
+
+
+class RunOfAProjectWithoutAForgeTest(unittest.TestCase):
+    def test_should_read_no_login_environment_for_the_run_of_a_project_of_forge_none(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(root)
+        (root / "config" / "config.toml").write_text(
+            f'{CLIENT_AND_DOCUMENT_CONFIGURATION}[forge_accounts]\nbuild = "octo-build"\n', encoding="utf-8"
+        )
+        forge = ForgeRecordingItsQuestionsDouble()
+        local_project = (("PATH", "/srv/tidepool"), ("FORGE", "none"))
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_machine_double({"PROJECT": {"tidepool": local_project}}, {}),
+            spawn_process=spawn_as_this_process,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+        )
+        request = Namespace(
+            procedure="build-task",
+            slot="build",
+            project="tidepool",
+            cwd=str(root),
+            brief=None,
+            arguments=("task=@TASK.T7",),
+            run_id="20261019T090000Z-a1b2c3",
+            wave=None,
+            task=None,
+            detach=True,
+            resume=False,
+        )
+
+        # Act
+        run(request, runtime)
+
+        # Assert
+        self.assertEqual(forge.questions, [])

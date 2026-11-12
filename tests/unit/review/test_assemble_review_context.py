@@ -2,6 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.errors import BrigadeError
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.review.assemble_review_context import ReviewDemand, assemble_review_context
 from tests.unit.commands.command_runtime import create_corpus_double, write_ledger
@@ -59,7 +60,13 @@ def create_thread_listing_forge(**more_answers) -> ForgeDouble:
 
 
 def create_demand(forge) -> ReviewDemand:
-    return ReviewDemand(opened=OPENED, project_path="/home/user/tidepool", forge=forge, environment={"GH_TOKEN": "t"})
+    return ReviewDemand(
+        opened=OPENED,
+        project_path="/srv/tidepool",
+        forge=forge,
+        forge_name="github",
+        environment={"GH_TOKEN": "t"},
+    )
 
 
 class AssembleReviewContextUnderTheVerdictModeTest(unittest.TestCase):
@@ -74,8 +81,9 @@ class AssembleReviewContextUnderTheVerdictModeTest(unittest.TestCase):
         )
         demand = ReviewDemand(
             opened=OPENED,
-            project_path="/home/user/tidepool",
+            project_path="/srv/tidepool",
             forge=create_review_forge(),
+            forge_name="github",
             environment={"GH_TOKEN": "t"},
         )
 
@@ -213,9 +221,34 @@ class AssembleReviewContextUnderTheApprovalModeTest(unittest.TestCase):
             [
                 {
                     "schema_version": 1,
-                    "repository": "/home/user/tidepool",
+                    "repository": "/srv/tidepool",
                     "number": 42,
                     "environment": {"GH_TOKEN": "t"},
                 }
             ],
         )
+
+
+class AssembleReviewContextThroughTheForgeOfTheProjectTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+
+    def test_should_name_the_forge_of_the_project_when_it_answers_out_of_shape(self):
+        # Arrange
+        runtime = create_test_runtime(
+            create_test_paths(self.root), run_process=create_corpus_double({"POLICY": NO_POLICY})
+        )
+        demand = ReviewDemand(
+            opened=OPENED,
+            project_path="/srv/tidepool",
+            forge=create_review_forge(read_pull_request=lambda request: {"schema_version": 1}),
+            forge_name="gitlab",
+            environment={"GH_TOKEN": "t"},
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            assemble_review_context(runtime, demand)
+
+        # Assert
+        self.assertRegex(str(raised.exception), "^forge plugin gitlab answered read_pull_request")

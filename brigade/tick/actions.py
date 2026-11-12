@@ -4,6 +4,7 @@ from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.task_report_order import TaskReportOrder
 from brigade.tick.build_snapshot import PreflightFailure, TaskAmendment
+from brigade.tick.head_proof import HeadChecks
 
 
 @dataclass(frozen=True)
@@ -13,7 +14,7 @@ class LaunchTask:
     branch: str
     task: str
     task_branch: str
-    checks_passed: bool
+    pull_request_checks: HeadChecks | None
 
 
 @dataclass(frozen=True)
@@ -49,7 +50,8 @@ class RunPreflight:
     wave: str
     branch: str
     task: str
-    pr: int
+    task_branch: str
+    pr: int | None
 
 
 @dataclass(frozen=True)
@@ -57,7 +59,7 @@ class LaunchVerification:
     project: str
     wave: str
     task: str
-    pr: int
+    pr: int | None
     worktree: str
 
 
@@ -91,6 +93,29 @@ class MergePullRequest:
     pr: int
     method: str
     head: str
+
+
+@dataclass(frozen=True)
+class MergeTaskBranch:
+    project: str
+    wave: str
+    task: str
+    task_branch: str
+    branch: str
+    method: str
+    head: str
+
+
+@dataclass(frozen=True)
+class NameMergeCommand:
+    command: str
+
+
+@dataclass(frozen=True)
+class OpenMergeWorktree:
+    project: str
+    branch: str
+    path: str
 
 
 @dataclass(frozen=True)
@@ -161,7 +186,7 @@ class CloseWave:
 class CloseMilestone:
     project: str
     milestone: str
-    pr: int
+    pr: int | None
 
 
 @dataclass(frozen=True)

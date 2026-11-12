@@ -23,6 +23,9 @@ from brigade.tick.actions import (
     LaunchTask,
     LaunchVerification,
     MergePullRequest,
+    MergeTaskBranch,
+    NameMergeCommand,
+    OpenMergeWorktree,
     ParkTask,
     PauseWave,
     RebaseMilestone,
@@ -54,6 +57,7 @@ from brigade.tick.build_snapshot import (
     WaveFacts,
     WavePause,
 )
+from brigade.tick.head_proof import ForgeCheck, HeadChecks
 from brigade.tick.plan import plan
 from brigade.tick.read_integration_branches import IntegrationBranchFacts
 from brigade.waves.list_candidate_waves import CandidateWave
@@ -82,13 +86,18 @@ ALONE_S9 = (TaskFacts(name="S9", branch="feature/S9-task"),)
 
 
 LAUNCH_S3 = LaunchTask(
-    project="shop", wave="shop_w1", branch=TASK_BASE, task="S3", task_branch="feature/S3-task", checks_passed=False
+    project="shop", wave="shop_w1", branch=TASK_BASE, task="S3", task_branch="feature/S3-task", pull_request_checks=None
 )
 LAUNCH_S9 = LaunchTask(
-    project="shop", wave="shop_w1", branch=TASK_BASE, task="S9", task_branch="feature/S9-task", checks_passed=False
+    project="shop", wave="shop_w1", branch=TASK_BASE, task="S9", task_branch="feature/S9-task", pull_request_checks=None
 )
 LAUNCH_S10 = LaunchTask(
-    project="shop", wave="shop_w1", branch=TASK_BASE, task="S10", task_branch="feature/S10-task", checks_passed=False
+    project="shop",
+    wave="shop_w1",
+    branch=TASK_BASE,
+    task="S10",
+    task_branch="feature/S10-task",
+    pull_request_checks=None,
 )
 CLOSE_SHOP_W1 = CloseWave(wave="shop_w1", project="shop")
 PARK_BLOCKED_S3 = ParkTask(wave="shop_w1", task="S3", reason="blocked", blockers=("OPEN_QUESTION.Undecided",))
@@ -107,13 +116,15 @@ class PlanTest(unittest.TestCase):
 
 
 class PlanStartableTasksTest(unittest.TestCase):
-    def test_should_launch_a_queued_task_telling_whether_the_checks_of_its_open_pull_request_passed(self):
-        for case, pull_request, checks_passed in [
-            ("without a pull request", None, False),
-            ("its checks passed", create_pull_request("open"), True),
-            ("a check failed", create_pull_request("open", "failure"), False),
-            ("a check pending", create_pull_request("open", "pending"), False),
-            ("its pull request closed", create_pull_request("closed"), False),
+    def test_should_launch_a_queued_task_carrying_the_check_runs_of_its_open_pull_request_at_its_head(self):
+        for case, pull_request, pull_request_checks in [
+            ("without a pull request", None, None),
+            (
+                "its pull request open",
+                create_pull_request("open", "failure"),
+                HeadChecks(head="0123abc", checks=(ForgeCheck(name="tests", verdict="failure"),)),
+            ),
+            ("its pull request closed", create_pull_request("closed"), None),
         ]:
             with self.subTest(case=case):
                 # Arrange
@@ -131,7 +142,7 @@ class PlanStartableTasksTest(unittest.TestCase):
                         branch=TASK_BASE,
                         task="S3",
                         task_branch="feature/S3-task",
-                        checks_passed=checks_passed,
+                        pull_request_checks=pull_request_checks,
                     ),
                     actions,
                 )
@@ -286,7 +297,9 @@ OPENED_BY_AN_EARLIER_RUN = 41
 NOT_PREFLIGHTED = None
 PREFLIGHTED_AT_THE_HEAD = HEAD
 PREFLIGHTED_BEFORE_A_PUSH = "fedcba9"
-PREFLIGHT_S3 = RunPreflight(project="shop", wave="shop_w1", branch=TASK_BASE, task="S3", pr=42)
+PREFLIGHT_S3 = RunPreflight(
+    project="shop", wave="shop_w1", branch=TASK_BASE, task="S3", task_branch="feature/S3-task", pr=42
+)
 
 
 class PlanPreflightTest(unittest.TestCase):
@@ -2112,16 +2125,18 @@ class PlanRunningTaskWithoutALiveRunTest(unittest.TestCase):
 
 LAST_RUN_A_REBASE = "20261006T110000Z-4eba5e"
 LAUNCH_S3 = LaunchTask(
-    project="shop", wave="shop_w1", branch=TASK_BASE, task="S3", task_branch="feature/S3-task", checks_passed=False
+    project="shop", wave="shop_w1", branch=TASK_BASE, task="S3", task_branch="feature/S3-task", pull_request_checks=None
 )
-LAUNCH_S3_ON_PASSED_CHECKS = dataclasses.replace(LAUNCH_S3, checks_passed=True)
+LAUNCH_S3_WITH_PULL_REQUEST_CHECKS = dataclasses.replace(
+    LAUNCH_S3, pull_request_checks=HeadChecks(head="0123abc", checks=(ForgeCheck(name="tests", verdict="success"),))
+)
 
 
 class PlanRunningTaskRebasedByItsLastRunTest(unittest.TestCase):
     def test_should_launch_the_build_run_once_the_rebase_run_has_put_the_branch_on_the_wave_branch(self):
         for case, pull_request, expected in [
             ("without a pull request", NO_PULL_REQUEST, LAUNCH_S3),
-            ("with its pull request open", OPEN, LAUNCH_S3_ON_PASSED_CHECKS),
+            ("with its pull request open", OPEN, LAUNCH_S3_WITH_PULL_REQUEST_CHECKS),
         ]:
             with self.subTest(case=case):
                 # Arrange
@@ -2348,6 +2363,17 @@ class PlanMilestoneReportTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(actions, (REPORT_M4,))
+
+    def test_should_report_none_while_a_rebase_run_is_live_on_the_branch_of_the_milestone(self):
+        # Arrange
+        milestone = dataclasses.replace(create_milestone(WAVES_OF_M4_CLOSED, NO_TASK_TODO), rebase_run_live=True)
+        snapshot = Snapshot(now=NOW, projects=(SHOP,), milestones=(milestone,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
 
     def test_should_report_none_once_the_milestone_is_reported(self):
         # Arrange
@@ -2701,3 +2727,558 @@ class PlanIntegrationBranchRemovalTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, (kept,))
+
+
+DELIVERED_HEAD = "4d5e6f7"
+NOT_DELIVERED = None
+LOCAL_PREFLIGHT_S3 = RunPreflight(
+    project="shop", wave="shop_w1", branch=TASK_BASE, task="S3", task_branch="feature/S3-task", pr=None
+)
+
+
+class PlanPreflightOfATaskWithoutAForgeTest(unittest.TestCase):
+    def test_should_preflight_the_head_its_build_run_delivered_once(self):
+        for case, delivered, preflighted, live_runs, expected in [
+            ("delivered and not preflighted", DELIVERED_HEAD, NOT_PREFLIGHTED, (), (LOCAL_PREFLIGHT_S3,)),
+            ("delivered and preflighted at that head", DELIVERED_HEAD, DELIVERED_HEAD, (), ()),
+            (
+                "delivered again since its preflight",
+                DELIVERED_HEAD,
+                PREFLIGHTED_BEFORE_A_PUSH,
+                (),
+                (LOCAL_PREFLIGHT_S3,),
+            ),
+            ("delivered while a live run names it", DELIVERED_HEAD, NOT_PREFLIGHTED, (LIVE_RUN_OF_S3,), ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    branch="feature/S3-task",
+                    last_run=LAST_RUN_OF_S3,
+                    delivered_head=delivered,
+                    preflighted_head=preflighted,
+                )
+                project = dataclasses.replace(SHOP, live_runs=live_runs)
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_park_a_running_task_whose_last_run_delivered_nothing(self):
+        # Arrange
+        task = TaskFacts(name="S3", branch="feature/S3-task", last_run=LAST_RUN_OF_S3, delivered_head=NOT_DELIVERED)
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions, (ParkTask(wave="shop_w1", task="S3", reason="run dead: 20261006T110000Z-d1e2f3", blockers=()),)
+        )
+
+    def test_should_launch_a_task_queued_again_after_its_build_run_delivered_a_head(self):
+        # Arrange
+        task = TaskFacts(
+            name="S3",
+            branch="feature/S3-task",
+            last_run=LAST_RUN_OF_S3,
+            delivered_head=DELIVERED_HEAD,
+            preflighted_head=NOT_PREFLIGHTED,
+        )
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "queued"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (LAUNCH_S3,))
+
+    def test_should_park_a_running_task_whose_last_run_delivered_nothing_since_its_preflight(self):
+        # Arrange
+        task = TaskFacts(
+            name="S3",
+            branch="feature/S3-task",
+            last_run=LAST_RUN_OF_S3,
+            delivered_head=NOT_DELIVERED,
+            preflighted_head=PREFLIGHTED_BEFORE_A_PUSH,
+        )
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions, (ParkTask(wave="shop_w1", task="S3", reason="run dead: 20261006T110000Z-d1e2f3", blockers=()),)
+        )
+
+    def test_should_park_a_running_task_whose_delivered_head_failed_its_preflight_with_its_findings(self):
+        # Arrange
+        acceptance_failure = PreflightFailure(
+            name="acceptance", findings=("python3 -m unittest exited 1", "FAILED (failures=1)")
+        )
+        task = TaskFacts(
+            name="S3",
+            branch="feature/S3-task",
+            last_run=LAST_RUN_OF_S3,
+            delivered_head=DELIVERED_HEAD,
+            preflighted_head=DELIVERED_HEAD,
+            preflight_failures=(ANCESTRY_FAILURE, acceptance_failure),
+        )
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                ParkTask(
+                    wave="shop_w1",
+                    task="S3",
+                    reason="preflight failed at 4d5e6f7: ancestry: the head does not descend from the wave branch;"
+                    " acceptance: python3 -m unittest exited 1; acceptance: FAILED (failures=1)",
+                    blockers=(),
+                ),
+            ),
+        )
+
+    def test_should_park_no_task_whose_failed_preflight_is_not_of_its_delivered_head_while_it_runs(self):
+        for case, state, preflighted, live_runs, expected in [
+            ("delivered again since", "running", PREFLIGHTED_BEFORE_A_PUSH, (), (LOCAL_PREFLIGHT_S3,)),
+            ("named by a live run", "running", DELIVERED_HEAD, (LIVE_RUN_OF_S3,), ()),
+            ("parked already", "parked", DELIVERED_HEAD, (), (CloseWave(wave="shop_w1", project="shop"),)),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    branch="feature/S3-task",
+                    last_run=LAST_RUN_OF_S3,
+                    delivered_head=DELIVERED_HEAD,
+                    preflighted_head=preflighted,
+                    preflight_failures=(ANCESTRY_FAILURE,),
+                )
+                project = dataclasses.replace(SHOP, live_runs=live_runs)
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+
+LOCAL_VERIFICATION_S3 = LaunchVerification(project="shop", wave="shop_w1", task="S3", pr=None, worktree=WORKTREE_S3)
+NO_VERDICT = None
+NOT_REVIEWED = None
+PASS_AT_THE_DELIVERED_HEAD = RecordedVerdict(head=DELIVERED_HEAD, verdict="pass")
+CHANGES_AT_THE_DELIVERED_HEAD = RecordedVerdict(head=DELIVERED_HEAD, verdict="changes")
+PASS_BEFORE_A_DELIVERY = RecordedVerdict(head="fedcba9", verdict="pass")
+
+
+class PlanVerificationOfATaskWithoutAForgeTest(unittest.TestCase):
+    def test_should_verify_the_delivered_head_once_its_preflight_passed(self):
+        for case, preflighted, verdict, reviewed, live_runs, expected in [
+            (
+                "preflighted at its delivered head",
+                DELIVERED_HEAD,
+                NO_VERDICT,
+                NOT_REVIEWED,
+                (),
+                (LOCAL_VERIFICATION_S3,),
+            ),
+            (
+                "judged before its last delivery",
+                DELIVERED_HEAD,
+                PASS_BEFORE_A_DELIVERY,
+                NOT_REVIEWED,
+                (),
+                (LOCAL_VERIFICATION_S3,),
+            ),
+            ("reviewed at its delivered head with no verdict", DELIVERED_HEAD, NO_VERDICT, DELIVERED_HEAD, (), ()),
+            ("named by a live run", DELIVERED_HEAD, NO_VERDICT, NOT_REVIEWED, (LIVE_RUN_OF_S3,), ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    branch="feature/S3-task",
+                    worktree=WORKTREE_S3,
+                    last_run=LAST_RUN_OF_S3,
+                    delivered_head=DELIVERED_HEAD,
+                    preflighted_head=preflighted,
+                    verdict=verdict,
+                    reviewed_head=reviewed,
+                )
+                project = dataclasses.replace(SHOP, live_runs=live_runs)
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_record_the_state_the_verdict_of_its_delivered_head_decides(self):
+        for verdict, expected_state in [
+            (PASS_AT_THE_DELIVERED_HEAD, "verified"),
+            (CHANGES_AT_THE_DELIVERED_HEAD, "changes_requested"),
+        ]:
+            with self.subTest(verdict=verdict.verdict):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    branch="feature/S3-task",
+                    worktree=WORKTREE_S3,
+                    last_run=LAST_RUN_OF_S3,
+                    delivered_head=DELIVERED_HEAD,
+                    preflighted_head=DELIVERED_HEAD,
+                    verdict=verdict,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(
+                    actions, (RecordTaskState(wave="shop_w1", task="S3", state=expected_state, reason=None),)
+                )
+
+    def test_should_verify_no_task_whose_delivered_head_is_not_held_for_verification(self):
+        for case, state, preflighted, worktree in [
+            ("still running", "running", DELIVERED_HEAD, WORKTREE_S3),
+            ("preflighted before its last delivery", "verifying", PREFLIGHTED_BEFORE_A_PUSH, WORKTREE_S3),
+            ("without a worktree", "verifying", DELIVERED_HEAD, NO_WORKTREE),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3",
+                    branch="feature/S3-task",
+                    worktree=worktree,
+                    last_run=LAST_RUN_OF_S3,
+                    delivered_head=DELIVERED_HEAD,
+                    preflighted_head=preflighted,
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, ())
+
+
+DELIVERED_S3 = "d3l1v3r"
+PASS_AT_THE_DELIVERED_S3 = RecordedVerdict(head=DELIVERED_S3, verdict="pass")
+MERGE_COMMAND_OF_S3 = "git -C /projects/shop merge feature/S3-task"
+MERGE_COMMAND_OF_THE_MILESTONE = "git -C /projects/shop merge integration/empty-cart"
+MILESTONE_WORKTREE = "/projects/shop/.brigade/worktrees/integration-empty-cart"
+MERGE_COMMAND_INTO_THE_MILESTONE = f"git -C {MILESTONE_WORKTREE} merge feature/S3-task"
+MERGE_COMMAND_OF_S4_INTO_THE_MILESTONE = f"git -C {MILESTONE_WORKTREE} merge feature/S4-task"
+OPEN_THE_MILESTONE_WORKTREE = OpenMergeWorktree(project="shop", branch=TASK_BASE, path=MILESTONE_WORKTREE)
+MERGE_S3_BRANCH = MergeTaskBranch(
+    project="shop",
+    wave="shop_w1",
+    task="S3",
+    task_branch="feature/S3-task",
+    branch=TASK_BASE,
+    method="rebase",
+    head=DELIVERED_S3,
+)
+
+
+def create_verified_task_delivered_without_a_forge(**changes) -> TaskFacts:
+    return dataclasses.replace(
+        TaskFacts(
+            name="S3",
+            branch="feature/S3-task",
+            delivered_head=DELIVERED_S3,
+            preflighted_head=DELIVERED_S3,
+            verdict=PASS_AT_THE_DELIVERED_S3,
+        ),
+        **changes,
+    )
+
+
+class PlanMergingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
+    def test_should_merge_into_its_milestone_branch_the_head_its_preflight_and_its_verdict_passed(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge()
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (MERGE_S3_BRANCH,))
+
+    def test_should_merge_by_the_method_of_the_project(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge()
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP_MERGING_BY_SQUASH,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (dataclasses.replace(MERGE_S3_BRANCH, method="squash"),))
+
+    def test_should_not_merge_a_head_its_preflight_or_its_verdict_did_not_pass(self):
+        for case, task in [
+            ("no verdict", create_verified_task_delivered_without_a_forge(verdict=None)),
+            (
+                "a verdict asking for changes",
+                create_verified_task_delivered_without_a_forge(
+                    verdict=RecordedVerdict(head=DELIVERED_S3, verdict="changes")
+                ),
+            ),
+            (
+                "a verdict of an older head",
+                create_verified_task_delivered_without_a_forge(verdict=RecordedVerdict(head="0ld", verdict="pass")),
+            ),
+            ("a preflight of an older head", create_verified_task_delivered_without_a_forge(preflighted_head="0ld")),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, ())
+
+    def test_should_not_merge_a_task_still_awaiting_its_verification(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge(reviewed_head=DELIVERED_S3)
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertNotIn(MERGE_S3_BRANCH, actions)
+
+    def test_should_name_the_merge_command_under_no_auto_merge_and_merge_nothing(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge(merge_command=MERGE_COMMAND_INTO_THE_MILESTONE)
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP_WITHOUT_AUTO_MERGE,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (NameMergeCommand(command=MERGE_COMMAND_INTO_THE_MILESTONE),))
+
+    def test_should_record_merged_under_no_auto_merge_once_the_head_is_an_ancestor_of_the_milestone_branch(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge(
+            merge_command=MERGE_COMMAND_INTO_THE_MILESTONE, merged_into_target=True
+        )
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP_WITHOUT_AUTO_MERGE,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (RecordTaskState(wave="shop_w1", task="S3", state="merged", reason=None),))
+
+    def test_should_open_the_worktree_of_the_milestone_branch_before_naming_the_merge_under_no_auto_merge(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge(
+            merge_command=MERGE_COMMAND_INTO_THE_MILESTONE, merge_worktree_to_open=MILESTONE_WORKTREE
+        )
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP_WITHOUT_AUTO_MERGE,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions, (OPEN_THE_MILESTONE_WORKTREE, NameMergeCommand(command=MERGE_COMMAND_INTO_THE_MILESTONE))
+        )
+
+    def test_should_open_the_worktree_of_the_milestone_branch_once_for_two_tasks_awaiting_their_merge(self):
+        # Arrange
+        s3 = create_verified_task_delivered_without_a_forge(
+            merge_command=MERGE_COMMAND_INTO_THE_MILESTONE, merge_worktree_to_open=MILESTONE_WORKTREE
+        )
+        s4 = create_verified_task_delivered_without_a_forge(
+            name="S4",
+            branch="feature/S4-task",
+            merge_command=MERGE_COMMAND_OF_S4_INTO_THE_MILESTONE,
+            merge_worktree_to_open=MILESTONE_WORKTREE,
+        )
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(create_wave((s3, s4), {"S3": "verified", "S4": "verified"}),),
+            projects=(SHOP_WITHOUT_AUTO_MERGE,),
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                OPEN_THE_MILESTONE_WORKTREE,
+                NameMergeCommand(command=MERGE_COMMAND_INTO_THE_MILESTONE),
+                NameMergeCommand(command=MERGE_COMMAND_OF_S4_INTO_THE_MILESTONE),
+            ),
+        )
+
+    def test_should_open_no_worktree_for_a_task_not_yet_accepted_under_no_auto_merge(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge(
+            merge_command=MERGE_COMMAND_INTO_THE_MILESTONE,
+            merge_worktree_to_open=MILESTONE_WORKTREE,
+            reviewed_head=DELIVERED_S3,
+        )
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP_WITHOUT_AUTO_MERGE,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertNotIn(OPEN_THE_MILESTONE_WORKTREE, actions)
+
+    def test_should_merge_by_itself_a_task_of_its_milestone_where_the_project_merges(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge(
+            merge_command=MERGE_COMMAND_INTO_THE_MILESTONE, merge_worktree_to_open=MILESTONE_WORKTREE
+        )
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (MERGE_S3_BRANCH,))
+
+    def test_should_open_no_worktree_for_a_task_already_merged_by_the_user(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge(
+            merge_command=MERGE_COMMAND_INTO_THE_MILESTONE,
+            merged_into_target=True,
+            merge_worktree_to_open=MILESTONE_WORKTREE,
+        )
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP_WITHOUT_AUTO_MERGE,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (RecordTaskState(wave="shop_w1", task="S3", state="merged", reason=None),))
+
+    def test_should_open_nothing_and_name_nothing_on_a_milestone_branch_a_rebase_run_holds_under_no_auto_merge(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge(
+            merge_command=MERGE_COMMAND_INTO_THE_MILESTONE, merge_worktree_to_open=MILESTONE_WORKTREE
+        )
+        rebasing = MilestoneFacts(project="shop", milestone="M1", branch=TASK_BASE, rebase_run_live=True)
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(create_wave((task,), {"S3": "verified"}),),
+            projects=(SHOP_WITHOUT_AUTO_MERGE,),
+            milestones=(rebasing,),
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_not_merge_into_a_milestone_branch_a_rebase_run_holds(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge()
+        rebasing = MilestoneFacts(project="shop", milestone="M1", branch=TASK_BASE, rebase_run_live=True)
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP,), milestones=(rebasing,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_name_the_merge_command_of_a_task_of_no_milestone_and_merge_nothing(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge(merge_command=MERGE_COMMAND_OF_S3)
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave_of_no_milestone((task,), {"S3": "verified"}),), projects=(SHOP,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (NameMergeCommand(command=MERGE_COMMAND_OF_S3),))
+
+    def test_should_record_merged_a_task_of_no_milestone_once_the_user_merged_it(self):
+        # Arrange
+        task = create_verified_task_delivered_without_a_forge(
+            merge_command=MERGE_COMMAND_OF_S3, merged_into_target=True
+        )
+        snapshot = Snapshot(
+            now=NOW, waves=(create_wave_of_no_milestone((task,), {"S3": "verified"}),), projects=(SHOP,)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (RecordTaskState(wave="shop_w1", task="S3", state="merged", reason=None),))
+
+
+class PlanEndingAMilestoneOfAProjectWithoutAForgeTest(unittest.TestCase):
+    def test_should_name_the_command_that_merges_the_milestone_into_main(self):
+        # Arrange
+        milestone = MilestoneFacts(
+            project="shop", milestone="M1", branch=TASK_BASE, merge_command=MERGE_COMMAND_OF_THE_MILESTONE
+        )
+
+        # Act
+        actions = plan(Snapshot(now=NOW, projects=(SHOP,), milestones=(milestone,)))
+
+        # Assert
+        self.assertEqual(actions, (NameMergeCommand(command=MERGE_COMMAND_OF_THE_MILESTONE),))
+
+    def test_should_close_the_milestone_with_no_pull_request_once_its_branch_is_merged_into_main(self):
+        # Arrange
+        milestone = MilestoneFacts(
+            project="shop",
+            milestone="M1",
+            branch=TASK_BASE,
+            merge_command=MERGE_COMMAND_OF_THE_MILESTONE,
+            merged_into_main=True,
+        )
+
+        # Act
+        actions = plan(Snapshot(now=NOW, projects=(SHOP,), milestones=(milestone,)))
+
+        # Assert
+        self.assertEqual(actions, (CloseMilestone(project="shop", milestone="M1", pr=None),))

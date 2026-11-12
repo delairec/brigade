@@ -36,6 +36,24 @@ def _resolve_any_plugin(kind: str, name: str, **places):
     return PluginDouble(kind=kind, name=name)
 
 
+class PluginResolverDouble:
+    def __init__(self):
+        self.resolved = []
+
+    def __call__(self, kind: str, name: str, **places):
+        self.resolved.append((kind, name))
+        return PluginDouble(kind=kind, name=name)
+
+
+def _write_steps_done(root: Path, study_record: str) -> None:
+    steps = root / "state" / "runs" / RUN_ID / "steps"
+    steps.mkdir(parents=True)
+    (steps.parent / "study.json").write_text(study_record, encoding="utf-8")
+    (steps / "collect.json").write_text("{}", encoding="utf-8")
+    (steps / "judge.json").write_text("{}", encoding="utf-8")
+    (steps / "output.json").write_text("{}", encoding="utf-8")
+
+
 class StudyRunTextTest(unittest.TestCase):
     def test_should_say_where_the_run_ended(self):
         # Arrange
@@ -115,7 +133,7 @@ class StudyRunOfAStudyTest(unittest.TestCase):
         (steps / "output.json").write_text("{}", encoding="utf-8")
         runtime = create_test_runtime(
             create_test_paths(root),
-            run_process=create_corpus_double(NO_STUDY_RECORDED),
+            run_process=create_corpus_double({"PROJECT": {"oak": (("PATH", "/srv/oak"),)}}),
             resolve_plugin=_resolve_any_plugin,
         )
 
@@ -161,3 +179,54 @@ class StudyRunOfMineTranscriptsTest(unittest.TestCase):
             collected["collected"][0]["summary"],
             {"sessions": 1, "findings": {"correction": 1}, "unreadable": []},
         )
+
+
+class StudyRunForgeTest(unittest.TestCase):
+    def test_should_resolve_the_forge_of_the_project_its_study_names(self):
+        # Arrange
+        rows = [
+            ("a project of FORGE github", "github", [("forge", "github"), ("document", "awawa")]),
+            ("a project of FORGE none", "none", [("document", "awawa")]),
+        ]
+        for case, forge, expected_resolutions in rows:
+            with self.subTest(case=case):
+                root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+                self.enterContext(contextlib.chdir(root))
+                write_operational_corpus(root)
+                _write_steps_done(
+                    root,
+                    '{"schema_version": 1, "study": "milestone-report", "project": "oak", "milestone": {"project":'
+                    ' "oak", "milestone": "M6", "branch": "integration/hardening", "waves": ["oak_w2"], "tasks":'
+                    ' ["B17"]}}',
+                )
+                resolver = PluginResolverDouble()
+                runtime = create_test_runtime(
+                    create_test_paths(root),
+                    run_process=create_corpus_double({"PROJECT": {"oak": (("PATH", "/srv/oak"), ("FORGE", forge))}}),
+                    resolve_plugin=resolver,
+                )
+
+                # Act
+                COMMAND.run(Namespace(name="milestone-report", run_id=RUN_ID), runtime)
+
+                # Assert
+                self.assertEqual(resolver.resolved, expected_resolutions)
+
+    def test_should_resolve_the_forge_of_the_project_at_its_directory_for_a_study_naming_no_project(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        self.enterContext(contextlib.chdir(root))
+        write_operational_corpus(root)
+        _write_steps_done(root, '{"schema_version": 1, "study": "mine_transcripts", "project": null}')
+        resolver = PluginResolverDouble()
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_corpus_double({"PROJECT": {"oak": (("PATH", str(root)), ("FORGE", "github"))}}),
+            resolve_plugin=resolver,
+        )
+
+        # Act
+        COMMAND.run(Namespace(name="mine_transcripts", run_id=RUN_ID), runtime)
+
+        # Assert
+        self.assertEqual(resolver.resolved, [("forge", "github"), ("document", "awawa")])

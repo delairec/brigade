@@ -55,7 +55,12 @@ class PromoteTaskTest(unittest.TestCase):
             {"file": str(self.worktree / "corpus" / "tasks.awawa"), "fields": []},
         )
         self.processes.answer_corpus_change(self.worktree, ("corpus/tasks.awawa",), MESSAGE)
-        self.processes.answer(("git", "push", "--quiet", "origin", "fix/B12-the-parser"))
+        self.processes.answer(
+            ("git", "rev-parse", "--verify", "--quiet", "refs/remotes/origin/fix/B12-the-parser"), stdout="c0ffee\n"
+        )
+        self.processes.answer(
+            ("git", "push", "--quiet", "--force-with-lease=fix/B12-the-parser:c0ffee", "origin", "fix/B12-the-parser")
+        )
         self.processes.answer(
             ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "HEAD^{commit}"), stdout="d00d\n"
         )
@@ -152,7 +157,10 @@ class PromoteTaskTest(unittest.TestCase):
             pushed_environments.append(request.environment)
             return 0, "", ""
 
-        self.processes.answer_by(("git", "push", "--quiet", "origin", "fix/B12-the-parser"), record_push)
+        self.processes.answer_by(
+            ("git", "push", "--quiet", "--force-with-lease=fix/B12-the-parser:c0ffee", "origin", "fix/B12-the-parser"),
+            record_push,
+        )
         demand = TaskPromotionDemand(
             path=self.worktree,
             task="B12",
@@ -224,3 +232,40 @@ class PromoteTaskTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), "the TASK schema of the corpus of oak declares no DELIVERED_BY")
+
+
+class PromoteTaskInAnAreaTest(unittest.TestCase):
+    def setUp(self):
+        PromoteTaskTest.setUp(self)
+        (self.worktree / "brigade").mkdir()
+        (self.worktree / "brigade" / "tasks.awawa").write_text(TASKS, encoding="utf-8")
+        config_root = self.runtime.paths.config_root
+        area = self.worktree / "brigade"
+        self.processes.answer_entities(
+            config_root,
+            "PROJECT",
+            {"oak": (("PATH", "/srv/oak"), ("MAIN", "main"), ("CORPUS", "brigade"), ("MODE", "area"))},
+        )
+        self.processes.answer_json(
+            ("awawa", "show", "@TASK.B12", "--json", str(area)), {"file": str(area / "tasks.awawa"), "fields": []}
+        )
+        self.processes.answer_json(("awawa", "show", "TASK", "--json", str(area)), DECLARED_SCHEMA)
+        self.processes.answer_corpus_change(self.worktree, ("brigade/tasks.awawa",), MESSAGE)
+        self.processes.answer(("awawa", "lint", "--strict", str(area)))
+
+    def test_should_promote_the_task_in_the_file_of_the_area_and_lint_the_area(self):
+        # Act
+        promote_task(
+            self.runtime,
+            TaskPromotionDemand(
+                path=self.worktree,
+                task=None,
+                pr=42,
+                environment={},
+                attribution=("Co-Authored-By: Ada <ada@example.org>",),
+            ),
+        )
+
+        # Assert
+        self.assertIn("STATUS implemented", (self.worktree / "brigade" / "tasks.awawa").read_text(encoding="utf-8"))
+        self.assertIn(("awawa", "lint", "--strict", str(self.worktree / "brigade")), self.processes.list_argvs())

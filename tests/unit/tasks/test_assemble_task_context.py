@@ -8,6 +8,7 @@ from brigade.system.parse_configuration import Configuration
 from brigade.tasks.assemble_task_context import TaskContextDemand, assemble_task_context
 from brigade.tasks.locate_task_worktree import TaskWorktree
 from tests.unit.scripted_processes import ScriptedProcesses
+from tests.unit.select_requests_opening_on import select_requests_opening_on
 
 PROJECT = Entity(
     name="oak",
@@ -319,3 +320,102 @@ class AssembleTaskContextTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(context["reserved"]["task_number"], 41)
+
+
+class AssembleTaskContextInAnAreaTest(unittest.TestCase):
+    def setUp(self):
+        AssembleTaskContextTest.setUp(self)
+
+    def create_area(self) -> tuple:
+        project = Entity(
+            name="oak",
+            fields=(
+                EntityField(name="PATH", value="/srv/oak"),
+                EntityField(name="CORPUS", value="brigade"),
+                EntityField(name="MODE", value="area"),
+            ),
+        )
+        (self.worktree_path / "brigade").mkdir()
+        worktree = TaskWorktree(
+            path=self.worktree_path, task="B12", project=project, wave="oak_w1", base="integration/harvest"
+        )
+        write_operational_corpus(self.root)
+        runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
+        self.processes.answer_entities(
+            runtime.paths.config_root,
+            "PROJECT",
+            {"oak": (("PATH", "/srv/oak"), ("CORPUS", "brigade"), ("MODE", "area"))},
+        )
+        self.processes.answer(
+            ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "integration/harvest^{commit}"),
+            stdout="c0ffee\n",
+        )
+        tree = self.root / "cache" / "refs" / "oak" / "c0ffee" / "brigade"
+        tree.mkdir(parents=True)
+        self.processes.answer_json(("awawa", "status", "--json", str(tree)), {"entities": []})
+        return runtime, worktree
+
+    def test_should_read_the_task_in_the_folder_of_the_area(self):
+        # Arrange
+        runtime, worktree = self.create_area()
+
+        # Act
+        context = assemble_task_context(
+            runtime,
+            TaskContextDemand(
+                configuration=Configuration(),
+                worktree=worktree,
+                attribution=ATTRIBUTION,
+                read_environment=lambda key: {},
+            ),
+        )
+
+        # Assert
+        self.assertIsNone(context["project"])
+        read_of_the_task = self.processes.requests[1]
+        self.assertEqual(read_of_the_task.argv, ("awawa", "context", "@TASK.B12", "--with-schema", "."))
+        self.assertEqual(read_of_the_task.cwd, str(self.worktree_path / "brigade"))
+
+    def test_should_lint_the_closure_of_the_task_in_the_folder_of_the_area(self):
+        # Arrange
+        runtime, worktree = self.create_area()
+
+        # Act
+        assemble_task_context(
+            runtime,
+            TaskContextDemand(
+                configuration=Configuration(),
+                worktree=worktree,
+                attribution=ATTRIBUTION,
+                read_environment=lambda key: {},
+            ),
+        )
+
+        # Assert
+        closure_lint = select_requests_opening_on(self.processes.requests, ("awawa", "lint"))[0]
+        self.assertEqual(closure_lint.cwd, str(self.worktree_path / "brigade"))
+
+    def test_should_read_the_files_the_rules_apply_to_in_the_folder_of_the_area(self):
+        # Arrange
+        runtime, worktree = self.create_area()
+        instructions = str(self.instructions)
+        self.processes.answer_json(
+            ("awawa", "show", "@TASK.B12", "--json", str(self.worktree_path / "brigade")), TASK_SHOWN
+        )
+        self.processes.answer_json(
+            ("awawa", "status", "TRIGGER", "--where", "KIND==path", "--json", instructions), {"entities": []}
+        )
+
+        # Act
+        context = assemble_task_context(
+            runtime,
+            TaskContextDemand(
+                configuration=Configuration(instructions=instructions),
+                worktree=worktree,
+                attribution=ATTRIBUTION,
+                read_environment=lambda key: {},
+            ),
+        )
+
+        # Assert
+        self.assertEqual(context["rules"], [])

@@ -17,7 +17,7 @@ from tests.unit.scripted_processes import ScriptedProcesses
 THE_TASK_OF_THE_BRANCH = None
 THE_LAST_PULL_REQUEST = None
 MAIN_BRANCH_CHECKOUT = {
-    ("git", "rev-parse", "--show-toplevel"): "/home/user/tidepool\n",
+    ("git", "rev-parse", "--show-toplevel"): "/srv/tidepool\n",
     ("git", "branch", "--show-current"): "main\n",
 }
 
@@ -86,6 +86,9 @@ class TaskPromoteOutsideATaskTest(unittest.TestCase):
         self.assertEqual(str(raised.exception), "the branch main is not a <prefix>/<task>-<slug> branch")
 
 
+OAK_PROJECT = (("PATH", "/srv/oak"), ("MAIN", "main"))
+
+
 class TaskPromotePushTest(unittest.TestCase):
     def setUp(self):
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
@@ -105,7 +108,7 @@ class TaskPromotePushTest(unittest.TestCase):
             ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"), stdout="/srv/oak/.git\n"
         )
         self.processes.answer_entities(
-            self.runtime.paths.config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("MAIN", "main"))}
+            self.runtime.paths.config_root, "PROJECT", {"oak": (*OAK_PROJECT, ("FORGE", "github"))}
         )
         append_event(
             self.runtime.paths,
@@ -138,10 +141,51 @@ class TaskPromotePushTest(unittest.TestCase):
             pushed_environments.append(request.environment)
             return 0, "", ""
 
-        self.processes.answer_by(("git", "push", "--quiet", "origin", "feature/B12-the-parser"), record_push)
+        self.processes.answer(("git", "rev-parse", "--verify", "--quiet", "refs/remotes/origin/feature/B12-the-parser"))
+        self.processes.answer_by(
+            (
+                "git",
+                "push",
+                "--quiet",
+                "--force-with-lease=feature/B12-the-parser:",
+                "origin",
+                "feature/B12-the-parser",
+            ),
+            record_push,
+        )
 
         # Act
         COMMAND.run(Namespace(task=THE_TASK_OF_THE_BRANCH, pr=42), self.runtime)
 
         # Assert
         self.assertEqual(pushed_environments, [{"GH_TOKEN": "token-of-octo-bot"}])
+
+    def test_should_push_the_promotion_with_no_login_environment_on_a_project_of_forge_none(self):
+        # Arrange
+        pushed_environments = []
+
+        def record_push(request):
+            pushed_environments.append(request.environment)
+            return 0, "", ""
+
+        self.processes.answer(("git", "rev-parse", "--verify", "--quiet", "refs/remotes/origin/feature/B12-the-parser"))
+        self.processes.answer_by(
+            (
+                "git",
+                "push",
+                "--quiet",
+                "--force-with-lease=feature/B12-the-parser:",
+                "origin",
+                "feature/B12-the-parser",
+            ),
+            record_push,
+        )
+        self.processes.answer_entities(
+            self.runtime.paths.config_root, "PROJECT", {"oak": (*OAK_PROJECT, ("FORGE", "none"))}
+        )
+
+        # Act
+        COMMAND.run(Namespace(task=THE_TASK_OF_THE_BRANCH, pr=42), self.runtime)
+
+        # Assert
+        self.assertEqual(pushed_environments, [{}])

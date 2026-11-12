@@ -1,5 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import ClassVar
+
+from brigade.ledger.omit_absent_pull_request import ABSENT_PULL_REQUEST, omit_absent_pull_request
 
 
 @dataclass(frozen=True)
@@ -8,7 +10,7 @@ class TaskVerdict:
     project: str
     wave: str
     task: str
-    pr: int
+    pr: int | None = field(default=ABSENT_PULL_REQUEST, kw_only=True)
     head: str
     verdict: str
     findings: tuple[dict, ...]
@@ -20,7 +22,7 @@ class TaskVerdict:
             project=document["project"],
             wave=document["wave"],
             task=document["task"],
-            pr=document["pr"],
+            pr=document.get("pr"),
             head=document["head"],
             verdict=document["verdict"],
             findings=tuple(document["findings"]),
@@ -32,7 +34,7 @@ class TaskVerdict:
             "project": self.project,
             "wave": self.wave,
             "task": self.task,
-            "pr": self.pr,
+            **omit_absent_pull_request(self.pr),
             "head": self.head,
             "verdict": self.verdict,
             "findings": list(self.findings),

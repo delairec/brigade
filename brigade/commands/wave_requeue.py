@@ -2,7 +2,7 @@ import argparse
 from dataclasses import dataclass
 
 from brigade.command import Argument, Command
-from brigade.commands._read_forge_environment import read_forge_environment
+from brigade.commands._read_forge_environment import ForgeSlot, read_forge_environment
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.prepare_tree import Tree
 from brigade.corpus.read_entity import Entity, read_entity
@@ -14,6 +14,7 @@ from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_state import REQUEUE_REASON, TaskState
 from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.find_project import find_project
+from brigade.registry.read_project_forge import read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
 from brigade.system.parse_configuration import Configuration
@@ -39,7 +40,9 @@ def _render_text(document: dict) -> str:
 def _read_task_on_main(runtime: Runtime, configuration: Configuration, started: WaveStarted, task: str):
     project = find_project(read_projects(runtime), started.project)
     main = locate_project_main(
-        runtime.run_process, project, lambda key: read_forge_environment(configuration, key, runtime)
+        runtime.run_process,
+        project,
+        lambda key: read_forge_environment(configuration, ForgeSlot(read_project_forge(project), key), runtime),
     )
     query = argparse.Namespace(project=started.project, ref=main, worktree=NO_WORKTREE)
     try:
@@ -75,6 +78,17 @@ def _decide_requeued_state(entries: tuple[LedgerEntry, ...], wave: str, task: st
     return QUEUED_STATE
 
 
+def _prepare_tree(runtime: Runtime, configuration: Configuration, started: WaveStarted) -> Tree:
+    project = find_project(read_projects(runtime), started.project)
+    reading = WaveTreeReading(
+        configuration=configuration,
+        read_environment=lambda key: read_forge_environment(
+            configuration, ForgeSlot(read_project_forge(project), key), runtime
+        ),
+    )
+    return prepare_wave_tree(runtime, reading, started)
+
+
 def wave_requeue(request: argparse.Namespace, runtime: Runtime) -> dict:
     entries = read_ledger(runtime.paths.state_root).entries
     summary = require_wave_summary(entries, request.wave)
@@ -84,10 +98,7 @@ def wave_requeue(request: argparse.Namespace, runtime: Runtime) -> dict:
     if state != PARKED_STATE:
         raise BrigadeError(f"the task {request.task} of the wave {request.wave} is {state}, not parked")
     configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
-    reading = WaveTreeReading(
-        configuration=configuration, read_environment=lambda key: read_forge_environment(configuration, key, runtime)
-    )
-    tree = prepare_wave_tree(runtime, reading, summary.started)
+    tree = _prepare_tree(runtime, configuration, summary.started)
     if request.task in read_implemented_tasks(runtime.run_process, tree.root):
         raise BrigadeError(f"the task {request.task} of the wave {request.wave} is already implemented on {tree.ref}")
     on_wave = read_entity(runtime.run_process, tree.root, TASK_TYPE, request.task)

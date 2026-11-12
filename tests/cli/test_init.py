@@ -9,6 +9,8 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.machine = TemporaryMachine(Path(self.root.name))
+        self.machine.install_awawa(self)
+        self.machine.reduce_path_to("git", "awawa")
 
     def tearDown(self):
         self.root.cleanup()
@@ -29,6 +31,13 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
                 f"created  config.toml  {corpus / 'config.toml'}",
                 "",
                 "init: created 4 · present 0 · differs 0",
+                "client: no supported client answers its probe; the client key is left commented",
+                "",
+                "next steps:",
+                "  brigade doctor",
+                f"  set the client key in {corpus / 'config.toml'}",
+                "  brigade project add <path>",
+                "  brigade scheduler install",
             ],
         )
         self.assertEqual(completed.stderr, "")
@@ -42,3 +51,14 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
             [list((self.machine.state_home / "brigade").iterdir()), (self.machine.cache_home / "brigade").exists()],
             [[self.machine.state_home / "brigade" / "commands"], False],
         )
+
+    def test_should_set_the_remote_as_origin_of_the_configuration_repository(self):
+        # Arrange
+        remote = "git@example.org:ada/brigade-config.git"
+
+        # Act
+        completed = self.machine.run_init("--remote", remote)
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(self.machine.read_git("remote", "get-url", "origin"), f"{remote}\n")

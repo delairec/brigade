@@ -2,21 +2,30 @@ import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
-from brigade.commands._read_forge_environment import FORGE_NAME, read_forge_environment
+from brigade.commands._read_forge_environment import ForgeSlot, read_forge_environment
+from brigade.errors import BrigadeError
 from brigade.git.locate_main_checkout import locate_main_checkout
 from brigade.git.locate_worktree_root import locate_worktree_root
+from brigade.git.read_current_branch import read_current_branch
+from brigade.registry.read_project_forge import NO_FORGE, read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
+from brigade.runs.locate_source_worktree import locate_source_worktree
 from brigade.runtime import Runtime
+from brigade.system.parse_configuration import Configuration
 from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 from brigade.tasks.find_task_base import find_task_base
+from brigade.tasks.locate_task_worktree import locate_task_worktree
+from brigade.verify.assemble_local_verify_context import assemble_local_verify_context
 from brigade.verify.assemble_verify_context import assemble_verify_context
 from brigade.verify.find_opened_task import find_opened_task
 from brigade.verify.preflight_pull_request import PreflightDemand
+from brigade.verify.preflight_task_branch import BranchPreflightDemand
 
 DOCUMENT_SCHEMA_VERSION = 1
 CLI_KEY = "cli"
 ABSENT = "none"
+NAMED_BY_THE_BRANCH = None
 
 
 def _render_commands(entries: list[dict]) -> str:
@@ -64,19 +73,38 @@ def _render_text(document: dict) -> str:
     return "\n".join(sections).removesuffix("\n")
 
 
+def _assemble_task_branch_context(runtime: Runtime, configuration: Configuration, worktree: Path) -> dict:
+    located = locate_task_worktree(runtime, locate_source_worktree(runtime.paths, worktree), NAMED_BY_THE_BRANCH)
+    branch_demand = BranchPreflightDemand(
+        project=located.project,
+        task=located.task,
+        task_branch=read_current_branch(runtime.run_process, located.path),
+        base_branch=located.base,
+        configuration=configuration,
+    )
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, **assemble_local_verify_context(runtime, branch_demand)}
+
+
 def verify_context(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)
     run_process = runtime.run_process
     worktree = locate_worktree_root(run_process, Path.cwd())
     project = require_project_at(read_projects(runtime), locate_main_checkout(run_process, worktree))
+    forge_name = read_project_forge(project)
+    if forge_name == NO_FORGE:
+        return _assemble_task_branch_context(runtime, configuration, worktree)
+    if request.pr is None:
+        raise BrigadeError(
+            f"@PROJECT.{project.name} acts through the forge {forge_name}: the context names its pull request"
+        )
     found = find_opened_task(runtime, project.name, request.pr)
     demand = PreflightDemand(
         project=project,
         task=found.opened.task,
         base_branch=find_task_base(runtime, worktree, project, found.opened.task),
         pr=request.pr,
-        forge=runtime.resolve_plugin("forge", FORGE_NAME),
-        environment=read_forge_environment(configuration, CLI_KEY, runtime),
+        forge=runtime.resolve_plugin("forge", forge_name),
+        environment=read_forge_environment(configuration, ForgeSlot(forge_name, CLI_KEY), runtime),
         configuration=configuration,
     )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, **assemble_verify_context(runtime, demand)}
@@ -86,7 +114,12 @@ COMMAND = Command(
     path=("verify", "context"),
     help="print in one read what the verification of the pull request of a task judges",
     group_help="check the pull request of a task",
-    arguments=(Argument(("pr",), {"type": int, "help": "the number of the pull request"}),),
+    arguments=(
+        Argument(
+            ("pr",),
+            {"type": int, "nargs": "?", "help": "the number of the pull request, none on a project without a forge"},
+        ),
+    ),
     run=verify_context,
     render_text=_render_text,
 )

@@ -4,7 +4,7 @@ from brigade.system.launch_argv_request import LaunchArgvRequest
 
 LAUNCH_DOCUMENT = {
     "schema_version": 1,
-    "worktree": "/home/user/tidepool",
+    "worktree": "/srv/tidepool",
     "brief": "Deliver the task.",
     "role": {
         "name": "builder",
@@ -30,7 +30,7 @@ class LaunchArgvRequestTest(unittest.TestCase):
             document,
             {
                 "schema_version": 1,
-                "worktree": "/home/user/tidepool",
+                "worktree": "/srv/tidepool",
                 "brief": "Deliver the task.",
                 "role": {
                     "name": "builder",

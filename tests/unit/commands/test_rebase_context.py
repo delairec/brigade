@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from argparse import Namespace
@@ -6,6 +7,7 @@ from pathlib import Path
 from brigade.commands.rebase_context import COMMAND
 from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_corpus_double, write_ledger
+from tests.unit.commands.create_plugin_resolver import create_plugin_resolver
 from tests.unit.commands.test_verify_preflight import (
     M4_BRANCH_CUT,
     TASK_PR_OPENED,
@@ -26,6 +28,8 @@ MERGE_TREE = (
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
+NO_RED_HEAD = None
+NO_MAIN_REPAIR = None
 CONFLICTING_MERGE = ProcessAnswer(stdout="4b825dc\nsrc/tides.py\nREADME.md\n", exit_code=1)
 CLEAN_MERGE = ProcessAnswer(stdout="4b825dc\n")
 
@@ -71,9 +75,9 @@ class RebaseContextOfAPullRequestTest(unittest.TestCase):
 
     def _create_runtime(self, merge: ProcessAnswer, tasks: dict = TIDEPOOL_TASKS, base: str = "integration/M4-tides"):
         answers = {
-            ("git", "rev-parse", "--show-toplevel"): ProcessAnswer(stdout="/home/user/tidepool-T7\n"),
+            ("git", "rev-parse", "--show-toplevel"): ProcessAnswer(stdout="/srv/tidepool-T7\n"),
             ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): ProcessAnswer(
-                stdout="/home/user/tidepool/.git\n"
+                stdout="/srv/tidepool/.git\n"
             ),
             (*MERGE_TREE[:-1], f"origin/{base}"): merge,
         }
@@ -91,7 +95,7 @@ class RebaseContextOfAPullRequestTest(unittest.TestCase):
                 runtime = self._create_runtime(merge)
 
                 # Act
-                document = COMMAND.run(Namespace(pr=42), runtime)
+                document = COMMAND.run(Namespace(pr=42, head=NO_RED_HEAD, into=NO_MAIN_REPAIR), runtime)
 
                 # Assert
                 self.assertEqual(document, create_document(conflicts))
@@ -101,7 +105,7 @@ class RebaseContextOfAPullRequestTest(unittest.TestCase):
         runtime = self._create_runtime(CLEAN_MERGE, tasks=TASK_OF_NO_MILESTONE, base="main")
 
         # Act
-        document = COMMAND.run(Namespace(pr=42), runtime)
+        document = COMMAND.run(Namespace(pr=42, head=NO_RED_HEAD, into=NO_MAIN_REPAIR), runtime)
 
         # Assert
         self.assertEqual(document["base"], "main")
@@ -143,7 +147,7 @@ class RebaseContextOfATaskWithoutAPullRequestTest(unittest.TestCase):
                 runtime = self._create_runtime(project, base)
 
                 # Act
-                document = COMMAND.run(Namespace(pr=NO_PULL_REQUEST), runtime)
+                document = COMMAND.run(Namespace(pr=NO_PULL_REQUEST, head=NO_RED_HEAD, into=NO_MAIN_REPAIR), runtime)
 
                 # Assert
                 self.assertEqual(
@@ -171,6 +175,7 @@ TIDES_BRANCH_CUT = {
 }
 MILESTONE_WITHOUT_FORGE = (("PATH", "/srv/tidepool"), ("MAIN", "main"))
 MILESTONE_ON_GITHUB = (("PATH", "/srv/tidepool"), ("MAIN", "main"), ("FORGE", "github"))
+MILESTONE_ON_FORGEJO = (("PATH", "/srv/tidepool"), ("MAIN", "main"), ("FORGE", "forgejo"))
 TASK_OF_THE_MILESTONE = (("MILESTONE", "@MILESTONE.M4"),)
 HARDENING_BRANCH_CUT = {**TIDES_BRANCH_CUT, "milestone": "M6", "branch": "integration/hardening-the-tick"}
 WAVE_STARTED_ON_A_BRANCH = {**WAVE_STARTED, "branch": "integration/tidepool_w16"}
@@ -194,8 +199,21 @@ class RebaseContextOfAMilestoneOrWaveBranchTest(unittest.TestCase):
             (*MERGE_TREE[:-1], base): CONFLICTING_MERGE,
         }
         corpus = {"PROJECT": {"tidepool": project}, "TASK": {"T7": TASK_OF_THE_MILESTONE}}
-        machine = ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus))
-        return create_test_runtime(create_test_paths(self.root), run_process=machine.run)
+        self.machine = ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus))
+        return create_test_runtime(create_test_paths(self.root), run_process=self.machine.run)
+
+    def test_should_read_the_tasks_of_the_wave_in_the_area_of_the_project(self):
+        # Arrange
+        project_in_an_area = (*MILESTONE_WITHOUT_FORGE, ("CORPUS", "brigade"), ("MODE", "area"))
+        runtime = self._create_runtime(project_in_an_area, "integration/tidepool_w16", "integration/tides")
+
+        # Act
+        document = COMMAND.run(Namespace(pr=NO_PULL_REQUEST, head=NO_RED_HEAD, into=NO_MAIN_REPAIR), runtime)
+
+        # Assert
+        self.assertEqual(document["base"], "integration/tides")
+        self.assertIn(("awawa", "show", "@TASK.T7", "--json", "/srv/tidepool-branch/brigade"), self.machine.argvs)
+        self.assertNotIn(("awawa", "show", "@TASK.T7", "--json", "/srv/tidepool-branch"), self.machine.argvs)
 
     def test_should_describe_the_branch_its_base_and_its_conflicts_with_that_base(self):
         for case, project, branch, base, upstream in [
@@ -228,7 +246,7 @@ class RebaseContextOfAMilestoneOrWaveBranchTest(unittest.TestCase):
                 runtime = self._create_runtime(project, branch, upstream)
 
                 # Act
-                document = COMMAND.run(Namespace(pr=NO_PULL_REQUEST), runtime)
+                document = COMMAND.run(Namespace(pr=NO_PULL_REQUEST, head=NO_RED_HEAD, into=NO_MAIN_REPAIR), runtime)
 
                 # Assert
                 self.assertEqual(
@@ -250,7 +268,7 @@ class RebaseContextOfAMilestoneOrWaveBranchTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(Namespace(pr=NO_PULL_REQUEST), runtime)
+            COMMAND.run(Namespace(pr=NO_PULL_REQUEST, head=NO_RED_HEAD, into=NO_MAIN_REPAIR), runtime)
 
         # Assert
         self.assertEqual(
@@ -270,7 +288,7 @@ class RebaseContextOfAMilestoneOrWaveBranchTest(unittest.TestCase):
 
                 # Act
                 with self.assertRaises(BrigadeError) as raised:
-                    COMMAND.run(Namespace(pr=NO_PULL_REQUEST), runtime)
+                    COMMAND.run(Namespace(pr=NO_PULL_REQUEST, head=NO_RED_HEAD, into=NO_MAIN_REPAIR), runtime)
 
                 # Assert
                 self.assertEqual(
@@ -279,10 +297,162 @@ class RebaseContextOfAMilestoneOrWaveBranchTest(unittest.TestCase):
                 )
 
 
+RED_HEAD = "c0ffee1"
+RESOLVE_RED_HEAD = ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "c0ffee1^{commit}")
+
+
+class CheckRunsByBranchForgeDouble:
+    def __init__(self, check_runs_by_branch: dict):
+        self.check_runs_by_branch = check_runs_by_branch
+
+    def list_check_runs(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "check_runs": self.check_runs_by_branch.get(request["branch"], [])}
+
+
+class RebaseContextOfARedHeadTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (self.root / "config").mkdir()
+        (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
+
+    def _create_runtime(self, project: tuple, branch: str, forge: object = None, resolve_plugin=None):
+        answers = {
+            ("git", "rev-parse", "--show-toplevel"): ProcessAnswer(stdout="/srv/tidepool-branch\n"),
+            ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): ProcessAnswer(
+                stdout="/srv/tidepool/.git\n"
+            ),
+            ("git", "branch", "--show-current"): ProcessAnswer(stdout=f"{branch}\n"),
+            RESOLVE_RED_HEAD: ProcessAnswer(stdout=f"{RED_HEAD}\n"),
+        }
+        corpus = {"PROJECT": {"tidepool": project}}
+        machine = ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus))
+        return create_test_runtime(
+            create_test_paths(self.root),
+            run_process=machine.run,
+            resolve_plugin=resolve_plugin or (lambda kind, name: forge),
+        )
+
+    def test_should_name_the_milestone_branch_repaired_in_place_its_red_commit_and_the_command_that_failed(self):
+        # Arrange
+        record = self.root / "state" / "commit-checks" / "tidepool" / f"{RED_HEAD}.json"
+        record.parent.mkdir(parents=True)
+        record.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "project": "tidepool",
+                    "commit": RED_HEAD,
+                    "checks": [{"command": "make setup", "exit_code": 0}, {"command": "make test", "exit_code": 2}],
+                }
+            ),
+            encoding="utf-8",
+        )
+        runtime = self._create_runtime(MILESTONE_WITHOUT_FORGE, "integration/tides")
+
+        # Act
+        document = COMMAND.run(Namespace(pr=NO_PULL_REQUEST, head=RED_HEAD, into=NO_MAIN_REPAIR), runtime)
+
+        # Assert
+        self.assertEqual(
+            document,
+            {
+                "schema_version": 1,
+                "project": "tidepool",
+                "pr": None,
+                "task": None,
+                "branch": "integration/tides",
+                "head": "c0ffee1",
+                "into": None,
+                "failed": ["make test"],
+            },
+        )
+
+    def test_should_name_the_fix_branch_of_the_main_branch_its_red_commit_and_the_check_run_that_failed_on_main(self):
+        # Arrange
+        forge = CheckRunsByBranchForgeDouble(
+            {
+                "main": [
+                    {"name": "ci / tests", "conclusion": "failure", "head": "c0ffee1"},
+                    {"name": "ci / lint", "conclusion": "success", "head": "c0ffee1"},
+                ]
+            }
+        )
+        runtime = self._create_runtime(MILESTONE_ON_GITHUB, "fix/repair-main-c0ffee1", forge)
+
+        # Act
+        document = COMMAND.run(Namespace(pr=NO_PULL_REQUEST, head=RED_HEAD, into="main"), runtime)
+
+        # Assert
+        self.assertEqual(
+            document,
+            {
+                "schema_version": 1,
+                "project": "tidepool",
+                "pr": None,
+                "task": None,
+                "branch": "fix/repair-main-c0ffee1",
+                "head": "c0ffee1",
+                "into": "main",
+                "failed": ["ci / tests"],
+            },
+        )
+
+    def test_should_list_the_check_runs_of_the_red_head_through_the_forge_of_the_project(self):
+        # Arrange
+        forge = CheckRunsByBranchForgeDouble(
+            {"main": [{"name": "ci / tests", "conclusion": "failure", "head": "c0ffee1"}]}
+        )
+        runtime = self._create_runtime(
+            MILESTONE_ON_FORGEJO,
+            "fix/repair-main-c0ffee1",
+            resolve_plugin=create_plugin_resolver({("forge", "forgejo"): forge}),
+        )
+
+        # Act
+        document = COMMAND.run(Namespace(pr=NO_PULL_REQUEST, head=RED_HEAD, into="main"), runtime)
+
+        # Assert
+        self.assertEqual(document["failed"], ["ci / tests"])
+
+
+class RebaseContextTextOfARedHeadTest(unittest.TestCase):
+    def test_should_print_the_branch_its_red_commit_and_each_command_that_failed(self):
+        for case, into, text in [
+            (
+                "a branch repaired in place",
+                None,
+                "# branch\nintegration/tides\n\n# head\nc0ffee1\n\n# failed\nmake test\nmake lint",
+            ),
+            (
+                "the main branch repaired on a fix branch",
+                "main",
+                "# branch\nintegration/tides\n\n# head\nc0ffee1\n\n# into\nmain\n\n# failed\nmake test\nmake lint",
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                document = {
+                    "schema_version": 1,
+                    "project": "tidepool",
+                    "pr": None,
+                    "task": None,
+                    "branch": "integration/tides",
+                    "head": "c0ffee1",
+                    "into": into,
+                    "failed": ["make test", "make lint"],
+                }
+
+                # Act
+                rendered = COMMAND.render_text(document)
+
+                # Assert
+                self.assertEqual(rendered, text)
+
+
 class RebaseContextRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = Namespace(pr=42)
+        options = Namespace(pr=42, head=NO_RED_HEAD, into=NO_MAIN_REPAIR)
 
         # Act
         request = COMMAND.read_request(options)

@@ -181,6 +181,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
                 "actions_applied": 0,
                 "actions_failed": 0,
                 "heartbeat": str(self.root / "state" / "tick.json"),
+                "merge_commands": [],
             },
         )
         self.assertEqual(
@@ -391,8 +392,24 @@ class TickTextTest(unittest.TestCase):
                     "duration_ms": 250,
                     "actions_applied": 2,
                     "actions_failed": 1,
+                    "merge_commands": [],
                 },
                 "tick 2026-10-07T09:00:00Z: 2 actions applied, 1 failed in 250 ms",
+            ),
+            (
+                "once, naming a merge the user runs",
+                {
+                    "mode": "once",
+                    "ts": "2026-10-07T09:00:00Z",
+                    "duration_ms": 250,
+                    "actions_applied": 0,
+                    "actions_failed": 0,
+                    "merge_commands": ["git -C /srv/shop merge integration/cart"],
+                },
+                (
+                    "tick 2026-10-07T09:00:00Z: 0 actions applied, 0 failed in 250 ms\n"
+                    "to merge: git -C /srv/shop merge integration/cart"
+                ),
             ),
             ("a loop", {"mode": "loop", "ticks_attempted": 3}, "tick --loop: 3 ticks attempted"),
             (
@@ -491,6 +508,7 @@ MACHINE_OUTPUTS = {
     ("git", "branch", "--quiet", "-D"): "",
     ("git", "merge-base"): "",
     ("git", "fetch"): "",
+    ("git", "ls-remote"): "",
     ("git", "diff"): "",
     ("git", "status", "--porcelain", "--untracked-files=no"): "",
     ("awawa", "status", "TASK", "--where", "STATUS==implemented"): '{"entities": []}',
@@ -696,6 +714,9 @@ def create_forge(found: dict | None, details: dict | None, tails: dict | None = 
             "find_pull_request": lambda request: {"schema_version": 1, "pull_request": found},
             "read_pull_request": lambda request: {"schema_version": 1, "pull_request": details},
             "read_check_logs": CheckLogsReaderDouble(tails).read_check_logs,
+            "list_check_runs": lambda request: {"schema_version": 1, "check_runs": []},
+            "list_review_threads": lambda request: {"schema_version": 1, "threads": []},
+            "list_pull_requests": lambda request: {"schema_version": 1, "pull_requests": []},
         }
     )
 
@@ -732,7 +753,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
     def _create_runtime(self, task: tuple, forge: ForgeDouble, setup: tuple = (), requests: tuple = ()) -> Runtime:
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), *setup)},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"), *setup)},
             "TASK": {"T7": task},
             "REQUEST": dict(requests),
         }
@@ -740,7 +761,9 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, MACHINE_OUTPUTS),
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
+            ),
         )
 
     def _read_events(self) -> list[dict]:
@@ -758,7 +781,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         document = COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
-        self.assertEqual(document["actions_applied"], 1)
+        self.assertEqual(document["actions_applied"], 3)
         self.assertEqual(
             self.spawn.argvs,
             [
@@ -994,15 +1017,16 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("queued")])
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_DELIVERED},
         }
         runtime = create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **WAVE_TREE_HOLDING_T7_IMPLEMENTED_OUTPUTS}),
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(
-                STEP_COUNTING_PROBE, create_forge(MERGED_PULL_REQUEST, NO_DETAILS_ASKED)
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, create_forge(MERGED_PULL_REQUEST, NO_DETAILS_ASKED)),
+                self.root,
             ),
         )
 
@@ -1753,15 +1777,16 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("queued")])
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_TO_DELIVER},
         }
         runtime = create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **BLOCKING_QUESTION_OUTPUTS}),
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(
-                STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)),
+                self.root,
             ),
         )
 
@@ -2479,7 +2504,18 @@ OTHER_TASK_PASSED = {**TASK_PASSED_AT_THE_HEAD, "task": "T8", "pr": 43}
 SAME_TASK_PASSED_IN_ANOTHER_WAVE = {**TASK_PASSED_AT_THE_HEAD, "wave": "tidepool_w15", "pr": 41}
 
 
-class MergingForgeDouble:
+class ForgeWithNothingToCollectDouble:
+    def list_check_runs(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "check_runs": []}
+
+    def list_pull_requests(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "pull_requests": []}
+
+    def list_review_threads(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "threads": []}
+
+
+class MergingForgeDouble(ForgeWithNothingToCollectDouble):
     def __init__(self, found_by_branch: dict):
         self.found_by_branch = found_by_branch
         self.merges = []
@@ -2527,14 +2563,16 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
     def _create_runtime(self, forge: MergingForgeDouble) -> Runtime:
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_DELIVERED, "T8": TASK_AFTER_T7},
         }
         return create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, MACHINE_OUTPUTS),
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
+            ),
         )
 
     def _read_events(self) -> list[dict]:
@@ -2601,7 +2639,9 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
                     "pr": 42,
                     "method": "rebase",
                     "head": "8885daa",
-                }
+                },
+                {"project": "tidepool"},
+                {"project": "tidepool"},
             ],
         )
 
@@ -3218,7 +3258,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         self.spawn = SpawnRecorderDouble()
         self._create_runtime()
 
-    def _create_runtime(self, forge: tuple = (), answers: dict | None = None):
+    def _create_runtime(self, forge: tuple = (), answers: dict | None = None, red_branch: str | None = None):
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
             "PROJECT": {"tidepool": (("PATH", str(self.root / "tidepool")), ("MAIN", "main"), *forge)},
@@ -3242,12 +3282,17 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
             if forge
             else create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
         )
+        forge_name = dict(forge).get("FORGE", "github")
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
-            run_process=self.machine.run,
+            run_process=create_the_worktree_at_its_addition(self.machine.run),
             spawn_process=self.spawn.spawn,
-            resolve_plugin=_resolve_the_collectors_beside(
-                create_plugin_resolution(STEP_COUNTING_PROBE, forge_double), self.root
+            resolve_plugin=_serve_the_forge_double_as(
+                forge_name,
+                _resolve_the_collectors_beside(
+                    create_plugin_resolution(STEP_COUNTING_PROBE, RedBranchForgeDouble(forge_double, red_branch)),
+                    self.root,
+                ),
             ),
         )
 
@@ -3267,6 +3312,76 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         }
         write_run(self.root / "state", blocked_run, BLOCKED_REBASE_OF_THE_MILESTONE_BRANCH)
         write_ledger(self.root, [CUT_OF_M4, *launches, BLOCKED_REBASE_OF_THE_MILESTONE_BRANCH])
+
+    def test_should_name_on_stderr_the_red_main_branch_holding_the_rebase_of_the_milestone_branch(self):
+        # Arrange
+        write_commit_checks(self.root, WAVE_HEAD, FAILED)
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertIn(
+            f"brigade tick: the rebase of integration/tides waits: main is red at {WAVE_HEAD}, `make test` failed\n",
+            errors.getvalue(),
+        )
+        self.assertNotIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
+
+    def test_should_hold_the_rebase_of_the_milestone_branch_on_the_check_runs_the_forge_of_the_project_lists(self):
+        # Arrange
+        self._create_runtime(
+            forge=(("FORGE", FORGE_OF_NO_GITHUB),),
+            answers={("git", "ls-remote"): ProcessAnswer(exit_code=2)},
+            red_branch="main",
+        )
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertIn(
+            f"brigade tick: the rebase of integration/tides waits: main is red at {WAVE_HEAD}, `ci / tests` failed\n",
+            errors.getvalue(),
+        )
+
+    def test_should_launch_one_run_repairing_the_red_main_branch_on_a_fix_branch_cut_from_its_head(self):
+        # Arrange
+        write_commit_checks(self.root, WAVE_HEAD, FAILED)
+        repair = self.root / "tidepool" / ".brigade" / "worktrees" / f"fix-repair-main-{WAVE_HEAD}"
+
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            select_argvs_opening_on(self.machine.argvs, ("git", "worktree", "add", "--quiet", "-b")),
+            [("git", "worktree", "add", "--quiet", "-b", f"fix/repair-main-{WAVE_HEAD}", str(repair), WAVE_HEAD)],
+        )
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "rebase-on-base",
+                    f"branch=fix/repair-main-{WAVE_HEAD}",
+                    f"head={WAVE_HEAD}",
+                    "into=main",
+                    "--slot",
+                    "rebase",
+                    "--cwd",
+                    str(repair),
+                    "--project",
+                    "tidepool",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
 
     def test_should_rebase_the_milestone_branch_onto_main_before_the_wave_of_its_candidates_starts_on_it(self):
         # Act
@@ -3507,13 +3622,48 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
 OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT = {
     **MACHINE_ANSWERS,
     ("git", "merge-base", "--is-ancestor", "integration/M4", "feature/T7-tide-table"): ProcessAnswer(exit_code=1),
+    ("git", "merge-base", "--is-ancestor", "feature/T7-tide-table", "integration/M4"): ProcessAnswer(exit_code=1),
     ("git", "rebase", "--fork-point", "integration/M4"): ProcessAnswer(
         exit_code=1, stderr="CONFLICT (content): Merge conflict in src/tides.py"
     ),
     ("git", "rev-parse", "--quiet", "--verify", "REBASE_HEAD"): ProcessAnswer(stdout="f02da32\n"),
     ("git", "rebase", "--abort"): ProcessAnswer(),
+    ("git", "rev-parse", "HEAD"): ProcessAnswer(stdout="4c0e214\n"),
+    ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "feature/T7-tide-table^{commit}"): ProcessAnswer(
+        stdout="4c0e214\n"
+    ),
 }
+T7_HEAD = "4c0e214"
+GREEN_PULL_REQUEST_AT_THE_T7_HEAD = {**GREEN_PULL_REQUEST, "head": "4c0e214"}
+PASSED = 0
+FAILED = 1
 
+
+def write_commit_checks(root: Path, commit: str, exit_code: int) -> None:
+    record = root / "state" / "commit-checks" / "tidepool" / f"{commit}.json"
+    record.parent.mkdir(parents=True, exist_ok=True)
+    record.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "project": "tidepool",
+                "commit": commit,
+                "checks": [{"command": "make test", "exit_code": exit_code}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+OUTPUTS_OF_A_LAUNCH_FROM_THE_FORGE_STOPPED_ON_A_CONFLICT = {
+    **OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT,
+    ("git", "merge-base", "--is-ancestor", "origin/integration/M4", "feature/T7-tide-table"): ProcessAnswer(
+        exit_code=1
+    ),
+    ("git", "rebase", "--fork-point", "origin/integration/M4"): ProcessAnswer(
+        exit_code=1, stderr="CONFLICT (content): Merge conflict in src/tides.py"
+    ),
+}
 
 REBASE_RUN_OF_T7 = "20261018T100000Z-5e6f70"
 T7_RUNNING = {
@@ -3554,18 +3704,42 @@ class TickLaunchingATaskWhoseChecksPassedAndWhoseBranchConflictsWithTheWaveBranc
             },
             REBASE_OF_T7_DONE,
         )
+        write_commit_checks(self.root, WAVE_HEAD, PASSED)
+        self.runtime = self._create_runtime()
+
+    def _create_runtime(self, forge_name: str = "github", red_branch: str | None = None) -> Runtime:
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", forge_name))},
             "TASK": {"T7": TASK_TO_DELIVER},
         }
-        self.runtime = create_test_runtime(
+        forge = RedBranchForgeDouble(RebasingForgeDouble([GREEN_PULL_REQUEST_AT_THE_T7_HEAD]), red_branch)
+        return create_test_runtime(
             create_test_paths(self.root),
             run_process=ScriptedProcessRunner(
-                OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT, fallback=create_corpus_double(corpus)
+                OUTPUTS_OF_A_LAUNCH_FROM_THE_FORGE_STOPPED_ON_A_CONFLICT, fallback=create_corpus_double(corpus)
             ).run,
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([GREEN_PULL_REQUEST])),
+            resolve_plugin=_serve_the_forge_double_as(
+                forge_name,
+                _resolve_the_collectors_beside(create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root),
+            ),
+        )
+
+    def test_should_hold_the_launch_on_the_check_runs_the_forge_of_the_project_lists(self):
+        # Arrange
+        (self.root / "state" / "commit-checks" / "tidepool" / f"{WAVE_HEAD}.json").unlink()
+        runtime = self._create_runtime(forge_name=FORGE_OF_NO_GITHUB, red_branch="integration/M4")
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertIn(
+            f"brigade tick: @TASK.T7 waits: integration/M4 is red at {WAVE_HEAD}, `ci / tests` failed\n",
+            errors.getvalue(),
         )
 
     def test_should_launch_the_rebase_slot_on_the_worktree_of_the_task_instead_of_its_build(self):
@@ -3618,7 +3792,7 @@ class TickLaunchingATaskWhoseChecksPassedAndWhoseBranchConflictsWithTheWaveBranc
         )
 
 
-class TickLaunchingATaskWhoseBranchIsOffTheWaveBranchWithoutPassedChecksTest(unittest.TestCase):
+class TickLaunchingATaskWithoutAPullRequestWhoseBranchConflictsWithTheWaveBranchTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(self.root)
@@ -3629,6 +3803,8 @@ class TickLaunchingATaskWhoseBranchIsOffTheWaveBranchWithoutPassedChecksTest(uni
         self.worktree.mkdir(parents=True)
         self.spawn = SpawnRecorderDouble()
         write_ledger(self.root, [CUT_OF_M4_ON_THE_WAVE_BRANCH, WAVE_STARTED])
+        write_commit_checks(self.root, T7_HEAD, PASSED)
+        write_commit_checks(self.root, WAVE_HEAD, PASSED)
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
             "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
@@ -3644,14 +3820,17 @@ class TickLaunchingATaskWhoseBranchIsOffTheWaveBranchWithoutPassedChecksTest(uni
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([None])),
         )
 
-    def test_should_rebase_nothing(self):
+    def test_should_rebase_the_branch_onto_the_wave_branch(self):
         # Act
         COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Assert
-        self.assertEqual(select_argvs_opening_on(self.machine.argvs, GIT_REBASE), [])
+        self.assertEqual(
+            select_argvs_opening_on(self.machine.argvs, GIT_REBASE),
+            [("git", "rebase", "--fork-point", "integration/M4"), ("git", "rebase", "--abort")],
+        )
 
-    def test_should_launch_the_build_slot_on_the_branch_as_it_stands(self):
+    def test_should_launch_the_rebase_slot_with_the_task_and_its_base_and_no_pull_request(self):
         # Act
         COMMAND.run(Namespace(mode="once"), self.runtime)
 
@@ -3661,17 +3840,15 @@ class TickLaunchingATaskWhoseBranchIsOffTheWaveBranchWithoutPassedChecksTest(uni
             [
                 (
                     "run",
-                    "build-task",
+                    "rebase-on-base",
                     "task=@TASK.T7",
                     "base=integration/M4",
                     "--slot",
-                    "build",
+                    "rebase",
                     "--cwd",
                     str(self.worktree),
                     "--project",
                     "tidepool",
-                    "--brief",
-                    str(self.root / "state" / "briefs" / "tidepool_w16-T7.md"),
                     "--wave",
                     "tidepool_w16",
                     "--task",
@@ -3680,6 +3857,226 @@ class TickLaunchingATaskWhoseBranchIsOffTheWaveBranchWithoutPassedChecksTest(uni
                     ANY,
                 )
             ],
+        )
+
+
+def create_the_worktree_at_its_addition(run_process):
+    def run(request):
+        if request.argv[:3] == ("git", "worktree", "add"):
+            Path(request.argv[-2]).mkdir(parents=True, exist_ok=True)
+        return run_process(request)
+
+    return run
+
+
+class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.repository = self.root / "tidepool"
+        (self.repository / ".brigade" / "worktrees" / "T7").mkdir(parents=True)
+        self.spawn = SpawnRecorderDouble()
+        write_ledger(self.root, [CUT_OF_M4_ON_THE_WAVE_BRANCH, WAVE_STARTED])
+        write_commit_checks(self.root, T7_HEAD, PASSED)
+        write_commit_checks(self.root, WAVE_HEAD, FAILED)
+        corpus = {
+            "STUDY": PAUSED_BUILT_IN_STUDIES,
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_TO_DELIVER},
+        }
+        self.machine = ScriptedProcessRunner(
+            OUTPUTS_OF_A_LAUNCH_STOPPED_ON_A_CONFLICT, fallback=create_corpus_double(corpus)
+        )
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_the_worktree_at_its_addition(self.machine.run),
+            spawn_process=self.spawn.spawn,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([None])),
+        )
+
+    def test_should_launch_one_run_repairing_the_red_wave_branch_in_its_worktree_and_no_build(self):
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "rebase-on-base",
+                    "branch=integration/M4",
+                    f"head={WAVE_HEAD}",
+                    "--slot",
+                    "rebase",
+                    "--cwd",
+                    str(self.repository / ".brigade" / "worktrees" / "integration-M4"),
+                    "--project",
+                    "tidepool",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
+
+    def test_should_launch_no_second_repair_while_the_first_lives(self):
+        # Arrange
+        live_repair = {
+            **create_run_record(FIRST_RUN, None, None),
+            "slot": "rebase",
+            "arguments": {"branch": "integration/M4", "head": WAVE_HEAD},
+            "project": "tidepool",
+            "cwd": str(self.repository / ".brigade" / "worktrees" / "integration-M4"),
+            "worktree": str(self.repository / ".brigade" / "worktrees" / "integration-M4"),
+        }
+        record_run_pid(write_run(self.root / "state", live_repair, None), os.getpid())
+
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(self.spawn.argvs, [])
+
+    def test_should_name_the_question_of_the_repair_ended_blocked_at_each_tick_and_launch_no_other(self):
+        # Arrange
+        blocked_repair = {
+            **create_run_record(FIRST_RUN, None, None),
+            "slot": "rebase",
+            "arguments": {"branch": "integration/M4", "head": WAVE_HEAD},
+            "project": "tidepool",
+            "cwd": str(self.repository / ".brigade" / "worktrees" / "integration-M4"),
+            "worktree": str(self.repository / ".brigade" / "worktrees" / "integration-M4"),
+        }
+        blocked = {
+            **create_run_result(FIRST_RUN, "blocked", "2026-10-18T10:30:00Z"),
+            "message": "Drop the flaky tide test or fix its clock?\nbrigade-end: blocked",
+        }
+        write_run(self.root / "state", blocked_repair, blocked)
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(self.spawn.argvs, [])
+        self.assertEqual(
+            errors.getvalue().splitlines()[-1],
+            "brigade tick: the repair of integration/M4 is blocked: Drop the flaky tide test or fix its clock?",
+        )
+
+    def test_should_name_the_red_wave_branch_its_commit_and_the_command_that_failed_on_stderr(self):
+        # Arrange
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertIn(
+            "brigade tick: @TASK.T7 waits: integration/M4 is red at 8885daa, `make test` failed\n", errors.getvalue()
+        )
+
+    def test_should_record_no_state_for_the_task(self):
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        events = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(json.loads(events[-1])["event"], "wave.started")
+
+    def test_should_launch_the_held_task_at_the_tick_that_reads_its_base_green(self):
+        # Arrange
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+        write_commit_checks(self.root, WAVE_HEAD, PASSED)
+
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs[-1],
+            (
+                "run",
+                "rebase-on-base",
+                "task=@TASK.T7",
+                "base=integration/M4",
+                "--slot",
+                "rebase",
+                "--cwd",
+                str(self.repository / ".brigade" / "worktrees" / "T7"),
+                "--project",
+                "tidepool",
+                "--wave",
+                "tidepool_w16",
+                "--task",
+                "T7",
+                "--run-id",
+                ANY,
+            ),
+        )
+
+    def test_should_check_an_unproven_base_once_and_hold_the_launch_on_its_record_at_the_next_tick(self):
+        # Arrange
+        (self.root / "state" / "commit-checks" / "tidepool" / f"{WAVE_HEAD}.json").unlink()
+        checkout = str(self.root / "state" / "head-checks" / "tidepool" / WAVE_HEAD)
+        self.machine.answers[("awawa", "lint", "--strict", ".")] = ProcessAnswer(exit_code=1)
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.machine.argvs.count(("git", "worktree", "add", "--quiet", "--detach", checkout, WAVE_HEAD)), 1
+        )
+
+    def test_should_name_the_red_wave_branch_holding_the_launch_in_the_plan_of_a_dry_run(self):
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "project": "tidepool",
+                "wave": "tidepool_w16",
+                "branch": "integration/M4",
+                "task": "T7",
+                "task_branch": "feature/T7-tide-table",
+                "pull_request_checks": None,
+                "waits": "integration/M4 is red at 8885daa, `make test` failed",
+            },
+            document["plan"],
+        )
+
+    def test_should_run_no_command_of_the_project_on_a_dry_run(self):
+        # Arrange
+        (self.root / "state" / "commit-checks" / "tidepool" / f"{WAVE_HEAD}.json").unlink()
+
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "project": "tidepool",
+                "wave": "tidepool_w16",
+                "branch": "integration/M4",
+                "task": "T7",
+                "task_branch": "feature/T7-tide-table",
+                "pull_request_checks": None,
+            },
+            document["plan"],
         )
 
 
@@ -3706,6 +4103,7 @@ class TickBriefingATaskOnTheTaskAsItReadsOnTheWaveBranchTest(unittest.TestCase):
         repository = root / "tidepool"
         (repository / ".brigade" / "worktrees" / "T7").mkdir(parents=True)
         write_ledger(root, [CUT_OF_M4_ON_THE_WAVE_BRANCH, WAVE_STARTED])
+        write_commit_checks(root, T7_HEAD, FAILED)
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
             "PROJECT": {"tidepool": (("PATH", str(repository)), ("MAIN", "main"))},
@@ -3713,7 +4111,11 @@ class TickBriefingATaskOnTheTaskAsItReadsOnTheWaveBranchTest(unittest.TestCase):
         }
         answers = {
             **MACHINE_ANSWERS,
+            ("git", "rev-parse", "HEAD"): ProcessAnswer(stdout=f"{T7_HEAD}\n"),
             IS_T7_ON_THE_WAVE_BRANCH: descent,
+            ("git", "merge-base", "--is-ancestor", "feature/T7-tide-table", "integration/M4"): ProcessAnswer(
+                exit_code=1
+            ),
             (*SHOW_T7, str(root / "cache" / "refs" / "tidepool" / WAVE_HEAD)): on_the_wave_branch,
         }
         return create_test_runtime(
@@ -3723,7 +4125,7 @@ class TickBriefingATaskOnTheTaskAsItReadsOnTheWaveBranchTest(unittest.TestCase):
             resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([None])),
         )
 
-    def test_should_give_the_build_of_a_branch_off_the_wave_branch_the_task_as_it_reads_on_the_wave_branch(self):
+    def test_should_give_the_build_of_a_red_branch_off_the_wave_branch_the_task_as_it_reads_on_the_wave_branch(self):
         # Arrange
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         runtime = self._create_runtime(root, BRANCH_OFF_THE_WAVE_BRANCH, T7_RULED_ON_THE_WAVE_BRANCH)
@@ -3738,8 +4140,8 @@ class TickBriefingATaskOnTheTaskAsItReadsOnTheWaveBranchTest(unittest.TestCase):
             "\n"
             "- Base branch: integration/M4.\n"
             f"- Worktree: {root / 'tidepool' / '.brigade' / 'worktrees' / 'T7'}, on the branch feature/T7-tide-table,"
-            " left as it stands, off the head of integration/M4: do not rebase it; the tick rebases it onto"
-            " integration/M4 once the checks of its pull request pass.\n"
+            " left as it stands, off the head of integration/M4: its head failed `make test`;"
+            " repair those failures first, and do not rebase the branch.\n"
             "\n"
             "@TASK.T7 reads differently on integration/M4 than in the corpus of the worktree;"
             " that reading is more recent and prevails:\n"
@@ -3769,8 +4171,8 @@ class TickBriefingATaskOnTheTaskAsItReadsOnTheWaveBranchTest(unittest.TestCase):
             "\n"
             "- Base branch: integration/M4.\n"
             f"- Worktree: {root / 'tidepool' / '.brigade' / 'worktrees' / 'T7'}, on the branch feature/T7-tide-table,"
-            " left as it stands, off the head of integration/M4: do not rebase it; the tick rebases it onto"
-            " integration/M4 once the checks of its pull request pass.\n",
+            " left as it stands, off the head of integration/M4: its head failed `make test`;"
+            " repair those failures first, and do not rebase the branch.\n",
         )
 
     def test_should_read_no_task_on_the_wave_branch_for_a_branch_descending_from_it(self):
@@ -3907,7 +4309,49 @@ LEDGER_OF_A_TASK_PAST_ITS_ROUNDS = [
 ]
 
 
-class RebasingForgeDouble:
+FORGE_OF_NO_GITHUB = "forgejo"
+
+
+def _red_check_run_at(head: str) -> dict:
+    return {
+        "pull_request": None,
+        "branch": "integration/M4",
+        "head": head,
+        "name": "ci / tests",
+        "conclusion": "failure",
+        "link": "https://forge.example/tidepool/runs/7",
+    }
+
+
+class RedBranchForgeDouble:
+    def __init__(self, forge: object, branch: str):
+        self.forge = forge
+        self.branch = branch
+
+    def __getattr__(self, name: str):
+        return getattr(self.forge, name)
+
+    def list_check_runs(self, request: dict, runtime) -> dict:
+        if request["branch"] == self.branch:
+            return {"schema_version": 1, "check_runs": [_red_check_run_at(WAVE_HEAD)]}
+        return self.forge.list_check_runs(request, runtime)
+
+    def read_job_steps(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "steps": None}
+
+
+def _serve_the_forge_double_as(forge_name: str, resolve_plugin):
+    def resolve(kind: str, name: str, **options):
+        if kind != "forge":
+            return resolve_plugin(kind, name, **options)
+        if name != forge_name:
+            raise AssertionError(f"the command resolved the forge plugin {name}")
+        return resolve_plugin(kind, "github", **options)
+
+    return resolve
+
+
+class RebasingForgeDouble(ForgeWithNothingToCollectDouble):
     def __init__(self, found: list[dict]):
         self.found = found
 
@@ -3934,20 +4378,28 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         self.spawn = SpawnRecorderDouble()
         self.lock_free_at_the_rebase = []
         self.environments_of_the_fetch = []
+        write_commit_checks(self.root, WAVE_HEAD, PASSED)
 
-    def _create_runtime(self, outputs: dict, found: list[dict]) -> Runtime:
+    def _create_runtime(
+        self, outputs: dict, found: list[dict], forge_name: str = "github", red_branch: str | None = None
+    ) -> Runtime:
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
-            "TASK": {"T7": TASK_DELIVERED},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", forge_name))},
+            "TASK": {"T7": TASK_DELIVERED, "T8": TASK_DELIVERED},
         }
         self.machine = ScriptedProcessRunner(outputs, fallback=create_corpus_double(corpus))
         forge = RebasingForgeDouble(found)
         return create_test_runtime(
             create_test_paths(self.root),
-            run_process=self._observe_the_lock(self.machine.run),
+            run_process=create_the_worktree_at_its_addition(self._observe_the_lock(self.machine.run)),
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+            resolve_plugin=_serve_the_forge_double_as(
+                forge_name,
+                _resolve_the_collectors_beside(
+                    create_plugin_resolution(STEP_COUNTING_PROBE, RedBranchForgeDouble(forge, red_branch)), self.root
+                ),
+            ),
         )
 
     def _observe_the_lock(self, run_process):
@@ -3971,6 +4423,163 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
     def _read_events(self) -> list[dict]:
         return list(
             map(json.loads, (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines())
+        )
+
+    def test_should_rebase_nothing_while_the_head_of_the_wave_branch_is_red(self):
+        # Arrange
+        write_ledger(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
+        write_commit_checks(self.root, WAVE_HEAD, FAILED)
+        runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST])
+
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(select_argvs_opening_on(self.machine.argvs, GIT_REBASE, GIT_PUSH), [])
+
+    def test_should_name_the_red_wave_branch_holding_the_catch_up_on_stderr(self):
+        # Arrange
+        write_ledger(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
+        write_commit_checks(self.root, WAVE_HEAD, FAILED)
+        runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST])
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertIn(
+            "brigade tick: the catch-up of @TASK.T7 waits: integration/M4 is red at 8885daa, `make test` failed\n",
+            errors.getvalue(),
+        )
+
+    def test_should_hold_the_catch_up_on_the_check_runs_the_forge_of_the_project_lists(self):
+        # Arrange
+        write_ledger(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
+        (self.root / "state" / "commit-checks" / "tidepool" / f"{WAVE_HEAD}.json").unlink()
+        runtime = self._create_runtime(
+            REBASE_OUTPUTS, [BEHIND_PULL_REQUEST], forge_name=FORGE_OF_NO_GITHUB, red_branch="integration/M4"
+        )
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertIn(
+            "brigade tick: the catch-up of @TASK.T7 waits: integration/M4 is red at 8885daa, `ci / tests` failed\n",
+            errors.getvalue(),
+        )
+
+    def test_should_name_in_the_dry_run_the_check_runs_the_forge_of_the_project_lists_holding_the_catch_up(self):
+        # Arrange
+        write_ledger(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
+        (self.root / "state" / "commit-checks" / "tidepool" / f"{WAVE_HEAD}.json").unlink()
+        runtime = self._create_runtime(
+            REBASE_OUTPUTS, [BEHIND_PULL_REQUEST], forge_name=FORGE_OF_NO_GITHUB, red_branch="integration/M4"
+        )
+
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "project": "tidepool",
+                "wave": "tidepool_w16",
+                "branch": "integration/M4",
+                "task": "T7",
+                "task_branch": "feature/T7-tide-table",
+                "pr": 42,
+                "worktree": str(self.worktree),
+                "head": WAVE_HEAD,
+                "holds_uncommitted_changes": False,
+                "waits": f"integration/M4 is red at {WAVE_HEAD}, `ci / tests` failed",
+            },
+            document["plan"],
+        )
+
+    def test_should_launch_one_run_repairing_the_red_wave_branch_holding_the_catch_up(self):
+        # Arrange
+        write_ledger(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
+        write_commit_checks(self.root, WAVE_HEAD, FAILED)
+        runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST])
+
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "rebase-on-base",
+                    "branch=integration/M4",
+                    f"head={WAVE_HEAD}",
+                    "--slot",
+                    "rebase",
+                    "--cwd",
+                    ANY,
+                    "--project",
+                    "tidepool",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
+
+    def test_should_launch_one_run_repairing_the_red_wave_branch_two_catch_ups_wait_on(self):
+        # Arrange
+        write_ledger(
+            self.root,
+            [
+                CUT_OF_M4_ON_THE_WAVE_BRANCH,
+                {**WAVE_STARTED, "tasks": ["T7", "T8"]},
+                TASK_PR_OPENED,
+                {**TASK_PR_OPENED, "task": "T8", "branch": "feature/T8-tide-chart", "pr": 43},
+                TASK_PREFLIGHTED_AT_THE_HEAD,
+                {**TASK_PREFLIGHTED_AT_THE_HEAD, "task": "T8", "pr": 43},
+                _record_task_state("verifying"),
+                {**_record_task_state("verifying"), "task": "T8"},
+            ],
+        )
+        write_commit_checks(self.root, WAVE_HEAD, FAILED)
+        (self.repository / ".brigade" / "worktrees" / "T8").mkdir(parents=True)
+        runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST])
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "rebase-on-base",
+                    "branch=integration/M4",
+                    f"head={WAVE_HEAD}",
+                    "--slot",
+                    "rebase",
+                    "--cwd",
+                    ANY,
+                    "--project",
+                    "tidepool",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
+        self.assertIn(
+            "brigade tick: the catch-up of @TASK.T8 waits: integration/M4 is red at 8885daa, `make test` failed\n",
+            errors.getvalue(),
         )
 
     def test_should_rebase_the_task_branch_in_its_worktree_and_push_it_with_a_lease_on_its_head(self):
@@ -4109,7 +4718,10 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         COMMAND.run(Namespace(mode="once"), runtime)
 
         # Assert
-        self.assertEqual(self.environments_of_the_fetch, [ENVIRONMENT_OF_THE_CLI_ACCOUNT])
+        self.assertEqual(
+            self.environments_of_the_fetch,
+            [ENVIRONMENT_OF_THE_CLI_ACCOUNT, ENVIRONMENT_OF_THE_CLI_ACCOUNT, ENVIRONMENT_OF_THE_CLI_ACCOUNT],
+        )
 
     def test_should_abort_a_conflicting_rebase_and_launch_the_rebase_slot_in_fixing(self):
         # Arrange
@@ -4279,6 +4891,9 @@ def create_forge_of_the_cli(found: dict | None, environment: dict | None) -> For
         {
             "find_pull_request": lambda request: {"schema_version": 1, "pull_request": found},
             "read_login_environment": lambda request: {"schema_version": 1, "environment": environment},
+            "list_check_runs": lambda request: {"schema_version": 1, "check_runs": []},
+            "list_review_threads": lambda request: {"schema_version": 1, "threads": []},
+            "list_pull_requests": lambda request: {"schema_version": 1, "pull_requests": []},
         }
     )
 
@@ -4290,26 +4905,28 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
         (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
         self.repository = self.root / "tidepool"
 
-    def _create_runtime(self, binding: str, forge: ForgeDouble) -> Runtime:
+    def _create_runtime(self, binding: str, forge: ForgeDouble, project_forge: str) -> Runtime:
         (self.root / "config" / "config.toml").write_text(
             CLIENT_AND_DOCUMENT_CONFIGURATION + ONE_FORGE_ATTEMPT + binding, encoding="utf-8"
         )
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", project_forge))},
             "TASK": {"T7": TASK_TO_DELIVER},
         }
         return create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, MACHINE_OUTPUTS),
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
+            ),
         )
 
     def test_should_read_the_pull_request_of_a_running_task_as_the_login_of_the_key_cli(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("running")])
         forge = create_forge_of_the_cli(OPEN_PULL_REQUEST, ENVIRONMENT_OF_THE_CLI_ACCOUNT)
-        runtime = self._create_runtime(CLI_BOUND_TO_A_FORGE_ACCOUNT, forge)
+        runtime = self._create_runtime(CLI_BOUND_TO_A_FORGE_ACCOUNT, forge, "github")
 
         # Act
         COMMAND.run(Namespace(mode="dry-run"), runtime)
@@ -4337,7 +4954,7 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("running")])
         forge = create_forge_of_the_cli(OPEN_PULL_REQUEST, ENVIRONMENT_OF_THE_CLI_ACCOUNT)
-        runtime = self._create_runtime(CLI_BOUND_TO_A_FORGE_ACCOUNT, forge)
+        runtime = self._create_runtime(CLI_BOUND_TO_A_FORGE_ACCOUNT, forge, "github")
 
         # Act
         COMMAND.run(Namespace(mode="once"), runtime)
@@ -4351,7 +4968,7 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("running")])
         forge = create_forge_of_the_cli(OPEN_PULL_REQUEST, NO_TOKEN)
-        runtime = self._create_runtime(CLI_BOUND_TO_A_TOKENLESS_ACCOUNT, forge)
+        runtime = self._create_runtime(CLI_BOUND_TO_A_TOKENLESS_ACCOUNT, forge, "github")
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
@@ -4362,11 +4979,11 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
             str(raised.exception), "gh printed no token for the login tidepool-tokenless, bound to cli, after 1 attempt"
         )
 
-    def test_should_plan_the_wave_while_it_follows_no_task(self):
+    def test_should_plan_the_wave_of_a_project_without_a_forge_with_no_token_for_the_login_of_the_key_cli(self):
         # Arrange
         write_ledger(self.root, [CUT_OF_M4_ON_THE_WAVE_BRANCH, WAVE_STARTED])
         forge = create_forge_of_the_cli(NO_PULL_REQUEST, NO_TOKEN)
-        runtime = self._create_runtime(CLI_BOUND_TO_A_TOKENLESS_ACCOUNT, forge)
+        runtime = self._create_runtime(CLI_BOUND_TO_A_TOKENLESS_ACCOUNT, forge, "none")
 
         # Act
         document = COMMAND.run(Namespace(mode="dry-run"), runtime)
@@ -4381,7 +4998,7 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
                     "branch": "integration/M4",
                     "task": "T7",
                     "task_branch": "feature/T7-tide-table",
-                    "checks_passed": False,
+                    "pull_request_checks": None,
                 }
             ],
         )
@@ -4516,6 +5133,7 @@ class TickRecordingTheFailingCheckRunsTest(unittest.TestCase):
                 "actions_applied": 3,
                 "actions_failed": 1,
                 "heartbeat": str(self.root / "state" / "tick.json"),
+                "merge_commands": [],
             },
         )
 
@@ -4831,6 +5449,7 @@ class TickReportingAMilestoneTest(unittest.TestCase):
                 "branch": "integration/tides",
                 "waves": ["tidepool_w16"],
                 "tasks": ["T7"],
+                "reads_pull_requests": True,
             },
         )
 
@@ -5242,7 +5861,7 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
         self.spawn = SpawnRecorderDouble()
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_AMENDED_ON_THE_WAVE_BRANCH},
         }
         on_the_pull_request = {**corpus, "TASK": {"T7": TASK_DELIVERED_TO_ITS_FIRST_WORDING}}
@@ -5257,7 +5876,9 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=self.machine.run,
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([BEHIND_PULL_REQUEST])),
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([BEHIND_PULL_REQUEST])), self.root
+            ),
         )
 
     def test_should_launch_the_build_slot_on_the_worktree_of_the_task_and_rebase_nothing(self):
@@ -5351,6 +5972,8 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
                         },
                     },
                 },
+                {"project": "tidepool"},
+                {"project": "tidepool"},
             ],
         )
 
@@ -5369,7 +5992,7 @@ class TickBoundingItsReadsTest(unittest.TestCase):
         (self.repository / ".brigade" / "worktrees" / "T8").mkdir(parents=True)
         corpus = {
             "STUDY": {"triage": PAUSED_TRIAGE},
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"))},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_TO_DELIVER, "T8": TASK_TO_DELIVER},
         }
         self.processes = ScriptedProcessRunner(MACHINE_ANSWERS, fallback=create_corpus_double(corpus))
@@ -5381,8 +6004,9 @@ class TickBoundingItsReadsTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=self.processes.run,
             spawn_process=SpawnRecorderDouble().spawn,
-            resolve_plugin=create_plugin_resolution(
-                STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)),
+                self.root,
             ),
             read_ledger=self.readings.read,
         )
@@ -5445,7 +6069,7 @@ class TickReadingTheReferencesOfAWaveItMovedTest(unittest.TestCase):
         write_ledger(root, LEDGER_OF_A_VERIFIED_TASK)
         corpus = {
             "STUDY": {"triage": PAUSED_TRIAGE},
-            "PROJECT": {"tidepool": (("PATH", str(repository)), ("MAIN", "main"))},
+            "PROJECT": {"tidepool": (("PATH", str(repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": TASK_DELIVERED, "T8": TASK_AFTER_T7},
         }
         processes = ScriptedProcessRunner(MACHINE_ANSWERS, fallback=create_corpus_double(corpus))
@@ -5454,7 +6078,7 @@ class TickReadingTheReferencesOfAWaveItMovedTest(unittest.TestCase):
             create_test_paths(root),
             run_process=WaveBranchMovedByTheMergeDouble(forge, processes).run,
             spawn_process=SpawnRecorderDouble().spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+            resolve_plugin=_resolve_the_collectors_beside(create_plugin_resolution(STEP_COUNTING_PROBE, forge), root),
         )
 
         # Act
@@ -5884,3 +6508,441 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
             {"project": "tidepool", "milestone": "M4", "branch": "integration/tides", "pr": 77, "head": "8885daa"},
             document["plan"],
         )
+
+
+ACCEPTANCE_COMMAND = "python3 -m unittest"
+
+
+class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.repository = self.root / "tidepool"
+        delivered_run = {**create_run_record(FIRST_RUN, WAVE, "T7"), "project": "tidepool"}
+        write_run(self.root / "state", delivered_run, create_run_result(FIRST_RUN, "done", "2026-10-18T10:30:00Z"))
+        delivered = {**create_run_result(FIRST_RUN, "done", "2026-10-18T10:30:00Z"), "wave": WAVE, "task": "T7"}
+        self.delivered = delivered
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("running"), delivered])
+        self.worktree = self.repository / ".brigade" / "worktrees" / "T7"
+        self.spawn = SpawnRecorderDouble()
+
+    def _create_runtime(self, acceptance_outputs: dict) -> Runtime:
+        project = (
+            ("PATH", str(self.repository)),
+            ("MAIN", "main"),
+            ("FORGE", "none"),
+            ("ACCEPTANCE", ACCEPTANCE_COMMAND),
+        )
+        corpus = {"STUDY": PAUSED_BUILT_IN_STUDIES, "PROJECT": {"tidepool": project}, "TASK": {"T7": TASK_DELIVERED}}
+        return create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **acceptance_outputs}),
+            spawn_process=self.spawn.spawn,
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)),
+                self.root,
+            ),
+        )
+
+    def _read_events_of_the_tick(self) -> list[dict]:
+        events = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        return list(map(json.loads, events[3:]))
+
+    def test_should_hold_for_verification_the_head_its_build_run_delivered_once_its_acceptance_passes(self):
+        # Arrange
+        passing_acceptance = {("python3", "-m", "unittest"): ""}
+        runtime = self._create_runtime(passing_acceptance)
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_events_of_the_tick(),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.preflighted",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "head": "8885daa",
+                    "checks": [
+                        {"name": "ancestry", "verdict": "pass", "findings": []},
+                        {
+                            "name": "acceptance",
+                            "verdict": "pass",
+                            "findings": [],
+                            "commands": [{"command": "python3 -m unittest", "exit_code": 0}],
+                        },
+                        {"name": "corpus", "verdict": "pass", "findings": []},
+                        {"name": "promotion", "verdict": "pass", "findings": []},
+                        {"name": "untouched_files", "verdict": "pass", "findings": []},
+                        {"name": "privacy", "verdict": "pass", "findings": []},
+                        {
+                            "name": "size",
+                            "verdict": "info",
+                            "findings": ["0 files", "0 lines", "0 packages", "0 layers"],
+                        },
+                    ],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "verifying",
+                },
+            ],
+        )
+
+    def test_should_launch_the_verification_of_its_delivered_head_naming_no_pull_request(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        preflighted = {**TASK_PREFLIGHTED_AT_THE_HEAD, "pr": None}
+        write_ledger(
+            self.root,
+            [WAVE_STARTED, _record_task_state("running"), self.delivered, preflighted, _record_task_state("verifying")],
+        )
+        no_acceptance_run = {}
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(no_acceptance_run))
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "verify-pr",
+                    "task=@TASK.T7",
+                    "--slot",
+                    "review",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
+
+
+FORGELESS_RUN = "20261018T100000Z-e5f6a7"
+NO_MILESTONE_TASK = (("TITLE", "Tide table"), ("TYPE", "feat"), ("STATUS", "implemented"))
+VERDICT_OFF_A_FORGE = {
+    "schema_version": 1,
+    "ts": "2026-10-18T11:45:00Z",
+    "event": "task.verdict",
+    "project": "tidepool",
+    "wave": "tidepool_w16",
+    "task": "T7",
+    "head": "8885daa",
+    "verdict": "pass",
+    "findings": [],
+    "login": None,
+}
+MILESTONE_REPORTED_ON_M4 = {
+    "schema_version": 1,
+    "ts": "2026-10-18T12:00:00Z",
+    "event": "milestone.reported",
+    "project": "tidepool",
+    "milestone": "M4",
+    "run": FORGELESS_RUN,
+    "login": None,
+}
+REPORT_ORDER_DONE = {
+    "schema_version": 1,
+    "ts": "2026-10-18T12:05:00Z",
+    "event": "order.done",
+    "project": "tidepool",
+    "kind": "study",
+    "order": None,
+    "run": FORGELESS_RUN,
+}
+TO_MAIN_NOT_MERGED = {("git", "merge-base", "--is-ancestor"): ProcessAnswer(exit_code=1)}
+POLICY_OF_NO_AUTO_MERGE = {"tidepool_policy": (("PROJECT", "@PROJECT.tidepool"), ("AUTO_MERGE", "none"))}
+MERGE_AND_TREE_OUTPUTS = {
+    ("git", "merge", "--quiet"): "",
+    ("git", "reset"): "",
+}
+
+
+class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.repository = self.root / "tidepool"
+        write_run(
+            self.root / "state",
+            {**create_run_record(FIRST_RUN, WAVE, "T7"), "project": "tidepool"},
+            create_run_result(FIRST_RUN, "done", "2026-10-18T10:30:00Z"),
+        )
+        self.delivered = {**create_run_result(FIRST_RUN, "done", "2026-10-18T10:30:00Z"), "wave": WAVE, "task": "T7"}
+        self.verified_events = [
+            WAVE_STARTED,
+            _record_task_state("running"),
+            self.delivered,
+            {**TASK_PREFLIGHTED_AT_THE_HEAD, "pr": None},
+            _record_task_state("verifying"),
+            VERDICT_OFF_A_FORGE,
+            _record_task_state("verified"),
+        ]
+
+    def _create_runtime(
+        self, task: tuple, answers: dict, milestones: dict | None = None, policies: dict | None = None
+    ) -> Runtime:
+        project = (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "none"))
+        corpus = {
+            "STUDY": PAUSED_BUILT_IN_STUDIES,
+            "PROJECT": {"tidepool": project},
+            "TASK": {"T7": task},
+            "MILESTONE": milestones or {},
+            "POLICY": policies or {},
+        }
+        machine = create_machine_double(corpus, {**MACHINE_OUTPUTS, **MERGE_AND_TREE_OUTPUTS})
+        machine.__self__.answers.update(answers)
+        return create_test_runtime(
+            create_test_paths(self.root),
+            run_process=machine,
+            spawn_process=SpawnRecorderDouble().spawn,
+            resolve_plugin=_resolve_the_collectors_beside(
+                create_plugin_resolution(STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)),
+                self.root,
+            ),
+        )
+
+    def _write_events(self, events: list[dict]) -> int:
+        write_ledger(self.root, events)
+        return len(events)
+
+    def _read_events_since(self, written: int) -> list[dict]:
+        events = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        return list(map(json.loads, events[written:]))
+
+    def test_should_record_the_merge_with_no_pull_request_and_close_its_wave_with_none(self):
+        # Arrange
+        written = self._write_events([CUT_OF_M4, *self.verified_events])
+        no_other_answer = {}
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(TASK_DELIVERED, no_other_answer))
+
+        # Assert
+        self.assertEqual(
+            self._read_events_since(written)[:3],
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "pr.merged",
+                    "project": "tidepool",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "rounds": 1,
+                    "login": None,
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "merged",
+                },
+                {"schema_version": 1, "ts": "2026-10-19T09:00:00Z", "event": "wave.closed", "wave": "tidepool_w16"},
+            ],
+        )
+
+    def test_should_merge_the_task_head_into_a_worktree_of_the_branch_of_its_milestone(self):
+        # Arrange
+        self._write_events([CUT_OF_M4, *self.verified_events])
+        runtime = self._create_runtime(TASK_DELIVERED, {})
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertIn(
+            ("git", "merge", "--quiet", "-m", "merge @TASK.T7 into integration/tides", "8885daa"),
+            runtime.run_process.__self__.argvs,
+        )
+
+    def test_should_park_a_task_whose_merge_conflicts(self):
+        # Arrange
+        written = self._write_events([CUT_OF_M4, *self.verified_events])
+        conflict = {("git", "merge", "--quiet"): ProcessAnswer(exit_code=1)}
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(TASK_DELIVERED, conflict))
+
+        # Assert
+        parked = self._read_events_since(written)[0]
+        self.assertEqual(
+            parked,
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "task.parked",
+                "wave": "tidepool_w16",
+                "task": "T7",
+                "reason": "the merge into integration/tides conflicted",
+                "blockers": [],
+            },
+        )
+
+    def test_should_open_the_worktree_of_its_milestone_and_name_the_merge_under_no_auto_merge(self):
+        # Arrange
+        written = self._write_events([CUT_OF_M4, *self.verified_events])
+        runtime = self._create_runtime(TASK_DELIVERED, TO_MAIN_NOT_MERGED, policies=POLICY_OF_NO_AUTO_MERGE)
+
+        # Act
+        document = COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        worktree = f"{self.repository}/.brigade/worktrees/integration-tides"
+        self.assertEqual(document["merge_commands"], [f"git -C {worktree} merge feature/T7-tide-table"])
+        self.assertIn(
+            ("git", "worktree", "add", "--quiet", worktree, "integration/tides"),
+            runtime.run_process.__self__.argvs,
+        )
+        self.assertEqual(self._read_events_since(written), [])
+
+    def test_should_name_the_worktree_already_holding_its_milestone_branch_and_open_none_under_no_auto_merge(self):
+        # Arrange
+        self._write_events([CUT_OF_M4, *self.verified_events])
+        holding_the_branch = ProcessAnswer(
+            stdout="worktree /srv/elsewhere\0HEAD 8885daa\0branch refs/heads/integration/tides\0\0"
+        )
+        answers = {**TO_MAIN_NOT_MERGED, ("git", "worktree", "list"): holding_the_branch}
+        runtime = self._create_runtime(TASK_DELIVERED, answers, policies=POLICY_OF_NO_AUTO_MERGE)
+
+        # Act
+        document = COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(document["merge_commands"], ["git -C /srv/elsewhere merge feature/T7-tide-table"])
+        self.assertNotIn(
+            (
+                "git",
+                "worktree",
+                "add",
+                "--quiet",
+                f"{self.repository}/.brigade/worktrees/integration-tides",
+                "integration/tides",
+            ),
+            runtime.run_process.__self__.argvs,
+        )
+
+    def test_should_record_merged_a_task_once_its_head_is_an_ancestor_of_its_milestone_branch_under_no_auto_merge(self):
+        # Arrange
+        written = self._write_events([CUT_OF_M4, *self.verified_events])
+        in_the_milestone_branch = {("git", "merge-base", "--is-ancestor"): ProcessAnswer()}
+        runtime = self._create_runtime(TASK_DELIVERED, in_the_milestone_branch, policies=POLICY_OF_NO_AUTO_MERGE)
+
+        # Act
+        document = COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(self._read_events_since(written)[0]["state"], "merged")
+        self.assertEqual(document["merge_commands"], [])
+        self.assertIn(
+            ("git", "merge-base", "--is-ancestor", "8885daa", "integration/tides"),
+            runtime.run_process.__self__.argvs,
+        )
+
+    def test_should_name_the_command_merging_a_task_of_no_milestone_and_record_nothing(self):
+        # Arrange
+        written = self._write_events(self.verified_events)
+        runtime = self._create_runtime(NO_MILESTONE_TASK, TO_MAIN_NOT_MERGED)
+
+        # Act
+        document = COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(document["merge_commands"], [f"git -C {self.repository} merge feature/T7-tide-table"])
+        self.assertEqual(self._read_events_since(written), [])
+
+    def test_should_name_the_merge_commands_on_stderr_in_a_loop(self):
+        # Arrange
+        self._write_events(self.verified_events)
+        runtime = self._create_runtime(NO_MILESTONE_TASK, TO_MAIN_NOT_MERGED)
+        request = Namespace(mode=LOOP_MODE, create_runtime=_create_round_factory([(runtime, signal.SIGTERM)]))
+        stderr = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(stderr):
+            COMMAND.run(request, runtime)
+
+        # Assert
+        self.assertIn(
+            f"brigade tick: to merge: git -C {self.repository} merge feature/T7-tide-table\n", stderr.getvalue()
+        )
+
+    def test_should_record_merged_a_task_of_no_milestone_the_user_merged_into_main(self):
+        # Arrange
+        written = self._write_events(self.verified_events)
+        merged_into_main = {("git", "merge-base", "--is-ancestor"): ProcessAnswer()}
+
+        # Act
+        document = COMMAND.run(Namespace(mode="once"), self._create_runtime(NO_MILESTONE_TASK, merged_into_main))
+
+        # Assert
+        self.assertEqual(self._read_events_since(written)[0]["state"], "merged")
+        self.assertEqual(document["merge_commands"], [])
+
+    def test_should_name_the_command_merging_a_reported_milestone_into_main(self):
+        # Arrange
+        self._write_events([CUT_OF_M4, MILESTONE_REPORTED_ON_M4, REPORT_ORDER_DONE])
+        runtime = self._create_runtime(TASK_DELIVERED, TO_MAIN_NOT_MERGED)
+
+        # Act
+        document = COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(document["merge_commands"], [f"git -C {self.repository} merge integration/tides"])
+
+    def test_should_close_the_milestone_with_no_pull_request_once_its_branch_is_in_main(self):
+        # Arrange
+        written = self._write_events([CUT_OF_M4, MILESTONE_REPORTED_ON_M4, REPORT_ORDER_DONE])
+        branch_in_main = {("git", "merge-base", "--is-ancestor"): ProcessAnswer()}
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(TASK_DELIVERED, branch_in_main))
+
+        # Assert
+        self.assertEqual(
+            self._read_events_since(written),
+            [
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "milestone.closed",
+                    "project": "tidepool",
+                    "milestone": "M4",
+                }
+            ],
+        )
+
+    def test_should_order_the_report_of_its_milestone_without_the_pull_requests(self):
+        # Arrange
+        self._write_events([CUT_OF_M4, *self.verified_events])
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(TASK_DELIVERED, {}))
+
+        # Assert
+        report_run = next((self.root / "state" / "runs").glob("*/study.json"))
+        self.assertFalse(json.loads(report_run.read_text())["milestone"]["reads_pull_requests"])
