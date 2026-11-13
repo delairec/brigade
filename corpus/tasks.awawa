@@ -8362,6 +8362,9 @@ TASK B104
 		REF @TASK.B72
 		REF @TASK.B33
 		REF @TASK.B98
+	DESC "the kind stale local branches and worktrees the scans stale_branches and worktrees signal"
+		+ "is delivered by @TASK.B248"
+		REF @TASK.B248
 	SPEC "a MILESTONE entity of corpus/milestones.awawa names the clean feature, its DESC stating"
 		+ "the kinds brigade clean removes, what each kind spares, the keys of config.toml that"
 		+ "enable each kind and set its age or count, the schedule of the purge, and how the"
@@ -8386,6 +8389,9 @@ TASK B104
 		+ "ajouter la fonctionnalité (un peu comme on a fait avec la tâche qui doit"
 		+ "programmer/planifier la feature \\\"preflight\\\")\""
 	SOURCE "use-case map of 2026-10-16, finding C18"
+	SOURCE "the user's ruling of 2026-11-13 at the refinement of @TASK.B248, on whether its removal"
+		+ "goes to brigade clean: « B248 garde le retrait »"
+		REF @TASK.B248
 
 TASK B105
 	TITLE "The claude-code client streams its events into stdout.log as they happen, and brigade"
@@ -16312,13 +16318,20 @@ TASK B234
 		+ "its milestone.closed, the branch of a wave once its wave is closed or cancelled, never"
 		+ "while a commit of the branch is outside its merged pull request or a run holds the"
 		+ "worktree"
-	STATUS implemented
+	STATUS archived
 	DELIVERED_BY 362
 	TYPE feat
 	MILESTONE @MILESTONE.M6
 	COMPONENT "tick"
 	ROLE ada
 	AFTER @TASK.B232
+	DESC "archived on 2026-11-13 at the refinement of @TASK.B248: its SPEC 4, a kept branch named"
+		+ "on stderr at each tick, is made false by SPEC 3 of B248, a kept branch named once, and"
+		+ "the clause of its SPEC 6 that the tick removes no branch nor worktree the ledger does"
+		+ "not record by SPEC 1 of B248, the tick removing what the scans stale_branches and"
+		+ "worktrees signal; the removal it delivers and its guards, SPEC 1 to 3, 5, 7 and 8, stand"
+		+ "as implemented"
+		REF @TASK.B248
 	SPEC "the snapshot of the tick reads the integration branches of each project: every branch the"
 		+ "ledger records, the branch of a milestone.branch_cut and the branch of a wave.started"
 		+ "that carries one, that stands as a local branch, with the worktree"
@@ -17432,32 +17445,38 @@ TASK B242
 
 TASK B243
 	TITLE "Milestones are delivered in a chosen order: MILESTONE declares AFTER, and the tick cuts"
-		+ "no branch, starts no wave and launches no task of a milestone whose AFTER is not reached"
-		+ "at PROJECT.MAIN, naming it on stderr at each tick"
-	STATUS draft
+		+ "no branch, opens no wave and selects no new task of a milestone whose AFTER is not"
+		+ "reached at PROJECT.MAIN, naming it on stderr at each tick; a wave already open goes to"
+		+ "its end"
+	STATUS todo
 	TYPE feat
 	MILESTONE @MILESTONE.M12
 	COMPONENT "the tick"
 	ROLE ada
 	DESC "binds @DECISION.AMilestoneIsServedByItsStatusAndOrderedByItsAfter"
 		REF @DECISION.AMilestoneIsServedByItsStatusAndOrderedByItsAfter
-	DESC "leaves open whether an AFTER added to a milestone that already has open waves stops them"
-	DESC "the active milestones are read in brigade/waves/read_active_milestones.py and"
-		+ "brigade/waves/list_candidate_waves.py, the uncut ones in _list_uncut_milestones of"
-		+ "brigade/tick/build_snapshot.py, a planned milestone in brigade/tick/plan.py, at fafeb90a"
+	DESC "the unserved milestone is named on stderr as @TASK.B233 names the task of a reached"
+		+ "milestone"
+		REF @TASK.B233
+	DESC "at f7d2deae a planned milestone is already served never:"
+		+ "brigade/waves/read_active_milestones.py keeps the milestones of STATUS active alone, and"
+		+ "_read_active_milestones of brigade/waves/list_candidate_waves.py duplicates it; the"
+		+ "uncut milestones are listed by _list_uncut_milestones of brigade/tick/build_snapshot.py;"
+		+ "the launch paths of an open wave read no milestone"
 	SPEC "SCHEMA MILESTONE of corpus/_schema.awawa declares FIELD AFTER @MILESTONE, REPEATABLE,"
 		+ "CONVERSE BEFORE, DESC the milestone that must be reached before this one"
-	SPEC "the tick cuts no branch, starts no wave and launches no task of a milestone one AFTER of"
-		+ "which is not STATUS reached at PROJECT.MAIN, and names it on stderr at each tick, as"
-		+ "@TASK.B233 names the task of a reached milestone"
+	SPEC "the tick cuts no branch, opens no wave and selects no new task of a milestone one AFTER"
+		+ "of which is not STATUS reached at PROJECT.MAIN, and names it on stderr at each tick"
+	SPEC "a wave already open of a milestone given an AFTER not reached goes to its end: the tick"
+		+ "serves its tasks until the wave closes"
 	SPEC "a planned milestone stays unserved whatever its AFTER"
 	SPEC "a milestone with no AFTER is served as today"
 	SPEC "a cycle of AFTER serves none of its milestones, each named on stderr at each tick"
-	SPEC "the pull request that delivers the task writes AFTER @MILESTONE.M12 on @MILESTONE.M8 and"
-		+ "AFTER @MILESTONE.M8 on @MILESTONE.ADD0"
+	SPEC "the pull request that delivers the task writes an AFTER naming MILESTONE M12 on MILESTONE"
+		+ "M8 and an AFTER naming MILESTONE M8 on MILESTONE ADD0"
 	SPEC "a test of tests/unit/tick proves an active milestone with an AFTER not reached unserved"
-		+ "and named, one whose AFTER is reached served, a planned one unserved whatever its AFTER,"
-		+ "and a cycle serving none"
+		+ "and named, its open wave going to its end, one whose AFTER is reached served, a planned"
+		+ "one unserved whatever its AFTER, and a cycle serving none"
 	RATIONALE "on 2026-11-09 the user wanted @MILESTONE.M12 delivered before @MILESTONE.M8 and"
 		+ "@MILESTONE.ADD0, whose DESC says planned after M8 in prose a command reads nothing from;"
 		+ "STATUS alone orders milestones by the user activating each in its turn"
@@ -17467,26 +17486,36 @@ TASK B243
 	SOURCE "the user's words of 2026-11-09, « je pense qu'on devrait aussi ajouter un after sur les"
 		+ "milestone pour qu'elles soient livrées dans un ordre donné si on le souhaite, plutôt que"
 		+ "de gérer un statut », then « enfin il faut les deux plutôt »"
+	SOURCE "the user's ruling of 2026-11-13 at the refinement of the task, on whether an AFTER"
+		+ "given to a milestone that has an open wave stops that wave: « Elle finit »"
 
 TASK B244
-	TITLE "The tick signals a task of an open wave it has taken no action on for N minutes: one"
-		+ "inbox signal, fingerprinted so that a recurrence folds, so that a stall is seen without"
-		+ "a human reading the ledger"
-	STATUS draft
+	TITLE "The tick signals a task of an open wave it has taken no action on for a delay"
+		+ "config.toml sets, 60 minutes by default: one inbox signal, fingerprinted so that a"
+		+ "recurrence folds, so that a stall is seen without a human reading the ledger"
+	STATUS todo
 	TYPE feat
 	MILESTONE @MILESTONE.M12
 	COMPONENT "the tick and the inbox"
 	ROLE ada
-	DESC "leaves open N, and what counts as an action of the tick on a task"
 	DESC "@TASK.B168 parks the task of a dead run; a task of an open wave with no run and no action"
 		+ "is reported by nothing, the ledger apart"
 		REF @TASK.B168
-	SPEC "a task of an open wave on which the tick has taken no action for N minutes raises one"
-		+ "signal in the inbox, of a kind of its own, fingerprinted by the project, the wave and"
-		+ "the task, so that the same stall at the next tick folds into it as"
-		+ "@DECISION.TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint folds a signal"
+	DESC "the signal folds as @DECISION.TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint folds"
+		+ "a signal"
+		REF @DECISION.TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint
+	SPEC "a key of config.toml sets the delay of a stall in minutes, 60 when the key is absent"
+	SPEC "the last action of the tick on a task is the latest ledger event keyed by that task among"
+		+ "task.state, run.started, run.finished and tick.action_failed"
+	SPEC "a task of an open wave whose last action is older than the delay raises one signal in the"
+		+ "inbox, of a kind of its own, fingerprinted by the project, the wave and the task, so"
+		+ "that the same stall at the next tick folds into it"
+	SPEC "a task holding a live run raises no stall signal, whatever the age of its last action"
+	SPEC "a merged task, a parked task and a task paused on the quota raise no stall signal"
 	SPEC "a test of tests/unit/tick proves the signal raised once the delay is passed and not"
-		+ "before, and the same fingerprint recorded at the next tick"
+		+ "before, the delay read from config.toml, none raised for a task holding a live run, a"
+		+ "merged task, a parked task or a task paused on the quota, and the same fingerprint"
+		+ "recorded at the next tick"
 	RATIONALE "on 2026-11-08 @TASK.B240 and @TASK.B177 stayed blocked for hours with no signal,"
 		+ "read in the ledger by the session; for B177 the tick read a local milestone branch 11"
 		+ "commits behind origin, the cause @TASK.B242 fixes, not the absence of a signal"
@@ -17496,26 +17525,37 @@ TASK B244
 	SOURCE "the user's ruling of 2026-11-09 that the tasks resolving the signals of the inbox"
 		+ "review of 2026-11-08 go draft into @MILESTONE.M12, quoted there"
 		REF @MILESTONE.M12
+	SOURCE "the user's ruling of 2026-11-13 at the refinement of the task, on N and on what counts"
+		+ "as an action of the tick on a task: « Clé config, 60 min »; on a merged task, a parked"
+		+ "task and a task paused on the quota raising the signal: « Aucune des trois »"
 
 TASK B245
 	TITLE "The triage completes an existing pattern instead of proposing a new one at each"
-		+ "recurrence of its subject"
-	STATUS draft
+		+ "recurrence of its subject: its answer adds EVIDENCE to a PATTERN the operational corpus"
+		+ "holds"
+	STATUS todo
 	TYPE fix
 	MILESTONE @MILESTONE.M12
 	COMPONENT "the study triage"
 	ROLE ada
-	DESC "starts from"
+	DESC "completes"
 		+ "@DECISION.TheTriageGroupsSignalsByKeyAndAPatternCitesASignalByOpeningAnEvidenceOnItsFingerprint,"
-		+ "which refuses a PATTERN of an answer that is not new and checks none the operational"
-		+ "corpus already holds; what completing an existing pattern is, an EVIDENCE added or its"
-		+ "signals cited, is left to the refinement"
+		+ "whose check refuses a PATTERN of an answer that is not new: an answer adds EVIDENCE to a"
+		+ "PATTERN the operational corpus holds"
 		REF @DECISION.TheTriageGroupsSignalsByKeyAndAPatternCitesASignalByOpeningAnEvidenceOnItsFingerprint
+	SPEC "the collector inbox-families hands the model the name and the TITLE of each PATTERN the"
+		+ "operational corpus holds"
+	SPEC "an answer of the triage may add EVIDENCE to a PATTERN the operational corpus holds, each"
+		+ "opening on the fingerprint of a signal inbox-families collected; check_patterns and"
+		+ "deliver_patterns accept it, and after the run the held PATTERN carries each EVIDENCE"
+		+ "added"
 	SPEC "a triage run whose families match the subject of a PATTERN the operational corpus already"
-		+ "holds, ratified or not, completes that pattern with the new signals and proposes no new"
-		+ "one on that subject"
-	SPEC "a test of tests/unit/studies proves a second run on signals of a subject with an existing"
-		+ "pattern writing no new PATTERN and citing the new signals on the existing one"
+		+ "holds, ratified or not, adds the new signals to that PATTERN as EVIDENCE and proposes no"
+		+ "new one on that subject"
+	SPEC "a test of tests/unit/studies proves inbox-families printing the name and the TITLE of"
+		+ "each held PATTERN, an answer adding EVIDENCE to a held PATTERN accepted and written on"
+		+ "that PATTERN, an added EVIDENCE opening on no collected fingerprint refused, and a"
+		+ "second run on signals of a subject with a held PATTERN writing no new PATTERN"
 	RATIONALE "the inbox of the machine read on 2026-11-08: 207 signals and 24 patterns, none"
 		+ "ratified, for about 8 subjects; 6 patterns named merge_leaves_branch…, 4 vulture…, 3"
 		+ "pytest…, among them"
@@ -17524,47 +17564,93 @@ TASK B245
 	SOURCE "the user's ruling of 2026-11-09 that the tasks resolving the signals of the inbox"
 		+ "review of 2026-11-08 go draft into @MILESTONE.M12, quoted there"
 		REF @MILESTONE.M12
+	SOURCE "the user's ruling of 2026-11-13 at the refinement of the task, on what completing an"
+		+ "existing pattern is, an EVIDENCE added or its signals cited: « Le modèle ajoute des"
+		+ "EVIDENCE »"
 
 TASK B246
-	TITLE "A branch is pushed only once the checks of the CI that can run locally pass: the"
-		+ "ACCEPTANCE commands of the project, ruff and coverage included, in a run of the tick as"
+	TITLE "A build run loads a task package that fits and pushes nothing without ACCEPTANCE:"
+		+ "brigade task context prints the task whole and its neighbours at depth 1, and brigade"
+		+ "task push refuses a HEAD on which no brigade task check passed, in a run of the tick as"
 		+ "in a role launched by hand"
-	STATUS draft
+	STATUS todo
 	TYPE fix
 	MILESTONE @MILESTONE.M12
-	COMPONENT "the build procedure"
+	COMPONENT "the build procedure and the task commands"
 	ROLE ada
-	DESC "leaves open whether the gap is only the runs launched outside the tick, and whether a run"
-		+ "of the tick still pushes without them"
+	DESC "absorbs @TASK.B247: the oversized output its pattern cites is the package brigade task"
+		+ "context prints"
+		REF @TASK.B247
 	DESC "the PROJECT brigade of the operational corpus, awawa show @PROJECT.brigade on 2026-11-09,"
 		+ "carries the ACCEPTANCE lines uvx ruff@0.17.2 check ., uvx ruff@0.17.2 format --check .,"
 		+ "uvx --from coverage==7.17.0 coverage run -m unittest discover -s tests/unit -t . and uvx"
 		+ "--from coverage==7.17.0 coverage report, and brigade task check runs them; ruff and"
 		+ "coverage are not on PATH, uv and uvx are"
+	DESC "at f7d2deae brigade task pr refuses a push without a passing check of HEAD,"
+		+ "_require_passing_check of brigade/tasks/open_task_pull_request.py; remediate-pr.md"
+		+ "pushes, and rebase-on-base.md hands the branch to brigade rebase done, once the tests of"
+		+ "the project pass, the ACCEPTANCE commands unnamed; brigade/tasks/promote_task.py pushes"
+		+ "with lease and no check; AGENTS.md names neither coverage nor uvx"
+	DESC "at f7d2deae _read_task of brigade/tasks/assemble_task_context.py reads the task with"
+		+ "awawa context <task> --with-schema at unbounded depth"
 	SPEC "a run that builds a task pushes its branch only once every ACCEPTANCE command of the"
 		+ "project passes on its worktree, coverage report included; a failing command is repaired"
 		+ "before the push, or reported as a blocker with its output"
-	SPEC "the project instructions of brigade name the commands a run launched outside the tick"
-		+ "runs before its push, the uvx forms included, so that coverage is provable locally with"
-		+ "neither ruff nor coverage on PATH"
+	SPEC "brigade task push pushes the branch of the task with lease, force-with-lease after a"
+		+ "rebase, and refuses, pushing nothing, a HEAD on which no brigade task check passed"
+	SPEC "the procedures build-task.md, remediate-pr.md and rebase-on-base.md of"
+		+ "brigade/runs/data/procedures push the branch of a task through brigade task push"
+	SPEC "brigade task promote pushes only once a brigade task check passed on the parent of the"
+		+ "promotion commit and that commit, touching the corpus alone, passes awawa fmt --check"
+		+ "and awawa lint --strict"
+	SPEC "the AGENTS.md of brigade names brigade task check and the uvx forms of the ACCEPTANCE"
+		+ "commands for a role launched by hand, so that coverage is provable locally with neither"
+		+ "ruff nor coverage on PATH"
 	SPEC "a test of tests/unit proves a build run whose ACCEPTANCE command fails pushing nothing"
+	SPEC "brigade task context prints awawa show of the task, its RATIONALE whole, and awawa"
+		+ "context <task> --depth 1 --skip reasoning --with-schema for its neighbours"
+	SPEC "build-task.md says the package holds the task whole and its neighbours at depth 1 without"
+		+ "their reasoning, and that the run reads a further entity with awawa show when it needs"
+		+ "it"
+	SPEC "a test of tests/unit/tasks proves brigade task context running awawa show of the task,"
+		+ "and awawa context of the task with --depth 1, --skip reasoning and --with-schema"
+	SPEC "once delivered, the pattern oversized_output_re_read_in_runs raises no new signal on the"
+		+ "runs launched after the delivery"
 	RATIONALE "the pattern coverage_report_unchecked_before_push of the inbox cites pull requests"
 		+ "233 and 241; on 2026-11-08 pull request 388 failed coverage at 99%, pushed by a role"
 		+ "launched by hand outside a tick run, which reported coverage as unprovable locally"
+	RATIONALE "the pattern oversized_output_re_read_in_runs of the inbox read on 2026-11-08: 56"
+		+ "re-reads across 17 sessions of 16 claude-code runs; examined on 2026-11-13, the outputs"
+		+ "re-read are the tool results of brigade task context that Claude Code persisted to a"
+		+ "file; measured at f7d2deae with wc -c, awawa context @TASK.B177 --with-schema prints 359"
+		+ "074 bytes, 2 712 of them the schema, 171 755 at --depth 2 and 46 862 at --depth 1 --skip"
+		+ "reasoning, where @TASK.B243 prints 7 954, and awawa show prints 6 366 for B177 and 2 430"
+		+ "for B243; an output of 58.6 KB was persisted too, in a run of @TASK.B238, so depth 2"
+		+ "stays persisted"
+		REF @TASK.B177
+		REF @TASK.B243
+		REF @TASK.B238
 	SOURCE "the user's ruling of 2026-11-09 that the tasks resolving the signals of the inbox"
 		+ "review of 2026-11-08 go draft into @MILESTONE.M12, quoted there"
 		REF @MILESTONE.M12
+	SOURCE "the user's rulings of 2026-11-13 at the refinement of @MILESTONE.M12: on this task and"
+		+ "@TASK.B247, « Fusionner »; on what refuses a push without the ACCEPTANCE commands, «"
+		+ "Commande brigade »; on the package, « Depth 1 skip reasoning + show »; on the push of"
+		+ "brigade task promote, « Check du parent + corpus »"
+		REF @MILESTONE.M12
+		REF @TASK.B247
 
 TASK B247
 	TITLE "Runs stop re-reading an oversized output they already hold"
-	STATUS draft
+	STATUS archived
 	TYPE fix
 	MILESTONE @MILESTONE.M12
 	COMPONENT "the runs"
 	ROLE ada
-	DESC "the cause has not been examined: the first work of the task is that examination, on the"
-		+ "transcripts the pattern cites, and its SPEC is refined from the finding; no cause is"
-		+ "assumed here"
+	DESC "archived on 2026-11-13, before any delivery: absorbed into @TASK.B246, which bounds the"
+		+ "package brigade task context prints and carries its SPEC 2; the examination of its SPEC"
+		+ "1 is done, its finding in the RATIONALE of B246"
+		REF @TASK.B246
 	SPEC "the examination names, over the 16 claude-code runs the pattern cites, where each re-read"
 		+ "output came from and what the run did with it, and this task is refined or archived from"
 		+ "that finding"
@@ -17575,31 +17661,45 @@ TASK B247
 	SOURCE "the user's ruling of 2026-11-09 that the tasks resolving the signals of the inbox"
 		+ "review of 2026-11-08 go draft into @MILESTONE.M12, quoted there"
 		REF @MILESTONE.M12
+	SOURCE "the user's ruling of 2026-11-13 at the refinement of @MILESTONE.M12, on this task and"
+		+ "@TASK.B246: « Fusionner »"
+		REF @MILESTONE.M12
+		REF @TASK.B246
 
 TASK B248
-	TITLE "One cleaning order clears what the merges leave behind, local branches and worktrees,"
-		+ "their signals fold, and a base branch gone from the forge writes no error at each tick"
-	STATUS draft
+	TITLE "The tick removes what the merges leave behind, each local branch the scan stale_branches"
+		+ "signals and each worktree the scan worktrees signals, names a kept branch once, and"
+		+ "records once a base branch gone from the forge instead of an error at each tick"
+	STATUS todo
 	TYPE feat
 	MILESTONE @MILESTONE.M12
 	COMPONENT "the tick and the scans"
 	ROLE ada
 	DESC "not urgent"
-	DESC "@TASK.B234 removes a branch with nothing left to do and keeps one with a commit outside"
-		+ "its merged pull request; @TASK.B104, draft, plans brigade clean by kind; this task is"
-		+ "the one action over the leftovers the scans signal, reconciled with B104 at refinement"
+	DESC "keeps the removal the scans call for, where @TASK.B104, draft, plans brigade clean by"
+		+ "kind; @TASK.B234 removes the integration branches the ledger records, this task what the"
+		+ "scans signal, under the same guards"
 		REF @TASK.B234
 		REF @TASK.B104
-	SPEC "one command, or one action of the tick, removes every local branch the scan"
-		+ "stale_branches signals and every worktree the scan worktrees signals, and their signals"
-		+ "fold at the next scan"
-	SPEC "a branch kept for a commit outside its merged pull request is named with that commit"
-		+ "once, not at each tick"
-	SPEC "an integration branch whose base the forge no longer holds writes no error at each tick:"
-		+ "the tick records the fact once and compares no more"
-	SPEC "a test of tests/unit proves the order removing a stale branch and its worktree, keeping a"
-		+ "branch with a commit outside its merged pull request, and a base gone from the forge"
-		+ "named once"
+	DESC "at f7d2deae the scans stale_branches, brigade/collecting/read_stale_branches.py, and"
+		+ "worktrees, brigade/collectors/stale_worktrees.py, report and remove nothing; the kept"
+		+ "integration branches are named at each tick by _name_the_kept_integration_branches of"
+		+ "brigade/commands/tick.py; the 404 is a CommandFailed of the compare call of"
+		+ "find_pull_request in brigade/adapters/forges/github.py, caught by _read_wave_facts of"
+		+ "brigade/tick/build_snapshot.py and written to stderr at each tick"
+	SPEC "the tick removes each local branch the scan stale_branches signals and each worktree the"
+		+ "scan worktrees signals; a branch or a worktree so removed is an item of its scan no more"
+		+ "at the next run of the scan"
+	SPEC "a removal is planned only under the guards of TASK B234: no run live on the worktree, no"
+		+ "lock git lists on it, and the head of the local branch reached the forge"
+	SPEC "a branch carrying a commit outside its merged pull request is kept and named with that"
+		+ "commit once, not at each tick"
+	SPEC "an integration branch whose base the forge no longer holds is recorded once and compared"
+		+ "no more: the tick writes no error for it at the ticks that follow"
+	SPEC "a test of tests/unit proves the tick removing a stale branch and its worktree, removing"
+		+ "none under a live run, a lock or a local head that did not reach the forge, naming once"
+		+ "a branch kept for a commit outside its merged pull request, and recording once a base"
+		+ "gone from the forge"
 	RATIONALE "the inbox read on 2026-11-08: 119 stale_branches_brigade signals, 43"
 		+ "worktrees_brigade signals, 8 patterns; on 2026-11-09 git branch --list | wc -l printed"
 		+ "188 and git branch -r | wc -l 38 in the clone of brigade, delete_branch_on_merge on, so"
@@ -17611,27 +17711,45 @@ TASK B248
 	SOURCE "the user's ruling of 2026-11-09 that the tasks resolving the signals of the inbox"
 		+ "review of 2026-11-08 go draft into @MILESTONE.M12, quoted there"
 		REF @MILESTONE.M12
+	SOURCE "the user's rulings of 2026-11-13 at the refinement of the task: on whether the removal"
+		+ "stays here or goes to the brigade clean @TASK.B104 plans, « B248 garde le retrait »; on"
+		+ "one command or one action of the tick, « Action du tick »"
+		REF @TASK.B104
 
 TASK B249
 	TITLE "A cut by the usage limit launches no further run until its reset, and a study it parked"
 		+ "resumes once the limit has passed"
-	STATUS draft
+	STATUS todo
 	TYPE fix
 	MILESTONE @MILESTONE.M12
 	COMPONENT "the tick"
 	ROLE ada
-	DESC "leaves open whether the pause of"
-		+ "@DECISION.ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset held during the cut of"
-		+ "2026-11-02, 24 runs of verify-pr having been launched into the limit on that one day;"
-		+ "the classification of @TASK.B220 worked on each of them"
+	DESC "the pause of @DECISION.ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset held on"
+		+ "2026-11-02 for the build launches alone: at f7d2deae the quota pause gates"
+		+ "_plan_launches of brigade/tick/plan.py and nothing else; the verification of a pull"
+		+ "request, _plan_followed_pull_requests and _decide_verification, the verification of a"
+		+ "delivered head, the repairs, remediation and check repair, and _plan_studies read"
+		+ "neither the pause of the wave nor the rate limits of the snapshot; a task in verifying"
+		+ "is not paused on the quota, QUOTA_PAUSED_STATES of brigade/tick/build_snapshot.py"
+		+ "holding running and fixing alone; the classification of @TASK.B220 worked on each of the"
+		+ "24 runs"
 		REF @DECISION.ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset
 		REF @TASK.B220
+	DESC "at f7d2deae run_study of brigade/studies/run_study.py parks a study on any BrigadeError"
+		+ "of a step, and nothing un-parks it"
+	DESC "SPEC 2 binds @DECISION.TheTickRunsADueStudyAndCountsEachLiveStudyRunOfAJudgingStudy,"
+		+ "amended on 2026-11-13: a study parked on rate_limit is due again after its reset, any"
+		+ "other park staying to the user"
+		REF @DECISION.TheTickRunsADueStudyAndCountsEachLiveStudyRunOfAJudgingStudy
 	SPEC "once a run of the machine ends on error_class rate_limit, the tick launches no run of any"
-		+ "slot until the reset that run names, verify-pr included"
-	SPEC "a study whose run was cut by the usage limit is due again once the reset has passed,"
-		+ "instead of staying parked as failed"
-	SPEC "a test of tests/unit/tick proves no run launched between a run.finished on rate_limit and"
-		+ "its reset, and a study cut by it due again after the reset"
+		+ "slot until the reset that run names: no build run, no verification of a pull request or"
+		+ "of a delivered head, verify-pr included, no remediation, no check repair and no study"
+	SPEC "a study parked by a run that ended on error_class rate_limit is due again once the reset"
+		+ "that run names has passed, instead of staying parked as failed; a study parked on any"
+		+ "other cause stays parked until the user resumes it"
+	SPEC "a test of tests/unit/tick proves no build, verification, repair or study run launched"
+		+ "between a run.finished on rate_limit and its reset, a study parked on rate_limit due"
+		+ "again after the reset, and a study parked on another cause still parked"
 	RATIONALE "read in ~/.local/state/brigade/ledger on 2026-11-09: the 24 verify-pr run.finished"
 		+ "events with outcome failed are all dated 2026-11-02 and each carries error_class"
 		+ "rate_limit, as the run 20261102T235517Z-dcb28a of @TASK.B226 in the wave brigade_w24, 1"
@@ -17640,14 +17758,23 @@ TASK B249
 		+ "triage is parked since a quota cut, its last run 20261108T175056Z-7d24ef"
 		REF @TASK.B226
 		REF @TASK.B220
+	RATIONALE "read in the ledger on 2026-11-13: the 24 verify-pr runs are those of @TASK.B226,"
+		+ "launched on 2026-11-02 between 22:01Z and 23:55Z while the waves brigade_w20, w21, w22"
+		+ "and w24 were paused, wave.paused on the quota with resume_at 2026-11-03T00:00Z; the"
+		+ "study triage is parked since its judging run 20261108T175118Z-6f382d ended on"
+		+ "rate_limit, in the order run 20261108T175056Z-7d24ef"
+		REF @TASK.B226
 	SOURCE "the user's ruling of 2026-11-09 that the tasks resolving the signals of the inbox"
 		+ "review of 2026-11-08 go draft into @MILESTONE.M12, quoted there"
 		REF @MILESTONE.M12
+	SOURCE "the refinement of 2026-11-13: the question its DESC left open answered from the code at"
+		+ "f7d2deae and from the ledger; the user's ruling of that day, on SPEC 2 standing against"
+		+ "a parked study never due: « Amender la décision »"
 
 TASK B250
 	TITLE "brigade doctor reads the linger of the user: with linger on, doctor and brigade"
 		+ "scheduler install report ok"
-	STATUS draft
+	STATUS todo
 	TYPE fix
 	MILESTONE @MILESTONE.M12
 	COMPONENT "brigade doctor"
@@ -17655,14 +17782,15 @@ TASK B250
 	DESC "corrects @TASK.B172"
 		REF @TASK.B172
 	SPEC "brigade/system/describe_linger_warning.py asks loginctl for the user of the run, loginctl"
-		+ "show-user <user> --property=Linger, where at fafeb90a line 14 runs loginctl show-user -p"
-		+ "Linger with no user"
+		+ "show-user <user> --property=Linger, where at f7d2deae describe_linger_warning runs"
+		+ "loginctl show-user -p Linger with no user"
 	SPEC "with linger on, brigade doctor and brigade scheduler install report linger ok and warn no"
 		+ "linger no more"
 	SPEC "a test of tests/unit/system proves the user passed to loginctl and Linger=yes read as ok"
 	RATIONALE "on 2026-11-09 loginctl show-user -p Linger printed nothing, exit 0, while loginctl"
 		+ "show-user <user> --property=Linger printed Linger=yes and /var/lib/systemd/linger/<user>"
-		+ "exists, so doctor and brigade scheduler install warned no linger falsely"
+		+ "exists, so doctor and brigade scheduler install warned no linger falsely; both commands"
+		+ "printed the same on 2026-11-13"
 	SOURCE "the user's ruling of 2026-11-09 that the tasks resolving the signals of the inbox"
 		+ "review of 2026-11-08 go draft into @MILESTONE.M12, quoted there"
 		REF @MILESTONE.M12

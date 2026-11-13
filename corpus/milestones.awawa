@@ -146,6 +146,18 @@ MILESTONE M12
 		+ "of milestones; activated before @MILESTONE.M8 and @MILESTONE.ADD0"
 		REF @MILESTONE.M8
 		REF @MILESTONE.ADD0
+	DESC "refined on 2026-11-13: @TASK.B246 absorbs @TASK.B247; @TASK.B243, @TASK.B244, @TASK.B248"
+		+ "and @TASK.B249 stay four tasks, with no AFTER between them"
+		REF @TASK.B246
+		REF @TASK.B247
+		REF @TASK.B243
+		REF @TASK.B244
+		REF @TASK.B248
+		REF @TASK.B249
 	SOURCE "the user's words of 2026-11-09, « tâche en draft dans une nouvelle milestone non active"
 		+ "(planned je crois), on y mets les tâches qui résolvent les signaux relevés. On la"
 		+ "lancera avant les prochaines milestone », then « tâches au pluriel pardon »"
+	SOURCE "the user's rulings of 2026-11-13 at the refinement of its draft tasks, on their"
+		+ "grouping: « Fusionner » for @TASK.B246 and @TASK.B247, the four others kept apart"
+		REF @TASK.B246
+		REF @TASK.B247

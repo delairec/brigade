@@ -3359,6 +3359,10 @@ DECISION TheTickRunsADueStudyAndCountsEachLiveStudyRunOfAJudgingStudy
 	DESC "study pause and study resume exit 1 for an archived study, which stays archived"
 	DESC "binds @TASK.B147"
 		REF @TASK.B147
+	DESC "amended on 2026-11-13: a study parked by a run whose run.finished carries error_class"
+		+ "rate_limit is due again once the reset that run names has passed; any other cause of a"
+		+ "park stays resumed by the user alone; binds @TASK.B249"
+		REF @TASK.B249
 	REJECTED "the tick resuming a parked study when its schedule passes: a step parks on a cause"
 		+ "the schedule does not clear, and the study would park again at every due round"
 	REJECTED "counting only the runs at their judge step: the collect step of a live run leads into"
@@ -3369,6 +3373,9 @@ DECISION TheTickRunsADueStudyAndCountsEachLiveStudyRunOfAJudgingStudy
 		REF @TASK.B147
 	SOURCE "pull request #148 of the brigade repository, delivering @TASK.B147"
 		REF @TASK.B147
+	SOURCE "the user's ruling of 2026-11-13 at the refinement of @TASK.B249, on its SPEC 2 standing"
+		+ "against a parked study never due: « Amender la décision »"
+		REF @TASK.B249
 
 DECISION TheBuildProcedureCommitsBeforeItsCheck
 	TITLE "build-task commits the work before brigade task check, and corrects a failing check in a"
@@ -4283,6 +4290,12 @@ DECISION TheTriageGroupsSignalsByKeyAndAPatternCitesASignalByOpeningAnEvidenceOn
 		+ "the operational corpus already holds are linted, never checked"
 	DESC "binds @TASK.B25"
 		REF @TASK.B25
+	DESC "completed on 2026-11-13: an answer may add EVIDENCE to a PATTERN the operational corpus"
+		+ "holds, each opening on the fingerprint of a signal inbox-families collected, where DESC"
+		+ "3 refuses a PATTERN of the answer that is not new; inbox-families hands the model the"
+		+ "name and the TITLE of each held PATTERN, and a run proposes no new PATTERN on a subject"
+		+ "a held one covers; binds @TASK.B245"
+		REF @TASK.B245
 	REJECTED "an EVIDENCE that contains the fingerprint anywhere: rt:101 would cite rt:1012, and a"
 		+ "check name holding a space forbids reading the first word alone"
 	REJECTED "families joined transitively into one group: one shared file would merge two"
@@ -4296,6 +4309,9 @@ DECISION TheTriageGroupsSignalsByKeyAndAPatternCitesASignalByOpeningAnEvidenceOn
 		+ "proposed twice, and the check of the answer is the same rule read from the other side"
 	SOURCE "pull request 211, which delivers @TASK.B25"
 		REF @TASK.B25
+	SOURCE "the user's ruling of 2026-11-13 at the refinement of @TASK.B245, on what completing an"
+		+ "existing pattern is: « Le modèle ajoute des EVIDENCE »"
+		REF @TASK.B245
 
 DECISION RatificationNamesItsEntitiesAfterThePatternAndTheArrivalInMainDeliversThePattern
 	TITLE "brigade inbox ratify names the CONSTRAINT and the ORDER after their PATTERN, and the"
@@ -6440,6 +6456,8 @@ DECISION AMilestoneIsServedByItsStatusAndOrderedByItsAfter
 		REF @DECISION.AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 	DESC "binds @TASK.B243"
 		REF @TASK.B243
+	DESC "an AFTER not reached stops the cut of the branch of the milestone, the opening of a wave"
+		+ "and the selection of new tasks; a wave of the milestone already open goes to its end"
 	REJECTED "STATUS alone, the user activating each milestone in its turn: the user ruled an AFTER"
 		+ "on the milestones, « je pense qu'on devrait aussi ajouter un after sur les milestone"
 		+ "pour qu'elles soient livrées dans un ordre donné si on le souhaite, plutôt que de gérer"
@@ -6459,6 +6477,9 @@ DECISION AMilestoneIsServedByItsStatusAndOrderedByItsAfter
 	SOURCE "the user's words of 2026-11-09, « je pense qu'on devrait aussi ajouter un after sur les"
 		+ "milestone pour qu'elles soient livrées dans un ordre donné si on le souhaite, plutôt que"
 		+ "de gérer un statut », then « enfin il faut les deux plutôt »"
+	SOURCE "the user's ruling of 2026-11-13 at the refinement of @TASK.B243, on whether an AFTER"
+		+ "given to a milestone that has an open wave stops that wave: « Elle finit »"
+		REF @TASK.B243
 
 DECISION ATaskParkedOnTheQuestionOfItsRunIsHeldUntilItsEntityChangesOrARequeueReleasesIt
 	TITLE "a todo task whose latest wave, closed or cancelled, parked it on the question of a run"
