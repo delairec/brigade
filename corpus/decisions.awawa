@@ -1847,7 +1847,7 @@ DECISION APreflightIsANamedSetOfCollectorsAndChecks
 		+ "is the user's"
 	DESC "the logins of [forge_accounts] are verified by a check, each printing its token, which"
 		+ "the built-in preflight wave names; the tick runs that preflight before it starts a wave,"
-		+ "a broken login parks the wave before any run, and the check stays one any preflight"
+		+ "a broken login pauses the wave before any run, and the check stays one any preflight"
 		+ "names, the built-in refinement among them"
 	DESC "binds @TASK.B98, @TASK.B252 and @TASK.B253"
 		REF @TASK.B98
@@ -1863,6 +1863,8 @@ DECISION APreflightIsANamedSetOfCollectorsAndChecks
 		+ "brigade project add --init-corpus does by the decision"
 		+ "ProjectAddInitCorpusCommitsTheSchemaAloneOnABranchOfADetachedWorktree: the user ruled «"
 		+ "Écrit et lint, sans commit », the history of the project being the user's"
+	REJECTED "the check of the forge logins run only by the preflight refinement: a broken login"
+		+ "would be found by hand, after the tick had started a wave on it"
 	RATIONALE "the refinement of @TASK.B73 did by hand mechanical checks a command could run, and"
 		+ "the user wants them useful beyond the refinement"
 		REF @TASK.B73
@@ -3043,7 +3045,7 @@ DECISION ProjectCommandsRunAsAnArgvWithoutAShell
 		+ "runs, is written in the same serialization of one argv, so that every project command"
 		+ "has one form"
 	DESC "the string field is the serialization of that argv until @TASK.B163 moves the project's"
-		+ "commands to argv arrays in TOML versioned by the project"
+		+ "commands to argv steps of a recipe versioned by the project"
 		REF @TASK.B163
 	DESC "it applies @DECISION.OneRunnerForEverySubprocessAndGatewaysForGitAndAwawa without"
 		+ "exception: no sh -c and no shell=True, whatever the field the command comes from"

@@ -18128,7 +18128,7 @@ TASK B253
 		+ "its token, and fails naming each login gh prints no token for; brigade checks list"
 		+ "prints it"
 	SPEC "the built-in preflight wave names that check; the tick runs it before it starts a wave,"
-		+ "and a login that prints no token parks the wave before any run: no run of the wave is"
+		+ "and a login that prints no token pauses the wave before any run: no run of the wave is"
 		+ "launched"
 	SPEC "wiki/Preflight.md lists the built-in preflights and what each reports"
 	SPEC "tests/unit prove each of the three reports on a corpus fixture, a citation whose lines"
