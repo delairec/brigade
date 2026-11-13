@@ -141,7 +141,7 @@ MILESTONE M11
 MILESTONE M12
 	TITLE "Inbox signals and milestone order"
 	SUBJECT "resolve the inbox signals and order the milestones"
-	STATUS planned
+	STATUS active
 	DESC "holds the tasks that resolve the signals the inbox raised on 2026-11-08 and the ordering"
 		+ "of milestones; activated before @MILESTONE.M8 and @MILESTONE.ADD0"
 		REF @MILESTONE.M8
