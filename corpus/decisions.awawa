@@ -368,9 +368,10 @@ DECISION AStudyIsDeterministicCollectorsThenOneJudgingRun
 	SOURCE "pull request #3 of the brigade repository"
 
 DECISION AKindOfWorkIsARecipeAnInstanceAnOrder
-	TITLE "a user declares a new kind of work as a recipe, a TOML file of ordered process-shaped"
-		+ "steps run by one engine of the tick; an order is one instance of a recipe; wave stays"
-		+ "native and study is the first built-in recipe"
+	TITLE "a user declares a new kind of work as a recipe, ordered process-shaped steps run by one"
+		+ "engine of the tick, written as a TOML file or, in a project that has a corpus, as a"
+		+ "RECIPE entity of it; an order is one instance of a recipe; wave stays native and study"
+		+ "is the first built-in recipe"
 	STATUS active
 	DESC "a recipe declares schema, name, description, params, max_wall and ordered steps of the"
 		+ "kinds collect, command, gate, judge, output, order, corpus and op, op being worktree,"
@@ -380,16 +381,21 @@ DECISION AKindOfWorkIsARecipeAnInstanceAnOrder
 		+ "run directory's documents through brigade order context, answers through brigade order"
 		+ "answer, and is a run with its procedure's budget, counted in the slot cap and recorded"
 		+ "in the ledger"
-	DESC "a gate step names a check, an executable printing ok and reason, resolved like a"
-		+ "collector; a failed gate or command parks the order with the step's reason unless the"
-		+ "recipe says skip, stop or retry:N; nothing is assumed, and a parked order resumes once"
-		+ "the user acted"
+	DESC "a gate step names a preflight of @DECISION.APreflightIsANamedSetOfCollectorsAndChecks,"
+		+ "built-in or custom, and declares no check of its own; a failed gate or command parks the"
+		+ "order with the step's reason unless the recipe says skip, stop or retry:N; nothing is"
+		+ "assumed, and a parked order resumes once the user acted"
+		REF @DECISION.APreflightIsANamedSetOfCollectorsAndChecks
 	DESC "each step's result is a file under the run directory; a resumed order restarts at its"
 		+ "first undone step; the ledger holds order.started, step.done, step.failed, order.parked"
 		+ "and order.done"
-	DESC "recipes resolve in order: the project's .brigade/recipes/, the machine's recipes"
-		+ "directory, brigade's built-in recipes in a data/ folder under brigade/; brigade recipe"
-		+ "lint checks the schema, that every collector, check, output, procedure and slot"
+	DESC "a recipe of a project is a RECIPE entity of the project's own corpus when the project has"
+		+ "one, a TOML file of the project's .brigade/recipes/ otherwise, the rule of a custom"
+		+ "preflight; a recipe of the machine's recipes directory and a built-in recipe are TOML"
+		+ "files; recipes resolve in order: the project's, the machine's recipes directory,"
+		+ "brigade's built-in recipes in a data/ folder under brigade/, as"
+		+ "@DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources sets; brigade recipe"
+		+ "lint checks the schema, that every collector, preflight, output, procedure and slot"
 		+ "resolves, that every param is declared, and refuses a client or model key"
 		REF @DECISION.ShippedFilesLiveInsideThePackageAndAreReadAsResources
 	DESC "an ORDER entity of the brigade corpus holds the recipe, the project, the user's words,"
@@ -404,8 +410,15 @@ DECISION AKindOfWorkIsARecipeAnInstanceAnOrder
 		+ "whose savings the plan measures"
 	REJECTED "the wave as a declared recipe: fan-out per task, repair loops with caps, the overlap"
 		+ "order and the quota pause are code; a recipe places a wave order instead"
-	REJECTED "recipes as corpus entities: a recipe is nested and code-like, versioned with the"
-		+ "project it serves; the corpus keeps the orders, which are facts"
+	REJECTED "recipes as entities of the operational corpus: it is machine-local, and a recipe is"
+		+ "versioned with the project it serves; the operational corpus keeps the orders, which are"
+		+ "facts"
+	REJECTED "recipes always in TOML, a project that has a corpus included, « Recettes toujours en"
+		+ "TOML »: the user ruled « Même règle », the rule of a custom preflight, an entity of the"
+		+ "project's corpus when it has one"
+	REJECTED "a gate step naming a check of its own, an executable printing ok and reason, as DESC"
+		+ "3 read until 2026-11-13: a set of checks declared in a second place beside the"
+		+ "preflights; the user ruled « Remonter B98 dans M8 »"
 	REJECTED "the engine in M1: until a second recipe exists it would generalise one case; the"
 		+ "contract is fixed in M1 and the engine built in M8"
 	REJECTED "the names workflow, playbook, procedure and routine: the first is the vocabulary of"
@@ -419,6 +432,11 @@ DECISION AKindOfWorkIsARecipeAnInstanceAnOrder
 	SOURCE "pull request #3 of the brigade repository"
 	SOURCE "DESC 5 amended on the user's ruling of 2026-10-05, pull request #9 of the brigade"
 		+ "repository"
+	SOURCE "the TITLE, DESC 3, DESC 5 and the REJECTED lines on the forms of a recipe and on the"
+		+ "gate amended on the user's rulings of 2026-11-13 in the refinement of M8: on the gate"
+		+ "steps of a recipe, « Remonter B98 dans M8 », a gate step calling a named preflight; on"
+		+ "where a recipe of a project lives, « Même règle », after « une entité du corpus quand le"
+		+ "projet en a un, un fichier toml sinon » for a custom preflight"
 
 DECISION TheBlueprintIsADevelopmentArtefactRetiredByTheDashboard
 	TITLE "the Blueprint Artifact is an artefact of brigade's development phase, retired when the"
@@ -1182,8 +1200,8 @@ DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 	STATUS active
 	DESC "every document brigade writes or reads, command output, ledger line, result, collector"
 		+ "document, recipe, config and answer file, carries schema_version, an integer per"
-		+ "document kind starting at 1, the name @TASK.B01 and @TASK.B02 fix; @TASK.B50 says schema"
-		+ "and is aligned at its refinement"
+		+ "document kind starting at 1, the name @TASK.B01 and @TASK.B02 fix; @TASK.B50 names it so"
+		+ "since its refinement of 2026-11-13"
 		REF @TASK.B01
 		REF @TASK.B02
 		REF @TASK.B50
@@ -1815,19 +1833,36 @@ DECISION APreflightIsANamedSetOfCollectorsAndChecks
 		+ "preflight verify-pull-request once brigade preflight exists; B15 is delivered as written"
 		+ "until then"
 		REF @TASK.B15
-	DESC "a scan of @TASK.B33 and the mechanical steps of a recipe of"
-		+ "@DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder call a named built-in preflight or are"
-		+ "replaced by one, so that a set of collectors and checks is declared in one place; which"
-		+ "of the two, for each, is settled by @TASK.B98"
-		REF @TASK.B33
+	DESC "a gate step of a recipe of @DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder calls a named"
+		+ "preflight, so that a set of collectors and checks is declared in one place; a scan of"
+		+ "@TASK.B33 calls a named built-in preflight or is replaced by one, and which of the two"
+		+ "is not ruled on 2026-11-13"
 		REF @DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder
+		REF @TASK.B33
+	DESC "a custom preflight of a project is a PREFLIGHT entity of the project's own corpus when"
+		+ "the project has one, a TOML file of the project's .brigade/preflights/ otherwise; a"
+		+ "preflight of the machine's preflights directory and a built-in preflight are TOML files"
+	DESC "brigade preflight add writes the entity, then runs fmt and lint, or writes the TOML file,"
+		+ "then lints it, in the tree of the project, and never commits: the history of the project"
+		+ "is the user's"
+	DESC "the logins of [forge_accounts] are verified by a check, each printing its token, which"
+		+ "the built-in preflight wave names; the tick runs that preflight before it starts a wave,"
+		+ "a broken login parks the wave before any run, and the check stays one any preflight"
+		+ "names, the built-in refinement among them"
+	DESC "binds @TASK.B98, @TASK.B252 and @TASK.B253"
 		REF @TASK.B98
-	DESC "binds @TASK.B98 and the tasks of the milestone it creates"
-		REF @TASK.B98
+		REF @TASK.B252
+		REF @TASK.B253
 	REJECTED "a preflight declaring its own actions: a third way, beside the scans and the recipes,"
 		+ "to declare a set of collectors, and actions no study or recipe could reuse"
 	REJECTED "a distinct word for the named sets, preflight kept for the pull request checks alone:"
 		+ "the pull request checks are one named set among others"
+	REJECTED "a custom preflight as an entity of the operational corpus: it is machine-local, and"
+		+ "the user ruled the project's own corpus, versioned with the project"
+	REJECTED "brigade preflight add committing on a dedicated branch of a detached worktree, as"
+		+ "brigade project add --init-corpus does by the decision"
+		+ "ProjectAddInitCorpusCommitsTheSchemaAloneOnABranchOfADetachedWorktree: the user ruled «"
+		+ "Écrit et lint, sans commit », the history of the project being the user's"
 	RATIONALE "the refinement of @TASK.B73 did by hand mechanical checks a command could run, and"
 		+ "the user wants them useful beyond the refinement"
 		REF @TASK.B73
@@ -1836,6 +1871,13 @@ DECISION APreflightIsANamedSetOfCollectorsAndChecks
 		+ "des preflight built-in ... et la possibilité d'en ajouter des customs\"; \"ces"
 		+ "mécanismes (scans, recette) feront appel à ou seront remplacé par des preflight built-in"
 		+ "nommés\""
+	SOURCE "DESC 4 amended and DESC 5, 6 and 7 written on the user's rulings of 2026-11-13 in the"
+		+ "refinement of M8, which refined @TASK.B98 into three tasks: on the gate steps of a"
+		+ "recipe, « Remonter B98 dans M8 »; on where a custom preflight lives, « une entité du"
+		+ "corpus quand le projet en a un, un fichier toml sinon »; on brigade preflight add, «"
+		+ "Écrit et lint, sans commit »; on the check of the forge logins, « Built-in `wave`, lancé"
+		+ "par le tick »"
+		REF @TASK.B98
 
 DECISION APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob
 	TITLE "a pull request touching only corpus/, docs/, artifact/ or Markdown at the root starts no"
