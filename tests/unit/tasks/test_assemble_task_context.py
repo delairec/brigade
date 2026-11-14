@@ -45,7 +45,11 @@ class AssembleTaskContextTest(unittest.TestCase):
         self.instructions = self.root / "instructions"
         self.processes = ScriptedProcesses()
         self.processes.answer(("git", "merge-base", "--is-ancestor", "integration/harvest", "HEAD"))
-        self.processes.answer(("awawa", "context", "@TASK.B12", "--with-schema", "."), stdout="TASK B12\n")
+        self.processes.answer(("awawa", "show", "@TASK.B12", "."), stdout='TASK B12\n\tRATIONALE "why"\n')
+        self.processes.answer(
+            ("awawa", "context", "@TASK.B12", "--depth", "1", "--skip", "reasoning", "--with-schema", "."),
+            stdout="TASK B12\nMILESTONE M1\n",
+        )
         self.processes.answer(("awawa", "lint", "--closure", "@TASK.B12", "."), exit_code=1, stderr="L001\n")
 
     def script_wave_tree(self, runtime) -> None:
@@ -113,10 +117,16 @@ class AssembleTaskContextTest(unittest.TestCase):
                 },
                 "task": [
                     {
-                        "command": "awawa context @TASK.B12 --with-schema .",
+                        "command": "awawa show @TASK.B12 .",
                         "exit_code": 0,
                         "stderr": "",
-                        "output": "TASK B12\n",
+                        "output": 'TASK B12\n\tRATIONALE "why"\n',
+                    },
+                    {
+                        "command": "awawa context @TASK.B12 --depth 1 --skip reasoning --with-schema .",
+                        "exit_code": 0,
+                        "stderr": "",
+                        "output": "TASK B12\nMILESTONE M1\n",
                     },
                     {"command": "awawa lint --closure @TASK.B12 .", "exit_code": 1, "stderr": "L001\n", "output": ""},
                 ],
@@ -124,7 +134,7 @@ class AssembleTaskContextTest(unittest.TestCase):
                 "project": None,
                 "acceptance": {"acceptance": ["python3 -m unittest"], "heavy": ["npm run e2e"]},
                 "reserved": {"task_number": 16, "temporary_directory": None, "attribution": ATTRIBUTION},
-                "when_done": ["brigade task check", "brigade task pr", "brigade task promote"],
+                "when_done": ["brigade task check", "brigade task push", "brigade task pr", "brigade task promote"],
             },
         )
 
@@ -248,9 +258,7 @@ class AssembleTaskContextTest(unittest.TestCase):
 
     def test_should_fail_when_the_context_of_the_task_cannot_be_read(self):
         # Arrange
-        self.processes.answer(
-            ("awawa", "context", "@TASK.B12", "--with-schema", "."), exit_code=1, stderr="@TASK.B12 is not defined\n"
-        )
+        self.processes.answer(("awawa", "show", "@TASK.B12", "."), exit_code=1, stderr="@TASK.B12 is not defined\n")
         write_operational_corpus(self.root)
         runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
 
@@ -259,9 +267,7 @@ class AssembleTaskContextTest(unittest.TestCase):
             assemble_task_context(runtime, self.create_demand(Configuration()))
 
         # Assert
-        self.assertEqual(
-            str(refusal.exception), "awawa context @TASK.B12 --with-schema . exited 1: @TASK.B12 is not defined"
-        )
+        self.assertEqual(str(refusal.exception), "awawa show @TASK.B12 . exited 1: @TASK.B12 is not defined")
 
     def test_should_carry_the_rules_of_a_path_named_beside_a_backslash_awawa_keeps(self):
         # Arrange
@@ -373,7 +379,7 @@ class AssembleTaskContextInAnAreaTest(unittest.TestCase):
         # Assert
         self.assertIsNone(context["project"])
         read_of_the_task = self.processes.requests[1]
-        self.assertEqual(read_of_the_task.argv, ("awawa", "context", "@TASK.B12", "--with-schema", "."))
+        self.assertEqual(read_of_the_task.argv, ("awawa", "show", "@TASK.B12", "."))
         self.assertEqual(read_of_the_task.cwd, str(self.worktree_path / "brigade"))
 
     def test_should_lint_the_closure_of_the_task_in_the_folder_of_the_area(self):

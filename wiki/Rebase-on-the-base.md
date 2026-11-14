@@ -4,7 +4,7 @@ How a run of the `rebase` slot puts the branch of a task back on its base after 
 ```
 brigade rebase context [<pr>]    # the branch, its base and the files in conflict
 brigade rebase context --head <commit> [--into <main>]   # the branch repaired, its red commit and what failed
-brigade rebase done <pr>         # push the rebased head onto the branch
+brigade rebase done <pr>         # check that the rebased head descends from its base
 brigade rebase pr --into <main>  # push the branch repairing a red main branch and open its pull request
 ```
 
@@ -12,11 +12,11 @@ Both run from the worktree of the task whose rebase conflicted, in a run of the 
 
 - `rebase context` prints the branch of the pull request, its base, the branch the `wave.started` of its wave names,
   and the files `git merge-tree` reports in conflict between the head and `origin/<base>`.
-- `rebase done` fetches both branches and pushes the head onto the branch with `--force-with-lease` on the remote head
-  it fetched, under the account of the run, then prints the head pushed.
+- `rebase done` fetches both branches, checks that the head descends from `origin/<base>` and prints it; it pushes
+  nothing. The run then pushes the branch with `brigade task push`, once `brigade task check` passed on that head.
 
-> **Watch out:** `rebase done` refuses a head that does not descend from `origin/<base>`: exit 1, and nothing is
-> pushed.
+> **Watch out:** `rebase done` refuses a head that does not descend from `origin/<base>`: exit 1, and the run pushes
+> nothing.
 
 <details><summary>A task with no pull request yet</summary>
 

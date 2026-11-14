@@ -1,5 +1,4 @@
 import dataclasses
-import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -8,7 +7,6 @@ from brigade.errors import BrigadeError
 from brigade.git.push_branch import BranchPush
 from brigade.git.push_branch_with_lease import push_branch_with_lease
 from brigade.git.read_current_branch import read_current_branch
-from brigade.git.resolve_commit import resolve_commit
 from brigade.ledger.append_event import append_event
 from brigade.ledger.milestone_created import MilestoneCreated
 from brigade.ledger.task_pr_opened import TaskPrOpened
@@ -16,12 +14,11 @@ from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.tasks.compose_pull_request_title import PullRequestTitleParts, compose_pull_request_title
 from brigade.tasks.describe_pull_request_body import PullRequestBodyParts, describe_pull_request_body
-from brigade.tasks.locate_check_record import locate_check_record
 from brigade.tasks.locate_task_corpus import locate_task_corpus
 from brigade.tasks.locate_task_worktree import TaskWorktree, locate_task_worktree
+from brigade.tasks.require_passing_check import require_passing_check
 
 DOCUMENT_SCHEMA_VERSION = 1
-HEAD = "HEAD"
 MILESTONE_PREFIX = "@MILESTONE."
 NO_MILESTONE = None
 
@@ -43,23 +40,6 @@ class ForgeSession:
     forge: object
     environment: dict
     login: str
-
-
-def _require_passing_check(runtime: Runtime, worktree: TaskWorktree) -> dict:
-    target = f"@TASK.{worktree.task}"
-    record = locate_check_record(runtime.paths.state_root, worktree.project.name, worktree.task)
-    if not record.exists():
-        raise BrigadeError(f"no check of {target} is recorded; run brigade task check")
-    check = json.loads(record.read_text(encoding="utf-8"))
-    head = resolve_commit(runtime.run_process, worktree.path, HEAD)
-    if check["head"] != head:
-        raise BrigadeError(
-            f"the last check of {target} is of {check['head']}, not of HEAD {head}; run brigade task check"
-        )
-    failing = next((entry["command"] for entry in check["checks"] if not entry["passed"]), None)
-    if failing is not None:
-        raise BrigadeError(f"the last check of {target} failed on {failing}; run brigade task check")
-    return check
 
 
 def _compose_title(task: Entity, subject: str | None) -> str:
@@ -162,7 +142,7 @@ def _describe_opening(session: ForgeSession, opened: _TaskPullRequest, pull_requ
 
 def open_task_pull_request(runtime: Runtime, demand: TaskPullRequestDemand) -> dict:
     worktree = locate_task_worktree(runtime, demand.path, demand.task)
-    check = _require_passing_check(runtime, worktree)
+    check = require_passing_check(runtime, worktree)
     task = read_entity(runtime.run_process, locate_task_corpus(worktree), "TASK", worktree.task)
     title = _compose_title(task, demand.subject)
     session = ForgeSession(worktree=worktree, forge=demand.forge, environment=demand.environment, login=demand.login)

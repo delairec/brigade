@@ -119,6 +119,7 @@ class SelectCommandModulesOfThePackageTest(unittest.TestCase):
             (["task", "context"], ["task_context"]),
             (["task", "pr"], ["task_pr"]),
             (["task", "promote"], ["task_promote"]),
+            (["task", "push"], ["task_push"]),
             (["tick"], ["tick"]),
             (["verify", "preflight"], ["verify_preflight"]),
             (["wave", "cancel"], ["wave_cancel"]),
