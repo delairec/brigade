@@ -15,6 +15,7 @@ from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
+from tests.unit.select_requests_opening_on import select_requests_opening_on
 
 TASKS = 'TASK B12\n\tTITLE "The parser"\n\tSTATUS todo\n\tDELIVERED_BY 40\n\nTASK B13\n\tSTATUS todo\n'
 DECLARED_SCHEMA = {
@@ -24,7 +25,22 @@ DECLARED_SCHEMA = {
         {"name": "DESC", "atoms": ['"a task"']},
     ]
 }
+PASSING_CHECK_OF_THE_PARENT = (
+    '{"schema_version": 1, "project": "oak", "task": "B12", "head": "d00d",'
+    ' "checks": [{"command": "python3 -m unittest", "passed": true, "duration_ms": 1200, "tail": []}]}'
+)
+FAILED_CHECK_OF_THE_PARENT = (
+    '{"schema_version": 1, "project": "oak", "task": "B12", "head": "d00d",'
+    ' "checks": [{"command": "coverage report", "passed": false, "duration_ms": 30, "tail": []}]}'
+)
+TASKS_UNPROMOTED = TASKS
 MESSAGE = "docs(corpus): mark @TASK.B12 implemented, delivered by #42\n\nCo-Authored-By: Ada <ada@example.org>"
+
+
+def record_check(root: Path, check: str) -> None:
+    record = root / "state" / "checks" / "oak" / "B12.json"
+    record.parent.mkdir(parents=True, exist_ok=True)
+    record.write_text(check, encoding="utf-8")
 
 
 class PromoteTaskTest(unittest.TestCase):
@@ -65,6 +81,8 @@ class PromoteTaskTest(unittest.TestCase):
             ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "HEAD^{commit}"), stdout="d00d\n"
         )
 
+        record_check(self.root, PASSING_CHECK_OF_THE_PARENT)
+
     def declare_schema(self, schema: dict) -> None:
         self.processes.answer_json(("awawa", "show", "TASK", "--json", str(self.worktree)), schema)
 
@@ -83,6 +101,30 @@ class PromoteTaskTest(unittest.TestCase):
             datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
             TaskPrOpened(project="oak", task="B12", wave="oak_w1", branch="fix/B12-the-parser", pr=pr, login="bot"),
         )
+
+    def test_should_leave_the_task_unpromoted_when_the_check_of_its_parent_failed(self):
+        # Arrange
+        self.declare_schema(DECLARED_SCHEMA)
+        record_check(self.root, FAILED_CHECK_OF_THE_PARENT)
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            promote_task(self.runtime, self.create_demand(42))
+
+        # Assert
+        self.assertEqual((self.worktree / "corpus" / "tasks.awawa").read_text(encoding="utf-8"), TASKS_UNPROMOTED)
+
+    def test_should_commit_nothing_and_push_nothing_when_the_check_of_its_parent_failed(self):
+        # Arrange
+        self.declare_schema(DECLARED_SCHEMA)
+        record_check(self.root, FAILED_CHECK_OF_THE_PARENT)
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            promote_task(self.runtime, self.create_demand(42))
+
+        # Assert
+        self.assertEqual(select_requests_opening_on(self.processes.requests, ("git", "commit"), ("git", "push")), [])
 
     def test_should_mark_the_task_implemented_and_delivered_by_its_pull_request(self):
         # Arrange

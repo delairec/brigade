@@ -31,7 +31,8 @@ TRAILING_PUNCTUATION = ",."
 AGENTS_FILE = "AGENTS.md"
 TEMPORARY_DIRECTORY = "tmp"
 WORKTREE_ROOT = "."
-WHEN_DONE = ["brigade task check", "brigade task pr", "brigade task promote"]
+WHEN_DONE = ["brigade task check", "brigade task push", "brigade task pr", "brigade task promote"]
+NEIGHBOURS = ("--depth", "1", "--skip", "reasoning", "--with-schema")
 
 
 @dataclass(frozen=True)
@@ -72,10 +73,8 @@ def _list_rules(runtime: Runtime, configuration: Configuration, worktree: TaskWo
     return list_trigger_rules(runtime, Path(configuration.instructions), _list_task_paths(task))
 
 
-def _read_task(runtime: Runtime, worktree: TaskWorktree, target: str) -> ProcessRecord:
-    record = run_awawa(
-        runtime.run_process, locate_task_corpus(worktree), ("context", target, "--with-schema", WORKTREE_ROOT)
-    )
+def _read_task(runtime: Runtime, worktree: TaskWorktree, arguments: tuple[str, ...]) -> ProcessRecord:
+    record = run_awawa(runtime.run_process, locate_task_corpus(worktree), (*arguments, WORKTREE_ROOT))
     if record.exit_code != 0:
         raise CommandFailed(record.argv, record.exit_code, record.stderr)
     return record
@@ -114,7 +113,8 @@ def assemble_task_context(runtime: Runtime, demand: TaskContextDemand) -> dict:
     return {
         "worktree": {"ancestry": _describe_ancestry(runtime, worktree), "setup": _read_setup(runtime, worktree)},
         "task": [
-            describe_command(_read_task(runtime, worktree, target)),
+            describe_command(_read_task(runtime, worktree, ("show", target))),
+            describe_command(_read_task(runtime, worktree, ("context", target, *NEIGHBOURS))),
             describe_command(
                 run_awawa(
                     runtime.run_process, locate_task_corpus(worktree), ("lint", "--closure", target, WORKTREE_ROOT)

@@ -18,6 +18,7 @@ from brigade.registry.read_corpus_workspace import read_corpus_workspace
 from brigade.runtime import Runtime
 from brigade.tasks.locate_task_corpus import locate_task_corpus
 from brigade.tasks.locate_task_worktree import TaskWorktree, locate_task_worktree
+from brigade.tasks.require_passing_check import require_passing_check
 
 DOCUMENT_SCHEMA_VERSION = 1
 HEAD = "HEAD"
@@ -101,6 +102,7 @@ def _write_promotion(runtime: Runtime, worktree: TaskWorktree, pr: int, attribut
 
 def promote_task(runtime: Runtime, demand: TaskPromotionDemand) -> dict:
     worktree = locate_task_worktree(runtime, demand.path, demand.task)
+    require_passing_check(runtime, worktree)
     pr = demand.pr if demand.pr is not None else _read_recorded_pull_request(runtime, worktree)
     _require_promotion_fields(runtime, worktree)
     _write_promotion(runtime, worktree, pr, demand.attribution)
