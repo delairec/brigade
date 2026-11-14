@@ -261,6 +261,11 @@ dies before it records a `run.finished` does.
   milestone.
 - A task `draft` or `todo` whose `MILESTONE` is `reached` at the main branch is served never: the tick starts no wave
   holding it and names the task and the milestone on stderr at each tick.
+- A milestone is served by its `STATUS` and ordered by its `AFTER`: a `planned` milestone is served never, and an
+  `active` milestone one `AFTER` of which is not `reached` at the main branch is not served, a cycle of `AFTER`
+  serving none of its milestones; the tick cuts no branch of it, starts no wave of it and names it with its `AFTER`
+  not reached on stderr at each tick. A wave of it already open goes to its end. An `active` milestone with no
+  `AFTER` is served.
 - A `todo` task whose latest wave is closed and parked it on the question of a run that ended `blocked` enters no new
   wave until its entity at the branch read differs from the one that wave read, or `brigade wave requeue` queues it;
   the tick names the task, its wave and the first line of its question on stderr at each tick.

@@ -1,20 +1,12 @@
 import sys
-from collections.abc import Callable
 from dataclasses import dataclass
 
-from brigade.corpus.read_awawa_document import read_awawa_document
 from brigade.runtime import Runtime
-from brigade.system.run_process import ProcessRecord, ProcessRequest
-from brigade.tasks.read_task_field import read_task_field
 from brigade.waves.admit_candidates import admit_candidates
 from brigade.waves.list_held_tasks import list_held_tasks
 from brigade.waves.map_open_tasks import map_open_tasks
 from brigade.waves.read_project_tasks import ProjectTasks, ProjectTasksReading, read_project_tasks
-
-MILESTONE = "MILESTONE"
-STATUS_FIELD = "STATUS"
-ACTIVE_STATUS = "active"
-NO_ACTIVE_MILESTONE = ()
+from brigade.waves.read_served_milestones import read_served_milestones
 
 
 @dataclass(frozen=True)
@@ -23,15 +15,14 @@ class CandidateWave:
     tasks: tuple[str, ...]
 
 
-def _read_active_milestones(
-    run_process: Callable[[ProcessRequest], ProcessRecord], main: ProjectTasks
-) -> tuple[str, ...]:
-    if not any(read_task_field(task, MILESTONE) for task in main.by_name.values()):
-        return NO_ACTIVE_MILESTONE
-    status = read_awawa_document(
-        run_process, main.root, ("status", MILESTONE, "--where", f"{STATUS_FIELD}=={ACTIVE_STATUS}")
-    )
-    return tuple(entity["name"] for entity in status["entities"])
+def _read_served_milestones(runtime: Runtime, main: ProjectTasks) -> tuple[str, ...]:
+    milestones = read_served_milestones(runtime.run_process, main)
+    for waiting in milestones.waiting:
+        sys.stderr.write(
+            f"brigade tick: @MILESTONE.{waiting.milestone} is not served until its AFTER is reached:"
+            f" {', '.join(waiting.after)}\n"
+        )
+    return milestones.served
 
 
 def _compose_candidate_wave(
@@ -51,10 +42,7 @@ def list_candidate_waves(
     runtime: Runtime, reading: ProjectTasksReading, main: ProjectTasks
 ) -> tuple[CandidateWave, ...]:
     readings = (
-        *(
-            read_project_tasks(runtime, reading, milestone)
-            for milestone in _read_active_milestones(runtime.run_process, main)
-        ),
+        *(read_project_tasks(runtime, reading, milestone) for milestone in _read_served_milestones(runtime, main)),
         main,
     )
     open_tasks = map_open_tasks(reading.entries, reading.project.name)
