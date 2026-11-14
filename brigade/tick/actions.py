@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from datetime import datetime
 
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.studies.milestone_report_order import MilestoneReportOrder
@@ -254,4 +253,4 @@ class SignalStall:
     project: str
     wave: str
     task: str
-    last_action: datetime
+    last_action: str

@@ -979,7 +979,9 @@ def _plan_stall_signals(snapshot: Snapshot, actions: tuple) -> tuple:
     acted_tasks = frozenset((getattr(action, "wave", None), getattr(action, "task", None)) for action in actions)
     attended_tasks = _read_occupancy(snapshot).tasks | acted_tasks
     return tuple(
-        SignalStall(project=wave.project, wave=wave.wave, task=task.name, last_action=task.last_action)
+        SignalStall(
+            project=wave.project, wave=wave.wave, task=task.name, last_action=format_instant(task.last_action)
+        )
         for wave in snapshot.waves
         for task in wave.tasks
         if _is_stalled(wave, task, snapshot, attended_tasks)
