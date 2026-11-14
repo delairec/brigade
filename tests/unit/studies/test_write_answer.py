@@ -269,11 +269,24 @@ class WriteAnswerTest(unittest.TestCase):
         self.processes.answer(
             ("git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"), "origin/main\n"
         )
-        self.processes.answer(("git", "worktree", "add", "--quiet", "--detach", str(checkout), "main"))
+        self.processes.answer(
+            (
+                "git",
+                "worktree",
+                "add",
+                "--quiet",
+                "--detach",
+                "--lock",
+                "--reason",
+                "brigade writing an answer to a file",
+                str(checkout),
+                "main",
+            )
+        )
         self.processes.answer(("git", "switch", "--quiet", "--force-create", branch))
         self.processes.answer(("git", "add", "--", "answer.md"))
         self.processes.answer(("git", "diff", "--cached", "--quiet", "--", "answer.md"))
-        self.processes.answer(("git", "worktree", "remove", "--force", str(checkout)))
+        self.processes.answer(("git", "worktree", "remove", "--force", "--force", str(checkout)))
 
         # Act
         written = write_answer(self.create_context("file:answer.md"))

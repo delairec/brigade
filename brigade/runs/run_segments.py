@@ -3,8 +3,8 @@ from contextlib import AbstractContextManager, nullcontext
 from datetime import timedelta
 from pathlib import Path
 
-from brigade.git.add_detached_worktree import add_detached_worktree
-from brigade.git.remove_worktree import remove_worktree
+from brigade.git.add_detached_worktree import DetachedWorktree, add_detached_worktree
+from brigade.git.remove_detached_worktree import remove_detached_worktree
 from brigade.ledger.append_event import append_event
 from brigade.ledger.signal_recorded import SignalRecorded
 from brigade.runs.ask_progress import ask_progress
@@ -17,6 +17,8 @@ from brigade.system.hold_lock import hold_lock
 from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.system.stop_signal_receiver import StopSignalReceiver
 from brigade.system.write_json_atomically import write_json_atomically
+
+RUN_REASON = "brigade run"
 
 BUDGET_REACHED = "budget_reached"
 WALL_LIMIT_REACHED = "wall_limit_reached"
@@ -91,6 +93,10 @@ def _run_with_handovers(plan: RunPlan, runtime: Runtime, stop: StopSignalReceive
             return records
 
 
+def _describe_disposable_worktree(plan: RunPlan) -> DetachedWorktree:
+    return DetachedWorktree(repository=plan.cwd, path=plan.worktree, start="HEAD", reason=RUN_REASON)
+
+
 def _hold_worktrees_lock(plan: RunPlan, runtime: Runtime) -> AbstractContextManager:
     if plan.project is None:
         return nullcontext()
@@ -100,13 +106,13 @@ def _hold_worktrees_lock(plan: RunPlan, runtime: Runtime) -> AbstractContextMana
 def run_segments(plan: RunPlan, runtime: Runtime, stop: StopSignalReceiver) -> list[SegmentRecord]:
     if plan.disposable_worktree:
         with _hold_worktrees_lock(plan, runtime):
-            add_detached_worktree(runtime.run_process, plan.cwd, plan.worktree, "HEAD")
+            add_detached_worktree(runtime.run_process, _describe_disposable_worktree(plan))
     try:
         records = _run_with_handovers(plan, runtime, stop)
     finally:
         if plan.disposable_worktree:
             with _hold_worktrees_lock(plan, runtime):
-                remove_worktree(runtime.run_process, plan.cwd, plan.worktree)
+                remove_detached_worktree(runtime.run_process, _describe_disposable_worktree(plan))
     last_result = _locate_segment_result(plan, records[-1].number)
     write_json_atomically(plan.run_directory / RESULT_FILE, json.loads(last_result.read_text(encoding="utf-8")))
     return records

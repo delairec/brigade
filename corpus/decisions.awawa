@@ -7017,3 +7017,43 @@ DECISION TheTickKeepsALeftoverHoldingUncommittedChangesOrTheMainCheckoutAndReach
 	SOURCE "the build run of @TASK.B248 of 2026-11-14, step 3, the SPEC lines naming no behaviour"
 		+ "for these cases"
 		REF @TASK.B248
+
+DECISION AWorktreeABrigadeCommandCreatesIsLockedUntilThatCommandRemovesIt
+	TITLE "a worktree a brigade command creates for its own work is created locked with a reason"
+		+ "naming the command, which removes it; no removal of the tick touches a locked worktree"
+	STATUS active
+	DESC "the detached worktrees under the state or the cache directory of brigade, those of"
+		+ "brigade plan record, of the publication of a task or a milestone report, of an answer"
+		+ "written to a file and of the proof of a head, are created with git worktree add --lock"
+		+ "--reason and removed by their command with git worktree remove --force --force"
+	DESC "a worktree a crash left stays locked: the tick keeps it, and the scan worktrees names it"
+	DESC "binds @TASK.B248"
+		REF @TASK.B248
+	REJECTED "the worktrees under the state and the cache directory of brigade excluded from the"
+		+ "removal: SPEC 1 of TASK B248, the tick removing each worktree the scan worktrees"
+		+ "signals, would be narrowed"
+	REJECTED "the guard no run live on the worktree widened to the processes of a run: a run is"
+		+ "recognised by its cwd, and a command it starts works in a worktree that is no run's cwd"
+	SOURCE "the question of run 20261114T111000Z-4fcbe8 of @TASK.B248 in wave brigade_w51, which"
+		+ "recommended locking those worktrees, the one option keeping the ratified SPEC as written"
+		REF @TASK.B248
+
+DECISION TheLockReasonOfAWorktreeABrigadeCommandCreatesNamesTheCommandOrTheWorkThatRemovesIt
+	TITLE "the lock reason of a worktree a brigade command creates names the command that owns it,"
+		+ "or the work when more than one command does it"
+	STATUS active
+	DESC "brigade plan record, brigade run and brigade project add for their own worktrees; brigade"
+		+ "proving a head, brigade publishing a task report, brigade publishing a milestone report"
+		+ "and brigade writing an answer to a file for the work the tick, brigade rebase context or"
+		+ "brigade study run carry out"
+	DESC "the disposable worktree of a run and the worktree of brigade project add are locked as"
+		+ "well: both are worktrees a brigade command creates for its own work under the state or"
+		+ "the cache directory"
+	DESC "binds @TASK.B248"
+		REF @TASK.B248
+	REJECTED "the name of the calling command carried down to the proof of a head: three callers,"
+		+ "the tick, brigade rebase context and the preparation of a task worktree, would thread a"
+		+ "name the lock only displays"
+	SOURCE "the build run of @TASK.B248 of 2026-11-14, step 3, the SPEC naming the reason but not"
+		+ "its form"
+		REF @TASK.B248

@@ -4122,7 +4122,21 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            self.machine.argvs.count(("git", "worktree", "add", "--quiet", "--detach", checkout, WAVE_HEAD)), 1
+            self.machine.argvs.count(
+                (
+                    "git",
+                    "worktree",
+                    "add",
+                    "--quiet",
+                    "--detach",
+                    "--lock",
+                    "--reason",
+                    "brigade proving a head",
+                    checkout,
+                    WAVE_HEAD,
+                )
+            ),
+            1,
         )
 
     def test_should_name_the_red_wave_branch_holding_the_launch_in_the_plan_of_a_dry_run(self):

@@ -17805,6 +17805,8 @@ TASK B248
 		+ "reason naming that command, which removes it; the guard no lock git lists on it keeps it"
 		+ "from the tick while the command works, and a worktree a crash left stays locked, kept"
 		+ "and named by the scan worktrees"
+		IMPL "brigade/git/add_detached_worktree.py::def add_detached_worktree("
+		IMPL "brigade/git/remove_detached_worktree.py::def remove_detached_worktree("
 	SPEC "a test of tests/unit proves the tick removing a stale branch and its worktree, removing"
 		+ "none under a live run, a lock or a local head that did not reach the forge, naming once"
 		+ "a branch kept for a commit outside its merged pull request, and recording once a base"

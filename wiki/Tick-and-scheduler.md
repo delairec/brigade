@@ -43,6 +43,12 @@ head changes; a kept worktree with no branch is named nowhere:
 | `uncommitted changes` | its worktree holds uncommitted changes, which a forced `git worktree remove` would lose |
 | `the main checkout` | the stale branch is the one the main checkout stands on |
 
+A worktree a brigade command creates for its own work under the state or the cache directory of brigade, that of
+`brigade plan record`, `brigade run`, `brigade project add`, the proof of a head, the publication of a task or a
+milestone report and an answer written to a file, is created locked with a reason naming the command or its work, and
+that command removes it: the tick keeps it while the command works, and one a crash left stays locked, kept and named
+by the scan `worktrees`.
+
 An integration branch whose pull request the forge cannot read because the forge no longer holds the branch it merges
 into is recorded once, as a `branch.base_gone` event of the ledger: from then on the tick reads no pull request for it
 and checks its head against the main branch of the project, writing no error at the ticks that follow.

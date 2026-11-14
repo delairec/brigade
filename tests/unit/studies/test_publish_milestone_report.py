@@ -87,7 +87,18 @@ class PublishMilestoneReportTest(unittest.TestCase):
         self.processes.answer(("git", "fetch", "--quiet", "origin", BRANCH))
         self.processes.answer(("git", "worktree", "prune"))
         self.processes.answer_by(
-            ("git", "worktree", "add", "--quiet", "--detach", str(self.checkout), f"origin/{BRANCH}"),
+            (
+                "git",
+                "worktree",
+                "add",
+                "--quiet",
+                "--detach",
+                "--lock",
+                "--reason",
+                "brigade publishing a milestone report",
+                str(self.checkout),
+                f"origin/{BRANCH}",
+            ),
             self.create_checkout,
         )
         self.processes.answer(("git", "worktree", "list", "--porcelain", "-z"))
@@ -108,7 +119,7 @@ class PublishMilestoneReportTest(unittest.TestCase):
         )
         self.processes.answer_corpus_change(self.checkout, (MILESTONES_PATH,), REACHED_MESSAGE)
         self.processes.answer(("git", "push", "--quiet", "origin", PUSHED_HEAD))
-        self.processes.answer(("git", "worktree", "remove", "--force", str(self.checkout)))
+        self.processes.answer(("git", "worktree", "remove", "--force", "--force", str(self.checkout)))
         self.processes.answer(("git", "rev-parse", "HEAD"), stdout="8885daa\n")
         self.processes.answer_entities(
             self.checkout,
@@ -322,7 +333,18 @@ class PublishMilestoneReportTest(unittest.TestCase):
                 ("awawa", "show", "@PROJECT.oak", "--json", str(self.runtime.paths.config_root)),
                 ("git", "fetch", "--quiet", "origin", BRANCH),
                 ("git", "worktree", "prune"),
-                ("git", "worktree", "add", "--quiet", "--detach", str(self.checkout), f"origin/{BRANCH}"),
+                (
+                    "git",
+                    "worktree",
+                    "add",
+                    "--quiet",
+                    "--detach",
+                    "--lock",
+                    "--reason",
+                    "brigade publishing a milestone report",
+                    str(self.checkout),
+                    f"origin/{BRANCH}",
+                ),
                 ("git", "worktree", "list", "--porcelain", "-z"),
                 ("git", "switch", "--quiet", "--force-create", BRANCH),
                 ("git", "add", "--", REPORT_PATH),
@@ -339,7 +361,7 @@ class PublishMilestoneReportTest(unittest.TestCase):
                 ("awawa", "status", "TASK", "--where", "STATUS==implemented", "--json", str(self.checkout)),
                 ("awawa", "show", "@TASK.B17", "--json", str(self.checkout)),
                 ("git", "rev-parse", "HEAD"),
-                ("git", "worktree", "remove", "--force", str(self.checkout)),
+                ("git", "worktree", "remove", "--force", "--force", str(self.checkout)),
             ],
         )
 
@@ -388,7 +410,18 @@ class PublishMilestoneReportTest(unittest.TestCase):
                 ("awawa", "show", "@PROJECT.oak", "--json", str(self.runtime.paths.config_root)),
                 ("git", "fetch", "--quiet", "origin", BRANCH),
                 ("git", "worktree", "prune"),
-                ("git", "worktree", "add", "--quiet", "--detach", str(self.checkout), f"origin/{BRANCH}"),
+                (
+                    "git",
+                    "worktree",
+                    "add",
+                    "--quiet",
+                    "--detach",
+                    "--lock",
+                    "--reason",
+                    "brigade publishing a milestone report",
+                    str(self.checkout),
+                    f"origin/{BRANCH}",
+                ),
                 ("git", "worktree", "list", "--porcelain", "-z"),
                 ("git", "switch", "--quiet", "--force-create", BRANCH),
                 ("git", "add", "--", REPORT_PATH),
@@ -401,7 +434,7 @@ class PublishMilestoneReportTest(unittest.TestCase):
                 ("git", "diff", "--cached", "--quiet", "--", MILESTONES_PATH),
                 ("git", "commit", "--quiet", "-m", REACHED_MESSAGE),
                 ("git", "push", "--quiet", "origin", PUSHED_HEAD),
-                ("git", "worktree", "remove", "--force", str(self.checkout)),
+                ("git", "worktree", "remove", "--force", "--force", str(self.checkout)),
             ],
         )
 
@@ -513,7 +546,9 @@ class PublishMilestoneReportOfAProjectWithoutAForgeTest(unittest.TestCase):
         self.assertEqual(published, {"report": REPORT_PATH, "branch": BRANCH, "pull_request": None})
         self.assertEqual((self.checkout / REPORT_PATH).read_text(encoding="utf-8"), MARKDOWN)
         self.assertNotIn(("git", "push", "--quiet", "origin", BRANCH), self.processes.list_argvs())
-        self.assertNotIn(("git", "worktree", "remove", "--force", str(self.checkout)), self.processes.list_argvs())
+        self.assertNotIn(
+            ("git", "worktree", "remove", "--force", "--force", str(self.checkout)), self.processes.list_argvs()
+        )
         self.assertIn(("git", "commit", "--quiet", "-m", REACHED_MESSAGE), self.processes.list_argvs())
 
     def test_should_hold_the_worktrees_lock_from_the_opening_of_the_worktree_to_the_reached_milestone(self):
