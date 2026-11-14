@@ -7,10 +7,11 @@ from brigade.collecting.read_stale_worktrees import STALE_BRANCH, StaleWorktrees
 from brigade.corpus.read_entities import Entity
 from brigade.errors import BrigadeError
 from brigade.git.check_ancestor import check_ancestor
-from brigade.git.has_uncommitted_changes import has_uncommitted_changes
+from brigade.git.has_local_changes import has_local_changes
 from brigade.git.is_on_a_remote import is_on_a_remote
 from brigade.git.list_worktrees import Worktree, list_worktrees
 from brigade.git.read_branch_head import read_branch_head
+from brigade.git.resolve_commit import resolve_commit
 from brigade.registry.read_project_field import read_project_field
 from brigade.runs.is_run_live_on import is_run_live_on
 from brigade.system.run_process import ProcessRecord, ProcessRequest
@@ -77,17 +78,21 @@ def _read_guards(project_reading: _ProjectReading, worktree: Worktree | None) ->
     return _Guards(
         run_live=is_run_live_on(reading.state_root, worktree.path, reading.is_alive),
         locked=worktree.locked,
-        uncommitted=has_uncommitted_changes(project_reading.run_process, worktree.path),
+        uncommitted=worktree.path.is_dir() and has_local_changes(project_reading.run_process, worktree.path),
     )
+
+
+def _is_within_pull_request(project_reading: _ProjectReading, head: str, pull_request: dict) -> bool:
+    run_process = project_reading.run_process
+    repository = project_reading.repository
+    if resolve_commit(run_process, repository, pull_request["head_sha"]) is None:
+        return False
+    return check_ancestor(run_process, repository, head, pull_request["head_sha"]).exit_code == DESCENDING
 
 
 def _has_reached_forge(project_reading: _ProjectReading, head: str, pull_requests: list[dict]) -> bool:
     within_a_pull_request = any(
-        check_ancestor(
-            project_reading.run_process, project_reading.repository, head, pull_request["head_sha"]
-        ).exit_code
-        == DESCENDING
-        for pull_request in pull_requests
+        _is_within_pull_request(project_reading, head, pull_request) for pull_request in pull_requests
     )
     return within_a_pull_request or is_on_a_remote(project_reading.run_process, project_reading.repository, head)
 
