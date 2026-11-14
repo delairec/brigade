@@ -24,13 +24,14 @@ from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_reported import TaskReported
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
+from brigade.ledger.tick_action_failed import TickActionFailed
 from brigade.ledger.wave_cancelled import WaveCancelled
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.runs.record_run_pid import record_run_pid
-from brigade.system.parse_configuration import Configuration
+from brigade.system.parse_configuration import Configuration, parse_configuration
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.reset_hour import ResetHour
 from brigade.tick.actions import LaunchTask
@@ -163,6 +164,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
         self.reader = PullRequestReaderDouble()
         self.shop_forge = "none"
         self.remote_answers = {}
+        self.configuration = Configuration()
 
     def write_operational_corpus(self) -> None:
         self.paths.config_root.mkdir(parents=True)
@@ -250,7 +252,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
         runtime = create_test_runtime(self.paths, run_process=self.runner)
         stderr = io.StringIO()
         with contextlib.redirect_stderr(stderr):
-            snapshot = build_snapshot(runtime, Configuration(), ForgeReaders(self.reader, _read_forge_environment))
+            snapshot = build_snapshot(runtime, self.configuration, ForgeReaders(self.reader, _read_forge_environment))
         return snapshot, stderr.getvalue()
 
 
@@ -364,14 +366,31 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 TaskFacts(
                     name="B1",
                     branch="feature/B1-task",
+                    last_action=datetime(2026, 10, 19, 8, 58, tzinfo=UTC),
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
                     rate_limit=RateLimit(reset=None),
                 ),
-                TaskFacts(name="B2", branch="feature/B2-task", pull_request=PULL_REQUEST, stopped_run="r2"),
-                TaskFacts(name="B3", branch="feature/B3-task", milestone="M4"),
-                TaskFacts(name="B4", branch="feature/B4-task", pull_request=PULL_REQUEST),
+                TaskFacts(
+                    name="B2",
+                    branch="feature/B2-task",
+                    last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                    stopped_run="r2",
+                ),
+                TaskFacts(
+                    name="B3",
+                    branch="feature/B3-task",
+                    last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
+                    milestone="M4",
+                ),
+                TaskFacts(
+                    name="B4",
+                    branch="feature/B4-task",
+                    last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                ),
             ),
         )
 
@@ -389,6 +408,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             TaskFacts(
                 name="B1",
                 branch="feature/B1-task",
+                last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
                 after=("B0",),
                 pull_request=PULL_REQUEST,
                 worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -410,6 +430,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             TaskFacts(
                 name="B1",
                 branch="feature/B1-task",
+                last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
                 after=("B0",),
                 pull_request=PULL_REQUEST,
                 worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -432,6 +453,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             TaskFacts(
                 name="B1",
                 branch="feature/B1-task",
+                last_action=datetime(2026, 10, 19, 9, 0, tzinfo=UTC),
                 after=("B0",),
                 pull_request=PULL_REQUEST,
                 worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -456,16 +478,32 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 TaskFacts(
                     name="B1",
                     branch="feature/B1-task",
+                    last_action=datetime(2026, 10, 19, 8, 58, tzinfo=UTC),
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
                     rate_limit=RateLimit(reset=None),
                     last_run="20261013T100000Z-a00003",
                 ),
-                TaskFacts(name="B2", branch="feature/B2-task", pull_request=PULL_REQUEST, stopped_run="r2"),
-                TaskFacts(name="B3", branch="feature/B3-task", milestone="M4"),
                 TaskFacts(
-                    name="B4", branch="feature/B4-task", pull_request=PULL_REQUEST, last_run="20261013T090000Z-a00002"
+                    name="B2",
+                    branch="feature/B2-task",
+                    last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                    stopped_run="r2",
+                ),
+                TaskFacts(
+                    name="B3",
+                    branch="feature/B3-task",
+                    last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
+                    milestone="M4",
+                ),
+                TaskFacts(
+                    name="B4",
+                    branch="feature/B4-task",
+                    last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                    last_run="20261013T090000Z-a00002",
                 ),
             ),
         )
@@ -486,15 +524,32 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 TaskFacts(
                     name="B1",
                     branch="feature/B1-task",
+                    last_action=datetime(2026, 10, 19, 8, 58, tzinfo=UTC),
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
                     rate_limit=RateLimit(reset=None),
                     holds_uncommitted_changes=True,
                 ),
-                TaskFacts(name="B2", branch="feature/B2-task", pull_request=PULL_REQUEST, stopped_run="r2"),
-                TaskFacts(name="B3", branch="feature/B3-task", milestone="M4"),
-                TaskFacts(name="B4", branch="feature/B4-task", pull_request=PULL_REQUEST),
+                TaskFacts(
+                    name="B2",
+                    branch="feature/B2-task",
+                    last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                    stopped_run="r2",
+                ),
+                TaskFacts(
+                    name="B3",
+                    branch="feature/B3-task",
+                    last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
+                    milestone="M4",
+                ),
+                TaskFacts(
+                    name="B4",
+                    branch="feature/B4-task",
+                    last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                ),
             ),
         )
 
@@ -585,6 +640,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B1",
                             branch="feature/B1-task",
+                            last_action=datetime(2026, 10, 19, 8, 58, tzinfo=UTC),
                             after=("B0",),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -612,6 +668,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B2",
                             branch="feature/B2-task",
+                            last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
                             after=(),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -639,6 +696,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B3",
                             branch="feature/B3-task",
+                            last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
                             milestone="M4",
                             after=(),
                             blocked_by=(),
@@ -658,6 +716,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B4",
                             branch="feature/B4-task",
+                            last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
                             after=(),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -861,6 +920,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B1",
                             branch="feature/B1-task",
+                            last_action=datetime(2026, 10, 19, 8, 58, tzinfo=UTC),
                             after=("B0",),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -888,6 +948,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B2",
                             branch="feature/B2-task",
+                            last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
                             after=(),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -915,6 +976,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B3",
                             branch="feature/B3-task",
+                            last_action=datetime(2026, 10, 19, 8, 57, tzinfo=UTC),
                             milestone="M4",
                             after=(),
                             blocked_by=(),
@@ -934,6 +996,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B4",
                             branch="feature/B4-task",
+                            last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
                             after=(),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -986,6 +1049,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B1",
                             branch="feature/B1-task",
+                            last_action=datetime(2026, 10, 19, 8, 58, tzinfo=UTC),
                             after=("B0",),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -1013,6 +1077,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B2",
                             branch="feature/B2-task",
+                            last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
                             after=(),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -1040,6 +1105,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B3",
                             branch="feature/B3-task",
+                            last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
                             milestone="M4",
                             after=(),
                             blocked_by=(),
@@ -1059,6 +1125,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B4",
                             branch="feature/B4-task",
+                            last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
                             after=(),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -1687,6 +1754,7 @@ class BuildSnapshotOfAWaveStartedAfterTheForgeAccountBecameUnavailableTest(Build
                         TaskFacts(
                             name="B1",
                             branch="feature/B1-task",
+                            last_action=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             after=("B0",),
                             blocked_by=(),
                             pull_request=None,
@@ -1845,6 +1913,7 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
                 TaskFacts(
                     name="B1",
                     branch="feature/B1-task",
+                    last_action=datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -1853,9 +1922,26 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
                     reviewed_head="4f2a9c1",
                     review_runs=("r1",),
                 ),
-                TaskFacts(name="B2", branch="feature/B2-task", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
-                TaskFacts(name="B3", branch="feature/B3-task", milestone="M4"),
-                TaskFacts(name="B4", branch="feature/B4-task", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
+                TaskFacts(
+                    name="B2",
+                    branch="feature/B2-task",
+                    last_action=datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                    preflighted_head="4f2a9c1",
+                ),
+                TaskFacts(
+                    name="B3",
+                    branch="feature/B3-task",
+                    last_action=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
+                    milestone="M4",
+                ),
+                TaskFacts(
+                    name="B4",
+                    branch="feature/B4-task",
+                    last_action=datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                    preflighted_head="4f2a9c1",
+                ),
             ),
         )
 
@@ -1874,6 +1960,7 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
                 TaskFacts(
                     name="B1",
                     branch="feature/B1-task",
+                    last_action=datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -1885,12 +1972,24 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
                 TaskFacts(
                     name="B2",
                     branch="feature/B2-task",
+                    last_action=datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
                     pull_request=PULL_REQUEST,
                     preflighted_head="4f2a9c1",
                     reported=True,
                 ),
-                TaskFacts(name="B3", branch="feature/B3-task", milestone="M4"),
-                TaskFacts(name="B4", branch="feature/B4-task", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
+                TaskFacts(
+                    name="B3",
+                    branch="feature/B3-task",
+                    last_action=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
+                    milestone="M4",
+                ),
+                TaskFacts(
+                    name="B4",
+                    branch="feature/B4-task",
+                    last_action=datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                    preflighted_head="4f2a9c1",
+                ),
             ),
         )
 
@@ -1959,6 +2058,7 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
             TaskFacts(
                 name="B1",
                 branch="feature/B1-task",
+                last_action=datetime(2026, 10, 19, 8, 40, tzinfo=UTC),
                 after=("B0",),
                 pull_request=PULL_REQUEST,
                 worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -1990,12 +2090,24 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
                 TaskFacts(
                     name="B2",
                     branch="feature/B2-task",
+                    last_action=datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
                     pull_request=PULL_REQUEST,
                     preflighted_head="4f2a9c1",
                     verdict=RecordedVerdict(head="4f2a9c1", verdict="changes"),
                 ),
-                TaskFacts(name="B3", branch="feature/B3-task", milestone="M4"),
-                TaskFacts(name="B4", branch="feature/B4-task", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
+                TaskFacts(
+                    name="B3",
+                    branch="feature/B3-task",
+                    last_action=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
+                    milestone="M4",
+                ),
+                TaskFacts(
+                    name="B4",
+                    branch="feature/B4-task",
+                    last_action=datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                    preflighted_head="4f2a9c1",
+                ),
             ),
         )
 
@@ -2035,6 +2147,7 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
                 TaskFacts(
                     name="B1",
                     branch="feature/B1-task",
+                    last_action=datetime(2026, 10, 19, 8, 21, tzinfo=UTC),
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -2042,7 +2155,12 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
                     preflight_failures=(PreflightFailure(name="checks", findings=("tests: failure",)),),
                     repair_rounds=2,
                 ),
-                TaskFacts(name="B2", branch="feature/B2-task", pull_request=PULL_REQUEST),
+                TaskFacts(
+                    name="B2",
+                    branch="feature/B2-task",
+                    last_action=datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                ),
             ),
         )
 
@@ -2787,3 +2905,45 @@ class BuildSnapshotOfAStudyParkedByItsJudgingRunTest(BuildSnapshotTestCase):
 
                 # Assert
                 self.assertIsNone(snapshot.studies[1].quota_resume_at)
+
+
+class BuildSnapshotOfTheLastActionOnATaskTest(BuildSnapshotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_operational_corpus()
+        self.record(300, TaskState(wave="w0", task="B1", state="parked"))
+        self.record(200, WaveStarted(wave="w1", project="shop", tasks=("B1", "B2", "B4")))
+        self.record(180, TaskState(wave="w1", task="B1", state="running"))
+        self.record(120, create_run_finished("r1", wave="w1", task="B1", outcome="failed"))
+        self.record(10, TaskState(wave="w0", task="B1", state="queued"))
+        self.record(150, TaskState(wave="w1", task="B2", state="running"))
+        self.record(90, TickActionFailed(action="RunPreflight", project="shop", wave="w1", task="B2", error="no"))
+        self.record(5, create_verdict("B2", PULL_REQUEST_HEAD, "pass"))
+
+    def test_should_take_the_latest_task_state_run_finished_or_failed_action_of_the_task_in_its_wave(self):
+        for case, index, expected in [
+            ("a run finished after its state", 0, datetime(2026, 10, 19, 7, 0, tzinfo=UTC)),
+            ("a failed action after its state, a verdict apart", 1, datetime(2026, 10, 19, 7, 30, tzinfo=UTC)),
+            ("no action since the start of its wave", 2, datetime(2026, 10, 19, 5, 40, tzinfo=UTC)),
+        ]:
+            with self.subTest(case=case):
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].tasks[index].last_action, expected)
+
+
+class BuildSnapshotOfTheDelayOfAStallTest(BuildSnapshotTestCase):
+    def test_should_read_the_delay_of_a_stall_from_config_toml(self):
+        # Arrange
+        self.write_operational_corpus()
+        configuration_file = self.root / "config.toml"
+        configuration_file.write_text("stall_after = 90\n")
+        self.configuration = parse_configuration(configuration_file)
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.stall_after, 90)

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.studies.milestone_report_order import MilestoneReportOrder
@@ -246,3 +247,11 @@ class KeepIntegrationBranch:
     project: str
     branch: str
     reason: str
+
+
+@dataclass(frozen=True)
+class SignalStall:
+    project: str
+    wave: str
+    task: str
+    last_action: datetime
