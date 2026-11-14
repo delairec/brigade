@@ -6,6 +6,7 @@ import os
 import shutil
 import tempfile
 import unittest
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -53,6 +54,7 @@ from brigade.tick.build_snapshot import (
 )
 from brigade.tick.plan import plan
 from brigade.tick.read_integration_branches import IntegrationBranchFacts
+from brigade.tick.read_leftovers import LeftoverFacts
 from brigade.waves.list_candidate_waves import CandidateWave
 from tests.unit.commands.run_directories import FIRST_RUN, SECOND_RUN, create_run_record, create_run_result, write_run
 from tests.unit.create_test_paths import create_test_paths
@@ -254,7 +256,9 @@ class BuildSnapshotTestCase(unittest.TestCase):
             }
         )
 
-    def build(self) -> tuple[Snapshot, str]:
+    def build(
+        self, read_stale_branches: Callable[[Entity], list[dict]] = _list_no_stale_branch
+    ) -> tuple[Snapshot, str]:
         self.runner = self.create_runner()
         runtime = create_test_runtime(self.paths, run_process=self.runner)
         stderr = io.StringIO()
@@ -262,7 +266,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
             snapshot = build_snapshot(
                 runtime,
                 self.configuration,
-                ForgeReaders(self.reader, _read_forge_environment, _list_no_stale_branch),
+                ForgeReaders(self.reader, _read_forge_environment, read_stale_branches),
             )
         return snapshot, stderr.getvalue()
 
@@ -347,6 +351,51 @@ class BuildSnapshotOfTheIntegrationBranchesTest(BuildSnapshotTestCase):
                     worktree=None,
                     run_live=False,
                     locked=False,
+                ),
+            ),
+        )
+
+    def test_should_read_no_leftover_of_a_stale_branch_the_ledger_records_as_an_integration_branch(self):
+        # Arrange
+        self.write_operational_corpus()
+        self.record(90, MilestoneBranchCut(project="shop", milestone="M4", branch="integration/delivery", login=None))
+        self.record(60, WaveStarted(wave="w0", project="shop", tasks=("B3",), branch="integration/w0"))
+        self.record(40, WaveClosed(wave="w0"))
+        self.record(30, MilestoneClosed(project="shop", milestone="M4", pr=90))
+        self.remote_answers = {
+            ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/delivery"): ProcessAnswer(exit_code=1),
+            **answer_tree("integration/delivery", MILESTONE_SHA),
+            **AWAWA_ANSWERS.answer_entities(
+                self.milestone_tree, "TASK", {"B3": TASK_IDENTITY}, "MILESTONE==@MILESTONE.M4"
+            ),
+            ("git", "rev-parse", "--verify", "--quiet", "refs/heads/feature/B5-sprout"): ProcessAnswer(
+                stdout="b5b5b5b\n"
+            ),
+        }
+        merged = [{"number": 7, "state": "merged", "head_sha": "c0ffee9"}]
+        stale = [
+            {"branch": "integration/delivery", "pull_requests": merged},
+            {"branch": "integration/w0", "pull_requests": merged},
+            {"branch": "feature/B5-sprout", "pull_requests": merged},
+        ]
+
+        # Act
+        snapshot, _ = self.build(read_stale_branches=lambda project: stale if project.name == "shop" else [])
+
+        # Assert
+        self.assertEqual(
+            snapshot.leftovers,
+            (
+                LeftoverFacts(
+                    project="shop",
+                    branch="feature/B5-sprout",
+                    worktree=None,
+                    head="b5b5b5b",
+                    reached_forge=False,
+                    run_live=False,
+                    locked=False,
+                    uncommitted=False,
+                    main_checkout=False,
                 ),
             ),
         )
