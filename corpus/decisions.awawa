@@ -6900,3 +6900,27 @@ DECISION InitRefusesToReplaceAnOriginAtAnotherUrl
 	SOURCE "the build run of @TASK.B177 of 2026-11-11, SPEC 4 naming no behaviour for an origin"
 		+ "already set"
 		REF @TASK.B177
+
+DECISION AnAnswerOfTheTriageAddsEvidenceToAHeldPatternByAPatternOfItsNameHoldingEvidenceAlone
+	TITLE "an answer of the triage adds EVIDENCE to a PATTERN the operational corpus holds by a"
+		+ "PATTERN entity of its name holding EVIDENCE fields alone, which brigade folds into the"
+		+ "held entity"
+	STATUS active
+	DESC "a PATTERN of the answer whose name the operational corpus holds is an addition:"
+		+ "check_patterns refuses any field of it other than EVIDENCE, and an addition holding no"
+		+ "EVIDENCE; the STATUS and ACTION checks apply to a new PATTERN alone"
+	DESC "the EVIDENCE lines of an addition are inserted at the end of the held entity, the PATTERN"
+		+ "entities left are appended as before; the corpus linted at validation holds the held"
+		+ "file so folded beside the answer left"
+	DESC "binds @TASK.B245"
+		REF @TASK.B245
+	REJECTED "a new entity type naming the PATTERN to complete: brigade init upgrades no installed"
+		+ "schema, so the machines already initialised would refuse it"
+	REJECTED "the answer repeating the held PATTERN whole, its TITLE, STATUS and ACTION with them:"
+		+ "the triage could rewrite a ratified PATTERN, and a field it changed would be silently"
+		+ "dropped or would overwrite the user's ruling"
+	RATIONALE "the operational schema stays as installed, and an addition can change nothing of the"
+		+ "held PATTERN but its EVIDENCE"
+	SOURCE "the user's ruling of 2026-11-13 at the refinement of @TASK.B245: « Le modèle ajoute des"
+		+ "EVIDENCE »"
+		REF @TASK.B245

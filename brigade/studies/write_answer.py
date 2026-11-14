@@ -1,6 +1,7 @@
 from brigade.corpus.change_corpus_file import CorpusChange, change_corpus_file
 from brigade.corpus.locate_corpus_lock import locate_corpus_lock
 from brigade.studies.choose_answer_form import choose_answer_form
+from brigade.studies.fold_pattern_answer import FoldedAnswer
 from brigade.studies.hand_answer_to_output import hand_answer_to_output
 from brigade.studies.name_answer_file import name_answer_file
 from brigade.studies.open_answer_issue import open_answer_issue
@@ -19,9 +20,15 @@ PUBLISHERS_BY_OUTPUT = {"issue": open_answer_issue, "inbox": record_answer_signa
 
 
 def _append_block(text: str, block: str) -> str:
+    if not block.strip():
+        return text
     if not text.strip():
         return block
     return text.rstrip("\n") + "\n\n" + block
+
+
+def _append_folded(folded: FoldedAnswer) -> str:
+    return _append_block(folded.held, folded.new)
 
 
 def _read_answer(context: StudyRunContext) -> str:
@@ -43,7 +50,7 @@ def _write_entity(context: StudyRunContext, answer: str) -> None:
             lock=locate_corpus_lock(context.runtime.paths.lock_directory, root),
             file_names=(file_name,),
             describe_message=lambda: f"brigade study run: the answer of @STUDY.{context.study.name}",
-            rewrite=lambda texts: (_append_block(texts[0], answer),),
+            rewrite=lambda texts: (_append_folded(choose_answer_form(context.study).fold(texts[0], answer)),),
         ),
     )
 

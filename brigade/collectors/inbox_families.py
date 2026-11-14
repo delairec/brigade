@@ -1,6 +1,6 @@
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.collecting.describe_collection import describe_collection
-from brigade.corpus.read_entities import read_entities
+from brigade.corpus.read_entities import Entity, read_entities
 from brigade.inbox.group_signals import SignalFamily, group_signals
 from brigade.inbox.is_signal_cited import is_signal_cited
 from brigade.inbox.read_inbox import NEW_STATUS, Signal, read_inbox
@@ -9,16 +9,17 @@ from brigade.runtime import Runtime
 NAME = "inbox-families"
 PATTERN_TYPE = "PATTERN"
 EVIDENCE_FIELD = "EVIDENCE"
+TITLE_FIELD = "TITLE"
 NOT_CACHED = False
 
 
-def _read_cited_evidence(runtime: Runtime) -> tuple[str, ...]:
-    return tuple(
-        field.value
-        for pattern in read_entities(runtime.run_process, runtime.paths.config_root, PATTERN_TYPE)
-        for field in pattern.fields
-        if field.name == EVIDENCE_FIELD
-    )
+def _read_cited_evidence(patterns: tuple[Entity, ...]) -> tuple[str, ...]:
+    return tuple(field.value for pattern in patterns for field in pattern.fields if field.name == EVIDENCE_FIELD)
+
+
+def _describe_pattern(pattern: Entity) -> dict:
+    [title] = (field.value for field in pattern.fields if field.name == TITLE_FIELD)
+    return {"name": pattern.name, "title": title}
 
 
 def _describe_signal(signal: Signal) -> dict:
@@ -30,7 +31,8 @@ def _describe_family(family: SignalFamily) -> dict:
 
 
 def collect(environment: dict, runtime: Runtime, equipment: CollectorEquipment) -> dict:
-    cited_evidence = _read_cited_evidence(runtime)
+    patterns = read_entities(runtime.run_process, runtime.paths.config_root, PATTERN_TYPE)
+    cited_evidence = _read_cited_evidence(patterns)
     signals = sorted(
         (
             signal
@@ -42,4 +44,8 @@ def collect(environment: dict, runtime: Runtime, equipment: CollectorEquipment) 
     )
     families = [_describe_family(family) for family in group_signals(signals)]
     summary = {"families": len(families), "signals": len(signals)}
-    return {**describe_collection(NAME, runtime, summary, families), "cache": NOT_CACHED}
+    return {
+        **describe_collection(NAME, runtime, summary, families),
+        "cache": NOT_CACHED,
+        "patterns": [_describe_pattern(pattern) for pattern in patterns],
+    }
