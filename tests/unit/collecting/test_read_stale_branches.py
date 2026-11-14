@@ -10,10 +10,10 @@ from tests.unit.collectors.scan_fixtures import (
 PULL_REQUESTS = [
     {"number": 3, "head": "main", "state": "merged", "head_sha": "a3"},
     {"number": 4, "head": "task/w1/B1", "state": "merged", "head_sha": "b4"},
-    {"number": 5, "head": "task/w1/B2", "state": "open"},
+    {"number": 5, "head": "task/w1/B2", "state": "open", "head_sha": "f5"},
     {"number": 6, "head": "feat/x", "state": "closed", "head_sha": "c6"},
     {"number": 8, "head": "feat/y", "state": "closed", "head_sha": "d8"},
-    {"number": 9, "head": "feat/y", "state": "open"},
+    {"number": 9, "head": "feat/y", "state": "open", "head_sha": "a9"},
     {"number": 2, "head": "deleted", "state": "merged", "head_sha": "e2"},
 ]
 

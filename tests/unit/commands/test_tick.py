@@ -234,6 +234,8 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
                     "rate_limits": [],
                     "milestones": [],
                     "integration_branches": [],
+                    "leftovers": [],
+                    "kept_branches": [],
                 },
                 "plan": [],
             },
@@ -501,12 +503,14 @@ CUT_OF_M4 = {
     "login": "tidepool-cli",
 }
 CUT_OF_M4_ON_THE_WAVE_BRANCH = {**CUT_OF_M4, "branch": WAVE_BRANCH}
+MAIN_CHECKOUT_ALONE = f"worktree /srv/tidepool\0HEAD {MAIN_HEAD}\0branch refs/heads/main\0\0"
 MACHINE_OUTPUTS = {
     ("git", "rev-parse", "--verify"): f"{WAVE_HEAD}\n",
     ("git", "cat-file", "-p"): ".brigade/worktrees/\n",
     ("git", "worktree", "add"): "",
-    ("git", "worktree", "list"): "",
+    ("git", "worktree", "list"): MAIN_CHECKOUT_ALONE,
     ("git", "worktree", "remove"): "",
+    ("git", "for-each-ref", "--format=%(refname:lstrip=2)", "refs/heads"): "",
     ("git", "branch", "--quiet", "-D"): "",
     ("git", "merge-base"): "",
     ("git", "fetch"): "",

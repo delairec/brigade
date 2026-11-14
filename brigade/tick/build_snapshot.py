@@ -7,9 +7,6 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
-from brigade.collecting.collector_equipment import CollectorEquipment
-from brigade.collecting.read_stale_branches import read_stale_branches
-from brigade.commands._read_forge_environment import FORGE_KIND
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity, read_entities
 from brigade.corpus.read_entity import read_entity
@@ -41,7 +38,6 @@ from brigade.registry.find_project import find_project
 from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_policy_field import read_policy_field
 from brigade.registry.read_project_field import read_project_field
-from brigade.registry.read_project_forge import read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
 from brigade.runs.list_runs import list_runs
@@ -92,7 +88,6 @@ from brigade.waves.read_wave_pause import WavePause, read_wave_pause
 from brigade.waves.read_wave_start import read_wave_start
 from brigade.waves.summarize_waves import summarize_waves
 
-CLIENT_KIND = "client"
 DOCUMENT_SCHEMA_VERSION = 1
 TASK_TYPE = "TASK"
 LIVE_RUN_STATE = "running"
@@ -468,6 +463,7 @@ def _list_preflight_failures(preflighted: TaskPreflighted) -> tuple[PreflightFai
 class ForgeReaders:
     read_pull_request: Callable[[str, str], PullRequestFacts | None]
     read_environment: Callable[[Entity, str], dict]
+    read_stale_branches: Callable[[Entity], list[dict]]
 
 
 @dataclass(frozen=True)
@@ -1176,28 +1172,7 @@ def _read_integration_branches(
     )
 
 
-def _read_stale_branches_of(runtime: Runtime, configuration: Configuration) -> Callable[[Entity], list[dict]]:
-    def read(project: Entity) -> list[dict]:
-        if not is_on_a_forge(project):
-            return []
-        forge_name = read_project_forge(project)
-        equipment = CollectorEquipment(
-            configuration=configuration,
-            forge=runtime.resolve_plugin(FORGE_KIND, forge_name),
-            forge_name=forge_name,
-            resolve_client=lambda name: runtime.resolve_plugin(CLIENT_KIND, name),
-        )
-        return read_stale_branches(project, equipment, runtime)
-
-    return read
-
-
-def _read_leftovers(
-    runtime: Runtime,
-    configuration: Configuration,
-    reading: WaveReading,
-    projects: frozenset[str],
-) -> tuple[LeftoverFacts, ...]:
+def _read_leftovers(runtime: Runtime, reading: WaveReading, projects: frozenset[str]) -> tuple[LeftoverFacts, ...]:
     return read_leftovers(
         runtime.run_process,
         LeftoverReading(
@@ -1209,7 +1184,7 @@ def _read_leftovers(
             ),
             state_root=runtime.paths.state_root,
             is_alive=is_recorded_process_alive,
-            read_stale_branches=_read_stale_branches_of(runtime, configuration),
+            read_stale_branches=reading.forge.read_stale_branches,
         ),
     )
 
@@ -1240,6 +1215,6 @@ def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeR
         rate_limits=_read_rate_limits(reading, runtime.now),
         milestones=_read_milestones(runtime, reading, projects_read),
         integration_branches=_read_integration_branches(runtime, configuration, reading, projects_read),
-        leftovers=_read_leftovers(runtime, configuration, reading, projects_read),
+        leftovers=_read_leftovers(runtime, reading, projects_read),
         kept_branches=_read_kept_branches(reading),
     )

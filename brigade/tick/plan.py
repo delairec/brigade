@@ -156,18 +156,14 @@ def _plan_every_action(snapshot: Snapshot) -> tuple:
     return actions + _plan_leftovers(snapshot, actions) + _plan_stall_signals(snapshot, actions)
 
 
-def _find_guarding_reason(reached_forge: bool, run_live: bool, locked: bool) -> str | None:
-    if not reached_forge:
+def _find_guarding_reason(guarded: IntegrationBranchFacts | LeftoverFacts) -> str | None:
+    if not guarded.reached_forge:
         return UNREACHED_FORGE_REASON
-    if run_live:
+    if guarded.run_live:
         return LIVE_RUN_REASON
-    if locked:
+    if guarded.locked:
         return LOCK_REASON
     return NO_KEEPING_REASON
-
-
-def _find_keeping_reason(branch: IntegrationBranchFacts) -> str | None:
-    return _find_guarding_reason(branch.reached_forge, branch.run_live, branch.locked)
 
 
 def _keep_unnamed(snapshot: Snapshot, kept: KeepBranch) -> tuple:
@@ -178,7 +174,7 @@ def _keep_unnamed(snapshot: Snapshot, kept: KeepBranch) -> tuple:
 
 
 def _decide_integration_branch(snapshot: Snapshot, branch: IntegrationBranchFacts) -> tuple:
-    reason = _find_keeping_reason(branch)
+    reason = _find_guarding_reason(branch)
     if reason is None:
         return (RemoveIntegrationBranch(project=branch.project, branch=branch.branch, worktree=branch.worktree),)
     return _keep_unnamed(
@@ -207,7 +203,7 @@ def _find_leftover_keeping_reason(leftover: LeftoverFacts) -> str | None:
         return MAIN_CHECKOUT_REASON
     if leftover.uncommitted:
         return UNCOMMITTED_REASON
-    return _find_guarding_reason(leftover.reached_forge, leftover.run_live, leftover.locked)
+    return _find_guarding_reason(leftover)
 
 
 def _decide_leftover(snapshot: Snapshot, leftover: LeftoverFacts, removed_worktrees: set[str]) -> tuple:
