@@ -2871,6 +2871,19 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         # Assert
         self.assertEqual(read_inbox(self.root / "state", FIXED_NOW), no_signal)
 
+    def test_should_print_the_stall_with_the_instant_of_its_last_action_on_a_dry_run(self):
+        # Arrange
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+
+        # Assert
+        self.assertIn(
+            {"project": "tidepool", "wave": "tidepool_w16", "task": "T8", "last_action": "2026-10-18T09:00:00Z"},
+            json.loads(json.dumps(document["plan"])),
+        )
+
     def test_should_print_the_merge_with_the_head_it_names_on_a_dry_run(self):
         # Act
         document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)

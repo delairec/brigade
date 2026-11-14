@@ -11,9 +11,7 @@ from tests.unit.create_test_runtime import create_test_runtime
 
 FIRST_TICK = datetime(2026, 10, 19, 9, 0, tzinfo=UTC)
 NEXT_TICK = datetime(2026, 10, 19, 9, 5, tzinfo=UTC)
-STALL_OF_S3 = SignalStall(
-    project="shop", wave="shop_w1", task="S3", last_action=datetime(2026, 10, 19, 7, 30, tzinfo=UTC)
-)
+STALL_OF_S3 = SignalStall(project="shop", wave="shop_w1", task="S3", last_action="2026-10-19T07:30:00Z")
 
 
 class RecordStallTest(unittest.TestCase):
