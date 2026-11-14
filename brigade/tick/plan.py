@@ -96,9 +96,28 @@ UNREACHED_FORGE_REASON = "a commit outside the merged pull request"
 LIVE_RUN_REASON = "a live run"
 LOCK_REASON = "a lock"
 NO_KEEPING_REASON = None
+RUN_LAUNCHES = (
+    LaunchVerification,
+    LaunchRemediation,
+    LaunchCheckRepair,
+    RebuildTask,
+    RebaseTask,
+    ResumeTaskRun,
+    ReportTask,
+    ReportMilestone,
+    RebaseMilestone,
+    LaunchStudy,
+)
 
 
 def plan(snapshot: Snapshot) -> tuple:
+    actions = _plan_every_action(snapshot)
+    if _decide_quota_resume_at(snapshot) is None:
+        return actions
+    return tuple(action for action in actions if not isinstance(action, RUN_LAUNCHES))
+
+
+def _plan_every_action(snapshot: Snapshot) -> tuple:
     pauses = _plan_blocked_rebase_pauses(snapshot) + _plan_pauses(snapshot)
     paused = {wave.wave for wave in snapshot.waves if wave.pause is not None} | {
         pause.wave for pause in pauses if isinstance(pause, PauseWave)

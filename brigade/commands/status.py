@@ -12,6 +12,7 @@ from brigade.registry.require_operational_corpus import require_operational_corp
 from brigade.runtime import Runtime
 from brigade.studies.describe_study_row import describe_study_row
 from brigade.studies.read_last_study_orders import read_last_study_orders
+from brigade.studies.read_quota_resumes import read_quota_resumes
 from brigade.studies.read_studies import read_studies
 from brigade.studies.record_scan_signals import SCAN_KIND
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
@@ -68,11 +69,13 @@ def _describe_quota(entries: tuple[LedgerEntry, ...], waves: list[dict], runtime
 
 
 def _list_studies_to_watch(runtime: Runtime) -> list[dict]:
-    last_orders = read_last_study_orders(read_ledger(runtime.paths.state_root).entries)
+    entries = read_ledger(runtime.paths.state_root).entries
+    last_orders = read_last_study_orders(entries)
+    quota_resumes = read_quota_resumes(runtime.paths.state_root, entries)
     studies = []
     for study in read_studies(runtime):
         last_order = last_orders.get(study.name)
-        facts = describe_study_facts(study, last_order)
+        facts = describe_study_facts(study, last_order, quota_resumes)
         due = is_study_due(facts, runtime.now)
         if due or facts.parked:
             studies.append({**describe_study_row(study, last_order), "due": due})

@@ -17758,7 +17758,8 @@ TASK B248
 TASK B249
 	TITLE "A cut by the usage limit launches no further run until its reset, and a study it parked"
 		+ "resumes once the limit has passed"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 407
 	TYPE fix
 	MILESTONE @MILESTONE.M12
 	COMPONENT "the tick"
@@ -17783,12 +17784,23 @@ TASK B249
 	SPEC "once a run of the machine ends on error_class rate_limit, the tick launches no run of any"
 		+ "slot until the reset that run names: no build run, no verification of a pull request or"
 		+ "of a delivered head, verify-pr included, no remediation, no check repair and no study"
+		IMPL "brigade/tick/plan.py::RUN_LAUNCHES = ("
+		IMPL "brigade/tick/plan.py::def _plan_every_action(snapshot: Snapshot) -> tuple:"
 	SPEC "a study parked by a run that ended on error_class rate_limit is due again once the reset"
 		+ "that run names has passed, instead of staying parked as failed; a study parked on any"
 		+ "other cause stays parked until the user resumes it"
+		IMPL "brigade/studies/read_quota_resumes.py::def read_quota_resumes("
+		IMPL "brigade/tick/is_study_due.py::return study.quota_resume_at is not None and"
+			+ "study.quota_resume_at <= now"
+		IMPL "brigade/commands/status.py::quota_resumes ="
+			+ "read_quota_resumes(runtime.paths.state_root, entries)"
 	SPEC "a test of tests/unit/tick proves no build, verification, repair or study run launched"
 		+ "between a run.finished on rate_limit and its reset, a study parked on rate_limit due"
 		+ "again after the reset, and a study parked on another cause still parked"
+		IMPL "tests/unit/tick/test_plan.py::class"
+			+ "PlanNoRunWhileARateLimitIsInForceTest(unittest.TestCase):"
+		IMPL "tests/unit/tick/test_build_snapshot_from_the_corpus.py::class"
+			+ "BuildSnapshotOfAStudyParkedByItsJudgingRunTest(BuildSnapshotTestCase):"
 	RATIONALE "read in ~/.local/state/brigade/ledger on 2026-11-09: the 24 verify-pr run.finished"
 		+ "events with outcome failed are all dated 2026-11-02 and each carries error_class"
 		+ "rate_limit, as the run 20261102T235517Z-dcb28a of @TASK.B226 in the wave brigade_w24, 1"
