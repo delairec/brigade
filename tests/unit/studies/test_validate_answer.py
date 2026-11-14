@@ -161,7 +161,7 @@ class ValidateAnswerTest(unittest.TestCase):
         linted = []
 
         def record_the_files_linted(request):
-            linted.append(sorted(path.name for path in self.submitted.iterdir()))
+            linted.append(set(self.submitted.iterdir()))
             return 0, "", ""
 
         self.processes.answer_by(("awawa", "lint", "--strict", str(self.submitted)), record_the_files_linted)
@@ -172,7 +172,7 @@ class ValidateAnswerTest(unittest.TestCase):
         validate_answer(self.runtime, STUDY, self.run_directory, SUBMITTED)
 
         # Assert
-        self.assertEqual(linted, [["_schema.awawa", "answer.awawa"]])
+        self.assertEqual(linted, [{self.submitted / "_schema.awawa", self.submitted / "answer.awawa"}])
 
     def test_should_check_the_submitted_answer_against_the_operational_schema(self):
         # Arrange
