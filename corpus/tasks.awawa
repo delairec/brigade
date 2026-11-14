@@ -2141,7 +2141,6 @@ TASK B21
 			+ "BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest("
 	DELIVERED_BY 187
 	AFTER @TASK.B18
-	AFTER @TASK.B143
 	AFTER @TASK.B71
 	AFTER @TASK.B141
 	RATIONALE "it follows @TASK.B71, the launch options and the real run rehearsed, F1 and F22 of"
@@ -10679,8 +10678,14 @@ TASK B142
 TASK B143
 	TITLE "A task branch behind integration is rebased by git, the rebase slot running only on a"
 		+ "conflict"
-	STATUS implemented
+	STATUS archived
 	DELIVERED_BY 182
+	DESC "archived on 2026-11-14: @TASK.B246 makes false its SPEC that brigade rebase done pushes"
+		+ "the branch that descends from the head of BRANCH; rebase done checks that descent and"
+		+ "pushes nothing, the branch of a task being pushed through brigade task push alone, once"
+		+ "a brigade task check of HEAD passed; answers the finding of the verdict on pull request"
+		+ "#405"
+		REF @TASK.B246
 	TYPE feat
 	MILESTONE @MILESTONE.M1
 	COMPONENT "tick"
@@ -13754,7 +13759,6 @@ TASK B196
 			+ "test_should_tell_that_the_worktree_of_a_task_holds_uncommitted_changes(self):"
 		IMPL "tests/unit/git/test_has_uncommitted_changes.py::def"
 			+ "test_should_tell_whether_the_worktree_holds_changes_to_its_tracked_files(self):"
-	AFTER @TASK.B143
 	RATIONALE "since PR 182 the tick rebases a task branch behind its wave by git, and git refuses"
 		+ "a worktree holding uncommitted changes; the rebase is decided before every other path of"
 		+ "the task (brigade/tick/plan.py:184-187), so the repair that would finish the interrupted"
