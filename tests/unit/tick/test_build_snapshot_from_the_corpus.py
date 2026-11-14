@@ -2549,7 +2549,7 @@ class BuildSnapshotOfAStudyParkedByItsJudgingRunTest(BuildSnapshotTestCase):
         super().setUp()
         self.write_operational_corpus()
 
-    def park_triage(self, error_class: str, judging_record_kept: bool) -> None:
+    def park_triage(self, error_class: str, *, judging_record_kept: bool) -> None:
         self.record(35, OrderStarted(project=None, kind="study", order="triage", run=ORDER_RUN_OF_TRIAGE))
         self.record(
             30,
@@ -2592,7 +2592,7 @@ class BuildSnapshotOfAStudyParkedByItsJudgingRunTest(BuildSnapshotTestCase):
             with self.subTest(case=case):
                 # Arrange
                 self.setUp()
-                self.park_triage(error_class, judging_record_kept)
+                self.park_triage(error_class, judging_record_kept=judging_record_kept)
 
                 # Act
                 snapshot, _ = self.build()
