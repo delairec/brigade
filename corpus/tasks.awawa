@@ -17673,6 +17673,8 @@ TASK B246
 			+ "test_should_assemble_what_a_run_needs_to_deliver_the_task("
 	SPEC "once delivered, the pattern oversized_output_re_read_in_runs raises no new signal on the"
 		+ "runs launched after the delivery"
+		IMPL "brigade/tasks/assemble_task_context.py::describe_command(_read_task(runtime,"
+			+ "worktree, (\"show\", target))),"
 	RATIONALE "the pattern coverage_report_unchecked_before_push of the inbox cites pull requests"
 		+ "233 and 241; on 2026-11-08 pull request 388 failed coverage at 99%, pushed by a role"
 		+ "launched by hand outside a tick run, which reported coverage as unprovable locally"
