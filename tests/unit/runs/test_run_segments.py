@@ -1159,8 +1159,22 @@ class RunSegmentsInADisposableWorktreeTest(RunSegmentsTestCase):
         self.assertEqual(
             self.git.commands,
             [
-                (self.project, ("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "HEAD")),
-                (self.project, ("git", "worktree", "remove", "--force", str(self.worktree))),
+                (
+                    self.project,
+                    (
+                        "git",
+                        "worktree",
+                        "add",
+                        "--quiet",
+                        "--detach",
+                        "--lock",
+                        "--reason",
+                        "brigade run",
+                        str(self.worktree),
+                        "HEAD",
+                    ),
+                ),
+                (self.project, ("git", "worktree", "remove", "--force", "--force", str(self.worktree))),
             ],
         )
 

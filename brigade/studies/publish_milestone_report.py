@@ -3,7 +3,7 @@ from pathlib import Path
 
 from brigade.corpus.read_entities import Entity
 from brigade.git.add_branch_worktree import BranchWorktree
-from brigade.git.add_detached_worktree import add_detached_worktree
+from brigade.git.add_detached_worktree import DetachedWorktree, add_detached_worktree
 from brigade.git.clear_worktree_path import clear_worktree_path
 from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.fetch_branches import BranchesFetch, fetch_branches
@@ -12,7 +12,7 @@ from brigade.git.open_branch_worktree import open_branch_worktree
 from brigade.git.push_branch import BranchPush
 from brigade.git.push_head_to_branch import push_head_to_branch
 from brigade.git.read_head import read_head
-from brigade.git.remove_worktree import remove_worktree
+from brigade.git.remove_detached_worktree import remove_detached_worktree
 from brigade.git.reset_branch import reset_branch
 from brigade.ledger.append_event import append_event
 from brigade.ledger.milestone_pr_described import MilestonePrDescribed
@@ -33,6 +33,8 @@ from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.system.write_text_file import write_text_file
 from brigade.waves.compose_milestone_title import MilestoneTitleDemand, compose_milestone_title
 from brigade.waves.locate_branch_worktree import locate_branch_worktree
+
+PUBLICATION_REASON = "brigade publishing a milestone report"
 
 CORPUS_FIELD = "CORPUS"
 MAIN_FIELD = "MAIN"
@@ -154,14 +156,17 @@ def _open_branch_of_the_clone(context: StudyRunContext, located: StudyProject) -
     return worktree.path
 
 
-def _open_detached_checkout(context: StudyRunContext, located: StudyProject, environment: dict) -> Path:
+def _open_detached_checkout(context: StudyRunContext, located: StudyProject, environment: dict) -> DetachedWorktree:
     run_process = context.runtime.run_process
     branch = context.study.milestone.branch
     fetch_branches(run_process, BranchesFetch(repository=located.path, branches=(branch,), environment=environment))
     checkout = context.run_directory / CHECKOUT_DIRECTORY
     clear_worktree_path(run_process, located.path, checkout)
-    add_detached_worktree(run_process, located.path, checkout, f"{REMOTE_PREFIX}{branch}")
-    return checkout
+    worktree = DetachedWorktree(
+        repository=located.path, path=checkout, start=f"{REMOTE_PREFIX}{branch}", reason=PUBLICATION_REASON
+    )
+    add_detached_worktree(run_process, worktree)
+    return worktree
 
 
 def _publish_on_the_clone(context: StudyRunContext, publication: MilestonePublication, report: str, located) -> None:
@@ -174,12 +179,12 @@ def _publish_on_the_forge(
     context: StudyRunContext, publication: MilestonePublication, report: str, located: StudyProject
 ) -> int:
     run_process = context.runtime.run_process
-    checkout = _open_detached_checkout(context, located, publication.environment)
+    worktree = _open_detached_checkout(context, located, publication.environment)
     try:
-        _commit_report(context, publication, report, checkout)
-        return _publish_pull_request(context, publication, checkout)
+        _commit_report(context, publication, report, worktree.path)
+        return _publish_pull_request(context, publication, worktree.path)
     finally:
-        remove_worktree(run_process, located.path, checkout)
+        remove_detached_worktree(run_process, worktree)
 
 
 def publish_milestone_report(context: StudyRunContext) -> dict:

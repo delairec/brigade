@@ -127,7 +127,19 @@ class InstallProjectCorpusWithoutAForgeTest(InstallProjectCorpusTestCase):
 
         # Assert
         self.assertIn(
-            ("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "trunk"), self.processes.argvs
+            (
+                "git",
+                "worktree",
+                "add",
+                "--quiet",
+                "--detach",
+                "--lock",
+                "--reason",
+                "brigade project add",
+                str(self.worktree),
+                "trunk",
+            ),
+            self.processes.argvs,
         )
         self.assertIn(("git", "commit", "--quiet", "-m", SUBJECT), self.processes.argvs)
         self.assertIn(("git", "switch", "--quiet", "--create", BRANCH), self.processes.argvs)
@@ -137,7 +149,9 @@ class InstallProjectCorpusWithoutAForgeTest(InstallProjectCorpusTestCase):
         self._install("none")
 
         # Assert
-        self.assertEqual(self.processes.argvs[-1], ("git", "worktree", "remove", "--force", str(self.worktree)))
+        self.assertEqual(
+            self.processes.argvs[-1], ("git", "worktree", "remove", "--force", "--force", str(self.worktree))
+        )
 
     def test_should_name_the_branch_and_the_merge_command(self):
         # Act
@@ -175,7 +189,9 @@ class InstallProjectCorpusWithoutAForgeTest(InstallProjectCorpusTestCase):
             self._install("none")
 
         # Assert
-        self.assertEqual(self.processes.argvs[-1], ("git", "worktree", "remove", "--force", str(self.worktree)))
+        self.assertEqual(
+            self.processes.argvs[-1], ("git", "worktree", "remove", "--force", "--force", str(self.worktree))
+        )
 
 
 class InstallProjectCorpusOnAForgeTest(InstallProjectCorpusTestCase):
@@ -185,7 +201,19 @@ class InstallProjectCorpusOnAForgeTest(InstallProjectCorpusTestCase):
 
         # Assert
         self.assertIn(
-            ("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "origin/trunk"), self.processes.argvs
+            (
+                "git",
+                "worktree",
+                "add",
+                "--quiet",
+                "--detach",
+                "--lock",
+                "--reason",
+                "brigade project add",
+                str(self.worktree),
+                "origin/trunk",
+            ),
+            self.processes.argvs,
         )
 
     def test_should_push_the_branch(self):

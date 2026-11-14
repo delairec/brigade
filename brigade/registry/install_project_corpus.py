@@ -6,12 +6,12 @@ from brigade.corpus.change_corpus_file import CorpusChange, change_corpus_file
 from brigade.corpus.locate_corpus_lock import locate_corpus_lock
 from brigade.corpus.read_entities import Entity
 from brigade.errors import BrigadeError
-from brigade.git.add_detached_worktree import add_detached_worktree
+from brigade.git.add_detached_worktree import DetachedWorktree, add_detached_worktree
 from brigade.git.create_branch import create_branch
 from brigade.git.describe_merge_command import describe_merge_command
 from brigade.git.find_branch import find_branch
 from brigade.git.push_branch import BranchPush, push_branch
-from brigade.git.remove_worktree import remove_worktree
+from brigade.git.remove_detached_worktree import remove_detached_worktree
 from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_corpus_workspace import read_corpus_workspace
 from brigade.registry.read_project_field import read_project_field
@@ -19,6 +19,8 @@ from brigade.registry.render_project_schema import render_project_schema
 from brigade.runtime import Runtime
 from brigade.system.parse_configuration import CLI_KEY
 from brigade.waves.locate_project_main import locate_project_main
+
+INSTALLATION_REASON = "brigade project add"
 
 BRANCH = "brigade/init-corpus"
 WORKTREES_DIRECTORY = "corpus-installs"
@@ -39,7 +41,8 @@ def _commit_on_branch(runtime: Runtime, installation: CorpusInstallation, root: 
     project = installation.project
     worktree = runtime.paths.cache_root / WORKTREES_DIRECTORY / project.name
     main = locate_project_main(runtime.run_process, project, installation.read_environment)
-    add_detached_worktree(runtime.run_process, root, worktree, main)
+    detached = DetachedWorktree(repository=root, path=worktree, start=main, reason=INSTALLATION_REASON)
+    add_detached_worktree(runtime.run_process, detached)
     try:
         change_corpus_file(
             runtime.run_process,
@@ -54,7 +57,7 @@ def _commit_on_branch(runtime: Runtime, installation: CorpusInstallation, root: 
         )
         create_branch(runtime.run_process, worktree, BRANCH)
     finally:
-        remove_worktree(runtime.run_process, root, worktree)
+        remove_detached_worktree(runtime.run_process, detached)
 
 
 def _open_pull_request(runtime: Runtime, installation: CorpusInstallation, root: Path) -> int:

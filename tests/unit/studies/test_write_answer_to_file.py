@@ -66,13 +66,26 @@ class WriteAnswerToFileTest(unittest.TestCase):
         self.processes.answer(
             ("git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"), "origin/main\n"
         )
-        self.processes.answer(("git", "worktree", "add", "--quiet", "--detach", str(self.checkout), "main"))
+        self.processes.answer(
+            (
+                "git",
+                "worktree",
+                "add",
+                "--quiet",
+                "--detach",
+                "--lock",
+                "--reason",
+                "brigade writing an answer to a file",
+                str(self.checkout),
+                "main",
+            )
+        )
         self.processes.answer(("git", "switch", "--quiet", "--force-create", BRANCH))
         self.processes.answer(("git", "add", "--", RELATIVE_PATH))
         self.processes.answer(("git", "diff", "--cached", "--quiet", "--", RELATIVE_PATH), exit_code=1)
         self.processes.answer(("git", "commit", "--quiet", "-m", message))
         self.processes.answer(FORCED_PUSH)
-        self.processes.answer(("git", "worktree", "remove", "--force", str(self.checkout)))
+        self.processes.answer(("git", "worktree", "remove", "--force", "--force", str(self.checkout)))
 
     def create_context(self, forge: str, configuration: Configuration = NOTHING_BOUND) -> StudyRunContext:
         self.processes.answer_entities(
@@ -185,6 +198,9 @@ class WriteAnswerToFileTest(unittest.TestCase):
                     "add",
                     "--quiet",
                     "--detach",
+                    "--lock",
+                    "--reason",
+                    "brigade writing an answer to a file",
                     f"{self.root}/state/runs/20261019T090000Z-aaaaaa/checkout",
                     "main",
                 ),
@@ -199,7 +215,14 @@ class WriteAnswerToFileTest(unittest.TestCase):
                     "docs(studies): add the answer of trees, run 20261019T090000Z-aaaaaa",
                 ),
                 ("git", "push", "--quiet", "--force", "origin", "brigade/study-trees-20261019T090000Z-aaaaaa"),
-                ("git", "worktree", "remove", "--force", f"{self.root}/state/runs/20261019T090000Z-aaaaaa/checkout"),
+                (
+                    "git",
+                    "worktree",
+                    "remove",
+                    "--force",
+                    "--force",
+                    f"{self.root}/state/runs/20261019T090000Z-aaaaaa/checkout",
+                ),
             ],
         )
 

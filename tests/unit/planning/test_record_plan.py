@@ -95,9 +95,35 @@ class RecordPlanTestCase(unittest.TestCase):
         self.config_root = self.runtime.paths.config_root
         (self.config_root / "requests.awawa").write_text("REQUEST oak_r1\n\tSTATUS planning\n", encoding="utf-8")
         self.processes.answer(("git", "fetch", "--quiet", "origin", "main"))
-        self.processes.answer(("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "origin/main"))
-        self.processes.answer(("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "main"))
-        self.processes.answer(("git", "worktree", "remove", "--force", str(self.worktree)))
+        self.processes.answer(
+            (
+                "git",
+                "worktree",
+                "add",
+                "--quiet",
+                "--detach",
+                "--lock",
+                "--reason",
+                "brigade plan record",
+                str(self.worktree),
+                "origin/main",
+            )
+        )
+        self.processes.answer(
+            (
+                "git",
+                "worktree",
+                "add",
+                "--quiet",
+                "--detach",
+                "--lock",
+                "--reason",
+                "brigade plan record",
+                str(self.worktree),
+                "main",
+            )
+        )
+        self.processes.answer(("git", "worktree", "remove", "--force", "--force", str(self.worktree)))
         self.forge = create_forge([create_found_pull_request(NO_REVIEW_REQUIRED)])
 
     def script_plan_entities(self, entities: list[dict]) -> None:
@@ -338,7 +364,9 @@ class RecordPlanTest(RecordPlanTestCase):
         record_plan(self.runtime, self.create_recording())
 
         # Assert
-        self.assertIn(("git", "worktree", "remove", "--force", str(self.worktree)), self.processes.list_argvs())
+        self.assertIn(
+            ("git", "worktree", "remove", "--force", "--force", str(self.worktree)), self.processes.list_argvs()
+        )
 
     def test_should_check_the_plan_against_the_main_branch_of_the_forge(self):
         # Arrange
@@ -350,7 +378,20 @@ class RecordPlanTest(RecordPlanTestCase):
         # Assert
         self.assertEqual(
             select_argvs_opening_on(self.processes.list_argvs(), GIT_WORKTREE_ADD),
-            [("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "origin/main")],
+            [
+                (
+                    "git",
+                    "worktree",
+                    "add",
+                    "--quiet",
+                    "--detach",
+                    "--lock",
+                    "--reason",
+                    "brigade plan record",
+                    str(self.worktree),
+                    "origin/main",
+                )
+            ],
         )
 
     def test_should_fetch_the_main_branch_with_the_environment_of_the_forge(self):
@@ -450,7 +491,20 @@ class RecordPlanWithoutForgeTest(RecordPlanTestCase):
         # Assert
         self.assertEqual(
             select_argvs_opening_on(self.processes.list_argvs(), GIT_WORKTREE_ADD),
-            [("git", "worktree", "add", "--quiet", "--detach", str(self.worktree), "main")],
+            [
+                (
+                    "git",
+                    "worktree",
+                    "add",
+                    "--quiet",
+                    "--detach",
+                    "--lock",
+                    "--reason",
+                    "brigade plan record",
+                    str(self.worktree),
+                    "main",
+                )
+            ],
         )
 
     def test_should_merge_the_plan_branch_into_the_main_branch_no_worktree_holds(self):
@@ -694,7 +748,9 @@ class RecordPlanLintTest(RecordPlanTestCase):
 
         # Assert
         self.assertEqual(select_argvs_opening_on(self.processes.list_argvs(), GIT_SWITCH), [])
-        self.assertIn(("git", "worktree", "remove", "--force", str(self.worktree)), self.processes.list_argvs())
+        self.assertIn(
+            ("git", "worktree", "remove", "--force", "--force", str(self.worktree)), self.processes.list_argvs()
+        )
 
     def test_should_leave_the_request_planning_when_the_lint_refuses_the_plan(self):
         # Arrange

@@ -539,7 +539,16 @@ OFF_THE_WAVE_BRANCH = {
     READ_THE_TASK_HEAD: ProcessAnswer(stdout=f"{TASK_HEAD}\n"),
     READ_THE_WAVE_HEAD: ProcessAnswer(stdout=f"{WAVE_HEAD}\n"),
 }
-ADD_A_CHECKOUT_OF_THE_TASK_HEAD = ("git", "worktree", "add", "--quiet", "--detach")
+ADD_A_CHECKOUT_OF_THE_TASK_HEAD = (
+    "git",
+    "worktree",
+    "add",
+    "--quiet",
+    "--detach",
+    "--lock",
+    "--reason",
+    "brigade proving a head",
+)
 REBASE_ON_THE_WAVE_BRANCH = ("git", "rebase", "--fork-point", "integration/w1")
 TASK_BRANCH_MERGED = ("git", "merge-base", "--is-ancestor", "feature/B1-task", "integration/w1")
 STOPPED_ON_A_CONFLICT = {
