@@ -61,6 +61,11 @@ TRIAGE = dataclasses.replace(
     STUDY, name="triage", collectors=("inbox-families",), slot="triage", output="entity:PATTERN", answer_type="PATTERN"
 )
 RATIFIED_PATTERN = 'PATTERN cli_is_hard_to_read\n\tTITLE "the cli is hard to read"\n\tSTATUS ratified\n'
+EVIDENCE_ADDED = 'PATTERN cli_is_hard_to_read\n\tEVIDENCE "rt:101"\n'
+FAMILIES = {
+    "collector": "inbox-families",
+    "items": [{"by": "signal", "key": "rt:101", "signals": [{"id": "cb358a1d", "fingerprint": "rt:101"}]}],
+}
 SUBMITTED_PATTERN = 'PATTERN slow_tick\n\tTITLE "the tick is slow"\n\tSTATUS dismissed\n\tACTION dismiss\n'
 
 
@@ -150,6 +155,24 @@ class ValidateAnswerTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(refusal.exception), f"the answer holds no {TARGET}")
+
+    def test_should_lint_the_answer_alone_when_the_operational_corpus_holds_no_file_of_its_type(self):
+        # Arrange
+        linted = []
+
+        def record_the_files_linted(request):
+            linted.append(sorted(path.name for path in self.submitted.iterdir()))
+            return 0, "", ""
+
+        self.processes.answer_by(("awawa", "lint", "--strict", str(self.submitted)), record_the_files_linted)
+        self.processes.answer_json(("awawa", "show", TARGET, "--json", str(self.submitted)), FILLED_FIELDS)
+        self.processes.answer_json(("awawa", "show", TARGET, "--json", str(self.filled)), FILLED_FIELDS)
+
+        # Act
+        validate_answer(self.runtime, STUDY, self.run_directory, SUBMITTED)
+
+        # Assert
+        self.assertEqual(linted, [["_schema.awawa", "answer.awawa"]])
 
     def test_should_check_the_submitted_answer_against_the_operational_schema(self):
         # Arrange
@@ -248,6 +271,8 @@ class ValidateTriageAnswerTest(unittest.TestCase):
         (self.run_directory / "steps" / "collect.json").write_text('{"collected": []}', encoding="utf-8")
         self.submitted = self.run_directory / "validation" / "submitted"
         self.answered = self.run_directory / "validation" / "answered"
+        no_held_patterns = {}
+        self.processes.answer_entities(self.root / "config", "PATTERN", no_held_patterns)
 
     def test_should_lint_the_patterns_beside_those_the_operational_corpus_holds(self):
         # Arrange
@@ -285,6 +310,44 @@ class ValidateTriageAnswerTest(unittest.TestCase):
 
         # Assert
         self.assertIsNone(accepted)
+
+    def test_should_lint_the_evidence_an_answer_adds_on_the_pattern_the_operational_corpus_holds(self):
+        # Arrange
+        (self.root / "config" / "patterns.awawa").write_text(RATIFIED_PATTERN, encoding="utf-8")
+        families = self.root / "families.json"
+        families.write_text(json.dumps(FAMILIES), encoding="utf-8")
+        collected = {"collected": [{"collector": "inbox-families", "summary": {}, "document": str(families)}]}
+        (self.run_directory / "steps" / "collect.json").write_text(json.dumps(collected), encoding="utf-8")
+        linted = []
+
+        def record_the_corpus_linted(request):
+            linted.append(
+                {
+                    "patterns": (self.submitted / "patterns.awawa").read_text(encoding="utf-8"),
+                    "answer": (self.submitted / "answer.awawa").read_text(encoding="utf-8"),
+                }
+            )
+            return 0, "", ""
+
+        self.processes.answer_by(("awawa", "lint", "--strict", str(self.submitted)), record_the_corpus_linted)
+        held_patterns = {"cli_is_hard_to_read": (("TITLE", "the cli is hard to read"), ("STATUS", "ratified"))}
+        self.processes.answer_entities(self.root / "config", "PATTERN", held_patterns)
+        self.processes.answer_entities(self.answered, "PATTERN", {"cli_is_hard_to_read": (("EVIDENCE", "rt:101"),)})
+
+        # Act
+        validate_answer(self.runtime, TRIAGE, self.run_directory, EVIDENCE_ADDED)
+
+        # Assert
+        self.assertEqual(
+            linted,
+            [
+                {
+                    "patterns": 'PATTERN cli_is_hard_to_read\n\tTITLE "the cli is hard to read"\n\tSTATUS ratified\n'
+                    '\tEVIDENCE "rt:101"\n',
+                    "answer": "",
+                }
+            ],
+        )
 
     def test_should_refuse_a_triage_answer_its_patterns_check_refuses(self):
         # Arrange

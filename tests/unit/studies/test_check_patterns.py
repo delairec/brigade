@@ -56,6 +56,13 @@ FINDINGS = {
     ],
 }
 
+HELD_PATTERN = (
+    ("TITLE", "the cli is hard to read"),
+    ("STATUS", "ratified"),
+    ("EVIDENCE", "rt:9"),
+    ("ACTION", "constraint"),
+)
+
 
 class CheckPatternsTest(unittest.TestCase):
     def setUp(self):
@@ -65,6 +72,8 @@ class CheckPatternsTest(unittest.TestCase):
         self.processes = ScriptedProcesses()
         self.runtime = create_test_runtime(create_test_paths(root), run_process=self.processes)
         self.answer = root / "submitted"
+        no_held_patterns = {}
+        self.hold_patterns(no_held_patterns)
         families = root / "families.json"
         families.write_text(json.dumps(FAMILIES), encoding="utf-8")
         self.collected = [{"collector": "inbox-families", "summary": FAMILIES["summary"], "document": str(families)}]
@@ -78,6 +87,9 @@ class CheckPatternsTest(unittest.TestCase):
 
     def answer_patterns(self, patterns: dict) -> None:
         self.processes.answer_entities(self.answer, "PATTERN", patterns)
+
+    def hold_patterns(self, patterns: dict) -> None:
+        self.processes.answer_entities(self.runtime.paths.config_root, "PATTERN", patterns)
 
     def test_should_accept_new_patterns_citing_the_signals_collected_with_an_action(self):
         # Arrange
@@ -239,3 +251,59 @@ class CheckPatternsTest(unittest.TestCase):
             "@PATTERN.status_is_read_again: the EVIDENCE 'repeated_command:vibe:s-built:9' opens on the fingerprint"
             " of no finding transcript-findings collected",
         )
+
+    def test_should_accept_evidence_added_to_a_pattern_the_operational_corpus_holds(self):
+        # Arrange
+        self.hold_patterns({"cli_is_hard_to_read": HELD_PATTERN})
+        self.answer_patterns({"cli_is_hard_to_read": (("EVIDENCE", "rt:101 another thread"), ("EVIDENCE", "rt:103"))})
+
+        # Act
+        accepted = check_patterns(self.runtime, self.answer, self.collected)
+
+        # Assert
+        self.assertIsNone(accepted)
+
+    def test_should_refuse_an_evidence_added_to_a_held_pattern_opening_on_no_fingerprint_collected(self):
+        # Arrange
+        self.hold_patterns({"cli_is_hard_to_read": HELD_PATTERN})
+        self.answer_patterns({"cli_is_hard_to_read": (("EVIDENCE", "rt:10 a thread"),)})
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            check_patterns(self.runtime, self.answer, self.collected)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "@PATTERN.cli_is_hard_to_read: the EVIDENCE 'rt:10 a thread' opens on the fingerprint of no signal"
+            " inbox-families collected",
+        )
+
+    def test_should_refuse_a_held_pattern_the_answer_gives_another_field_than_evidence(self):
+        # Arrange
+        self.hold_patterns({"cli_is_hard_to_read": HELD_PATTERN})
+        self.answer_patterns({"cli_is_hard_to_read": (("STATUS", "new"), ("EVIDENCE", "rt:101"))})
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            check_patterns(self.runtime, self.answer, self.collected)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "@PATTERN.cli_is_hard_to_read is held by the operational corpus: an answer adds EVIDENCE to it, STATUS"
+            " given",
+        )
+
+    def test_should_refuse_a_held_pattern_the_answer_adds_no_evidence_to(self):
+        # Arrange
+        self.hold_patterns({"cli_is_hard_to_read": HELD_PATTERN})
+        no_field = ()
+        self.answer_patterns({"cli_is_hard_to_read": no_field})
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            check_patterns(self.runtime, self.answer, self.collected)
+
+        # Assert
+        self.assertEqual(str(refusal.exception), "@PATTERN.cli_is_hard_to_read holds no EVIDENCE")

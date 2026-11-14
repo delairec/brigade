@@ -9,6 +9,7 @@ from brigade.runtime import Runtime
 
 PATTERN_TYPE = "PATTERN"
 PROPOSED_STATUS = "new"
+EVIDENCE_FIELD = "EVIDENCE"
 INBOX_FAMILIES = "inbox-families"
 TRANSCRIPT_FINDINGS = "transcript-findings"
 
@@ -50,14 +51,8 @@ def _read_values(pattern: Entity, field_name: str) -> list[str]:
     return [field.value for field in pattern.fields if field.name == field_name]
 
 
-def _check_pattern(pattern: Entity, citable: Citable) -> None:
-    target = f"@{PATTERN_TYPE}.{pattern.name}"
-    [status] = _read_values(pattern, "STATUS")
-    if status != PROPOSED_STATUS:
-        raise BrigadeError(f"{target} is {status}: a triage proposes it {PROPOSED_STATUS}")
-    if not _read_values(pattern, "ACTION"):
-        raise BrigadeError(f"{target} names no ACTION")
-    evidence_lines = _read_values(pattern, "EVIDENCE")
+def _check_evidence(target: str, pattern: Entity, citable: Citable) -> None:
+    evidence_lines = _read_values(pattern, EVIDENCE_FIELD)
     if not evidence_lines:
         raise BrigadeError(f"{target} holds no EVIDENCE")
     for evidence in evidence_lines:
@@ -67,7 +62,35 @@ def _check_pattern(pattern: Entity, citable: Citable) -> None:
             )
 
 
+def _check_new_pattern(target: str, pattern: Entity) -> None:
+    [status] = _read_values(pattern, "STATUS")
+    if status != PROPOSED_STATUS:
+        raise BrigadeError(f"{target} is {status}: a triage proposes it {PROPOSED_STATUS}")
+    if not _read_values(pattern, "ACTION"):
+        raise BrigadeError(f"{target} names no ACTION")
+
+
+def _check_evidence_added(target: str, pattern: Entity) -> None:
+    for field in pattern.fields:
+        if field.name != EVIDENCE_FIELD:
+            raise BrigadeError(
+                f"{target} is held by the operational corpus: an answer adds EVIDENCE to it, {field.name} given"
+            )
+
+
+def _check_pattern(pattern: Entity, citable: Citable, held_names: frozenset[str]) -> None:
+    target = f"@{PATTERN_TYPE}.{pattern.name}"
+    if pattern.name in held_names:
+        _check_evidence_added(target, pattern)
+    else:
+        _check_new_pattern(target, pattern)
+    _check_evidence(target, pattern, citable)
+
+
 def check_patterns(runtime: Runtime, directory: Path, collected: list[dict]) -> None:
     citable = _read_citable(collected)
+    held_names = frozenset(
+        pattern.name for pattern in read_entities(runtime.run_process, runtime.paths.config_root, PATTERN_TYPE)
+    )
     for pattern in read_entities(runtime.run_process, directory, PATTERN_TYPE):
-        _check_pattern(pattern, citable)
+        _check_pattern(pattern, citable, held_names)

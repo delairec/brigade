@@ -250,3 +250,30 @@ class InboxFamiliesCollectorTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document["cache"], False)
+
+    def test_should_hand_the_name_and_the_title_of_each_pattern_the_operational_corpus_holds(self):
+        # Arrange
+        self.record(FIRST_THREAD_ON_THE_CLI)
+        self.answer_patterns(
+            {
+                "cli_is_hard_to_read": (
+                    ("TITLE", "the cli is hard to read"),
+                    ("STATUS", "ratified"),
+                    ("EVIDENCE", "rt:9"),
+                    ("ACTION", "constraint"),
+                ),
+                "tick_is_slow": (("TITLE", "the tick is slow"), ("STATUS", "new"), ("EVIDENCE", "rt:10")),
+            }
+        )
+
+        # Act
+        document = collect(ENVIRONMENT, self.runtime, EQUIPMENT)
+
+        # Assert
+        self.assertEqual(
+            document["patterns"],
+            [
+                {"name": "cli_is_hard_to_read", "title": "the cli is hard to read"},
+                {"name": "tick_is_slow", "title": "the tick is slow"},
+            ],
+        )
