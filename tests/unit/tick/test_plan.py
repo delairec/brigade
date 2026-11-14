@@ -884,8 +884,17 @@ def create_study(
     status: str = "active",
     last_started: datetime | None = None,
     parked: bool = False,
+    quota_resume_at: datetime | None = None,
 ) -> StudyFacts:
-    return StudyFacts(name=name, slot=slot, every=every, status=status, last_started=last_started, parked=parked)
+    return StudyFacts(
+        name=name,
+        slot=slot,
+        every=every,
+        status=status,
+        last_started=last_started,
+        parked=parked,
+        quota_resume_at=quota_resume_at,
+    )
 
 
 TWO_HOURS_AGO = datetime(2026, 10, 6, 10, 0, tzinfo=UTC)
@@ -3282,3 +3291,180 @@ class PlanEndingAMilestoneOfAProjectWithoutAForgeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(actions, (CloseMilestone(project="shop", milestone="M1", pr=None),))
+
+
+RATE_LIMIT_IN_FORCE = (RateLimit(reset=ResetHour(hour="15:00", timezone="UTC")),)
+PAUSE_SHOP_UNTIL_15 = PauseWave(wave="shop_w1", reason="quota", resume_at="2026-10-06T15:00:00Z")
+VERIFYING_S3 = TaskFacts(
+    name="S3",
+    branch="feature/S3-task",
+    pull_request=OPEN,
+    worktree=WORKTREE_S3,
+    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+)
+PREFLIGHTED_DELIVERY_OF_S3 = TaskFacts(
+    name="S3", branch="feature/S3-task", delivered_head=HEAD, preflighted_head=HEAD, worktree=WORKTREE_S3
+)
+REQUESTED_S3 = dataclasses.replace(VERIFYING_S3, preflight_failures=(BODY_FAILURE,))
+FAILING_ITS_CHECKS_S3 = dataclasses.replace(VERIFYING_S3, preflight_failures=(CHECKS_FAILURE,))
+BEHIND_S3 = dataclasses.replace(VERIFYING_S3, pull_request=BEHIND)
+AMENDED_S3 = dataclasses.replace(BEHIND_S3, amendment=AMENDED_ON_THE_TASK_BASE)
+PARKED_WITH_ITS_PULL_REQUEST_S3 = TaskFacts(name="S3", branch="feature/S3-task", pull_request=OPEN)
+M9_OUTRUN_BY_MAIN = MilestoneFacts(
+    project="shop", milestone="M9", branch="integration/delivery", open_waves=("shop_w4",), behind_main=True
+)
+
+
+class PlanNoRunWhileARateLimitIsInForceTest(unittest.TestCase):
+    def test_should_launch_no_run_of_any_slot_until_the_reset_of_a_rate_limit(self):
+        for case, snapshot, expected in [
+            (
+                "a build run",
+                Snapshot(now=NOW, waves=(create_wave(ALONE, {}),), projects=(SHOP,), rate_limits=RATE_LIMIT_IN_FORCE),
+                (PAUSE_SHOP_UNTIL_15,),
+            ),
+            (
+                "the verification of a pull request",
+                Snapshot(
+                    now=NOW,
+                    waves=(create_wave((VERIFYING_S3,), {"S3": "verifying"}),),
+                    projects=(SHOP,),
+                    rate_limits=RATE_LIMIT_IN_FORCE,
+                ),
+                (PAUSE_SHOP_UNTIL_15,),
+            ),
+            (
+                "the verification of a delivered head",
+                Snapshot(
+                    now=NOW,
+                    waves=(create_wave((PREFLIGHTED_DELIVERY_OF_S3,), {"S3": "verifying"}),),
+                    projects=(SHOP,),
+                    rate_limits=RATE_LIMIT_IN_FORCE,
+                ),
+                (PAUSE_SHOP_UNTIL_15,),
+            ),
+            (
+                "a remediation",
+                Snapshot(
+                    now=NOW,
+                    waves=(create_wave((REQUESTED_S3,), {"S3": "changes_requested"}),),
+                    projects=(SHOP,),
+                    rate_limits=RATE_LIMIT_IN_FORCE,
+                ),
+                (PAUSE_SHOP_UNTIL_15,),
+            ),
+            (
+                "a check repair",
+                Snapshot(
+                    now=NOW,
+                    waves=(create_wave((FAILING_ITS_CHECKS_S3,), {"S3": "fixing"}),),
+                    projects=(SHOP,),
+                    rate_limits=RATE_LIMIT_IN_FORCE,
+                ),
+                (PAUSE_SHOP_UNTIL_15,),
+            ),
+            (
+                "the rebuild of an amended task",
+                Snapshot(
+                    now=NOW,
+                    waves=(create_wave((AMENDED_S3,), {"S3": "pr_open"}),),
+                    projects=(SHOP,),
+                    rate_limits=RATE_LIMIT_IN_FORCE,
+                ),
+                (PAUSE_SHOP_UNTIL_15,),
+            ),
+            (
+                "the rebase of a task",
+                Snapshot(
+                    now=NOW,
+                    waves=(create_wave((BEHIND_S3,), {"S3": "pr_open"}),),
+                    projects=(SHOP,),
+                    rate_limits=RATE_LIMIT_IN_FORCE,
+                ),
+                (PAUSE_SHOP_UNTIL_15,),
+            ),
+            (
+                "the resume of a run cut by an earlier rate limit",
+                Snapshot(
+                    now=NOW,
+                    waves=(dataclasses.replace(create_wave(STOPPED_S3, {"S3": "paused:quota"}), pause=QUOTA_UNTIL_12),),
+                    projects=(SHOP,),
+                    rate_limits=RATE_LIMIT_IN_FORCE,
+                ),
+                (ResumeWave(wave="shop_w1", reason="quota"),),
+            ),
+            (
+                "the report of a task",
+                Snapshot(
+                    now=NOW,
+                    waves=(create_wave_of_no_milestone((PARKED_WITH_ITS_PULL_REQUEST_S3,), {"S3": "parked"}),),
+                    projects=(SHOP,),
+                    rate_limits=RATE_LIMIT_IN_FORCE,
+                ),
+                (PAUSE_SHOP_UNTIL_15, CloseWave(wave="shop_w1", project="shop")),
+            ),
+            (
+                "the report of a milestone",
+                Snapshot(
+                    now=NOW,
+                    projects=(SHOP_ON_GITHUB,),
+                    milestones=(create_milestone(WAVES_OF_M4_CLOSED, NO_TASK_TODO),),
+                    rate_limits=RATE_LIMIT_IN_FORCE,
+                ),
+                (),
+            ),
+            (
+                "the rebase of a milestone branch",
+                Snapshot(now=NOW, projects=(SHOP,), milestones=(M9_OUTRUN_BY_MAIN,), rate_limits=RATE_LIMIT_IN_FORCE),
+                (),
+            ),
+            (
+                "a study",
+                Snapshot(now=NOW, studies=(create_study(),), rate_limits=RATE_LIMIT_IN_FORCE),
+                (),
+            ),
+            (
+                "a verification while a wave is paused on the quota",
+                Snapshot(
+                    now=NOW,
+                    waves=(
+                        create_wave((VERIFYING_S3,), {"S3": "verifying"}),
+                        dataclasses.replace(CAFE_WAVE, pause=QUOTA_UNTIL_13),
+                    ),
+                    projects=(SHOP, CAFE),
+                ),
+                (PauseWave(wave="shop_w1", reason="quota", resume_at="2026-10-06T13:00:00Z"),),
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_launch_a_study_parked_by_a_rate_limit_once_its_reset_has_passed(self):
+        for case, study, expected in [
+            (
+                "its reset passed",
+                create_study(last_started=HALF_AN_HOUR_AGO, parked=True, quota_resume_at=NOW),
+                (LAUNCH_WEEKLY,),
+            ),
+            (
+                "its reset still ahead",
+                create_study(
+                    last_started=HALF_AN_HOUR_AGO, parked=True, quota_resume_at=datetime(2026, 10, 6, 13, 0, tzinfo=UTC)
+                ),
+                (),
+            ),
+            ("parked on another cause", create_study(last_started=TWO_HOURS_AGO, parked=True), ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                snapshot = Snapshot(now=NOW, studies=(study,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)

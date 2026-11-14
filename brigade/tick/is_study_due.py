@@ -8,8 +8,10 @@ ACTIVE_STATUS = "active"
 
 
 def is_study_due(study: StudyFacts, now: datetime) -> bool:
-    if study.status != ACTIVE_STATUS or study.every is None or study.parked:
+    if study.status != ACTIVE_STATUS or study.every is None:
         return False
+    if study.parked:
+        return study.quota_resume_at is not None and study.quota_resume_at <= now
     try:
         schedule = read_schedule(study.every)
     except BrigadeError as refusal:

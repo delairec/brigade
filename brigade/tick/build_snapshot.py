@@ -44,6 +44,7 @@ from brigade.runs.read_run_question import read_run_question
 from brigade.runtime import Runtime
 from brigade.studies.read_last_study_orders import read_last_study_orders
 from brigade.studies.read_live_study_runs import LiveStudyRun, read_live_study_runs
+from brigade.studies.read_quota_resumes import read_quota_resumes
 from brigade.studies.read_studies import read_studies
 from brigade.system.parse_configuration import Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
@@ -1165,13 +1166,16 @@ def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeR
     runtime = dataclasses.replace(runtime, run_process=remember_process_records(runtime.run_process))
     reading = _assemble_reading(runtime, configuration, forge)
     last_orders = read_last_study_orders(reading.entries)
+    quota_resumes = read_quota_resumes(runtime.paths.state_root, reading.entries)
     projects = _read_registered_projects(runtime, reading)
     projects_read = frozenset(project.name for project in projects)
     return Snapshot(
         now=runtime.now.astimezone(),
         waves=_read_open_waves(runtime, reading, projects_read),
         projects=projects,
-        studies=tuple(describe_study_facts(study, last_orders.get(study.name)) for study in read_studies(runtime)),
+        studies=tuple(
+            describe_study_facts(study, last_orders.get(study.name), quota_resumes) for study in read_studies(runtime)
+        ),
         live_study_runs=read_live_study_runs(runtime.paths.state_root, is_recorded_process_alive),
         study_runs=configuration.study_runs,
         rate_limits=_read_rate_limits(reading, runtime.now),

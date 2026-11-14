@@ -12,6 +12,7 @@ class StudyFacts:
     status: str
     last_started: datetime | None
     parked: bool
+    quota_resume_at: datetime | None = None
 
     def to_document(self) -> dict:
         return {
