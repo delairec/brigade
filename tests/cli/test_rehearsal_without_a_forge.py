@@ -139,3 +139,10 @@ class BrigadeRehearsalOfAOneTaskWaveUnderNoAutoMergeTest(unittest.TestCase):
         # Assert
         self.assertIn("wave.closed", names)
         self.assertEqual(states[-1], "merged")
+
+    def test_should_end_the_report_of_the_milestone_once_its_task_is_merged(self):
+        # Act
+        names = self.rehearser.list_event_names()
+
+        # Assert
+        self.assertIn("order.done", names)
