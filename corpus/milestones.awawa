@@ -62,6 +62,7 @@ MILESTONE M7
 MILESTONE M8
 	TITLE "Recipes"
 	STATUS planned
+	AFTER @MILESTONE.M12
 
 MILESTONE F0
 	TITLE "fix-foundations"
@@ -83,6 +84,7 @@ MILESTONE F0
 MILESTONE ADD0
 	TITLE "post-mvp"
 	STATUS planned
+	AFTER @MILESTONE.M8
 	DESC "improvements found while running brigade on itself that no milestone of the MVP needs,"
 		+ "planned after M8"
 	SOURCE "the user's words of 2026-10-07, \"on va créer une milestone \\\"post-mvp\\\" avec comme"

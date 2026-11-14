@@ -77,6 +77,7 @@ from brigade.waves.name_milestone_branch import name_milestone_branch
 from brigade.waves.prepare_wave_tree import WaveTreeReading, locate_wave_branch_base, prepare_wave_tree
 from brigade.waves.read_active_milestones import read_active_milestones
 from brigade.waves.read_project_tasks import ProjectTasks, ProjectTasksReading, read_project_tasks
+from brigade.waves.read_served_milestones import read_served_milestones
 from brigade.waves.read_task_states import read_task_states
 from brigade.waves.read_wave_pause import WavePause, read_wave_pause
 from brigade.waves.read_wave_start import read_wave_start
@@ -843,13 +844,9 @@ def _describe_uncut_milestone(
 def _list_uncut_milestones(
     runtime: Runtime, reading: WaveReading, project: str, main: ProjectTasks
 ) -> tuple[UncutMilestone, ...]:
-    if not any(_read_milestone(task) for task in main.by_name.values()):
-        return ()
     return tuple(
         _describe_uncut_milestone(runtime, reading, _MainReading(project=project, main=main), milestone)
-        for milestone in sorted(
-            active.removeprefix(MILESTONE_PREFIX) for active in read_active_milestones(runtime.run_process, main.root)
-        )
+        for milestone in sorted(read_served_milestones(runtime.run_process, main).served)
         if find_milestone_branch(reading.entries, project, milestone) is None
     )
 
