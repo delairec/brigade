@@ -17512,7 +17512,8 @@ TASK B244
 	TITLE "The tick signals a task of an open wave it has taken no action on for a delay"
 		+ "config.toml sets, 60 minutes by default: one inbox signal, fingerprinted so that a"
 		+ "recurrence folds, so that a stall is seen without a human reading the ledger"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 406
 	TYPE feat
 	MILESTONE @MILESTONE.M12
 	COMPONENT "the tick and the inbox"
