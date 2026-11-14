@@ -3,6 +3,7 @@ import re
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
+from brigade.errors import BrigadeError, PullRequestCompareFailed
 from brigade.runtime import Runtime
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRequest
 
@@ -304,16 +305,22 @@ def _describe_found_pull_request(pull_request: dict, behind_by: str) -> dict:
     }
 
 
+def _compare_to_base(request: dict, runtime: Runtime, pull_request: dict) -> str:
+    base = pull_request["baseRefName"]
+    try:
+        return _ask_gh(
+            request, runtime, ("api", f"{COMPARE_PATH}/{base}...{pull_request['headRefOid']}", "--jq", ".behind_by")
+        )
+    except BrigadeError as failure:
+        raise PullRequestCompareFailed(base, failure) from failure
+
+
 def find_pull_request(request: dict, runtime: Runtime) -> dict:
     found = json.loads(_ask_gh(request, runtime, _build_head_listing_arguments(request["branch"])))
     if not found:
         return {"schema_version": DOCUMENT_SCHEMA_VERSION, "pull_request": None}
     pull_request = found[0]
-    behind_by = _ask_gh(
-        request,
-        runtime,
-        ("api", f"{COMPARE_PATH}/{pull_request['baseRefName']}...{pull_request['headRefOid']}", "--jq", ".behind_by"),
-    )
+    behind_by = _compare_to_base(request, runtime, pull_request)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "pull_request": _describe_found_pull_request(pull_request, behind_by),

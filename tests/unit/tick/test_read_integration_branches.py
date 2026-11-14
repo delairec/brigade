@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.corpus.read_entities import Entity, EntityField
-from brigade.errors import CommandFailed
+from brigade.errors import CommandFailed, PullRequestCompareFailed
 from brigade.ledger.branch_base_gone import BranchBaseGone
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
@@ -415,8 +415,18 @@ class ReadABranchItCannotReadTest(ReadIntegrationBranchesTestCase):
         self.assertIn("brigade tick: the branch integration/tides of shop skipped: ", errors.getvalue())
 
 
-COMPARE_NOT_FOUND = CommandFailed(
-    ("gh", "api", "repos/{owner}/{repo}/compare/integration/currents...9c1e2d3"), 1, "Not Found (HTTP 404)"
+COMPARE_NOT_FOUND = PullRequestCompareFailed(
+    "integration/tides",
+    CommandFailed(("gh", "api", "repos/{owner}/{repo}/compare/integration/tides...9c1e2d3"), 1, "Not Found (HTTP 404)"),
+)
+TIDES_ON_THE_FORGE = (
+    "git",
+    "ls-remote",
+    "--quiet",
+    "--exit-code",
+    "--heads",
+    "origin",
+    "refs/heads/integration/tides",
 )
 CURRENTS_ON_THE_FORGE = (
     "git",
@@ -429,26 +439,27 @@ CURRENTS_ON_THE_FORGE = (
 )
 W3_IN_MAIN = ("git", "merge-base", "--is-ancestor", "9c1e2d3", "main")
 BASE_OF_W3_GONE = LedgerEntry(
-    instant=INSTANT, event=BranchBaseGone(project="shop", branch="integration/shop_w3", base="integration/currents")
+    instant=INSTANT, event=BranchBaseGone(project="shop", branch="integration/shop_w3", base="integration/tides")
 )
 
 
 class FailingPullRequestReaderDouble:
-    def __init__(self):
+    def __init__(self, failure: Exception = COMPARE_NOT_FOUND):
         self.branches: list[str] = []
+        self._failure = failure
 
     def __call__(self, repository: str, branch: str) -> PullRequestFacts | None:
         self.branches.append(branch)
-        raise COMPARE_NOT_FOUND
+        raise self._failure
 
 
 class ReadABranchWhoseBaseTheForgeNoLongerHoldsTest(ReadIntegrationBranchesTestCase):
-    def test_should_read_the_base_gone_from_the_forge_of_a_branch_whose_pull_request_it_cannot_read(self):
+    def test_should_read_as_gone_the_base_of_the_pull_request_whose_compare_fails_not_the_base_of_the_wave(self):
         # Arrange
         git = RecordingProcessRunner(
             {
                 W3_HEAD: ProcessAnswer(stdout="9c1e2d3\n"),
-                CURRENTS_ON_THE_FORGE: ProcessAnswer(exit_code=2),
+                TIDES_ON_THE_FORGE: ProcessAnswer(exit_code=2),
                 W3_IN_MAIN: ProcessAnswer(exit_code=1),
             }
         )
@@ -476,7 +487,7 @@ class ReadABranchWhoseBaseTheForgeNoLongerHoldsTest(ReadIntegrationBranchesTestC
                     worktree=None,
                     run_live=False,
                     locked=False,
-                    gone_base="integration/currents",
+                    gone_base="integration/tides",
                 ),
             ),
         )
@@ -494,6 +505,28 @@ class ReadABranchWhoseBaseTheForgeNoLongerHoldsTest(ReadIntegrationBranchesTestC
 
         # Assert
         self.assertEqual(branches, ())
+
+    def test_should_skip_a_branch_whose_pull_request_read_fails_short_of_its_compare(self):
+        # Arrange
+        git = RecordingProcessRunner(
+            {W3_HEAD: ProcessAnswer(stdout="9c1e2d3\n"), CURRENTS_ON_THE_FORGE: ProcessAnswer(exit_code=2)}
+        )
+        failure = CommandFailed(("gh", "pr", "list"), 1, "HTTP 502")
+        reading = dataclasses.replace(
+            self.create_reading((START_OF_W3, CLOSE_OF_W3), {}),
+            read_pull_request=FailingPullRequestReaderDouble(failure),
+        )
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            read_integration_branches(git, reading)
+
+        # Assert
+        self.assertEqual(
+            errors.getvalue(),
+            "brigade tick: the branch integration/shop_w3 of shop skipped: gh pr list exited 1: HTTP 502\n",
+        )
 
     def test_should_read_no_more_the_pull_request_of_a_branch_whose_gone_base_the_ledger_records(self):
         # Arrange

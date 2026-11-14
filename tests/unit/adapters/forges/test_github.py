@@ -27,7 +27,7 @@ from brigade.adapters.forges.github import (
     reply_review_thread,
     rewrite_pull_request_body,
 )
-from brigade.errors import CommandFailed
+from brigade.errors import CommandFailed, PullRequestCompareFailed
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRecord, ProcessRequest
 from tests.unit.create_test_runtime import create_test_runtime
 
@@ -532,6 +532,24 @@ class FindPullRequestTest(unittest.TestCase):
                 "updated_at": "2026-10-30T14:04:22Z",
             },
         )
+
+    def test_should_name_the_base_of_the_pull_request_whose_compare_fails(self):
+        # Arrange
+        def gh(request: ProcessRequest) -> ProcessRecord:
+            if request.argv[1] == "api":
+                raise CommandFailed(request.argv, 1, "Not Found (HTTP 404)")
+            return ProcessRecord(
+                argv=request.argv, cwd=request.cwd, exit_code=0, stdout=OPEN_PULL_REQUEST, stderr="", duration_ms=0
+            )
+
+        runtime = create_test_runtime(run_process=gh)
+
+        # Act
+        with self.assertRaises(PullRequestCompareFailed) as raised:
+            find_pull_request(FIND_REQUEST, runtime)
+
+        # Assert
+        self.assertEqual(raised.exception.base, "integration/M1-empty-cart")
 
     def test_should_answer_no_pull_request_for_a_branch_that_has_none(self):
         # Arrange

@@ -15,6 +15,12 @@ class CommandFailed(ToolFailure):
         super().__init__(f"{' '.join(argv)} exited {exit_code}: {stderr.strip()}")
 
 
+class PullRequestCompareFailed(BrigadeError):
+    def __init__(self, base: str, failure: BrigadeError):
+        super().__init__(str(failure))
+        self.base = base
+
+
 class EntityNotDefined(BrigadeError):
     pass
 
