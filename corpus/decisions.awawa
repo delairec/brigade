@@ -6924,3 +6924,38 @@ DECISION AnAnswerOfTheTriageAddsEvidenceToAHeldPatternByAPatternOfItsNameHolding
 	SOURCE "the user's ruling of 2026-11-13 at the refinement of @TASK.B245: « Le modèle ajoute des"
 		+ "EVIDENCE »"
 		REF @TASK.B245
+
+DECISION TheStallOfATaskIsReadFromItsLastLedgerEventAndRaisedOnceTheRoundsOfTheTickSettle
+	TITLE "the tick reads the last action on a task from task.state, run.finished and"
+		+ "tick.action_failed keyed by its wave and its task, the wave.started instant when it has"
+		+ "none, and records the stall signals of the plan of its last round, once, after its"
+		+ "rounds"
+	STATUS active
+	DESC "binds SPEC 1 to 5 of @TASK.B244"
+		REF @TASK.B244
+	DESC "the key of config.toml is stall_after, in minutes, 1 or more, 60 when absent"
+	DESC "the ledger declares no run.started event: a run that starts records task.state running,"
+		+ "which stands for it"
+	DESC "a task with no event of its own in its wave takes the instant of the wave.started of that"
+		+ "wave as its last action"
+	DESC "a task the plan of the round acts on raises no stall signal in that round"
+	DESC "the stall signals of a tick are those of the plan of its last round, recorded once after"
+		+ "the rounds"
+	DESC "a task of a wave paused on the quota counts as paused on the quota, whatever its own"
+		+ "state"
+	DESC "the evidence of the signal names the wave, the task and the instant of the last action"
+	REJECTED "a task with no event of its own raising no signal: a task of an open wave the tick"
+		+ "never launched is a stall the signal exists to report"
+	REJECTED "the stall signals recorded in the round that plans them: the first round signals the"
+		+ "task a later round launches once the merge of its predecessor lands, and every round"
+		+ "folds the signal again"
+	REJECTED "a task of a wave paused on the quota signalled while its own state is not"
+		+ "paused:quota: the pause of the wave holds every task of it on the quota, which the user"
+		+ "ruled raises no signal"
+	RATIONALE "the rounds of the tick replan until no action remains, so only the plan of the last"
+		+ "round says which tasks the tick leaves untouched; the build run of @TASK.B244 saw a"
+		+ "stall folded ten times in one tick and recorded for a task launched in the next round"
+		REF @TASK.B244
+	SOURCE "the build run of @TASK.B244 of 2026-11-14, on the declared events of"
+		+ "brigade/ledger/declared_events.py and the rounds of brigade/tick/run_rounds.py"
+		REF @TASK.B244

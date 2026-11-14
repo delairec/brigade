@@ -3292,6 +3292,7 @@ THREE_HOURS_AGO = datetime(2026, 10, 6, 9, 0, tzinfo=UTC)
 STALL_AFTER_AN_HOUR = 60
 STALL_AFTER_FOUR_HOURS = 240
 NO_PAUSE = None
+FORGE_ACCOUNT_PAUSE = WavePause(reason="forge_account", resume_at=None)
 SIGNAL_STALL_OF_S3 = SignalStall(project="shop", wave="shop_w1", task="S3", last_action=THREE_HOURS_AGO)
 
 
@@ -3342,6 +3343,7 @@ class PlanStallSignalTest(unittest.TestCase):
             ("a parked task", "parked", NO_PAUSE),
             ("a task paused on the quota", "paused:quota", NO_PAUSE),
             ("a task of a wave paused on the quota", "queued", QUOTA_UNTIL_13),
+            ("a task paused on the quota in a wave paused on the forge account", "paused:quota", FORGE_ACCOUNT_PAUSE),
         ]:
             with self.subTest(case=case):
                 # Arrange
@@ -3358,10 +3360,7 @@ class PlanStallSignalTest(unittest.TestCase):
 
     def test_should_signal_a_task_of_a_wave_paused_for_another_reason_than_the_quota(self):
         # Arrange
-        paused_on_the_forge_account = WavePause(reason="forge_account", resume_at=None)
-        wave = dataclasses.replace(
-            create_wave((create_waiting_task(THREE_HOURS_AGO),), {}), pause=paused_on_the_forge_account
-        )
+        wave = dataclasses.replace(create_wave((create_waiting_task(THREE_HOURS_AGO),), {}), pause=FORGE_ACCOUNT_PAUSE)
         snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
         # Act
@@ -3369,3 +3368,14 @@ class PlanStallSignalTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(actions, (SIGNAL_STALL_OF_S3,))
+
+    def test_should_raise_no_stall_signal_for_a_task_the_tick_acts_on(self):
+        # Arrange
+        task = TaskFacts(name="S3", branch="feature/S3-task", last_action=THREE_HOURS_AGO)
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "queued"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (LAUNCH_S3,))
