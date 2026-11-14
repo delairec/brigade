@@ -16,14 +16,6 @@ from tests.unit.commands.test_verify_preflight import (
 
 DESCENDING = ProcessAnswer()
 NOT_DESCENDING = ProcessAnswer(exit_code=1)
-PUSH_WITH_A_LEASE_ON_THE_REMOTE_HEAD = (
-    "git",
-    "push",
-    "--quiet",
-    "--force-with-lease=task/M4-tides/T7:8885daa",
-    "origin",
-    "HEAD:task/M4-tides/T7",
-)
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.select_argvs_opening_on import select_argvs_opening_on
@@ -41,12 +33,15 @@ DONE_DOCUMENT = {
 
 
 class RebaseDoneTextTest(unittest.TestCase):
-    def test_should_name_the_branch_pushed_its_head_and_its_base(self):
+    def test_should_name_the_branch_its_head_and_the_base_it_descends_from(self):
         # Act
         text = COMMAND.render_text(DONE_DOCUMENT)
 
         # Assert
-        self.assertEqual(text, "task/M4-tides/T7 pushed at 9a9a9a9 on top of integration/M4-tides for #42, @TASK.T7")
+        self.assertEqual(
+            text,
+            "task/M4-tides/T7 at 9a9a9a9 descends from integration/M4-tides for #42, @TASK.T7; push it with brigade task push",
+        )
 
 
 class RebaseDoneOfAPullRequestTest(unittest.TestCase):
@@ -64,7 +59,6 @@ class RebaseDoneOfAPullRequestTest(unittest.TestCase):
             ),
             ("git", "fetch"): ProcessAnswer(),
             ("git", "merge-base", "--is-ancestor", "origin/integration/M4-tides", "HEAD"): ancestry,
-            ("git", "rev-parse", "--verify"): ProcessAnswer(stdout="8885daa\n"),
             ("git", "rev-parse", "HEAD"): ProcessAnswer(stdout="9a9a9a9\n"),
             ("git", "push"): ProcessAnswer(),
         }
@@ -73,7 +67,7 @@ class RebaseDoneOfAPullRequestTest(unittest.TestCase):
         )
         return create_test_runtime(create_test_paths(self.root), run_process=self.machine.run)
 
-    def test_should_push_a_branch_descending_from_the_head_of_its_base_with_a_lease_on_its_remote_head(self):
+    def test_should_accept_a_branch_descending_from_the_head_of_its_base_and_push_nothing(self):
         # Arrange
         runtime = self._create_runtime(DESCENDING)
 
@@ -82,7 +76,7 @@ class RebaseDoneOfAPullRequestTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document["head"], "9a9a9a9")
-        self.assertEqual(select_argvs_opening_on(self.machine.argvs, GIT_PUSH), [PUSH_WITH_A_LEASE_ON_THE_REMOTE_HEAD])
+        self.assertEqual(select_argvs_opening_on(self.machine.argvs, GIT_PUSH), [])
 
     def test_should_refuse_a_branch_that_does_not_descend_from_the_head_of_its_base_and_push_nothing(self):
         # Arrange
