@@ -35,6 +35,10 @@ SCHEMA MILESTONE
 			+ "subject of 72 characters"
 	FIELD STATUS planned|active|reached
 		REQUIRED
+	FIELD AFTER @MILESTONE
+		REPEATABLE
+		CONVERSE BEFORE
+		DESC "the milestone that must be reached before this one"
 	WHEN STATUS active
 		FIELD SUBJECT
 			REQUIRED
