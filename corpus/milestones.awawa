@@ -61,7 +61,12 @@ MILESTONE M7
 
 MILESTONE M8
 	TITLE "Recipes"
-	STATUS planned
+	SUBJECT "deliver recipes, orders and named preflights"
+	STATUS active
+	SOURCE "the user's ruling of 2026-11-13 in the refinement of M8, « Active maintenant »: the"
+		+ "milestone is activated by the pull request of its refinement, which the user merges only"
+		+ "once @MILESTONE.M12 is finished"
+		REF @MILESTONE.M12
 
 MILESTONE F0
 	TITLE "fix-foundations"
