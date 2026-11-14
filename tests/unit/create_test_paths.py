@@ -16,5 +16,6 @@ def create_test_paths(
         home=root / "home",
         executable_search_path=executable_search_path,
         package_file=PACKAGE_FILE,
+        user="ada",
         run_directory=run_directory,
     )

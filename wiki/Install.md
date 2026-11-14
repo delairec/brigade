@@ -40,7 +40,7 @@ is 1; a missing optional item is a warning, reported with its fallback.
 | awawa 2.7 or later | yes |
 | the probe of the client adapter `config.toml` names | yes |
 | a user systemd instance | no |
-| the linger of the user, read from `loginctl show-user -p Linger` where the scheduler is `systemd` as `scheduler install` chooses it: without it the timer stops at logout | no |
+| the linger of the user, read from `loginctl show-user <user> --property=Linger` for the user of the run where the scheduler is `systemd` as `scheduler install` chooses it: without it the timer stops at logout | no |
 | gh and the account it is logged in as | no |
 | awawa-web | no |
 | the instructions corpus `config.toml` names, `awawa lint --strict` clean or not | no |

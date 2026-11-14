@@ -47,7 +47,7 @@ def _render_text(document: dict) -> str:
 def _list_warnings(scheduler: str, runtime: Runtime) -> list[str]:
     if scheduler != "systemd":
         return []
-    warning = describe_linger_warning(runtime.run_process)
+    warning = describe_linger_warning(runtime.run_process, runtime.paths.user)
     return [] if warning is None else [warning]
 
 
