@@ -1,3 +1,4 @@
+import dataclasses
 import functools
 import sys
 from collections.abc import Callable
@@ -7,14 +8,17 @@ from pathlib import Path
 from brigade.corpus.read_entities import Entity
 from brigade.errors import BrigadeError
 from brigade.git.check_ancestor import check_ancestor
+from brigade.git.find_remote_branch import RemoteBranch, find_remote_branch
 from brigade.git.list_worktrees import list_worktrees
 from brigade.git.read_branch_head import read_branch_head
+from brigade.ledger.branch_base_gone import BranchBaseGone
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.milestone_closed import MilestoneClosed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.read_project_field import read_project_field
 from brigade.runs.is_run_live_on import is_run_live_on
+from brigade.system.parse_configuration import CLI_KEY
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 from brigade.waves.locate_branch_worktree import locate_branch_worktree
@@ -43,6 +47,7 @@ class IntegrationBranchFacts:
     worktree: str | None
     run_live: bool
     locked: bool
+    gone_base: str | None = None
 
     def to_document(self) -> dict:
         return {
@@ -58,6 +63,7 @@ class IntegrationBranchFacts:
             "worktree": self.worktree,
             "run_live": self.run_live,
             "locked": self.locked,
+            "gone_base": self.gone_base,
         }
 
 
@@ -80,6 +86,7 @@ class _RecordedBranch:
     milestone: str | None
     started: WaveStarted | None
     ended: bool
+    base_gone: bool
 
 
 def _list_recorded_branches(entries: tuple[LedgerEntry, ...]) -> list[_RecordedBranch]:
@@ -87,15 +94,26 @@ def _list_recorded_branches(entries: tuple[LedgerEntry, ...]) -> list[_RecordedB
     closed = {(event.project, event.milestone) for event in events if isinstance(event, MilestoneClosed)}
     ended = {event.wave for event in events if isinstance(event, ENDING_EVENTS)}
     cuts = {(event.project, event.milestone): event for event in events if isinstance(event, MilestoneBranchCut)}
+    gone = {(event.project, event.branch) for event in events if isinstance(event, BranchBaseGone)}
     milestone_branches = [
         _RecordedBranch(
-            project=cut.project, branch=cut.branch, milestone=cut.milestone, started=NO_WAVE, ended=key in closed
+            project=cut.project,
+            branch=cut.branch,
+            milestone=cut.milestone,
+            started=NO_WAVE,
+            ended=key in closed,
+            base_gone=(cut.project, cut.branch) in gone,
         )
         for key, cut in cuts.items()
     ]
     wave_branches = [
         _RecordedBranch(
-            project=event.project, branch=event.branch, milestone=NO_MILESTONE, started=event, ended=event.wave in ended
+            project=event.project,
+            branch=event.branch,
+            milestone=NO_MILESTONE,
+            started=event,
+            ended=event.wave in ended,
+            base_gone=(event.project, event.branch) in gone,
         )
         for event in events
         if isinstance(event, WaveStarted) and event.branch is not None
@@ -116,7 +134,7 @@ def _is_within(branch_reading: _BranchReading, head: str, ref: str) -> bool:
 
 
 def _locate_base(branch_reading: _BranchReading, recorded: _RecordedBranch) -> str:
-    if recorded.started is None:
+    if recorded.started is None or recorded.base_gone:
         return read_project_field(branch_reading.project, MAIN_FIELD)
     return branch_reading.reading.locate_wave_base(recorded.started)
 
@@ -149,11 +167,39 @@ def _read_merged_pull_request(branch_reading: _BranchReading, branch: str) -> Pu
     return pull_request
 
 
+@dataclass(frozen=True)
+class _PullRequestReading:
+    merged: PullRequestFacts | None
+    gone_base: str | None
+
+
+def _is_held_by_the_forge(branch_reading: _BranchReading, branch: str) -> bool:
+    environment = branch_reading.reading.read_environment(branch_reading.project, CLI_KEY)
+    return find_remote_branch(
+        branch_reading.run_process,
+        RemoteBranch(repository=branch_reading.repository, branch=branch, environment=environment),
+    )
+
+
+def _read_pull_request_of(branch_reading: _BranchReading, recorded: _RecordedBranch) -> _PullRequestReading:
+    if recorded.base_gone:
+        return _PullRequestReading(merged=None, gone_base=None)
+    try:
+        return _PullRequestReading(merged=_read_merged_pull_request(branch_reading, recorded.branch), gone_base=None)
+    except BrigadeError:
+        base = _locate_base(branch_reading, recorded)
+        if _is_held_by_the_forge(branch_reading, base):
+            raise
+        return _PullRequestReading(merged=None, gone_base=base)
+
+
 def _read_branch(branch_reading: _BranchReading, recorded: _RecordedBranch) -> IntegrationBranchFacts | None:
     head = read_branch_head(branch_reading.run_process, branch_reading.repository, recorded.branch)
     if head is None:
         return None
-    merged = _read_merged_pull_request(branch_reading, recorded.branch)
+    pull_request = _read_pull_request_of(branch_reading, recorded)
+    merged = pull_request.merged
+    reachable = dataclasses.replace(recorded, base_gone=recorded.base_gone or pull_request.gone_base is not None)
     reading = branch_reading.reading
     worktree = locate_branch_worktree(branch_reading.repository, reading.worktree_root, recorded.branch)
     return IntegrationBranchFacts(
@@ -165,10 +211,11 @@ def _read_branch(branch_reading: _BranchReading, recorded: _RecordedBranch) -> I
         merged_pull_request=None if merged is None else merged.number,
         merged_head=None if merged is None else merged.head,
         head=head,
-        reached_forge=_has_reached_forge(branch_reading, recorded, head, merged),
+        reached_forge=_has_reached_forge(branch_reading, reachable, head, merged),
         worktree=str(worktree) if worktree.is_dir() else None,
         run_live=is_run_live_on(reading.state_root, worktree, reading.is_alive),
         locked=_is_locked(branch_reading, worktree),
+        gone_base=pull_request.gone_base,
     )
 
 

@@ -1,3 +1,5 @@
+from brigade.ledger.branch_base_gone import BranchBaseGone
+from brigade.ledger.branch_kept import BranchKept
 from brigade.ledger.budget_applied import BudgetApplied
 from brigade.ledger.constraint_delivered import ConstraintDelivered
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
@@ -94,6 +96,8 @@ DECLARED_EVENTS = {
         InboxRecorded,
         InboxDismissed,
         BudgetApplied,
+        BranchKept,
+        BranchBaseGone,
     )
 }
 LedgerEvent = (
@@ -138,5 +142,7 @@ LedgerEvent = (
     | InboxRecorded
     | InboxDismissed
     | BudgetApplied
+    | BranchKept
+    | BranchBaseGone
     | UndeclaredEvent
 )

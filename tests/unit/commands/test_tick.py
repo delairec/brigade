@@ -6617,7 +6617,8 @@ class TickRemovingTheBranchOfAClosedMilestoneTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            "brigade tick: the branch integration/tides of tidepool kept: a commit outside the merged pull request\n",
+            f"brigade tick: the branch integration/tides of tidepool kept at {WAVE_HEAD}:"
+            " a commit outside the merged pull request\n",
             errors.getvalue(),
         )
 
@@ -6631,6 +6632,19 @@ class TickRemovingTheBranchOfAClosedMilestoneTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(errors.getvalue().count("the branch integration/tides of tidepool kept"), 1)
+
+    def test_should_name_the_branch_it_keeps_once_across_ticks(self):
+        # Arrange
+        self.machine.answers[MILESTONE_BRANCH_WITHIN_MAIN] = ProcessAnswer(exit_code=1)
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
             COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Assert
@@ -6662,6 +6676,7 @@ class TickRemovingTheBranchOfAClosedMilestoneTest(unittest.TestCase):
                     "project": "tidepool",
                     "branch": "integration/tides",
                     "reason": "a commit outside the merged pull request",
+                    "head": WAVE_HEAD,
                 }
             ],
         )

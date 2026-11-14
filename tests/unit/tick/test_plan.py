@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 from brigade.corpus.read_entity import Entity, EntityField
 from brigade.errors import BrigadeError
+from brigade.ledger.branch_kept import BranchKept
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.read_live_study_runs import LiveStudyRun
@@ -16,7 +17,7 @@ from brigade.tick.actions import (
     CloseWave,
     CutMilestoneBranch,
     DescribeMilestonePullRequest,
-    KeepIntegrationBranch,
+    KeepBranch,
     LaunchCheckRepair,
     LaunchRemediation,
     LaunchStudy,
@@ -31,8 +32,10 @@ from brigade.tick.actions import (
     RebaseMilestone,
     RebaseTask,
     RebuildTask,
+    RecordGoneBase,
     RecordTaskState,
     RemoveIntegrationBranch,
+    RemoveLeftover,
     RemoveTaskWorktree,
     ReportMilestone,
     ReportTask,
@@ -61,6 +64,7 @@ from brigade.tick.build_snapshot import (
 from brigade.tick.head_proof import ForgeCheck, HeadChecks
 from brigade.tick.plan import plan
 from brigade.tick.read_integration_branches import IntegrationBranchFacts
+from brigade.tick.read_leftovers import LeftoverFacts
 from brigade.waves.list_candidate_waves import CandidateWave
 
 NOW = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
@@ -2702,28 +2706,34 @@ class PlanIntegrationBranchRemovalTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(actions, ())
 
-    def test_should_keep_the_branch_of_an_ended_milestone_or_wave_and_name_its_reason(self):
+    def test_should_keep_the_branch_of_an_ended_milestone_or_wave_and_name_its_reason_and_its_head(self):
         for branch, kept in [
             (
                 dataclasses.replace(CLOSED_MILESTONE_BRANCH, head="5ff69cd", reached_forge=False),
-                KeepIntegrationBranch(
-                    project="shop", branch="integration/tides", reason="a commit outside the merged pull request"
+                KeepBranch(
+                    project="shop",
+                    branch="integration/tides",
+                    reason="a commit outside the merged pull request",
+                    head="5ff69cd",
                 ),
             ),
             (
                 dataclasses.replace(CLOSED_MILESTONE_BRANCH, run_live=True),
-                KeepIntegrationBranch(project="shop", branch="integration/tides", reason="a live run"),
+                KeepBranch(project="shop", branch="integration/tides", reason="a live run", head="48537f8"),
             ),
             (
                 dataclasses.replace(CLOSED_MILESTONE_BRANCH, locked=True),
-                KeepIntegrationBranch(project="shop", branch="integration/tides", reason="a lock"),
+                KeepBranch(project="shop", branch="integration/tides", reason="a lock", head="48537f8"),
             ),
             (
                 dataclasses.replace(
                     CLOSED_WAVE_BRANCH, merged_pull_request=None, merged_head=None, reached_forge=False
                 ),
-                KeepIntegrationBranch(
-                    project="shop", branch="integration/shop_w3", reason="a commit outside the merged pull request"
+                KeepBranch(
+                    project="shop",
+                    branch="integration/shop_w3",
+                    reason="a commit outside the merged pull request",
+                    head="5ff69cd",
                 ),
             ),
         ]:
@@ -2736,6 +2746,186 @@ class PlanIntegrationBranchRemovalTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, (kept,))
+
+    def test_should_name_no_more_a_kept_branch_the_ledger_records_kept_for_the_same_reason_at_the_same_head(self):
+        # Arrange
+        branch = dataclasses.replace(CLOSED_MILESTONE_BRANCH, head="5ff69cd", reached_forge=False)
+        named = BranchKept(
+            project="shop",
+            branch="integration/tides",
+            reason="a commit outside the merged pull request",
+            head="5ff69cd",
+        )
+        snapshot = Snapshot(now=NOW, projects=(SHOP,), integration_branches=(branch,), kept_branches=frozenset({named}))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_name_again_a_kept_branch_whose_head_moved_since_the_ledger_recorded_it(self):
+        # Arrange
+        branch = dataclasses.replace(CLOSED_MILESTONE_BRANCH, head="7a8b9c0", reached_forge=False)
+        named = BranchKept(
+            project="shop",
+            branch="integration/tides",
+            reason="a commit outside the merged pull request",
+            head="5ff69cd",
+        )
+        snapshot = Snapshot(now=NOW, projects=(SHOP,), integration_branches=(branch,), kept_branches=frozenset({named}))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                KeepBranch(
+                    project="shop",
+                    branch="integration/tides",
+                    reason="a commit outside the merged pull request",
+                    head="7a8b9c0",
+                ),
+            ),
+        )
+
+    def test_should_record_the_base_the_forge_no_longer_holds_of_an_integration_branch(self):
+        # Arrange
+        branch = dataclasses.replace(CLOSED_WAVE_BRANCH, ended=False, gone_base="integration/currents")
+        snapshot = Snapshot(now=NOW, projects=(SHOP,), integration_branches=(branch,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions, (RecordGoneBase(project="shop", branch="integration/shop_w3", base="integration/currents"),)
+        )
+
+
+SPROUT_WORKTREE = "/srv/shop/.brigade/worktrees/S7"
+STALE_BRANCH_WITH_ITS_WORKTREE = LeftoverFacts(
+    project="shop",
+    branch="feature/S7-sprout",
+    worktree=SPROUT_WORKTREE,
+    head="c0ffee1",
+    reached_forge=True,
+    run_live=False,
+    locked=False,
+    uncommitted=False,
+    main_checkout=False,
+)
+DETACHED_WORKTREE = LeftoverFacts(
+    project="shop",
+    branch=None,
+    worktree="/srv/shop/.brigade/worktrees/S8",
+    head="d00d1e2",
+    reached_forge=True,
+    run_live=False,
+    locked=False,
+    uncommitted=False,
+    main_checkout=False,
+)
+
+
+class PlanLeftoverRemovalTest(unittest.TestCase):
+    def test_should_remove_each_stale_branch_and_each_stale_worktree_whose_head_reached_the_forge(self):
+        for leftover, removal in [
+            (
+                STALE_BRANCH_WITH_ITS_WORKTREE,
+                RemoveLeftover(project="shop", branch="feature/S7-sprout", worktree=SPROUT_WORKTREE),
+            ),
+            (
+                dataclasses.replace(STALE_BRANCH_WITH_ITS_WORKTREE, worktree=None),
+                RemoveLeftover(project="shop", branch="feature/S7-sprout", worktree=None),
+            ),
+            (
+                DETACHED_WORKTREE,
+                RemoveLeftover(project="shop", branch=None, worktree="/srv/shop/.brigade/worktrees/S8"),
+            ),
+        ]:
+            with self.subTest(leftover=leftover):
+                # Arrange
+                snapshot = Snapshot(now=NOW, projects=(SHOP,), leftovers=(leftover,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, (removal,))
+
+    def test_should_keep_a_stale_branch_and_name_its_reason_and_its_head(self):
+        for leftover, reason in [
+            (
+                dataclasses.replace(STALE_BRANCH_WITH_ITS_WORKTREE, reached_forge=False),
+                "a commit outside the merged pull request",
+            ),
+            (dataclasses.replace(STALE_BRANCH_WITH_ITS_WORKTREE, run_live=True), "a live run"),
+            (dataclasses.replace(STALE_BRANCH_WITH_ITS_WORKTREE, locked=True), "a lock"),
+            (dataclasses.replace(STALE_BRANCH_WITH_ITS_WORKTREE, uncommitted=True), "uncommitted changes"),
+            (dataclasses.replace(STALE_BRANCH_WITH_ITS_WORKTREE, main_checkout=True), "the main checkout"),
+        ]:
+            with self.subTest(reason=reason):
+                # Arrange
+                snapshot = Snapshot(now=NOW, projects=(SHOP,), leftovers=(leftover,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(
+                    actions, (KeepBranch(project="shop", branch="feature/S7-sprout", reason=reason, head="c0ffee1"),)
+                )
+
+    def test_should_name_no_more_a_kept_stale_branch_the_ledger_records_kept(self):
+        # Arrange
+        leftover = dataclasses.replace(STALE_BRANCH_WITH_ITS_WORKTREE, reached_forge=False)
+        named = BranchKept(
+            project="shop",
+            branch="feature/S7-sprout",
+            reason="a commit outside the merged pull request",
+            head="c0ffee1",
+        )
+        snapshot = Snapshot(now=NOW, projects=(SHOP,), leftovers=(leftover,), kept_branches=frozenset({named}))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_plan_nothing_for_a_stale_worktree_it_keeps(self):
+        # Arrange
+        snapshot = Snapshot(
+            now=NOW, projects=(SHOP,), leftovers=(dataclasses.replace(DETACHED_WORKTREE, reached_forge=False),)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_delete_alone_the_stale_branch_whose_worktree_the_plan_removes_as_the_worktree_of_its_task(self):
+        # Arrange
+        task = TaskFacts(name="S7", branch="feature/S7-sprout", pull_request=MERGED, worktree=SPROUT_WORKTREE)
+        wave = create_wave((task,), {"S7": "merged"})
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,), leftovers=(STALE_BRANCH_WITH_ITS_WORKTREE,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                RemoveTaskWorktree(project="shop", task="S7", worktree=SPROUT_WORKTREE),
+                CLOSE_SHOP_W1,
+                RemoveLeftover(project="shop", branch="feature/S7-sprout", worktree=None),
+            ),
+        )
 
 
 DELIVERED_HEAD = "4d5e6f7"

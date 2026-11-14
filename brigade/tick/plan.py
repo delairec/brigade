@@ -1,6 +1,7 @@
 import dataclasses
 from datetime import datetime, timedelta
 
+from brigade.ledger.branch_kept import BranchKept
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.task_state import REBUILD_REASON
 from brigade.studies.milestone_report_order import MilestoneReportOrder
@@ -13,7 +14,7 @@ from brigade.tick.actions import (
     CloseWave,
     CutMilestoneBranch,
     DescribeMilestonePullRequest,
-    KeepIntegrationBranch,
+    KeepBranch,
     LaunchCheckRepair,
     LaunchRemediation,
     LaunchStudy,
@@ -28,8 +29,10 @@ from brigade.tick.actions import (
     RebaseMilestone,
     RebaseTask,
     RebuildTask,
+    RecordGoneBase,
     RecordTaskState,
     RemoveIntegrationBranch,
+    RemoveLeftover,
     RemoveTaskWorktree,
     ReportMilestone,
     ReportTask,
@@ -53,6 +56,7 @@ from brigade.tick.decide_resume_at import decide_resume_at
 from brigade.tick.head_proof import ForgeCheck, HeadChecks
 from brigade.tick.is_study_due import is_study_due
 from brigade.tick.read_integration_branches import IntegrationBranchFacts
+from brigade.tick.read_leftovers import LeftoverFacts
 from brigade.waves.read_parked_question import BLOCKED_RUN_REASON
 from brigade.waves.read_task_state import PARKED_STATE
 
@@ -97,6 +101,8 @@ CHECK_SUITE_CREATION_DELAY = timedelta(minutes=1)
 UNREACHED_FORGE_REASON = "a commit outside the merged pull request"
 LIVE_RUN_REASON = "a live run"
 LOCK_REASON = "a lock"
+UNCOMMITTED_REASON = "uncommitted changes"
+MAIN_CHECKOUT_REASON = "the main checkout"
 NO_KEEPING_REASON = None
 RUN_LAUNCHES = (
     LaunchVerification,
@@ -148,28 +154,80 @@ def _plan_every_action(snapshot: Snapshot) -> tuple:
         + _plan_studies(snapshot)
         + _plan_integration_branches(snapshot)
     )
-    return actions + _plan_stall_signals(snapshot, actions)
+    return actions + _plan_leftovers(snapshot, actions) + _plan_stall_signals(snapshot, actions)
 
 
-def _find_keeping_reason(branch: IntegrationBranchFacts) -> str | None:
-    if not branch.reached_forge:
+def _find_guarding_reason(reached_forge: bool, run_live: bool, locked: bool) -> str | None:
+    if not reached_forge:
         return UNREACHED_FORGE_REASON
-    if branch.run_live:
+    if run_live:
         return LIVE_RUN_REASON
-    if branch.locked:
+    if locked:
         return LOCK_REASON
     return NO_KEEPING_REASON
 
 
-def _decide_integration_branch(branch: IntegrationBranchFacts) -> RemoveIntegrationBranch | KeepIntegrationBranch:
+def _find_keeping_reason(branch: IntegrationBranchFacts) -> str | None:
+    return _find_guarding_reason(branch.reached_forge, branch.run_live, branch.locked)
+
+
+def _keep_unnamed(snapshot: Snapshot, kept: KeepBranch) -> tuple:
+    named = BranchKept(project=kept.project, branch=kept.branch, reason=kept.reason, head=kept.head)
+    if named in snapshot.kept_branches:
+        return ()
+    return (kept,)
+
+
+def _decide_integration_branch(snapshot: Snapshot, branch: IntegrationBranchFacts) -> tuple:
     reason = _find_keeping_reason(branch)
     if reason is None:
-        return RemoveIntegrationBranch(project=branch.project, branch=branch.branch, worktree=branch.worktree)
-    return KeepIntegrationBranch(project=branch.project, branch=branch.branch, reason=reason)
+        return (RemoveIntegrationBranch(project=branch.project, branch=branch.branch, worktree=branch.worktree),)
+    return _keep_unnamed(
+        snapshot, KeepBranch(project=branch.project, branch=branch.branch, reason=reason, head=branch.head)
+    )
+
+
+def _record_gone_base(branch: IntegrationBranchFacts) -> tuple:
+    if branch.gone_base is None:
+        return ()
+    return (RecordGoneBase(project=branch.project, branch=branch.branch, base=branch.gone_base),)
 
 
 def _plan_integration_branches(snapshot: Snapshot) -> tuple:
-    return tuple(_decide_integration_branch(branch) for branch in snapshot.integration_branches if branch.ended)
+    return tuple(
+        action
+        for branch in snapshot.integration_branches
+        for action in (
+            _record_gone_base(branch) + (_decide_integration_branch(snapshot, branch) if branch.ended else ())
+        )
+    )
+
+
+def _find_leftover_keeping_reason(leftover: LeftoverFacts) -> str | None:
+    if leftover.main_checkout:
+        return MAIN_CHECKOUT_REASON
+    if leftover.uncommitted:
+        return UNCOMMITTED_REASON
+    return _find_guarding_reason(leftover.reached_forge, leftover.run_live, leftover.locked)
+
+
+def _decide_leftover(snapshot: Snapshot, leftover: LeftoverFacts, removed_worktrees: set[str]) -> tuple:
+    reason = _find_leftover_keeping_reason(leftover)
+    if reason is None:
+        worktree = None if leftover.worktree in removed_worktrees else leftover.worktree
+        return (RemoveLeftover(project=leftover.project, branch=leftover.branch, worktree=worktree),)
+    if leftover.branch is None:
+        return ()
+    return _keep_unnamed(
+        snapshot, KeepBranch(project=leftover.project, branch=leftover.branch, reason=reason, head=leftover.head)
+    )
+
+
+def _plan_leftovers(snapshot: Snapshot, actions: tuple) -> tuple:
+    removed_worktrees = {action.worktree for action in actions if isinstance(action, RemoveTaskWorktree)}
+    return tuple(
+        action for leftover in snapshot.leftovers for action in _decide_leftover(snapshot, leftover, removed_worktrees)
+    )
 
 
 def _plan_launches(snapshot: Snapshot, paused: set) -> tuple:

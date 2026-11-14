@@ -22,7 +22,7 @@ PULL_REQUESTS_QUERY = """query($owner: String!, $name: String!, $states: [PullRe
   repository(owner: $owner, name: $name) {
     pullRequests(first: 100, after: $endCursor, states: $states, orderBy: {field: CREATED_AT, direction: DESC}) {
       nodes {
-        number title headRefName baseRefName state isDraft reviewDecision
+        number title headRefName headRefOid baseRefName state isDraft reviewDecision
         author { login }
         commits(last: 1) {
           nodes { commit { statusCheckRollup { contexts(first: 100) {
@@ -234,6 +234,7 @@ def _describe_listed_pull_request(pull_request: dict) -> dict:
         "number": pull_request["number"],
         "title": pull_request["title"],
         "head": pull_request["headRefName"],
+        "head_sha": pull_request["headRefOid"],
         "base": pull_request["baseRefName"],
         "state": pull_request["state"].lower(),
         "author": _read_login(pull_request["author"]),
