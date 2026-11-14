@@ -203,7 +203,7 @@ class SchedulerInstallWarningsTest(unittest.TestCase):
         # Arrange
         (self.root / "config" / "config.toml").write_text('scheduler = "systemd"\n', encoding="utf-8")
         loginctl = RecordingProcessRunner(
-            {("loginctl", "show-user", "-p", "Linger"): ProcessAnswer(stdout="Linger=no\n")}
+            {("loginctl", "show-user", "ada", "--property=Linger"): ProcessAnswer(stdout="Linger=no\n")}
         )
         runtime = create_test_runtime(
             create_test_paths(self.root), run_process=loginctl, resolve_plugin=_resolve_a_scheduler_double
@@ -233,7 +233,7 @@ class SchedulerInstallWarningsTest(unittest.TestCase):
             (
                 "a lingering user",
                 RecordingProcessRunner(
-                    {("loginctl", "show-user", "-p", "Linger"): ProcessAnswer(stdout="Linger=yes\n")}
+                    {("loginctl", "show-user", "ada", "--property=Linger"): ProcessAnswer(stdout="Linger=yes\n")}
                 ),
                 [],
             ),

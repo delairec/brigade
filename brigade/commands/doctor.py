@@ -169,7 +169,7 @@ def _check_linger(reading: Configuration | BrigadeError, runtime: Runtime) -> li
     configured = None if isinstance(reading, BrigadeError) else reading.scheduler
     if choose_scheduler(configured, runtime.run_process).name != "systemd":
         return []
-    warning = describe_linger_warning(runtime.run_process)
+    warning = describe_linger_warning(runtime.run_process, runtime.paths.user)
     if warning is None:
         return [_create_optional("linger", "ok", "the user systemd instance lingers", LINGER_FALLBACK)]
     return [_create_optional("linger", "warning", warning, LINGER_FALLBACK)]
