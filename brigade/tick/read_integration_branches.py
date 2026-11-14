@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.corpus.read_entities import Entity
-from brigade.errors import BrigadeError
+from brigade.errors import BrigadeError, PullRequestCompareFailed
 from brigade.git.check_ancestor import check_ancestor
 from brigade.git.find_remote_branch import RemoteBranch, find_remote_branch
 from brigade.git.list_worktrees import list_worktrees
@@ -186,11 +186,10 @@ def _read_pull_request_of(branch_reading: _BranchReading, recorded: _RecordedBra
         return _PullRequestReading(merged=None, gone_base=None)
     try:
         return _PullRequestReading(merged=_read_merged_pull_request(branch_reading, recorded.branch), gone_base=None)
-    except BrigadeError:
-        base = _locate_base(branch_reading, recorded)
-        if _is_held_by_the_forge(branch_reading, base):
+    except PullRequestCompareFailed as failure:
+        if _is_held_by_the_forge(branch_reading, failure.base):
             raise
-        return _PullRequestReading(merged=None, gone_base=base)
+        return _PullRequestReading(merged=None, gone_base=failure.base)
 
 
 def _read_branch(branch_reading: _BranchReading, recorded: _RecordedBranch) -> IntegrationBranchFacts | None:
