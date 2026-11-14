@@ -33,7 +33,8 @@ DETACHED_ON_A_REMOTE = (
     "--format=%(refname)",
     "refs/remotes",
 )
-UNCOMMITTED_CHANGES = ("git", "status", "--porcelain", "--untracked-files=no")
+LOCAL_CHANGES = ("git", "status", "--porcelain")
+SPROUT_PULL_REQUEST_HEAD = ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "c0ffee9^{commit}")
 STALE_SPROUT = {
     "branch": "feature/S7-sprout",
     "pull_requests": [{"number": 7, "state": "merged", "head_sha": "c0ffee9"}],
@@ -92,6 +93,7 @@ class ReadAStaleBranchTest(ReadLeftoversTestCase):
                 ),
                 LOCAL_BRANCHES_LISTING: ProcessAnswer(stdout="main\nfeature/S7-sprout\n"),
                 SPROUT_HEAD: ProcessAnswer(stdout="c0ffee1\n"),
+                SPROUT_PULL_REQUEST_HEAD: ProcessAnswer(stdout="c0ffee9\n"),
             }
         )
 
@@ -128,6 +130,7 @@ class ReadAStaleBranchTest(ReadLeftoversTestCase):
                     {
                         WORKTREE_LISTING: self.list_worktrees(self.main_checkout_on("main")),
                         SPROUT_HEAD: ProcessAnswer(stdout="c0ffee1\n"),
+                        SPROUT_PULL_REQUEST_HEAD: ProcessAnswer(stdout="c0ffee9\n"),
                         SPROUT_IN_ITS_PULL_REQUEST: ProcessAnswer(exit_code=within_its_pull_request),
                         SPROUT_ON_A_REMOTE: ProcessAnswer(stdout=on_a_remote),
                     }
@@ -144,6 +147,7 @@ class ReadAStaleBranchTest(ReadLeftoversTestCase):
         run = self.state_root / "runs" / "20261114T100000Z-a1b2c3"
         run.mkdir(parents=True)
         (run / "run.json").write_text(json.dumps({"cwd": str(self.sprout)}), encoding="utf-8")
+        self.sprout.mkdir(parents=True)
         git = RecordingProcessRunner(
             {
                 WORKTREE_LISTING: self.list_worktrees(
@@ -151,7 +155,8 @@ class ReadAStaleBranchTest(ReadLeftoversTestCase):
                     f"worktree {self.sprout}\0HEAD c0ffee1\0branch refs/heads/feature/S7-sprout\0locked",
                 ),
                 SPROUT_HEAD: ProcessAnswer(stdout="c0ffee1\n"),
-                UNCOMMITTED_CHANGES: ProcessAnswer(stdout=" M brigade/tick/plan.py\n"),
+                SPROUT_PULL_REQUEST_HEAD: ProcessAnswer(stdout="c0ffee9\n"),
+                LOCAL_CHANGES: ProcessAnswer(stdout=" M brigade/tick/plan.py\n"),
             }
         )
 
@@ -190,6 +195,80 @@ class ReadAStaleBranchTest(ReadLeftoversTestCase):
 
         # Assert
         self.assertEqual(leftovers[0].main_checkout, True)
+
+    def test_should_read_a_worktree_holding_only_untracked_files_as_holding_uncommitted_changes(self):
+        # Arrange
+        self.sprout.mkdir(parents=True)
+        git = RecordingProcessRunner(
+            {
+                WORKTREE_LISTING: self.list_worktrees(
+                    self.main_checkout_on("main"),
+                    f"worktree {self.sprout}\0HEAD c0ffee1\0branch refs/heads/feature/S7-sprout",
+                ),
+                SPROUT_HEAD: ProcessAnswer(stdout="c0ffee1\n"),
+                LOCAL_CHANGES: ProcessAnswer(stdout="?? notes/draft.md\n"),
+            }
+        )
+
+        # Act
+        leftovers = read_leftovers(git, self.create_reading([STALE_SPROUT]))
+
+        # Assert
+        self.assertEqual(leftovers[0].uncommitted, True)
+
+    def test_should_read_a_locked_worktree_whose_directory_is_gone_without_running_git_in_it(self):
+        # Arrange
+        git = RecordingProcessRunner(
+            {
+                WORKTREE_LISTING: self.list_worktrees(
+                    self.main_checkout_on("main"),
+                    f"worktree {self.sprout}\0HEAD c0ffee1\0branch refs/heads/feature/S7-sprout\0locked",
+                ),
+                SPROUT_HEAD: ProcessAnswer(stdout="c0ffee1\n"),
+                SPROUT_PULL_REQUEST_HEAD: ProcessAnswer(stdout="c0ffee9\n"),
+                LOCAL_CHANGES: ProcessAnswer(stdout=" M brigade/tick/plan.py\n"),
+            }
+        )
+
+        # Act
+        leftovers = read_leftovers(git, self.create_reading([STALE_SPROUT]))
+
+        # Assert
+        self.assertEqual(
+            leftovers,
+            (
+                LeftoverFacts(
+                    project="shop",
+                    branch="feature/S7-sprout",
+                    worktree=str(self.sprout),
+                    head="c0ffee1",
+                    reached_forge=True,
+                    run_live=False,
+                    locked=True,
+                    uncommitted=False,
+                    main_checkout=False,
+                ),
+            ),
+        )
+
+    def test_should_read_a_pull_request_head_the_clone_never_fetched_as_not_holding_the_branch_head(self):
+        # Arrange
+        git = RecordingProcessRunner(
+            {
+                WORKTREE_LISTING: self.list_worktrees(self.main_checkout_on("main")),
+                SPROUT_HEAD: ProcessAnswer(stdout="c0ffee1\n"),
+                SPROUT_PULL_REQUEST_HEAD: ProcessAnswer(exit_code=1),
+                SPROUT_IN_ITS_PULL_REQUEST: ProcessAnswer(
+                    exit_code=128, stderr="fatal: Not a valid commit name c0ffee9"
+                ),
+            }
+        )
+
+        # Act
+        leftovers = read_leftovers(git, self.create_reading([STALE_SPROUT]))
+
+        # Assert
+        self.assertEqual(leftovers[0].reached_forge, False)
 
     def test_should_read_no_stale_branch_the_ledger_records_as_an_integration_branch(self):
         # Arrange
