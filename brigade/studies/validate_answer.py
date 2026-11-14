@@ -28,11 +28,18 @@ def _prepare_corpus(runtime: Runtime, directory: Path, answer: str) -> None:
     write_text_atomically(directory / ANSWER_FILE, answer)
 
 
+def _read_held(held: Path) -> str:
+    if not held.is_file():
+        return ""
+    return held.read_text(encoding="utf-8")
+
+
 def _prepare_submitted_corpus(runtime: Runtime, study: Study, directory: Path, answer: str) -> None:
-    _prepare_corpus(runtime, directory, answer)
     held = runtime.paths.config_root / name_answer_file(study.answer_type)
+    folded = choose_answer_form(study).fold(_read_held(held), answer)
+    _prepare_corpus(runtime, directory, folded.new)
     if held.is_file():
-        shutil.copyfile(held, directory / held.name)
+        write_text_atomically(directory / held.name, folded.held)
 
 
 def _require_conformity(runtime: Runtime, study: Study, directory: Path) -> None:
