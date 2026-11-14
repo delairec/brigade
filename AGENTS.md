@@ -91,6 +91,6 @@ A role launched by hand on a task proves its branch as a run of the tick does, f
 ```
 brigade task check                                  # the ACCEPTANCE commands, the corpus checks and the privacy check
 brigade task push                                   # pushes the branch with a lease, once a check of HEAD passed
-uvx ruff@0.17.2 check . && uvx ruff@0.17.2 format --check .
+uvx --from ruff==0.17.2 ruff check . && uvx --from ruff==0.17.2 ruff format --check .
 uvx --from coverage==7.17.0 coverage run -m unittest discover -s tests/unit -t . && uvx --from coverage==7.17.0 coverage report
 ```
