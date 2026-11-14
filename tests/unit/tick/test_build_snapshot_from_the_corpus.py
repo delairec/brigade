@@ -2539,6 +2539,7 @@ class BuildSnapshotOfATaskDeliveredWithoutAForgeTest(BuildSnapshotTestCase):
 
 ORDER_RUN_OF_TRIAGE = "20261019T082500Z-0a1b2c"
 JUDGING_RUN_OF_TRIAGE = "20261019T082600Z-3d4e5f"
+NEXT_JUDGING_RUN_OF_TRIAGE = "20261019T085500Z-6a7b8c"
 RESET_AT_TEN = ResetHour(hour="10:00", timezone="UTC")
 JUDGING_RECORD_KEPT = True
 JUDGING_RECORD_PRUNED = False
@@ -2599,3 +2600,52 @@ class BuildSnapshotOfAStudyParkedByItsJudgingRunTest(BuildSnapshotTestCase):
 
                 # Assert
                 self.assertEqual(snapshot.studies[1].quota_resume_at, expected)
+
+    def test_should_carry_no_reset_for_a_study_resumed_after_its_reset_then_parked_on_another_cause(self):
+        for case, events in [
+            (
+                "its next judging run ended on another error",
+                (
+                    create_run_finished(
+                        NEXT_JUDGING_RUN_OF_TRIAGE,
+                        procedure="study",
+                        slot="triage",
+                        outcome="failed",
+                        error_class="execution",
+                    ),
+                    OrderParked(
+                        project=None,
+                        kind="study",
+                        order="triage",
+                        run=ORDER_RUN_OF_TRIAGE,
+                        step="judge",
+                        reason=f"the judging run {NEXT_JUDGING_RUN_OF_TRIAGE} gave no answer",
+                    ),
+                ),
+            ),
+            (
+                "its output step failed",
+                (
+                    OrderParked(
+                        project=None,
+                        kind="study",
+                        order="triage",
+                        run=ORDER_RUN_OF_TRIAGE,
+                        step="output",
+                        reason="the answer could not be written",
+                    ),
+                ),
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                self.park_triage("rate_limit", judging_record_kept=JUDGING_RECORD_KEPT)
+                for event in events:
+                    self.record(5, event)
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertIsNone(snapshot.studies[1].quota_resume_at)

@@ -227,7 +227,19 @@ class StatusOfTheMachineTest(unittest.TestCase):
             create_run_finished(judging_run, outcome="failed", error_class="rate_limit"),
             reset=ResetHour(hour="08:30", timezone="UTC"),
         )
-        append_event(self.paths, at(8, 9), cut)
+        append_event(self.paths, at(8, 11), cut)
+        append_event(
+            self.paths,
+            at(8, 11),
+            OrderParked(
+                project=None,
+                kind="study",
+                order="debt",
+                run="20261019T080000Z-d1",
+                step="judge",
+                reason=f"the judging run {judging_run} gave no answer",
+            ),
+        )
         runtime = create_test_runtime(self.paths, run_process=create_corpus_double(CORPUS))
 
         # Act
