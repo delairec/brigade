@@ -39,15 +39,21 @@ class BuildPathsTest(unittest.TestCase):
     def test_should_fall_back_to_the_home_directories_and_the_default_search_path(self):
         # Arrange
         rows = [
-            ("unset", {"HOME": "/home/ada", "USER": "ada"}),
+            ("unset", {"HOME": "/srv/homes/ada", "USER": "ada"}),
             (
                 "empty",
-                {"HOME": "/home/ada", "USER": "ada", "XDG_CONFIG_HOME": "", "XDG_STATE_HOME": "", "XDG_CACHE_HOME": ""},
+                {
+                    "HOME": "/srv/homes/ada",
+                    "USER": "ada",
+                    "XDG_CONFIG_HOME": "",
+                    "XDG_STATE_HOME": "",
+                    "XDG_CACHE_HOME": "",
+                },
             ),
             (
                 "relative",
                 {
-                    "HOME": "/home/ada",
+                    "HOME": "/srv/homes/ada",
                     "USER": "ada",
                     "XDG_CONFIG_HOME": "config",
                     "XDG_STATE_HOME": "state",
@@ -64,10 +70,10 @@ class BuildPathsTest(unittest.TestCase):
                 self.assertEqual(
                     paths,
                     Paths(
-                        config_root=Path("/home/ada/.config/brigade"),
-                        state_root=Path("/home/ada/.local/state/brigade"),
-                        cache_root=Path("/home/ada/.cache/brigade"),
-                        home=Path("/home/ada"),
+                        config_root=Path("/srv/homes/ada/.config/brigade"),
+                        state_root=Path("/srv/homes/ada/.local/state/brigade"),
+                        cache_root=Path("/srv/homes/ada/.cache/brigade"),
+                        home=Path("/srv/homes/ada"),
                         executable_search_path="/bin:/usr/bin",
                         package_file=Path(brigade.__file__),
                         user="ada",
@@ -90,7 +96,7 @@ class BuildPathsWithoutAHomeVariableTest(unittest.TestCase):
 class BuildPathsUserTest(unittest.TestCase):
     def test_should_name_the_user_the_environment_names(self):
         # Act
-        paths = build_paths({"HOME": "/home/ada", "USER": "ada"})
+        paths = build_paths({"HOME": "/srv/homes/ada", "USER": "ada"})
 
         # Assert
         self.assertEqual(paths.user, "ada")
