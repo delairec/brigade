@@ -6944,3 +6944,52 @@ DECISION InitRefusesToReplaceAnOriginAtAnotherUrl
 	SOURCE "the build run of @TASK.B177 of 2026-11-11, SPEC 4 naming no behaviour for an origin"
 		+ "already set"
 		REF @TASK.B177
+
+DECISION AWordOfBrigadeCarriesOneSenseAndBorrowedSensesKeepTheirs
+	TITLE "each word of brigade's public vocabulary carries one sense, which wiki/Glossary.md"
+		+ "states and a guard holds; the senses borrowed from the forge, the CI and the OS and the"
+		+ "generic verbs of the code keep theirs"
+	STATUS active
+	DESC "the public vocabulary is the commands, arguments, help lines, messages, ledger events,"
+		+ "the entities and fields of the operational schema, the keys of config.toml, the"
+		+ "procedures, the wiki, the Blueprint, and the module and function names that name a"
+		+ "concept of brigade"
+	DESC "a check run, a review thread of the forge, a step of a CI job, a signal of the OS and a"
+		+ "generic verb of the code such as run_process keep their own sense and are not renamed"
+	DESC "a renamed key or field is refused under its old name, naming the new one, and never read"
+		+ "as an alias"
+	DESC "binds @TASK.B255 and @TASK.B257"
+		REF @TASK.B255
+		REF @TASK.B257
+	REJECTED "every identifier of the code renamed, run_process among them, 438 files: the cost of"
+		+ "a rename no user reads"
+	REJECTED "a page Glossary beside wiki/Concepts.md: each word stated twice"
+	REJECTED "an old name read as an alias of the new: two names for one thing"
+	SOURCE "the user's rulings of 2026-11-14 in the refinement of B255: « Public vocabulary"
+		+ "(Recommended) », « Concepts becomes it (Recommended) », « Adopt as displayed »"
+
+DECISION ACommandGroupIsNamedInTheSingularAfterItsEntityOrItsSlot
+	TITLE "a command group of brigade is named in the singular after its entity, its actions as"
+		+ "subcommands, and the group of a slot of one run is named after that slot; no two"
+		+ "commands do the same work"
+	STATUS active
+	DESC "the slots plan, build, review, remediate and rebase each run the group of their name; the"
+		+ "slots report, triage, rules and explore run brigade study, the group of the unit they"
+		+ "work on"
+	DESC "the slots keep their names and the keys of [forge_accounts] with them: the commands"
+		+ "follow the slots, brigade verify becoming brigade review, brigade review brigade"
+		+ "remediate and brigade task brigade build"
+	DESC "binds @TASK.B255, @TASK.B256, @TASK.B98 and @TASK.B50"
+		REF @TASK.B255
+		REF @TASK.B256
+		REF @TASK.B98
+		REF @TASK.B50
+	REJECTED "the slot review renamed verify: the key review of [forge_accounts] migrated on every"
+		+ "machine"
+	REJECTED "plural groups for listings beside singular groups that act: brigade run and brigade"
+		+ "runs side by side"
+	REJECTED "the group brigade task kept, named after the unit rather than the slot"
+	SOURCE "the user's rulings of 2026-11-14 in the refinement of B255: « Command verify becomes"
+		+ "review », « Singular, by entity (Recommended) », « Command task becomes build"
+		+ "(Recommended) », « ledger --wave removed, study answers out of reports, task check via a"
+		+ "preflight »"

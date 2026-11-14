@@ -4510,7 +4510,7 @@ TASK B50
 	SPEC "brigade/corpus/data/project_schema.awawa.tpl, the schema brigade installs in the corpus"
 		+ "of a project, declares SCHEMA RECIPE"
 	SPEC "recipes resolve in order: the project's, the machine's recipes directory, the built-ins;"
-		+ "brigade recipes list prints them with their source, wave listed as native, and brigade"
+		+ "brigade recipe list prints them with their source, wave listed as native, and brigade"
 		+ "recipes show <name> prints the recipe"
 	SPEC "brigade recipe lint checks the schema, that every collector, preflight, output, procedure"
 		+ "and slot resolves, that every param referenced is declared, and refuses a client or"
@@ -4665,7 +4665,7 @@ TASK B52
 		+ "on the report slot with a template, an output file committed on the pull request's"
 		+ "branch"
 	SPEC "the preflight the gate calls is built-in and names a built-in check reviewed, printed by"
-		+ "brigade checks list, which fails on a pull request no review was submitted on"
+		+ "brigade check list, which fails on a pull request no review was submitted on"
 	SPEC "a test of tests/cli runs brigade order new pr-usage-report pr=<n> on the sandbox"
 		+ "repository its rehearsers prepare, with the fake client, to the committed file; the"
 		+ "ledger shows no run for the collectors, and the steps of the run of the judge step"
@@ -8098,12 +8098,12 @@ TASK B98
 		+ "brigade-check-<name> on PATH, then the built-ins; where"
 		+ "brigade/system/resolve_plugin.py:86-87 resolves through those places the collector kind"
 		+ "alone today"
-	SPEC "brigade checks list prints every check found with its name and its source, project,"
+	SPEC "brigade check list prints every check found with its name and its source, project,"
 		+ "machine, PATH or built-in, text and --json, as brigade collectors list prints the"
 		+ "collectors"
 	SPEC "the eight checks of brigade/verify/check_*.py, acceptance, ancestry, body, check_runs,"
 		+ "corpus_at_head, privacy, promotion and untouched_files, are built-in checks: brigade"
-		+ "checks list prints each as built-in"
+		+ "check list prints each as built-in"
 	SPEC "a check answers one document holding its verdict, pass or fail, and its findings,"
 		+ "validated on entry as the decision"
 		+ "DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry sets; the answer of an"
@@ -8121,12 +8121,12 @@ TASK B98
 		+ "measures included, tests/cli/test_verify_preflight.py passing unchanged; the preflight"
 		+ "the tick runs on the pull request of a task records task.preflighted as today"
 	SPEC "wiki/Preflight.md describes a preflight as a named set of collectors and checks, the"
-		+ "places a check resolves from, brigade checks list and brigade preflight <name>, and the"
+		+ "places a check resolves from, brigade check list and brigade preflight <name>, and the"
 		+ "row preflight of wiki/Concepts.md reads the same"
 	SPEC "tests/unit prove the order of the four places for a check, an executable check on PATH"
 		+ "run and its document validated, a failing check failing its preflight, and a name no"
 		+ "preflight carries refused; tests/cli runs brigade preflight verify-pull-request and"
-		+ "brigade checks list, one flow each"
+		+ "brigade check list, one flow each"
 	RATIONALE "the planning this task asked for as drafted, a milestone and its draft tasks, was"
 		+ "carried out with the user in the refinement of M8 on 2026-11-13: the task is rewritten"
 		+ "as the first of three, @TASK.B252 delivering brigade preflight add and the custom"
@@ -16738,13 +16738,13 @@ TASK B236
 	MILESTONE @MILESTONE.ADD0
 	COMPONENT "docs"
 	ROLE ada
-	SPEC "a wiki page quotes the output of brigade ledger --wave for each closed wave of one range"
-		+ "of days that the tick delivered on a registered project, at least ten tasks merged in"
-		+ "total across those waves, the range opening after TASK B37, #309, reached main, which"
+	SPEC "a wiki page quotes the output of brigade wave show --events for each closed wave of one"
+		+ "range of days that the tick delivered on a registered project, at least ten tasks merged"
+		+ "in total across those waves, the range opening after TASK B37, #309, reached main, which"
 		+ "the tick runs from"
 	SPEC "the same page quotes brigade ledger compare of that range against the reference figures"
-		+ "of the user's notes of 2026-10-03: steps to first edit p50 23, steps per task run p50"
-		+ "47, 146 oversized output steps over 67 launches"
+		+ "of the user's notes of 2026-10-03, which count the agent turns as steps: turns to first"
+		+ "edit p50 23, turns per task run p50 47, 146 oversized output turns over 67 launches"
 	AFTER @TASK.B37
 	AFTER @TASK.B175
 	AFTER @TASK.B140
@@ -16754,7 +16754,7 @@ TASK B236
 	AFTER @TASK.B163
 	AFTER @TASK.B252
 	AFTER @TASK.B254
-	AFTER @TASK.B255
+	AFTER @TASK.B257
 	AFTER @TASK.B229
 	AFTER @TASK.B230
 	RATIONALE "the exit criterion of the plan is proof that brigade delivers unattended on a real"
@@ -16809,6 +16809,13 @@ TASK B236
 		+ "to the AFTER, a task they lose is removed from it, and when fewer than ten remain, the"
 		+ "AFTER names tasks of ADD0 until ten do"
 		REF @TASK.B37
+	RATIONALE "updated on 2026-11-14, @TASK.B255 split in three: its AFTER names @TASK.B257, which"
+		+ "follows @TASK.B255 and @TASK.B256 and which no task of M8 follows, in place of"
+		+ "@TASK.B255; SPEC 1 quotes brigade wave show --events, @TASK.B256 removing brigade ledger"
+		+ "--wave, and SPEC 2 says turns, @TASK.B255 renaming the agent turn"
+		REF @TASK.B255
+		REF @TASK.B256
+		REF @TASK.B257
 	SOURCE "the Artifact Brigade Blueprint, plan, M6 and the measured figures of the user's notes"
 	SOURCE "the user's rulings of 2026-11-01 in the refinement of M6, on @TASK.B39: « c'est quoi"
 		+ "l'objectif de la tâche? », then « Oui, ces 3 SPEC »; the comparison moved to @TASK.B175,"
@@ -17993,7 +18000,7 @@ TASK B251
 	ROLE ada
 	SPEC "study ships as the built-in recipe study, a TOML file of the built-in recipes in a data/"
 		+ "folder under brigade/, its collect steps taken from the COLLECTOR lines of the STUDY it"
-		+ "runs for; brigade recipes list prints it as built-in"
+		+ "runs for; brigade recipe list prints it as built-in"
 	SPEC "brigade study new, run, context, answer, list, show, pause and resume print, record and"
 		+ "exit as before this task, a STUDY being the order of the recipe study:"
 		+ "tests/cli/test_study.py and the unit tests of the studies pass unchanged"
@@ -18122,11 +18129,11 @@ TASK B253
 	SPEC "it reports the drafts and the tasks whose deliverables overlap those of the draft, found"
 		+ "by the files and the entities they cite in common"
 	SPEC "each of the three reports is delivered as a collector or a check resolved by name,"
-		+ "printed by brigade collectors list or brigade checks list, and the preflight is a TOML"
+		+ "printed by brigade collectors list or brigade check list, and the preflight is a TOML"
 		+ "file naming them"
 	SPEC "a built-in check verifies the logins of [forge_accounts] of config.toml, each printing"
-		+ "its token, and fails naming each login gh prints no token for; brigade checks list"
-		+ "prints it"
+		+ "its token, and fails naming each login gh prints no token for; brigade check list prints"
+		+ "it"
 	SPEC "the built-in preflight wave names that check; the tick runs it before it starts a wave,"
 		+ "and a login that prints no token pauses the wave before any run: no run of the wave is"
 		+ "launched"
@@ -18211,40 +18218,66 @@ TASK B254
 		REF @TASK.B163
 
 TASK B255
-	TITLE "One sense per word and one command per thing: each word of the inventory keeps one"
-		+ "sense, the commands doing the same work are merged, the wiki Glossary with its guard,"
-		+ "and wave-plan renamed after what it does"
-	STATUS draft
+	TITLE "Each word of brigade's public vocabulary keeps the one sense ruled on 2026-11-14, the"
+		+ "command groups are named in the singular after their entity or their slot, and wave-plan"
+		+ "is renamed request-plan"
+	STATUS todo
+	TYPE refactor
 	MILESTONE @MILESTONE.M8
 	COMPONENT "audit"
-	ROLE lex
 	ROLE ada
-	DESC "to be refined with the user before ratification: the sense kept for each word of the"
-		+ "inventory of RATIONALE, the commands merged or removed, the first rows of the glossary,"
-		+ "and how the Glossary stands to wiki/Concepts.md, which holds one row per word today"
-	SPEC "no word of brigade carries two senses: for each word of the inventory in RATIONALE, one"
-		+ "sense is kept and every other use is renamed in the code, the corpus, the wiki and the"
-		+ "Blueprint, or the coexistence is ruled by a DECISION naming both senses"
-	SPEC "no two commands of brigade do the same thing: the commands of one slot form one command"
-		+ "group, and a command whose work another command does is removed or merged, verify and"
-		+ "review among them"
-	SPEC "the wiki page Glossary carries a glossary table between two marker comments, one row per"
-		+ "word, the columns word, kind (command, argument, entity, field, concept), what it does"
-		+ "and milestone, each row citing the task that delivers it"
-	SPEC "a guard of tests/guards checks the glossary against the corpus, as"
-		+ "tests/guards/test_wiki_adapter_matrix.py checks the adapter matrix: it fails on a row"
-		+ "citing a task the corpus lacks, on a milestone that is not that task's MILESTONE, on a"
-		+ "command of brigade or an entity or field of the operational schema without a row, and on"
-		+ "a row naming a word the code and the corpus do not carry"
-	SPEC "wave, request and milestone keep the one sense their rows of wiki/Concepts.md give each,"
-		+ "a wave a batch of ratified tasks started together, a request what the user wants for one"
-		+ "project and the plan it receives, a milestone a MILESTONE entity whose tasks merge into"
-		+ "its branch, in every command, argument, help line, procedure and message of brigade; the"
-		+ "planner procedure wave-plan, brigade/runs/data/procedures/wave-plan.md, which plans a"
-		+ "request and no wave, is renamed after what it does"
+	SPEC "the word verify leaves brigade: the command group verify is named review, its subcommands"
+		+ "review context and review verdict, the command group review is named remediate, its"
+		+ "subcommands remediate context and remediate reply, the procedure verify-pr.md is"
+		+ "review-pr.md, wiki/Verification.md is wiki/Review.md and POLICY.VERIFY_ROUNDS is"
+		+ "POLICY.REPAIR_ROUNDS; the slots, the role files and the keys of [forge_accounts] keep"
+		+ "their names"
+	SPEC "step names a step of a recipe alone: the agent turn the budgets count is a turn in the"
+		+ "ledger events, brigade ledger budgets and compare, the role files, the help lines and"
+		+ "the wiki, and the STEP entity of a progress file is an ENTRY; the step of a CI job keeps"
+		+ "its sense"
+	SPEC "check names a check of a preflight alone: the checks of brigade doctor are prerequisites"
+		+ "in its code, its output and its document, and a check answers result ok or fail where it"
+		+ "answers a verdict pass or fail today; verdict names the pass or changes of a review"
+		+ "alone; the check run of the forge keeps its sense"
+	SPEC "round names a repair round alone, the round of the tick, brigade/tick/run_rounds.py,"
+		+ "being a cycle; plan names the MILESTONE and the tasks recorded for a request alone: the"
+		+ "plan function of the tick is decide, brigade tick --dry-run prints decisions where it"
+		+ "prints plan today, the help of brigade plan reads plan the requests where it reads plan"
+		+ "the waves, and the procedure brigade/runs/data/procedures/wave-plan.md, which plans a"
+		+ "request and no wave, is request-plan.md"
+	SPEC "the operational corpus is the registry in every help line, message and page, corpus"
+		+ "naming the corpus of a project alone; the key and the plugin kind document of"
+		+ "config.toml are progress_form; the document a collector writes is its collection; the"
+		+ "help of brigade ledger says event ledger where it says event journal; the journal of a"
+		+ "run is its log; the commands/ directory of a trail is processes/; package is context in"
+		+ "the help lines of the context commands; HELD_REBASES of brigade/commands/tick.py is"
+		+ "DEFERRED_REBASES; hand-over and hand_over are spelled handover"
+	SPEC "paused names a suspension by the user, parked a stop by brigade that awaits the user,"
+		+ "blocked a wait on another fact and stopped the end of a process, in every state,"
+		+ "outcome, help line and message of brigade; each use found departing from its sense is"
+		+ "renamed, and the pull request body lists the uses read with the sense each carries"
+	SPEC "every command group of brigade is named in the singular after its entity, its actions as"
+		+ "subcommands: brigade run start, list, show, stop and prune where brigade run <procedure>"
+		+ "and brigade runs stand today, brigade role list, show and lint where brigade roles"
+		+ "stands, brigade report list and show where brigade reports stands, brigade collector run"
+		+ "and list where brigade collect and brigade collectors stand; brigade task is brigade"
+		+ "build, the group of the slot build"
+	SPEC "a key of config.toml, a field of a role file or a field of an installed operational"
+		+ "schema carrying a name this task replaces is refused by the command that reads it,"
+		+ "naming the new name, and brigade doctor lists each one with its new name; no old name is"
+		+ "read as an alias"
+	SPEC "the draft and todo tasks of corpus/tasks.awawa naming an old command, field or word of"
+		+ "this task are rewritten with the new one in the same pull request, implemented and"
+		+ "archived tasks staying as written; wave, request and milestone keep the one sense the"
+		+ "rows of wiki/Concepts.md give each"
+	SPEC "python3 -m unittest passes, and git grep finds none of the old command names, fields and"
+		+ "keys of this task under brigade/, tests/, wiki/ and artifact/blueprint/ outside the"
+		+ "refusal messages of SPEC 8"
 	AFTER @TASK.B163
 	AFTER @TASK.B251
 	AFTER @TASK.B253
+	AFTER @TASK.B256
 	RATIONALE "words carrying several senses, measured on 2026-11-13 at f7d2deae, the starting list"
 		+ "of SPEC 1, each word with its live senses: step (the agent turn the budgets count, 288"
 		+ "hits in 45 files of brigade/; the step collect, judge or output of a study run,"
@@ -18282,29 +18315,40 @@ TASK B255
 		+ "spellings hand-over, hand_over, handover and handovers; brigade recipe lint beside"
 		+ "brigade recipes list; setup, PROJECT.SETUP alone, carries one sense"
 		REF @TASK.B98
-	RATIONALE "commands doing overlapping work, the same measure, the starting list of SPEC 2:"
-		+ "brigade task check and brigade verify preflight run the same corpus checks,"
-		+ "CORPUS_CHECKS defined in brigade/corpus/check_corpus.py:7 and in"
-		+ "brigade/verify/check_corpus_at_head.py:8, and the same ACCEPTANCE lines; six context"
-		+ "printers, plan, rebase, review, study, task and verify context, built by ten"
-		+ "assemble_*_context modules with no shared helper; six answer commands, verify verdict,"
-		+ "review reply, study answer, plan record, rebase done and inbox ratify, validate then"
-		+ "record; brigade status and brigade wave list both list the open waves; brigade ledger"
-		+ "--wave and brigade wave show both answer what happened in a wave; brigade collect and"
-		+ "the collect step of a study are two entries to one engine; brigade corpus stands beside"
-		+ "awawa; a slot maps to a command group, plan to plan, build to task, review to verify,"
-		+ "remediate to review, rebase to rebase, and report, triage, rules and explore to study"
-	RATIONALE "renames the measure found cheap, none of them ruled: the step of a study to stage,"
-		+ "about 8 files and the ledger events; the STEP of a progress file to an entry, about 5"
-		+ "files; the checks of doctor to probes, 1 file; the command review to remediate, about 6"
-		+ "files, or the slot review to verify, about 15 files and config.toml; the verdict of a"
-		+ "check to ok or fail, about 12 files; VERIFY_ROUNDS to REPAIR_ROUNDS, about 6 files; the"
-		+ "round of the tick to cycle, about 5 files; the key and the plugin kind document to"
-		+ "progress form, about 11 files; the document of a collector to collection, about 8 files;"
-		+ "event journal to event ledger in the help of ledger, 2 files; the journal of a run to"
-		+ "log, about 20 files; package to context in the help of 4 commands; HELD_REBASES to"
-		+ "deferred, 1 file; the operational corpus to registry, about 22 files; the plan of the"
-		+ "tick to decide, about 6 files; run_process to another verb, 217 files"
+	RATIONALE "the senses ruled on 2026-11-14, one per word of the inventory: verify none, the word"
+		+ "leaving brigade; review the review of a pull request, brigade's and the forge's; step a"
+		+ "step of a recipe, the agent turn a turn; check a check of a preflight, the items of"
+		+ "doctor prerequisites; verdict pass or changes of a review, a check answering result ok"
+		+ "or fail; finding a defect a review or a check names; round a repair round, the tick's a"
+		+ "cycle; plan the MILESTONE and tasks of a request, the tick's plan decide; corpus the"
+		+ "corpus of a project, the operational one the registry, the instructions corpus keeping"
+		+ "its sense; document the JSON document of a command, the config key progress_form, a"
+		+ "collector's a collection; ledger the events, trail the subprocesses of one invocation,"
+		+ "trace one record of it, a run's journal its log; context what a context command prints,"
+		+ "brief the prompt of a run; paused, parked, blocked and stopped as SPEC 6 says, held"
+		+ "deferred; command a command of the CLI; order the ORDER entity, ratify creating one as"
+		+ "@TASK.B53 rules; report the report of a milestone, a task or a wave; run the agent run,"
+		+ "run_process keeping its generic verb; handover one spelling; signal, preflight and setup"
+		+ "one sense already"
+		REF @TASK.B53
+	RATIONALE "the public vocabulary alone is renamed, the borrowed senses and the generic verbs of"
+		+ "the code keeping theirs, as"
+		+ "@DECISION.AWordOfBrigadeCarriesOneSenseAndBorrowedSensesKeepTheirs rules; the groups"
+		+ "follow @DECISION.ACommandGroupIsNamedInTheSingularAfterItsEntityOrItsSlot, @TASK.B98 and"
+		+ "@TASK.B50 delivering brigade check list and brigade recipe list in the singular already"
+		REF @DECISION.AWordOfBrigadeCarriesOneSenseAndBorrowedSensesKeepTheirs
+		REF @DECISION.ACommandGroupIsNamedInTheSingularAfterItsEntityOrItsSlot
+		REF @TASK.B98
+		REF @TASK.B50
+	RATIONALE "found on 2026-11-14 while examining the inventory: probe already names the operation"
+		+ "by which a client adapter declares its operations, wiki/Concepts.md, so the items of"
+		+ "doctor are not probes; the steps of a recipe, @TASK.B50 and @TASK.B51, collide with the"
+		+ "agent turn; VERIFY_ROUNDS is named in 868 files of tests/, the fixtures, and 3 of"
+		+ "brigade/, where the measure of 2026-11-13 counted about 6; HELD_REBASES is a constant of"
+		+ "brigade/commands/tick.py:961 and no field; POLICY.REVIEW, approval or verdict, already"
+		+ "carries the review sense"
+		REF @TASK.B50
+		REF @TASK.B51
 	RATIONALE "the live senses of wave, request and milestone are the rows of wiki/Concepts.md:"
 		+ "@TASK.B187, which gave each its one sense, is archived"
 		REF @TASK.B187
@@ -18315,10 +18359,21 @@ TASK B255
 		REF @TASK.B163
 		REF @TASK.B251
 		REF @TASK.B253
+	RATIONALE "AFTER @TASK.B256, which removes brigade ledger --wave, brigade verify preflight and"
+		+ "the study answers of brigade reports, so that this task does not rename what goes; a"
+		+ "renamed key or field refused rather than aliased, SPEC 8, keeps one name per thing, the"
+		+ "upgrade of an installed operational schema being @TASK.B197, a draft of ADD0"
+		REF @TASK.B256
+		REF @TASK.B197
 	RATIONALE "split off @TASK.B163 on 2026-11-13, its SPEC 3, 4, 5, 6 and 9 as drafted with the"
 		+ "inventory of words of its RATIONALE; left a draft on the user's ruling, each word"
 		+ "needing its kept sense"
 		REF @TASK.B163
+	RATIONALE "split again on 2026-11-14 in three, the user ruling « Three tasks »: this task the"
+		+ "senses of words, @TASK.B256 the merges of the commands, @TASK.B257 the glossary and its"
+		+ "guard, after both"
+		REF @TASK.B256
+		REF @TASK.B257
 	SOURCE "the user's ruling of 2026-10-16: « on va faire au plus simple, on colle au plan"
 		+ "initial, on change rien pour l'instant, mais on enregistre une tâche en m8 pour vérifier"
 		+ "deux choses: que l'on ne passe plus de commandes dans des strings, qu'il n'y a plus de"
@@ -18333,3 +18388,119 @@ TASK B255
 		+ "Glossary with its guard and the renaming of wave-plan; on its status, « Laisser en draft"
 		+ "», the task to be refined with the user, the senses to keep per word"
 		REF @TASK.B163
+	SOURCE "the user's rulings of 2026-11-14 in the refinement of B255: on the split, « Three tasks"
+		+ "(Recommended) »; on the glossary, « Concepts becomes it (Recommended) »; on the scope of"
+		+ "SPEC 1, « Public vocabulary (Recommended) »; on the slots, « Command verify becomes"
+		+ "review », the slots unchanged, command review becoming remediate; on step, « A recipe"
+		+ "step (Recommended) »; on the groups, « Singular, by entity (Recommended) »; on build, «"
+		+ "Command task becomes build (Recommended) »; on the table of senses, « Adopt as displayed"
+		+ "»; on @TASK.B98 and @TASK.B50, « Correct now (Recommended) »"
+		REF @TASK.B98
+		REF @TASK.B50
+	SOURCE "the user's ratification of 2026-11-14, « All three todo », with the precisions of SPEC"
+		+ "8 and 6 of @TASK.B255 and the update of @TASK.B236"
+		REF @TASK.B255
+		REF @TASK.B236
+
+TASK B256
+	TITLE "One command per thing: brigade ledger --wave, brigade verify preflight and the study"
+		+ "answers of brigade reports leave for wave show --events, brigade preflight"
+		+ "verify-pull-request and the inbox, and brigade task check runs a built-in preflight"
+	STATUS todo
+	TYPE refactor
+	MILESTONE @MILESTONE.M8
+	COMPONENT "audit"
+	ROLE ada
+	SPEC "brigade ledger takes no --wave; brigade wave show --events prints the events the ledger"
+		+ "holds for the wave, in the order recorded, in text and in the document --json carries"
+	SPEC "brigade reports list and show print the wave, task and milestone reports alone; a study"
+		+ "answer is listed and shown by brigade inbox alone, and the dashboard reads it there"
+	SPEC "brigade task check runs the built-in preflight task through the engine of TASK B98, which"
+		+ "names the checks of the corpus at head and of the acceptance lines; the corpus checks,"
+		+ "CORPUS_CHECKS of brigade/corpus/check_corpus.py:8 and"
+		+ "brigade/verify/check_corpus_at_head.py:9 today, are declared once"
+	SPEC "brigade verify preflight is removed: brigade preflight verify-pull-request pr=<pr> prints"
+		+ "the document it printed, the size it measures included, the tick runs that preflight on"
+		+ "the pull request of a task and records task.preflighted as today, and the procedures and"
+		+ "the wiki name brigade preflight verify-pull-request"
+	SPEC "the commands that remain doing the same work under one slot are listed in the pull"
+		+ "request body with the reason each stays, the six context commands and the six answer"
+		+ "commands one per slot among them; python3 -m unittest passes, the tests of the removed"
+		+ "commands moved to the commands that replace them"
+	AFTER @TASK.B98
+	AFTER @TASK.B163
+	AFTER @TASK.B253
+	RATIONALE "commands doing overlapping work, the same measure, the starting list of SPEC 2:"
+		+ "brigade task check and brigade verify preflight run the same corpus checks,"
+		+ "CORPUS_CHECKS defined in brigade/corpus/check_corpus.py:7 and in"
+		+ "brigade/verify/check_corpus_at_head.py:8, and the same ACCEPTANCE lines; six context"
+		+ "printers, plan, rebase, review, study, task and verify context, built by ten"
+		+ "assemble_*_context modules with no shared helper; six answer commands, verify verdict,"
+		+ "review reply, study answer, plan record, rebase done and inbox ratify, validate then"
+		+ "record; brigade status and brigade wave list both list the open waves; brigade ledger"
+		+ "--wave and brigade wave show both answer what happened in a wave; brigade collect and"
+		+ "the collect step of a study are two entries to one engine; brigade corpus stands beside"
+		+ "awawa; a slot maps to a command group, plan to plan, build to task, review to verify,"
+		+ "remediate to review, rebase to rebase, and report, triage, rules and explore to study"
+	RATIONALE "ruled on 2026-11-14: brigade ledger --wave removed, brigade wave show gaining"
+		+ "--events; the study answers out of brigade reports, being signals of the inbox; brigade"
+		+ "task check through a built-in preflight, CORPUS_CHECKS once, brigade verify preflight"
+		+ "removed for brigade preflight verify-pull-request; the context and the answer commands"
+		+ "stay one per slot, a command group per slot, and brigade status, the Home document,"
+		+ "aggregates the waves brigade wave list lists"
+	RATIONALE "AFTER @TASK.B98, which delivers brigade preflight and the built-in"
+		+ "verify-pull-request, @TASK.B253, the last preflight task of M8, and @TASK.B163, which"
+		+ "moves the acceptance lines of a project that brigade task check runs"
+		REF @TASK.B98
+		REF @TASK.B253
+		REF @TASK.B163
+	RATIONALE "split off @TASK.B255 on 2026-11-14, its SPEC 2 as drafted; TYPE refactor, the work"
+		+ "of each removed command done by the command that replaces it"
+		REF @TASK.B255
+	SOURCE "the user's rulings of 2026-11-14 in the refinement of B255: on the split, « Three tasks"
+		+ "(Recommended) »; on the merges, « ledger --wave removed, study answers out of reports,"
+		+ "task check via a preflight »"
+	SOURCE "the user's ratification of 2026-11-14, « All three todo », with the precisions of SPEC"
+		+ "8 and 6 of @TASK.B255 and the update of @TASK.B236"
+		REF @TASK.B255
+		REF @TASK.B236
+
+TASK B257
+	TITLE "wiki/Concepts.md becomes wiki/Glossary.md, one row per word of brigade between two"
+		+ "markers, and a guard of tests/guards holds it to the code and the corpus"
+	STATUS todo
+	TYPE docs
+	MILESTONE @MILESTONE.M8
+	COMPONENT "audit"
+	ROLE ada
+	SPEC "wiki/Concepts.md is renamed wiki/Glossary.md, every link of wiki/ and README.md to it"
+		+ "follows, and wiki/Home.md names it as the page to read when a word is unknown"
+	SPEC "wiki/Glossary.md carries one table between <!-- glossary: begin --> and <!-- glossary:"
+		+ "end -->, one row per word, the columns word, kind (command, argument, entity, field,"
+		+ "concept), what it is, page, milestone and task, each row citing the task that delivers"
+		+ "it; every word of the table of senses ruled on 2026-11-14 has its row, in the sense kept"
+	SPEC "a guard of tests/guards checks the table as tests/guards/test_wiki_adapter_matrix.py"
+		+ "checks the adapter matrix: it fails on a row citing a task the corpus lacks, on a"
+		+ "milestone that is not that task's MILESTONE, on a command group or subcommand of brigade"
+		+ "--help, an entity or a field of brigade/corpus/data/schema.awawa.tpl without a row, and"
+		+ "on a row naming a word neither the code nor the corpus carries"
+	AFTER @TASK.B255
+	AFTER @TASK.B256
+	RATIONALE "one page and no second: wiki/Concepts.md held one row per word on 2026-11-14, 30"
+		+ "rows, no marker and no guard, and a Glossary beside it would state each word twice; the"
+		+ "user ruled « Concepts becomes it (Recommended) »"
+	RATIONALE "AFTER @TASK.B255 and @TASK.B256: the guard passes only once every word carries its"
+		+ "one sense and every command removed is gone"
+		REF @TASK.B255
+		REF @TASK.B256
+	RATIONALE "split off @TASK.B255 on 2026-11-14, its SPEC 3 and 4 as drafted; TYPE docs, the"
+		+ "guard proving a page of the wiki"
+		REF @TASK.B255
+	SOURCE "the user's « ok » of 2026-10-16 on the session's recommendation: the M8 task adds the"
+		+ "wiki glossary table with a guard"
+	SOURCE "the user's rulings of 2026-11-14 in the refinement of B255: on the split, « Three tasks"
+		+ "(Recommended) »; on the glossary, « Concepts becomes it (Recommended) »"
+	SOURCE "the user's ratification of 2026-11-14, « All three todo », with the precisions of SPEC"
+		+ "8 and 6 of @TASK.B255 and the update of @TASK.B236"
+		REF @TASK.B255
+		REF @TASK.B236
