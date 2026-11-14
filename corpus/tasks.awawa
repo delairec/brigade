@@ -17448,7 +17448,8 @@ TASK B243
 		+ "no branch, opens no wave and selects no new task of a milestone whose AFTER is not"
 		+ "reached at PROJECT.MAIN, naming it on stderr at each tick; a wave already open goes to"
 		+ "its end"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 403
 	TYPE feat
 	MILESTONE @MILESTONE.M12
 	COMPONENT "the tick"
