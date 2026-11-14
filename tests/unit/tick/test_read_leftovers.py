@@ -75,7 +75,7 @@ class ReadLeftoversTestCase(unittest.TestCase):
         )
 
     def list_worktrees(self, *records: str) -> ProcessAnswer:
-        return ProcessAnswer(stdout="".join(f"{record}\0\0" for record in records))
+        return ProcessAnswer(stdout="\0\0".join(records) + "\0\0")
 
     def main_checkout_on(self, branch: str) -> str:
         return f"worktree {self.repository}\0HEAD a0a0a0a\0branch refs/heads/{branch}"
@@ -159,7 +159,22 @@ class ReadAStaleBranchTest(ReadLeftoversTestCase):
         leftovers = read_leftovers(git, self.create_reading([STALE_SPROUT]))
 
         # Assert
-        self.assertEqual((leftovers[0].run_live, leftovers[0].locked, leftovers[0].uncommitted), (True, True, True))
+        self.assertEqual(
+            leftovers,
+            (
+                LeftoverFacts(
+                    project="shop",
+                    branch="feature/S7-sprout",
+                    worktree=str(self.sprout),
+                    head="c0ffee1",
+                    reached_forge=True,
+                    run_live=True,
+                    locked=True,
+                    uncommitted=True,
+                    main_checkout=False,
+                ),
+            ),
+        )
 
     def test_should_read_a_stale_branch_the_main_checkout_holds(self):
         # Arrange
@@ -249,6 +264,40 @@ class ReadTheLeftoversOfAProjectItCannotReadTest(ReadLeftoversTestCase):
             leftovers = read_leftovers(git, reading)
 
         # Assert
+        self.assertEqual(leftovers, ())
+        self.assertRegex(errors.getvalue(), "^brigade tick: the leftovers of shop skipped: ")
+
+
+class LeftoverFactsTest(unittest.TestCase):
+    def test_should_carry_its_facts_in_its_document(self):
+        # Arrange
+        facts = LeftoverFacts(
+            project="shop",
+            branch="feature/S7-sprout",
+            worktree="/srv/shop/.brigade/worktrees/S7",
+            head="c0ffee1",
+            reached_forge=True,
+            run_live=False,
+            locked=True,
+            uncommitted=False,
+            main_checkout=False,
+        )
+
+        # Act
+        document = facts.to_document()
+
+        # Assert
         self.assertEqual(
-            (leftovers, errors.getvalue().startswith("brigade tick: the leftovers of shop skipped: ")), ((), True)
+            document,
+            {
+                "project": "shop",
+                "branch": "feature/S7-sprout",
+                "worktree": "/srv/shop/.brigade/worktrees/S7",
+                "head": "c0ffee1",
+                "reached_forge": True,
+                "run_live": False,
+                "locked": True,
+                "uncommitted": False,
+                "main_checkout": False,
+            },
         )

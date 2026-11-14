@@ -45,9 +45,8 @@ class RemoveLeftoverTest(unittest.TestCase):
         remove_leftover(create_test_runtime(self.paths, run_process=runner), action)
 
         # Assert
-        self.assertEqual(
-            (runner.commands[-1], WORKTREE_REMOVAL in runner.list_argvs()), (("/srv/shop", BRANCH_DELETION), False)
-        )
+        self.assertEqual(runner.commands[-1], ("/srv/shop", BRANCH_DELETION))
+        self.assertNotIn(WORKTREE_REMOVAL, runner.list_argvs())
 
     def test_should_remove_the_stale_worktree_alone_when_it_holds_no_branch(self):
         # Arrange
@@ -58,10 +57,8 @@ class RemoveLeftoverTest(unittest.TestCase):
         remove_leftover(create_test_runtime(self.paths, run_process=runner), action)
 
         # Assert
-        self.assertEqual(
-            (runner.commands[-1], any(argv[:3] == ("git", "branch", "--quiet") for argv in runner.list_argvs())),
-            (("/srv/shop", WORKTREE_REMOVAL), False),
-        )
+        self.assertEqual(runner.commands[-1], ("/srv/shop", WORKTREE_REMOVAL))
+        self.assertNotIn(BRANCH_DELETION, runner.list_argvs())
 
     def test_should_remove_under_the_lock_of_the_worktrees_of_the_project(self):
         # Arrange

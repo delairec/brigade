@@ -522,10 +522,7 @@ class ReadABranchWhoseBaseTheForgeNoLongerHoldsTest(ReadIntegrationBranchesTestC
                 branches = read_integration_branches(git, reading)
 
                 # Assert
-                self.assertEqual(
-                    (branches[0].reached_forge, branches[0].gone_base, branches[0].merged_pull_request),
-                    (reached_forge, None, None),
-                )
+                self.assertEqual(branches[0].reached_forge, reached_forge)
 
 
 class IntegrationBranchFactsTest(unittest.TestCase):

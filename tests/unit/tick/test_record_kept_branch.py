@@ -46,14 +46,13 @@ class RecordKeptBranchTest(unittest.TestCase):
             record_kept_branch(create_test_runtime(self.paths, now=NOW), KEPT_SPROUT)
 
         # Assert
+        [entry] = read_ledger(self.paths.state_root).entries
         self.assertEqual(
-            [entry.event for entry in read_ledger(self.paths.state_root).entries],
-            [
-                BranchKept(
-                    project="shop",
-                    branch="feature/S7-sprout",
-                    reason="a commit outside the merged pull request",
-                    head="c0ffee1",
-                )
-            ],
+            entry.event,
+            BranchKept(
+                project="shop",
+                branch="feature/S7-sprout",
+                reason="a commit outside the merged pull request",
+                head="c0ffee1",
+            ),
         )
