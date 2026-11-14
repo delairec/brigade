@@ -9,6 +9,7 @@ from pathlib import Path
 from brigade.collecting.collect_document import CollectionRequest, collect_document
 from brigade.collecting.collector_environment import CollectorInputs
 from brigade.collecting.collector_equipment import CollectorEquipment
+from brigade.collecting.read_stale_branches import read_stale_branches
 from brigade.command import Argument, Command, ExclusiveArguments
 from brigade.commands._launch_branch_rebase import launch_branch_rebase
 from brigade.commands._list_branch_check_runs import list_branch_check_runs
@@ -847,10 +848,27 @@ def _read_environment_of_project(runtime: Runtime, configuration: Configuration)
     return lambda project, key: read_environment(read_project_forge(project), key)
 
 
+def _read_stale_branches_of(runtime: Runtime, configuration: Configuration) -> Callable[[Entity], list[dict]]:
+    def read(project: Entity) -> list[dict]:
+        if not is_on_a_forge(project):
+            return []
+        forge_name = read_project_forge(project)
+        equipment = CollectorEquipment(
+            configuration=configuration,
+            forge=runtime.resolve_plugin(FORGE_KIND, forge_name),
+            forge_name=forge_name,
+            resolve_client=lambda name: runtime.resolve_plugin(CLIENT_KIND, name),
+        )
+        return read_stale_branches(project, equipment, runtime)
+
+    return read
+
+
 def _read_the_forge(runtime: Runtime, configuration: Configuration) -> ForgeReaders:
     return ForgeReaders(
         read_pull_request=_follow_pull_requests(runtime, configuration),
         read_environment=_read_environment_of_project(runtime, configuration),
+        read_stale_branches=_read_stale_branches_of(runtime, configuration),
     )
 
 

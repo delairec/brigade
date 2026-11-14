@@ -131,6 +131,10 @@ def _read_forge_environment(project: Entity, slot: str) -> dict:
     return FORGE_ENVIRONMENT
 
 
+def _list_no_stale_branch(project: Entity) -> list[dict]:
+    return []
+
+
 class PullRequestReaderDouble:
     def __init__(self):
         self.branches = []
@@ -243,6 +247,9 @@ class BuildSnapshotTestCase(unittest.TestCase):
                 ),
                 **answer_unreadable_tree("trunk"),
                 **answer_main_of_the_forge(MAIN_SHA),
+                ("git", "worktree", "list", "--porcelain", "-z"): ProcessAnswer(
+                    stdout=f"worktree {self.repository}\0HEAD {MAIN_SHA}\0branch refs/heads/main\0\0"
+                ),
                 **self.remote_answers,
             }
         )
@@ -252,7 +259,11 @@ class BuildSnapshotTestCase(unittest.TestCase):
         runtime = create_test_runtime(self.paths, run_process=self.runner)
         stderr = io.StringIO()
         with contextlib.redirect_stderr(stderr):
-            snapshot = build_snapshot(runtime, self.configuration, ForgeReaders(self.reader, _read_forge_environment))
+            snapshot = build_snapshot(
+                runtime,
+                self.configuration,
+                ForgeReaders(self.reader, _read_forge_environment, _list_no_stale_branch),
+            )
         return snapshot, stderr.getvalue()
 
 

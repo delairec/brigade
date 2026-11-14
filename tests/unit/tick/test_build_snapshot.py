@@ -44,6 +44,8 @@ class SnapshotTest(unittest.TestCase):
                 "rate_limits": [],
                 "milestones": [],
                 "integration_branches": [],
+                "leftovers": [],
+                "kept_branches": [],
             },
         )
 
@@ -85,6 +87,7 @@ class SnapshotTest(unittest.TestCase):
                     "worktree": None,
                     "run_live": False,
                     "locked": False,
+                    "gone_base": None,
                 }
             ],
         )
