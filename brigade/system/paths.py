@@ -1,3 +1,4 @@
+import getpass
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -13,6 +14,7 @@ HEARTBEAT_FILE = "tick.json"
 SCHEMA_FILE = "_schema.awawa"
 RUN_DIRECTORY_VARIABLE = "BRIGADE_RUN_DIR"
 HOME_VARIABLE = "HOME"
+USER_VARIABLE = "USER"
 SESSION_BUS_VARIABLE = "DBUS_SESSION_BUS_ADDRESS"
 
 
@@ -24,6 +26,7 @@ class Paths:
     home: Path
     executable_search_path: str
     package_file: Path
+    user: str
     run_directory: Path | None = None
     session_bus_address: str | None = None
 
@@ -62,6 +65,12 @@ def _resolve_absolute_path(environment: Mapping[str, str], variable: str) -> Pat
     return None
 
 
+def _resolve_user(environment: Mapping[str, str]) -> str:
+    if USER_VARIABLE in environment:
+        return environment[USER_VARIABLE]
+    return getpass.getuser()
+
+
 def _resolve_home(environment: Mapping[str, str]) -> Path:
     if HOME_VARIABLE in environment:
         return Path(environment[HOME_VARIABLE])
@@ -77,6 +86,7 @@ def build_paths(environment: Mapping[str, str]) -> Paths:
         home=home,
         executable_search_path=environment.get("PATH", os.defpath),
         package_file=Path(brigade.__file__),
+        user=_resolve_user(environment),
         run_directory=_resolve_absolute_path(environment, RUN_DIRECTORY_VARIABLE),
         session_bus_address=environment.get(SESSION_BUS_VARIABLE),
     )

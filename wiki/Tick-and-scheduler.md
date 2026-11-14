@@ -95,7 +95,8 @@ The tick launches no run of a paused wave.
 `tick_stale_after` of `config.toml`, in minutes, 15 by default.
 
 > **Watch out:** under `systemd`, without `loginctl enable-linger` the user manager stops with the last session, and
-> the timer with it. `scheduler install` warns when `loginctl show-user -p Linger` does not answer `Linger=yes`.
+> the timer with it. `scheduler install` warns when `loginctl show-user <user> --property=Linger`, for the user of
+> the run, does not answer `Linger=yes`.
 
 ## Details and edge cases
 

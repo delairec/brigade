@@ -9,9 +9,9 @@ PROBE_DIRECTORY = "/"
 PROBE_TIMEOUT_S = 10.0
 
 
-def describe_linger_warning(run_process: Callable[[ProcessRequest], ProcessRecord]) -> str | None:
+def describe_linger_warning(run_process: Callable[[ProcessRequest], ProcessRecord], user: str) -> str | None:
     request = ProcessRequest(
-        argv=("loginctl", "show-user", "-p", "Linger"), cwd=PROBE_DIRECTORY, timeout_s=PROBE_TIMEOUT_S
+        argv=("loginctl", "show-user", user, "--property=Linger"), cwd=PROBE_DIRECTORY, timeout_s=PROBE_TIMEOUT_S
     )
     try:
         record = run_process(request)

@@ -6924,3 +6924,20 @@ DECISION AnAnswerOfTheTriageAddsEvidenceToAHeldPatternByAPatternOfItsNameHolding
 	SOURCE "the user's ruling of 2026-11-13 at the refinement of @TASK.B245: « Le modèle ajoute des"
 		+ "EVIDENCE »"
 		REF @TASK.B245
+
+DECISION TheLingerIsAskedForTheUserTheEnvironmentNamesElseTheAccountOfTheProcess
+	TITLE "the user brigade passes to loginctl show-user is USER of the environment brigade runs"
+		+ "in, else the account getpass.getuser() names; brigade/system/paths.py reads it beside"
+		+ "HOME, as the user of Paths"
+	STATUS active
+	DESC "binds SPEC 1 of @TASK.B250, which names the user of the run without saying where it is"
+		+ "read"
+		REF @TASK.B250
+	REJECTED "the uid of the process passed to loginctl: the SPEC names the user, and a name reads"
+		+ "in the warning and the trace where a number does not"
+	REJECTED "the account of the process alone, read with pwd: every other fact of the environment"
+		+ "comes from the mapping build_paths receives, which a test names literally"
+	RATIONALE "HOME is read the same way, the variable first, else the account of the process, so"
+		+ "that a timer whose environment holds no USER still asks for its own account"
+	SOURCE "the build run of @TASK.B250 of 2026-11-14"
+		REF @TASK.B250
