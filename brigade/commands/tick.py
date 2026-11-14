@@ -775,20 +775,24 @@ def _list_task_run_executors(runtime: Runtime, configuration: Configuration) -> 
     }
 
 
-def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
+def _list_cleanup_executors(runtime: Runtime) -> dict:
     return {
-        RecordTaskState: lambda action: _record_task_state(runtime, action),
-        CarryOpenedPullRequest: lambda action: _carry_opened_pull_request(runtime, action),
-        ParkTask: lambda action: _park_task(runtime, action),
         RemoveTaskWorktree: lambda action: remove_task_worktree(runtime, action),
         RemoveIntegrationBranch: lambda action: remove_integration_branch(runtime, action),
         RemoveLeftover: lambda action: remove_leftover(runtime, action),
         KeepBranch: lambda action: record_kept_branch(runtime, action),
         RecordGoneBase: lambda action: append_event(
-            runtime.paths,
-            runtime.now,
-            BranchBaseGone(project=action.project, branch=action.branch, base=action.base),
+            runtime.paths, runtime.now, BranchBaseGone(project=action.project, branch=action.branch, base=action.base)
         ),
+    }
+
+
+def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
+    return {
+        RecordTaskState: lambda action: _record_task_state(runtime, action),
+        CarryOpenedPullRequest: lambda action: _carry_opened_pull_request(runtime, action),
+        ParkTask: lambda action: _park_task(runtime, action),
+        **_list_cleanup_executors(runtime),
         RunPreflight: lambda action: _run_preflight(runtime, configuration, action),
         MergePullRequest: lambda action: _merge_pull_request(runtime, configuration, action),
         MergeTaskBranch: lambda action: _merge_task_branch(runtime, configuration, action),
