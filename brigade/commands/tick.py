@@ -107,6 +107,7 @@ from brigade.tick.actions import (
     ResumeTaskRun,
     ResumeWave,
     RunPreflight,
+    SignalStall,
     StartWave,
 )
 from brigade.tick.apply_actions import apply_actions
@@ -122,6 +123,7 @@ from brigade.tick.prepare_task_worktree import prepare_task_worktree
 from brigade.tick.read_ruled_task import read_ruled_task
 from brigade.tick.rebase_task import rebase_task
 from brigade.tick.record_review_threads import record_review_threads
+from brigade.tick.record_stall import record_stall
 from brigade.tick.remove_integration_branch import remove_integration_branch
 from brigade.tick.remove_task_worktree import remove_task_worktree
 from brigade.tick.run_rounds import Rounds, RoundsOutcome, run_rounds
@@ -795,6 +797,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         DescribeMilestonePullRequest: lambda action: _describe_milestone_pull_request(runtime, configuration, action),
         CollectCheckRuns: lambda action: _collect_check_runs(runtime, configuration, action),
         CollectReviewThreads: lambda action: _collect_review_threads(runtime, configuration, action),
+        SignalStall: lambda action: record_stall(runtime, action),
     }
 
 
