@@ -15,6 +15,7 @@ from unittest.mock import ANY
 from brigade.collectors import pr_threads
 from brigade.commands.tick import COMMAND
 from brigade.errors import BrigadeError, CommandFailed, StandingDown, UsageError
+from brigade.inbox.read_inbox import Signal, read_inbox
 from brigade.runs.record_run_pid import record_run_pid
 from brigade.runtime import Runtime
 from brigade.system.collector_places import locate_collectors
@@ -38,7 +39,7 @@ from tests.unit.commands.run_doubles import (
     create_plugin_resolution,
 )
 from tests.unit.create_test_paths import create_test_paths
-from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
 from tests.unit.forge_double import ForgeDouble
 from tests.unit.ledger_reader_double import LedgerReaderDouble
 from tests.unit.plugin_double import PluginDouble
@@ -48,6 +49,7 @@ from tests.unit.select_reported_milestones import select_reported_milestones
 from tests.unit.select_reported_tasks import select_reported_tasks
 from tests.unit.spawned_process_double import SpawnedProcessDouble
 
+CONFIGURATION_OF_A_TWO_DAY_STALL = f"{CLIENT_AND_DOCUMENT_CONFIGURATION}stall_after = 2880\n"
 GIT_PUSH = ("git", "push")
 GIT_ADD = ("git", "add")
 GIT_COMMIT = ("git", "commit")
@@ -744,7 +746,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(self.root)
-        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "config" / "config.toml").write_text(CONFIGURATION_OF_A_TWO_DAY_STALL, encoding="utf-8")
         (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
         self.repository = self.root / "tidepool"
         self.worktree = self.repository / ".brigade" / "worktrees" / "T7"
@@ -2551,7 +2553,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(self.root)
-        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "config" / "config.toml").write_text(CONFIGURATION_OF_A_TWO_DAY_STALL, encoding="utf-8")
         (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
         self.repository = self.root / "tidepool"
         (self.repository / ".brigade" / "worktrees" / "T8").mkdir(parents=True)
@@ -2623,6 +2625,44 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
                 },
             ],
         )
+
+    def test_should_record_in_the_inbox_the_stall_of_a_task_it_takes_no_action_on_past_the_delay(self):
+        # Arrange
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        forge = MergingForgeRefusingAMovedHeadDouble(
+            {"feature/T7-tide-table": GREEN_PULL_REQUEST}, pushed_head="9010166"
+        )
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+
+        # Assert
+        self.assertEqual(
+            read_inbox(self.root / "state", FIXED_NOW),
+            (
+                Signal(
+                    id="d5dbc2f5644c278e9eae3089e6a8ff52417544a77c8be929eec8c364ffc12262",
+                    fingerprint="stall:tidepool:tidepool_w16:T8",
+                    kind="stall",
+                    project="tidepool",
+                    count=1,
+                    age_s=0,
+                    status="new",
+                    evidence={"wave": "tidepool_w16", "task": "T8", "last_action": "2026-10-18T09:00:00Z"},
+                ),
+            ),
+        )
+
+    def test_should_record_no_stall_of_a_task_it_launches_in_a_later_round(self):
+        # Arrange
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        no_signal = ()
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(read_inbox(self.root / "state", FIXED_NOW), no_signal)
 
     def test_should_print_the_merge_with_the_head_it_names_on_a_dry_run(self):
         # Act
@@ -6682,7 +6722,7 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(self.root)
-        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "config" / "config.toml").write_text(CONFIGURATION_OF_A_TWO_DAY_STALL, encoding="utf-8")
         (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
         self.repository = self.root / "tidepool"
         write_run(
