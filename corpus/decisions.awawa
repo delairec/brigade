@@ -6996,3 +6996,24 @@ DECISION TheStallOfATaskIsReadFromItsLastLedgerEventAndRaisedOnceTheRoundsOfTheT
 	SOURCE "the build run of @TASK.B244 of 2026-11-14, on the declared events of"
 		+ "brigade/ledger/declared_events.py and the rounds of brigade/tick/run_rounds.py"
 		REF @TASK.B244
+
+DECISION TheTickKeepsALeftoverHoldingUncommittedChangesOrTheMainCheckoutAndReachesAGoneBaseThroughMain
+	TITLE "the tick keeps a leftover worktree that holds uncommitted changes and a stale branch the"
+		+ "main checkout holds, naming the branch once; an integration branch whose base the forge"
+		+ "no longer holds is checked against PROJECT.MAIN"
+	STATUS active
+	DESC "binds SPEC 1, 2 and 4 of @TASK.B248"
+		REF @TASK.B248
+	REJECTED "removing a worktree that holds uncommitted changes: git worktree remove is run"
+		+ "forced, so the changes would be lost with no trace"
+	REJECTED "removing the worktree a stale branch stands in when that worktree is the main"
+		+ "checkout: git refuses to remove it, and the branch it holds cannot be deleted"
+	REJECTED "leaving the head of a branch whose base is gone unchecked: with no merged pull"
+		+ "request to compare, PROJECT.MAIN is the base the head must have reached"
+	RATIONALE "the guards of @TASK.B234 cover a live run, a lock and a head that did not reach the"
+		+ "forge; a worktree the scan worktrees signals may hold work no commit carries, and a"
+		+ "stale branch may be the one the main checkout stands on"
+		REF @TASK.B234
+	SOURCE "the build run of @TASK.B248 of 2026-11-14, step 3, the SPEC lines naming no behaviour"
+		+ "for these cases"
+		REF @TASK.B248

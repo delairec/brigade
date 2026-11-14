@@ -25,17 +25,27 @@ plan is empty or ten rounds have passed. Among those actions, it:
 - pauses every running wave on the quota or on the forge account, and resumes it;
 - removes the local branch of an integration branch the ledger records, and its worktree with it when one stands,
   once the branch has nothing left to do: the branch of a milestone once the ledger holds its `milestone.closed`, the
-  branch of a wave once it holds its `wave.closed` or its `wave.cancelled`.
+  branch of a wave once it holds its `wave.closed` or its `wave.cancelled`;
+- removes what the merges leave behind: each local branch the scan `stale_branches` signals, every pull request of its
+  head branch merged or closed, with its worktree when one stands, and each worktree the scan `worktrees` signals, its
+  branch gone or its head detached with no live run.
 
-The branch of an active milestone or of an open wave is never removed, nor a branch the ledger does not record, nor
-the branch on the forge. An ended branch is kept, with its worktree, while one of these holds, and the tick names it
-with its reason on stderr and in `brigade tick --dry-run`:
+The branch of an active milestone or of an open wave is never removed, nor the branch on the forge. A branch or a
+worktree to remove is kept while one of these holds, and the tick names a kept branch with its reason and its head
+once, on stderr, in `brigade tick --dry-run` and as a `branch.kept` event of the ledger, and again only once its reason or its
+head changes; a kept worktree with no branch is named nowhere:
 
 | Reason | When |
 |---|---|
-| `a commit outside the merged pull request` | the head of the local branch is neither the head of its merged pull request, nor an ancestor of it, nor an ancestor of `origin/` the branch it merges into: the main branch for a milestone branch, the branch of its milestone for a wave branch |
+| `a commit outside the merged pull request` | the head of the local branch is neither the head of its merged pull request, nor an ancestor of it, nor an ancestor of `origin/` the branch it merges into: the main branch for a milestone branch, the branch of its milestone for a wave branch; for a stale branch, its head is in none of its pull requests and on no remote branch |
 | `a live run` | a run is live on its worktree |
 | `a lock` | git lists its worktree locked |
+| `uncommitted changes` | its worktree holds uncommitted changes, which a forced `git worktree remove` would lose |
+| `the main checkout` | the stale branch is the one the main checkout stands on |
+
+An integration branch whose pull request the forge cannot read because the forge no longer holds the branch it merges
+into is recorded once, as a `branch.base_gone` event of the ledger: from then on the tick reads no pull request for it
+and checks its head against the main branch of the project, writing no error at the ticks that follow.
 
 The worktree of a task is not an integration worktree: it is removed once the pull request of its task is merged or
 closed, as below, and a parked task of a closed wave keeps its worktree and its commits.
