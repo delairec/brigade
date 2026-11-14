@@ -36,6 +36,7 @@ from brigade.tick.actions import (
     ResumeTaskRun,
     ResumeWave,
     RunPreflight,
+    SignalStall,
     StartWave,
 )
 from brigade.tick.build_snapshot import (
@@ -126,6 +127,7 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_wave_starts(snapshot)
         + _plan_studies(snapshot)
         + _plan_integration_branches(snapshot)
+        + _plan_stall_signals(snapshot)
     )
 
 
@@ -937,3 +939,29 @@ def _plan_studies(snapshot: Snapshot) -> tuple:
             free_runs -= 1
         launches.append(LaunchStudy(study=study.name))
     return tuple(launches)
+
+
+def _is_paused_on_the_quota(wave: WaveFacts, task: TaskFacts) -> bool:
+    return wave.states.get(task.name) == PAUSED_ON_QUOTA_STATE or (
+        wave.pause is not None and wave.pause.reason == QUOTA_REASON
+    )
+
+
+def _is_stalled(wave: WaveFacts, task: TaskFacts, snapshot: Snapshot, live_tasks: frozenset) -> bool:
+    return (
+        task.last_action is not None
+        and snapshot.now - task.last_action > timedelta(minutes=snapshot.stall_after)
+        and (wave.wave, task.name) not in live_tasks
+        and wave.states.get(task.name) not in SETTLED_STATES
+        and not _is_paused_on_the_quota(wave, task)
+    )
+
+
+def _plan_stall_signals(snapshot: Snapshot) -> tuple:
+    live_tasks = frozenset((live.wave, live.task) for project in snapshot.projects for live in project.live_runs)
+    return tuple(
+        SignalStall(project=wave.project, wave=wave.wave, task=task.name, last_action=task.last_action)
+        for wave in snapshot.waves
+        for task in wave.tasks
+        if _is_stalled(wave, task, snapshot, live_tasks)
+    )
