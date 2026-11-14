@@ -17767,7 +17767,8 @@ TASK B248
 	TITLE "The tick removes what the merges leave behind, each local branch the scan stale_branches"
 		+ "signals and each worktree the scan worktrees signals, names a kept branch once, and"
 		+ "records once a base branch gone from the forge instead of an error at each tick"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 410
 	TYPE feat
 	MILESTONE @MILESTONE.M12
 	COMPONENT "the tick and the scans"
