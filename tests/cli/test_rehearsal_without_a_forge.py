@@ -101,6 +101,7 @@ class BrigadeRehearsalOfAOneTaskWaveUnderNoAutoMergeTest(unittest.TestCase):
         cls.rehearser.project.run_git("checkout", "--quiet", "-b", "elsewhere")
         cls.rehearser.project.run_git(*shlex.split(cls.command)[1:])
         cls.rehearser.run_brigade("tick", "--once")
+        cls.rehearser.wait_until(cls.rehearser.has_the_report_ended, "the report of the milestone never ended")
 
     def test_should_merge_nothing_before_the_user_runs_the_command(self):
         # Act
@@ -138,3 +139,10 @@ class BrigadeRehearsalOfAOneTaskWaveUnderNoAutoMergeTest(unittest.TestCase):
         # Assert
         self.assertIn("wave.closed", names)
         self.assertEqual(states[-1], "merged")
+
+    def test_should_end_the_report_of_the_milestone_once_its_task_is_merged(self):
+        # Act
+        names = self.rehearser.list_event_names()
+
+        # Assert
+        self.assertIn("order.done", names)
