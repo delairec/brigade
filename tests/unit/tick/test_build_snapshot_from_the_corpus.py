@@ -17,6 +17,8 @@ from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.milestone_closed import MilestoneClosed
 from brigade.ledger.milestone_pr_described import MilestonePrDescribed
 from brigade.ledger.milestone_pr_opened import MilestonePrOpened
+from brigade.ledger.order_parked import OrderParked
+from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_reported import TaskReported
@@ -30,6 +32,7 @@ from brigade.ledger.wave_started import WaveStarted
 from brigade.runs.record_run_pid import record_run_pid
 from brigade.system.parse_configuration import Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
+from brigade.system.reset_hour import ResetHour
 from brigade.tick.actions import LaunchTask
 from brigade.tick.build_snapshot import (
     BlockedRun,
@@ -2532,3 +2535,67 @@ class BuildSnapshotOfATaskDeliveredWithoutAForgeTest(BuildSnapshotTestCase):
 
                 # Assert
                 self.assertEqual(snapshot.waves[0].tasks[0].delivered_head, expected)
+
+
+ORDER_RUN_OF_TRIAGE = "20261019T082500Z-0a1b2c"
+JUDGING_RUN_OF_TRIAGE = "20261019T082600Z-3d4e5f"
+RESET_AT_TEN = ResetHour(hour="10:00", timezone="UTC")
+JUDGING_RECORD_KEPT = True
+JUDGING_RECORD_PRUNED = False
+
+
+class BuildSnapshotOfAStudyParkedByItsJudgingRunTest(BuildSnapshotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_operational_corpus()
+
+    def park_triage(self, error_class: str, judging_record_kept: bool) -> None:
+        self.record(35, OrderStarted(project=None, kind="study", order="triage", run=ORDER_RUN_OF_TRIAGE))
+        self.record(
+            30,
+            dataclasses.replace(
+                create_run_finished(
+                    JUDGING_RUN_OF_TRIAGE, procedure="study", slot="triage", outcome="failed", error_class=error_class
+                ),
+                reset=RESET_AT_TEN,
+            ),
+        )
+        self.record(
+            30,
+            OrderParked(
+                project=None,
+                kind="study",
+                order="triage",
+                run=ORDER_RUN_OF_TRIAGE,
+                step="judge",
+                reason=f"the judging run {JUDGING_RUN_OF_TRIAGE} gave no answer",
+            ),
+        )
+        if judging_record_kept:
+            write_run(
+                self.paths.state_root,
+                {
+                    **create_run_record(JUDGING_RUN_OF_TRIAGE, None, None),
+                    "procedure": "study",
+                    "slot": "triage",
+                    "arguments": {"study": "triage", "run": ORDER_RUN_OF_TRIAGE},
+                },
+                None,
+            )
+
+    def test_should_carry_the_reset_of_the_rate_limit_that_parked_a_study(self):
+        for case, error_class, judging_record_kept, expected in [
+            ("cut by a rate limit", "rate_limit", JUDGING_RECORD_KEPT, datetime(2026, 10, 19, 10, 0, tzinfo=UTC)),
+            ("ended on another error", "execution", JUDGING_RECORD_KEPT, None),
+            ("cut by a rate limit, its record pruned", "rate_limit", JUDGING_RECORD_PRUNED, None),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                self.park_triage(error_class, judging_record_kept)
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.studies[1].quota_resume_at, expected)
