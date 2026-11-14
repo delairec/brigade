@@ -71,7 +71,12 @@ S1_IMPLEMENTED_NOWHERE = {
     "S1": (("STATUS", "draft"), ("MILESTONE", "@MILESTONE.M9")),
     "S2": (("STATUS", "todo"), ("MILESTONE", "@MILESTONE.M9"), ("AFTER", "@TASK.S1")),
 }
-ACTIVE_AT_MAIN = {"entities": [{"type": "MILESTONE", "name": name} for name in ("M9", "M10", "M12", "M13")]}
+ACTIVE_AT_MAIN = {
+    "M9": (("STATUS", "active"),),
+    "M10": (("STATUS", "active"),),
+    "M12": (("STATUS", "active"),),
+    "M13": (("STATUS", "active"),),
+}
 NO_INCOMING_REFERENCE = {"incoming": []}
 
 
@@ -85,7 +90,7 @@ class ListCandidateWavesTestCase(unittest.TestCase):
         )
         self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         self.main_tree = self.answer_tree("main", MAIN_SHA, TASKS_AT_MAIN)
-        self.processes.answer_json((*ACTIVE_MILESTONES, str(self.main_tree)), ACTIVE_AT_MAIN)
+        self.processes.answer_entities(self.main_tree, "MILESTONE", ACTIVE_AT_MAIN, ("STATUS==active",))
 
     def answer_tree(self, ref: str, sha: str, tasks: dict) -> Path:
         tree = self.root / "cache" / "refs" / "shop" / sha

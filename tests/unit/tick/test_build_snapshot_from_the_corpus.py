@@ -1385,6 +1385,156 @@ class BuildSnapshotOfTheTasksOfAReachedMilestoneTest(BuildSnapshotTestCase):
         self.assertEqual(snapshot.projects[1].candidates, (CandidateWave(milestone="M6", tasks=("B5",)),))
 
 
+def describe_milestone_after(title: str, after: str) -> list[dict]:
+    return [*describe_milestone(title), {"name": "AFTER", "atoms": [f"@MILESTONE.{after}"]}]
+
+
+class BuildSnapshotOfTheMilestonesOrderedByTheirAfterTest(BuildSnapshotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_operational_corpus()
+        tasks = {
+            "B5": describe_task_of_milestone("todo", "M6"),
+            "B11": describe_task_of_milestone("todo", "M7"),
+            "B12": describe_task_of_milestone("todo", "M9"),
+            "B13": describe_task_of_milestone("todo", "M10"),
+            "B14": describe_task_of_milestone("todo", "M11"),
+            "B15": describe_task_of_milestone("todo", "M8"),
+        }
+        self.remote_answers = {
+            **AWAWA_ANSWERS.answer_entities(self.main_tree, "TASK", tasks),
+            **AWAWA_ANSWERS.answer_entities(
+                self.main_tree,
+                "MILESTONE",
+                {
+                    "M6": describe_milestone_after("Hardening", "M5"),
+                    "M7": describe_milestone_after("Recipes", "M8"),
+                    "M8": describe_milestone("Inbox"),
+                    "M10": describe_milestone_after("Tides", "M11"),
+                    "M11": describe_milestone_after("Currents", "M10"),
+                },
+                "STATUS==active",
+            ),
+            **AWAWA_ANSWERS.answer_entities(
+                self.main_tree, "MILESTONE", {"M5": describe_milestone("Payments")}, "STATUS==reached"
+            ),
+            **AWAWA_ANSWERS.answer_entities(
+                self.main_tree, "MILESTONE", {"M9": describe_milestone_after("Post-MVP", "M5")}, "STATUS==planned"
+            ),
+            **AWAWA_ANSWERS.answer_no_incoming_refs(self.main_tree, "B5", "B11", "B12", "B13", "B14", "B15"),
+        }
+
+    def test_should_start_no_wave_of_an_active_milestone_whose_after_is_not_reached(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertNotIn(CandidateWave(milestone="M7", tasks=("B11",)), snapshot.projects[1].candidates)
+
+    def test_should_cut_no_branch_of_an_active_milestone_whose_after_is_not_reached(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertNotIn(
+            UncutMilestone(milestone="M7", branch="integration/recipes", open_waves=(), todo=("B11",)),
+            snapshot.projects[1].uncut_milestones,
+        )
+
+    def test_should_name_on_stderr_each_active_milestone_whose_after_is_not_reached_a_cycle_included(self):
+        # Act
+        _, stderr = self.build()
+
+        # Assert
+        self.assertEqual(
+            stderr.splitlines(),
+            [
+                (
+                    "brigade tick: the project attic skipped: git rev-parse --verify --quiet --end-of-options"
+                    " trunk^{commit} exited 128: fatal: bad revision"
+                ),
+                "brigade tick: @MILESTONE.M7 is not served until its AFTER is reached: @MILESTONE.M8",
+                "brigade tick: @MILESTONE.M10 is not served until its AFTER is reached: @MILESTONE.M11",
+                "brigade tick: @MILESTONE.M11 is not served until its AFTER is reached: @MILESTONE.M10",
+            ],
+        )
+
+    def test_should_start_a_wave_of_an_active_milestone_whose_after_is_reached(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertIn(CandidateWave(milestone="M6", tasks=("B5",)), snapshot.projects[1].candidates)
+
+    def test_should_start_a_wave_of_an_active_milestone_with_no_after(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertIn(CandidateWave(milestone="M8", tasks=("B15",)), snapshot.projects[1].candidates)
+
+    def test_should_start_no_wave_of_a_planned_milestone_whose_after_is_reached(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertNotIn(CandidateWave(milestone="M9", tasks=("B12",)), snapshot.projects[1].candidates)
+
+    def test_should_start_no_wave_of_the_milestones_of_a_cycle_of_after(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.projects[1].candidates,
+            (CandidateWave(milestone="M6", tasks=("B5",)), CandidateWave(milestone="M8", tasks=("B15",))),
+        )
+
+
+class PlanOfAnOpenWaveOfAMilestoneWhoseAfterIsNotReachedTest(BuildSnapshotTestCase):
+    def test_should_launch_the_queued_task_of_the_open_wave_until_the_wave_closes(self):
+        # Arrange
+        self.write_operational_corpus()
+        self.shop_forge = "github"
+        of_milestone = [{"name": "MILESTONE", "atoms": ["@MILESTONE.M7"]}]
+        queued = [*AWAWA_ANSWERS.describe_task("todo"), *of_milestone]
+        self.remote_answers = {
+            **AWAWA_ANSWERS.answer_entities(self.main_tree, "TASK", {"B11": queued}),
+            **AWAWA_ANSWERS.answer_entities(
+                self.main_tree,
+                "MILESTONE",
+                {"M7": describe_milestone_after("Recipes", "M8"), "M8": describe_milestone("Inbox")},
+                "STATUS==active",
+            ),
+            **AWAWA_ANSWERS.answer_entities(self.main_tree, "MILESTONE", {}, "STATUS==reached"),
+            **AWAWA_ANSWERS.answer_no_incoming_refs(self.main_tree, "B11"),
+            **answer_tree("origin/integration/recipes", MILESTONE_SHA),
+            **AWAWA_ANSWERS.answer_entities(self.milestone_tree, "TASK", {"B11": queued}),
+            **AWAWA_ANSWERS.answer_entities(self.milestone_tree, "TASK", {"B11": queued}, "MILESTONE==@MILESTONE.M7"),
+            **AWAWA_ANSWERS.answer_no_incoming_refs(self.milestone_tree, "B11"),
+            **AWAWA_ANSWERS.answer_entities(self.milestone_tree, "TASK", {}, "STATUS==implemented"),
+        }
+        self.record(70, MilestoneBranchCut(project="shop", milestone="M7", branch="integration/recipes", login=None))
+        self.record(60, WaveStarted(wave="w2", project="shop", tasks=("B11",)))
+        snapshot, _ = self.build()
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertIn(
+            LaunchTask(
+                project="shop",
+                wave="w2",
+                branch="integration/recipes",
+                task="B11",
+                task_branch="feature/B11-task",
+                pull_request_checks=None,
+            ),
+            actions,
+        )
+
+
 class BuildSnapshotOfAWaveWhoseTaskCarriesNoTypeTest(BuildSnapshotTestCase):
     def setUp(self):
         super().setUp()
