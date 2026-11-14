@@ -17816,7 +17816,8 @@ TASK B249
 TASK B250
 	TITLE "brigade doctor reads the linger of the user: with linger on, doctor and brigade"
 		+ "scheduler install report ok"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 408
 	TYPE fix
 	MILESTONE @MILESTONE.M12
 	COMPONENT "brigade doctor"
