@@ -47,6 +47,7 @@ from brigade.studies.read_live_study_runs import LiveStudyRun, read_live_study_r
 from brigade.studies.read_studies import read_studies
 from brigade.system.parse_configuration import Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
+from brigade.system.read_stall_after import STALL_AFTER_BY_DEFAULT_MIN
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
 from brigade.system.remember_process_records import remember_process_records
 from brigade.system.reset_hour import ResetHour
@@ -54,6 +55,7 @@ from brigade.system.run_process import ProcessRecord, ProcessRequest
 from brigade.tasks.read_task_field import read_task_field
 from brigade.tick.decide_resume_at import decide_resume_at
 from brigade.tick.describe_study_facts import describe_study_facts
+from brigade.tick.find_last_action import find_last_action
 from brigade.tick.is_milestone_rebase_held import MilestoneHeads, is_milestone_rebase_held
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
 from brigade.tick.name_branch_of_task import name_branch_of_task
@@ -195,6 +197,7 @@ class TaskFacts:
     merge_command: str | None = None
     merged_into_target: bool = False
     merge_worktree_to_open: str | None = None
+    last_action: datetime | None = None
 
     def to_document(self) -> dict:
         return {
@@ -364,6 +367,7 @@ class Snapshot:
     studies: tuple[StudyFacts, ...] = ()
     live_study_runs: tuple[LiveStudyRun, ...] = ()
     study_runs: int = STUDY_RUNS_BY_DEFAULT
+    stall_after: int = STALL_AFTER_BY_DEFAULT_MIN
     rate_limits: tuple[RateLimit, ...] = ()
     milestones: tuple[MilestoneFacts, ...] = ()
     integration_branches: tuple[IntegrationBranchFacts, ...] = ()
@@ -767,7 +771,8 @@ def _read_wave_task(runtime: Runtime, reading: WaveReading, open_wave: _OpenWave
     )
     amended = _note_amendment(followed, _read_task_on_its_pull_request(runtime, reading, open_wave, followed), task)
     noted = _note_last_run(_note_quota(amended, reading, wave, open_wave.followed.states), reading, wave)
-    return _note_delivered_head(reading, open_wave, noted)
+    acted = dataclasses.replace(noted, last_action=find_last_action(reading.entries, wave, noted.name))
+    return _note_delivered_head(reading, open_wave, acted)
 
 
 def _open_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, tree_root: Path) -> _OpenWave:
@@ -1174,6 +1179,7 @@ def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeR
         studies=tuple(describe_study_facts(study, last_orders.get(study.name)) for study in read_studies(runtime)),
         live_study_runs=read_live_study_runs(runtime.paths.state_root, is_recorded_process_alive),
         study_runs=configuration.study_runs,
+        stall_after=configuration.stall_after,
         rate_limits=_read_rate_limits(reading, runtime.now),
         milestones=_read_milestones(runtime, reading, projects_read),
         integration_branches=_read_integration_branches(runtime, configuration, reading, projects_read),

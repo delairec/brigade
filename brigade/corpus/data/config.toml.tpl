@@ -52,6 +52,10 @@ $client_line
 # The minutes past which brigade scheduler status reports the last tick as stale and exits 1, 1 or more.
 # tick_stale_after = 15
 
+# The minutes past which the tick records a stall in the inbox for a task of an open wave it has taken no action on,
+# 1 or more: no live run, neither merged nor parked nor paused on the quota.
+# stall_after = 60
+
 # The hours of the reset window of the client's quota, 1 or more: brigade status sums the usage of the runs finished
 # within it.
 # quota_window_hours = 5

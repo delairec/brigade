@@ -39,6 +39,7 @@ from brigade.tick.actions import (
     ResumeTaskRun,
     ResumeWave,
     RunPreflight,
+    SignalStall,
     StartWave,
 )
 from brigade.tick.build_snapshot import (
@@ -3282,3 +3283,99 @@ class PlanEndingAMilestoneOfAProjectWithoutAForgeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(actions, (CloseMilestone(project="shop", milestone="M1", pr=None),))
+
+
+AN_HOUR_AND_A_MINUTE_AGO = datetime(2026, 10, 6, 10, 59, tzinfo=UTC)
+AN_HOUR_AGO = datetime(2026, 10, 6, 11, 0, tzinfo=UTC)
+FIFTY_NINE_MINUTES_AGO = datetime(2026, 10, 6, 11, 1, tzinfo=UTC)
+THREE_HOURS_AGO = datetime(2026, 10, 6, 9, 0, tzinfo=UTC)
+STALL_AFTER_AN_HOUR = 60
+STALL_AFTER_FOUR_HOURS = 240
+NO_PAUSE = None
+FORGE_ACCOUNT_PAUSE = WavePause(reason="forge_account", resume_at=None)
+SIGNAL_STALL_OF_S3 = SignalStall(project="shop", wave="shop_w1", task="S3", last_action=THREE_HOURS_AGO)
+
+
+def create_waiting_task(last_action: datetime) -> TaskFacts:
+    return TaskFacts(name="S3", branch="feature/S3-task", after=("S2",), last_action=last_action)
+
+
+class PlanStallSignalTest(unittest.TestCase):
+    def test_should_signal_a_task_of_an_open_wave_once_its_last_action_is_older_than_the_delay(self):
+        for case, last_action, stall_after, expected in [
+            (
+                "a minute past the delay",
+                AN_HOUR_AND_A_MINUTE_AGO,
+                STALL_AFTER_AN_HOUR,
+                (SignalStall(project="shop", wave="shop_w1", task="S3", last_action=AN_HOUR_AND_A_MINUTE_AGO),),
+            ),
+            ("at the delay", AN_HOUR_AGO, STALL_AFTER_AN_HOUR, ()),
+            ("a minute before the delay", FIFTY_NINE_MINUTES_AGO, STALL_AFTER_AN_HOUR, ()),
+            ("within a longer delay", THREE_HOURS_AGO, STALL_AFTER_FOUR_HOURS, ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                wave = create_wave((create_waiting_task(last_action),), {})
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,), stall_after=stall_after)
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_raise_no_stall_signal_for_a_task_holding_a_live_run(self):
+        # Arrange
+        task = TaskFacts(name="S3", branch="feature/S3-task", last_action=THREE_HOURS_AGO)
+        live_run = LiveRun(run="20261006T090000Z-a1b2c3", slot="build", worktree=WORKTREE_S3, wave="shop_w1", task="S3")
+        project = dataclasses.replace(SHOP, live_runs=(live_run,))
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(project,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_raise_no_stall_signal_for_a_merged_a_parked_or_a_task_paused_on_the_quota(self):
+        for case, state, pause in [
+            ("a merged task", "merged", NO_PAUSE),
+            ("a parked task", "parked", NO_PAUSE),
+            ("a task paused on the quota", "paused:quota", NO_PAUSE),
+            ("a task of a wave paused on the quota", "queued", QUOTA_UNTIL_13),
+            ("a task paused on the quota in a wave paused on the forge account", "paused:quota", FORGE_ACCOUNT_PAUSE),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                wave = dataclasses.replace(
+                    create_wave((create_waiting_task(THREE_HOURS_AGO),), {"S3": state}), pause=pause
+                )
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertNotIn(SIGNAL_STALL_OF_S3, actions)
+
+    def test_should_signal_a_task_of_a_wave_paused_for_another_reason_than_the_quota(self):
+        # Arrange
+        wave = dataclasses.replace(create_wave((create_waiting_task(THREE_HOURS_AGO),), {}), pause=FORGE_ACCOUNT_PAUSE)
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (SIGNAL_STALL_OF_S3,))
+
+    def test_should_raise_no_stall_signal_for_a_task_the_tick_acts_on(self):
+        # Arrange
+        task = TaskFacts(name="S3", branch="feature/S3-task", last_action=THREE_HOURS_AGO)
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "queued"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (LAUNCH_S3,))

@@ -107,6 +107,7 @@ from brigade.tick.actions import (
     ResumeTaskRun,
     ResumeWave,
     RunPreflight,
+    SignalStall,
     StartWave,
 )
 from brigade.tick.apply_actions import apply_actions
@@ -122,6 +123,7 @@ from brigade.tick.prepare_task_worktree import prepare_task_worktree
 from brigade.tick.read_ruled_task import read_ruled_task
 from brigade.tick.rebase_task import rebase_task
 from brigade.tick.record_review_threads import record_review_threads
+from brigade.tick.record_stall import record_stall
 from brigade.tick.remove_integration_branch import remove_integration_branch
 from brigade.tick.remove_task_worktree import remove_task_worktree
 from brigade.tick.run_rounds import Rounds, RoundsOutcome, run_rounds
@@ -795,6 +797,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         DescribeMilestonePullRequest: lambda action: _describe_milestone_pull_request(runtime, configuration, action),
         CollectCheckRuns: lambda action: _collect_check_runs(runtime, configuration, action),
         CollectReviewThreads: lambda action: _collect_review_threads(runtime, configuration, action),
+        SignalStall: lambda action: record_stall(runtime, action),
     }
 
 
@@ -863,6 +866,11 @@ def _name_the_kept_integration_branches(named: set[KeepIntegrationBranch], actio
     return tuple(action for action in actions if action not in kept)
 
 
+def _hold_the_stall_signals(held: list[SignalStall], actions: tuple) -> tuple:
+    held[:] = [action for action in actions if isinstance(action, SignalStall)]
+    return tuple(action for action in actions if action not in held)
+
+
 def _name_the_merge_commands(named: set[str], actions: tuple) -> tuple:
     commands = [action for action in actions if isinstance(action, NameMergeCommand)]
     named.update(command.command for command in commands)
@@ -873,6 +881,7 @@ def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuratio
     forge = _read_the_forge(runtime, configuration)
     named: set[KeepIntegrationBranch] = set()
     merge_commands: set[str] = set()
+    stalls: list[SignalStall] = []
     apply = functools.partial(
         apply_actions,
         executors=_list_executors(runtime, configuration),
@@ -881,17 +890,19 @@ def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuratio
     outcome = run_rounds(
         Rounds(
             build_snapshot=lambda: _name_the_blocked_milestone_rebases(build_snapshot(runtime, configuration, forge)),
-            plan=lambda snapshot: _name_the_merge_commands(
-                merge_commands, _name_the_kept_integration_branches(named, plan(snapshot))
+            plan=lambda snapshot: _hold_the_stall_signals(
+                stalls,
+                _name_the_merge_commands(merge_commands, _name_the_kept_integration_branches(named, plan(snapshot))),
             ),
             apply=apply,
             cap=ROUND_CAP,
         )
     )
+    signals = apply(tuple(stalls))
     connectors = apply(_plan_registered_connectors(runtime))
     return RoundsOutcome(
-        actions_applied=outcome.actions_applied + connectors.applied,
-        actions_failed=outcome.actions_failed + len(connectors.failed),
+        actions_applied=outcome.actions_applied + signals.applied + connectors.applied,
+        actions_failed=outcome.actions_failed + len(signals.failed) + len(connectors.failed),
         merge_commands=tuple(sorted(merge_commands)),
     )
 
