@@ -17533,7 +17533,8 @@ TASK B245
 	TITLE "The triage completes an existing pattern instead of proposing a new one at each"
 		+ "recurrence of its subject: its answer adds EVIDENCE to a PATTERN the operational corpus"
 		+ "holds"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 404
 	TYPE fix
 	MILESTONE @MILESTONE.M12
 	COMPONENT "the study triage"
