@@ -2871,6 +2871,33 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         # Assert
         self.assertEqual(read_inbox(self.root / "state", FIXED_NOW), no_signal)
 
+    def test_should_count_the_stall_it_records_among_the_actions_applied(self):
+        # Arrange
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        forge = MergingForgeRefusingAMovedHeadDouble(
+            {"feature/T7-tide-table": GREEN_PULL_REQUEST}, pushed_head="9010166"
+        )
+
+        # Act
+        document = COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+
+        # Assert
+        self.assertEqual(document["actions_applied"], 3)
+
+    def test_should_count_the_stall_it_cannot_record_among_the_actions_failed(self):
+        # Arrange
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "state" / "inbox").write_text("", encoding="utf-8")
+        forge = MergingForgeRefusingAMovedHeadDouble(
+            {"feature/T7-tide-table": GREEN_PULL_REQUEST}, pushed_head="9010166"
+        )
+
+        # Act
+        document = COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+
+        # Assert
+        self.assertEqual(document["actions_failed"], 2)
+
     def test_should_print_the_stall_with_the_instant_of_its_last_action_on_a_dry_run(self):
         # Arrange
         (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
