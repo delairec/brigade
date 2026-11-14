@@ -89,7 +89,7 @@ def _create_doctor_answers() -> dict:
         ("awawa", "--version"): ProcessAnswer(stdout="awawa 2.8.1\n"),
         ("scripted", "--version"): ProcessAnswer(stdout="scripted 1.4.2\nbuild 5\n"),
         ("systemctl",): ProcessAnswer(stdout="running\n"),
-        ("loginctl",): ProcessAnswer(stdout="Linger=yes\n"),
+        ("loginctl", "show-user", "ada", "--property=Linger"): ProcessAnswer(stdout="Linger=yes\n"),
         ("awawa-web",): ProcessAnswer(),
         ("awawa", "lint"): ProcessAnswer(),
         ("git", "for-each-ref"): ProcessAnswer(),
@@ -339,7 +339,7 @@ class DoctorLingerTest(DoctorTestCase):
         ]
         for answer, state, detail in rows:
             with self.subTest(detail=detail):
-                self.answers["loginctl",] = answer
+                self.answers["loginctl", "show-user", "ada", "--property=Linger"] = answer
 
                 # Act
                 document = doctor(self.no_option, self.runtime)
@@ -456,7 +456,7 @@ class DoctorLingerTest(DoctorTestCase):
     def test_should_leave_the_exit_code_at_0_when_the_user_does_not_linger(self):
         # Arrange
         self.configure(CONFIGURATION)
-        self.answers["loginctl",] = ProcessAnswer(stdout="Linger=no\n")
+        self.answers["loginctl", "show-user", "ada", "--property=Linger"] = ProcessAnswer(stdout="Linger=no\n")
 
         # Act
         exit_code = COMMAND.decide_exit_code(doctor(self.no_option, self.runtime))
