@@ -157,6 +157,7 @@ TASK_CHECKOUT = {
     ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): "/srv/tidepool/.git\n",
     ("git", "rev-parse", "--verify"): "8885daa\n",
     ("git", "merge-base", "--is-ancestor"): "",
+    ("awawa", "show", "@TASK.T7", "."): "TASK T7\n",
     ("awawa", "context"): "TASK T7\n",
     ("awawa", "lint", "--closure"): "",
     ("awawa", "status", "--json"): '{"entities": [{"type": "TASK", "name": "T190"}]}',
@@ -207,11 +208,12 @@ class TaskContextOfABuildRunTest(unittest.TestCase):
         self.assertEqual(
             (self.root / "run" / "context.md").read_text(encoding="utf-8"),
             "# worktree\n$ git merge-base --is-ancestor integration/tides HEAD\nexit 0\n\n"
-            "# task\n$ awawa context @TASK.T7 --with-schema .\nexit 0\nTASK T7\n"
+            "# task\n$ awawa show @TASK.T7 .\nexit 0\nTASK T7\n"
+            "$ awawa context @TASK.T7 --depth 1 --skip reasoning --with-schema .\nexit 0\nTASK T7\n"
             "$ awawa lint --closure @TASK.T7 .\nexit 0\n\n"
             "# acceptance\npython3 -m unittest\n\n"
             f"# reserved\ntask number 191\ntemporary directory {self.root / 'run' / 'tmp'}\n\n"
-            "# when done\nbrigade task check\nbrigade task pr\nbrigade task promote\n",
+            "# when done\nbrigade task check\nbrigade task push\nbrigade task pr\nbrigade task promote\n",
         )
 
     def test_should_assemble_the_package_of_a_task_worked_on_outside_a_run(self):
@@ -234,8 +236,9 @@ class TaskContextOfABuildRunTest(unittest.TestCase):
                     "setup": None,
                 },
                 "task": [
+                    {"command": "awawa show @TASK.T7 .", "exit_code": 0, "stderr": "", "output": "TASK T7\n"},
                     {
-                        "command": "awawa context @TASK.T7 --with-schema .",
+                        "command": "awawa context @TASK.T7 --depth 1 --skip reasoning --with-schema .",
                         "exit_code": 0,
                         "stderr": "",
                         "output": "TASK T7\n",
@@ -246,7 +249,7 @@ class TaskContextOfABuildRunTest(unittest.TestCase):
                 "project": None,
                 "acceptance": {"acceptance": ["python3 -m unittest"], "heavy": []},
                 "reserved": {"task_number": 191, "temporary_directory": None, "attribution": []},
-                "when_done": ["brigade task check", "brigade task pr", "brigade task promote"],
+                "when_done": ["brigade task check", "brigade task push", "brigade task pr", "brigade task promote"],
             },
         )
 

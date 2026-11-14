@@ -27,7 +27,7 @@ Every command of brigade, what it does in one line, and the page that documents 
 | `brigade plan record` | record the plan of a request, one `MILESTONE` and its tasks, on `plan/<request>` and deliver it to the main branch | [Waves](Waves.md) |
 | `brigade plan context` | print the package a planner reads to cut a request into a wave | — |
 | `brigade wave start\|show\|list\|cancel\|resume\|requeue` | start the waves of the projects, list, show and cancel them | [Waves](Waves.md) |
-| `brigade task context\|check\|pr\|promote` | work on a task of a wave from its worktree | [Tasks](Tasks.md) |
+| `brigade task context\|check\|push\|pr\|promote` | work on a task of a wave from its worktree | [Tasks](Tasks.md) |
 | `brigade verify preflight` | run the deterministic checks of a pull request of a task before any judgment | [Preflight](Preflight.md) |
 | `brigade verify context\|verdict` | print what the verification of the pull request of a task judges, and record its verdict | [Verification](Verification.md) |
 | `brigade review context\|reply` | answer the review of the pull request of a task | [Review answers](Review-answers.md) |

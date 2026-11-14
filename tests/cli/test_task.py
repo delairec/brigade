@@ -113,9 +113,10 @@ class BrigadeTaskContextInTheWorktreeOfATaskTest(TaskContextTestCase):
             completed.stdout,
             r"\A# worktree\n\$ git merge-base --is-ancestor integration/M1-empty-cart HEAD\nexit 0\n"
             r"\$ touch setup-ran\n\n"
-            r"# task\n\$ awawa context @TASK\.S3 --with-schema \.\nexit 0\nTASK S3\n(?s:.*)"
+            r"# task\n\$ awawa show @TASK\.S3 \.\nexit 0\nTASK S3\n(?s:.*)"
+            r"\$ awawa context @TASK\.S3 --depth 1 --skip reasoning --with-schema \.\nexit 0\nTASK S3\n(?s:.*)"
             r"\$ awawa lint --closure @TASK\.S3 \.\nexit 0\n(?s:.*)\n"
             r"# acceptance\npython3 -m unittest\npython3 -m unittest discover tests/e2e  \(left to CI\)\n\n"
             r"# reserved\ntask number 7\n\n"
-            r"# when done\nbrigade task check\nbrigade task pr\nbrigade task promote\n\Z",
+            r"# when done\nbrigade task check\nbrigade task push\nbrigade task pr\nbrigade task promote\n\Z",
         )
