@@ -17758,7 +17758,8 @@ TASK B248
 TASK B249
 	TITLE "A cut by the usage limit launches no further run until its reset, and a study it parked"
 		+ "resumes once the limit has passed"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 407
 	TYPE fix
 	MILESTONE @MILESTONE.M12
 	COMPONENT "the tick"
