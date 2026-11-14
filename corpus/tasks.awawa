@@ -17612,7 +17612,8 @@ TASK B246
 		+ "brigade task context prints the task whole and its neighbours at depth 1, and brigade"
 		+ "task push refuses a HEAD on which no brigade task check passed, in a run of the tick as"
 		+ "in a role launched by hand"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 405
 	TYPE fix
 	MILESTONE @MILESTONE.M12
 	COMPONENT "the build procedure and the task commands"
