@@ -33,7 +33,11 @@ def read_stale_branches(project: Entity, equipment: CollectorEquipment, runtime:
     pull_requests = _read_pull_requests(repository, equipment, runtime)
     stale = []
     for branch in branches:
-        own = [{"number": pr["number"], "state": pr["state"]} for pr in pull_requests if pr["head"] == branch]
+        own = [
+            {"number": pr["number"], "state": pr["state"], "head_sha": pr["head_sha"]}
+            for pr in pull_requests
+            if pr["head"] == branch
+        ]
         if branch != main and own and all(pr["state"] != OPEN_STATE for pr in own):
             stale.append({"branch": branch, "pull_requests": own})
     return stale

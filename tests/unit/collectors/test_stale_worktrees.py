@@ -21,8 +21,8 @@ WORKTREES = (
     "worktree /srv/oak/.brigade/worktrees/B5\0HEAD b5\0detached\0\0"
 )
 PULL_REQUESTS = [
-    {"number": 4, "head": "task/w1/B1", "state": "merged"},
-    {"number": 5, "head": "task/w1/B2", "state": "open"},
+    {"number": 4, "head": "task/w1/B1", "state": "merged", "head_sha": "b4"},
+    {"number": 5, "head": "task/w1/B2", "state": "open", "head_sha": "b5"},
 ]
 
 
@@ -89,7 +89,7 @@ class StaleWorktreesCollectorTest(ScanCollectorTestCase):
 
         # Assert
         self.assertEqual(
-            self.processes.list_argvs()[-3:], [WORKTREE_LISTING, LOCAL_BRANCHES_LISTING, LOCAL_BRANCHES_LISTING]
+            self.processes.list_argvs()[-3:], [LOCAL_BRANCHES_LISTING, WORKTREE_LISTING, LOCAL_BRANCHES_LISTING]
         )
         self.assertEqual(forge.list_operations(), ["list_pull_requests"])
 

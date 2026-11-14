@@ -7,6 +7,9 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
+from brigade.collecting.collector_equipment import CollectorEquipment
+from brigade.collecting.read_stale_branches import read_stale_branches
+from brigade.commands._read_forge_environment import FORGE_KIND
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity, read_entities
 from brigade.corpus.read_entity import read_entity
@@ -15,6 +18,7 @@ from brigade.git.check_ancestor import check_ancestor
 from brigade.git.describe_merge_command import describe_merge_command
 from brigade.git.has_uncommitted_changes import has_uncommitted_changes
 from brigade.git.resolve_commit import resolve_commit
+from brigade.ledger.branch_kept import BranchKept
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.ledger_entry import LedgerEntry
@@ -37,6 +41,7 @@ from brigade.registry.find_project import find_project
 from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_policy_field import read_policy_field
 from brigade.registry.read_project_field import read_project_field
+from brigade.registry.read_project_forge import read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
 from brigade.runs.list_runs import list_runs
@@ -66,6 +71,7 @@ from brigade.tick.read_integration_branches import (
     IntegrationBranchReading,
     read_integration_branches,
 )
+from brigade.tick.read_leftovers import LeftoverFacts, LeftoverReading, read_leftovers
 from brigade.tick.study_facts import StudyFacts
 from brigade.waves.count_repair_rounds import count_repair_rounds
 from brigade.waves.describe_milestone_merge import describe_milestone_merge
@@ -86,6 +92,7 @@ from brigade.waves.read_wave_pause import WavePause, read_wave_pause
 from brigade.waves.read_wave_start import read_wave_start
 from brigade.waves.summarize_waves import summarize_waves
 
+CLIENT_KIND = "client"
 DOCUMENT_SCHEMA_VERSION = 1
 TASK_TYPE = "TASK"
 LIVE_RUN_STATE = "running"
@@ -372,6 +379,8 @@ class Snapshot:
     rate_limits: tuple[RateLimit, ...] = ()
     milestones: tuple[MilestoneFacts, ...] = ()
     integration_branches: tuple[IntegrationBranchFacts, ...] = ()
+    leftovers: tuple[LeftoverFacts, ...] = ()
+    kept_branches: frozenset[BranchKept] = frozenset()
 
     def to_document(self) -> dict:
         return {
@@ -385,6 +394,8 @@ class Snapshot:
             "rate_limits": [rate_limit.to_document() for rate_limit in self.rate_limits],
             "milestones": [milestone.to_document() for milestone in self.milestones],
             "integration_branches": [branch.to_document() for branch in self.integration_branches],
+            "leftovers": [leftover.to_document() for leftover in self.leftovers],
+            "kept_branches": [kept.to_document() for kept in self.kept_branches],
         }
 
 
@@ -1165,6 +1176,48 @@ def _read_integration_branches(
     )
 
 
+def _read_stale_branches_of(runtime: Runtime, configuration: Configuration) -> Callable[[Entity], list[dict]]:
+    def read(project: Entity) -> list[dict]:
+        if not is_on_a_forge(project):
+            return []
+        forge_name = read_project_forge(project)
+        equipment = CollectorEquipment(
+            configuration=configuration,
+            forge=runtime.resolve_plugin(FORGE_KIND, forge_name),
+            forge_name=forge_name,
+            resolve_client=lambda name: runtime.resolve_plugin(CLIENT_KIND, name),
+        )
+        return read_stale_branches(project, equipment, runtime)
+
+    return read
+
+
+def _read_leftovers(
+    runtime: Runtime,
+    configuration: Configuration,
+    reading: WaveReading,
+    projects: frozenset[str],
+) -> tuple[LeftoverFacts, ...]:
+    return read_leftovers(
+        runtime.run_process,
+        LeftoverReading(
+            projects=tuple(project for project in reading.projects if project.name in projects),
+            excluded_branches=frozenset(
+                (event.project, event.branch)
+                for event in reading.events
+                if isinstance(event, (MilestoneBranchCut, WaveStarted)) and event.branch is not None
+            ),
+            state_root=runtime.paths.state_root,
+            is_alive=is_recorded_process_alive,
+            read_stale_branches=_read_stale_branches_of(runtime, configuration),
+        ),
+    )
+
+
+def _read_kept_branches(reading: WaveReading) -> frozenset[BranchKept]:
+    return frozenset(event for event in reading.events if isinstance(event, BranchKept))
+
+
 def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeReaders) -> Snapshot:
     if not runtime.paths.schema_file.exists():
         return Snapshot(now=runtime.now)
@@ -1187,4 +1240,6 @@ def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeR
         rate_limits=_read_rate_limits(reading, runtime.now),
         milestones=_read_milestones(runtime, reading, projects_read),
         integration_branches=_read_integration_branches(runtime, configuration, reading, projects_read),
+        leftovers=_read_leftovers(runtime, configuration, reading, projects_read),
+        kept_branches=_read_kept_branches(reading),
     )

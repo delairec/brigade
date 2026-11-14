@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from brigade.ledger.branch_base_gone import BranchBaseGone
+from brigade.ledger.branch_kept import BranchKept
 from brigade.ledger.budget_applied import BudgetApplied
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.inbox_dismissed import InboxDismissed
@@ -78,6 +80,8 @@ AppendedEvent = (
     | InboxRecorded
     | InboxDismissed
     | BudgetApplied
+    | BranchKept
+    | BranchBaseGone
 )
 
 
