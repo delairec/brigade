@@ -3479,7 +3479,7 @@ STALL_AFTER_AN_HOUR = 60
 STALL_AFTER_FOUR_HOURS = 240
 NO_PAUSE = None
 FORGE_ACCOUNT_PAUSE = WavePause(reason="forge_account", resume_at=None)
-SIGNAL_STALL_OF_S3 = SignalStall(project="shop", wave="shop_w1", task="S3", last_action=THREE_HOURS_AGO)
+SIGNAL_STALL_OF_S3 = SignalStall(project="shop", wave="shop_w1", task="S3", last_action="2026-10-06T09:00:00Z")
 
 
 def create_waiting_task(last_action: datetime) -> TaskFacts:
@@ -3493,7 +3493,7 @@ class PlanStallSignalTest(unittest.TestCase):
                 "a minute past the delay",
                 AN_HOUR_AND_A_MINUTE_AGO,
                 STALL_AFTER_AN_HOUR,
-                (SignalStall(project="shop", wave="shop_w1", task="S3", last_action=AN_HOUR_AND_A_MINUTE_AGO),),
+                (SignalStall(project="shop", wave="shop_w1", task="S3", last_action="2026-10-06T10:59:00Z"),),
             ),
             ("at the delay", AN_HOUR_AGO, STALL_AFTER_AN_HOUR, ()),
             ("a minute before the delay", FIFTY_NINE_MINUTES_AGO, STALL_AFTER_AN_HOUR, ()),
