@@ -33,8 +33,9 @@ blocked, your final message stating the question and the finding it comes from o
 
 ## 3. Push
 
-Run the project's tests, commit, and push the branch of the pull request only when they pass. The push moves the task
-back to its preflight.
+Commit, then `brigade task check` until it passes, as the build does, then `brigade task push`: it pushes the branch
+of the pull request with a lease, and refuses, pushing nothing, a `HEAD` on which no check passed. The push moves the
+task back to its preflight.
 
 ## 4. Record the answers
 

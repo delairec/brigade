@@ -84,3 +84,13 @@ python3 -m unittest                                 # the tests; tests/cli runs 
 python3 build.py                                    # builds dist/brigade.pyz with the zipapp module
 ln -s "$PWD/bin/brigade" ~/.local/bin/brigade       # installs brigade from the clone, any directory on PATH
 ```
+
+A role launched by hand on a task proves its branch as a run of the tick does, from the worktree of the task, with
+`uv` on PATH and neither ruff nor coverage:
+
+```
+brigade task check                                  # the ACCEPTANCE commands, the corpus checks and the privacy check
+brigade task push                                   # pushes the branch with a lease, once a check of HEAD passed
+uvx ruff@0.17.2 check . && uvx ruff@0.17.2 format --check .
+uvx --from coverage==7.17.0 coverage run -m unittest discover -s tests/unit -t . && uvx --from coverage==7.17.0 coverage report
+```

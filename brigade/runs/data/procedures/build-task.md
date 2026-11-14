@@ -20,10 +20,10 @@ step needs and no command gives back (a ruling, a pull request number), and the 
 ## 1. Read the package
 
 `brigade task context`, from the worktree. It prints the ancestry of the worktree and the output of its setup, the
-task and its closure, the rules of the files it touches, the project's `AGENTS.md`, the acceptance commands, the task
+task whole, its `RATIONALE` included, its neighbours at depth 1 without their reasoning, and its closure, the rules of the files it touches, the project's `AGENTS.md`, the acceptance commands, the task
 number reserved for the run and the attribution lines. Its `TITLE` is what you deliver, its `SPEC` lines are your
 acceptance criteria, its `RATIONALE` the design already settled. A live `BLOCKED_BY` question means the task is not
-startable: stop and end blocked, naming it.
+startable: stop and end blocked, naming it. Read a further entity with `awawa show @TYPE.Name .` when you need it.
 
 ## 2. Write the failing tests of each SPEC
 
@@ -54,11 +54,14 @@ Commit the work with a Conventional Commits subject, the attribution lines of th
 `brigade task check` refuses a worktree whose files differ from `HEAD`, so every change is committed before it runs.
 It runs the acceptance commands of the project, then `awawa fmt --check` and `awawa lint --strict` on the corpus, then
 the privacy check on the lines the branch adds since its base, each finding as `file:line`: a failure is corrected in
-a new commit and the check run again, until it passes. A failure is investigated, never masked.
+a new commit and the check run again, until it passes. A failure is investigated, never masked. Every acceptance
+command passes before the branch is pushed, `coverage report` included; a failure you cannot repair is reported as a
+blocker with its output.
 
-## 6. Open the pull request
+## 6. Push, then open the pull request
 
-`brigade task pr --subject <subject>`, the subject in the imperative and in English. It refuses a check that is not of
+`brigade task push`: it pushes the branch with a lease, and refuses, pushing nothing, a `HEAD` on which no
+`brigade task check` passed. Then `brigade task pr --subject <subject>`, the subject in the imperative and in English. It refuses a check that is not of
 `HEAD` or that failed: run the check again rather than work around it. It prints the number of the pull request.
 
 ## 7. Promote
