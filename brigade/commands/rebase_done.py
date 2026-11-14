@@ -8,9 +8,7 @@ from brigade.git.fetch_branches import BranchesFetch, fetch_branches
 from brigade.git.locate_main_checkout import locate_main_checkout
 from brigade.git.locate_worktree_root import locate_worktree_root
 from brigade.git.push_branch import REMOTE
-from brigade.git.push_with_lease import LeasedPush, push_with_lease
 from brigade.git.read_head import read_head
-from brigade.git.resolve_commit import resolve_commit
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
 from brigade.runtime import Runtime
@@ -24,8 +22,8 @@ NOT_AN_ANCESTOR = 1
 
 def _render_text(document: dict) -> str:
     return (
-        f"{document['branch']} pushed at {document['head']} on top of {document['base']}"
-        f" for #{document['pr']}, @TASK.{document['task']}"
+        f"{document['branch']} at {document['head']} descends from {document['base']}"
+        f" for #{document['pr']}, @TASK.{document['task']}; push it with brigade task push"
     )
 
 
@@ -40,15 +38,6 @@ def rebase_done(request: argparse.Namespace, runtime: Runtime) -> dict:
     )
     if check_ancestor(run_process, worktree, f"{REMOTE}/{base}", "HEAD").exit_code == NOT_AN_ANCESTOR:
         raise BrigadeError(f"{branch} does not descend from the head of {base}: rebase it first")
-    push_with_lease(
-        run_process,
-        LeasedPush(
-            worktree=worktree,
-            branch=branch,
-            expected_head=resolve_commit(run_process, worktree, f"{REMOTE}/{branch}"),
-            environment=ENVIRONMENT_OF_THE_RUN,
-        ),
-    )
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "project": project.name,
@@ -62,7 +51,7 @@ def rebase_done(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("rebase", "done"),
-    help="push the branch of the pull request of a task once it descends from the head of its base",
+    help="check that the branch of the pull request of a task descends from the head of its base, pushing nothing",
     group_help="put the pull request of a task back on its base",
     arguments=(Argument(("pr",), {"type": int, "help": "the number of the pull request"}),),
     run=rebase_done,
