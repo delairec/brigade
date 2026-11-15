@@ -15,9 +15,9 @@ class CommandFailed(ToolFailure):
         super().__init__(f"{' '.join(argv)} exited {exit_code}: {stderr.strip()}")
 
 
-class PullRequestCompareFailed(BrigadeError):
-    def __init__(self, base: str, failure: BrigadeError):
-        super().__init__(str(failure))
+class PullRequestCompareFailed(CommandFailed):
+    def __init__(self, base: str, failure: CommandFailed):
+        ToolFailure.__init__(self, str(failure))
         self.base = base
 
 

@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from brigade.corpus.read_entity import Entity, EntityField
-from brigade.errors import CommandFailed
+from brigade.errors import CommandFailed, PullRequestCompareFailed
 from brigade.ledger.append_event import append_event
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
@@ -150,6 +150,14 @@ class PullRequestReaderFailingOnOneWaveDouble(PullRequestReaderDouble):
     def __call__(self, repository: str, branch: str) -> PullRequestFacts:
         if branch == "feature/B1-task":
             raise CommandFailed(("gh", "pr", "list", "--head", branch), 1, "HTTP 502: Bad Gateway")
+        return super().__call__(repository, branch)
+
+
+class PullRequestReaderFailingTheCompareOnOneWaveDouble(PullRequestReaderDouble):
+    def __call__(self, repository: str, branch: str) -> PullRequestFacts:
+        if branch == "feature/B1-task":
+            compare = ("gh", "api", "repos/{owner}/{repo}/compare/main...9c1e2d3")
+            raise PullRequestCompareFailed("main", CommandFailed(compare, 1, "HTTP 502: Bad Gateway"))
         return super().__call__(repository, branch)
 
 
@@ -1295,6 +1303,24 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         self.assertEqual(
             stderr.splitlines()[1],
             "brigade tick: the wave w1 skipped: gh pr list --head feature/B1-task exited 1: HTTP 502: Bad Gateway",
+        )
+        self.assertEqual(
+            snapshot.waves,
+            (),
+        )
+
+    def test_should_skip_a_wave_whose_pull_request_the_forge_cannot_compare_to_its_base_and_follow_the_others(self):
+        # Arrange
+        self.reader = PullRequestReaderFailingTheCompareOnOneWaveDouble()
+
+        # Act
+        snapshot, stderr = self.build()
+
+        # Assert
+        self.assertEqual(
+            stderr.splitlines()[1],
+            "brigade tick: the wave w1 skipped: gh api repos/{owner}/{repo}/compare/main...9c1e2d3 exited 1:"
+            " HTTP 502: Bad Gateway",
         )
         self.assertEqual(
             snapshot.waves,

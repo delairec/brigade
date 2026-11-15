@@ -3,7 +3,7 @@ import re
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
-from brigade.errors import BrigadeError, PullRequestCompareFailed
+from brigade.errors import CommandFailed, PullRequestCompareFailed
 from brigade.runtime import Runtime
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRequest
 
@@ -311,7 +311,7 @@ def _compare_to_base(request: dict, runtime: Runtime, pull_request: dict) -> str
         return _ask_gh(
             request, runtime, ("api", f"{COMPARE_PATH}/{base}...{pull_request['headRefOid']}", "--jq", ".behind_by")
         )
-    except BrigadeError as failure:
+    except CommandFailed as failure:
         raise PullRequestCompareFailed(base, failure) from failure
 
 
