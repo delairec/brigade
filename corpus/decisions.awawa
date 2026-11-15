@@ -7020,3 +7020,4 @@ DECISION TheTickRebasesTheBranchOfAMilestoneOntoMainWhileItsPullRequestIsOpen
 		+ "opened path returned before reading any rebase fact"
 		REF @MILESTONE.M12
 	SOURCE "the user's quick fix of 2026-11-15 on the defect, with no TASK entity"
+	SOURCE "pull request #414 of the brigade repository"
