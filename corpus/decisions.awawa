@@ -1829,9 +1829,10 @@ DECISION APreflightIsANamedSetOfCollectorsAndChecks
 	DESC "brigade preflight <name> runs the preflight named and returns its findings as one"
 		+ "document; built-in preflights ship with brigade, refinement the first, and a user adds"
 		+ "custom ones"
-	DESC "the eight deterministic checks of a pull request of @TASK.B15 become the built-in"
-		+ "preflight verify-pull-request once brigade preflight exists; B15 is delivered as written"
-		+ "until then"
+	DESC "the deterministic checks of a pull request of @TASK.B15, seven checks and the size"
+		+ "measured beside them, become the built-in preflight verify-pull-request once brigade"
+		+ "preflight exists; it does not name the check acceptance, which the preflight of the task"
+		+ "branch of a project of FORGE none runs; B15 is delivered as written until then"
 		REF @TASK.B15
 	DESC "a gate step of a recipe of @DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder calls a named"
 		+ "preflight, so that a set of collectors and checks is declared in one place; a scan of"
@@ -1865,6 +1866,10 @@ DECISION APreflightIsANamedSetOfCollectorsAndChecks
 		+ "Écrit et lint, sans commit », the history of the project being the user's"
 	REJECTED "the check of the forge logins run only by the preflight refinement: a broken login"
 		+ "would be found by hand, after the tick had started a wave on it"
+	REJECTED "verify-pull-request naming the check acceptance too: on a project with a forge the"
+		+ "ACCEPTANCE commands ran before the push, brigade task push taking only a HEAD that"
+		+ "passed brigade task check, and the check checks requires the check runs of the CI; a"
+		+ "project of FORGE none has no CI, so the preflight of its task branch runs them"
 	RATIONALE "the refinement of @TASK.B73 did by hand mechanical checks a command could run, and"
 		+ "the user wants them useful beyond the refinement"
 		REF @TASK.B73
@@ -1880,6 +1885,11 @@ DECISION APreflightIsANamedSetOfCollectorsAndChecks
 		+ "Écrit et lint, sans commit »; on the check of the forge logins, « Built-in `wave`, lancé"
 		+ "par le tick »"
 		REF @TASK.B98
+	SOURCE "DESC 3 reworded and the REJECTED on acceptance written on the user's ruling of"
+		+ "2026-11-15 on SPEC 7 of @TASK.B98, « ok pour A alors. »: the eight checks DESC 3 counted"
+		+ "are the eight entries of @TASK.B15, the size among them and acceptance not"
+		REF @TASK.B98
+		REF @TASK.B15
 
 DECISION APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob
 	TITLE "a pull request touching only corpus/, docs/, artifact/ or Markdown at the root starts no"
