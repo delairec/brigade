@@ -36,8 +36,6 @@ SCHEMA PROJECT
 		DEFAULT 4
 	FIELD MERGE squash|rebase|merge
 		DEFAULT rebase
-	FIELD GRAPH string
-		DESC "the command that regenerates the dependency graph document"
 	FIELD CLIENT string
 		DESC "the client adapter of this project's runs; config.toml's default when absent"
 	FIELD ROLESET string
@@ -77,10 +75,6 @@ SCHEMA POLICY
 		DEFAULT 2
 	FIELD AUTO_MERGE integration|none
 		DEFAULT integration
-	FIELD AUTO_RATIFY uint
-		DEFAULT 0
-	FIELD SAMPLING suggestions|none
-		DEFAULT suggestions
 
 SCHEMA STUDY
 	DESC "a question answered by evidence: collectors, then at most one judging run; with no slot,"
