@@ -1,11 +1,11 @@
 import dataclasses
 
-from brigade.git.add_detached_worktree import add_detached_worktree
+from brigade.git.add_detached_worktree import DetachedWorktree, add_detached_worktree
 from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.force_push_branch import force_push_branch
 from brigade.git.push_branch import BranchPush
 from brigade.git.read_main_branch import read_main_branch
-from brigade.git.remove_worktree import remove_worktree
+from brigade.git.remove_detached_worktree import remove_detached_worktree
 from brigade.git.reset_branch import reset_branch
 from brigade.studies.locate_study_project import StudyProject, locate_study_project
 from brigade.studies.present_answer import AnswerPublication
@@ -13,6 +13,8 @@ from brigade.studies.read_publication_environment import read_publication_enviro
 from brigade.studies.study_run_context import StudyRunContext
 from brigade.system.create_directory import create_directory
 from brigade.system.write_text_file import write_text_file
+
+WRITING_REASON = "brigade writing an answer to a file"
 
 FILE_OUTPUT_PREFIX = "file:"
 RUN_PLACEHOLDER = "{run}"
@@ -31,6 +33,7 @@ class _AnswerBranch:
 def _open_pull_request(
     context: StudyRunContext, project: StudyProject, branch: _AnswerBranch, publication: AnswerPublication
 ) -> str | None:
+
     if project.forge is None:
         return NO_PULL_REQUEST
     checkout = context.run_directory / CHECKOUT_DIRECTORY
@@ -61,7 +64,8 @@ def write_answer_to_file(context: StudyRunContext, publication: AnswerPublicatio
     branch = f"{BRANCH_PREFIX}{context.study.name}-{context.run_id}"
     base = read_main_branch(run_process, project.path)
     checkout = context.run_directory / CHECKOUT_DIRECTORY
-    add_detached_worktree(run_process, project.path, checkout, base)
+    worktree = DetachedWorktree(repository=project.path, path=checkout, start=base, reason=WRITING_REASON)
+    add_detached_worktree(run_process, worktree)
     try:
         reset_branch(run_process, checkout, branch)
         create_directory((checkout / relative_path).parent)
@@ -76,5 +80,5 @@ def write_answer_to_file(context: StudyRunContext, publication: AnswerPublicatio
         )
         pull_request = _open_pull_request(context, project, _AnswerBranch(name=branch, base=base), publication)
     finally:
-        remove_worktree(run_process, project.path, checkout)
+        remove_detached_worktree(run_process, worktree)
     return {"branch": branch, "pull_request": pull_request}

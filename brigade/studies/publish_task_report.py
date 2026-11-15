@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from brigade.git.add_detached_worktree import add_detached_worktree
+from brigade.git.add_detached_worktree import DetachedWorktree, add_detached_worktree
 from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.fetch_branches import BranchesFetch, fetch_branches
 from brigade.git.push_ref_to_branch import RefPush, push_ref_to_branch
-from brigade.git.remove_worktree import remove_worktree
+from brigade.git.remove_detached_worktree import remove_detached_worktree
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.registry.find_project import find_project
@@ -17,6 +17,8 @@ from brigade.studies.read_publication_environment import read_publication_enviro
 from brigade.studies.study_run_context import StudyRunContext
 from brigade.system.create_directory import create_directory
 from brigade.system.write_text_file import write_text_file
+
+PUBLICATION_REASON = "brigade publishing a task report"
 
 CORPUS_FIELD = "CORPUS"
 CHECKOUT_DIRECTORY = "checkout"
@@ -92,10 +94,13 @@ def publish_task_report(context: StudyRunContext) -> dict:
     fetch_branches(
         run_process, BranchesFetch(repository=located.path, branches=(order.branch,), environment=environment)
     )
-    add_detached_worktree(run_process, located.path, checkout, f"{REMOTE_PREFIX}{order.branch}")
+    worktree = DetachedWorktree(
+        repository=located.path, path=checkout, start=f"{REMOTE_PREFIX}{order.branch}", reason=PUBLICATION_REASON
+    )
+    add_detached_worktree(run_process, worktree)
     try:
         _commit_report(context, publication)
         pull_request = NO_PULL_REQUEST if located.forge is None else _replace_pull_request_body(context, publication)
     finally:
-        remove_worktree(run_process, located.path, checkout)
+        remove_detached_worktree(run_process, worktree)
     return {"report": report, "branch": order.branch, "pull_request": pull_request}

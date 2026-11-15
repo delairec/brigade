@@ -15,6 +15,7 @@ from brigade.git.check_ancestor import check_ancestor
 from brigade.git.describe_merge_command import describe_merge_command
 from brigade.git.has_uncommitted_changes import has_uncommitted_changes
 from brigade.git.resolve_commit import resolve_commit
+from brigade.ledger.branch_kept import BranchKept
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.ledger_entry import LedgerEntry
@@ -44,9 +45,11 @@ from brigade.runs.read_run_question import read_run_question
 from brigade.runtime import Runtime
 from brigade.studies.read_last_study_orders import read_last_study_orders
 from brigade.studies.read_live_study_runs import LiveStudyRun, read_live_study_runs
+from brigade.studies.read_quota_resumes import read_quota_resumes
 from brigade.studies.read_studies import read_studies
 from brigade.system.parse_configuration import Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
+from brigade.system.read_stall_after import STALL_AFTER_BY_DEFAULT_MIN
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
 from brigade.system.remember_process_records import remember_process_records
 from brigade.system.reset_hour import ResetHour
@@ -54,6 +57,7 @@ from brigade.system.run_process import ProcessRecord, ProcessRequest
 from brigade.tasks.read_task_field import read_task_field
 from brigade.tick.decide_resume_at import decide_resume_at
 from brigade.tick.describe_study_facts import describe_study_facts
+from brigade.tick.find_last_action import find_last_action
 from brigade.tick.is_milestone_rebase_held import MilestoneHeads, is_milestone_rebase_held
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
 from brigade.tick.name_branch_of_task import name_branch_of_task
@@ -63,6 +67,7 @@ from brigade.tick.read_integration_branches import (
     IntegrationBranchReading,
     read_integration_branches,
 )
+from brigade.tick.read_leftovers import LeftoverFacts, LeftoverReading, read_leftovers
 from brigade.tick.study_facts import StudyFacts
 from brigade.waves.count_repair_rounds import count_repair_rounds
 from brigade.waves.describe_milestone_merge import describe_milestone_merge
@@ -77,6 +82,7 @@ from brigade.waves.name_milestone_branch import name_milestone_branch
 from brigade.waves.prepare_wave_tree import WaveTreeReading, locate_wave_branch_base, prepare_wave_tree
 from brigade.waves.read_active_milestones import read_active_milestones
 from brigade.waves.read_project_tasks import ProjectTasks, ProjectTasksReading, read_project_tasks
+from brigade.waves.read_served_milestones import read_served_milestones
 from brigade.waves.read_task_states import read_task_states
 from brigade.waves.read_wave_pause import WavePause, read_wave_pause
 from brigade.waves.read_wave_start import read_wave_start
@@ -199,6 +205,7 @@ class TaskFacts:
     merge_command: str | None = None
     merged_into_target: bool = False
     merge_worktree_to_open: str | None = None
+    last_action: datetime | None = None
 
     def to_document(self) -> dict:
         return {
@@ -369,9 +376,12 @@ class Snapshot:
     studies: tuple[StudyFacts, ...] = ()
     live_study_runs: tuple[LiveStudyRun, ...] = ()
     study_runs: int = STUDY_RUNS_BY_DEFAULT
+    stall_after: int = STALL_AFTER_BY_DEFAULT_MIN
     rate_limits: tuple[RateLimit, ...] = ()
     milestones: tuple[MilestoneFacts, ...] = ()
     integration_branches: tuple[IntegrationBranchFacts, ...] = ()
+    leftovers: tuple[LeftoverFacts, ...] = ()
+    kept_branches: frozenset[BranchKept] = frozenset()
 
     def to_document(self) -> dict:
         return {
@@ -385,6 +395,8 @@ class Snapshot:
             "rate_limits": [rate_limit.to_document() for rate_limit in self.rate_limits],
             "milestones": [milestone.to_document() for milestone in self.milestones],
             "integration_branches": [branch.to_document() for branch in self.integration_branches],
+            "leftovers": [leftover.to_document() for leftover in self.leftovers],
+            "kept_branches": [kept.to_document() for kept in self.kept_branches],
         }
 
 
@@ -459,6 +471,7 @@ def _list_preflight_failures(preflighted: TaskPreflighted) -> tuple[PreflightFai
 class ForgeReaders:
     read_pull_request: Callable[[str, str], PullRequestFacts | None]
     read_environment: Callable[[Entity, str], dict]
+    read_stale_branches: Callable[[Entity], list[dict]]
 
 
 @dataclass(frozen=True)
@@ -815,7 +828,8 @@ def _read_wave_task(runtime: Runtime, reading: WaveReading, open_wave: _OpenWave
     noted = _note_login(
         _note_last_run(_note_quota(amended, reading, wave, open_wave.followed.states), reading, wave), reading, wave
     )
-    return _note_delivered_head(reading, open_wave, noted)
+    acted = dataclasses.replace(noted, last_action=find_last_action(reading.entries, wave, noted.name))
+    return _note_delivered_head(reading, open_wave, acted)
 
 
 def _open_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, tree_root: Path) -> _OpenWave:
@@ -893,13 +907,9 @@ def _describe_uncut_milestone(
 def _list_uncut_milestones(
     runtime: Runtime, reading: WaveReading, project: str, main: ProjectTasks
 ) -> tuple[UncutMilestone, ...]:
-    if not any(_read_milestone(task) for task in main.by_name.values()):
-        return ()
     return tuple(
         _describe_uncut_milestone(runtime, reading, _MainReading(project=project, main=main), milestone)
-        for milestone in sorted(
-            active.removeprefix(MILESTONE_PREFIX) for active in read_active_milestones(runtime.run_process, main.root)
-        )
+        for milestone in sorted(read_served_milestones(runtime.run_process, main).served)
         if find_milestone_branch(reading.entries, project, milestone) is None
     )
 
@@ -1224,22 +1234,49 @@ def _read_integration_branches(
     )
 
 
+def _read_leftovers(runtime: Runtime, reading: WaveReading, projects: frozenset[str]) -> tuple[LeftoverFacts, ...]:
+    return read_leftovers(
+        runtime.run_process,
+        LeftoverReading(
+            projects=tuple(project for project in reading.projects if project.name in projects),
+            excluded_branches=frozenset(
+                (event.project, event.branch)
+                for event in reading.events
+                if isinstance(event, (MilestoneBranchCut, WaveStarted)) and event.branch is not None
+            ),
+            state_root=runtime.paths.state_root,
+            is_alive=is_recorded_process_alive,
+            read_stale_branches=reading.forge.read_stale_branches,
+        ),
+    )
+
+
+def _read_kept_branches(reading: WaveReading) -> frozenset[BranchKept]:
+    return frozenset(event for event in reading.events if isinstance(event, BranchKept))
+
+
 def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeReaders) -> Snapshot:
     if not runtime.paths.schema_file.exists():
         return Snapshot(now=runtime.now)
     runtime = dataclasses.replace(runtime, run_process=remember_process_records(runtime.run_process))
     reading = _assemble_reading(runtime, configuration, forge)
     last_orders = read_last_study_orders(reading.entries)
+    quota_resumes = read_quota_resumes(runtime.paths.state_root, reading.entries)
     projects = _read_registered_projects(runtime, reading)
     projects_read = frozenset(project.name for project in projects)
     return Snapshot(
         now=runtime.now.astimezone(),
         waves=_read_open_waves(runtime, reading, projects_read),
         projects=projects,
-        studies=tuple(describe_study_facts(study, last_orders.get(study.name)) for study in read_studies(runtime)),
+        studies=tuple(
+            describe_study_facts(study, last_orders.get(study.name), quota_resumes) for study in read_studies(runtime)
+        ),
         live_study_runs=read_live_study_runs(runtime.paths.state_root, is_recorded_process_alive),
         study_runs=configuration.study_runs,
+        stall_after=configuration.stall_after,
         rate_limits=_read_rate_limits(reading, runtime.now),
         milestones=_read_milestones(runtime, reading, projects_read),
         integration_branches=_read_integration_branches(runtime, configuration, reading, projects_read),
+        leftovers=_read_leftovers(runtime, reading, projects_read),
+        kept_branches=_read_kept_branches(reading),
     )

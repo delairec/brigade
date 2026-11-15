@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 from brigade.corpus.read_entity import Entity, EntityField
 from brigade.errors import BrigadeError
+from brigade.ledger.branch_kept import BranchKept
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.read_live_study_runs import LiveStudyRun
@@ -16,7 +17,7 @@ from brigade.tick.actions import (
     CloseWave,
     CutMilestoneBranch,
     DescribeMilestonePullRequest,
-    KeepIntegrationBranch,
+    KeepBranch,
     LaunchCheckRepair,
     LaunchRemediation,
     LaunchStudy,
@@ -31,14 +32,17 @@ from brigade.tick.actions import (
     RebaseMilestone,
     RebaseTask,
     RebuildTask,
+    RecordGoneBase,
     RecordTaskState,
     RemoveIntegrationBranch,
+    RemoveLeftover,
     RemoveTaskWorktree,
     ReportMilestone,
     ReportTask,
     ResumeTaskRun,
     ResumeWave,
     RunPreflight,
+    SignalStall,
     StartWave,
 )
 from brigade.tick.build_snapshot import (
@@ -60,6 +64,7 @@ from brigade.tick.build_snapshot import (
 from brigade.tick.head_proof import ForgeCheck, HeadChecks
 from brigade.tick.plan import plan
 from brigade.tick.read_integration_branches import IntegrationBranchFacts
+from brigade.tick.read_leftovers import LeftoverFacts
 from brigade.waves.list_candidate_waves import CandidateWave
 
 NOW = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
@@ -883,8 +888,17 @@ def create_study(
     status: str = "active",
     last_started: datetime | None = None,
     parked: bool = False,
+    quota_resume_at: datetime | None = None,
 ) -> StudyFacts:
-    return StudyFacts(name=name, slot=slot, every=every, status=status, last_started=last_started, parked=parked)
+    return StudyFacts(
+        name=name,
+        slot=slot,
+        every=every,
+        status=status,
+        last_started=last_started,
+        parked=parked,
+        quota_resume_at=quota_resume_at,
+    )
 
 
 TWO_HOURS_AGO = datetime(2026, 10, 6, 10, 0, tzinfo=UTC)
@@ -2692,28 +2706,34 @@ class PlanIntegrationBranchRemovalTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(actions, ())
 
-    def test_should_keep_the_branch_of_an_ended_milestone_or_wave_and_name_its_reason(self):
+    def test_should_keep_the_branch_of_an_ended_milestone_or_wave_and_name_its_reason_and_its_head(self):
         for branch, kept in [
             (
                 dataclasses.replace(CLOSED_MILESTONE_BRANCH, head="5ff69cd", reached_forge=False),
-                KeepIntegrationBranch(
-                    project="shop", branch="integration/tides", reason="a commit outside the merged pull request"
+                KeepBranch(
+                    project="shop",
+                    branch="integration/tides",
+                    reason="a commit outside the merged pull request",
+                    head="5ff69cd",
                 ),
             ),
             (
                 dataclasses.replace(CLOSED_MILESTONE_BRANCH, run_live=True),
-                KeepIntegrationBranch(project="shop", branch="integration/tides", reason="a live run"),
+                KeepBranch(project="shop", branch="integration/tides", reason="a live run", head="48537f8"),
             ),
             (
                 dataclasses.replace(CLOSED_MILESTONE_BRANCH, locked=True),
-                KeepIntegrationBranch(project="shop", branch="integration/tides", reason="a lock"),
+                KeepBranch(project="shop", branch="integration/tides", reason="a lock", head="48537f8"),
             ),
             (
                 dataclasses.replace(
                     CLOSED_WAVE_BRANCH, merged_pull_request=None, merged_head=None, reached_forge=False
                 ),
-                KeepIntegrationBranch(
-                    project="shop", branch="integration/shop_w3", reason="a commit outside the merged pull request"
+                KeepBranch(
+                    project="shop",
+                    branch="integration/shop_w3",
+                    reason="a commit outside the merged pull request",
+                    head="5ff69cd",
                 ),
             ),
         ]:
@@ -2726,6 +2746,186 @@ class PlanIntegrationBranchRemovalTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(actions, (kept,))
+
+    def test_should_name_no_more_a_kept_branch_the_ledger_records_kept_for_the_same_reason_at_the_same_head(self):
+        # Arrange
+        branch = dataclasses.replace(CLOSED_MILESTONE_BRANCH, head="5ff69cd", reached_forge=False)
+        named = BranchKept(
+            project="shop",
+            branch="integration/tides",
+            reason="a commit outside the merged pull request",
+            head="5ff69cd",
+        )
+        snapshot = Snapshot(now=NOW, projects=(SHOP,), integration_branches=(branch,), kept_branches=frozenset({named}))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_name_again_a_kept_branch_whose_head_moved_since_the_ledger_recorded_it(self):
+        # Arrange
+        branch = dataclasses.replace(CLOSED_MILESTONE_BRANCH, head="7a8b9c0", reached_forge=False)
+        named = BranchKept(
+            project="shop",
+            branch="integration/tides",
+            reason="a commit outside the merged pull request",
+            head="5ff69cd",
+        )
+        snapshot = Snapshot(now=NOW, projects=(SHOP,), integration_branches=(branch,), kept_branches=frozenset({named}))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                KeepBranch(
+                    project="shop",
+                    branch="integration/tides",
+                    reason="a commit outside the merged pull request",
+                    head="7a8b9c0",
+                ),
+            ),
+        )
+
+    def test_should_record_the_base_the_forge_no_longer_holds_of_an_integration_branch(self):
+        # Arrange
+        branch = dataclasses.replace(CLOSED_WAVE_BRANCH, ended=False, gone_base="integration/currents")
+        snapshot = Snapshot(now=NOW, projects=(SHOP,), integration_branches=(branch,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions, (RecordGoneBase(project="shop", branch="integration/shop_w3", base="integration/currents"),)
+        )
+
+
+SPROUT_WORKTREE = "/srv/shop/.brigade/worktrees/S7"
+STALE_BRANCH_WITH_ITS_WORKTREE = LeftoverFacts(
+    project="shop",
+    branch="feature/S7-sprout",
+    worktree=SPROUT_WORKTREE,
+    head="c0ffee1",
+    reached_forge=True,
+    run_live=False,
+    locked=False,
+    uncommitted=False,
+    main_checkout=False,
+)
+DETACHED_WORKTREE = LeftoverFacts(
+    project="shop",
+    branch=None,
+    worktree="/srv/shop/.brigade/worktrees/S8",
+    head="d00d1e2",
+    reached_forge=True,
+    run_live=False,
+    locked=False,
+    uncommitted=False,
+    main_checkout=False,
+)
+
+
+class PlanLeftoverRemovalTest(unittest.TestCase):
+    def test_should_remove_each_stale_branch_and_each_stale_worktree_whose_head_reached_the_forge(self):
+        for leftover, removal in [
+            (
+                STALE_BRANCH_WITH_ITS_WORKTREE,
+                RemoveLeftover(project="shop", branch="feature/S7-sprout", worktree=SPROUT_WORKTREE),
+            ),
+            (
+                dataclasses.replace(STALE_BRANCH_WITH_ITS_WORKTREE, worktree=None),
+                RemoveLeftover(project="shop", branch="feature/S7-sprout", worktree=None),
+            ),
+            (
+                DETACHED_WORKTREE,
+                RemoveLeftover(project="shop", branch=None, worktree="/srv/shop/.brigade/worktrees/S8"),
+            ),
+        ]:
+            with self.subTest(leftover=leftover):
+                # Arrange
+                snapshot = Snapshot(now=NOW, projects=(SHOP,), leftovers=(leftover,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, (removal,))
+
+    def test_should_keep_a_stale_branch_and_name_its_reason_and_its_head(self):
+        for leftover, reason in [
+            (
+                dataclasses.replace(STALE_BRANCH_WITH_ITS_WORKTREE, reached_forge=False),
+                "a commit outside the merged pull request",
+            ),
+            (dataclasses.replace(STALE_BRANCH_WITH_ITS_WORKTREE, run_live=True), "a live run"),
+            (dataclasses.replace(STALE_BRANCH_WITH_ITS_WORKTREE, locked=True), "a lock"),
+            (dataclasses.replace(STALE_BRANCH_WITH_ITS_WORKTREE, uncommitted=True), "uncommitted changes"),
+            (dataclasses.replace(STALE_BRANCH_WITH_ITS_WORKTREE, main_checkout=True), "the main checkout"),
+        ]:
+            with self.subTest(reason=reason):
+                # Arrange
+                snapshot = Snapshot(now=NOW, projects=(SHOP,), leftovers=(leftover,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(
+                    actions, (KeepBranch(project="shop", branch="feature/S7-sprout", reason=reason, head="c0ffee1"),)
+                )
+
+    def test_should_name_no_more_a_kept_stale_branch_the_ledger_records_kept(self):
+        # Arrange
+        leftover = dataclasses.replace(STALE_BRANCH_WITH_ITS_WORKTREE, reached_forge=False)
+        named = BranchKept(
+            project="shop",
+            branch="feature/S7-sprout",
+            reason="a commit outside the merged pull request",
+            head="c0ffee1",
+        )
+        snapshot = Snapshot(now=NOW, projects=(SHOP,), leftovers=(leftover,), kept_branches=frozenset({named}))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_plan_nothing_for_a_stale_worktree_it_keeps(self):
+        # Arrange
+        snapshot = Snapshot(
+            now=NOW, projects=(SHOP,), leftovers=(dataclasses.replace(DETACHED_WORKTREE, reached_forge=False),)
+        )
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_delete_alone_the_stale_branch_whose_worktree_the_plan_removes_as_the_worktree_of_its_task(self):
+        # Arrange
+        task = TaskFacts(name="S7", branch="feature/S7-sprout", pull_request=MERGED, worktree=SPROUT_WORKTREE)
+        wave = create_wave((task,), {"S7": "merged"})
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,), leftovers=(STALE_BRANCH_WITH_ITS_WORKTREE,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                RemoveTaskWorktree(project="shop", task="S7", worktree=SPROUT_WORKTREE),
+                CLOSE_SHOP_W1,
+                RemoveLeftover(project="shop", branch="feature/S7-sprout", worktree=None),
+            ),
+        )
 
 
 DELIVERED_HEAD = "4d5e6f7"
@@ -3280,6 +3480,279 @@ class PlanEndingAMilestoneOfAProjectWithoutAForgeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(actions, (CloseMilestone(project="shop", milestone="M1", pr=None),))
+
+
+RATE_LIMIT_IN_FORCE = (RateLimit(reset=ResetHour(hour="15:00", timezone="UTC")),)
+PAUSE_SHOP_UNTIL_15 = PauseWave(wave="shop_w1", reason="quota", resume_at="2026-10-06T15:00:00Z")
+VERIFYING_S3 = TaskFacts(
+    name="S3",
+    branch="feature/S3-task",
+    pull_request=OPEN,
+    worktree=WORKTREE_S3,
+    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+)
+PREFLIGHTED_DELIVERY_OF_S3 = TaskFacts(
+    name="S3", branch="feature/S3-task", delivered_head=HEAD, preflighted_head=HEAD, worktree=WORKTREE_S3
+)
+REQUESTED_S3 = dataclasses.replace(VERIFYING_S3, preflight_failures=(BODY_FAILURE,))
+FAILING_ITS_CHECKS_S3 = dataclasses.replace(VERIFYING_S3, preflight_failures=(CHECKS_FAILURE,))
+BEHIND_S3 = dataclasses.replace(VERIFYING_S3, pull_request=BEHIND)
+AMENDED_S3 = dataclasses.replace(BEHIND_S3, amendment=AMENDED_ON_THE_TASK_BASE)
+PARKED_WITH_ITS_PULL_REQUEST_S3 = TaskFacts(name="S3", branch="feature/S3-task", pull_request=OPEN)
+M9_OUTRUN_BY_MAIN = MilestoneFacts(
+    project="shop", milestone="M9", branch="integration/delivery", open_waves=("shop_w4",), behind_main=True
+)
+
+
+class PlanNoRunWhileARateLimitIsInForceTest(unittest.TestCase):
+    def test_should_launch_no_run_of_any_slot_until_the_reset_of_a_rate_limit(self):
+        for case, snapshot, expected in [
+            (
+                "a build run",
+                Snapshot(now=NOW, waves=(create_wave(ALONE, {}),), projects=(SHOP,), rate_limits=RATE_LIMIT_IN_FORCE),
+                (PAUSE_SHOP_UNTIL_15,),
+            ),
+            (
+                "the verification of a pull request",
+                Snapshot(
+                    now=NOW,
+                    waves=(create_wave((VERIFYING_S3,), {"S3": "verifying"}),),
+                    projects=(SHOP,),
+                    rate_limits=RATE_LIMIT_IN_FORCE,
+                ),
+                (PAUSE_SHOP_UNTIL_15,),
+            ),
+            (
+                "the verification of a delivered head",
+                Snapshot(
+                    now=NOW,
+                    waves=(create_wave((PREFLIGHTED_DELIVERY_OF_S3,), {"S3": "verifying"}),),
+                    projects=(SHOP,),
+                    rate_limits=RATE_LIMIT_IN_FORCE,
+                ),
+                (PAUSE_SHOP_UNTIL_15,),
+            ),
+            (
+                "a remediation",
+                Snapshot(
+                    now=NOW,
+                    waves=(create_wave((REQUESTED_S3,), {"S3": "changes_requested"}),),
+                    projects=(SHOP,),
+                    rate_limits=RATE_LIMIT_IN_FORCE,
+                ),
+                (PAUSE_SHOP_UNTIL_15,),
+            ),
+            (
+                "a check repair",
+                Snapshot(
+                    now=NOW,
+                    waves=(create_wave((FAILING_ITS_CHECKS_S3,), {"S3": "fixing"}),),
+                    projects=(SHOP,),
+                    rate_limits=RATE_LIMIT_IN_FORCE,
+                ),
+                (PAUSE_SHOP_UNTIL_15,),
+            ),
+            (
+                "the rebuild of an amended task",
+                Snapshot(
+                    now=NOW,
+                    waves=(create_wave((AMENDED_S3,), {"S3": "pr_open"}),),
+                    projects=(SHOP,),
+                    rate_limits=RATE_LIMIT_IN_FORCE,
+                ),
+                (PAUSE_SHOP_UNTIL_15,),
+            ),
+            (
+                "the rebase of a task",
+                Snapshot(
+                    now=NOW,
+                    waves=(create_wave((BEHIND_S3,), {"S3": "pr_open"}),),
+                    projects=(SHOP,),
+                    rate_limits=RATE_LIMIT_IN_FORCE,
+                ),
+                (PAUSE_SHOP_UNTIL_15,),
+            ),
+            (
+                "the resume of a run cut by an earlier rate limit",
+                Snapshot(
+                    now=NOW,
+                    waves=(dataclasses.replace(create_wave(STOPPED_S3, {"S3": "paused:quota"}), pause=QUOTA_UNTIL_12),),
+                    projects=(SHOP,),
+                    rate_limits=RATE_LIMIT_IN_FORCE,
+                ),
+                (ResumeWave(wave="shop_w1", reason="quota"),),
+            ),
+            (
+                "the report of a task",
+                Snapshot(
+                    now=NOW,
+                    waves=(create_wave_of_no_milestone((PARKED_WITH_ITS_PULL_REQUEST_S3,), {"S3": "parked"}),),
+                    projects=(SHOP,),
+                    rate_limits=RATE_LIMIT_IN_FORCE,
+                ),
+                (PAUSE_SHOP_UNTIL_15, CloseWave(wave="shop_w1", project="shop")),
+            ),
+            (
+                "the report of a milestone",
+                Snapshot(
+                    now=NOW,
+                    projects=(SHOP_ON_GITHUB,),
+                    milestones=(create_milestone(WAVES_OF_M4_CLOSED, NO_TASK_TODO),),
+                    rate_limits=RATE_LIMIT_IN_FORCE,
+                ),
+                (),
+            ),
+            (
+                "the rebase of a milestone branch",
+                Snapshot(now=NOW, projects=(SHOP,), milestones=(M9_OUTRUN_BY_MAIN,), rate_limits=RATE_LIMIT_IN_FORCE),
+                (),
+            ),
+            (
+                "a study",
+                Snapshot(now=NOW, studies=(create_study(),), rate_limits=RATE_LIMIT_IN_FORCE),
+                (),
+            ),
+            (
+                "a verification while a wave is paused on the quota",
+                Snapshot(
+                    now=NOW,
+                    waves=(
+                        create_wave((VERIFYING_S3,), {"S3": "verifying"}),
+                        dataclasses.replace(CAFE_WAVE, pause=QUOTA_UNTIL_13),
+                    ),
+                    projects=(SHOP, CAFE),
+                ),
+                (PauseWave(wave="shop_w1", reason="quota", resume_at="2026-10-06T13:00:00Z"),),
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_launch_a_study_parked_by_a_rate_limit_once_its_reset_has_passed(self):
+        for case, study, expected in [
+            (
+                "its reset passed",
+                create_study(last_started=HALF_AN_HOUR_AGO, parked=True, quota_resume_at=NOW),
+                (LAUNCH_WEEKLY,),
+            ),
+            (
+                "its reset still ahead",
+                create_study(
+                    last_started=HALF_AN_HOUR_AGO, parked=True, quota_resume_at=datetime(2026, 10, 6, 13, 0, tzinfo=UTC)
+                ),
+                (),
+            ),
+            ("parked on another cause", create_study(last_started=TWO_HOURS_AGO, parked=True), ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                snapshot = Snapshot(now=NOW, studies=(study,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+
+AN_HOUR_AND_A_MINUTE_AGO = datetime(2026, 10, 6, 10, 59, tzinfo=UTC)
+AN_HOUR_AGO = datetime(2026, 10, 6, 11, 0, tzinfo=UTC)
+FIFTY_NINE_MINUTES_AGO = datetime(2026, 10, 6, 11, 1, tzinfo=UTC)
+THREE_HOURS_AGO = datetime(2026, 10, 6, 9, 0, tzinfo=UTC)
+STALL_AFTER_AN_HOUR = 60
+STALL_AFTER_FOUR_HOURS = 240
+NO_PAUSE = None
+FORGE_ACCOUNT_PAUSE = WavePause(reason="forge_account", resume_at=None)
+SIGNAL_STALL_OF_S3 = SignalStall(project="shop", wave="shop_w1", task="S3", last_action="2026-10-06T09:00:00Z")
+
+
+def create_waiting_task(last_action: datetime) -> TaskFacts:
+    return TaskFacts(name="S3", branch="feature/S3-task", after=("S2",), last_action=last_action)
+
+
+class PlanStallSignalTest(unittest.TestCase):
+    def test_should_signal_a_task_of_an_open_wave_once_its_last_action_is_older_than_the_delay(self):
+        for case, last_action, stall_after, expected in [
+            (
+                "a minute past the delay",
+                AN_HOUR_AND_A_MINUTE_AGO,
+                STALL_AFTER_AN_HOUR,
+                (SignalStall(project="shop", wave="shop_w1", task="S3", last_action="2026-10-06T10:59:00Z"),),
+            ),
+            ("at the delay", AN_HOUR_AGO, STALL_AFTER_AN_HOUR, ()),
+            ("a minute before the delay", FIFTY_NINE_MINUTES_AGO, STALL_AFTER_AN_HOUR, ()),
+            ("within a longer delay", THREE_HOURS_AGO, STALL_AFTER_FOUR_HOURS, ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                wave = create_wave((create_waiting_task(last_action),), {})
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,), stall_after=stall_after)
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_raise_no_stall_signal_for_a_task_holding_a_live_run(self):
+        # Arrange
+        task = TaskFacts(name="S3", branch="feature/S3-task", last_action=THREE_HOURS_AGO)
+        live_run = LiveRun(run="20261006T090000Z-a1b2c3", slot="build", worktree=WORKTREE_S3, wave="shop_w1", task="S3")
+        project = dataclasses.replace(SHOP, live_runs=(live_run,))
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(project,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_raise_no_stall_signal_for_a_merged_a_parked_or_a_task_paused_on_the_quota(self):
+        for case, state, pause in [
+            ("a merged task", "merged", NO_PAUSE),
+            ("a parked task", "parked", NO_PAUSE),
+            ("a task paused on the quota", "paused:quota", NO_PAUSE),
+            ("a task of a wave paused on the quota", "queued", QUOTA_UNTIL_13),
+            ("a task paused on the quota in a wave paused on the forge account", "paused:quota", FORGE_ACCOUNT_PAUSE),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                wave = dataclasses.replace(
+                    create_wave((create_waiting_task(THREE_HOURS_AGO),), {"S3": state}), pause=pause
+                )
+                snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertNotIn(SIGNAL_STALL_OF_S3, actions)
+
+    def test_should_signal_a_task_of_a_wave_paused_for_another_reason_than_the_quota(self):
+        # Arrange
+        wave = dataclasses.replace(create_wave((create_waiting_task(THREE_HOURS_AGO),), {}), pause=FORGE_ACCOUNT_PAUSE)
+        snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (SIGNAL_STALL_OF_S3,))
+
+    def test_should_raise_no_stall_signal_for_a_task_the_tick_acts_on(self):
+        # Arrange
+        task = TaskFacts(name="S3", branch="feature/S3-task", last_action=THREE_HOURS_AGO)
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "queued"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (LAUNCH_S3,))
 
 
 CLIENT_LOGIN = WavePause(reason="client_login", resume_at=None)

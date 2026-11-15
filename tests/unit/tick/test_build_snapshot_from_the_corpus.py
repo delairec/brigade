@@ -6,30 +6,35 @@ import os
 import shutil
 import tempfile
 import unittest
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from brigade.corpus.read_entity import Entity, EntityField
-from brigade.errors import CommandFailed
+from brigade.errors import CommandFailed, PullRequestCompareFailed
 from brigade.ledger.append_event import append_event
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.milestone_closed import MilestoneClosed
 from brigade.ledger.milestone_pr_described import MilestonePrDescribed
 from brigade.ledger.milestone_pr_opened import MilestonePrOpened
+from brigade.ledger.order_parked import OrderParked
+from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_reported import TaskReported
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
+from brigade.ledger.tick_action_failed import TickActionFailed
 from brigade.ledger.wave_cancelled import WaveCancelled
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.runs.record_run_pid import record_run_pid
-from brigade.system.parse_configuration import Configuration
+from brigade.system.parse_configuration import Configuration, parse_configuration
 from brigade.system.pull_request_facts import PullRequestFacts
+from brigade.system.reset_hour import ResetHour
 from brigade.tick.actions import LaunchTask
 from brigade.tick.build_snapshot import (
     BlockedRun,
@@ -49,6 +54,7 @@ from brigade.tick.build_snapshot import (
 )
 from brigade.tick.plan import plan
 from brigade.tick.read_integration_branches import IntegrationBranchFacts
+from brigade.tick.read_leftovers import LeftoverFacts
 from brigade.waves.list_candidate_waves import CandidateWave
 from tests.unit.commands.run_directories import FIRST_RUN, SECOND_RUN, create_run_record, create_run_result, write_run
 from tests.unit.create_test_paths import create_test_paths
@@ -127,6 +133,10 @@ def _read_forge_environment(project: Entity, slot: str) -> dict:
     return FORGE_ENVIRONMENT
 
 
+def _list_no_stale_branch(project: Entity) -> list[dict]:
+    return []
+
+
 class PullRequestReaderDouble:
     def __init__(self):
         self.branches = []
@@ -140,6 +150,14 @@ class PullRequestReaderFailingOnOneWaveDouble(PullRequestReaderDouble):
     def __call__(self, repository: str, branch: str) -> PullRequestFacts:
         if branch == "feature/B1-task":
             raise CommandFailed(("gh", "pr", "list", "--head", branch), 1, "HTTP 502: Bad Gateway")
+        return super().__call__(repository, branch)
+
+
+class PullRequestReaderFailingTheCompareOnOneWaveDouble(PullRequestReaderDouble):
+    def __call__(self, repository: str, branch: str) -> PullRequestFacts:
+        if branch == "feature/B1-task":
+            compare = ("gh", "api", "repos/{owner}/{repo}/compare/main...9c1e2d3")
+            raise PullRequestCompareFailed("main", CommandFailed(compare, 1, "HTTP 502: Bad Gateway"))
         return super().__call__(repository, branch)
 
 
@@ -160,6 +178,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
         self.reader = PullRequestReaderDouble()
         self.shop_forge = "none"
         self.remote_answers = {}
+        self.configuration = Configuration()
 
     def write_operational_corpus(self) -> None:
         self.paths.config_root.mkdir(parents=True)
@@ -238,16 +257,25 @@ class BuildSnapshotTestCase(unittest.TestCase):
                 ),
                 **answer_unreadable_tree("trunk"),
                 **answer_main_of_the_forge(MAIN_SHA),
+                ("git", "worktree", "list", "--porcelain", "-z"): ProcessAnswer(
+                    stdout=f"worktree {self.repository}\0HEAD {MAIN_SHA}\0branch refs/heads/main\0\0"
+                ),
                 **self.remote_answers,
             }
         )
 
-    def build(self) -> tuple[Snapshot, str]:
+    def build(
+        self, read_stale_branches: Callable[[Entity], list[dict]] = _list_no_stale_branch
+    ) -> tuple[Snapshot, str]:
         self.runner = self.create_runner()
         runtime = create_test_runtime(self.paths, run_process=self.runner)
         stderr = io.StringIO()
         with contextlib.redirect_stderr(stderr):
-            snapshot = build_snapshot(runtime, Configuration(), ForgeReaders(self.reader, _read_forge_environment))
+            snapshot = build_snapshot(
+                runtime,
+                self.configuration,
+                ForgeReaders(self.reader, _read_forge_environment, read_stale_branches),
+            )
         return snapshot, stderr.getvalue()
 
 
@@ -335,6 +363,51 @@ class BuildSnapshotOfTheIntegrationBranchesTest(BuildSnapshotTestCase):
             ),
         )
 
+    def test_should_read_no_leftover_of_a_stale_branch_the_ledger_records_as_an_integration_branch(self):
+        # Arrange
+        self.write_operational_corpus()
+        self.record(90, MilestoneBranchCut(project="shop", milestone="M4", branch="integration/delivery", login=None))
+        self.record(60, WaveStarted(wave="w0", project="shop", tasks=("B3",), branch="integration/w0"))
+        self.record(40, WaveClosed(wave="w0"))
+        self.record(30, MilestoneClosed(project="shop", milestone="M4", pr=90))
+        self.remote_answers = {
+            ("git", "rev-parse", "--verify", "--quiet", "refs/heads/integration/delivery"): ProcessAnswer(exit_code=1),
+            **answer_tree("integration/delivery", MILESTONE_SHA),
+            **AWAWA_ANSWERS.answer_entities(
+                self.milestone_tree, "TASK", {"B3": TASK_IDENTITY}, "MILESTONE==@MILESTONE.M4"
+            ),
+            ("git", "rev-parse", "--verify", "--quiet", "refs/heads/feature/B5-sprout"): ProcessAnswer(
+                stdout="b5b5b5b\n"
+            ),
+        }
+        merged = [{"number": 7, "state": "merged", "head_sha": "c0ffee9"}]
+        stale = [
+            {"branch": "integration/delivery", "pull_requests": merged},
+            {"branch": "integration/w0", "pull_requests": merged},
+            {"branch": "feature/B5-sprout", "pull_requests": merged},
+        ]
+
+        # Act
+        snapshot, _ = self.build(read_stale_branches=lambda project: stale if project.name == "shop" else [])
+
+        # Assert
+        self.assertEqual(
+            snapshot.leftovers,
+            (
+                LeftoverFacts(
+                    project="shop",
+                    branch="feature/B5-sprout",
+                    worktree=None,
+                    head="b5b5b5b",
+                    reached_forge=False,
+                    run_live=False,
+                    locked=False,
+                    uncommitted=False,
+                    main_checkout=False,
+                ),
+            ),
+        )
+
 
 class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
     def setUp(self):
@@ -361,14 +434,31 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 TaskFacts(
                     name="B1",
                     branch="feature/B1-task",
+                    last_action=datetime(2026, 10, 19, 8, 58, tzinfo=UTC),
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
                     rate_limit=RateLimit(reset=None),
                 ),
-                TaskFacts(name="B2", branch="feature/B2-task", pull_request=PULL_REQUEST, stopped_run="r2"),
-                TaskFacts(name="B3", branch="feature/B3-task", milestone="M4"),
-                TaskFacts(name="B4", branch="feature/B4-task", pull_request=PULL_REQUEST),
+                TaskFacts(
+                    name="B2",
+                    branch="feature/B2-task",
+                    last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                    stopped_run="r2",
+                ),
+                TaskFacts(
+                    name="B3",
+                    branch="feature/B3-task",
+                    last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
+                    milestone="M4",
+                ),
+                TaskFacts(
+                    name="B4",
+                    branch="feature/B4-task",
+                    last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                ),
             ),
         )
 
@@ -386,6 +476,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             TaskFacts(
                 name="B1",
                 branch="feature/B1-task",
+                last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
                 after=("B0",),
                 pull_request=PULL_REQUEST,
                 worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -407,6 +498,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             TaskFacts(
                 name="B1",
                 branch="feature/B1-task",
+                last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
                 after=("B0",),
                 pull_request=PULL_REQUEST,
                 worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -429,6 +521,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             TaskFacts(
                 name="B1",
                 branch="feature/B1-task",
+                last_action=datetime(2026, 10, 19, 9, 0, tzinfo=UTC),
                 after=("B0",),
                 pull_request=PULL_REQUEST,
                 worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -453,16 +546,32 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 TaskFacts(
                     name="B1",
                     branch="feature/B1-task",
+                    last_action=datetime(2026, 10, 19, 8, 58, tzinfo=UTC),
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
                     rate_limit=RateLimit(reset=None),
                     last_run="20261013T100000Z-a00003",
                 ),
-                TaskFacts(name="B2", branch="feature/B2-task", pull_request=PULL_REQUEST, stopped_run="r2"),
-                TaskFacts(name="B3", branch="feature/B3-task", milestone="M4"),
                 TaskFacts(
-                    name="B4", branch="feature/B4-task", pull_request=PULL_REQUEST, last_run="20261013T090000Z-a00002"
+                    name="B2",
+                    branch="feature/B2-task",
+                    last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                    stopped_run="r2",
+                ),
+                TaskFacts(
+                    name="B3",
+                    branch="feature/B3-task",
+                    last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
+                    milestone="M4",
+                ),
+                TaskFacts(
+                    name="B4",
+                    branch="feature/B4-task",
+                    last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                    last_run="20261013T090000Z-a00002",
                 ),
             ),
         )
@@ -483,15 +592,32 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 TaskFacts(
                     name="B1",
                     branch="feature/B1-task",
+                    last_action=datetime(2026, 10, 19, 8, 58, tzinfo=UTC),
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
                     rate_limit=RateLimit(reset=None),
                     holds_uncommitted_changes=True,
                 ),
-                TaskFacts(name="B2", branch="feature/B2-task", pull_request=PULL_REQUEST, stopped_run="r2"),
-                TaskFacts(name="B3", branch="feature/B3-task", milestone="M4"),
-                TaskFacts(name="B4", branch="feature/B4-task", pull_request=PULL_REQUEST),
+                TaskFacts(
+                    name="B2",
+                    branch="feature/B2-task",
+                    last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                    stopped_run="r2",
+                ),
+                TaskFacts(
+                    name="B3",
+                    branch="feature/B3-task",
+                    last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
+                    milestone="M4",
+                ),
+                TaskFacts(
+                    name="B4",
+                    branch="feature/B4-task",
+                    last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                ),
             ),
         )
 
@@ -582,6 +708,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B1",
                             branch="feature/B1-task",
+                            last_action=datetime(2026, 10, 19, 8, 58, tzinfo=UTC),
                             after=("B0",),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -609,6 +736,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B2",
                             branch="feature/B2-task",
+                            last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
                             after=(),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -636,6 +764,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B3",
                             branch="feature/B3-task",
+                            last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
                             milestone="M4",
                             after=(),
                             blocked_by=(),
@@ -655,6 +784,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B4",
                             branch="feature/B4-task",
+                            last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
                             after=(),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -858,6 +988,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B1",
                             branch="feature/B1-task",
+                            last_action=datetime(2026, 10, 19, 8, 58, tzinfo=UTC),
                             after=("B0",),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -885,6 +1016,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B2",
                             branch="feature/B2-task",
+                            last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
                             after=(),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -912,6 +1044,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B3",
                             branch="feature/B3-task",
+                            last_action=datetime(2026, 10, 19, 8, 57, tzinfo=UTC),
                             milestone="M4",
                             after=(),
                             blocked_by=(),
@@ -931,6 +1064,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B4",
                             branch="feature/B4-task",
+                            last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
                             after=(),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -983,6 +1117,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B1",
                             branch="feature/B1-task",
+                            last_action=datetime(2026, 10, 19, 8, 58, tzinfo=UTC),
                             after=("B0",),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -1010,6 +1145,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B2",
                             branch="feature/B2-task",
+                            last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
                             after=(),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -1037,6 +1173,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B3",
                             branch="feature/B3-task",
+                            last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
                             milestone="M4",
                             after=(),
                             blocked_by=(),
@@ -1056,6 +1193,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                         TaskFacts(
                             name="B4",
                             branch="feature/B4-task",
+                            last_action=datetime(2026, 10, 19, 8, 10, tzinfo=UTC),
                             after=(),
                             blocked_by=(),
                             pull_request=PullRequestFacts(
@@ -1165,6 +1303,24 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         self.assertEqual(
             stderr.splitlines()[1],
             "brigade tick: the wave w1 skipped: gh pr list --head feature/B1-task exited 1: HTTP 502: Bad Gateway",
+        )
+        self.assertEqual(
+            snapshot.waves,
+            (),
+        )
+
+    def test_should_skip_a_wave_whose_pull_request_the_forge_cannot_compare_to_its_base_and_follow_the_others(self):
+        # Arrange
+        self.reader = PullRequestReaderFailingTheCompareOnOneWaveDouble()
+
+        # Act
+        snapshot, stderr = self.build()
+
+        # Assert
+        self.assertEqual(
+            stderr.splitlines()[1],
+            "brigade tick: the wave w1 skipped: gh api repos/{owner}/{repo}/compare/main...9c1e2d3 exited 1:"
+            " HTTP 502: Bad Gateway",
         )
         self.assertEqual(
             snapshot.waves,
@@ -1385,6 +1541,156 @@ class BuildSnapshotOfTheTasksOfAReachedMilestoneTest(BuildSnapshotTestCase):
         self.assertEqual(snapshot.projects[1].candidates, (CandidateWave(milestone="M6", tasks=("B5",)),))
 
 
+def describe_milestone_after(title: str, after: str) -> list[dict]:
+    return [*describe_milestone(title), {"name": "AFTER", "atoms": [f"@MILESTONE.{after}"]}]
+
+
+class BuildSnapshotOfTheMilestonesOrderedByTheirAfterTest(BuildSnapshotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_operational_corpus()
+        tasks = {
+            "B5": describe_task_of_milestone("todo", "M6"),
+            "B11": describe_task_of_milestone("todo", "M7"),
+            "B12": describe_task_of_milestone("todo", "M9"),
+            "B13": describe_task_of_milestone("todo", "M10"),
+            "B14": describe_task_of_milestone("todo", "M11"),
+            "B15": describe_task_of_milestone("todo", "M8"),
+        }
+        self.remote_answers = {
+            **AWAWA_ANSWERS.answer_entities(self.main_tree, "TASK", tasks),
+            **AWAWA_ANSWERS.answer_entities(
+                self.main_tree,
+                "MILESTONE",
+                {
+                    "M6": describe_milestone_after("Hardening", "M5"),
+                    "M7": describe_milestone_after("Recipes", "M8"),
+                    "M8": describe_milestone("Inbox"),
+                    "M10": describe_milestone_after("Tides", "M11"),
+                    "M11": describe_milestone_after("Currents", "M10"),
+                },
+                "STATUS==active",
+            ),
+            **AWAWA_ANSWERS.answer_entities(
+                self.main_tree, "MILESTONE", {"M5": describe_milestone("Payments")}, "STATUS==reached"
+            ),
+            **AWAWA_ANSWERS.answer_entities(
+                self.main_tree, "MILESTONE", {"M9": describe_milestone_after("Post-MVP", "M5")}, "STATUS==planned"
+            ),
+            **AWAWA_ANSWERS.answer_no_incoming_refs(self.main_tree, "B5", "B11", "B12", "B13", "B14", "B15"),
+        }
+
+    def test_should_start_no_wave_of_an_active_milestone_whose_after_is_not_reached(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertNotIn(CandidateWave(milestone="M7", tasks=("B11",)), snapshot.projects[1].candidates)
+
+    def test_should_cut_no_branch_of_an_active_milestone_whose_after_is_not_reached(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertNotIn(
+            UncutMilestone(milestone="M7", branch="integration/recipes", open_waves=(), todo=("B11",)),
+            snapshot.projects[1].uncut_milestones,
+        )
+
+    def test_should_name_on_stderr_each_active_milestone_whose_after_is_not_reached_a_cycle_included(self):
+        # Act
+        _, stderr = self.build()
+
+        # Assert
+        self.assertEqual(
+            stderr.splitlines(),
+            [
+                (
+                    "brigade tick: the project attic skipped: git rev-parse --verify --quiet --end-of-options"
+                    " trunk^{commit} exited 128: fatal: bad revision"
+                ),
+                "brigade tick: @MILESTONE.M7 is not served until its AFTER is reached: @MILESTONE.M8",
+                "brigade tick: @MILESTONE.M10 is not served until its AFTER is reached: @MILESTONE.M11",
+                "brigade tick: @MILESTONE.M11 is not served until its AFTER is reached: @MILESTONE.M10",
+            ],
+        )
+
+    def test_should_start_a_wave_of_an_active_milestone_whose_after_is_reached(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertIn(CandidateWave(milestone="M6", tasks=("B5",)), snapshot.projects[1].candidates)
+
+    def test_should_start_a_wave_of_an_active_milestone_with_no_after(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertIn(CandidateWave(milestone="M8", tasks=("B15",)), snapshot.projects[1].candidates)
+
+    def test_should_start_no_wave_of_a_planned_milestone_whose_after_is_reached(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertNotIn(CandidateWave(milestone="M9", tasks=("B12",)), snapshot.projects[1].candidates)
+
+    def test_should_start_no_wave_of_the_milestones_of_a_cycle_of_after(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.projects[1].candidates,
+            (CandidateWave(milestone="M6", tasks=("B5",)), CandidateWave(milestone="M8", tasks=("B15",))),
+        )
+
+
+class PlanOfAnOpenWaveOfAMilestoneWhoseAfterIsNotReachedTest(BuildSnapshotTestCase):
+    def test_should_launch_the_queued_task_of_the_open_wave_until_the_wave_closes(self):
+        # Arrange
+        self.write_operational_corpus()
+        self.shop_forge = "github"
+        of_milestone = [{"name": "MILESTONE", "atoms": ["@MILESTONE.M7"]}]
+        queued = [*AWAWA_ANSWERS.describe_task("todo"), *of_milestone]
+        self.remote_answers = {
+            **AWAWA_ANSWERS.answer_entities(self.main_tree, "TASK", {"B11": queued}),
+            **AWAWA_ANSWERS.answer_entities(
+                self.main_tree,
+                "MILESTONE",
+                {"M7": describe_milestone_after("Recipes", "M8"), "M8": describe_milestone("Inbox")},
+                "STATUS==active",
+            ),
+            **AWAWA_ANSWERS.answer_entities(self.main_tree, "MILESTONE", {}, "STATUS==reached"),
+            **AWAWA_ANSWERS.answer_no_incoming_refs(self.main_tree, "B11"),
+            **answer_tree("origin/integration/recipes", MILESTONE_SHA),
+            **AWAWA_ANSWERS.answer_entities(self.milestone_tree, "TASK", {"B11": queued}),
+            **AWAWA_ANSWERS.answer_entities(self.milestone_tree, "TASK", {"B11": queued}, "MILESTONE==@MILESTONE.M7"),
+            **AWAWA_ANSWERS.answer_no_incoming_refs(self.milestone_tree, "B11"),
+            **AWAWA_ANSWERS.answer_entities(self.milestone_tree, "TASK", {}, "STATUS==implemented"),
+        }
+        self.record(70, MilestoneBranchCut(project="shop", milestone="M7", branch="integration/recipes", login=None))
+        self.record(60, WaveStarted(wave="w2", project="shop", tasks=("B11",)))
+        snapshot, _ = self.build()
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertIn(
+            LaunchTask(
+                project="shop",
+                wave="w2",
+                branch="integration/recipes",
+                task="B11",
+                task_branch="feature/B11-task",
+                pull_request_checks=None,
+            ),
+            actions,
+        )
+
+
 class BuildSnapshotOfAWaveWhoseTaskCarriesNoTypeTest(BuildSnapshotTestCase):
     def setUp(self):
         super().setUp()
@@ -1534,6 +1840,7 @@ class BuildSnapshotOfAWaveStartedAfterTheForgeAccountBecameUnavailableTest(Build
                         TaskFacts(
                             name="B1",
                             branch="feature/B1-task",
+                            last_action=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             after=("B0",),
                             blocked_by=(),
                             pull_request=None,
@@ -1692,6 +1999,7 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
                 TaskFacts(
                     name="B1",
                     branch="feature/B1-task",
+                    last_action=datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -1700,9 +2008,26 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
                     reviewed_head="4f2a9c1",
                     review_runs=("r1",),
                 ),
-                TaskFacts(name="B2", branch="feature/B2-task", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
-                TaskFacts(name="B3", branch="feature/B3-task", milestone="M4"),
-                TaskFacts(name="B4", branch="feature/B4-task", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
+                TaskFacts(
+                    name="B2",
+                    branch="feature/B2-task",
+                    last_action=datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                    preflighted_head="4f2a9c1",
+                ),
+                TaskFacts(
+                    name="B3",
+                    branch="feature/B3-task",
+                    last_action=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
+                    milestone="M4",
+                ),
+                TaskFacts(
+                    name="B4",
+                    branch="feature/B4-task",
+                    last_action=datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                    preflighted_head="4f2a9c1",
+                ),
             ),
         )
 
@@ -1721,6 +2046,7 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
                 TaskFacts(
                     name="B1",
                     branch="feature/B1-task",
+                    last_action=datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -1732,12 +2058,24 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
                 TaskFacts(
                     name="B2",
                     branch="feature/B2-task",
+                    last_action=datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
                     pull_request=PULL_REQUEST,
                     preflighted_head="4f2a9c1",
                     reported=True,
                 ),
-                TaskFacts(name="B3", branch="feature/B3-task", milestone="M4"),
-                TaskFacts(name="B4", branch="feature/B4-task", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
+                TaskFacts(
+                    name="B3",
+                    branch="feature/B3-task",
+                    last_action=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
+                    milestone="M4",
+                ),
+                TaskFacts(
+                    name="B4",
+                    branch="feature/B4-task",
+                    last_action=datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                    preflighted_head="4f2a9c1",
+                ),
             ),
         )
 
@@ -1806,6 +2144,7 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
             TaskFacts(
                 name="B1",
                 branch="feature/B1-task",
+                last_action=datetime(2026, 10, 19, 8, 40, tzinfo=UTC),
                 after=("B0",),
                 pull_request=PULL_REQUEST,
                 worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -1837,12 +2176,24 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
                 TaskFacts(
                     name="B2",
                     branch="feature/B2-task",
+                    last_action=datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
                     pull_request=PULL_REQUEST,
                     preflighted_head="4f2a9c1",
                     verdict=RecordedVerdict(head="4f2a9c1", verdict="changes"),
                 ),
-                TaskFacts(name="B3", branch="feature/B3-task", milestone="M4"),
-                TaskFacts(name="B4", branch="feature/B4-task", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
+                TaskFacts(
+                    name="B3",
+                    branch="feature/B3-task",
+                    last_action=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
+                    milestone="M4",
+                ),
+                TaskFacts(
+                    name="B4",
+                    branch="feature/B4-task",
+                    last_action=datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                    preflighted_head="4f2a9c1",
+                ),
             ),
         )
 
@@ -1882,6 +2233,7 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
                 TaskFacts(
                     name="B1",
                     branch="feature/B1-task",
+                    last_action=datetime(2026, 10, 19, 8, 21, tzinfo=UTC),
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
@@ -1889,7 +2241,12 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
                     preflight_failures=(PreflightFailure(name="checks", findings=("tests: failure",)),),
                     repair_rounds=2,
                 ),
-                TaskFacts(name="B2", branch="feature/B2-task", pull_request=PULL_REQUEST),
+                TaskFacts(
+                    name="B2",
+                    branch="feature/B2-task",
+                    last_action=datetime(2026, 10, 19, 8, 30, tzinfo=UTC),
+                    pull_request=PULL_REQUEST,
+                ),
             ),
         )
 
@@ -2520,3 +2877,159 @@ class BuildSnapshotOfATaskDeliveredWithoutAForgeTest(BuildSnapshotTestCase):
 
                 # Assert
                 self.assertEqual(snapshot.waves[0].tasks[0].delivered_head, expected)
+
+
+ORDER_RUN_OF_TRIAGE = "20261019T082500Z-0a1b2c"
+JUDGING_RUN_OF_TRIAGE = "20261019T082600Z-3d4e5f"
+NEXT_JUDGING_RUN_OF_TRIAGE = "20261019T085500Z-6a7b8c"
+RESET_AT_TEN = ResetHour(hour="10:00", timezone="UTC")
+JUDGING_RECORD_KEPT = True
+JUDGING_RECORD_PRUNED = False
+
+
+class BuildSnapshotOfAStudyParkedByItsJudgingRunTest(BuildSnapshotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_operational_corpus()
+
+    def park_triage(self, error_class: str, *, judging_record_kept: bool) -> None:
+        self.record(35, OrderStarted(project=None, kind="study", order="triage", run=ORDER_RUN_OF_TRIAGE))
+        self.record(
+            30,
+            dataclasses.replace(
+                create_run_finished(
+                    JUDGING_RUN_OF_TRIAGE, procedure="study", slot="triage", outcome="failed", error_class=error_class
+                ),
+                reset=RESET_AT_TEN,
+            ),
+        )
+        self.record(
+            30,
+            OrderParked(
+                project=None,
+                kind="study",
+                order="triage",
+                run=ORDER_RUN_OF_TRIAGE,
+                step="judge",
+                reason=f"the judging run {JUDGING_RUN_OF_TRIAGE} gave no answer",
+            ),
+        )
+        if judging_record_kept:
+            write_run(
+                self.paths.state_root,
+                {
+                    **create_run_record(JUDGING_RUN_OF_TRIAGE, None, None),
+                    "procedure": "study",
+                    "slot": "triage",
+                    "arguments": {"study": "triage", "run": ORDER_RUN_OF_TRIAGE},
+                },
+                None,
+            )
+
+    def test_should_carry_the_reset_of_the_rate_limit_that_parked_a_study(self):
+        for case, error_class, judging_record_kept, expected in [
+            ("cut by a rate limit", "rate_limit", JUDGING_RECORD_KEPT, datetime(2026, 10, 19, 10, 0, tzinfo=UTC)),
+            ("ended on another error", "execution", JUDGING_RECORD_KEPT, None),
+            ("cut by a rate limit, its record pruned", "rate_limit", JUDGING_RECORD_PRUNED, None),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                self.park_triage(error_class, judging_record_kept=judging_record_kept)
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.studies[1].quota_resume_at, expected)
+
+    def test_should_carry_no_reset_for_a_study_resumed_after_its_reset_then_parked_on_another_cause(self):
+        for case, events in [
+            (
+                "its next judging run ended on another error",
+                (
+                    create_run_finished(
+                        NEXT_JUDGING_RUN_OF_TRIAGE,
+                        procedure="study",
+                        slot="triage",
+                        outcome="failed",
+                        error_class="execution",
+                    ),
+                    OrderParked(
+                        project=None,
+                        kind="study",
+                        order="triage",
+                        run=ORDER_RUN_OF_TRIAGE,
+                        step="judge",
+                        reason=f"the judging run {NEXT_JUDGING_RUN_OF_TRIAGE} gave no answer",
+                    ),
+                ),
+            ),
+            (
+                "its output step failed",
+                (
+                    OrderParked(
+                        project=None,
+                        kind="study",
+                        order="triage",
+                        run=ORDER_RUN_OF_TRIAGE,
+                        step="output",
+                        reason="the answer could not be written",
+                    ),
+                ),
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                self.park_triage("rate_limit", judging_record_kept=JUDGING_RECORD_KEPT)
+                for event in events:
+                    self.record(5, event)
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertIsNone(snapshot.studies[1].quota_resume_at)
+
+
+class BuildSnapshotOfTheLastActionOnATaskTest(BuildSnapshotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_operational_corpus()
+        self.record(300, TaskState(wave="w0", task="B1", state="parked"))
+        self.record(200, WaveStarted(wave="w1", project="shop", tasks=("B1", "B2", "B4")))
+        self.record(180, TaskState(wave="w1", task="B1", state="running"))
+        self.record(120, create_run_finished("r1", wave="w1", task="B1", outcome="failed"))
+        self.record(10, TaskState(wave="w0", task="B1", state="queued"))
+        self.record(150, TaskState(wave="w1", task="B2", state="running"))
+        self.record(90, TickActionFailed(action="RunPreflight", project="shop", wave="w1", task="B2", error="no"))
+        self.record(5, create_verdict("B2", PULL_REQUEST_HEAD, "pass"))
+
+    def test_should_take_the_latest_task_state_run_finished_or_failed_action_of_the_task_in_its_wave(self):
+        for case, index, expected in [
+            ("a run finished after its state", 0, datetime(2026, 10, 19, 7, 0, tzinfo=UTC)),
+            ("a failed action after its state, a verdict apart", 1, datetime(2026, 10, 19, 7, 30, tzinfo=UTC)),
+            ("no action since the start of its wave", 2, datetime(2026, 10, 19, 5, 40, tzinfo=UTC)),
+        ]:
+            with self.subTest(case=case):
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].tasks[index].last_action, expected)
+
+
+class BuildSnapshotOfTheDelayOfAStallTest(BuildSnapshotTestCase):
+    def test_should_read_the_delay_of_a_stall_from_config_toml(self):
+        # Arrange
+        self.write_operational_corpus()
+        configuration_file = self.root / "config.toml"
+        configuration_file.write_text("stall_after = 90\n")
+        self.configuration = parse_configuration(configuration_file)
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.stall_after, 90)

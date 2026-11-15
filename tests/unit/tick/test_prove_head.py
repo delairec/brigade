@@ -46,11 +46,24 @@ class ProveHeadTest(unittest.TestCase):
         record.write_text(json.dumps(document), encoding="utf-8")
 
     def answer_the_checks_on_a_checkout(self, test_exit_code: int) -> None:
-        self.processes.answer(("git", "worktree", "add", "--quiet", "--detach", str(self.checkout), "c0ffee"))
+        self.processes.answer(
+            (
+                "git",
+                "worktree",
+                "add",
+                "--quiet",
+                "--detach",
+                "--lock",
+                "--reason",
+                "brigade proving a head",
+                str(self.checkout),
+                "c0ffee",
+            )
+        )
         self.processes.answer(("npm", "test"), exit_code=test_exit_code)
         self.processes.answer(("awawa", "fmt", "--check", "."))
         self.processes.answer(("awawa", "lint", "--strict", "."))
-        self.processes.answer(("git", "worktree", "remove", "--force", str(self.checkout)))
+        self.processes.answer(("git", "worktree", "remove", "--force", "--force", str(self.checkout)))
 
     def test_should_prove_green_a_commit_whose_record_by_sha_holds_every_command_passed_running_nothing(self):
         # Arrange
@@ -102,7 +115,7 @@ class ProveHeadTest(unittest.TestCase):
         self.assertEqual(
             self.processes.requests[-1],
             ProcessRequest(
-                argv=("git", "worktree", "remove", "--force", str(self.checkout)),
+                argv=("git", "worktree", "remove", "--force", "--force", str(self.checkout)),
                 cwd="/srv/oak",
                 timeout_s=TREE_TIMEOUT_S,
             ),
@@ -118,4 +131,6 @@ class ProveHeadTest(unittest.TestCase):
             prove_head(self.runtime, HeadQuery(PROJECT, REPOSITORY, "c0ffee", NO_TASK_CHECK, NO_FORGE_CHECK))
 
         # Assert
-        self.assertEqual(self.processes.requests[-1].argv, ("git", "worktree", "remove", "--force", str(self.checkout)))
+        self.assertEqual(
+            self.processes.requests[-1].argv, ("git", "worktree", "remove", "--force", "--force", str(self.checkout))
+        )

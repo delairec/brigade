@@ -7,7 +7,7 @@ from tests.unit.collectors.scan_fixtures import (
     create_forge,
 )
 
-MERGED_PULL_REQUEST = {"number": 4, "head": "task/w1/B1", "state": "merged"}
+MERGED_PULL_REQUEST = {"number": 4, "head": "task/w1/B1", "state": "merged", "head_sha": "b4"}
 
 
 class StaleBranchesCollectorTest(ScanCollectorTestCase):
@@ -32,7 +32,7 @@ class StaleBranchesCollectorTest(ScanCollectorTestCase):
                 "items": [
                     {
                         "branch": "task/w1/B1",
-                        "pull_requests": [{"number": 4, "state": "merged"}],
+                        "pull_requests": [{"number": 4, "state": "merged", "head_sha": "b4"}],
                         "fingerprint": "task/w1/B1",
                     }
                 ],

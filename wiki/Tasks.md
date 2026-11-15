@@ -1,11 +1,12 @@
 What a build run does from the worktree of its task with `brigade task`: read its starting package, run the checks,
-open the pull request and promote the task.
+push the branch, open the pull request and promote the task.
 
 ## Commands
 
 ```
 brigade task context [<task>]                  # the starting package of the run
 brigade task check [<task>]                    # the acceptance commands and the corpus checks; exit 1 when one fails
+brigade task push [<task>]                     # push the branch with a lease once a check of HEAD passed
 brigade task pr [<task>] --subject <subject>   # push the branch with a lease and open the pull request on its base
 brigade task promote [<task>] [--pr <n>]       # STATUS implemented and DELIVERED_BY, committed and pushed with a lease
 ```
@@ -16,7 +17,7 @@ of the task, `feat` becoming `feature`, the slug its `TITLE` lowercased, each ru
 letters and digits made one hyphen, cut at a hyphen within 40 characters (`feature/B46-local-mode`). Its pull request
 goes to that base. Every command runs from that worktree, takes the task of the branch when `<task>` is left out,
 and its wave from the open wave of the ledger that holds the task. Each prints text or, with `--json`, a JSON document.
-`task pr` and `task promote` push the branch with `--force-with-lease`, never with `--force`: the lease is the head of
+`task push`, `task pr` and `task promote` push the branch with `--force-with-lease`, never with `--force`: the lease is the head of
 `origin/<branch>` they read, or that the branch is absent from `origin`, so a branch the tick rebased since its last
 push is pushed, and one another push moved is refused.
 
@@ -30,16 +31,18 @@ stderr at each tick.
 | `task pr` | `task.pr_opened`, `milestone.created` |
 | `task promote` | `task.promoted` |
 
-> **Watch out:** `task pr` refuses a task whose last check is not of `HEAD` or has a failing command: run
-> `task check` again after every commit.
+> **Watch out:** `task push` and `task pr` refuse, pushing nothing, a task whose last check is not of `HEAD` or has a
+> failing command, and `task promote` one whose last check is not of the commit it promotes on: run `task check` again
+> after every commit.
 
 ## Details and edge cases
 
 <details><summary><code>task context</code></summary>
 
-It prints the starting package of the run: the ancestry of the worktree and the output of its setup, the task and its
-closure, the rules of the files it touches, the project's `AGENTS.md`, the acceptance commands, the task number and the
-attribution reserved for it.
+It prints the starting package of the run: the ancestry of the worktree and the output of its setup, the task whole
+with `awawa show`, its `RATIONALE` included, its neighbours at depth 1 without their reasoning with
+`awawa context <task> --depth 1 --skip reasoning --with-schema .`, its closure, the rules of the files it touches, the project's `AGENTS.md`, the acceptance commands, the task number and the
+attribution reserved for it. A run reads a further entity with `awawa show` when it needs it.
 
 </details>
 
@@ -50,6 +53,15 @@ attribution reserved for it.
   `awawa lint --strict .`.
 - It prints one line per command with its verdict and its duration, and the last 20 lines of each failing one.
 - It records the verdicts with the sha of `HEAD` in `$XDG_STATE_HOME/brigade/checks/<project>/<task>.json`.
+
+</details>
+
+<details><summary><code>task push</code></summary>
+
+- It pushes the branch of the task as the login of `forge_accounts.build`, with the lease of its head on `origin`, so
+  a branch rebased since its last push is pushed.
+- A procedure of a run pushes the branch of a task through it alone: the build, the answer to a review and the rebase
+  of a task branch.
 
 </details>
 
@@ -69,6 +81,8 @@ attribution reserved for it.
 - It formats and lints the corpus, commits with the attribution lines and pushes; a second run replaces the
   `DELIVERED_BY` it wrote.
 - It refuses a corpus whose `TASK` schema does not declare `STATUS implemented` and `DELIVERED_BY`.
+- It refuses, promoting and pushing nothing, a task whose last check is not of `HEAD` or failed: the promotion commit,
+  which touches the corpus alone, formatted and linted with `--strict`, sits on a commit the check passed on.
 
 </details>
 

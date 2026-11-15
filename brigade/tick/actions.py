@@ -242,7 +242,30 @@ class RemoveIntegrationBranch:
 
 
 @dataclass(frozen=True)
-class KeepIntegrationBranch:
+class KeepBranch:
     project: str
     branch: str
     reason: str
+    head: str
+
+
+@dataclass(frozen=True)
+class SignalStall:
+    project: str
+    wave: str
+    task: str
+    last_action: str
+
+
+@dataclass(frozen=True)
+class RecordGoneBase:
+    project: str
+    branch: str
+    base: str
+
+
+@dataclass(frozen=True)
+class RemoveLeftover:
+    project: str
+    branch: str | None
+    worktree: str | None

@@ -27,7 +27,7 @@ from brigade.adapters.forges.github import (
     reply_review_thread,
     rewrite_pull_request_body,
 )
-from brigade.errors import CommandFailed
+from brigade.errors import CommandFailed, PullRequestCompareFailed
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRecord, ProcessRequest
 from tests.unit.create_test_runtime import create_test_runtime
 
@@ -533,6 +533,24 @@ class FindPullRequestTest(unittest.TestCase):
             },
         )
 
+    def test_should_name_the_base_of_the_pull_request_whose_compare_fails(self):
+        # Arrange
+        def gh(request: ProcessRequest) -> ProcessRecord:
+            if request.argv[1] == "api":
+                raise CommandFailed(request.argv, 1, "Not Found (HTTP 404)")
+            return ProcessRecord(
+                argv=request.argv, cwd=request.cwd, exit_code=0, stdout=OPEN_PULL_REQUEST, stderr="", duration_ms=0
+            )
+
+        runtime = create_test_runtime(run_process=gh)
+
+        # Act
+        with self.assertRaises(PullRequestCompareFailed) as raised:
+            find_pull_request(FIND_REQUEST, runtime)
+
+        # Assert
+        self.assertEqual(raised.exception.base, "integration/M1-empty-cart")
+
     def test_should_answer_no_pull_request_for_a_branch_that_has_none(self):
         # Arrange
         gh = create_gh_answering("[]\n")
@@ -643,6 +661,7 @@ LISTED_PAGE = {
                         "number": 7,
                         "title": "feat: empty the cart",
                         "headRefName": "task/w1/S3",
+                        "headRefOid": "3a3a3a3",
                         "baseRefName": "integration/w1",
                         "state": "OPEN",
                         "isDraft": False,
@@ -654,6 +673,7 @@ LISTED_PAGE = {
                         "number": 8,
                         "title": "fix: keep the cart",
                         "headRefName": "task/w1/S4",
+                        "headRefOid": "4b4b4b4",
                         "baseRefName": "integration/w1",
                         "state": "OPEN",
                         "isDraft": True,
@@ -692,6 +712,7 @@ MERGED_PAGE = {
                         "number": 5,
                         "title": "docs: the readme",
                         "headRefName": "docs/readme",
+                        "headRefOid": "5c5c5c5",
                         "baseRefName": "main",
                         "state": "MERGED",
                         "isDraft": False,
@@ -752,6 +773,7 @@ class ListPullRequestsOfEveryStateTest(unittest.TestCase):
                         "number": 7,
                         "title": "feat: empty the cart",
                         "head": "task/w1/S3",
+                        "head_sha": "3a3a3a3",
                         "base": "integration/w1",
                         "state": "open",
                         "author": None,
@@ -763,6 +785,7 @@ class ListPullRequestsOfEveryStateTest(unittest.TestCase):
                         "number": 8,
                         "title": "fix: keep the cart",
                         "head": "task/w1/S4",
+                        "head_sha": "4b4b4b4",
                         "base": "integration/w1",
                         "state": "open",
                         "author": "Clauche-bot",
@@ -774,6 +797,7 @@ class ListPullRequestsOfEveryStateTest(unittest.TestCase):
                         "number": 5,
                         "title": "docs: the readme",
                         "head": "docs/readme",
+                        "head_sha": "5c5c5c5",
                         "base": "main",
                         "state": "merged",
                         "author": "ada",
@@ -805,6 +829,7 @@ class ListOpenPullRequestsTest(unittest.TestCase):
                         "number": 7,
                         "title": "feat: empty the cart",
                         "head": "task/w1/S3",
+                        "head_sha": "3a3a3a3",
                         "base": "integration/w1",
                         "state": "open",
                         "author": None,
@@ -816,6 +841,7 @@ class ListOpenPullRequestsTest(unittest.TestCase):
                         "number": 8,
                         "title": "fix: keep the cart",
                         "head": "task/w1/S4",
+                        "head_sha": "4b4b4b4",
                         "base": "integration/w1",
                         "state": "open",
                         "author": "Clauche-bot",
@@ -1315,6 +1341,7 @@ OPEN_PULL_REQUESTS_PAGES = json.dumps(
                             {
                                 "number": 13,
                                 "headRefName": "docs/readme",
+                                "headRefOid": "5c5c5c5",
                                 "commits": {"nodes": [{"commit": {"oid": "89abcde", "statusCheckRollup": None}}]},
                             },
                         ]

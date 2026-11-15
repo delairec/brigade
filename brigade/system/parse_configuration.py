@@ -8,6 +8,7 @@ from brigade.system.read_dashboard_port import DASHBOARD_PORT_BY_DEFAULT, DASHBO
 from brigade.system.read_journal_poll import JOURNAL_POLL_BY_DEFAULT_S, JOURNAL_POLL_KEY, read_journal_poll
 from brigade.system.read_quota_window import QUOTA_WINDOW_BY_DEFAULT_H, QUOTA_WINDOW_KEY, read_quota_window
 from brigade.system.read_runs_kept import RUNS_KEPT_BY_DEFAULT, RUNS_KEPT_KEY, read_runs_kept
+from brigade.system.read_stall_after import STALL_AFTER_BY_DEFAULT_MIN, STALL_AFTER_KEY, read_stall_after
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT, STUDY_RUNS_KEY, read_study_runs
 from brigade.system.read_tick_stale_after import (
     TICK_STALE_AFTER_BY_DEFAULT_MIN,
@@ -65,6 +66,7 @@ class Configuration:
     trail_days: int = TRAIL_DAYS_BY_DEFAULT
     runs_kept: int = RUNS_KEPT_BY_DEFAULT
     study_runs: int = STUDY_RUNS_BY_DEFAULT
+    stall_after: int = STALL_AFTER_BY_DEFAULT_MIN
     tick_stale_after: int = TICK_STALE_AFTER_BY_DEFAULT_MIN
     journal_poll_s: int | float = JOURNAL_POLL_BY_DEFAULT_S
     findings: tuple[str, ...] = ()
@@ -212,6 +214,7 @@ KNOWN_KEYS = (
     TRAIL_DAYS_KEY,
     RUNS_KEPT_KEY,
     STUDY_RUNS_KEY,
+    STALL_AFTER_KEY,
     TICK_STALE_AFTER_KEY,
     JOURNAL_POLL_KEY,
     FORGE_ACCOUNTS_KEY,
@@ -246,6 +249,7 @@ def parse_configuration(path: Path) -> Configuration:
         trail_days=read_trail_days(document, path),
         runs_kept=read_runs_kept(document, path),
         study_runs=read_study_runs(document, path),
+        stall_after=read_stall_after(document, path),
         tick_stale_after=read_tick_stale_after(document, path),
         journal_poll_s=journal_poll_s,
         findings=findings,

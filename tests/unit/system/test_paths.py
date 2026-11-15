@@ -1,3 +1,4 @@
+import getpass
 import unittest
 from pathlib import Path
 
@@ -11,6 +12,7 @@ class BuildPathsTest(unittest.TestCase):
         # Arrange
         environment = {
             "HOME": "/home/ada",
+            "USER": "ada",
             "PATH": "/usr/local/bin:/usr/bin",
             "XDG_CONFIG_HOME": "/srv/config",
             "XDG_STATE_HOME": "/srv/state",
@@ -30,18 +32,29 @@ class BuildPathsTest(unittest.TestCase):
                 home=Path("/home/ada"),
                 executable_search_path="/usr/local/bin:/usr/bin",
                 package_file=Path(brigade.__file__),
+                user="ada",
             ),
         )
 
     def test_should_fall_back_to_the_home_directories_and_the_default_search_path(self):
         # Arrange
         rows = [
-            ("unset", {"HOME": "/home/ada"}),
-            ("empty", {"HOME": "/home/ada", "XDG_CONFIG_HOME": "", "XDG_STATE_HOME": "", "XDG_CACHE_HOME": ""}),
+            ("unset", {"HOME": "/srv/homes/ada", "USER": "ada"}),
+            (
+                "empty",
+                {
+                    "HOME": "/srv/homes/ada",
+                    "USER": "ada",
+                    "XDG_CONFIG_HOME": "",
+                    "XDG_STATE_HOME": "",
+                    "XDG_CACHE_HOME": "",
+                },
+            ),
             (
                 "relative",
                 {
-                    "HOME": "/home/ada",
+                    "HOME": "/srv/homes/ada",
+                    "USER": "ada",
                     "XDG_CONFIG_HOME": "config",
                     "XDG_STATE_HOME": "state",
                     "XDG_CACHE_HOME": "cache",
@@ -57,12 +70,13 @@ class BuildPathsTest(unittest.TestCase):
                 self.assertEqual(
                     paths,
                     Paths(
-                        config_root=Path("/home/ada/.config/brigade"),
-                        state_root=Path("/home/ada/.local/state/brigade"),
-                        cache_root=Path("/home/ada/.cache/brigade"),
-                        home=Path("/home/ada"),
+                        config_root=Path("/srv/homes/ada/.config/brigade"),
+                        state_root=Path("/srv/homes/ada/.local/state/brigade"),
+                        cache_root=Path("/srv/homes/ada/.cache/brigade"),
+                        home=Path("/srv/homes/ada"),
                         executable_search_path="/bin:/usr/bin",
                         package_file=Path(brigade.__file__),
+                        user="ada",
                     ),
                 )
 
@@ -79,6 +93,25 @@ class BuildPathsWithoutAHomeVariableTest(unittest.TestCase):
         self.assertEqual(paths.home, Path.home())
 
 
+class BuildPathsUserTest(unittest.TestCase):
+    def test_should_name_the_user_the_environment_names(self):
+        # Act
+        paths = build_paths({"HOME": "/srv/homes/ada", "USER": "ada"})
+
+        # Assert
+        self.assertEqual(paths.user, "ada")
+
+    def test_should_take_the_name_of_the_account_when_no_variable_names_it(self):
+        # Arrange
+        no_variable = {}
+
+        # Act
+        paths = build_paths(no_variable)
+
+        # Assert
+        self.assertEqual(paths.user, getpass.getuser())
+
+
 class PathsSharedBySeveralComponentsTest(unittest.TestCase):
     def test_should_build_each_shared_file_and_directory_from_its_root(self):
         # Arrange
@@ -89,6 +122,7 @@ class PathsSharedBySeveralComponentsTest(unittest.TestCase):
             home=Path("/home/ada"),
             executable_search_path="/usr/bin",
             package_file=PACKAGE_FILE,
+            user="ada",
         )
         rows = [
             ("configuration_file", Path("/srv/config/brigade/config.toml")),

@@ -11,14 +11,14 @@ from brigade.corpus.read_awawa_document import read_awawa_document
 from brigade.corpus.read_awawa_file_document import read_awawa_file_document
 from brigade.corpus.read_entity_template import read_entity_template
 from brigade.errors import BrigadeError, CorpusLintFailed
-from brigade.git.add_detached_worktree import add_detached_worktree
+from brigade.git.add_detached_worktree import DetachedWorktree, add_detached_worktree
 from brigade.git.check_ancestor import check_ancestor
 from brigade.git.create_branch import create_branch
 from brigade.git.fast_forward_branch import fast_forward_branch
 from brigade.git.find_branch import find_branch
 from brigade.git.list_worktrees import list_worktrees
 from brigade.git.merge_fast_forward import merge_fast_forward
-from brigade.git.remove_worktree import remove_worktree
+from brigade.git.remove_detached_worktree import remove_detached_worktree
 from brigade.ledger.append_event import append_event
 from brigade.ledger.plan_lint_failed import PlanLintFailed
 from brigade.ledger.read_ledger import read_ledger
@@ -42,6 +42,8 @@ from brigade.runtime import Runtime
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
 from brigade.system.parse_configuration import CLI_KEY
 from brigade.waves.locate_project_main import locate_project_main
+
+RECORDING_REASON = "brigade plan record"
 
 MILESTONE_TYPE = "MILESTONE"
 TASK_TYPE = "TASK"
@@ -178,12 +180,13 @@ def _write_plan(runtime: Runtime, recording: PlanRecording, write: _PlanWrite) -
     root = Path(read_project_field(recording.project, "PATH"))
     worktree = runtime.paths.cache_root / WORKTREES_DIRECTORY / recording.request.name
     main = locate_project_main(runtime.run_process, recording.project, recording.read_environment)
-    add_detached_worktree(runtime.run_process, root, worktree, main)
+    detached = DetachedWorktree(repository=root, path=worktree, start=main, reason=RECORDING_REASON)
+    add_detached_worktree(runtime.run_process, detached)
     try:
         milestone = _check_against_corpus(runtime, recording, worktree, write.plan)
         _write_on_branch(runtime, recording, worktree, write)
     finally:
-        remove_worktree(runtime.run_process, root, worktree)
+        remove_detached_worktree(runtime.run_process, detached)
     return milestone
 
 

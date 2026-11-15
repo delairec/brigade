@@ -2,13 +2,15 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.corpus.read_entities import Entity
-from brigade.git.add_detached_worktree import add_detached_worktree
-from brigade.git.remove_worktree import remove_worktree
+from brigade.git.add_detached_worktree import DetachedWorktree, add_detached_worktree
+from brigade.git.remove_detached_worktree import remove_detached_worktree
 from brigade.runtime import Runtime
 from brigade.tick.head_proof import UNPROVEN, ForgeCheck, HeadEvidence, HeadProof, TaskCheck
 from brigade.tick.judge_head import judge_head
 from brigade.tick.read_commit_checks import read_commit_checks
 from brigade.tick.run_commit_checks import run_commit_checks
+
+PROOF_REASON = "brigade proving a head"
 
 HEAD_CHECKS_DIRECTORY = "head-checks"
 
@@ -24,11 +26,12 @@ class HeadQuery:
 
 def _check_on_a_checkout(runtime: Runtime, query: HeadQuery, evidence: HeadEvidence) -> HeadProof:
     checkout = runtime.paths.state_root / HEAD_CHECKS_DIRECTORY / query.project.name / query.commit
-    add_detached_worktree(runtime.run_process, query.repository, checkout, query.commit)
+    worktree = DetachedWorktree(repository=query.repository, path=checkout, start=query.commit, reason=PROOF_REASON)
+    add_detached_worktree(runtime.run_process, worktree)
     try:
         commit_checks = run_commit_checks(runtime, query.project, checkout, query.commit)
     finally:
-        remove_worktree(runtime.run_process, query.repository, checkout)
+        remove_detached_worktree(runtime.run_process, worktree)
     return judge_head(
         HeadEvidence(
             commit=evidence.commit,

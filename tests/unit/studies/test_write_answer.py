@@ -23,6 +23,11 @@ RATIFIED_PATTERN = 'PATTERN cli_is_hard_to_read\n\tTITLE "the cli is hard to rea
 PROPOSED_PATTERN = (
     'PATTERN slow_tick\n\tTITLE "the tick is slow"\n\tSTATUS new\n\tEVIDENCE "note:5f2b1c0d9e8a"\n\tACTION dismiss\n'
 )
+HELD_PATTERNS = (
+    'PATTERN cli_is_hard_to_read\n\tTITLE "the cli is hard to read"\n\tSTATUS ratified\n\tEVIDENCE "rt:9"\n\n'
+    'PATTERN tick_is_slow\n\tTITLE "the tick is slow"\n\tSTATUS new\n\tEVIDENCE "rt:10"\n\tACTION wave\n'
+)
+EVIDENCE_ADDED = 'PATTERN cli_is_hard_to_read\n\tEVIDENCE "rt:101 another thread"\n'
 REPORTED = 'REPORT oak_M6\n\tMILESTONE "M6"\n'
 MILESTONES_PATH = "corpus/milestones.awawa"
 MILESTONE_REPORT = Study(
@@ -205,6 +210,25 @@ class WriteAnswerTest(unittest.TestCase):
             self.processes.list_argvs(),
         )
 
+    def test_should_add_the_evidence_of_the_answer_to_the_held_pattern_and_write_no_new_pattern(self):
+        # Arrange
+        (self.config_root / "patterns.awawa").write_text(HELD_PATTERNS, encoding="utf-8")
+        (self.run_directory / "answer.awawa").write_text(EVIDENCE_ADDED, encoding="utf-8")
+        self.processes.answer_corpus_change(
+            self.config_root, ("patterns.awawa",), "brigade study run: the answer of @STUDY.triage"
+        )
+
+        # Act
+        write_answer(self.create_context("entity:PATTERN", BUILT_IN_TRIAGE))
+
+        # Assert
+        self.assertEqual(
+            (self.config_root / "patterns.awawa").read_text(encoding="utf-8"),
+            'PATTERN cli_is_hard_to_read\n\tTITLE "the cli is hard to read"\n\tSTATUS ratified\n\tEVIDENCE "rt:9"\n'
+            '\tEVIDENCE "rt:101 another thread"\n\n'
+            'PATTERN tick_is_slow\n\tTITLE "the tick is slow"\n\tSTATUS new\n\tEVIDENCE "rt:10"\n\tACTION wave\n',
+        )
+
     def test_should_publish_the_answer_as_an_issue(self):
         # Arrange
         self.processes.answer_entities(
@@ -245,11 +269,24 @@ class WriteAnswerTest(unittest.TestCase):
         self.processes.answer(
             ("git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"), "origin/main\n"
         )
-        self.processes.answer(("git", "worktree", "add", "--quiet", "--detach", str(checkout), "main"))
+        self.processes.answer(
+            (
+                "git",
+                "worktree",
+                "add",
+                "--quiet",
+                "--detach",
+                "--lock",
+                "--reason",
+                "brigade writing an answer to a file",
+                str(checkout),
+                "main",
+            )
+        )
         self.processes.answer(("git", "switch", "--quiet", "--force-create", branch))
         self.processes.answer(("git", "add", "--", "answer.md"))
         self.processes.answer(("git", "diff", "--cached", "--quiet", "--", "answer.md"))
-        self.processes.answer(("git", "worktree", "remove", "--force", str(checkout)))
+        self.processes.answer(("git", "worktree", "remove", "--force", "--force", str(checkout)))
 
         # Act
         written = write_answer(self.create_context("file:answer.md"))

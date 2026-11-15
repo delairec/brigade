@@ -13,9 +13,11 @@ from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_started import WaveStarted
+from brigade.system.reset_hour import ResetHour
 from brigade.system.token_usage import TokenUsage
 from tests.unit.commands.command_runtime import create_corpus_double, write_operational_corpus
 from tests.unit.commands.inbox_lines import NOTE_ON_OAK_RECORDED, THREAD_DISMISSED, THREAD_RECORDED
+from tests.unit.commands.run_directories import create_run_record, write_run
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.ledger.create_run_finished import create_run_finished
@@ -208,6 +210,53 @@ class StatusOfTheMachineTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document["quota"]["paused_waves"], [{"wave": "oak_w2", "resume_at": "2026-10-19T10:00:00Z"}])
+
+    def test_should_list_due_a_study_parked_by_a_rate_limit_whose_reset_has_passed(self):
+        # Arrange
+        self.write_machine()
+        judging_run = "20261019T080500Z-j1"
+        write_run(
+            self.paths.state_root,
+            {
+                **create_run_record(judging_run, None, None),
+                "arguments": {"study": "debt", "run": "20261019T080000Z-d1"},
+            },
+            None,
+        )
+        cut = dataclasses.replace(
+            create_run_finished(judging_run, outcome="failed", error_class="rate_limit"),
+            reset=ResetHour(hour="08:30", timezone="UTC"),
+        )
+        append_event(self.paths, at(8, 11), cut)
+        append_event(
+            self.paths,
+            at(8, 11),
+            OrderParked(
+                project=None,
+                kind="study",
+                order="debt",
+                run="20261019T080000Z-d1",
+                step="judge",
+                reason=f"the judging run {judging_run} gave no answer",
+            ),
+        )
+        runtime = create_test_runtime(self.paths, run_process=create_corpus_double(CORPUS))
+
+        # Act
+        document = COMMAND.run(Namespace(), runtime)
+
+        # Assert
+        self.assertEqual(
+            document["studies"][0],
+            {
+                "name": "debt",
+                "status": "active",
+                "every": "1d",
+                "last_run": "20261019T080000Z-d1",
+                "outcome": "parked",
+                "due": True,
+            },
+        )
 
 
 class StatusOfTheInboxTest(unittest.TestCase):

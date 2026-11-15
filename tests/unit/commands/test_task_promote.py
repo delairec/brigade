@@ -25,6 +25,10 @@ BOUND_ACCOUNTS = (
     'attribution = ["Co-Authored-By: Ada <ada@example.org>"]\n'
     '[forge_accounts]\nbuild = "octo-bot"\nreview = "rev-bot"\n'
 )
+PASSING_CHECK_OF_THE_PARENT = (
+    '{"schema_version": 1, "project": "oak", "task": "B12", "head": "d00d",'
+    ' "checks": [{"command": "python3 -m unittest", "passed": true, "duration_ms": 1200, "tail": []}]}'
+)
 MESSAGE = "docs(corpus): mark @TASK.B12 implemented, delivered by #42\n\nCo-Authored-By: Ada <ada@example.org>"
 
 
@@ -97,6 +101,8 @@ class TaskPromotePushTest(unittest.TestCase):
         (worktree / "corpus" / "tasks.awawa").write_text("TASK B12\n\tSTATUS todo\n", encoding="utf-8")
         write_operational_corpus(root)
         (root / "config" / "config.toml").write_text(BOUND_ACCOUNTS, encoding="utf-8")
+        (root / "state" / "checks" / "oak").mkdir(parents=True)
+        (root / "state" / "checks" / "oak" / "B12.json").write_text(PASSING_CHECK_OF_THE_PARENT, encoding="utf-8")
         self.processes = ScriptedProcesses()
         forge = ForgeDouble({"read_login_environment": _answer_the_token_of_the_login})
         self.runtime = create_test_runtime(

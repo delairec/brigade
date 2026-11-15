@@ -15,6 +15,7 @@ from unittest.mock import ANY
 from brigade.collectors import pr_threads
 from brigade.commands.tick import COMMAND
 from brigade.errors import BrigadeError, CommandFailed, StandingDown, UsageError
+from brigade.inbox.read_inbox import Signal, read_inbox
 from brigade.runs.record_run_pid import record_run_pid
 from brigade.runtime import Runtime
 from brigade.system.collector_places import locate_collectors
@@ -38,7 +39,7 @@ from tests.unit.commands.run_doubles import (
     create_plugin_resolution,
 )
 from tests.unit.create_test_paths import create_test_paths
-from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
 from tests.unit.forge_double import ForgeDouble
 from tests.unit.ledger_reader_double import LedgerReaderDouble
 from tests.unit.plugin_double import PluginDouble
@@ -48,6 +49,7 @@ from tests.unit.select_reported_milestones import select_reported_milestones
 from tests.unit.select_reported_tasks import select_reported_tasks
 from tests.unit.spawned_process_double import SpawnedProcessDouble
 
+CONFIGURATION_OF_A_TWO_DAY_STALL = f"{CLIENT_AND_DOCUMENT_CONFIGURATION}stall_after = 2880\n"
 GIT_PUSH = ("git", "push")
 GIT_ADD = ("git", "add")
 GIT_COMMIT = ("git", "commit")
@@ -232,6 +234,8 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
                     "rate_limits": [],
                     "milestones": [],
                     "integration_branches": [],
+                    "leftovers": [],
+                    "kept_branches": [],
                 },
                 "plan": [],
             },
@@ -499,12 +503,14 @@ CUT_OF_M4 = {
     "login": "tidepool-cli",
 }
 CUT_OF_M4_ON_THE_WAVE_BRANCH = {**CUT_OF_M4, "branch": WAVE_BRANCH}
+MAIN_CHECKOUT_ALONE = f"worktree /srv/tidepool\0HEAD {MAIN_HEAD}\0branch refs/heads/main\0\0"
 MACHINE_OUTPUTS = {
     ("git", "rev-parse", "--verify"): f"{WAVE_HEAD}\n",
     ("git", "cat-file", "-p"): ".brigade/worktrees/\n",
     ("git", "worktree", "add"): "",
-    ("git", "worktree", "list"): "",
+    ("git", "worktree", "list"): MAIN_CHECKOUT_ALONE,
     ("git", "worktree", "remove"): "",
+    ("git", "for-each-ref", "--format=%(refname:lstrip=2)", "refs/heads"): "",
     ("git", "branch", "--quiet", "-D"): "",
     ("git", "merge-base"): "",
     ("git", "fetch"): "",
@@ -776,7 +782,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(self.root)
-        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "config" / "config.toml").write_text(CONFIGURATION_OF_A_TWO_DAY_STALL, encoding="utf-8")
         (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
         self.repository = self.root / "tidepool"
         self.worktree = self.repository / ".brigade" / "worktrees" / "T7"
@@ -2758,7 +2764,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(self.root)
-        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "config" / "config.toml").write_text(CONFIGURATION_OF_A_TWO_DAY_STALL, encoding="utf-8")
         (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
         self.repository = self.root / "tidepool"
         (self.repository / ".brigade" / "worktrees" / "T8").mkdir(parents=True)
@@ -2829,6 +2835,84 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
                     "error": "gh pr merge failed: Head branch was modified. Review and try the merge again.",
                 },
             ],
+        )
+
+    def test_should_record_in_the_inbox_the_stall_of_a_task_it_takes_no_action_on_past_the_delay(self):
+        # Arrange
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        forge = MergingForgeRefusingAMovedHeadDouble(
+            {"feature/T7-tide-table": GREEN_PULL_REQUEST}, pushed_head="9010166"
+        )
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+
+        # Assert
+        self.assertEqual(
+            read_inbox(self.root / "state", FIXED_NOW),
+            (
+                Signal(
+                    id="d5dbc2f5644c278e9eae3089e6a8ff52417544a77c8be929eec8c364ffc12262",
+                    fingerprint="stall:tidepool:tidepool_w16:T8",
+                    kind="stall",
+                    project="tidepool",
+                    count=1,
+                    age_s=0,
+                    status="new",
+                    evidence={"wave": "tidepool_w16", "task": "T8", "last_action": "2026-10-18T09:00:00Z"},
+                ),
+            ),
+        )
+
+    def test_should_record_no_stall_of_a_task_it_launches_in_a_later_round(self):
+        # Arrange
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        no_signal = ()
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(read_inbox(self.root / "state", FIXED_NOW), no_signal)
+
+    def test_should_count_the_stall_it_records_among_the_actions_applied(self):
+        # Arrange
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        forge = MergingForgeRefusingAMovedHeadDouble(
+            {"feature/T7-tide-table": GREEN_PULL_REQUEST}, pushed_head="9010166"
+        )
+
+        # Act
+        document = COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+
+        # Assert
+        self.assertEqual(document["actions_applied"], 3)
+
+    def test_should_count_the_stall_it_cannot_record_among_the_actions_failed(self):
+        # Arrange
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "state" / "inbox").write_text("", encoding="utf-8")
+        forge = MergingForgeRefusingAMovedHeadDouble(
+            {"feature/T7-tide-table": GREEN_PULL_REQUEST}, pushed_head="9010166"
+        )
+
+        # Act
+        document = COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+
+        # Assert
+        self.assertEqual(document["actions_failed"], 2)
+
+    def test_should_print_the_stall_with_the_instant_of_its_last_action_on_a_dry_run(self):
+        # Arrange
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+
+        # Assert
+        self.assertIn(
+            {"project": "tidepool", "wave": "tidepool_w16", "task": "T8", "last_action": "2026-10-18T09:00:00Z"},
+            json.loads(json.dumps(document["plan"])),
         )
 
     def test_should_print_the_merge_with_the_head_it_names_on_a_dry_run(self):
@@ -4303,7 +4387,21 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            self.machine.argvs.count(("git", "worktree", "add", "--quiet", "--detach", checkout, WAVE_HEAD)), 1
+            self.machine.argvs.count(
+                (
+                    "git",
+                    "worktree",
+                    "add",
+                    "--quiet",
+                    "--detach",
+                    "--lock",
+                    "--reason",
+                    "brigade proving a head",
+                    checkout,
+                    WAVE_HEAD,
+                )
+            ),
+            1,
         )
 
     def test_should_name_the_red_wave_branch_holding_the_launch_in_the_plan_of_a_dry_run(self):
@@ -6537,7 +6635,8 @@ class TickRemovingTheBranchOfAClosedMilestoneTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            "brigade tick: the branch integration/tides of tidepool kept: a commit outside the merged pull request\n",
+            f"brigade tick: the branch integration/tides of tidepool kept at {WAVE_HEAD}:"
+            " a commit outside the merged pull request\n",
             errors.getvalue(),
         )
 
@@ -6551,6 +6650,19 @@ class TickRemovingTheBranchOfAClosedMilestoneTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(errors.getvalue().count("the branch integration/tides of tidepool kept"), 1)
+
+    def test_should_name_the_branch_it_keeps_once_across_ticks(self):
+        # Arrange
+        self.machine.answers[MILESTONE_BRANCH_WITHIN_MAIN] = ProcessAnswer(exit_code=1)
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), self.runtime)
             COMMAND.run(Namespace(mode="once"), self.runtime)
 
         # Assert
@@ -6582,6 +6694,7 @@ class TickRemovingTheBranchOfAClosedMilestoneTest(unittest.TestCase):
                     "project": "tidepool",
                     "branch": "integration/tides",
                     "reason": "a commit outside the merged pull request",
+                    "head": WAVE_HEAD,
                 }
             ],
         )
@@ -6948,7 +7061,7 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(self.root)
-        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "config" / "config.toml").write_text(CONFIGURATION_OF_A_TWO_DAY_STALL, encoding="utf-8")
         (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
         self.repository = self.root / "tidepool"
         write_run(

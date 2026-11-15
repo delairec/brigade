@@ -19,18 +19,18 @@ class DescribeLingerWarningTest(unittest.TestCase):
         for linger, expected_warning in rows:
             with self.subTest(linger=linger):
                 loginctl = RecordingProcessRunner(
-                    {("loginctl", "show-user", "-p", "Linger"): ProcessAnswer(stdout=linger)}
+                    {("loginctl", "show-user", "ada", "--property=Linger"): ProcessAnswer(stdout=linger)}
                 )
 
                 # Act
-                warning = describe_linger_warning(loginctl)
+                warning = describe_linger_warning(loginctl, "ada")
 
                 # Assert
                 self.assertEqual(warning, expected_warning)
 
     def test_should_warn_that_loginctl_is_not_on_the_path(self):
         # Act
-        warning = describe_linger_warning(_refuse_loginctl)
+        warning = describe_linger_warning(_refuse_loginctl, "ada")
 
         # Assert
         self.assertEqual(warning, "loginctl not on PATH")
@@ -39,14 +39,16 @@ class DescribeLingerWarningTest(unittest.TestCase):
         # Arrange
         loginctl = RecordingProcessRunner(
             {
-                ("loginctl", "show-user", "-p", "Linger"): ProcessAnswer(
-                    exit_code=1, stderr="Failed to look up user : No such process\n"
+                ("loginctl", "show-user", "ada", "--property=Linger"): ProcessAnswer(
+                    exit_code=1, stderr="Failed to look up user ada: No such process\n"
                 )
             }
         )
 
         # Act
-        warning = describe_linger_warning(loginctl)
+        warning = describe_linger_warning(loginctl, "ada")
 
         # Assert
-        self.assertEqual(warning, "loginctl show-user -p Linger exited 1: Failed to look up user : No such process")
+        self.assertEqual(
+            warning, "loginctl show-user ada --property=Linger exited 1: Failed to look up user ada: No such process"
+        )

@@ -58,12 +58,25 @@ class PublishTaskReportTest(unittest.TestCase):
         self.checkout = self.run_directory / "checkout"
         self.forge = create_forge()
         self.processes.answer(("git", "fetch", "--quiet", "origin", BRANCH))
-        self.processes.answer(("git", "worktree", "add", "--quiet", "--detach", str(self.checkout), f"origin/{BRANCH}"))
+        self.processes.answer(
+            (
+                "git",
+                "worktree",
+                "add",
+                "--quiet",
+                "--detach",
+                "--lock",
+                "--reason",
+                "brigade publishing a task report",
+                str(self.checkout),
+                f"origin/{BRANCH}",
+            )
+        )
         self.processes.answer(("git", "add", "--", REPORT_PATH))
         self.processes.answer(("git", "diff", "--cached", "--quiet", "--", REPORT_PATH), exit_code=1)
         self.processes.answer(("git", "commit", "--quiet", "-m", "docs(tasks): add the report of B46"))
         self.processes.answer(("git", "push", "--quiet", "origin", f"HEAD:refs/heads/{BRANCH}"))
-        self.processes.answer(("git", "worktree", "remove", "--force", str(self.checkout)))
+        self.processes.answer(("git", "worktree", "remove", "--force", "--force", str(self.checkout)))
         append_event(
             self.runtime.paths,
             self.runtime.now,
@@ -143,12 +156,23 @@ class PublishTaskReportTest(unittest.TestCase):
             self.processes.list_argvs()[-7:],
             [
                 ("git", "fetch", "--quiet", "origin", BRANCH),
-                ("git", "worktree", "add", "--quiet", "--detach", str(self.checkout), f"origin/{BRANCH}"),
+                (
+                    "git",
+                    "worktree",
+                    "add",
+                    "--quiet",
+                    "--detach",
+                    "--lock",
+                    "--reason",
+                    "brigade publishing a task report",
+                    str(self.checkout),
+                    f"origin/{BRANCH}",
+                ),
                 ("git", "add", "--", REPORT_PATH),
                 ("git", "diff", "--cached", "--quiet", "--", REPORT_PATH),
                 ("git", "commit", "--quiet", "-m", "docs(tasks): add the report of B46"),
                 ("git", "push", "--quiet", "origin", f"HEAD:refs/heads/{BRANCH}"),
-                ("git", "worktree", "remove", "--force", str(self.checkout)),
+                ("git", "worktree", "remove", "--force", "--force", str(self.checkout)),
             ],
         )
 
@@ -162,4 +186,6 @@ class PublishTaskReportTest(unittest.TestCase):
             publish_task_report(context)
 
         # Assert
-        self.assertEqual(self.processes.list_argvs()[-1], ("git", "worktree", "remove", "--force", str(self.checkout)))
+        self.assertEqual(
+            self.processes.list_argvs()[-1], ("git", "worktree", "remove", "--force", "--force", str(self.checkout))
+        )

@@ -1,6 +1,7 @@
 import dataclasses
 from datetime import datetime, timedelta
 
+from brigade.ledger.branch_kept import BranchKept
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.task_state import REBUILD_REASON
 from brigade.studies.milestone_report_order import MilestoneReportOrder
@@ -13,7 +14,7 @@ from brigade.tick.actions import (
     CloseWave,
     CutMilestoneBranch,
     DescribeMilestonePullRequest,
-    KeepIntegrationBranch,
+    KeepBranch,
     LaunchCheckRepair,
     LaunchRemediation,
     LaunchStudy,
@@ -28,14 +29,17 @@ from brigade.tick.actions import (
     RebaseMilestone,
     RebaseTask,
     RebuildTask,
+    RecordGoneBase,
     RecordTaskState,
     RemoveIntegrationBranch,
+    RemoveLeftover,
     RemoveTaskWorktree,
     ReportMilestone,
     ReportTask,
     ResumeTaskRun,
     ResumeWave,
     RunPreflight,
+    SignalStall,
     StartWave,
 )
 from brigade.tick.build_snapshot import (
@@ -52,6 +56,7 @@ from brigade.tick.decide_resume_at import decide_resume_at
 from brigade.tick.head_proof import ForgeCheck, HeadChecks
 from brigade.tick.is_study_due import is_study_due
 from brigade.tick.read_integration_branches import IntegrationBranchFacts
+from brigade.tick.read_leftovers import LeftoverFacts
 from brigade.waves.read_parked_question import BLOCKED_RUN_REASON
 from brigade.waves.read_task_state import PARKED_STATE
 
@@ -96,15 +101,36 @@ CHECK_SUITE_CREATION_DELAY = timedelta(minutes=1)
 UNREACHED_FORGE_REASON = "a commit outside the merged pull request"
 LIVE_RUN_REASON = "a live run"
 LOCK_REASON = "a lock"
+UNCOMMITTED_REASON = "uncommitted changes"
+MAIN_CHECKOUT_REASON = "the main checkout"
 NO_KEEPING_REASON = None
+RUN_LAUNCHES = (
+    LaunchVerification,
+    LaunchRemediation,
+    LaunchCheckRepair,
+    RebuildTask,
+    RebaseTask,
+    ResumeTaskRun,
+    ReportTask,
+    ReportMilestone,
+    RebaseMilestone,
+    LaunchStudy,
+)
 
 
 def plan(snapshot: Snapshot) -> tuple:
+    actions = _plan_every_action(snapshot)
+    if _decide_quota_resume_at(snapshot) is None:
+        return actions
+    return tuple(action for action in actions if not isinstance(action, RUN_LAUNCHES))
+
+
+def _plan_every_action(snapshot: Snapshot) -> tuple:
     pauses = _plan_blocked_rebase_pauses(snapshot) + _plan_pauses(snapshot)
     paused = {wave.wave for wave in snapshot.waves if wave.pause is not None} | {
         pause.wave for pause in pauses if isinstance(pause, PauseWave)
     }
-    return (
+    actions = (
         pauses
         + _plan_resumes(snapshot)
         + _plan_followed_pull_requests(snapshot)
@@ -128,27 +154,76 @@ def plan(snapshot: Snapshot) -> tuple:
         + _plan_studies(snapshot)
         + _plan_integration_branches(snapshot)
     )
+    return actions + _plan_leftovers(snapshot, actions) + _plan_stall_signals(snapshot, actions)
 
 
-def _find_keeping_reason(branch: IntegrationBranchFacts) -> str | None:
-    if not branch.reached_forge:
+def _find_guarding_reason(guarded: IntegrationBranchFacts | LeftoverFacts) -> str | None:
+    if not guarded.reached_forge:
         return UNREACHED_FORGE_REASON
-    if branch.run_live:
+    if guarded.run_live:
         return LIVE_RUN_REASON
-    if branch.locked:
+    if guarded.locked:
         return LOCK_REASON
     return NO_KEEPING_REASON
 
 
-def _decide_integration_branch(branch: IntegrationBranchFacts) -> RemoveIntegrationBranch | KeepIntegrationBranch:
-    reason = _find_keeping_reason(branch)
+def _keep_unnamed(snapshot: Snapshot, kept: KeepBranch) -> tuple:
+    named = BranchKept(project=kept.project, branch=kept.branch, reason=kept.reason, head=kept.head)
+    if named in snapshot.kept_branches:
+        return ()
+    return (kept,)
+
+
+def _decide_integration_branch(snapshot: Snapshot, branch: IntegrationBranchFacts) -> tuple:
+    reason = _find_guarding_reason(branch)
     if reason is None:
-        return RemoveIntegrationBranch(project=branch.project, branch=branch.branch, worktree=branch.worktree)
-    return KeepIntegrationBranch(project=branch.project, branch=branch.branch, reason=reason)
+        return (RemoveIntegrationBranch(project=branch.project, branch=branch.branch, worktree=branch.worktree),)
+    return _keep_unnamed(
+        snapshot, KeepBranch(project=branch.project, branch=branch.branch, reason=reason, head=branch.head)
+    )
+
+
+def _record_gone_base(branch: IntegrationBranchFacts) -> tuple:
+    if branch.gone_base is None:
+        return ()
+    return (RecordGoneBase(project=branch.project, branch=branch.branch, base=branch.gone_base),)
 
 
 def _plan_integration_branches(snapshot: Snapshot) -> tuple:
-    return tuple(_decide_integration_branch(branch) for branch in snapshot.integration_branches if branch.ended)
+    return tuple(
+        action
+        for branch in snapshot.integration_branches
+        for action in (
+            _record_gone_base(branch) + (_decide_integration_branch(snapshot, branch) if branch.ended else ())
+        )
+    )
+
+
+def _find_leftover_keeping_reason(leftover: LeftoverFacts) -> str | None:
+    if leftover.main_checkout:
+        return MAIN_CHECKOUT_REASON
+    if leftover.uncommitted:
+        return UNCOMMITTED_REASON
+    return _find_guarding_reason(leftover)
+
+
+def _decide_leftover(snapshot: Snapshot, leftover: LeftoverFacts, removed_worktrees: set[str]) -> tuple:
+    reason = _find_leftover_keeping_reason(leftover)
+    if reason is None:
+        worktree = None if leftover.worktree in removed_worktrees else leftover.worktree
+        return (RemoveLeftover(project=leftover.project, branch=leftover.branch, worktree=worktree),)
+    if leftover.branch is None:
+        return ()
+    return _keep_unnamed(
+        snapshot, KeepBranch(project=leftover.project, branch=leftover.branch, reason=reason, head=leftover.head)
+    )
+
+
+def _plan_leftovers(snapshot: Snapshot, actions: tuple) -> tuple:
+    removed_worktrees = {action.worktree for action in actions if isinstance(action, RemoveTaskWorktree)}
+    return tuple(
+        action for leftover in snapshot.leftovers for action in _decide_leftover(snapshot, leftover, removed_worktrees)
+    )
 
 
 def _plan_launches(snapshot: Snapshot, paused: set) -> tuple:
@@ -965,3 +1040,29 @@ def _plan_studies(snapshot: Snapshot) -> tuple:
             free_runs -= 1
         launches.append(LaunchStudy(study=study.name))
     return tuple(launches)
+
+
+def _is_paused_on_the_quota(wave: WaveFacts, task: TaskFacts) -> bool:
+    is_wave_paused_on_the_quota = wave.pause is not None and wave.pause.reason == QUOTA_REASON
+    return is_wave_paused_on_the_quota or wave.states.get(task.name) == PAUSED_ON_QUOTA_STATE
+
+
+def _is_stalled(wave: WaveFacts, task: TaskFacts, snapshot: Snapshot, attended_tasks: frozenset) -> bool:
+    return (
+        task.last_action is not None
+        and snapshot.now - task.last_action > timedelta(minutes=snapshot.stall_after)
+        and (wave.wave, task.name) not in attended_tasks
+        and wave.states.get(task.name) not in SETTLED_STATES
+        and not _is_paused_on_the_quota(wave, task)
+    )
+
+
+def _plan_stall_signals(snapshot: Snapshot, actions: tuple) -> tuple:
+    acted_tasks = frozenset((getattr(action, "wave", None), getattr(action, "task", None)) for action in actions)
+    attended_tasks = _read_occupancy(snapshot).tasks | acted_tasks
+    return tuple(
+        SignalStall(project=wave.project, wave=wave.wave, task=task.name, last_action=format_instant(task.last_action))
+        for wave in snapshot.waves
+        for task in wave.tasks
+        if _is_stalled(wave, task, snapshot, attended_tasks)
+    )
