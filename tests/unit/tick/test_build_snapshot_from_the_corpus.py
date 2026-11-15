@@ -1572,6 +1572,90 @@ class BuildSnapshotOfAWaveStartedAfterTheForgeAccountBecameUnavailableTest(Build
         self.assertEqual(snapshot.waves[0].forge_account_unavailable, False)
 
 
+LOGIN_EXPIRED = "authentication"
+
+
+class BuildSnapshotOfAWaveWhoseRunLostTheClientLoginTest(BuildSnapshotTestCase):
+    def setUp(self):
+        super().setUp()
+        self.write_operational_corpus()
+        self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B1",)))
+        self.record(50, TaskState(wave="w1", task="B1", state="running"))
+        self.record(30, create_run_finished("r1", wave="w1", task="B1", outcome="failed", error_class=LOGIN_EXPIRED))
+
+    def test_should_mark_lost_the_client_login_of_the_wave_of_a_run_that_failed_to_authenticate(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].client_login_lost, True)
+
+    def test_should_keep_the_client_login_of_another_wave(self):
+        # Arrange
+        self.record(20, WaveStarted(wave="w2", project="shop", tasks=("B2",)))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[1].client_login_lost, False)
+
+    def test_should_read_the_client_login_back_once_the_wave_is_resumed_from_its_pause_on_it(self):
+        for case, reason, expected in [
+            ("resumed from its pause on the client login", "client_login", False),
+            ("resumed from another pause", "quota", True),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                self.record(20, WaveResumed(wave="w1", reason=reason))
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].client_login_lost, expected)
+
+    def test_should_mark_the_client_login_lost_again_by_a_run_that_failed_to_authenticate_after_the_resume(self):
+        # Arrange
+        self.record(20, WaveResumed(wave="w1", reason="client_login"))
+        self.record(10, create_run_finished("r2", wave="w1", task="B1", outcome="failed", error_class=LOGIN_EXPIRED))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].client_login_lost, True)
+
+    def test_should_note_the_task_stopped_by_the_login_while_its_last_finished_run_failed_to_authenticate(self):
+        for case, later_error_class, expected in [
+            ("a later run that failed to authenticate", LOGIN_EXPIRED, True),
+            ("a later run ended on another failure", "execution", False),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                self.record(
+                    10, create_run_finished("r2", wave="w1", task="B1", outcome="failed", error_class=later_error_class)
+                )
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].tasks[0].stopped_by_login, expected)
+
+    def test_should_keep_the_task_stopped_by_the_login_once_its_wave_is_resumed_so_the_tick_launches_it_again(self):
+        # Arrange
+        self.record(20, WaveResumed(wave="w1", reason="client_login"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].tasks[0].stopped_by_login, True)
+
+
 class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
     def setUp(self):
         super().setUp()
@@ -1614,6 +1698,7 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
                     preflighted_head="4f2a9c1",
                     verdict=RecordedVerdict(head="4f2a9c1", verdict="changes"),
                     reviewed_head="4f2a9c1",
+                    review_runs=("r1",),
                 ),
                 TaskFacts(name="B2", branch="feature/B2-task", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
                 TaskFacts(name="B3", branch="feature/B3-task", milestone="M4"),
@@ -1642,6 +1727,7 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
                     preflighted_head="4f2a9c1",
                     verdict=RecordedVerdict(head="4f2a9c1", verdict="changes"),
                     reviewed_head="4f2a9c1",
+                    review_runs=("r1",),
                 ),
                 TaskFacts(
                     name="B2",
@@ -1654,6 +1740,57 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
                 TaskFacts(name="B4", branch="feature/B4-task", pull_request=PULL_REQUEST, preflighted_head="4f2a9c1"),
             ),
         )
+
+    def test_should_list_the_review_runs_of_the_task_that_ended_on_the_model_since_its_last_preflight(self):
+        for case, error_class, expected_runs in [
+            ("a review run ended on a failure of its own", "execution", ("r8", "r9")),
+            ("a review run cut by a rate limit", "rate_limit", ("r9",)),
+            ("a review run that failed to authenticate", "authentication", ("r9",)),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                self.record(20, create_review_run_finished("r8", "B4", error_class=error_class))
+                self.record(10, create_review_run_finished("r9", "B4"))
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].tasks[3].review_runs, expected_runs)
+
+    def test_should_set_aside_the_review_runs_ended_before_the_last_preflight_of_the_task(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].tasks[1].review_runs, ())
+
+    def test_should_set_aside_the_review_runs_ended_before_the_last_requeue_of_the_task(self):
+        # Arrange
+        self.record(20, TaskState(wave="w1", task="B1", state="pr_open", reason=REQUEUE_REASON))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].tasks[0].review_runs, ())
+
+    def test_should_take_no_head_as_reviewed_by_a_review_run_that_failed_to_authenticate(self):
+        for case, error_class, expected_head in [
+            ("a review run that failed to authenticate", "authentication", None),
+            ("a review run ended on another failure", "execution", "4f2a9c1"),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                self.record(20, create_review_run_finished("r8", "B4", error_class=error_class))
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].tasks[3].reviewed_head, expected_head)
 
     def test_should_set_aside_the_preflight_and_the_verdict_recorded_before_the_last_requeue_of_the_task(self):
         # Arrange
@@ -1871,9 +2008,10 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
         # Assert
         self.assertEqual(snapshot.waves[0].tasks[0].repair_rounds, 1)
 
-    def test_should_count_no_round_for_a_repair_run_cut_by_a_rate_limit(self):
+    def test_should_count_no_round_for_a_repair_run_its_client_stopped_before_the_model(self):
         for case, error_class, expected_rounds in [
             ("a repair run cut by a rate limit", "rate_limit", 1),
+            ("a repair run stopped by a lost client login", "authentication", 1),
             ("a repair run ended on another failure", "execution", 2),
         ]:
             with self.subTest(case=case):

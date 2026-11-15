@@ -39,6 +39,7 @@ from brigade.tick.actions import (
     StartWave,
 )
 from brigade.tick.build_snapshot import (
+    CLIENT_LOGIN_REASON,
     SETTLED_STATES,
     BlockedRun,
     MilestoneFacts,
@@ -156,7 +157,13 @@ def _plan_launches(snapshot: Snapshot, paused: set) -> tuple:
     launches = []
     for wave in (wave for wave in snapshot.waves if wave.wave not in paused):
         for task in sorted(
-            (task for task in wave.tasks if _is_startable(task, wave) or _is_rebased(task, wave, live_tasks)),
+            (
+                task
+                for task in wave.tasks
+                if _is_startable(task, wave)
+                or _is_rebased(task, wave, live_tasks)
+                or _is_stopped_by_login(task, wave, live_tasks)
+            ),
             key=lambda task: read_task_number(task.name, wave.wave),
         ):
             if free_slots[wave.project] <= 0:
@@ -208,17 +215,21 @@ def _plan_pauses(snapshot: Snapshot) -> tuple:
     resume_at = _decide_quota_resume_at(snapshot)
     if resume_at is None:
         return (
-            tuple(
-                PauseWave(wave=wave.wave, reason=FORGE_ACCOUNT_REASON, resume_at=None)
-                for wave in unpaused
-                if wave.forge_account_unavailable
-            )
+            tuple(pause for pause in (_decide_lost_access_pause(wave) for wave in unpaused) if pause is not None)
             + stopped_tasks
         )
     return (
         tuple(PauseWave(wave=wave.wave, reason=QUOTA_REASON, resume_at=format_instant(resume_at)) for wave in unpaused)
         + stopped_tasks
     )
+
+
+def _decide_lost_access_pause(wave: WaveFacts) -> PauseWave | None:
+    if wave.forge_account_unavailable:
+        return PauseWave(wave=wave.wave, reason=FORGE_ACCOUNT_REASON, resume_at=None)
+    if wave.client_login_lost:
+        return PauseWave(wave=wave.wave, reason=CLIENT_LOGIN_REASON, resume_at=None)
+    return None
 
 
 def _plan_blocked_rebase_pauses(snapshot: Snapshot) -> tuple:
@@ -324,7 +335,7 @@ def _decide_worktree_removal(wave: WaveFacts, task: TaskFacts, occupancy: _Occup
 
 
 def _plan_followed_task(wave: WaveFacts, task: TaskFacts, project: ProjectFacts, reading: _FollowedReading) -> tuple:
-    if task.rate_limit is not None:
+    if task.rate_limit is not None or (wave.client_login_lost and task.stopped_by_login):
         return ()
     recorded = tuple(
         action for action in (_decide_task_state(wave, task), _decide_opening_carried(wave, task)) if action is not None
@@ -337,7 +348,7 @@ def _plan_followed_task(wave: WaveFacts, task: TaskFacts, project: ProjectFacts,
         return (*recorded, catch_up)
     decided = (
         _decide_preflight(wave, task, project, reading.now),
-        _decide_verification(wave, task, reading.occupancy),
+        _decide_verification(wave, task, project, reading.occupancy),
         _decide_repair(wave, task, project, reading.occupancy),
         _decide_merge(wave, task, project, reading.now),
         _decide_worktree_removal(wave, task, reading.occupancy),
@@ -426,9 +437,24 @@ def _describe_spent_rounds(task: TaskFacts, project: ProjectFacts) -> str | None
     return f"past {project.verify_rounds} repair rounds"
 
 
+def _decide_review_launch(
+    task: TaskFacts, project: ProjectFacts, occupancy: _Occupancy, launch: LaunchVerification
+) -> LaunchVerification | ParkTask | None:
+    if task.worktree is None or task.worktree in occupancy.worktrees or (launch.wave, task.name) in occupancy.tasks:
+        return None
+    if len(task.review_runs) > project.verify_rounds:
+        return ParkTask(
+            wave=launch.wave,
+            task=task.name,
+            reason=f"{len(task.review_runs)} review runs without a verdict: {', '.join(task.review_runs)}",
+            blockers=(),
+        )
+    return launch
+
+
 def _decide_verification(
-    wave: WaveFacts, task: TaskFacts, occupancy: _Occupancy
-) -> RecordTaskState | LaunchVerification | None:
+    wave: WaveFacts, task: TaskFacts, project: ProjectFacts, occupancy: _Occupancy
+) -> RecordTaskState | LaunchVerification | ParkTask | None:
     state = wave.states.get(task.name)
     if (
         state != VERIFYING_STATE
@@ -440,16 +466,10 @@ def _decide_verification(
         return RecordTaskState(
             wave=wave.wave, task=task.name, state=STATES_BY_VERDICT[task.verdict.verdict], reason=None
         )
-    if (
-        task.reviewed_head != task.pull_request.head
-        and task.worktree is not None
-        and task.worktree not in occupancy.worktrees
-        and (wave.wave, task.name) not in occupancy.tasks
-    ):
-        return LaunchVerification(
-            project=wave.project, wave=wave.wave, task=task.name, pr=task.pull_request.number, worktree=task.worktree
-        )
-    return None
+    launch = LaunchVerification(
+        project=wave.project, wave=wave.wave, task=task.name, pr=task.pull_request.number, worktree=task.worktree
+    )
+    return _decide_review_launch(task, project, occupancy, launch)
 
 
 def _describe_request(task: TaskFacts) -> str:
@@ -590,32 +610,31 @@ def _plan_delivered_head_preflights(snapshot: Snapshot) -> tuple:
 
 
 def _is_delivered_head_preflighted(wave: WaveFacts, task: TaskFacts) -> bool:
-    return wave.states.get(task.name) == VERIFYING_STATE and task.delivered_head == task.preflighted_head
+    return (
+        wave.states.get(task.name) == VERIFYING_STATE
+        and task.delivered_head is not None
+        and task.delivered_head == task.preflighted_head
+    )
 
 
 def _decide_delivered_head_verification(
-    wave: WaveFacts, task: TaskFacts, occupancy: _Occupancy
-) -> RecordTaskState | LaunchVerification | None:
+    wave: WaveFacts, task: TaskFacts, project: ProjectFacts, occupancy: _Occupancy
+) -> RecordTaskState | LaunchVerification | ParkTask | None:
     if task.verdict is not None and task.verdict.head == task.delivered_head:
         return RecordTaskState(
             wave=wave.wave, task=task.name, state=STATES_BY_VERDICT[task.verdict.verdict], reason=None
         )
-    if (
-        task.reviewed_head != task.delivered_head
-        and task.worktree is not None
-        and task.worktree not in occupancy.worktrees
-        and (wave.wave, task.name) not in occupancy.tasks
-    ):
-        return LaunchVerification(
-            project=wave.project, wave=wave.wave, task=task.name, pr=NO_PULL_REQUEST, worktree=task.worktree
-        )
-    return None
+    launch = LaunchVerification(
+        project=wave.project, wave=wave.wave, task=task.name, pr=NO_PULL_REQUEST, worktree=task.worktree
+    )
+    return _decide_review_launch(task, project, occupancy, launch)
 
 
 def _plan_delivered_head_verifications(snapshot: Snapshot) -> tuple:
     occupancy = _read_occupancy(snapshot)
+    projects = {project.name: project for project in snapshot.projects}
     decided = (
-        _decide_delivered_head_verification(wave, task, occupancy)
+        _decide_delivered_head_verification(wave, task, projects[wave.project], occupancy)
         for wave in snapshot.waves
         for task in wave.tasks
         if _is_delivered_head_preflighted(wave, task)
@@ -752,6 +771,7 @@ def _plan_dead_run_parkings(snapshot: Snapshot) -> tuple:
         and (task.pull_request is None or task.last_run_is_a_rebase)
         and task.delivered_head is None
         and task.rate_limit is None
+        and not task.stopped_by_login
         and not task.rebased_by_last_run
         and (wave.wave, task.name) not in live_tasks
     )
@@ -919,6 +939,14 @@ def _is_rebased(task: TaskFacts, wave: WaveFacts, live_tasks: frozenset) -> bool
     return (
         wave.states.get(task.name) == RUNNING_STATE
         and task.rebased_by_last_run
+        and (wave.wave, task.name) not in live_tasks
+    )
+
+
+def _is_stopped_by_login(task: TaskFacts, wave: WaveFacts, live_tasks: frozenset) -> bool:
+    return (
+        wave.states.get(task.name) == RUNNING_STATE
+        and task.stopped_by_login
         and (wave.wave, task.name) not in live_tasks
     )
 

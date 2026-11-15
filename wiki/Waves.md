@@ -136,6 +136,10 @@ already closed or cancelled exits 1 naming that event.
 wave paused on the forge account, the tick resuming by itself a wave paused on the quota. It prints each wave it
 resumed; a wave no `wave.started` names, or one that is not paused, exits 1 naming it.
 
+A wave paused on the client login, the reason `client_login`, is resumed by naming it, once you have signed in to the
+AI client again: the next tick launches its task again from the state it holds, as
+[Tick and scheduler](Tick-and-scheduler.md#quota-forge-account-and-client-login-pauses) says.
+
 </details>
 
 <details><summary><code>wave requeue</code> in detail</summary>

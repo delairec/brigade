@@ -104,11 +104,14 @@ DESCENDING = 0
 RUNNING_STATE = "running"
 PAUSED_ON_QUOTA_STATE = "paused:quota"
 RATE_LIMIT = "rate_limit"
+AUTHENTICATION = "authentication"
+CLIENT_STOP_ERROR_CLASSES = (RATE_LIMIT, AUTHENTICATION)
 REVIEW_SLOT = "review"
 REBASE_SLOT = "rebase"
 BLOCKED_OUTCOME = "blocked"
 DONE_OUTCOME = "done"
 FORGE_ACCOUNT_REASON = "forge_account"
+CLIENT_LOGIN_REASON = "client_login"
 QUOTA_REASON = "quota"
 PROJECT_STATUS_FIELD = "STATUS"
 PAUSED_PROJECT_STATUS = "paused"
@@ -180,6 +183,7 @@ class TaskFacts:
     preflighted_head: str | None = None
     verdict: RecordedVerdict | None = None
     reviewed_head: str | None = None
+    review_runs: tuple[str, ...] = ()
     preflight_failures: tuple[PreflightFailure, ...] = ()
     repair_rounds: int = 0
     holds_uncommitted_changes: bool = False
@@ -187,6 +191,7 @@ class TaskFacts:
     blocked_run: BlockedRun | None = None
     rebased_by_last_run: bool = False
     last_run_is_a_rebase: bool = False
+    stopped_by_login: bool = False
     milestone: str | None = None
     amendment: TaskAmendment | None = None
     reported: bool = False
@@ -234,6 +239,7 @@ class WaveFacts:
     implemented: tuple[str, ...] = ()
     pause: WavePause | None = None
     forge_account_unavailable: bool = False
+    client_login_lost: bool = False
     milestone_branch: str | None = None
     blocked_rebase: BlockedRun | None = None
 
@@ -407,6 +413,7 @@ class FollowedWave:
     preflighted_heads: dict
     verdicts: dict
     reviewed_heads: dict
+    review_runs: dict
     preflight_failures: dict
     repair_rounds: dict
     reported_tasks: frozenset
@@ -432,6 +439,7 @@ def _follow_task(task: TaskFacts, followed: FollowedWave, implemented: tuple[str
         preflighted_head=followed.preflighted_heads.get(task.name),
         verdict=followed.verdicts.get(task.name),
         reviewed_head=followed.reviewed_heads.get(task.name),
+        review_runs=followed.review_runs.get(task.name, ()),
         preflight_failures=followed.preflight_failures.get(task.name, ()),
         repair_rounds=followed.repair_rounds.get(task.name, 0),
         reported=task.name in followed.reported_tasks,
@@ -465,7 +473,8 @@ class WaveReading:
 
 
 def _is_verification_fact(event, wave: str, task: str) -> bool:
-    return isinstance(event, TaskPreflighted | TaskVerdict) and event.wave == wave and event.task == task
+    is_preflight_or_verdict = isinstance(event, TaskPreflighted | TaskVerdict) and event.wave == wave
+    return (is_preflight_or_verdict or _is_review_ended_on_the_model(event, wave)) and event.task == task
 
 
 def _list_events_since_requeue(events: tuple, wave: str) -> tuple:
@@ -533,6 +542,33 @@ def _is_forge_account_unavailable(entries: tuple[LedgerEntry, ...]) -> bool:
         if isinstance(entry.event, WaveResumed) and entry.event.reason == FORGE_ACCOUNT_REASON
     ]
     return bool(unavailable) and max(unavailable) > max(cleared, default=BEFORE_ANY_EVENT)
+
+
+def _is_client_login_lost(entries: tuple[LedgerEntry, ...], wave: str) -> bool:
+    lost = [
+        entry.instant
+        for entry in entries
+        if isinstance(entry.event, RunFinished)
+        and entry.event.wave == wave
+        and entry.event.error_class == AUTHENTICATION
+    ]
+    cleared = [
+        entry.instant
+        for entry in entries
+        if isinstance(entry.event, WaveResumed)
+        and entry.event.wave == wave
+        and entry.event.reason == CLIENT_LOGIN_REASON
+    ]
+    return bool(lost) and max(lost) > max(cleared, default=BEFORE_ANY_EVENT)
+
+
+def _note_login(task: TaskFacts, reading: WaveReading, wave: str) -> TaskFacts:
+    finished = [
+        event
+        for event in reading.events
+        if isinstance(event, RunFinished) and event.wave == wave and event.task == task.name
+    ]
+    return dataclasses.replace(task, stopped_by_login=bool(finished) and finished[-1].error_class == AUTHENTICATION)
 
 
 def _read_state_before_pause(reading: WaveReading, wave: str, task: str) -> str | None:
@@ -603,12 +639,12 @@ def _note_last_run(task: TaskFacts, reading: WaveReading, wave: str) -> TaskFact
     )
 
 
-def _is_review_ended_within_quota(event, wave: str) -> bool:
+def _is_review_ended_on_the_model(event, wave: str) -> bool:
     return (
         isinstance(event, RunFinished)
         and event.slot == REVIEW_SLOT
         and event.wave == wave
-        and event.error_class != RATE_LIMIT
+        and event.error_class not in CLIENT_STOP_ERROR_CLASSES
     )
 
 
@@ -619,9 +655,19 @@ def _read_reviewed_heads(events: tuple, wave: str) -> dict:
         if isinstance(event, TaskPreflighted) and event.wave == wave:
             preflighted[event.task] = event.head
             reviewed.pop(event.task, None)
-        if _is_review_ended_within_quota(event, wave):
+        if _is_review_ended_on_the_model(event, wave):
             reviewed[event.task] = preflighted.get(event.task)
     return reviewed
+
+
+def _list_review_runs(events: tuple, wave: str) -> dict:
+    review_runs = {}
+    for event in events:
+        if isinstance(event, TaskPreflighted) and event.wave == wave:
+            review_runs.pop(event.task, None)
+        if _is_review_ended_on_the_model(event, wave):
+            review_runs[event.task] = (*review_runs.get(event.task, ()), event.run)
+    return review_runs
 
 
 @dataclass(frozen=True)
@@ -680,6 +726,7 @@ def _follow_wave(runtime: Runtime, reading: WaveReading, started: WaveStarted, s
             if isinstance(event, TaskVerdict) and event.wave == wave
         },
         reviewed_heads=_read_reviewed_heads(since_requeue, wave),
+        review_runs=_list_review_runs(since_requeue, wave),
         preflight_failures={
             event.task: _list_preflight_failures(event)
             for event in since_requeue
@@ -765,7 +812,9 @@ def _read_wave_task(runtime: Runtime, reading: WaveReading, open_wave: _OpenWave
         _read_task_facts(runtime, open_wave.tree_root, task), open_wave.followed, open_wave.implemented
     )
     amended = _note_amendment(followed, _read_task_on_its_pull_request(runtime, reading, open_wave, followed), task)
-    noted = _note_last_run(_note_quota(amended, reading, wave, open_wave.followed.states), reading, wave)
+    noted = _note_login(
+        _note_last_run(_note_quota(amended, reading, wave, open_wave.followed.states), reading, wave), reading, wave
+    )
     return _note_delivered_head(reading, open_wave, noted)
 
 
@@ -805,6 +854,7 @@ def _collect_wave_facts(runtime: Runtime, reading: WaveReading, started: WaveSta
         implemented=open_wave.implemented,
         pause=read_wave_pause(reading.events, started.wave),
         forge_account_unavailable=_is_forge_account_unavailable(reading.entries),
+        client_login_lost=_is_client_login_lost(reading.entries, started.wave),
         milestone_branch=milestone_branch,
         blocked_rebase=_read_blocked_rebase(reading, started.wave),
     )
