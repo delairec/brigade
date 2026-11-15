@@ -236,6 +236,10 @@ dies before it records a `run.finished` does.
   recorded no heads, launched before brigade recorded them, holds nothing.
 - No command names a milestone to rebase it again: `brigade wave requeue` takes a wave and a task, and
   `brigade rebase context|done` the pull request of a task. A push to the milestone branch releases the hold.
+- The rebase goes on after the report, while the pull request of the milestone into the main branch is open: the
+  same rebase, check before the push and hold, replaying the commit of the report and the commit `STATUS reached`
+  with the rest of the branch. The body of the pull request stays the report; the next tick retitles it from the
+  head pushed. Once that pull request is merged or closed, the tick no longer reads the branch to rebase it.
 - No rebase is planned for a wave that is paused, or whose rebase run lives or ended blocked; a blocked rebase run
   pauses its wave on its question.
 - `brigade wave resume` answers every rebase run of the wave that ended blocked before it, one that ended while the

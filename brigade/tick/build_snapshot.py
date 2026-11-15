@@ -1122,43 +1122,55 @@ def _note_milestone_merge(runtime: Runtime, reading: WaveReading, cut: Milestone
     return dataclasses.replace(facts, merge_command=command, merged_into_main=merged)
 
 
-def _read_opened_milestone_facts(
-    reading: WaveReading, cut: MilestoneBranchCut, project: Entity, opened: int
-) -> MilestoneFacts:
+def _read_rebase_facts(runtime: Runtime, reading: WaveReading, cut: MilestoneBranchCut, ref: str) -> MilestoneFacts:
+    project = find_project(reading.projects, cut.project)
+    rebase_runs = _list_branch_rebase_runs(reading, project, cut.branch)
+    refs = _locate_milestone_refs(runtime, reading, project, ref)
     return MilestoneFacts(
         project=cut.project,
         milestone=cut.milestone,
         branch=cut.branch,
+        behind_main=_is_behind_main(runtime, reading, cut, refs),
+        rebase_run_live=any(run["state"] == LIVE_RUN_STATE for run in rebase_runs),
+        blocked_rebase=_read_blocked_milestone_rebase(runtime, reading, cut, refs),
+    )
+
+
+def _read_opened_milestone_facts(
+    runtime: Runtime, reading: WaveReading, cut: MilestoneBranchCut, opened: int
+) -> MilestoneFacts:
+    project = find_project(reading.projects, cut.project)
+    pull_request = reading.forge.read_pull_request(read_project_field(project, PATH_FIELD), cut.branch)
+    facts = MilestoneFacts(project=cut.project, milestone=cut.milestone, branch=cut.branch)
+    if pull_request is not None and pull_request.state == OPEN_PULL_REQUEST:
+        ref = locate_forge_branch(runtime.run_process, project, cut.branch, _read_environment_of(reading, project))
+        facts = _read_rebase_facts(runtime, reading, cut, ref)
+    return dataclasses.replace(
+        facts,
         opened_pull_request=opened,
-        pull_request=reading.forge.read_pull_request(read_project_field(project, PATH_FIELD), cut.branch),
+        pull_request=pull_request,
         described_head=_find_described_head(reading, cut.project, cut.milestone),
     )
 
 
 def _read_milestone_facts(runtime: Runtime, reading: WaveReading, cut: MilestoneBranchCut) -> MilestoneFacts:
-    project = find_project(reading.projects, cut.project)
     opened = _find_milestone_pull_request(reading, cut.project, cut.milestone)
     if opened is not None:
-        return _read_opened_milestone_facts(reading, cut, project, opened)
+        return _read_opened_milestone_facts(runtime, reading, cut, opened)
+    project = find_project(reading.projects, cut.project)
     ref = locate_forge_branch(runtime.run_process, project, cut.branch, _read_environment_of(reading, project))
-    rebase_runs = _list_branch_rebase_runs(reading, project, cut.branch)
+    facts = _read_rebase_facts(runtime, reading, cut, ref)
     of_milestone = _read_tasks_of_milestone(runtime, reading, cut, ref)
     names = {task.name for task in of_milestone}
-    refs = _locate_milestone_refs(runtime, reading, project, ref)
-    facts = MilestoneFacts(
-        project=cut.project,
-        milestone=cut.milestone,
-        branch=cut.branch,
+    progress = dataclasses.replace(
+        facts,
         closed_waves=_list_closed_waves(reading, cut.project, names),
         open_waves=_list_open_waves(reading, cut.project, names),
         open_tasks=_list_open_tasks(tuple(of_milestone)),
-        behind_main=_is_behind_main(runtime, reading, cut, refs),
-        rebase_run_live=any(run["state"] == LIVE_RUN_STATE for run in rebase_runs),
-        blocked_rebase=_read_blocked_milestone_rebase(runtime, reading, cut, refs),
         tasks=tuple(task.name for task in of_milestone),
         reported=_is_milestone_reported(reading, cut),
     )
-    return _note_milestone_merge(runtime, reading, cut, facts)
+    return _note_milestone_merge(runtime, reading, cut, progress)
 
 
 def _read_readable_milestone_facts(

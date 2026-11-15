@@ -3465,7 +3465,13 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         self.spawn = SpawnRecorderDouble()
         self._create_runtime()
 
-    def _create_runtime(self, forge: tuple = (), answers: dict | None = None, red_branch: str | None = None):
+    def _create_runtime(
+        self,
+        forge: tuple = (),
+        answers: dict | None = None,
+        red_branch: str | None = None,
+        pull_requests: dict = NO_PULL_REQUEST_FROM_ANY_BRANCH,
+    ):
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
             "PROJECT": {"tidepool": (("PATH", str(self.root / "tidepool")), ("MAIN", "main"), *forge)},
@@ -3484,11 +3490,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
             rebase=FORGE_REBASE_OF_THE_MILESTONE_BRANCH if forge else REBASE_OF_THE_MILESTONE_BRANCH,
             descent=FORGE_MILESTONE_BRANCH_DESCENT if forge else MILESTONE_BRANCH_DESCENT,
         )
-        forge_double = (
-            OpeningForgeDouble(NO_PULL_REQUEST_FROM_ANY_BRANCH)
-            if forge
-            else create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
-        )
+        forge_double = OpeningForgeDouble(pull_requests) if forge else create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
         forge_name = dict(forge).get("FORGE", "github")
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
@@ -3503,13 +3505,27 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
             ),
         )
 
+    def _open_the_pull_request_of_the_milestone(self) -> None:
+        self._create_runtime(
+            forge=(("FORGE", "github"),),
+            answers={
+                FORGE_REBASE_OF_THE_MILESTONE_BRANCH: ProcessAnswer(),
+                ("git", "push", "--quiet", f"--force-with-lease=integration/tides:{WAVE_HEAD}"): ProcessAnswer(),
+                ("git", "ls-remote"): ProcessAnswer(exit_code=2),
+                ("git", "push", "--quiet", "origin"): ProcessAnswer(),
+            },
+            pull_requests={MILESTONE_BRANCH: MILESTONE_PULL_REQUEST_OPEN},
+        )
+
     def _stop_the_rebase_on_a_conflict(self) -> None:
         self.machine.answers[REBASE_OF_THE_MILESTONE_BRANCH] = ProcessAnswer(
             exit_code=1, stderr="CONFLICT (content): Merge conflict in src/tides.py"
         )
 
     def _block_the_last_rebase_run(
-        self, launches: tuple[dict, ...] = (LAUNCH_OF_THE_BLOCKED_REBASE_RUN_ON_THE_HEADS_THAT_STAND,)
+        self,
+        launches: tuple[dict, ...] = (LAUNCH_OF_THE_BLOCKED_REBASE_RUN_ON_THE_HEADS_THAT_STAND,),
+        opened: tuple[dict, ...] = (),
     ) -> None:
         blocked_run = {
             **create_run_record(FIRST_RUN, None, None),
@@ -3518,7 +3534,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
             "worktree": str(self.worktree),
         }
         write_run(self.root / "state", blocked_run, BLOCKED_REBASE_OF_THE_MILESTONE_BRANCH)
-        write_ledger(self.root, [CUT_OF_M4, *launches, BLOCKED_REBASE_OF_THE_MILESTONE_BRANCH])
+        write_ledger(self.root, [CUT_OF_M4, *opened, *launches, BLOCKED_REBASE_OF_THE_MILESTONE_BRANCH])
 
     def test_should_name_on_stderr_the_red_main_branch_holding_the_rebase_of_the_milestone_branch(self):
         # Arrange
@@ -3686,6 +3702,48 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
 
         # Assert
         self.assertNotIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
+
+    def test_should_rebase_onto_main_the_milestone_branch_whose_pull_request_is_open(self):
+        # Arrange
+        write_ledger(self.root, [CUT_OF_M4, *OPENING_OF_THE_PULL_REQUEST_OF_M4])
+        self._open_the_pull_request_of_the_milestone()
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertIn(FORGE_REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
+
+    def test_should_rebase_no_milestone_branch_whose_pull_request_is_open_and_its_rebase_run_ended_blocked(self):
+        # Arrange
+        self._block_the_last_rebase_run(opened=OPENING_OF_THE_PULL_REQUEST_OF_M4)
+        self._open_the_pull_request_of_the_milestone()
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), self.runtime)
+
+        # Assert
+        self.assertNotIn(FORGE_REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
+
+    def test_should_plan_no_rebase_of_the_milestone_branch_whose_pull_request_is_open_while_its_rebase_run_lives(
+        self,
+    ):
+        # Arrange
+        write_ledger(self.root, [CUT_OF_M4, *OPENING_OF_THE_PULL_REQUEST_OF_M4])
+        self._open_the_pull_request_of_the_milestone()
+        live_run = {
+            **create_run_record(FIRST_RUN, None, None),
+            "slot": "rebase",
+            "project": "tidepool",
+            "worktree": str(self.worktree),
+        }
+        record_run_pid(write_run(self.root / "state", live_run, None), os.getpid())
+
+        # Act
+        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+
+        # Assert
+        self.assertNotIn({"project": "tidepool", "milestone": "M4", "branch": "integration/tides"}, document["plan"])
 
     def test_should_launch_a_rebase_run_on_the_worktree_of_the_milestone_branch_stopped_on_a_conflict(self):
         # Arrange
@@ -6542,6 +6600,7 @@ MILESTONE_PR_DESCRIBED_AT_THE_HEAD = {
     "head": "8885daa",
     "login": "tidepool-cli",
 }
+OPENING_OF_THE_PULL_REQUEST_OF_M4 = (MILESTONE_PR_OPENED, MILESTONE_PR_DESCRIBED_AT_THE_HEAD)
 
 
 class DescribingForgeDouble(OpeningForgeDouble):

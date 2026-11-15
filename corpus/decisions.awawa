@@ -6988,3 +6988,35 @@ DECISION AReviewRunEndedWithoutAVerdictIsLaunchedAgainUpToVerifyRoundsThenParksI
 	SOURCE "the user's words of 2026-11-15, asked whether this second defect gets its own fix: « on"
 		+ "peut pas livrer les 2 dans la même pr de quick fix? »"
 	SOURCE "pull request #411 of the brigade repository"
+
+DECISION TheTickRebasesTheBranchOfAMilestoneOntoMainWhileItsPullRequestIsOpen
+	TITLE "while the pull request of a milestone into the main branch is open, the tick rebases its"
+		+ "branch onto the main branch once the main branch has moved, as before its report; once"
+		+ "that pull request is merged or closed, it reads no rebase fact of the branch"
+	STATUS active
+	DESC "the snapshot of a milestone whose milestone.pr_opened is recorded reads behind_main,"
+		+ "rebase_run_live and blocked_rebase when the forge reads its pull request open,"
+		+ "brigade/tick/build_snapshot.py:_read_opened_milestone_facts; the plan, the rebase, the"
+		+ "check of the rebased head before its push and the hold of a blocked rebase are those of"
+		+ "a milestone not reported"
+		REF @DECISION.AMilestoneBranchRebasedOntoMainIsCheckedBeforeItsPushAndARedHeadIsRepairedByOneRebaseRun
+		REF @DECISION.ABlockedMilestoneRebaseIsHeldUntilTheMainOrTheMilestoneBranchMovesSinceItsLaunch
+	DESC "the commit of the report and the commit STATUS reached are commits of the branch, which"
+		+ "the rebase replays; the milestone stays active at the main branch until the merge, so it"
+		+ "is still rebased"
+	DESC "the body of the pull request stays the report: no push edits it; the head the rebase"
+		+ "pushes differs from the described head, so the next tick retitles the pull request from"
+		+ "that head and records milestone.pr_described, and nothing else of the opened path"
+		+ "changes"
+	REJECTED "the branch rebased by hand each time the main branch moves: the tick already rebases"
+		+ "the branch of every milestone before its report, and a hand rebase waits on a session"
+	REJECTED "the rebase facts read whatever the state of the pull request: the forge deletes the"
+		+ "branch at the merge, its fetch fails, and the milestone is skipped and never closed"
+	REJECTED "the report run again after each rebase: the rebase onto the main branch changes no"
+		+ "task nor wave of the milestone, and the report is replayed with the branch"
+	RATIONALE "on 2026-11-15 pull request #412 of @MILESTONE.M12 was CONFLICTING after #411 and"
+		+ "#413 reached main, its CI not run; git rev-list --left-right --count gave 2 43 against"
+		+ "main, yet brigade tick --dry-run read behind_main False and planned no rebase: the"
+		+ "opened path returned before reading any rebase fact"
+		REF @MILESTONE.M12
+	SOURCE "the user's quick fix of 2026-11-15 on the defect, with no TASK entity"
