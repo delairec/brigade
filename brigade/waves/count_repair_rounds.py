@@ -10,7 +10,7 @@ from brigade.waves.is_requeue import is_requeue
 REBASE_SLOT = "rebase"
 FIXING_STATE = "fixing"
 PAUSED_ON_QUOTA_STATE = "paused:quota"
-RATE_LIMIT = "rate_limit"
+CLIENT_STOP_ERROR_CLASSES = ("rate_limit", "authentication")
 
 
 def _is_launched_by(entry: LedgerEntry, run: str) -> bool:
@@ -27,10 +27,10 @@ def _is_rebase_launch(entry: LedgerEntry, runs: tuple[dict, ...]) -> bool:
     )
 
 
-def _is_rate_limited_launch(entry: LedgerEntry, entries: tuple[LedgerEntry, ...]) -> bool:
+def _is_launch_stopped_by_its_client(entry: LedgerEntry, entries: tuple[LedgerEntry, ...]) -> bool:
     return any(
         isinstance(finished.event, RunFinished)
-        and finished.event.error_class == RATE_LIMIT
+        and finished.event.error_class in CLIENT_STOP_ERROR_CLASSES
         and finished.event.wave == entry.event.wave
         and finished.event.task == entry.event.task
         and _is_launched_by(entry, finished.event.run)
@@ -49,7 +49,7 @@ def _is_spending_round(
         previous_state != PAUSED_ON_QUOTA_STATE
         and not _is_rebuild(entry.event)
         and not _is_rebase_launch(entry, runs)
-        and not _is_rate_limited_launch(entry, entries)
+        and not _is_launch_stopped_by_its_client(entry, entries)
     )
 
 

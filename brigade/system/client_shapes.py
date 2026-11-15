@@ -109,7 +109,9 @@ CLIENT_ANSWER_SHAPES = {
         "duration_ms": OPTIONAL_COUNT,
         "cost_usd": Field(kinds=(int, float), nullable=True),
         "error_class": Field(
-            kinds=(str,), nullable=True, values=("rate_limit", "turn_limit", "execution", "unreadable_output")
+            kinds=(str,),
+            nullable=True,
+            values=("rate_limit", "turn_limit", "execution", "unreadable_output", "authentication"),
         ),
         "reset": Field(kinds=(dict,), nullable=True, fields={"hour": TEXT, "timezone": OPTIONAL_TEXT}),
         "message": OPTIONAL_TEXT,

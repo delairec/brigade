@@ -38,6 +38,7 @@ TASK_NOTIFICATION_ORIGIN = "task-notification"
 RATE_LIMIT_PATTERN = re.compile(
     r"limit reached|hit your (?:[\w-]+ )?limit|usage limit|rate limit|out of usage credits", re.IGNORECASE
 )
+AUTHENTICATION_PATTERN = re.compile(r"Failed to authenticate|auth login")
 RESET_PATTERN = re.compile(r"resets (?:at )?(\d{1,2})(?::(\d{2}))?(am|pm)?(?: \(([^)]+)\))?", re.IGNORECASE)
 ERROR_SUBTYPE_PREFIX = "error"
 TRANSCRIPT_MESSAGE_TYPES = ("user", "assistant")
@@ -176,11 +177,17 @@ def _names_rate_limit(message) -> bool:
     return message is not None and RATE_LIMIT_PATTERN.search(message) is not None
 
 
+def _names_authentication_failure(message) -> bool:
+    return message is not None and AUTHENTICATION_PATTERN.search(message) is not None
+
+
 def _classify_error(result: dict, message):
     if result.get("subtype") == "error_max_turns":
         return "turn_limit"
     if result.get("is_error") and _names_rate_limit(message):
         return "rate_limit"
+    if result.get("is_error") and _names_authentication_failure(message):
+        return "authentication"
     if result.get("is_error") or str(result.get("subtype", "")).startswith(ERROR_SUBTYPE_PREFIX):
         return "execution"
     return None

@@ -110,7 +110,7 @@ from brigade.tick.actions import (
     StartWave,
 )
 from brigade.tick.apply_actions import apply_actions
-from brigade.tick.build_snapshot import ForgeReaders, Snapshot, build_snapshot
+from brigade.tick.build_snapshot import CLIENT_LOGIN_REASON, ForgeReaders, Snapshot, build_snapshot
 from brigade.tick.describe_holding_head import describe_holding_head
 from brigade.tick.find_holding_head import find_holding_head
 from brigade.tick.head_proof import HoldingHead
@@ -714,6 +714,11 @@ def _pause_wave(runtime: Runtime, action: PauseWave) -> None:
     append_event(
         runtime.paths, runtime.now, WavePaused(wave=action.wave, reason=action.reason, resume_at=action.resume_at)
     )
+    if action.reason == CLIENT_LOGIN_REASON:
+        sys.stderr.write(
+            f"brigade tick: the wave {action.wave} paused: the login of its AI client is lost;"
+            f" sign in to the client again, then run brigade wave resume {action.wave}\n"
+        )
 
 
 def _collect_check_runs(runtime: Runtime, configuration: Configuration, action: CollectCheckRuns) -> None:

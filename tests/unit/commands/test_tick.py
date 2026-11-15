@@ -655,6 +655,38 @@ RESUMED_FROM_THE_FORGE_ACCOUNT = {
     "wave": "tidepool_w16",
     "reason": "forge_account",
 }
+RUN_FINISHED_ON_THE_CLIENT_LOGIN = {
+    **create_run_result(FIRST_RUN, "failed", "2026-10-19T08:50:00Z"),
+    "wave": "tidepool_w16",
+    "task": "T7",
+    "error_class": "authentication",
+    "message": "Failed to authenticate: this login reached its time limit and cannot be renewed.",
+}
+PAUSED_ON_THE_CLIENT_LOGIN = {
+    "schema_version": 1,
+    "ts": "2026-10-19T08:55:00Z",
+    "event": "wave.paused",
+    "wave": "tidepool_w16",
+    "reason": "client_login",
+    "resume_at": None,
+}
+RESUMED_FROM_THE_CLIENT_LOGIN = {
+    "schema_version": 1,
+    "ts": "2026-10-19T08:58:00Z",
+    "event": "wave.resumed",
+    "wave": "tidepool_w16",
+    "reason": "client_login",
+}
+REVIEW_RUN_FAILED_WITHOUT_A_VERDICT = {
+    **create_run_result(FIRST_RUN, "failed", "2026-10-18T11:40:00Z"),
+    "procedure": "verify-pr",
+    "slot": "review",
+    "role": "reviewer",
+    "wave": "tidepool_w16",
+    "task": "T7",
+    "error_class": "execution",
+    "message": "the client exited before the verdict",
+}
 PAUSED_TRIAGE = (
     ("SLOT", "triage"),
     ("OUTPUT", "entity:PATTERN"),
@@ -1390,6 +1422,49 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         self.worktree.mkdir(parents=True)
         write_ledger(
             self.root, [WAVE_STARTED, TASK_PR_OPENED, TASK_PREFLIGHTED_AT_THE_HEAD, _record_task_state("verifying")]
+        )
+        runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "verify-pr",
+                    "pr=42",
+                    "task=@TASK.T7",
+                    "--slot",
+                    "review",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
+
+    def test_should_launch_the_review_again_on_the_head_whose_review_run_failed_without_a_verdict(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        write_ledger(
+            self.root,
+            [
+                WAVE_STARTED,
+                TASK_PR_OPENED,
+                TASK_PREFLIGHTED_AT_THE_HEAD,
+                _record_task_state("verifying"),
+                REVIEW_RUN_FAILED_WITHOUT_A_VERDICT,
+            ],
         )
         runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
 
@@ -2230,6 +2305,138 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 FORGE_ACCOUNT_UNAVAILABLE,
                 PAUSED_ON_THE_FORGE_ACCOUNT,
                 RESUMED_FROM_THE_FORGE_ACCOUNT,
+            ],
+        )
+        runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "build-task",
+                    "task=@TASK.T7",
+                    "base=integration/M4",
+                    "--slot",
+                    "build",
+                    "--cwd",
+                    f"{self.root}/tidepool/.brigade/worktrees/T7",
+                    "--project",
+                    "tidepool",
+                    "--brief",
+                    f"{self.root}/state/briefs/tidepool_w16-T7.md",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                )
+            ],
+        )
+
+    def test_should_pause_the_wave_of_a_task_whose_run_lost_the_client_login_and_launch_none_of_its_tasks(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("running"), RUN_FINISHED_ON_THE_CLIENT_LOGIN])
+        runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+        no_launch = []
+
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self._read_events(),
+            [
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-18T09:00:00Z",
+                    "event": "wave.started",
+                    "wave": "tidepool_w16",
+                    "project": "tidepool",
+                    "branch": "integration/M4",
+                    "tasks": ["T7"],
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-18T10:00:00Z",
+                    "event": "task.state",
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "state": "running",
+                },
+                {
+                    "schema_version": 2,
+                    "ts": "2026-10-19T08:50:00Z",
+                    "event": "run.finished",
+                    "run": FIRST_RUN,
+                    "segment": 1,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": None,
+                    "session": "session-b74",
+                    "main_steps": 12,
+                    "total_steps": 12,
+                    "duration_ms": 4200,
+                    "usage": None,
+                    "outcome": "failed",
+                    "error_class": "authentication",
+                    "exit": 0,
+                    "wave": "tidepool_w16",
+                    "task": "T7",
+                    "nulls": {},
+                    "message": "Failed to authenticate: this login reached its time limit and cannot be renewed.",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": "2026-10-19T09:00:00Z",
+                    "event": "wave.paused",
+                    "wave": "tidepool_w16",
+                    "reason": "client_login",
+                    "resume_at": None,
+                },
+            ],
+        )
+        self.assertEqual(self.spawn.argvs, no_launch)
+
+    def test_should_name_on_stderr_how_to_resume_the_wave_it_pauses_on_the_client_login(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        write_ledger(self.root, [WAVE_STARTED, _record_task_state("running"), RUN_FINISHED_ON_THE_CLIENT_LOGIN])
+        runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+        errors = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stderr(errors):
+            COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertIn(
+            "brigade tick: the wave tidepool_w16 paused: the login of its AI client is lost;"
+            " sign in to the client again, then run brigade wave resume tidepool_w16\n",
+            errors.getvalue(),
+        )
+
+    def test_should_launch_again_the_task_whose_run_lost_the_client_login_once_its_wave_is_resumed(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        write_ledger(
+            self.root,
+            [
+                CUT_OF_M4_ON_THE_WAVE_BRANCH,
+                WAVE_STARTED,
+                _record_task_state("running"),
+                RUN_FINISHED_ON_THE_CLIENT_LOGIN,
+                PAUSED_ON_THE_CLIENT_LOGIN,
+                RESUMED_FROM_THE_CLIENT_LOGIN,
             ],
         )
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))

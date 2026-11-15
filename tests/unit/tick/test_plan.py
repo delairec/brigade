@@ -475,7 +475,6 @@ class PlanVerificationTest(unittest.TestCase):
                 WORKTREE_S3,
                 (RECORD_CHANGES_REQUESTED,),
             ),
-            ("reviewed at the head without a verdict", "verifying", NO_VERDICT, REVIEWED_AT_THE_HEAD, WORKTREE_S3, ()),
             ("without its worktree", "verifying", NO_VERDICT, NOT_REVIEWED, NO_WORKTREE, ()),
             ("not yet preflighted", "pr_open", NO_VERDICT, NOT_REVIEWED, WORKTREE_S3, ()),
             ("already verified", "verified", PASS_AT_THE_HEAD, REVIEWED_AT_THE_HEAD, WORKTREE_S3, (MERGE_S3,)),
@@ -2902,7 +2901,6 @@ class PlanVerificationOfATaskWithoutAForgeTest(unittest.TestCase):
                 (),
                 (LOCAL_VERIFICATION_S3,),
             ),
-            ("reviewed at its delivered head with no verdict", DELIVERED_HEAD, NO_VERDICT, DELIVERED_HEAD, (), ()),
             ("named by a live run", DELIVERED_HEAD, NO_VERDICT, NOT_REVIEWED, (LIVE_RUN_OF_S3,), ()),
         ]:
             with self.subTest(case=case):
@@ -3282,3 +3280,214 @@ class PlanEndingAMilestoneOfAProjectWithoutAForgeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(actions, (CloseMilestone(project="shop", milestone="M1", pr=None),))
+
+
+CLIENT_LOGIN = WavePause(reason="client_login", resume_at=None)
+PAUSE_SHOP_ON_THE_CLIENT_LOGIN = PauseWave(wave="shop_w1", reason="client_login", resume_at=None)
+BUILD_STOPPED_BY_THE_LOGIN = TaskFacts(
+    name="S3", branch="feature/S3-task", last_run=LAST_RUN_OF_S3, stopped_by_login=True
+)
+FOLLOWED_TASK_STOPPED_BY_THE_LOGIN = TaskFacts(
+    name="S3",
+    branch="feature/S3-task",
+    pull_request=OPEN,
+    worktree=WORKTREE_S3,
+    preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+    last_run=LAST_RUN_OF_S3,
+    stopped_by_login=True,
+)
+
+
+def create_wave_whose_client_login_is_lost(task: TaskFacts, state: str) -> WaveFacts:
+    return dataclasses.replace(create_wave((task,), {"S3": state}), client_login_lost=True)
+
+
+class PlanClientLoginPauseTest(unittest.TestCase):
+    def test_should_pause_until_brigade_wave_resume_a_running_wave_whose_client_login_is_lost(self):
+        # Arrange
+        shop = create_wave_whose_client_login_is_lost(BUILD_STOPPED_BY_THE_LOGIN, "running")
+        cafe = dataclasses.replace(CAFE_WAVE, client_login_lost=True, pause=CLIENT_LOGIN)
+        snapshot = Snapshot(now=NOW, waves=(shop, cafe), projects=(SHOP, CAFE))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (PAUSE_SHOP_ON_THE_CLIENT_LOGIN,))
+
+    def test_should_leave_unparked_and_unlaunched_a_running_task_whose_build_run_lost_the_client_login(self):
+        # Arrange
+        paused = dataclasses.replace(
+            create_wave_whose_client_login_is_lost(BUILD_STOPPED_BY_THE_LOGIN, "running"), pause=CLIENT_LOGIN
+        )
+        snapshot = Snapshot(now=NOW, waves=(paused,), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_launch_no_repair_nor_review_of_a_task_whose_run_lost_the_client_login(self):
+        for state in ["fixing", "verifying"]:
+            with self.subTest(state=state):
+                # Arrange
+                paused = dataclasses.replace(
+                    create_wave_whose_client_login_is_lost(FOLLOWED_TASK_STOPPED_BY_THE_LOGIN, state),
+                    pause=CLIENT_LOGIN,
+                )
+                snapshot = Snapshot(now=NOW, waves=(paused,), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, ())
+
+    def test_should_launch_again_the_task_whose_run_lost_the_client_login_once_its_wave_is_resumed(self):
+        for case, task, state, expected in [
+            ("a build run", BUILD_STOPPED_BY_THE_LOGIN, "running", (LAUNCH_S3,)),
+            ("a repair run", FOLLOWED_TASK_STOPPED_BY_THE_LOGIN, "fixing", (REMEDIATE_S3,)),
+            ("a review run", FOLLOWED_TASK_STOPPED_BY_THE_LOGIN, "verifying", (VERIFY_S3,)),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+
+FIRST_REVIEW_RUN = "20261006T110000Z-a1a1a1"
+SECOND_REVIEW_RUN = "20261006T120000Z-b2b2b2"
+THIRD_REVIEW_RUN = "20261006T130000Z-c3c3c3"
+
+
+def create_task_reviewed_without_a_verdict(review_runs: tuple[str, ...]) -> TaskFacts:
+    return TaskFacts(
+        name="S3",
+        branch="feature/S3-task",
+        pull_request=OPEN,
+        worktree=WORKTREE_S3,
+        preflighted_head=PREFLIGHTED_AT_THE_HEAD,
+        reviewed_head=REVIEWED_AT_THE_HEAD,
+        review_runs=review_runs,
+    )
+
+
+def create_task_delivered_and_reviewed_without_a_verdict(review_runs: tuple[str, ...]) -> TaskFacts:
+    return TaskFacts(
+        name="S3",
+        branch="feature/S3-task",
+        worktree=WORKTREE_S3,
+        last_run=LAST_RUN_OF_S3,
+        delivered_head=DELIVERED_HEAD,
+        preflighted_head=DELIVERED_HEAD,
+        reviewed_head=DELIVERED_HEAD,
+        review_runs=review_runs,
+    )
+
+
+class PlanReviewEndedWithoutAVerdictTest(unittest.TestCase):
+    def test_should_launch_the_review_again_while_its_runs_without_a_verdict_stay_within_the_verify_rounds(self):
+        for case, review_runs in [
+            ("one review run without a verdict", (FIRST_REVIEW_RUN,)),
+            ("as many review runs without a verdict as the verify rounds", (FIRST_REVIEW_RUN, SECOND_REVIEW_RUN)),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = create_task_reviewed_without_a_verdict(review_runs)
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, (VERIFY_S3,))
+
+    def test_should_park_the_task_whose_review_runs_without_a_verdict_pass_the_verify_rounds(self):
+        for case, verify_rounds, review_runs, expected_reason in [
+            (
+                "past the verify rounds by default",
+                2,
+                (FIRST_REVIEW_RUN, SECOND_REVIEW_RUN, THIRD_REVIEW_RUN),
+                (
+                    "3 review runs without a verdict:"
+                    " 20261006T110000Z-a1a1a1, 20261006T120000Z-b2b2b2, 20261006T130000Z-c3c3c3"
+                ),
+            ),
+            (
+                "past the verify rounds of the policy of the project",
+                1,
+                (FIRST_REVIEW_RUN, SECOND_REVIEW_RUN),
+                "2 review runs without a verdict: 20261006T110000Z-a1a1a1, 20261006T120000Z-b2b2b2",
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = create_task_reviewed_without_a_verdict(review_runs)
+                project = dataclasses.replace(SHOP, verify_rounds=verify_rounds)
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(project,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, (ParkTask(wave="shop_w1", task="S3", reason=expected_reason, blockers=()),))
+
+    def test_should_record_the_verdict_of_the_head_whatever_the_review_runs_that_ended_on_it(self):
+        # Arrange
+        task = dataclasses.replace(
+            create_task_reviewed_without_a_verdict((FIRST_REVIEW_RUN, SECOND_REVIEW_RUN, THIRD_REVIEW_RUN)),
+            verdict=PASS_AT_THE_HEAD,
+        )
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(SHOP,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (RECORD_VERIFIED,))
+
+    def test_should_launch_again_then_park_the_review_of_a_head_delivered_without_a_forge(self):
+        for case, review_runs, expected in [
+            ("within the verify rounds", (FIRST_REVIEW_RUN,), (LOCAL_VERIFICATION_S3,)),
+            (
+                "past the verify rounds",
+                (FIRST_REVIEW_RUN, SECOND_REVIEW_RUN, THIRD_REVIEW_RUN),
+                (
+                    ParkTask(
+                        wave="shop_w1",
+                        task="S3",
+                        reason="3 review runs without a verdict:"
+                        " 20261006T110000Z-a1a1a1, 20261006T120000Z-b2b2b2, 20261006T130000Z-c3c3c3",
+                        blockers=(),
+                    ),
+                ),
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = create_task_delivered_and_reviewed_without_a_verdict(review_runs)
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(SHOP,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_park_no_task_past_its_review_runs_while_a_run_of_it_is_live(self):
+        # Arrange
+        task = create_task_reviewed_without_a_verdict((FIRST_REVIEW_RUN, SECOND_REVIEW_RUN, THIRD_REVIEW_RUN))
+        project = dataclasses.replace(SHOP, live_runs=(LIVE_RUN_OF_S3,))
+        snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(project,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())

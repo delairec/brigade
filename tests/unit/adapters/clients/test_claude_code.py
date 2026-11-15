@@ -506,6 +506,34 @@ class ClaudeCodeResultTest(unittest.TestCase):
         self.assertEqual(result["error_class"], "rate_limit")
         self.assertEqual(result["reset"], {"hour": "01:30", "timezone": "Europe/Paris"})
 
+    def test_should_classify_run_ba1b31_stopped_by_a_login_it_cannot_renew_as_an_authentication_failure(self):
+        # Arrange
+        stdout = (FIXTURES / "result-login-expired.json").read_text()
+
+        # Act
+        result = parse_claude_output(stdout, exit_code=1)
+
+        # Assert
+        self.assertEqual(result["error_class"], "authentication")
+
+    def test_should_classify_an_error_naming_the_login_of_the_client_as_an_authentication_failure(self):
+        for message in [
+            "Failed to authenticate. API Error: 401 authentication_error",
+            "OAuth token revoked · Run claude auth login to sign in again",
+        ]:
+            with self.subTest(message=message):
+                # Arrange
+                stdout = (
+                    '{"type":"result","subtype":"success","is_error":true,"duration_ms":101,"num_turns":1,'
+                    f'"result":"{message}","session_id":"ada28962","usage":{{}}}}'
+                )
+
+                # Act
+                result = parse_claude_output(stdout, exit_code=1)
+
+                # Assert
+                self.assertEqual(result["error_class"], "authentication")
+
     def test_should_classify_any_other_error_as_an_execution_failure(self):
         # Arrange
         stdout = (

@@ -89,6 +89,27 @@ TRANSCRIPTS_WITHOUT_MESSAGE_USAGE = {
 
 
 class ReadClientAnswerTest(unittest.TestCase):
+    def test_should_read_a_result_failed_on_the_authentication_of_the_client(self):
+        # Arrange
+        answer = {
+            "schema_version": 1,
+            "outcome": "failed",
+            "steps": 1,
+            "usage": None,
+            "session_id": "session-b248",
+            "duration_ms": 101,
+            "cost_usd": 0,
+            "error_class": "authentication",
+            "reset": None,
+            "message": "Failed to authenticate: this login reached its time limit and cannot be renewed.",
+        }
+
+        # Act
+        result = read_client_answer(PARSE_RESULT_QUESTION, answer)
+
+        # Assert
+        self.assertEqual(result.error_class, "authentication")
+
     def test_should_refuse_an_answer_lacking_a_key_of_the_contract_naming_the_adapter_and_the_key(self):
         # Arrange
         cases = (
