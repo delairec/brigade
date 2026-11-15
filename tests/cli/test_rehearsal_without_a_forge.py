@@ -101,6 +101,7 @@ class BrigadeRehearsalOfAOneTaskWaveUnderNoAutoMergeTest(unittest.TestCase):
         cls.rehearser.project.run_git("checkout", "--quiet", "-b", "elsewhere")
         cls.rehearser.project.run_git(*shlex.split(cls.command)[1:])
         cls.rehearser.run_brigade("tick", "--once")
+        cls.rehearser.wait_until_the_report_has_ended()
 
     def test_should_merge_nothing_before_the_user_runs_the_command(self):
         # Act

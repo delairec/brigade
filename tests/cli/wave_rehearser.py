@@ -181,6 +181,9 @@ class WaveRehearser:
 
     def tick_until_the_milestone_is_reported(self) -> None:
         self.tick_until(self.is_milestone_reported, "the milestone was never reported")
+        self.wait_until_the_report_has_ended()
+
+    def wait_until_the_report_has_ended(self) -> None:
         self.wait_until(self.has_the_report_ended, "the report of the milestone never ended")
 
     def read_remote_file(self, branch: str, path: str) -> str:
