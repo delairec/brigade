@@ -18347,7 +18347,8 @@ TASK B253
 TASK B254
 	TITLE "The fields no code reads, PROJECT.GRAPH, POLICY.AUTO_RATIFY and POLICY.SAMPLING, leave"
 		+ "the operational schema and the wiki"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 416
 	TYPE refactor
 	MILESTONE @MILESTONE.M8
 	COMPONENT "corpus"
