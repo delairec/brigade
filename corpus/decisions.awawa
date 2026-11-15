@@ -6957,6 +6957,7 @@ DECISION ARunWhoseClientFailsToAuthenticatePausesItsWaveUntilWaveResumeAndSpends
 		REF @TASK.B248
 	SOURCE "the user's words of 2026-11-15, offered a corpus task for this defect: « non plutôt un"
 		+ "quick fix »"
+	SOURCE "pull request #411 of the brigade repository"
 
 DECISION AReviewRunEndedWithoutAVerdictIsLaunchedAgainUpToVerifyRoundsThenParksItsTask
 	TITLE "a review run that ends on the model without recording a verdict leaves its head"
@@ -6986,3 +6987,4 @@ DECISION AReviewRunEndedWithoutAVerdictIsLaunchedAgainUpToVerifyRoundsThenParksI
 		REF @TASK.B248
 	SOURCE "the user's words of 2026-11-15, asked whether this second defect gets its own fix: « on"
 		+ "peut pas livrer les 2 dans la même pr de quick fix? »"
+	SOURCE "pull request #411 of the brigade repository"
