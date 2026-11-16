@@ -34,6 +34,8 @@ from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
+from brigade.orders.is_order_due import OrderFacts
+from brigade.orders.live_order_run import LiveOrderRun
 from brigade.registry.find_project import find_project
 from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_policy_field import read_policy_field
@@ -375,6 +377,8 @@ class Snapshot:
     projects: tuple[ProjectFacts, ...] = ()
     studies: tuple[StudyFacts, ...] = ()
     live_study_runs: tuple[LiveStudyRun, ...] = ()
+    orders: tuple[OrderFacts, ...] = ()
+    live_order_runs: tuple[LiveOrderRun, ...] = ()
     study_runs: int = STUDY_RUNS_BY_DEFAULT
     stall_after: int = STALL_AFTER_BY_DEFAULT_MIN
     rate_limits: tuple[RateLimit, ...] = ()
