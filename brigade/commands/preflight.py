@@ -5,10 +5,11 @@ from brigade.command import Argument, Command
 from brigade.commands._accept_parameter import accept_parameter
 from brigade.commands._equip_collector import equip_collector
 from brigade.commands._equip_preflight import equip_preflight
+from brigade.commands._locate_preflights import locate_preflights
 from brigade.commands._read_parameters import read_parameters
 from brigade.git.locate_main_checkout import locate_main_checkout
 from brigade.git.locate_worktree_root import locate_worktree_root
-from brigade.preflights.run_preflight import BUILT_IN_PREFLIGHTS, PreflightRun, run_preflight
+from brigade.preflights.run_preflight import PreflightRun, run_preflight
 from brigade.runtime import Runtime
 from brigade.system.check_shapes import FAILED
 
@@ -35,7 +36,7 @@ def preflight(request: argparse.Namespace, runtime: Runtime) -> dict:
         project=project,
         parameters=parameters,
         equipment=equip_collector(project, runtime),
-        preflights=BUILT_IN_PREFLIGHTS,
+        preflights=locate_preflights(project, runtime),
         plugins=equip_preflight(runtime),
     )
     outcome = run_preflight(run, runtime)

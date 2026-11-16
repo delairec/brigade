@@ -1,4 +1,4 @@
-What a preflight is, where its checks come from, and which deterministic checks `brigade verify preflight` runs on
+What a preflight is, where it and its checks come from, how a project adds a custom one, and which deterministic checks `brigade verify preflight` runs on
 the pull request of a task before any judgment.
 
 A preflight is a named set of collectors and checks, run on demand. It declares no action of its own: each action it
@@ -7,6 +7,7 @@ needs is a collector or a check, resolved by name and reusable elsewhere. A buil
 
 ```
 brigade preflight <name> [key=value...] [--json]   # exit 1 when a check fails
+brigade preflight add <name> <collector or check> [key=value...]   # adds a step to a custom preflight, commits nothing
 brigade check list [--json]                        # every check found, its name and its source
 brigade verify preflight <pr> [--json]             # the built-in preflight verify-pull-request, and the size
 ```
@@ -15,6 +16,58 @@ brigade verify preflight <pr> [--json]             # the built-in preflight veri
 hands each check the parameters and the documents of the collectors, and prints the verdict and the findings of each
 check, as text or, with `--json`, a JSON document. The `key=value` pairs are the parameters of every collector and
 every check of the preflight, over the parameters the preflight declares. A name no preflight carries is refused.
+
+## Where a preflight comes from
+
+A preflight resolves by name, the first place holding it winning:
+
+| Place     | Form                                                                                                  |
+|-----------|-------------------------------------------------------------------------------------------------------|
+| project   | a `PREFLIGHT` entity of the project's corpus, or `.brigade/preflights/<name>.toml` where it has none   |
+| machine   | a TOML file `<config_root>/preflights/<name>.toml`                                                    |
+| built-in  | a TOML file of `brigade/preflights/data/`                                                             |
+
+A project has a corpus when it is registered in `MODE` `control` or `area`; a project in `MODE` `none`, or not
+registered, keeps its custom preflights as TOML files. The two forms of a custom preflight run the same collectors and
+checks. The TOML file holds `schema_version` 1, `name`, `description`, and the lists `collectors` and `checks`, each
+step a `name` and its `parameters`:
+
+```toml
+schema_version = 1
+name = "nightly-gate"
+description = "the nightly checks of the shop"
+collectors = [
+    { name = "notes", parameters = { "depth" = "1" } },
+]
+checks = [
+    { name = "coverage", parameters = {} },
+]
+```
+
+The entity is named after the preflight, its hyphens as underscores; its `TITLE` is the description, each `COLLECTOR`
+and `CHECK` a step, each `PARAMETER` a `key=value` pair of the step above it. The schema brigade installs in the corpus
+of a project declares `SCHEMA PREFLIGHT`:
+
+```
+PREFLIGHT nightly_gate
+	TITLE "the nightly checks of the shop"
+	COLLECTOR "notes"
+		PARAMETER "depth=1"
+	CHECK "coverage"
+```
+
+## brigade preflight add
+
+`brigade preflight add <name> <collector or check> [key=value...]` adds that collector or that check, the `key=value`
+pairs its parameters, to the custom preflight `<name>` of the project, which it creates, described as
+`the custom preflight <name>`, when the project holds none of that name. The step resolves as a collector first, then as
+a check; a name that resolves as neither is refused before anything is written.
+
+On a project with a corpus it writes the entity in `preflights.awawa` at the root of the corpus, runs `awawa fmt` on
+that file and `awawa lint --strict` on the corpus, and restores the file from `HEAD` when the lint fails; a corpus that
+declares no `PREFLIGHT` is refused, naming the type. On a project without one it writes
+`.brigade/preflights/<name>.toml`, then reads it back as a preflight. It writes in the main checkout of the project
+and commits nothing: `git status` shows the file, and the commit is the user's.
 
 ## Where a check comes from
 
