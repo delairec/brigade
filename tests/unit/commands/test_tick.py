@@ -17,6 +17,9 @@ from brigade.collectors import pr_threads
 from brigade.commands.tick import COMMAND
 from brigade.errors import BrigadeError, CommandFailed, StandingDown, UsageError
 from brigade.inbox.read_inbox import Signal, read_inbox
+from brigade.ledger.ledger_entry import LedgerEntry
+from brigade.ledger.order_started import OrderStarted
+from brigade.ledger.read_ledger import read_ledger
 from brigade.runs.record_run_pid import record_run_pid
 from brigade.runtime import Runtime
 from brigade.system.collector_places import locate_collectors
@@ -4634,6 +4637,45 @@ class TickLaunchingAStudyTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(spawn.argvs, [("study", "run", "health", "--run-id", ANY)])
+
+    def test_should_launch_an_order_whose_schedule_is_due_in_a_run_directory_of_its_own(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(root)
+        spawn = SpawnRecorderDouble()
+        hourly = (("RECIPE", "usage-report"), ("PROJECT", "@PROJECT.oak"), ("EVERY", "1h"), ("STATUS", "active"))
+        oak = (("PATH", str(root / "oak")), ("MAIN", "main"), ("FORGE", "none"), ("STATUS", "paused"))
+        (root / "config" / "recipes").mkdir()
+        (root / "config" / "recipes" / "usage-report.toml").write_text(
+            'schema_version = 1\nname = "usage-report"\ndescription = "the usage report"\nparams = []\n'
+            'max_wall = 30\n[[steps]]\nkind = "command"\nargv = ["make", "report"]\n',
+            encoding="utf-8",
+        )
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_machine_double(
+                {"PROJECT": {"oak": oak}, "STUDY": PAUSED_BUILT_IN_STUDIES, "ORDER": {"hourly": hourly}},
+                MACHINE_OUTPUTS,
+            ),
+            spawn_process=spawn.spawn,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
+        )
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(spawn.argvs, [("order", "run", "hourly", "--run-id", ANY)])
+        run_id = spawn.argvs[0][4]
+        self.assertEqual(
+            read_ledger(root / "state").entries,
+            (
+                LedgerEntry(
+                    instant=FIXED_NOW,
+                    event=OrderStarted(project="oak", kind="usage-report", order="hourly", run=run_id),
+                ),
+            ),
+        )
 
     def test_should_launch_the_built_in_studies_on_a_machine_that_never_ran_them(self):
         # Arrange

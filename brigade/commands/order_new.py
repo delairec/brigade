@@ -73,7 +73,7 @@ def order_new(request: argparse.Namespace, runtime: Runtime) -> dict:
     document = {"schema_version": DOCUMENT_SCHEMA_VERSION, "order": name, "every": request.every}
     if request.every is not None:
         return document
-    ran = order_run(argparse.Namespace(name=name), runtime)
+    ran = order_run(argparse.Namespace(name=name, run_id=None), runtime)
     return {**document, "run": ran["run"], "state": ran["state"]}
 
 
