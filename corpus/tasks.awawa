@@ -18428,6 +18428,12 @@ TASK B251
 		+ "and the launches of brigade/commands/tick.py:415-442 through start_study_run and"
 		+ "detach_study_run are gone, and no module under brigade/ runs the steps of a study or of"
 		+ "a report outside the engine"
+	SPEC "the tick launches the due studies, the milestone report and the task report as it"
+		+ "launches an order of a recipe, through start_order_run and detach_order_run; brigade"
+		+ "order run resolves its name as an ORDER entity, else as a STUDY entity or as the"
+		+ "milestone report or the task report with its arguments, each run as the order of the"
+		+ "recipe study, with no entity written for it; launch_study_run, start_study_run and"
+		+ "detach_study_run are deleted"
 	SPEC "the events order.started, step.done, step.failed, order.parked and order.done recorded"
 		+ "for a study before this task are still read by brigade ledger and by Home"
 	SPEC "brigade/studies/read_collected.py reads every <rank>-collect.json of the run directory,"
@@ -18485,6 +18491,11 @@ TASK B251
 		+ "recipe study, one collect step taking every COLLECTOR line, by a new decision departing"
 		+ "from that one"
 		REF @DECISION.TheEngineNamesEachStepByItsRankAndKindAndAStoppedOrderEndsDoneWithoutParking
+	SOURCE "the user's ruling of 2026-11-16, « order run résout aussi », on finding 1 of the"
+		+ "verdict of run 20261116T155000Z-00a228 on pull request 427, which the run"
+		+ "20261116T155500Z-598366 of the wave brigade_w56 left blocked: the reports launched"
+		+ "through start_study_run and detach_study_run are launched as orders, rather than as an"
+		+ "ORDER entity the tick would write in the operational corpus at each launch"
 
 TASK B252
 	TITLE "brigade preflight add writes a custom preflight in the tree of the project and commits"
