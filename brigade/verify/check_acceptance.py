@@ -1,9 +1,9 @@
+import shlex
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRecord, ProcessRequest
-from brigade.system.split_command import split_command
 from brigade.verify.judge_findings import judge_findings
 
 NAME = "acceptance"
@@ -13,15 +13,15 @@ ACCEPTANCE_TIMEOUT_S = 1800.0
 @dataclass(frozen=True)
 class AcceptanceFacts:
     head_tree: Path
-    commands: tuple[str, ...]
+    commands: tuple[tuple[str, ...], ...]
 
 
 def _run_command(
-    run_process: Callable[[ProcessRequest], ProcessRecord], head_tree: Path, command: str
+    run_process: Callable[[ProcessRequest], ProcessRecord], head_tree: Path, argv: tuple[str, ...]
 ) -> ProcessRecord:
     return run_process(
         ProcessRequest(
-            argv=split_command(command),
+            argv=argv,
             cwd=str(head_tree),
             timeout_s=ACCEPTANCE_TIMEOUT_S,
             acceptable_exit_codes=EVERY_EXIT_CODE,
@@ -34,7 +34,7 @@ def _describe_failure(command: str, record: ProcessRecord) -> list[str]:
 
 
 def check_acceptance(run_process: Callable[[ProcessRequest], ProcessRecord], facts: AcceptanceFacts) -> dict:
-    records = [(command, _run_command(run_process, facts.head_tree, command)) for command in facts.commands]
+    records = [(shlex.join(argv), _run_command(run_process, facts.head_tree, argv)) for argv in facts.commands]
     findings = [
         finding
         for command, record in records

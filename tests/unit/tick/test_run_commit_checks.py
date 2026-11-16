@@ -11,14 +11,7 @@ from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 CHECKOUT = Path("/srv/oak/.brigade/worktrees/check-c0ffee")
-PROJECT = Entity(
-    name="oak",
-    fields=(
-        EntityField(name="PATH", value="/srv/oak"),
-        EntityField(name="SETUP", value="npm ci"),
-        EntityField(name="ACCEPTANCE", value="npm test"),
-    ),
-)
+PROJECT = Entity(name="oak", fields=(EntityField(name="PATH", value="/srv/oak"),))
 
 
 class RunCommitChecksTest(unittest.TestCase):
@@ -28,22 +21,15 @@ class RunCommitChecksTest(unittest.TestCase):
         self.root = Path(directory.name)
         self.processes = ScriptedProcesses()
         self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
+        self.processes.answer_recipes(CHECKOUT, {"setup": (("npm", "ci"),), "acceptance": (("npm", "test"),)})
         self.processes.answer(("npm", "ci"))
         self.processes.answer(("npm", "test"), exit_code=1)
         self.processes.answer(("awawa", "fmt", "--check", "."))
         self.processes.answer(("awawa", "lint", "--strict", "."))
 
-    def test_should_run_the_setup_lines_then_the_acceptance_lines_then_the_checks_of_the_corpus(self):
-        # Act
-        run_commit_checks(self.runtime, PROJECT, CHECKOUT, "c0ffee")
-
-        # Assert
-        self.assertEqual(
-            self.processes.list_argvs(),
-            [("npm", "ci"), ("npm", "test"), ("awawa", "fmt", "--check", "."), ("awawa", "lint", "--strict", ".")],
-        )
-
-    def test_should_return_each_command_of_the_commit_with_its_exit_code(self):
+    def test_should_return_each_step_of_the_setup_then_of_the_acceptance_then_each_check_of_the_corpus_with_its_exit_code(
+        self,
+    ):
         # Act
         checks = run_commit_checks(self.runtime, PROJECT, CHECKOUT, "c0ffee")
 

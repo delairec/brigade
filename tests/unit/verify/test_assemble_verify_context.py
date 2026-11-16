@@ -11,6 +11,7 @@ from brigade.verify.assemble_verify_context import assemble_verify_context
 from brigade.verify.preflight_pull_request import PreflightDemand
 from tests.unit.commands.command_runtime import write_ledger
 from tests.unit.create_preflight_plugins import create_preflight_plugins
+from tests.unit.create_recipe_answers import create_recipe_answers
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
@@ -62,6 +63,7 @@ class AssembleVerifyContextTest(unittest.TestCase):
         (self.paths.cache_root / "refs" / "shop" / BASE).mkdir(parents=True)
         self.answers = {
             **create_registry_answers(self.paths.config_root, {"shop": {"PATH": "/srv/shop"}}),
+            **create_recipe_answers(self.head_tree, {}),
             (
                 "git",
                 "rev-parse",

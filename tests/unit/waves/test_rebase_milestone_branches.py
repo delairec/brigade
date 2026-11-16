@@ -92,8 +92,6 @@ def _create_project(forge: str) -> Entity:
             EntityField(name="PATH", value=REPOSITORY),
             EntityField(name="MAIN", value="main"),
             EntityField(name="FORGE", value=forge),
-            EntityField(name="SETUP", value="npm ci"),
-            EntityField(name="ACCEPTANCE", value="npm test"),
         ),
     )
 
@@ -110,6 +108,9 @@ class RebaseMilestoneBranchesTestCase(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         self.processes = ScriptedProcesses()
+        self.processes.answer_recipes(
+            Path(MILESTONE_WORKTREE), {"setup": (("npm", "ci"),), "acceptance": (("npm", "test"),)}
+        )
         self.forge = CheckRunsListingDouble()
         self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         self.held: list[HoldingHead] = []
@@ -412,13 +413,9 @@ class RebaseMilestoneBranchesCheckedBeforeTheirPushTest(RebaseMilestoneBranchesT
         self.rebase()
 
         # Assert
-        self.assertEqual(
-            select_commands_opening_on(self.processes.requests, AWAWA),
-            [
-                (MILESTONE_WORKTREE, ("awawa", "fmt", "--check", ".")),
-                (MILESTONE_WORKTREE, ("awawa", "lint", "--strict", ".")),
-            ],
-        )
+        commands = select_commands_opening_on(self.processes.requests, AWAWA)
+        self.assertIn((MILESTONE_WORKTREE, ("awawa", "fmt", "--check", ".")), commands)
+        self.assertIn((MILESTONE_WORKTREE, ("awawa", "lint", "--strict", ".")), commands)
 
     def test_should_keep_the_checks_of_the_rebased_head_in_the_record_by_commit(self):
         # Arrange

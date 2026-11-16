@@ -11,7 +11,7 @@ HEAD_TREE = Path("/cache/shop/2222222")
 class CheckAcceptanceTest(unittest.TestCase):
     def test_should_pass_naming_each_command_with_its_exit_code(self):
         # Arrange
-        facts = AcceptanceFacts(head_tree=HEAD_TREE, commands=("python3 -m unittest", "ruff check ."))
+        facts = AcceptanceFacts(head_tree=HEAD_TREE, commands=(("python3", "-m", "unittest"), ("ruff", "check", ".")))
 
         # Act
         check = check_acceptance(RecordingProcessRunner(), facts)
@@ -35,7 +35,7 @@ class CheckAcceptanceTest(unittest.TestCase):
         runner = RecordingProcessRunner(
             {("ruff", "check", "."): ProcessAnswer(exit_code=1, stdout="brigade/cli.py:3:1: F401\n")}
         )
-        facts = AcceptanceFacts(head_tree=HEAD_TREE, commands=("python3 -m unittest", "ruff check ."))
+        facts = AcceptanceFacts(head_tree=HEAD_TREE, commands=(("python3", "-m", "unittest"), ("ruff", "check", ".")))
 
         # Act
         check = check_acceptance(runner, facts)
@@ -57,7 +57,7 @@ class CheckAcceptanceTest(unittest.TestCase):
     def test_should_run_each_command_in_the_tree_of_the_head(self):
         # Arrange
         runner = RecordingProcessRunner()
-        facts = AcceptanceFacts(head_tree=HEAD_TREE, commands=("python3 -m unittest",))
+        facts = AcceptanceFacts(head_tree=HEAD_TREE, commands=(("python3", "-m", "unittest"),))
 
         # Act
         check_acceptance(runner, facts)

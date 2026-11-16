@@ -44,6 +44,7 @@ from tests.unit.commands.run_doubles import (
     create_plugin_resolution,
 )
 from tests.unit.create_preflight_plugins import resolve_preflight_kinds_or
+from tests.unit.create_recipe_outputs import create_recipe_outputs
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
 from tests.unit.forge_double import ForgeDouble
@@ -7045,9 +7046,6 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
         )
 
 
-ACCEPTANCE_COMMAND = "python3 -m unittest"
-
-
 class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
@@ -7068,12 +7066,14 @@ class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
             ("PATH", str(self.repository)),
             ("MAIN", "main"),
             ("FORGE", "none"),
-            ("ACCEPTANCE", ACCEPTANCE_COMMAND),
         )
         corpus = {"STUDY": PAUSED_BUILT_IN_STUDIES, "PROJECT": {"tidepool": project}, "TASK": {"T7": TASK_DELIVERED}}
+        recipes = create_recipe_outputs(
+            self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD, {"acceptance": (("python3", "-m", "unittest"),)}
+        )
         return create_test_runtime(
             create_test_paths(self.root),
-            run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **acceptance_outputs}),
+            run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **recipes, **acceptance_outputs}),
             spawn_process=self.spawn.spawn,
             resolve_plugin=_resolve_the_collectors_beside(
                 create_plugin_resolution(STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)),

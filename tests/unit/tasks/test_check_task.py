@@ -15,12 +15,9 @@ from tests.unit.scripted_processes import ScriptedProcesses
 
 PROJECT = Entity(
     name="oak",
-    fields=(
-        EntityField(name="PATH", value="/srv/oak"),
-        EntityField(name="ACCEPTANCE", value="python3 -m unittest"),
-        EntityField(name="ACCEPTANCE", value="ruff check ."),
-    ),
+    fields=(EntityField(name="PATH", value="/srv/oak"),),
 )
+ACCEPTANCE_RECIPE = {"acceptance": (("python3", "-m", "unittest"), ("ruff", "check", "."))}
 WORKTREE = TaskWorktree(
     path=Path("/srv/oak-b12"), task="B12", project=PROJECT, wave="oak_w1", base="integration/harvest"
 )
@@ -64,6 +61,7 @@ class CheckTaskTest(unittest.TestCase):
 
     def script_checks(self) -> None:
         self.processes.answer(STATUS_ARGV)
+        self.processes.answer_recipes(WORKTREE.path, ACCEPTANCE_RECIPE)
         self.processes.answer(
             ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "HEAD^{commit}"), stdout="c0ffee\n"
         )
@@ -137,6 +135,7 @@ class CheckTaskOfAFailingCommandWithALongOutputTest(unittest.TestCase):
     def test_should_keep_the_last_twenty_lines_of_its_output(self):
         # Arrange
         self.processes.answer(STATUS_ARGV)
+        self.processes.answer_recipes(WORKTREE.path, ACCEPTANCE_RECIPE)
         self.processes.answer(
             ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "HEAD^{commit}"), stdout="c0ffee\n"
         )
@@ -186,6 +185,7 @@ class CheckTaskOfAFailingCommandWithALongOutputTest(unittest.TestCase):
 
 def script_passing_commands(processes: ScriptedProcesses, merge_base_argv: tuple[str, ...], diff: str) -> None:
     processes.answer(STATUS_ARGV)
+    processes.answer_recipes(WORKTREE.path, {"acceptance": (("python3", "-m", "unittest"),)})
     processes.answer(HEAD_ARGV, stdout="c0ffee\n")
     processes.answer(("python3", "-m", "unittest"))
     processes.answer(("awawa", "fmt", "--check", "."))
@@ -199,7 +199,6 @@ def create_worktree(*fields: EntityField) -> TaskWorktree:
         name="oak",
         fields=(
             EntityField(name="PATH", value="/srv/oak"),
-            EntityField(name="ACCEPTANCE", value="python3 -m unittest"),
             *fields,
         ),
     )
@@ -287,36 +286,3 @@ class CheckTaskOfAProjectOnGithubTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document["checks"][-1]["tail"], ["src/parse.py:1: a home path"])
-
-
-class CheckTaskOfALineThatCannotBeSplitTest(unittest.TestCase):
-    def setUp(self):
-        directory = tempfile.TemporaryDirectory()
-        self.addCleanup(directory.cleanup)
-        self.root = Path(directory.name)
-        self.processes = ScriptedProcesses()
-        project = Entity(
-            name="oak",
-            fields=(
-                EntityField(name="PATH", value="/srv/oak"),
-                EntityField(name="ACCEPTANCE", value="python3 -m unittest"),
-                EntityField(name="ACCEPTANCE", value="printf 'oak"),
-            ),
-        )
-        self.worktree = TaskWorktree(
-            path=Path("/srv/oak-b12"), task="B12", project=project, wave="oak_w1", base="integration/harvest"
-        )
-
-    def test_should_refuse_the_line_by_name_before_any_command_runs(self):
-        # Arrange
-        self.processes.answer(STATUS_ARGV)
-
-        # Act
-        with self.assertRaises(BrigadeError) as refusal:
-            check_task(create_test_runtime(create_test_paths(self.root), run_process=self.processes), self.worktree)
-
-        # Assert
-        self.assertEqual(
-            str(refusal.exception), "the command printf 'oak cannot be split into an argv: No closing quotation"
-        )
-        self.assertEqual(self.processes.list_argvs(), [STATUS_ARGV])
