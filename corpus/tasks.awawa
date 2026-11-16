@@ -15950,7 +15950,7 @@ TASK B231
 		+ "outcome in the reason, and a re-queue resumes the run on its progress file"
 	STATUS draft
 	TYPE fix
-	MILESTONE @MILESTONE.M6
+	MILESTONE @MILESTONE.ADD0
 	COMPONENT "tick"
 	ROLE ada
 	SPEC "the snapshot reads the outcome of the last run of a running task from the last"
@@ -16033,6 +16033,8 @@ TASK B231
 		+ "écris en tâches draft ? »: « oui pour les trois »; the defect of the reason is this"
 		+ "task's, written on 2026-11-01, and its second occurrence is recorded here rather than in"
 		+ "a task of its own"
+	SOURCE "the user's ruling of 2026-11-16, on the offer to move this draft out of the reached"
+		+ "@MILESTONE.M6 or archive it: « B231, on le met dans ADD0 ok »"
 
 TASK B232
 	TITLE "A task runs on <prefix>/<id>-<slug>, cut from the integration branch of its milestone"
