@@ -11,6 +11,7 @@ from brigade.collecting.collector_environment import CollectorInputs
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.collecting.read_stale_branches import read_stale_branches
 from brigade.command import Argument, Command, ExclusiveArguments
+from brigade.commands._equip_collector import equip_collector
 from brigade.commands._equip_preflight import equip_preflight
 from brigade.commands._equip_registered_collector import equip_registered_collector
 from brigade.commands._launch_branch_rebase import launch_branch_rebase
@@ -45,6 +46,7 @@ from brigade.ledger.tick_action_failed import TickActionFailed
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
+from brigade.preflights.run_preflight import BUILT_IN_PREFLIGHTS, PreflightOutcome, PreflightRun, run_preflight
 from brigade.registry.find_project import find_project
 from brigade.registry.find_project_at import find_project_at
 from brigade.registry.is_on_a_forge import is_on_a_forge
@@ -150,6 +152,7 @@ from brigade.waves.locate_forge_branch import locate_forge_branch
 from brigade.waves.locate_project_main import locate_project_main
 from brigade.waves.pull_request_titles import PullRequestTitles
 from brigade.waves.rebase_milestone_branches import MilestoneBranchesRebase, rebase_milestone_branches
+from brigade.waves.start_preflighted_wave import PreflightedWaveStart, start_preflighted_wave
 from brigade.waves.start_project_wave import WaveStart, start_project_wave
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -169,6 +172,8 @@ RUNNING_STATE = "running"
 VERIFYING_STATE = "verifying"
 MERGED_STATE = "merged"
 PATH_FIELD = "PATH"
+WAVE_PREFLIGHT = "wave"
+NO_PREFLIGHT_PARAMETERS = {}
 NO_LOGIN = None
 NO_PULL_REQUEST_OFF_A_FORGE = None
 FAILED_VERDICT = "fail"
@@ -656,6 +661,19 @@ def _cache_forge_environment(runtime: Runtime, configuration: Configuration, for
     return functools.cache(lambda key: read_forge_environment(configuration, ForgeSlot(forge_name, key), runtime))
 
 
+def _preflight_wave(runtime: Runtime, project: Entity) -> PreflightOutcome:
+    path = Path(read_project_field(project, PATH_FIELD))
+    run = PreflightRun(
+        name=WAVE_PREFLIGHT,
+        project=path,
+        parameters=NO_PREFLIGHT_PARAMETERS,
+        equipment=equip_collector(path, runtime),
+        preflights=BUILT_IN_PREFLIGHTS,
+        plugins=equip_preflight(runtime),
+    )
+    return run_preflight(run, runtime)
+
+
 def _start_wave(runtime: Runtime, configuration: Configuration, action: StartWave) -> None:
     forge_name = _read_forge_of(runtime, action.project)
     start = WaveStart(
@@ -665,7 +683,14 @@ def _start_wave(runtime: Runtime, configuration: Configuration, action: StartWav
         read_environment=_cache_forge_environment(runtime, configuration, forge_name),
         read_login=functools.cache(lambda: read_cli_login(configuration, forge_name, runtime)),
     )
-    start_project_wave(runtime, start, action.milestone)
+    project = find_project(read_projects(runtime), action.project)
+    start_preflighted_wave(
+        runtime,
+        PreflightedWaveStart(
+            preflight=lambda: _preflight_wave(runtime, project),
+            start=lambda: start_project_wave(runtime, start, action.milestone),
+        ),
+    )
 
 
 def _hold_milestone_rebase(

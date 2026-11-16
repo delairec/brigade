@@ -56,6 +56,8 @@ class ListCollectorsTest(unittest.TestCase):
                 {"name": "corpus", "source": "built-in"},
                 {"name": "corpus-fmt", "source": "built-in"},
                 {"name": "corpus-lint", "source": "built-in"},
+                {"name": "draft", "source": "built-in"},
+                {"name": "forge-logins", "source": "built-in"},
                 {"name": "git-diff-stat", "source": "built-in"},
                 {"name": "git-log", "source": "built-in"},
                 {"name": "inbox-families", "source": "built-in"},

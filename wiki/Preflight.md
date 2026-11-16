@@ -58,3 +58,14 @@ It reads the pull request a task opened as the login of `forge_accounts.cli`, an
 branch.
 
 </details>
+
+## Built-in preflights
+
+| Preflight | Collectors | Checks | What it reports |
+|---|---|---|---|
+| `verify-pull-request` | `pull-request` | `ancestry`, `check_runs`, `corpus_at_head`, `promotion`, `untouched_files`, `privacy`, `body` | the deterministic checks of the pull request of a task, before any judgment |
+| `refinement` | `draft`, `forge-logins` | `moved_citations`, `tasks_outside_after`, `overlapping_deliverables`, `forge_logins` | on a draft task, `brigade preflight refinement task=<id>`: each `file:line` citation whose lines moved since the commit of its `SOURCE`, with where they stand now; the draft and todo tasks touching a file of its `TITLE` or `SPEC` that its `AFTER` does not name; the draft and todo tasks whose `TITLE` and `SPEC` cite a file or an entity its own cite; and the forge logins |
+| `wave` | `forge-logins` | `forge_logins` | each login of `[forge_accounts]` of `config.toml` gh prints no token for; the tick runs it before it starts a wave, and a failure pauses the wave on `forge_account` before any run, until `brigade wave resume` |
+
+A check of `refinement` fails as soon as it reports a fact: the facts are for the refinement to weigh, the preflight
+judges none of them.

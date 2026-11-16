@@ -2,6 +2,7 @@ import os
 
 from brigade.adapters.documents import markdown
 from tests.unit.commands.create_plugin_resolver import ScriptedClient, create_plugin_resolver
+from tests.unit.create_preflight_plugins import resolve_preflight_kinds_or
 from tests.unit.plugin_double import PluginDouble
 from tests.unit.spawned_process_double import SpawnedProcessDouble
 
@@ -18,12 +19,14 @@ CLIENT_AND_DOCUMENT_CONFIGURATION = 'client = "double"\ndocument = "markdown"\n'
 
 
 def create_plugin_resolution(probe: dict, forge=None):
-    return create_plugin_resolver(
-        {
-            ("client", "double"): ScriptedClient({"probe": probe}),
-            ("document", "markdown"): markdown,
-            ("forge", "github"): forge or PluginDouble(kind="forge", name="github"),
-        }
+    return resolve_preflight_kinds_or(
+        create_plugin_resolver(
+            {
+                ("client", "double"): ScriptedClient({"probe": probe}),
+                ("document", "markdown"): markdown,
+                ("forge", "github"): forge or PluginDouble(kind="forge", name="github"),
+            }
+        )
     )
 
 
