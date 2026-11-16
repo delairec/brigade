@@ -38,6 +38,7 @@ HOME = {
     },
     "last_tick": None,
     "studies": [{"name": "triage", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True}],
+    "orders": [],
 }
 
 
@@ -65,7 +66,8 @@ class RenderHomeTest(unittest.TestCase):
             "<dt>cache_creation_input_tokens</dt><dd>30</dd><dt>cache_read_input_tokens</dt><dd>40</dd>"
             "</dl><ul><li>oak_w2 paused on quota until 2026-10-19T10:00:00Z</li></ul></section>"
             "<section><h2>Last tick</h2><p>never</p></section>"
-            "<section><h2>Studies</h2><ul><li>triage, due</li></ul></section>",
+            "<section><h2>Studies</h2><ul><li>triage, due</li></ul></section>"
+            "<section><h2>Orders</h2><ul></ul></section>",
         )
 
     def test_should_render_the_last_tick_and_a_parked_study(self):
@@ -84,6 +86,32 @@ class RenderHomeTest(unittest.TestCase):
         # Assert
         self.assertIn("<section><h2>Last tick</h2><p>2026-10-19T08:55:00Z, 2 actions applied in 120 ms</p>", fragment)
         self.assertIn("<section><h2>Studies</h2><ul><li>debt, parked</li></ul></section>", fragment)
+
+    def test_should_render_a_parked_order_with_the_step_and_the_reason_that_parked_it(self):
+        # Arrange
+        home = {
+            **HOME,
+            "orders": [
+                {
+                    "name": "nightly",
+                    "recipe": "usage-report",
+                    "project": "oak",
+                    "run": "20261019T081500Z-n1",
+                    "step": "1-gate",
+                    "reason": "the gate <step> failed",
+                }
+            ],
+        }
+
+        # Act
+        fragment = render_home(home)
+
+        # Assert
+        self.assertIn(
+            "<section><h2>Orders</h2><ul><li>nightly of oak, parked at 1-gate: the gate &lt;step&gt; failed</li></ul>"
+            "</section>",
+            fragment,
+        )
 
     def test_should_render_each_scan_holding_new_signals_with_their_count_and_the_age_of_the_oldest(self):
         # Arrange

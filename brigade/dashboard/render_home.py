@@ -72,6 +72,13 @@ def _render_study(study: dict) -> str:
     return f"{escape(study['name'])}, {DUE if study['due'] else escape(str(study['outcome']))}"
 
 
+def _render_order(order: dict) -> str:
+    return (
+        f"{escape(order['name'])} of {escape(str(order['project']))},"
+        f" parked at {escape(order['step'])}: {escape(order['reason'])}"
+    )
+
+
 def render_home(document: dict) -> str:
     return "".join(
         [
@@ -81,5 +88,6 @@ def render_home(document: dict) -> str:
             _render_section("Quota", _render_quota(document["quota"])),
             _render_section("Last tick", _render_last_tick(document["last_tick"])),
             _render_section("Studies", _render_list([_render_study(study) for study in document["studies"]])),
+            _render_section("Orders", _render_list([_render_order(order) for order in document["orders"]])),
         ]
     )
