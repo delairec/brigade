@@ -46,6 +46,7 @@ from brigade.ledger.tick_action_failed import TickActionFailed
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
+from brigade.preflights.read_preflight_file import read_preflight_file
 from brigade.preflights.run_preflight import BUILT_IN_PREFLIGHTS, PreflightOutcome, PreflightRun, run_preflight
 from brigade.registry.find_project import find_project
 from brigade.registry.find_project_at import find_project_at
@@ -668,7 +669,7 @@ def _preflight_wave(runtime: Runtime, project: Entity) -> PreflightOutcome:
         project=path,
         parameters=NO_PREFLIGHT_PARAMETERS,
         equipment=equip_collector(path, runtime),
-        preflights=BUILT_IN_PREFLIGHTS,
+        preflights=(functools.partial(read_preflight_file, BUILT_IN_PREFLIGHTS),),
         plugins=equip_preflight(runtime),
     )
     return run_preflight(run, runtime)
