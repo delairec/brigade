@@ -9,11 +9,15 @@ from brigade.runtime import Runtime
 DOCUMENT_SCHEMA_VERSION = 1
 DOCUMENT_KIND = "document"
 OPERATIONAL_CORPUS_DOCUMENT = "awawa"
+PATTERN_FIELD = "PATTERN"
 
 
 def _render_text(document: dict) -> str:
     report = document["report"]
-    return render_report_markdown({"type": report["type"], "name": report["id"], "fields": report["fields"]})
+    pattern_fields = [] if report["pattern"] is None else [{"name": PATTERN_FIELD, "value": report["pattern"]}]
+    return render_report_markdown(
+        {"type": report["type"], "name": report["id"], "fields": [*pattern_fields, *report["fields"]]}
+    )
 
 
 def reports_show(request: argparse.Namespace, runtime: Runtime) -> dict:
