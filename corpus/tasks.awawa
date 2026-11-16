@@ -4748,7 +4748,8 @@ TASK B51
 
 TASK B52
 	TITLE "Example recipe pr-usage-report, proven end to end in tests/cli with the fake client"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 424
 	TYPE feat
 	MILESTONE @MILESTONE.M8
 	COMPONENT "recipes"
