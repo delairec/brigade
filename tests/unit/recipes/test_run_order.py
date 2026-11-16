@@ -62,9 +62,7 @@ class RunOrderTest(unittest.TestCase):
         self.steps_directory = self.run_directory / "steps"
 
     def create_run(self, recipe: dict) -> OrderRun:
-        return OrderRun(
-            order="nightly", project="shop", recipe=recipe, run_id=RUN_ID, run_directory=self.run_directory
-        )
+        return OrderRun(order="nightly", project="shop", recipe=recipe, run_id=RUN_ID, run_directory=self.run_directory)
 
     def test_should_run_an_order_to_its_output(self):
         # Arrange
