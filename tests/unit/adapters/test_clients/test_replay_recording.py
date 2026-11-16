@@ -1,8 +1,13 @@
+import contextlib
 import io
+import runpy
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
+from brigade.adapters.test_clients import replay_recording as replay_recording_module
 from brigade.adapters.test_clients.replay_recording import ReplayClock, replay_recording
 
 NO_HOLD = ""
@@ -98,3 +103,32 @@ class ReplayRecordingTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(clock.sleeps, [0.1, 0.1, 0.0, 0.0])
+
+
+class ReplayRecordingAsAProgramTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.recording = self.root / "builder.json"
+        self.recording.write_text('{"type": "assistant"}\n{"outcome": "done"}\n')
+
+    def test_should_replay_the_recording_its_command_line_names(self):
+        # Arrange
+        command_line = [
+            "replay_recording",
+            NO_HOLD,
+            NO_PROGRESS,
+            str(self.root / "progress.md"),
+            str(self.recording),
+            NO_INTERVAL,
+            NO_SOFT_LIMIT,
+        ]
+        output = io.StringIO()
+
+        # Act
+        with mock.patch.object(sys, "argv", command_line), contextlib.redirect_stdout(output):
+            runpy.run_path(replay_recording_module.__file__, run_name="__main__")
+
+        # Assert
+        self.assertEqual(output.getvalue(), '{"type": "assistant"}\n{"outcome": "done"}\n')

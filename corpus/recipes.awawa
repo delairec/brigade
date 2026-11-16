@@ -17,12 +17,16 @@ RECIPE acceptance
 		ARGV "."
 	STEP command
 		ARGV "uvx"
-		ARGV "ruff@0.17.2"
+		ARGV "--from"
+		ARGV "ruff==0.17.2"
+		ARGV "ruff"
 		ARGV "check"
 		ARGV "."
 	STEP command
 		ARGV "uvx"
-		ARGV "ruff@0.17.2"
+		ARGV "--from"
+		ARGV "ruff==0.17.2"
+		ARGV "ruff"
 		ARGV "format"
 		ARGV "--check"
 		ARGV "."
