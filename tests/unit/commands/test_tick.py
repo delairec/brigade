@@ -780,9 +780,11 @@ class SpawnReadingTheLedgerDouble:
 class SpawnRecorderDouble:
     def __init__(self):
         self.argvs = []
+        self.cwds = []
 
     def spawn(self, request):
         self.argvs.append(request.argv[2:])
+        self.cwds.append(request.cwd)
         return SpawnedProcessDouble(pid=os.getpid())
 
 
@@ -4669,6 +4671,7 @@ class TickLaunchingAStudyTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(spawn.argvs, [("order", "run", "hourly", "--run-id", ANY)])
+        self.assertEqual(spawn.cwds, [str(root / "config")])
         run_id = spawn.argvs[0][4]
         self.assertEqual(
             read_ledger(root / "state").entries,
