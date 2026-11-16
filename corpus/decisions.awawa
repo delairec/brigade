@@ -7271,7 +7271,7 @@ DECISION APreflightHandsItsChecksTheDocumentsOfItsCollectors
 		+ "package imports a plugin"
 	REJECTED "check names hyphenated as collector names are: SPEC 3 of the task B98 names"
 		+ "check_runs, corpus_at_head and untouched_files"
-	SOURCE "taken by the run delivering @TASK.B98 on 2026-11-16, its SPEC leaving the subject of a"
-		+ "check, the source of the facts of a pull request and the names of the built-in checks"
-		+ "open"
+	SOURCE "pull request #417 of the brigade repository, delivering @TASK.B98, whose SPEC leaves"
+		+ "the subject of a check, the source of the facts of a pull request and the names of the"
+		+ "built-in checks open"
 		REF @TASK.B98
