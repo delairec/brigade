@@ -2,9 +2,9 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
 
 from brigade.errors import BrigadeError
+from brigade.runtime import Runtime
 from brigade.system.check_places import CheckPlaces
 from brigade.system.resolve_check import BuiltInCheck, ExecutableCheck, resolve_check
 from tests.unit.create_test_runtime import create_test_runtime
@@ -62,9 +62,10 @@ class ExecutableCheckTest(unittest.TestCase):
         check.judge(SUBJECT, create_test_runtime(run_process=runner))
 
         # Assert
+        self.assertEqual(runner.requests[0].cwd, "/srv/shop")
         self.assertEqual(
-            (runner.requests[0].cwd, json.loads(runner.requests[0].stdin)),
-            ("/srv/shop", {"schema_version": 1, "project": "/srv/shop", "parameters": {"pr": "42"}, "collected": {}}),
+            json.loads(runner.requests[0].stdin),
+            {"schema_version": 1, "project": "/srv/shop", "parameters": {"pr": "42"}, "collected": {}},
         )
 
     def test_should_refuse_an_answer_that_is_not_a_check_document_naming_the_check(self):
@@ -89,15 +90,20 @@ class ExecutableCheckTest(unittest.TestCase):
                 self.assertEqual(str(refusal.exception), expected_refusal)
 
 
-def answer_without_findings(subject: dict, runtime) -> dict:
-    return {"schema_version": 1, "name": "ancestry", "verdict": "pass"}
+class BuiltInAnsweringWithoutFindingsDouble:
+    def check(self, subject: dict, runtime: Runtime) -> dict:
+        return {"schema_version": 1, "name": "ancestry", "verdict": "pass"}
 
 
 class BuiltInCheckTest(unittest.TestCase):
     def test_should_refuse_an_answer_of_a_built_in_that_is_not_a_check_document(self):
         # Arrange
-        module = SimpleNamespace(check=answer_without_findings)
-        check = BuiltInCheck(name="ancestry", source="built-in", command="brigade.checks.ancestry", module=module)
+        check = BuiltInCheck(
+            name="ancestry",
+            source="built-in",
+            command="brigade.checks.ancestry",
+            module=BuiltInAnsweringWithoutFindingsDouble(),
+        )
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:

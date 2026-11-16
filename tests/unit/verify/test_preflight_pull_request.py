@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.corpus.read_entities import Entity, EntityField
 from brigade.errors import BrigadeError
 from brigade.system.parse_configuration import Configuration
@@ -12,6 +13,8 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 from tests.unit.registry_answers import create_registry_answers
+
+NO_CLIENT_RESOLVER = None
 
 HEAD = "2222222"
 WAVE_HEAD = "1111111"
@@ -75,9 +78,12 @@ class PreflightPullRequestOfAnAreaTest(unittest.TestCase):
             task="B1",
             base_branch="integration/w1",
             pr=160,
-            forge=ForgeDescribingThePullRequestDouble(),
-            environment={"GH_TOKEN": "token-of-octo-builder"},
-            configuration=Configuration(),
+            equipment=CollectorEquipment(
+                configuration=Configuration(),
+                forge=ForgeDescribingThePullRequestDouble(),
+                forge_name="github",
+                resolve_client=NO_CLIENT_RESOLVER,
+            ),
         )
         return preflight_pull_request(
             create_test_runtime(self.paths, run_process=RecordingProcessRunner(answers)), demand
@@ -159,9 +165,12 @@ class PreflightPullRequestTest(unittest.TestCase):
             task="B1",
             base_branch="integration/w1",
             pr=160,
-            forge=ForgeDescribingThePullRequestDouble(),
-            environment={"GH_TOKEN": "token-of-octo-builder"},
-            configuration=Configuration(),
+            equipment=CollectorEquipment(
+                configuration=Configuration(),
+                forge=ForgeDescribingThePullRequestDouble(),
+                forge_name="github",
+                resolve_client=NO_CLIENT_RESOLVER,
+            ),
         )
 
         # Act
@@ -203,9 +212,12 @@ class PreflightPullRequestTest(unittest.TestCase):
             task="B1",
             base_branch="integration/w1",
             pr=160,
-            forge=ForgeAnsweringOutOfShapeDouble(),
-            environment={"GH_TOKEN": "token-of-octo-builder"},
-            configuration=Configuration(),
+            equipment=CollectorEquipment(
+                configuration=Configuration(),
+                forge=ForgeAnsweringOutOfShapeDouble(),
+                forge_name="gitlab",
+                resolve_client=NO_CLIENT_RESOLVER,
+            ),
         )
 
         # Act
