@@ -46,6 +46,8 @@ Every command of brigade, what it does in one line, and the page that documents 
 | `brigade recipe lint <name>` | check a recipe against its schema, its names and its params; refuse a client or model key and a command running the client's binary | [Concepts](Concepts.md) |
 | `brigade order new <recipe> [--project] [--every] [key=value...] [text]` | record an ORDER of the recipe, named after the recipe and the instant, and run it once unless `--every` gives it a schedule; `key=value` is a param the recipe declares, any other word the text, one at most | [Concepts](Concepts.md) |
 | `brigade order run <order>` | run the steps of the recipe of an order, each result a file under `runs/<id>/steps/`; a parked order resumes at its first undone step | [Concepts](Concepts.md) |
+| `brigade order context <run>` | print the documents of a run of an order and the schema of the answer its judge step writes | [Concepts](Concepts.md) |
+| `brigade order answer <run> --file <file>` | validate the answer of the judge step of a run of an order against the schema it names and record it | [Concepts](Concepts.md) |
 | `brigade order list` | list every order with its recipe, its project, its schedule and its status | [Concepts](Concepts.md) |
 | `brigade order show <order>` | print one order with each of its runs and their outcome | [Concepts](Concepts.md) |
 | `brigade order pause <order>` | set an order paused: the tick no longer runs it | [Concepts](Concepts.md) |
