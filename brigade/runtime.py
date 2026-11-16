@@ -1,4 +1,5 @@
 import functools
+import os
 import sys
 import time
 from collections.abc import Callable, Mapping
@@ -31,6 +32,7 @@ class Invocation:
 class Runtime:
     run_process: Callable[[ProcessRequest], ProcessRecord]
     spawn_process: Callable[[SpawnRequest], object]
+    signal_process: Callable[[int, int], None]
     paths: Paths
     now: datetime
     read_clock: Callable[[], datetime]
@@ -66,6 +68,7 @@ def build_runtime(invocation: Invocation, environment: Mapping[str, str]) -> Run
     return Runtime(
         run_process=run_recorded_process,
         spawn_process=functools.partial(spawn_process, record_trace=trail.append, environment=environment),
+        signal_process=os.kill,
         paths=paths,
         now=datetime.now(UTC),
         read_clock=functools.partial(datetime.now, UTC),
