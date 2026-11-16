@@ -41,6 +41,9 @@ Every command of brigade, what it does in one line, and the page that documents 
 | `brigade preflight <name>` | run the collectors and the checks of a named preflight; `key=value` pairs are their parameters | [Preflight](Preflight.md) |
 | `brigade preflight add <name> <step>` | add a collector or a check, `key=value` pairs its parameters, to a custom preflight of the project, committing nothing | [Preflight](Preflight.md) |
 | `brigade check list` | list every check found, its name and its source | [Preflight](Preflight.md) |
+| `brigade recipe list` | list every recipe found, its name and its source — project, machine, built-in, `wave` native — in the order they resolve | [Concepts](Concepts.md) |
+| `brigade recipe show <name>` | print the recipe named, as it resolves, and its source | [Concepts](Concepts.md) |
+| `brigade recipe lint <name>` | check a recipe against its schema, its names and its params; refuse a client or model key and a command running the client's binary | [Concepts](Concepts.md) |
 
 ## Observing
 
