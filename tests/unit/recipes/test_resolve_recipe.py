@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from brigade.errors import BrigadeError
-from brigade.recipes.list_recipes import RecipeFound
+from brigade.recipes.recipe_found import RecipeFound
 from brigade.recipes.recipe_places import RecipePlaces
 from brigade.recipes.resolve_recipe import resolve_recipe
 from tests.unit.recipes.recipe_files import write_recipe
