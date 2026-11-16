@@ -31,6 +31,8 @@ from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
+from brigade.orders.is_order_due import OrderFacts
+from brigade.orders.live_order_run import LiveOrderRun
 from brigade.runs.record_run_pid import record_run_pid
 from brigade.system.parse_configuration import Configuration, parse_configuration
 from brigade.system.pull_request_facts import PullRequestFacts
@@ -260,6 +262,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
                 ("git", "worktree", "list", "--porcelain", "-z"): ProcessAnswer(
                     stdout=f"worktree {self.repository}\0HEAD {MAIN_SHA}\0branch refs/heads/main\0\0"
                 ),
+                **AWAWA_ANSWERS.answer_entities(config_root, "ORDER", {}),
                 **self.remote_answers,
             }
         )
@@ -3033,3 +3036,76 @@ class BuildSnapshotOfTheDelayOfAStallTest(BuildSnapshotTestCase):
 
         # Assert
         self.assertEqual(snapshot.stall_after, 90)
+
+
+class BuildSnapshotOfTheOrdersTest(BuildSnapshotTestCase):
+    def test_should_carry_the_orders_by_their_last_run_and_their_live_runs(self):
+        # Arrange
+        self.write_operational_corpus()
+        self.record(30, OrderStarted(project="shop", kind="usage-report", order="nightly", run=FIRST_RUN))
+        self.record(
+            25,
+            OrderParked(
+                project="shop", kind="usage-report", order="nightly", run=FIRST_RUN, step="1-gate", reason="red"
+            ),
+        )
+        self.record(10, OrderStarted(project="shop", kind="usage-report", order="hourly", run=SECOND_RUN))
+        live_run = self.paths.state_root / "runs" / SECOND_RUN
+        live_run.mkdir(parents=True)
+        (live_run / "order.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "order": {"name": "hourly", "project": "shop"},
+                    "recipe": {"name": "usage-report", "max_wall": 30, "steps": []},
+                }
+            ),
+            encoding="utf-8",
+        )
+        os.utime(live_run / "order.json", ((FIXED_NOW - timedelta(minutes=10)).timestamp(),) * 2)
+        record_run_pid(live_run, os.getpid())
+        order_fields = [
+            {"name": "RECIPE", "atoms": ['"usage-report"']},
+            {"name": "PROJECT", "atoms": ['"@PROJECT.shop"']},
+            {"name": "EVERY", "atoms": ['"1h"']},
+            {"name": "STATUS", "atoms": ['"active"']},
+        ]
+        self.remote_answers = AWAWA_ANSWERS.answer_entities(
+            self.paths.config_root, "ORDER", {"hourly": order_fields, "nightly": order_fields}
+        )
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.orders,
+            (
+                OrderFacts(
+                    name="hourly",
+                    every="1h",
+                    status="active",
+                    last_started=FIXED_NOW - timedelta(minutes=10),
+                    parked=False,
+                ),
+                OrderFacts(
+                    name="nightly",
+                    every="1h",
+                    status="active",
+                    last_started=FIXED_NOW - timedelta(minutes=30),
+                    parked=True,
+                ),
+            ),
+        )
+        self.assertEqual(
+            snapshot.live_order_runs,
+            (
+                LiveOrderRun(
+                    order="hourly",
+                    recipe="usage-report",
+                    run=SECOND_RUN,
+                    started=FIXED_NOW - timedelta(minutes=10),
+                    max_wall=30,
+                ),
+            ),
+        )
