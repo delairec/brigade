@@ -12264,7 +12264,8 @@ TASK B162
 TASK B163
 	TITLE "No command of brigade in a shell line: the crontab line and the hook of the Claude Code"
 		+ "adapter one argv each, and the commands of a project as argv steps of a recipe"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 430
 	TYPE feat
 	MILESTONE @MILESTONE.M8
 	COMPONENT "audit"
