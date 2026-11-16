@@ -7351,3 +7351,50 @@ DECISION APreflightHandsItsChecksTheDocumentsOfItsCollectors
 		+ "the subject of a check, the source of the facts of a pull request and the names of the"
 		+ "built-in checks open"
 		REF @TASK.B98
+
+DECISION TheRefinementPreflightReportsTheFactsOfADraftAndJudgesNone
+	TITLE "each check of the built-in preflight refinement fails as soon as it reports a fact; the"
+		+ "files and the entities of a task are read from its TITLE and its SPEC, the citations of"
+		+ "the draft from every field, at the most recent commit of its SOURCE lines"
+	STATUS active
+	DESC "a check of the preflight refinement fails as soon as it reports one fact: the facts are"
+		+ "the refinement's to weigh, and the preflight judges none of them"
+	DESC "the files and the entities a task touches are those its TITLE and its SPEC lines cite;"
+		+ "the file:line citations whose lines moved are read from every field of the draft, its"
+		+ "RATIONALE and its SOURCE included"
+	DESC "the commit a citation is compared at is the most recent commit git blame names, at HEAD,"
+		+ "for the SOURCE lines of the draft; a draft holding no SOURCE is refused"
+	DESC "the tasks compared with the draft are the live ones, neither implemented nor archived"
+	DESC "binds @TASK.B253"
+		REF @TASK.B253
+	REJECTED "a check passing with its facts as warnings: a check answers pass or fail, and a fact"
+		+ "behind a pass would not reach the refinement"
+	REJECTED "the files and the entities read from every field: a RATIONALE cites the code a task"
+		+ "was reasoned from, and two tasks would overlap on files neither delivers"
+	REJECTED "the citations compared at the commit that wrote the task: a SOURCE reworded at a"
+		+ "later ruling dates the citations the ruling rests on"
+	REJECTED "the implemented tasks compared too: a delivered task needs no AFTER and shares no"
+		+ "deliverable still to come"
+	SOURCE "taken by the run delivering @TASK.B253 on 2026-11-16, whose SPEC leaves open when a"
+		+ "check fails, the fields the files, entities and citations are read from, and the commit"
+		+ "of the SOURCE"
+		REF @TASK.B253
+
+DECISION AFailedPreflightWavePausesTheWaveOnTheForgeAccount
+	TITLE "a wave whose built-in preflight wave fails is paused with the reason forge_account"
+		+ "before any run, until brigade wave resume"
+	STATUS active
+	DESC "the tick runs the preflight wave before it starts a wave; when it fails, the wave is"
+		+ "started then paused at once, the ledger event wave.paused carrying the reason"
+		+ "forge_account and no resume_at, and stderr names each finding"
+	DESC "binds @TASK.B253"
+		REF @TASK.B253
+	REJECTED "a new pause reason for a failed preflight: the preflight wave checks the forge logins"
+		+ "alone, and a login failing in the course of a run already pauses the wave on"
+		+ "forge_account"
+	REJECTED "the wave left unstarted while its preflight fails: the user ruled a broken login"
+		+ "parking the wave, and wave resume, which the user runs once the login is repaired, takes"
+		+ "a wave the ledger holds"
+	SOURCE "taken by the run delivering @TASK.B253 on 2026-11-16, whose SPEC asks a failed login to"
+		+ "pause the wave before any run and leaves the reason open"
+		REF @TASK.B253
