@@ -7707,3 +7707,30 @@ DECISION TheCrontabLineCallsEnvAndTheTickWritesItsOwnLogFile
 		+ "past the parse and the stderr of a subprocess would be lost where the line kept them"
 	SOURCE "the pull request of @TASK.B163"
 		REF @TASK.B163
+
+DECISION TheCommandsOfAProjectAreItsRecipesSetupAcceptanceAndHeavyRunOutsideAnOrder
+	TITLE "a project declares its commands as recipes of its own named setup, acceptance and heavy,"
+		+ "each of command steps, whose argvs brigade runs outside any order"
+	STATUS active
+	DESC "the recipes setup, acceptance and heavy are a RECIPE entity of the project's corpus or a"
+		+ "TOML file of its .brigade/recipes/, where"
+		+ "@DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder places a recipe of a project; they"
+		+ "resolve among the project's recipes alone, never among the machine's nor the built-in"
+		+ "ones, and a project without one of them has no command of it"
+		REF @DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder
+	DESC "they are read from the worktree checked or set up, so a branch that changes one of them"
+		+ "is checked under it"
+	DESC "the argv of each command step runs through the runner as the command step of the engine"
+		+ "runs it, outside any order: no ORDER entity, no run directory and no order event in the"
+		+ "ledger"
+	DESC "each step of acceptance runs whatever the others returned and each of setup stops the"
+		+ "setup at its failure, as @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell rules for the"
+		+ "lines they replace; a step of heavy is never run, and is printed as its argv joined"
+		REF @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell
+	REJECTED "a check run as an order of the engine: an order is one instance of a kind of work,"
+		+ "recorded in the corpus and the ledger and parked at its first failed command, while a"
+		+ "check reports the verdict of every command and records nothing"
+	REJECTED "a step kind or a key of its own for the commands of a project: the command step"
+		+ "already holds an argv"
+	SOURCE "the pull request of @TASK.B163"
+		REF @TASK.B163

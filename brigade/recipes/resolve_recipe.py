@@ -1,7 +1,8 @@
 from collections.abc import Callable
 
 from brigade.errors import BrigadeError
-from brigade.recipes.list_recipes import RecipeFound, list_recipes
+from brigade.recipes.list_recipes import list_recipes
+from brigade.recipes.recipe_found import RecipeFound
 from brigade.recipes.recipe_places import RecipePlaces
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
