@@ -3,6 +3,7 @@ import contextlib
 import functools
 import json
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -14,6 +15,8 @@ from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.step_done import StepDone
+from brigade.orders.convert_order import Order
+from brigade.orders.start_order_run import start_order_run
 from brigade.system.resolve_plugin import resolve_plugin
 from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
@@ -110,6 +113,16 @@ def create_order_answer(recipe: str) -> ProcessAnswer:
 
 
 NEW_RUN = PatternMatcher("20261019T090000Z-[0-9a-f]{6}")
+NIGHTLY_ORDER = Order(
+    name="nightly",
+    recipe="usage-report",
+    project="shop",
+    text=None,
+    params=("pull_request=12",),
+    every=None,
+    output=None,
+    status="active",
+)
 
 
 class OrderRunTest(unittest.TestCase):
@@ -166,11 +179,7 @@ class OrderRunTest(unittest.TestCase):
 
     def test_should_run_the_run_the_tick_started_without_starting_another(self):
         # Arrange
-        append_event(
-            self.paths,
-            FIXED_NOW,
-            OrderStarted(project="shop", kind="usage-report", order="nightly", run="20261019T085500Z-cccccc"),
-        )
+        start_order_run(self.runtime, NIGHTLY_ORDER, tomllib.loads(USAGE_REPORT), "20261019T085500Z-cccccc")
 
         # Act
         document = order_run(argparse.Namespace(name="nightly", run_id="20261019T085500Z-cccccc"), self.runtime)
@@ -226,11 +235,8 @@ class OrderRunTest(unittest.TestCase):
             ),
         )
 
-    def test_should_resume_a_parked_order_at_its_first_undone_step(self):
-        # Arrange
-        append_event(
-            self.paths, FIXED_NOW, OrderStarted(project="shop", kind="usage-report", order="nightly", run=PARKED_RUN)
-        )
+    def _park_after_its_first_step(self, recipe: dict) -> None:
+        start_order_run(self.runtime, NIGHTLY_ORDER, recipe, PARKED_RUN)
         append_event(self.paths, FIXED_NOW, StepDone(kind="usage-report", run=PARKED_RUN, step="1-command"))
         append_event(
             self.paths,
@@ -243,12 +249,28 @@ class OrderRunTest(unittest.TestCase):
         steps.mkdir(parents=True)
         (steps / "1-command.json").write_text("{}", encoding="utf-8")
 
+    def test_should_resume_a_parked_order_at_its_first_undone_step(self):
+        # Arrange
+        self._park_after_its_first_step(tomllib.loads(USAGE_REPORT))
+
         # Act
         document = order_run(argparse.Namespace(name="nightly", run_id=None), self.runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "order": "nightly", "run": PARKED_RUN, "state": "done"})
         self.assertEqual(select_argvs_run_in(self.runner.requests, str(self.shop)), [("make", "report", "shop")])
+
+    def test_should_resume_a_parked_order_with_the_recipe_its_run_recorded(self):
+        # Arrange
+        recorded = tomllib.loads(USAGE_REPORT)
+        recorded["steps"][1]["argv"] = ["make", "summary", "{project}"]
+        self._park_after_its_first_step(recorded)
+
+        # Act
+        order_run(argparse.Namespace(name="nightly", run_id=None), self.runtime)
+
+        # Assert
+        self.assertEqual(select_argvs_run_in(self.runner.requests, str(self.shop)), [("make", "summary", "shop")])
 
     def test_should_start_a_new_run_when_a_study_of_the_same_name_parked(self):
         # Arrange
