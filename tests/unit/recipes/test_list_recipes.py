@@ -24,6 +24,21 @@ def create_document(description: str) -> dict:
     }
 
 
+def create_machine_recipe(name: str) -> RecipeFound:
+    return RecipeFound(
+        name=name,
+        source="machine",
+        document={
+            "schema_version": 1,
+            "name": name,
+            "description": f"the machine's {name}",
+            "params": [],
+            "max_wall": 5,
+            "steps": [],
+        },
+    )
+
+
 class ListRecipesTest(unittest.TestCase):
     def setUp(self):
         root = tempfile.TemporaryDirectory()
@@ -72,8 +87,15 @@ class ListRecipesTest(unittest.TestCase):
         corpus = str(self.project)
         runner = RecordingProcessRunner(
             {
-                ("awawa", "status", "RECIPE", "--json", corpus): ProcessAnswer(
-                    stdout=json.dumps({"entities": [{"type": "RECIPE", "name": "review"}]})
+                ("awawa", "status", "--json", corpus): ProcessAnswer(
+                    stdout=json.dumps(
+                        {
+                            "entities": [
+                                {"type": "DECISION", "name": "RecipesAreReviewed"},
+                                {"type": "RECIPE", "name": "review"},
+                            ]
+                        }
+                    )
                 ),
                 ("awawa", "show", "@RECIPE.review", "--json", corpus): ProcessAnswer(
                     stdout=json.dumps(REVIEW_RECIPE_ENTITY)
@@ -88,3 +110,46 @@ class ListRecipesTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(recipes, (RecipeFound(name="review", source="project", document=REVIEW_RECIPE_DOCUMENT),))
+
+    def test_should_read_no_recipe_from_a_corpus_that_does_not_declare_the_recipe_entity(self):
+        # Arrange
+        corpus = str(self.project)
+        runner = RecordingProcessRunner(
+            {
+                ("awawa", "status", "--json", corpus): ProcessAnswer(
+                    stdout=json.dumps({"entities": [{"type": "DECISION", "name": "RecipesAreReviewed"}]})
+                ),
+                ("awawa", "status", "RECIPE", "--json", corpus): ProcessAnswer(
+                    exit_code=2, stderr="awawa status: `RECIPE` is not an entity type in this workspace\n"
+                ),
+            }
+        )
+        write_recipe(self.machine, "nightly", "the machine's nightly")
+        places = RecipePlaces(self.project, self.project / ".brigade" / "recipes", self.machine, self.built_ins)
+
+        # Act
+        recipes = list_recipes(places, runner)
+
+        # Assert
+        self.assertEqual(recipes, (create_machine_recipe("nightly"),))
+
+    def test_should_list_the_recipes_of_one_place_in_the_order_of_their_names(self):
+        # Arrange
+        for name in ("triage", "nightly", "review", "audit", "release"):
+            write_recipe(self.machine, name, f"the machine's {name}")
+        places = RecipePlaces(NO_CORPUS, self.project / ".brigade" / "recipes", self.machine, self.built_ins)
+
+        # Act
+        recipes = list_recipes(places, refuse_to_run)
+
+        # Assert
+        self.assertEqual(
+            recipes,
+            (
+                create_machine_recipe("audit"),
+                create_machine_recipe("nightly"),
+                create_machine_recipe("release"),
+                create_machine_recipe("review"),
+                create_machine_recipe("triage"),
+            ),
+        )

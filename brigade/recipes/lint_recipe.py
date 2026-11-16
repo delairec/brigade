@@ -12,8 +12,9 @@ OPS = ("worktree", "commit", "pull-request", "merge")
 ON_FAIL_KEY = "on_fail"
 PARK = "park"
 ON_FAIL = re.compile(r"park|skip|stop|retry:[1-9][0-9]*")
+PARAMETERS_KEY = "parameters"
 PARAMETERS = Field(kinds=(dict,), optional=True)
-STEP = Field(
+STEP_SHAPE = Field(
     kinds=(dict,),
     fields={"kind": Field(kinds=(str,), values=KINDS), ON_FAIL_KEY: Field(kinds=(str,), optional=True)},
 )
@@ -23,15 +24,15 @@ RECIPE_SHAPE = {
     "description": TEXT,
     "params": Field(kinds=(list,), items=TEXT),
     "max_wall": Field(kinds=(int,)),
-    "steps": Field(kinds=(list,), items=STEP),
+    "steps": Field(kinds=(list,), items=STEP_SHAPE),
 }
 STEP_SHAPES = {
-    "collect": {"collector": TEXT, "parameters": PARAMETERS},
+    "collect": {"collector": TEXT, PARAMETERS_KEY: PARAMETERS},
     "command": {"argv": Field(kinds=(list,), items=TEXT)},
     "gate": {"preflight": TEXT},
     "judge": {"slot": TEXT, "procedure": TEXT, "answer": TEXT},
     "output": {"output": TEXT},
-    "order": {"recipe": TEXT, "parameters": PARAMETERS},
+    "order": {"recipe": TEXT, PARAMETERS_KEY: PARAMETERS},
     "corpus": {"entity": TEXT},
     "op": {"op": Field(kinds=(str,), values=OPS)},
 }
@@ -39,6 +40,7 @@ FORBIDDEN_KEYS = ("client", "model")
 PROJECT_PLACEHOLDERS = ("project",)
 PLACEHOLDER = re.compile(r"\{([^{}]+)\}")
 JUDGE_KIND = "judge"
+VOWELS = tuple("aeiou")
 
 
 @dataclass(frozen=True)
@@ -51,8 +53,30 @@ class RecipeResolvers:
     client_binary: str | None
 
 
+def _name_step(kind: str) -> str:
+    article = "an" if kind.startswith(VOWELS) else "a"
+    return f"{article} {kind} step"
+
+
+def _check_keys(holder: dict, taken: tuple[str, ...], holder_name: str) -> None:
+    for key in holder:
+        if key not in (*taken, *FORBIDDEN_KEYS):
+            raise DocumentInvalid(f"holds the key {key}, which {holder_name} does not take")
+
+
+def _check_parameters(step: dict) -> None:
+    parameters = step.get(PARAMETERS_KEY, {})
+    try:
+        validate_document(parameters, dict.fromkeys(parameters, TEXT))
+    except DocumentInvalid as invalid:
+        raise DocumentInvalid(f"{PARAMETERS_KEY}.{invalid}") from None
+
+
 def _check_step(step: dict) -> None:
-    validate_document(step, STEP_SHAPES[step["kind"]])
+    shape = STEP_SHAPES[step["kind"]]
+    _check_keys(step, (*STEP_SHAPE.fields, *shape), _name_step(step["kind"]))
+    validate_document(step, shape)
+    _check_parameters(step)
     on_fail = step.get(ON_FAIL_KEY, PARK)
     if not ON_FAIL.fullmatch(on_fail):
         raise DocumentInvalid(f"on_fail is {on_fail!r}, not park, skip, stop or retry:N")
@@ -60,6 +84,7 @@ def _check_step(step: dict) -> None:
 
 def _check_schema(document: dict) -> None:
     validate_document(document, RECIPE_SHAPE)
+    _check_keys(document, tuple(RECIPE_SHAPE), "a recipe")
     for index, step in enumerate(document["steps"]):
         try:
             _check_step(step)

@@ -7,6 +7,5 @@ from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
 
 
-def locate_recipe_places(runtime: Runtime) -> RecipePlaces:
-    project = Path.cwd()
+def locate_recipe_places(project: Path, runtime: Runtime) -> RecipePlaces:
     return locate_recipes(project, find_project_at(read_projects(runtime), project), runtime.paths)
