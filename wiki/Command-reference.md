@@ -33,7 +33,7 @@ Every command of brigade, what it does in one line, and the page that documents 
 | `brigade rebase context\|done\|pr` | put the pull request of a task back on its base, or open the pull request repairing a red main branch | [Rebase on the base](Rebase-on-the-base.md) |
 | `brigade run start <procedure>` | run a procedure as a slot through the client adapter | [Runs](Runs.md) |
 | `brigade run list\|show\|stop\|prune\|stop-hook` | list the runs, show one, stop one and prune them; the hook a client calls past the soft limit of its run | [Runs](Runs.md) |
-| `brigade tick --once\|--dry-run\|--loop` | plan and apply what the facts call for, once or in a loop | [Tick and scheduler](Tick-and-scheduler.md) |
+| `brigade tick --once\|--dry-run\|--loop` | decide and apply what the facts call for, once or in a loop | [Tick and scheduler](Tick-and-scheduler.md) |
 | `brigade study new\|run\|context\|answer\|list\|show\|pause\|resume` | record the studies, run them, print their context and take their answers | [Studies](Studies.md) |
 | `brigade collector run <name>` | run a collector and print the summary and the path of its document; `key=value` pairs are its parameters | [Studies](Studies.md) |
 | `brigade collector list` | list every collector found, its name and its source | [Studies](Studies.md) |

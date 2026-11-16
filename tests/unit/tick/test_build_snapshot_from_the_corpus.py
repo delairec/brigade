@@ -54,7 +54,7 @@ from brigade.tick.build_snapshot import (
     WaveFacts,
     build_snapshot,
 )
-from brigade.tick.plan import plan
+from brigade.tick.decide import decide
 from brigade.tick.read_integration_branches import IntegrationBranchFacts
 from brigade.tick.read_leftovers import LeftoverFacts
 from brigade.waves.list_candidate_waves import CandidateWave
@@ -1678,7 +1678,7 @@ class PlanOfAnOpenWaveOfAMilestoneWhoseAfterIsNotReachedTest(BuildSnapshotTestCa
         snapshot, _ = self.build()
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertIn(
@@ -1805,7 +1805,7 @@ class PlanOfAWaveWaitingOnATaskImplementedOnTheForgeTest(BuildSnapshotTestCase):
         snapshot, _ = self.build()
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertIn(

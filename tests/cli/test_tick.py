@@ -157,7 +157,7 @@ class BrigadeTickDryRunTest(TickTestCase):
                     "leftovers": [],
                     "kept_branches": [],
                 },
-                "plan": [],
+                "decisions": [],
             },
         )
 
@@ -186,7 +186,7 @@ class BrigadeTickDryRunTest(TickTestCase):
                 "  integration_branches  []",
                 "  leftovers  []",
                 "  kept_branches  []",
-                "plan",
+                "decisions",
                 "  no action",
             ],
         )

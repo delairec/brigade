@@ -65,8 +65,8 @@ from brigade.tick.build_snapshot import (
     WaveFacts,
     WavePause,
 )
+from brigade.tick.decide import decide
 from brigade.tick.head_proof import ForgeCheck, HeadChecks
-from brigade.tick.plan import plan
 from brigade.tick.read_integration_branches import IntegrationBranchFacts
 from brigade.tick.read_leftovers import LeftoverFacts
 from brigade.waves.list_candidate_waves import CandidateWave
@@ -118,7 +118,7 @@ class PlanTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW)
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -141,7 +141,7 @@ class PlanStartableTasksTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "queued"}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertIn(
@@ -174,7 +174,7 @@ class PlanStartableTasksTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave(tasks, states, implemented),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -237,7 +237,7 @@ class PlanFollowedPullRequestsTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -254,7 +254,7 @@ class PlanFollowedPullRequestsTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -270,7 +270,7 @@ class PlanFollowedPullRequestsTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "merged"}),), projects=(holding,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (CLOSE_SHOP_W1,))
@@ -281,7 +281,7 @@ class PlanFollowedPullRequestsTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (RECORD_MERGED, REMOVE_WORKTREE_S3))
@@ -370,7 +370,7 @@ class PlanPreflightTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(project,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -444,7 +444,7 @@ class PlanPullRequestOpenedInAnotherWaveTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -502,7 +502,7 @@ class PlanVerificationTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -527,7 +527,7 @@ class PlanVerificationTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, (RECORD_PR_OPEN,))
@@ -562,7 +562,7 @@ class PlanVerificationTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(holding,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, ())
@@ -575,7 +575,7 @@ class PlanVerificationTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (RECORD_MERGED, REMOVE_WORKTREE_S3))
@@ -596,7 +596,7 @@ class PlanVerificationTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(holding,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (VERIFY_S3,))
@@ -660,7 +660,7 @@ class PlanMergeTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(project,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -674,7 +674,7 @@ class PlanMergeTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP_UNDER_APPROVAL,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(
@@ -696,7 +696,7 @@ class PlanMergeTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertNotIn(MERGE_S3, actions)
@@ -707,7 +707,7 @@ class PlanMergeTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (PARK_S3_ON_ANOTHER_BASE,))
@@ -719,7 +719,7 @@ class PlanMergeTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (REPORT_S3,))
@@ -737,7 +737,7 @@ class PlanMergeTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertNotIn(REPORT_S3, actions)
@@ -751,7 +751,7 @@ class PlanMergeTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -763,7 +763,7 @@ class PlanMergeTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertIn(REPORT_S3, actions)
@@ -774,7 +774,7 @@ class PlanMergeTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "parked"}),), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertNotIn(REPORT_S3, actions)
@@ -786,7 +786,7 @@ class PlanMergeTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (PARK_S3_ON_ANOTHER_BASE,))
@@ -802,7 +802,7 @@ class PlanMergeTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(project,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, (RECORD_MERGED,))
@@ -827,7 +827,7 @@ class PlanSlotsTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave(tasks, {}),), projects=(project,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (LAUNCH_S9, LAUNCH_S10))
@@ -845,7 +845,7 @@ class PlanSlotsTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave(ALONE, {}),), projects=(project,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -863,7 +863,7 @@ class PlanSlotsTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(first, second), projects=(project,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (LAUNCH_S3,))
@@ -878,7 +878,7 @@ class PlanTaskOrderTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            plan(snapshot)
+            decide(snapshot)
 
         # Assert
         self.assertEqual(str(raised.exception), "@TASK.Login of the wave shop_w1 carries no number to be ordered by")
@@ -930,7 +930,7 @@ class PlanDueStudiesTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, studies=(study,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -941,7 +941,7 @@ class PlanDueStudiesTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, studies=(create_study(),), live_study_runs=live_weekly)
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -952,7 +952,7 @@ class PlanDueStudiesTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            plan(snapshot)
+            decide(snapshot)
 
         # Assert
         self.assertEqual(
@@ -968,7 +968,7 @@ class PlanStudyRunsTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, studies=studies, study_runs=1)
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (LAUNCH_MONTHLY,))
@@ -988,7 +988,7 @@ class PlanStudyRunsTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, studies=studies, live_study_runs=live_study_runs, study_runs=1)
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -999,7 +999,7 @@ class PlanStudyRunsTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, studies=studies, live_study_runs=(LIVE_MONTHLY,), study_runs=1)
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (LAUNCH_TREES,))
@@ -1009,7 +1009,7 @@ class PlanStudyRunsTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, studies=(create_study(),), live_study_runs=(LIVE_MONTHLY,), study_runs=1)
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -1047,7 +1047,7 @@ class PlanQuotaPauseTest(unittest.TestCase):
                 )
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(
@@ -1069,7 +1069,7 @@ class PlanQuotaPauseTest(unittest.TestCase):
         )
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(
@@ -1087,7 +1087,7 @@ class PlanQuotaPauseTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave(RATE_LIMITED_UNTIL_15, {"S3": "running"}),), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (PAUSED_S3,))
@@ -1105,7 +1105,7 @@ class PlanQuotaPauseTest(unittest.TestCase):
                 )
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(
@@ -1118,7 +1118,7 @@ class PlanQuotaPauseTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave(ALONE, {}), cafe), projects=(SHOP, CAFE))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (ResumeWave(wave="cafe_w1", reason="quota"), LAUNCH_S3))
@@ -1129,7 +1129,7 @@ class PlanQuotaPauseTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (PAUSED_S3,))
@@ -1142,7 +1142,7 @@ class PlanQuotaPauseTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, ())
@@ -1157,7 +1157,7 @@ class PlanQuotaResumeTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(wave,), projects=(dataclasses.replace(SHOP, live_runs=(LIVE_RUN_OF_S9,)),))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(
@@ -1176,7 +1176,7 @@ class PlanQuotaResumeTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, ())
@@ -1186,7 +1186,7 @@ class PlanQuotaResumeTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave(STOPPED_S3, {"S3": "paused:quota"}),), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (ResumeTaskRun(wave="shop_w1", task="S3", run=STOPPED_RUN),))
@@ -1200,7 +1200,7 @@ class PlanForgeAccountPauseTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(shop, cafe), projects=(SHOP, CAFE))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (PauseWave(wave="shop_w1", reason="forge_account", resume_at=None),))
@@ -1233,7 +1233,7 @@ class PlanWaveStartTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, projects=(project,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -1279,7 +1279,7 @@ class PlanBlockedTaskParkingTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave(tasks, states),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -1305,7 +1305,7 @@ class PlanWaveCloseTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -1382,7 +1382,7 @@ class PlanRepairTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "pr_open"}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -1432,7 +1432,7 @@ class PlanRepairTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "pr_open"}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -1460,7 +1460,7 @@ class PlanRepairTest(unittest.TestCase):
                 )
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -1516,7 +1516,7 @@ class PlanRepairTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(project,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -1593,7 +1593,7 @@ class PlanRepairTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(project,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -1614,7 +1614,7 @@ class PlanRepairTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, (RECORD_PR_OPEN,))
@@ -1659,7 +1659,7 @@ class PlanRebaseTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "pr_open"}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -1680,7 +1680,7 @@ class PlanRebaseTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, (REBASE_S3,))
@@ -1705,7 +1705,7 @@ class PlanRebaseTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(project,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, ())
@@ -1727,7 +1727,7 @@ class PlanRebaseTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -1743,7 +1743,7 @@ class PlanRebaseTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "pr_open"}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -1767,7 +1767,7 @@ class PlanRebaseTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, (REBASE_S3,))
@@ -1801,7 +1801,7 @@ class PlanRebaseTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, (expected,))
@@ -1823,7 +1823,7 @@ class PlanRebaseTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, (REBASE_S3_TAKING_ITS_CHANGES_OVER,))
@@ -1872,7 +1872,7 @@ class PlanRebuildOfAnAmendedTaskTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, (expected,))
@@ -1892,7 +1892,7 @@ class PlanRebuildOfAnAmendedTaskTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (REBUILD_S3,))
@@ -1917,7 +1917,7 @@ class PlanRebuildOfAnAmendedTaskTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(project,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, ())
@@ -1937,7 +1937,7 @@ class PlanRebuildOfAnAmendedTaskTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (REBUILD_S3,))
@@ -1965,7 +1965,7 @@ class PlanBlockedRebaseRunOfAWaveBranchTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(
@@ -1989,7 +1989,7 @@ class PlanBlockedRebaseRunOfAWaveBranchTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -2018,7 +2018,7 @@ class PlanBlockedRunParkingTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, (PARK_S3_ON_THE_QUESTION,))
@@ -2044,7 +2044,7 @@ class PlanBlockedRunParkingTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(project,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -2063,7 +2063,7 @@ class PlanBlockedRunParkingTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "fixing"}),), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (RECORD_MERGED, REMOVE_WORKTREE_S3))
@@ -2099,7 +2099,7 @@ class PlanRunningTaskWithoutALiveRunTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -2121,7 +2121,7 @@ class PlanRunningTaskWithoutALiveRunTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave(ALONE, {"S3": "running"}),), projects=(project,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, (PARK_S3_RUN_NOT_STARTED,))
@@ -2134,7 +2134,7 @@ class PlanRunningTaskWithoutALiveRunTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave(tasks, {"S3": "running"}),), projects=(project,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, ())
@@ -2168,7 +2168,7 @@ class PlanRunningTaskRebasedByItsLastRunTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, (expected,))
@@ -2188,7 +2188,7 @@ class PlanRunningTaskRebasedByItsLastRunTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, (PARK_S3_ON_THE_QUESTION,))
@@ -2211,7 +2211,7 @@ class PlanRunningTaskRebasedByItsLastRunTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(project,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, ())
@@ -2263,7 +2263,7 @@ class PlanMilestoneReportTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (REPORT_M4,))
@@ -2274,7 +2274,7 @@ class PlanMilestoneReportTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -2287,7 +2287,7 @@ class PlanMilestoneReportTest(unittest.TestCase):
         )
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertNotIn(REPORT_M4, actions)
@@ -2298,7 +2298,7 @@ class PlanMilestoneReportTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -2309,7 +2309,7 @@ class PlanMilestoneReportTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, milestones=(milestone,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -2321,7 +2321,7 @@ class PlanMilestoneReportTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(other_wave,), projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertIn(REPORT_M4, actions)
@@ -2338,7 +2338,7 @@ class PlanMilestoneReportTest(unittest.TestCase):
         )
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertIn(REPORT_M4, actions)
@@ -2349,7 +2349,7 @@ class PlanMilestoneReportTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -2365,7 +2365,7 @@ class PlanMilestoneReportTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -2376,7 +2376,7 @@ class PlanMilestoneReportTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, projects=(SHOP,), milestones=(milestone,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (REPORT_M4,))
@@ -2387,7 +2387,7 @@ class PlanMilestoneReportTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, projects=(SHOP,), milestones=(milestone,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -2398,7 +2398,7 @@ class PlanMilestoneReportTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -2413,7 +2413,7 @@ class PlanMilestoneReportTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (CloseMilestone(project="shop", milestone="M4", pr=90),))
@@ -2454,7 +2454,7 @@ class PlanMilestoneReportTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -2472,7 +2472,7 @@ class PlanMilestoneReportTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, projects=(SHOP_ON_GITHUB,), milestones=(milestone,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -2519,7 +2519,7 @@ class PlanMilestoneRebaseTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, projects=(PROJECT_WITH_CANDIDATES,), milestones=(milestone,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -2560,7 +2560,7 @@ class PlanMilestoneCutTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, projects=(project,), milestones=recorded_milestones)
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -2576,7 +2576,7 @@ class PlanMilestoneCutTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, projects=(project,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (CUT_OF_M6, StartWave(project="shop", milestone=None)))
@@ -2604,7 +2604,7 @@ class PlanQuotaOfATaskInRepairTest(unittest.TestCase):
                 )
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(
@@ -2618,7 +2618,7 @@ class PlanQuotaOfATaskInRepairTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(
@@ -2690,7 +2690,7 @@ class PlanIntegrationBranchRemovalTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, projects=(SHOP,), integration_branches=(branch,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, (removal,))
@@ -2705,7 +2705,7 @@ class PlanIntegrationBranchRemovalTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, projects=(SHOP,), integration_branches=(branch,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, ())
@@ -2746,7 +2746,7 @@ class PlanIntegrationBranchRemovalTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, projects=(SHOP,), integration_branches=(branch,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, (kept,))
@@ -2763,7 +2763,7 @@ class PlanIntegrationBranchRemovalTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, projects=(SHOP,), integration_branches=(branch,), kept_branches=frozenset({named}))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -2780,7 +2780,7 @@ class PlanIntegrationBranchRemovalTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, projects=(SHOP,), integration_branches=(branch,), kept_branches=frozenset({named}))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(
@@ -2801,7 +2801,7 @@ class PlanIntegrationBranchRemovalTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, projects=(SHOP,), integration_branches=(branch,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(
@@ -2855,7 +2855,7 @@ class PlanLeftoverRemovalTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, projects=(SHOP,), leftovers=(leftover,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, (removal,))
@@ -2876,7 +2876,7 @@ class PlanLeftoverRemovalTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, projects=(SHOP,), leftovers=(leftover,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(
@@ -2895,7 +2895,7 @@ class PlanLeftoverRemovalTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, projects=(SHOP,), leftovers=(leftover,), kept_branches=frozenset({named}))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -2907,7 +2907,7 @@ class PlanLeftoverRemovalTest(unittest.TestCase):
         )
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -2919,7 +2919,7 @@ class PlanLeftoverRemovalTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,), leftovers=(STALE_BRANCH_WITH_ITS_WORKTREE,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(
@@ -2966,7 +2966,7 @@ class PlanPreflightOfATaskWithoutAForgeTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(project,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -2977,7 +2977,7 @@ class PlanPreflightOfATaskWithoutAForgeTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(
@@ -2996,7 +2996,7 @@ class PlanPreflightOfATaskWithoutAForgeTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "queued"}),), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (LAUNCH_S3,))
@@ -3013,7 +3013,7 @@ class PlanPreflightOfATaskWithoutAForgeTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(
@@ -3036,7 +3036,7 @@ class PlanPreflightOfATaskWithoutAForgeTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(
@@ -3072,7 +3072,7 @@ class PlanPreflightOfATaskWithoutAForgeTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(project,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -3123,7 +3123,7 @@ class PlanVerificationOfATaskWithoutAForgeTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(project,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -3147,7 +3147,7 @@ class PlanVerificationOfATaskWithoutAForgeTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(
@@ -3173,7 +3173,7 @@ class PlanVerificationOfATaskWithoutAForgeTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, ())
@@ -3218,7 +3218,7 @@ class PlanMergingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (MERGE_S3_BRANCH,))
@@ -3231,7 +3231,7 @@ class PlanMergingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
         )
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (dataclasses.replace(MERGE_S3_BRANCH, method="squash"),))
@@ -3256,7 +3256,7 @@ class PlanMergingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, ())
@@ -3267,7 +3267,7 @@ class PlanMergingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertNotIn(MERGE_S3_BRANCH, actions)
@@ -3280,7 +3280,7 @@ class PlanMergingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
         )
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (NameMergeCommand(command=MERGE_COMMAND_INTO_THE_MILESTONE),))
@@ -3295,7 +3295,7 @@ class PlanMergingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
         )
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (RecordTaskState(wave="shop_w1", task="S3", state="merged", reason=None),))
@@ -3310,7 +3310,7 @@ class PlanMergingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
         )
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(
@@ -3335,7 +3335,7 @@ class PlanMergingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
         )
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(
@@ -3359,7 +3359,7 @@ class PlanMergingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
         )
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertNotIn(OPEN_THE_MILESTONE_WORKTREE, actions)
@@ -3372,7 +3372,7 @@ class PlanMergingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verified"}),), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (MERGE_S3_BRANCH,))
@@ -3389,7 +3389,7 @@ class PlanMergingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
         )
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (RecordTaskState(wave="shop_w1", task="S3", state="merged", reason=None),))
@@ -3408,7 +3408,7 @@ class PlanMergingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
         )
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -3422,7 +3422,7 @@ class PlanMergingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
         )
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -3435,7 +3435,7 @@ class PlanMergingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
         )
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (NameMergeCommand(command=MERGE_COMMAND_OF_S3),))
@@ -3450,7 +3450,7 @@ class PlanMergingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
         )
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (RecordTaskState(wave="shop_w1", task="S3", state="merged", reason=None),))
@@ -3464,7 +3464,7 @@ class PlanEndingAMilestoneOfAProjectWithoutAForgeTest(unittest.TestCase):
         )
 
         # Act
-        actions = plan(Snapshot(now=NOW, projects=(SHOP,), milestones=(milestone,)))
+        actions = decide(Snapshot(now=NOW, projects=(SHOP,), milestones=(milestone,)))
 
         # Assert
         self.assertEqual(actions, (NameMergeCommand(command=MERGE_COMMAND_OF_THE_MILESTONE),))
@@ -3480,7 +3480,7 @@ class PlanEndingAMilestoneOfAProjectWithoutAForgeTest(unittest.TestCase):
         )
 
         # Act
-        actions = plan(Snapshot(now=NOW, projects=(SHOP,), milestones=(milestone,)))
+        actions = decide(Snapshot(now=NOW, projects=(SHOP,), milestones=(milestone,)))
 
         # Assert
         self.assertEqual(actions, (CloseMilestone(project="shop", milestone="M1", pr=None),))
@@ -3631,7 +3631,7 @@ class PlanNoRunWhileARateLimitIsInForceTest(unittest.TestCase):
         ]:
             with self.subTest(case=case):
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -3657,7 +3657,7 @@ class PlanNoRunWhileARateLimitIsInForceTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, studies=(study,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -3697,7 +3697,7 @@ class PlanStallSignalTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,), stall_after=stall_after)
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -3710,7 +3710,7 @@ class PlanStallSignalTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(project,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -3731,7 +3731,7 @@ class PlanStallSignalTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertNotIn(SIGNAL_STALL_OF_S3, actions)
@@ -3742,7 +3742,7 @@ class PlanStallSignalTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (SIGNAL_STALL_OF_S3,))
@@ -3753,7 +3753,7 @@ class PlanStallSignalTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "queued"}),), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (LAUNCH_S3,))
@@ -3787,7 +3787,7 @@ class PlanClientLoginPauseTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(shop, cafe), projects=(SHOP, CAFE))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (PAUSE_SHOP_ON_THE_CLIENT_LOGIN,))
@@ -3800,7 +3800,7 @@ class PlanClientLoginPauseTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(paused,), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -3816,7 +3816,7 @@ class PlanClientLoginPauseTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(paused,), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, ())
@@ -3832,7 +3832,7 @@ class PlanClientLoginPauseTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": state}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -3880,7 +3880,7 @@ class PlanReviewEndedWithoutAVerdictTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, (VERIFY_S3,))
@@ -3910,7 +3910,7 @@ class PlanReviewEndedWithoutAVerdictTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(project,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, (ParkTask(wave="shop_w1", task="S3", reason=expected_reason, blockers=()),))
@@ -3924,7 +3924,7 @@ class PlanReviewEndedWithoutAVerdictTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(SHOP,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (RECORD_VERIFIED,))
@@ -3952,7 +3952,7 @@ class PlanReviewEndedWithoutAVerdictTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(SHOP,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -3964,7 +3964,7 @@ class PlanReviewEndedWithoutAVerdictTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(project,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -3993,7 +3993,7 @@ class PlanDueOrdersTest(unittest.TestCase):
                 snapshot = Snapshot(now=NOW, orders=(order,))
 
                 # Act
-                actions = plan(snapshot)
+                actions = decide(snapshot)
 
                 # Assert
                 self.assertEqual(actions, expected)
@@ -4003,7 +4003,7 @@ class PlanDueOrdersTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, orders=(create_order(),), live_order_runs=(LIVE_NIGHTLY,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -4014,7 +4014,7 @@ class PlanDueOrdersTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, orders=orders, study_runs=2)
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (LaunchOrder(order="hourly"), LAUNCH_NIGHTLY))
@@ -4026,7 +4026,7 @@ class PlanOrdersUnderTheStudyRunsTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, studies=(create_study(),), orders=(create_order(),), study_runs=1)
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (LAUNCH_WEEKLY,))
@@ -4037,7 +4037,7 @@ class PlanOrdersUnderTheStudyRunsTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, orders=orders, study_runs=1)
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, (LaunchOrder(order="hourly"),))
@@ -4047,7 +4047,7 @@ class PlanOrdersUnderTheStudyRunsTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, studies=(create_study(),), live_order_runs=(LIVE_NIGHTLY,), study_runs=1)
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -4060,7 +4060,7 @@ class PlanOrderRunsPastTheirMaxWallTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, live_order_runs=(live,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(
@@ -4079,7 +4079,7 @@ class PlanOrderRunsPastTheirMaxWallTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, live_order_runs=(LIVE_NIGHTLY,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())
@@ -4090,7 +4090,7 @@ class PlanOrderRunsPastTheirMaxWallTest(unittest.TestCase):
         snapshot = Snapshot(now=NOW, orders=(create_order(parked=True),), live_order_runs=(live,))
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertEqual(actions, ())

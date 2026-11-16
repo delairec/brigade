@@ -68,7 +68,7 @@ A session launches no wave and no task run by hand.
 brigade scheduler install                   # writes the timer; again after every change to the unit templates
 brigade wave show <wave>                    # the tasks of a wave, their state and their runs
 brigade wave requeue <wave> <task>          # a parked task queued again for the next tick
-brigade tick --dry-run                      # the snapshot and the plan the next tick would apply
+brigade tick --dry-run                      # the snapshot and the decisions the next tick would apply
 ```
 
 The tick runs from the main checkout through `bin/brigade`: a fix to brigade reaches the tick once `main` is pulled
