@@ -12302,17 +12302,23 @@ TASK B163
 		+ "command steps of a recipe versioned by the project, each an argv, run by the engine of"
 		+ "TASK B51; no string field of brigade/corpus/data/schema.awawa.tpl holds a command, and"
 		+ "brigade project add writes none"
+		IMPL "brigade/recipes/read_project_commands.py::def read_project_commands("
+		IMPL "corpus/recipes.awawa::RECIPE acceptance"
 	SPEC "brigade task check, the acceptance check of the preflight, the checks the tick runs"
 		+ "before a push and the setup of a task worktree run those steps in place of the fields,"
 		+ "where brigade/tasks/run_project_checks.py, brigade/verify/check_acceptance.py,"
 		+ "brigade/verify/preflight_task_branch.py, brigade/tick/run_commit_checks.py and"
 		+ "brigade/tick/prepare_task_worktree.py read ACCEPTANCE and SETUP today"
+		IMPL "brigade/tasks/run_project_checks.py::ACCEPTANCE_RECIPE, run_process)"
+		IMPL "brigade/verify/preflight_task_branch.py::ACCEPTANCE_RECIPE, run_process"
 	SPEC "wiki/Projects.md, wiki/Tasks.md and wiki/Tick-and-scheduler.md describe the commands of a"
 		+ "project as steps of its recipe, where wiki/Tasks.md:49 and"
 		+ "wiki/Tick-and-scheduler.md:123,214-215 name its ACCEPTANCE and SETUP lines today"
+		IMPL "wiki/Projects.md::## The commands of a project"
 	SPEC "what the audit does not settle becomes tasks of a remediation plan: one draft TASK per"
 		+ "finding left, citing this task in its RATIONALE, the set listed in the pull request; the"
 		+ "audit closes with no finding outside a SPEC of this task or a task of the plan"
+		IMPL "corpus/tasks.awawa::TASK B501"
 	AFTER @TASK.B51
 	RATIONALE "commands stored as strings or handed to a shell, read on 2026-11-13 at f7d2deae, the"
 		+ "starting list of SPEC 1 to 5: PROJECT.ACCEPTANCE, HEAVY and SETUP, string fields of"
@@ -19010,3 +19016,19 @@ TASK B257
 		+ "8 and 6 of @TASK.B255 and the update of @TASK.B236"
 		REF @TASK.B255
 		REF @TASK.B236
+
+TASK B501
+	TITLE "The collector of a study runs a command as an argv of its own lines, never as the shell:"
+		+ "form of a string"
+	STATUS draft
+	TYPE feat
+	MILESTONE @MILESTONE.ADD0
+	COMPONENT "studies"
+	ROLE ada
+	SPEC "a collector of a study or of a recipe that runs a command holds it as one ARGV line per"
+		+ "argument, and no value of STUDY.COLLECTOR nor of the COLLECTOR of a step holds the"
+		+ "shell: form split by shlex.split, where brigade/studies/read_collector_line.py and the"
+		+ "help of brigade study new read it today"
+	RATIONALE "the finding the audit of @TASK.B163 leaves: the shell: form of STUDY.COLLECTOR runs"
+		+ "without a shell but stores a command as a string, which SPEC 1 of that task refuses"
+		REF @TASK.B163
