@@ -34,6 +34,7 @@ class ReportsShowTextTest(unittest.TestCase):
                 "id": "oak_w3",
                 "kind": "wave-report",
                 "project": "oak",
+                "pattern": None,
                 "type": "REPORT",
                 "fields": [{"name": "PROJECT", "value": "oak"}, {"name": "MANUAL_TEST", "value": "OK1: the page"}],
             },
@@ -46,6 +47,28 @@ class ReportsShowTextTest(unittest.TestCase):
         self.assertEqual(
             text,
             "# REPORT oak_w3\n\n- PROJECT: oak\n\n## Manual tests\n\n| # | test |\n| --- | --- |\n| 1 | OK1: the page |\n",
+        )
+
+    def test_should_name_the_pattern_the_order_of_a_result_comes_from(self):
+        # Arrange
+        document = {
+            "schema_version": 1,
+            "report": {
+                "id": "CartTimeouts_20261019T090000Z_a1",
+                "kind": "flaky-tests",
+                "project": "shop",
+                "pattern": "CartTimeouts",
+                "type": "RESULT",
+                "fields": [{"name": "ORDER", "value": "CartTimeouts"}],
+            },
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text, "# RESULT CartTimeouts_20261019T090000Z_a1\n\n- PATTERN: CartTimeouts\n- ORDER: CartTimeouts\n"
         )
 
 
@@ -66,8 +89,57 @@ class ReportsShowOfAKnownReportTest(unittest.TestCase):
                     "id": "oak_w3",
                     "kind": "wave-report",
                     "project": "oak",
+                    "pattern": None,
                     "type": "REPORT",
                     "fields": [{"name": "PROJECT", "value": "oak"}],
+                },
+            },
+        )
+
+
+class ReportsShowOfTheResultOfAnOrderFromAPatternTest(unittest.TestCase):
+    def test_should_give_the_pattern_the_order_comes_from(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(root)
+        (root / "config" / "results.awawa").write_text("", encoding="utf-8")
+        result = {
+            "type": "RESULT",
+            "name": "CartTimeouts_20261019T090000Z_a1",
+            "fields": [{"name": "ORDER", "value": "CartTimeouts"}],
+        }
+        plugin = DocumentPluginDouble({str(root / "config" / "results.awawa"): [result]})
+        orders = {
+            "ORDER": {
+                "CartTimeouts": (
+                    ("RECIPE", "flaky-tests"),
+                    ("PROJECT", "@PROJECT.shop"),
+                    ("STATUS", "active"),
+                    ("FROM", "@PATTERN.CartTimeouts"),
+                ),
+            }
+        }
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_corpus_double(orders),
+            resolve_plugin=create_plugin_resolver({("document", "awawa"): plugin}),
+        )
+
+        # Act
+        document = COMMAND.run(Namespace(id="CartTimeouts_20261019T090000Z_a1"), runtime)
+
+        # Assert
+        self.assertEqual(
+            document,
+            {
+                "schema_version": 1,
+                "report": {
+                    "id": "CartTimeouts_20261019T090000Z_a1",
+                    "kind": "flaky-tests",
+                    "project": "shop",
+                    "pattern": "CartTimeouts",
+                    "type": "RESULT",
+                    "fields": [{"name": "ORDER", "value": "CartTimeouts"}],
                 },
             },
         )
