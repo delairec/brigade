@@ -41,6 +41,22 @@ NIGHTLY = ProcessAnswer(
         }
     )
 )
+GATED = (
+    'schema_version = 1\nname = "gated"\ndescription = "a gate before the report"\nparams = []\nmax_wall = 30\n'
+    '[[steps]]\nkind = "gate"\npreflight = "quiet"\n'
+)
+QUIET = 'schema_version = 1\nname = "quiet"\ndescription = "no collector and no check"\ncollectors = []\nchecks = []\n'
+GATED_ORDER = ProcessAnswer(
+    stdout=json.dumps(
+        {
+            "fields": [
+                {"name": "RECIPE", "atoms": ['"gated"']},
+                {"name": "PROJECT", "atoms": ['"@PROJECT.shop"']},
+                {"name": "STATUS", "atoms": ['"active"']},
+            ]
+        }
+    )
+)
 NEW_RUN = PatternMatcher("20261019T090000Z-[0-9a-f]{6}")
 
 
@@ -53,6 +69,9 @@ class OrderRunTest(unittest.TestCase):
         self.paths = create_test_paths(root)
         (self.paths.config_root / "recipes").mkdir()
         (self.paths.config_root / "recipes" / "usage-report.toml").write_text(USAGE_REPORT, encoding="utf-8")
+        (self.paths.config_root / "recipes" / "gated.toml").write_text(GATED, encoding="utf-8")
+        (self.paths.config_root / "preflights").mkdir()
+        (self.paths.config_root / "preflights" / "quiet.toml").write_text(QUIET, encoding="utf-8")
         self.shop = root / "shop"
         self.shop.mkdir()
         self.enterContext(contextlib.chdir(self.shop))
@@ -62,6 +81,7 @@ class OrderRunTest(unittest.TestCase):
                 **create_registry_answers(self.paths.config_root, {"shop": {"PATH": str(self.shop), "MODE": "none"}}),
                 **create_checkout_answers(self.shop, self.shop),
                 ("awawa", "show", "@ORDER.nightly", "--json", config): NIGHTLY,
+                ("awawa", "show", "@ORDER.gated", "--json", config): GATED_ORDER,
             }
         )
         self.runtime = create_test_runtime(self.paths, run_process=self.runner)
@@ -136,6 +156,13 @@ class OrderRunTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "order": "nightly", "run": NEW_RUN, "state": "done"})
+
+    def test_should_run_the_preflight_a_gate_step_names(self):
+        # Act
+        document = order_run(argparse.Namespace(name="gated"), self.runtime)
+
+        # Assert
+        self.assertEqual(document, {"schema_version": 1, "order": "gated", "run": NEW_RUN, "state": "done"})
 
 
 class OrderRunTextTest(unittest.TestCase):

@@ -2,7 +2,10 @@ import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
+from brigade.commands._equip_collector import equip_collector
+from brigade.commands._equip_preflight import equip_preflight
 from brigade.commands._locate_checkout import locate_checkout
+from brigade.commands._locate_preflights import locate_preflights
 from brigade.commands._locate_recipe_places import locate_recipe_places
 from brigade.corpus.read_entity import read_entity
 from brigade.ledger.order_done import OrderDone
@@ -11,7 +14,9 @@ from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.read_ledger import read_ledger
 from brigade.orders.convert_order import Order, convert_order
 from brigade.orders.start_order_run import start_order_run
+from brigade.preflights.run_preflight import PreflightOutcome, PreflightRun, run_preflight
 from brigade.recipes.create_command_performer import create_command_performer
+from brigade.recipes.create_gate_performer import create_gate_performer
 from brigade.recipes.resolve_recipe import resolve_recipe
 from brigade.recipes.run_order import DONE, OrderRun, run_order
 from brigade.registry.find_project import find_project
@@ -28,6 +33,7 @@ PARKED_EXIT_CODE = 1
 PARAM_SEPARATOR = "="
 PROJECT_VALUE = "project"
 NO_PARKED_RUN = None
+NO_GATE_PARAMETERS = {}
 
 
 def _render_text(document: dict) -> str:
@@ -69,6 +75,18 @@ def _read_values(order: Order) -> dict[str, str | None]:
     return {**dict(param.partition(PARAM_SEPARATOR)[::2] for param in order.params), PROJECT_VALUE: order.project}
 
 
+def _run_gate(name: str, project: Path, runtime: Runtime) -> PreflightOutcome:
+    run = PreflightRun(
+        name=name,
+        project=project,
+        parameters=NO_GATE_PARAMETERS,
+        equipment=equip_collector(project, runtime),
+        preflights=locate_preflights(project, runtime),
+        plugins=equip_preflight(runtime),
+    )
+    return run_preflight(run, runtime)
+
+
 def order_run(request: argparse.Namespace, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     order = convert_order(read_entity(runtime.run_process, runtime.paths.config_root, ENTITY_TYPE, request.name))
@@ -82,7 +100,10 @@ def order_run(request: argparse.Namespace, runtime: Runtime) -> dict:
         run_id=run_id,
         run_directory=runtime.paths.state_root / RUNS_DIRECTORY / run_id,
     )
-    performers = {"command": create_command_performer(runtime.run_process, project, _read_values(order))}
+    performers = {
+        "command": create_command_performer(runtime.run_process, project, _read_values(order)),
+        "gate": create_gate_performer(lambda name: _run_gate(name, project, runtime)),
+    }
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, **run_order(runtime, run, performers)}
 
 
