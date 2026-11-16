@@ -38,6 +38,7 @@ from tests.unit.commands.run_doubles import (
     STEP_COUNTING_PROBE,
     create_plugin_resolution,
 )
+from tests.unit.create_preflight_plugins import resolve_preflight_kinds_or
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
 from tests.unit.forge_double import ForgeDouble
@@ -3238,7 +3239,7 @@ def _resolve_the_collectors_beside(resolve_plugin, root: Path):
             return check_runs
         if (kind, name) == ("collector", "pr-threads"):
             return pr_threads
-        return resolve_plugin(kind, name, **options)
+        return resolve_preflight_kinds_or(resolve_plugin)(kind, name, **options)
 
     return resolve
 

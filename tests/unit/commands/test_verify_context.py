@@ -24,6 +24,7 @@ from tests.unit.commands.test_verify_preflight import (
     WAVE_STARTED,
     ForgeDeclineDouble,
 )
+from tests.unit.create_preflight_plugins import resolve_preflight_kinds_or
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
@@ -191,7 +192,7 @@ class VerifyContextOfAPullRequestTest(unittest.TestCase):
             run_process=create_machine_double(
                 {"PROJECT": {"tidepool": GITHUB_PROJECT}, "TASK": TIDEPOOL_TASKS}, TASK_WORKTREE
             ),
-            resolve_plugin=lambda kind, name, **places: self.forge,
+            resolve_plugin=resolve_preflight_kinds_or(lambda kind, name, **places: self.forge),
         )
 
     def test_should_ask_the_forge_about_the_pull_request_of_the_task(self):
