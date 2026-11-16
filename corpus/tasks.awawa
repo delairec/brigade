@@ -205,7 +205,11 @@ TASK B03
 TASK B04
 	TITLE "brigade project add, list, show, pause and resume: the registry in the operational"
 		+ "corpus"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-11-16: @TASK.B163 makes false its SPEC that --acceptance, --heavy and"
+		+ "--setup write ACCEPTANCE, HEAVY and SETUP lines guessed from the supported"
+		+ "configurations when no flag is given; brigade project add writes no command, those of a"
+		+ "project being its recipes setup, acceptance and heavy"
 	MILESTONE @MILESTONE.M0
 	COMPONENT "registry"
 	ROLE ada
@@ -462,7 +466,6 @@ TASK B05
 		IMPL "tests/cli/test_ledger.py::def test_should_print_the_budgets_as_text"
 		IMPL "tests/cli/test_ledger.py::def test_should_print_the_comparison_as_text"
 	AFTER @TASK.B03
-	AFTER @TASK.B04
 	RATIONALE "the ledger is the one source of every statistic of brigade; @TASK.B06, @TASK.B07,"
 		+ "@TASK.B22, @TASK.B27 and @TASK.B47 wait on it, @TASK.B31 renders its views"
 		REF @TASK.B06
@@ -649,7 +652,6 @@ TASK B06
 			+ "with_journal: bool) -> dict:"
 		IMPL "tests/cli/test_runs.py::class BrigadeRunsListOfAFinishedRunTest(RunsTestCase):"
 		IMPL "tests/cli/test_runs.py::class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):"
-	AFTER @TASK.B04
 	AFTER @TASK.B42
 	AFTER @TASK.B43
 	RATIONALE "the Blueprint is the reference the user named: brigade run, its hand-over by"
@@ -816,7 +818,6 @@ TASK B07
 		IMPL "tests/cli/test_scheduler.py::def run_scheduler(self, path_directories: list,"
 			+ "*arguments: str):"
 		IMPL "tests/cli/test_scheduler.py::class SchedulerTestCase(unittest.TestCase):"
-	AFTER @TASK.B04
 	DELIVERED_BY 21
 	RATIONALE "the tick is the coordinator of"
 		+ "@DECISION.ADeterministicTickReplacesTheCoordinatorAgent; its shape, a snapshot, a pure"
@@ -936,7 +937,6 @@ TASK B08
 		+ "against a real git repository in a temporary directory"
 		IMPL "tests/integration/corpus/test_prepare_tree.py::def run_git(repository: Path,"
 			+ "*arguments: str) -> str:"
-	AFTER @TASK.B04
 	RATIONALE "a corpus is read at a version other than the checkout without a checkout or a new"
 		+ "worktree: the dashboard's branch selector of @TASK.B30 through @TASK.B27, the lint of a"
 		+ "pull request's branch in the preflight of @TASK.B15, and the corpus collector of"
@@ -1052,7 +1052,6 @@ TASK B10
 		IMPL "tests/cli/test_plan.py::class PlanContextTestCase(unittest.TestCase):"
 		IMPL "tests/awawa/provide_awawa.py::def provide_awawa(test_case: unittest.TestCase) ->"
 			+ "None:"
-	AFTER @TASK.B04
 	RATIONALE "the wave lifecycle of the Blueprint, plan section 5, rows 1 and 2: the CLI assembles"
 		+ "the planning context in one command, the agent of the plan slot cuts the request into"
 		+ "tasks; recording the plan is @TASK.B139"
@@ -4937,7 +4936,6 @@ TASK B55
 			+ "test_should_be_accepted_by_plan_context_once_the_branch_is_merged(self):"
 		IMPL "tests/cli/test_plan.py::def"
 			+ "test_should_be_accepted_by_plan_record_once_the_branch_is_merged(self):"
-	AFTER @TASK.B04
 	AFTER @TASK.B46
 	RATIONALE "split from @TASK.B04 in its refinement: awawa's binary ships no starter, the WAVE"
 		+ "schema comes with @TASK.B10, and the pull request needs the forge adapter of @TASK.B46"
@@ -5346,7 +5344,6 @@ TASK B61
 	AFTER @TASK.B01
 	AFTER @TASK.B02
 	AFTER @TASK.B03
-	AFTER @TASK.B04
 	AFTER @TASK.B06
 	AFTER @TASK.B07
 	AFTER @TASK.B08
