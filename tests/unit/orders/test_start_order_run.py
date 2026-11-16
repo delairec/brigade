@@ -22,6 +22,7 @@ NIGHTLY = Order(
     output=None,
     status="active",
 )
+USAGE_REPORT = {"name": "usage-report", "max_wall": 30, "steps": [{"kind": "judge", "answer": "RESULT"}]}
 
 
 class StartOrderRunTest(unittest.TestCase):
@@ -30,9 +31,9 @@ class StartOrderRunTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.runtime = create_test_runtime(create_test_paths(Path(directory.name)))
 
-    def test_should_record_the_order_in_its_run_directory(self):
+    def test_should_record_the_order_and_its_recipe_in_its_run_directory(self):
         # Act
-        start_order_run(self.runtime, NIGHTLY, RUN_ID)
+        start_order_run(self.runtime, NIGHTLY, USAGE_REPORT, RUN_ID)
 
         # Assert
         record = self.runtime.paths.state_root / "runs" / RUN_ID / "order.json"
@@ -50,12 +51,13 @@ class StartOrderRunTest(unittest.TestCase):
                     "output": None,
                     "status": "active",
                 },
+                "recipe": {"name": "usage-report", "max_wall": 30, "steps": [{"kind": "judge", "answer": "RESULT"}]},
             },
         )
 
     def test_should_record_the_start_of_the_run_under_the_name_of_its_recipe(self):
         # Act
-        start_order_run(self.runtime, NIGHTLY, RUN_ID)
+        start_order_run(self.runtime, NIGHTLY, USAGE_REPORT, RUN_ID)
 
         # Assert
         self.assertEqual(
