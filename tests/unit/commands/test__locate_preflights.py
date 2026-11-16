@@ -17,7 +17,10 @@ MACHINE_NIGHTLY = (
 PROJECT_NIGHTLY = (
     'schema_version = 1\nname = "nightly"\ndescription = "the nightly of the project"\ncollectors = []\nchecks = []\n'
 )
-NIGHTLY_ENTITY = {"fields": [{"name": "TITLE", "atoms": ['"the nightly of the corpus"'], "fields": []}]}
+NIGHTLY_ENTITY = {
+    "file": "/srv/shop/preflights.awawa",
+    "fields": [{"name": "TITLE", "atoms": ['"the nightly of the corpus"'], "fields": []}],
+}
 NOT_DEFINED = ProcessAnswer(exit_code=1, stderr="awawa show: @PREFLIGHT.nightly is not defined in the workspace\n")
 
 
