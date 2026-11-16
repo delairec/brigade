@@ -44,7 +44,7 @@ class BrigadeOrderOfTheRecipePrUsageReportTest(unittest.TestCase):
         project.run_git("switch", "--quiet", "main")
         (cls.rehearser.store / "pulls").mkdir()
         (cls.rehearser.store / "pulls" / "1.json").write_text(json.dumps(REVIEWED_PULL_REQUEST))
-        cls.completed = cls.rehearser.run_brigade("order", "new", "pr-usage-report", "--project", "shop", "pr=1")
+        cls.completed = cls.rehearser.run_brigade("order", "new", "--project", "shop", "pr-usage-report", "pr=1")
 
     def test_should_commit_the_report_on_the_branch_of_the_pull_request(self):
         # Act
