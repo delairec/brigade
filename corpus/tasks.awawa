@@ -4605,7 +4605,8 @@ TASK B50
 TASK B51
 	TITLE "The recipe engine generalises the study engine: the ORDER entity, the order commands,"
 		+ "and the tick running the due orders"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 421
 	TYPE feat
 	MILESTONE @MILESTONE.M8
 	COMPONENT "recipes"
