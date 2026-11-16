@@ -6,6 +6,7 @@ from pathlib import Path
 from brigade.orders.live_order_run import LiveOrderRun
 from brigade.orders.start_order_run import ORDER_RECORD_FILE
 from brigade.runs.run_locations import RUNS_DIRECTORY
+from brigade.studies.study_run_context import STUDY_KIND
 
 
 def _read_live_order_run(record: Path) -> LiveOrderRun:
@@ -23,5 +24,5 @@ def read_live_order_runs(state_root: Path, is_alive: Callable[[Path], bool]) -> 
     return tuple(
         _read_live_order_run(record)
         for record in sorted((state_root / RUNS_DIRECTORY).glob(f"*/{ORDER_RECORD_FILE}"))
-        if is_alive(record.parent)
+        if is_alive(record.parent) and json.loads(record.read_text(encoding="utf-8"))["recipe"]["name"] != STUDY_KIND
     )

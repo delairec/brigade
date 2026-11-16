@@ -47,6 +47,7 @@ from brigade.ledger.tick_action_failed import TickActionFailed
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
+from brigade.orders.convert_order import Order
 from brigade.orders.detach_order_run import detach_order_run
 from brigade.orders.start_order_run import start_order_run
 from brigade.orders.stop_order_run import stop_order_run
@@ -66,9 +67,10 @@ from brigade.runs.run_locations import RUN_RECORD_FILE, RUNS_DIRECTORY
 from brigade.runs.run_record import RUN_RECORD_SHAPE, RunRecord
 from brigade.runtime import Runtime
 from brigade.studies.describe_milestone_report import describe_milestone_report
+from brigade.studies.describe_study_order import describe_study_order
 from brigade.studies.describe_task_report import describe_task_report
-from brigade.studies.launch_study_run import launch_study_run
-from brigade.studies.read_study import read_study
+from brigade.studies.read_study import Study, read_study
+from brigade.studies.read_study_recipe import read_study_recipe
 from brigade.system.ask_check_logs import CheckLogsQuery, ask_check_logs
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
@@ -433,21 +435,30 @@ def _resume_task_run(runtime: Runtime, action: ResumeTaskRun) -> None:
     run(resuming, runtime)
 
 
+def _launch_order_run(runtime: Runtime, order: Order, recipe: dict) -> str:
+    run_id = create_run_id(runtime.now)
+    start_order_run(runtime, order, recipe, run_id)
+    detach_order_run(runtime, order.name, run_id)
+    return run_id
+
+
+def _launch_study_run(runtime: Runtime, study: Study) -> str:
+    return _launch_order_run(runtime, describe_study_order(study), read_study_recipe(study))
+
+
 def _launch_study(runtime: Runtime, action: LaunchStudy) -> None:
-    launch_study_run(runtime, read_study(runtime, action.study))
+    _launch_study_run(runtime, read_study(runtime, action.study))
 
 
 def _launch_order(runtime: Runtime, action: LaunchOrder) -> None:
-    run_id = create_run_id(runtime.now)
     resolved = resolve_order(runtime, action.order)
-    start_order_run(runtime, resolved.order, resolved.recipe, run_id)
-    detach_order_run(runtime, action.order, run_id)
+    _launch_order_run(runtime, resolved.order, resolved.recipe)
 
 
 def _report_milestone(runtime: Runtime, configuration: Configuration, action: ReportMilestone) -> None:
     project = find_project(read_projects(runtime), action.order.project)
     order = dataclasses.replace(action.order, reads_pull_requests=is_on_a_forge(project))
-    run_id = launch_study_run(runtime, describe_milestone_report(order))
+    run_id = _launch_study_run(runtime, describe_milestone_report(order))
     login = read_cli_login(configuration, read_project_forge(project), runtime) if is_on_a_forge(project) else NO_LOGIN
     append_event(
         runtime.paths,
@@ -458,7 +469,7 @@ def _report_milestone(runtime: Runtime, configuration: Configuration, action: Re
 
 def _report_task(runtime: Runtime, configuration: Configuration, action: ReportTask) -> None:
     order = action.order
-    run_id = launch_study_run(runtime, describe_task_report(order))
+    run_id = _launch_study_run(runtime, describe_task_report(order))
     project = find_project(read_projects(runtime), order.project)
     login = read_cli_login(configuration, read_project_forge(project), runtime) if is_on_a_forge(project) else NO_LOGIN
     append_event(

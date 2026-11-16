@@ -8,7 +8,6 @@ from brigade.studies.describe_milestone_report import describe_milestone_report
 from brigade.studies.describe_task_report import describe_task_report
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.read_study_of_run import read_study_of_run
-from brigade.studies.study_run_context import STUDY_RECORD_FILE
 from brigade.studies.task_report_order import TaskReportOrder
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -23,17 +22,20 @@ class ReadStudyOfRunTest(unittest.TestCase):
         self.runtime = create_test_runtime(create_test_paths(Path(directory.name)))
 
     def record(self, document: dict) -> None:
-        (self.run_directory / "study.json").write_text(json.dumps(document), encoding="utf-8")
+        (self.run_directory / "order.json").write_text(json.dumps(document), encoding="utf-8")
 
     def test_should_read_the_report_of_the_task_the_run_records(self):
         # Arrange
         self.record(
             {
                 "schema_version": 1,
-                "study": "task-report",
-                "project": "oak",
-                "milestone": None,
-                "task": {"project": "oak", "task": "B46", "wave": "oak_w4", "branch": "feature/B46-local-mode"},
+                "order": {
+                    "name": "task-report",
+                    "recipe": "study",
+                    "params": [
+                        'task={"project": "oak", "task": "B46", "wave": "oak_w4", "branch": "feature/B46-local-mode"}'
+                    ],
+                },
             }
         )
 
@@ -53,14 +55,15 @@ class ReadStudyOfRunTest(unittest.TestCase):
         self.record(
             {
                 "schema_version": 1,
-                "study": "milestone-report",
-                "project": "oak",
-                "milestone": {
-                    "project": "oak",
-                    "milestone": "M6",
-                    "branch": "integration/hardening",
-                    "waves": ["oak_w2"],
-                    "tasks": ["B17"],
+                "order": {
+                    "name": "milestone-report",
+                    "recipe": "study",
+                    "params": [
+                        (
+                            'milestone={"project": "oak", "milestone": "M6", "branch": "integration/hardening",'
+                            ' "waves": ["oak_w2"], "tasks": ["B17"]}'
+                        )
+                    ],
                 },
             }
         )
@@ -80,23 +83,20 @@ class ReadStudyOfRunTest(unittest.TestCase):
 
     def test_should_read_the_milestone_report_of_a_run_that_reads_no_pull_request(self):
         # Arrange
-        (self.run_directory / STUDY_RECORD_FILE).write_text(
-            json.dumps(
-                {
-                    "schema_version": 1,
-                    "study": "milestone-report",
-                    "milestone": {
-                        "project": "oak",
-                        "milestone": "M6",
-                        "branch": "integration/hardening",
-                        "waves": [],
-                        "tasks": ["B17"],
-                        "reads_pull_requests": False,
-                    },
-                    "task": None,
-                }
-            ),
-            encoding="utf-8",
+        self.record(
+            {
+                "schema_version": 1,
+                "order": {
+                    "name": "milestone-report",
+                    "recipe": "study",
+                    "params": [
+                        (
+                            'milestone={"project": "oak", "milestone": "M6", "branch": "integration/hardening",'
+                            ' "waves": [], "tasks": ["B17"], "reads_pull_requests": false}'
+                        )
+                    ],
+                },
+            }
         )
 
         # Act

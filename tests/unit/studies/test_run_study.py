@@ -121,7 +121,9 @@ class RunStudyTestCase(unittest.TestCase):
     def create_live_run(self, run: str, study: str) -> None:
         run_directory = self.root / "state" / "runs" / run
         run_directory.mkdir(parents=True)
-        (run_directory / "study.json").write_text(f'{{"study": "{study}"}}', encoding="utf-8")
+        (run_directory / "order.json").write_text(
+            f'{{"order": {{"name": "{study}"}}, "recipe": {{"name": "study"}}}}', encoding="utf-8"
+        )
         self.live_run_directories.add(run_directory)
 
 
@@ -132,6 +134,29 @@ class RunStudyTest(RunStudyTestCase):
 
         # Assert
         self.assertEqual(ran, {"study": "trees", "run": RUN_ID, "state": "done"})
+
+    def test_should_record_a_new_run_as_an_order_of_the_recipe_study(self):
+        # Arrange
+        no_started_run = None
+        record = self.root / "state" / "runs" / "20261019T090000Z-c0ffee" / "order.json"
+
+        # Act
+        run_study(self.runtime, SCAN, self.equipment, no_started_run)
+
+        # Assert
+        self.assertEqual(
+            json.loads(record.read_text(encoding="utf-8"))["order"],
+            {
+                "name": "trees",
+                "recipe": "study",
+                "project": None,
+                "text": None,
+                "params": [],
+                "every": None,
+                "output": "entity:FINDING",
+                "status": "active",
+            },
+        )
 
     def test_should_hold_the_run_by_the_process_of_brigade(self):
         # Act

@@ -1,13 +1,9 @@
 import argparse
-from pathlib import Path
 
 from brigade.command import Argument, Command
 from brigade.commands._equip_study import equip_study
-from brigade.corpus.read_entities import Entity
+from brigade.commands._find_study_project import find_study_project
 from brigade.recipes.run_order import DONE
-from brigade.registry.find_project import find_project
-from brigade.registry.find_project_at import find_project_at
-from brigade.registry.read_projects import read_projects
 from brigade.runs.run_locations import RUNS_DIRECTORY
 from brigade.runtime import Runtime
 from brigade.studies.read_study import Study, read_study
@@ -40,16 +36,9 @@ def _read_study_of_request(request: argparse.Namespace, runtime: Runtime) -> Stu
     return read_study_of_run(runtime, runtime.paths.state_root / RUNS_DIRECTORY / request.run_id)
 
 
-def _find_study_project(study: Study, runtime: Runtime) -> Entity | None:
-    projects = read_projects(runtime)
-    if study.project is None:
-        return find_project_at(projects, Path.cwd())
-    return find_project(projects, study.project)
-
-
 def study_run(request: argparse.Namespace, runtime: Runtime) -> dict:
     study = _read_study_of_request(request, runtime)
-    project = _find_study_project(study, runtime)
+    project = find_study_project(study, runtime)
     equipment = equip_study(project, runtime)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
