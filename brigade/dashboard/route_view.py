@@ -6,6 +6,7 @@ from urllib.parse import parse_qs, urlsplit
 from brigade.dashboard.render_answer import render_answer
 from brigade.dashboard.render_corpus_view import render_corpus_view
 from brigade.dashboard.render_fragment import render_fragment
+from brigade.dashboard.render_inbox_item import render_inbox_item
 from brigade.dashboard.render_ledger_fragment import render_ledger_fragment
 from brigade.dashboard.render_project_choice import render_project_choice
 from brigade.dashboard.render_report_fragment import render_report_fragment
@@ -19,6 +20,7 @@ LEDGER_VIEW = "ledger"
 REPORTS_VIEW = "reports"
 RUNS_VIEW = "runs"
 CORPUS_VIEW = "corpus"
+INBOX_VIEW = "inbox"
 DOCUMENT = "document"
 WAVE_EVENTS = ("wave", "show", "--json", "--events")
 
@@ -43,6 +45,14 @@ def _render_report(answers: dict[str, CommandAnswer]) -> str:
 
 def _render_with(render: Callable[[dict], str]) -> Callable[[dict[str, CommandAnswer]], str]:
     return lambda answers: render_answer(answers[DOCUMENT], render)
+
+
+RENDERERS_BY_COLLECTION = {
+    CORPUS_VIEW: _render_with(render_corpus_view),
+    REPORTS_VIEW: _render_report,
+    RUNS_VIEW: _render_with(render_run_fragment),
+    INBOX_VIEW: _render_with(render_inbox_item),
+}
 
 
 def _route_ledger(query: dict) -> ViewRoute:
@@ -75,12 +85,10 @@ def route_view(target: str, renderers: dict[str, Callable[[dict], str]]) -> View
         return ViewRoute(routes={DOCUMENT: route}, render=_render_with(renderers[address.path]))
     if address.path == CORPUS_VIEW:
         return ViewRoute(routes={DOCUMENT: route}, render=_render_with(render_project_choice))
-    if address.path.startswith(f"{CORPUS_VIEW}/"):
-        return ViewRoute(routes={DOCUMENT: route}, render=_render_with(render_corpus_view))
     if address.path == REPORTS_VIEW:
         return ViewRoute(routes={DOCUMENT: route}, render=_render_reports)
-    if address.path.startswith(f"{REPORTS_VIEW}/"):
-        return ViewRoute(routes={DOCUMENT: route}, render=_render_report)
-    if address.path.startswith(f"{RUNS_VIEW}/"):
-        return ViewRoute(routes={DOCUMENT: route}, render=_render_with(render_run_fragment))
-    return ViewRoute(routes={DOCUMENT: route}, render=_render_document)
+    render = next(
+        (render for collection, render in RENDERERS_BY_COLLECTION.items() if address.path.startswith(f"{collection}/")),
+        _render_document,
+    )
+    return ViewRoute(routes={DOCUMENT: route}, render=render)
