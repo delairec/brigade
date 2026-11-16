@@ -1,8 +1,8 @@
 import signal
 from collections.abc import Callable
 
-from brigade.ledger.append_event import append_event
 from brigade.ledger.order_parked import OrderParked
+from brigade.orders.park_order import park_order
 from brigade.orders.read_order_run import read_order_run
 from brigade.recipes.run_order import FIRST_STEP, STEPS_DIRECTORY, OrderRun
 from brigade.runs.read_run_pid import read_run_pid
@@ -18,9 +18,8 @@ def _find_first_undone_step(run: OrderRun) -> str:
 def stop_order_run(runtime: Runtime, action: StopOrderRun, signal_process: Callable[[int, int], None]) -> None:
     run = read_order_run(runtime, action.run)
     signal_process(read_run_pid(run.run_directory).pid, signal.SIGTERM)
-    append_event(
-        runtime.paths,
-        runtime.now,
+    park_order(
+        runtime,
         OrderParked(
             project=run.project,
             kind=run.recipe["name"],

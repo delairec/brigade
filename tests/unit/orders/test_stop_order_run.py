@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.inbox.read_inbox import read_inbox
 from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.read_ledger import read_ledger
 from brigade.orders.convert_order import Order
@@ -10,7 +11,7 @@ from brigade.orders.start_order_run import start_order_run
 from brigade.orders.stop_order_run import stop_order_run
 from brigade.tick.actions import StopOrderRun
 from tests.unit.create_test_paths import create_test_paths
-from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
 
 RUN_ID = "20261019T080000Z-aaaaaa"
 NIGHTLY = Order(
@@ -50,8 +51,21 @@ class StopOrderRunTest(unittest.TestCase):
         # Assert
         self.assertEqual(self.signals, [(4242, signal.SIGTERM)])
         self.assertEqual(
-            read_ledger(self.runtime.paths.state_root).entries[-1].event,
+            read_ledger(self.runtime.paths.state_root).entries[-2].event,
             OrderParked(
                 project="shop", kind="usage-report", order="nightly", run=RUN_ID, step="2-judge", reason=REASON
             ),
         )
+
+    def test_should_signal_in_the_inbox_the_order_it_parked(self):
+        # Act
+        stop_order_run(self.runtime, StopOrderRun(order="nightly", run=RUN_ID, reason=REASON), self.signals_sent)
+
+        # Assert
+        self.assertEqual(
+            read_inbox(self.runtime.paths.state_root, FIXED_NOW)[0].fingerprint,
+            "order_parked:nightly:20261019T080000Z-aaaaaa",
+        )
+
+    def signals_sent(self, pid: int, sent: int) -> None:
+        self.signals.append((pid, sent))
