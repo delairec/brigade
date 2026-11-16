@@ -18322,7 +18322,8 @@ TASK B253
 	TITLE "The built-in preflights refinement and wave: the citations of a draft whose lines moved,"
 		+ "the tasks on its files outside its AFTER, the overlapping deliverables, and the forge"
 		+ "logins checked by the tick before a wave"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 420
 	TYPE feat
 	MILESTONE @MILESTONE.M8
 	COMPONENT "preflight"
