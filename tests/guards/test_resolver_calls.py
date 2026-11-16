@@ -35,6 +35,16 @@ class ResolverCallsGuardTest(unittest.TestCase):
                 'scheduler = runtime.resolve_plugin("scheduler", "cron")\n',
                 "brigade/adapters/forges/github.py:1 calls resolve_plugin",
             ),
+            (
+                "brigade/preflights/run_preflight.py",
+                "collector = resolve_collector(name, places)\n",
+                "brigade/preflights/run_preflight.py:1 calls resolve_collector",
+            ),
+            (
+                "brigade/preflights/run_preflight.py",
+                "check = resolve_check(name, places)\n",
+                "brigade/preflights/run_preflight.py:1 calls resolve_check",
+            ),
         ]
         for module_path, source, expected_violation in rows:
             with self.subTest(module=module_path), tempfile.TemporaryDirectory() as root:
@@ -56,6 +66,11 @@ class ResolverCallsGuardTest(unittest.TestCase):
             ("brigade/runtime.py", "resolver = functools.partial(resolve_plugin, sources=sources)\n"),
             ("brigade/commands/doctor.py", 'forge = runtime.resolve_plugin("forge", "github")\n'),
             ("brigade/system/resolve_plugin.py", "def resolve_plugin(kind, name, sources):\n    return None\n"),
+            (
+                "brigade/system/resolve_plugin.py",
+                "def resolve_plugin(kind, name, places):\n    return resolve_check(name, places)\n",
+            ),
+            ("brigade/studies/collect_evidence.py", "collector = context.equipment.resolve_collector(name, project)\n"),
         ]
         for module_path, source in rows:
             with self.subTest(module=module_path), tempfile.TemporaryDirectory() as root:
