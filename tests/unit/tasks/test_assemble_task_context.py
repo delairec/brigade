@@ -12,9 +12,7 @@ from tests.unit.select_requests_opening_on import select_requests_opening_on
 
 PROJECT = Entity(
     name="oak",
-    fields=(
-        EntityField(name="PATH", value="/srv/oak"),
-    ),
+    fields=(EntityField(name="PATH", value="/srv/oak"),),
 )
 PROJECT_RECIPES = {"acceptance": (("python3", "-m", "unittest"),), "heavy": (("npm", "run", "e2e"),)}
 from tests.unit.commands.command_runtime import write_operational_corpus

@@ -1,0 +1,26 @@
+{
+  "call": {
+    "arguments": [
+      "status",
+      "--json",
+      "<tmp:0>/cache/brigade/plans/shop_r1"
+    ],
+    "cwd": "<tmp:0>/cache/brigade/plans/shop_r1",
+    "directories": [
+      "<tmp:0>/cache/brigade/plans/shop_r1"
+    ],
+    "inputs": {
+      "<tmp:0>/cache/brigade/plans/shop_r1/corpus/_schema.awawa": "SCHEMA TASK\n\tDESC \"a change delivered by one pull request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS todo|implemented\n\t\tREQUIRED\n\tFIELD TYPE feat|fix|test|docs\n\t\tREQUIRED\n\tFIELD MILESTONE @MILESTONE\n\tFIELD AFTER @TASK\n\t\tREPEATABLE\n\tFIELD DELIVERED_BY uint\n\nSCHEMA MILESTONE\n\tDESC \"the tasks planned for one request\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS planned|active|reached\n\t\tREQUIRED\n\nSCHEMA RECIPE\n\tDESC \"a kind of work brigade runs as ordered steps; its name is the name of the recipe\"\n\tFIELD SCHEMA_VERSION uint\n\t\tREQUIRED\n\tFIELD MAX_WALL uint\n\t\tREQUIRED\n\tFIELD STEP command\n\t\tREQUIRED\n\t\tREPEATABLE\n\t\tFIELD ARGV string\n\t\t\tREPEATABLE\n",
+      "<tmp:0>/cache/brigade/plans/shop_r1/corpus/recipes.awawa": "RECIPE acceptance\n\tSCHEMA_VERSION 1\n\tMAX_WALL 10\n\tSTEP command\n\t\tARGV \"true\"\n",
+      "<tmp:0>/cache/brigade/plans/shop_r1/corpus/tasks.awawa": "TASK S0\n\tTITLE \"Show the cart\"\n\tSTATUS implemented\n\tTYPE feat\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"statuses\": [\"implemented\"], \"types\": [{\"type\": \"MILESTONE\", \"counts\": {\"implemented\": 0}, \"unset\": 0, \"total\": 0}, {\"type\": \"RECIPE\", \"counts\": {\"implemented\": 0}, \"unset\": 1, \"total\": 1}, {\"type\": \"SCHEMA\", \"counts\": {\"implemented\": 0}, \"unset\": 3, \"total\": 3}, {\"type\": \"TASK\", \"counts\": {\"implemented\": 1}, \"unset\": 0, \"total\": 1}], \"ignored\": {\"files\": 0, \"by_pattern\": [], \"not_understood\": []}, \"entities\": [{\"type\": \"RECIPE\", \"name\": \"acceptance\", \"target\": \"@RECIPE.acceptance\", \"file\": \"<tmp:0>/cache/brigade/plans/shop_r1/corpus/recipes.awawa\", \"line\": 1, \"status\": null, \"incoming\": 0, \"incoming_by\": []}, {\"type\": \"SCHEMA\", \"name\": \"MILESTONE\", \"target\": \"@SCHEMA.MILESTONE\", \"file\": \"<tmp:0>/cache/brigade/plans/shop_r1/corpus/_schema.awawa\", \"line\": 14, \"status\": null, \"incoming\": 0, \"incoming_by\": []}, {\"type\": \"SCHEMA\", \"name\": \"RECIPE\", \"target\": \"@SCHEMA.RECIPE\", \"file\": \"<tmp:0>/cache/brigade/plans/shop_r1/corpus/_schema.awawa\", \"line\": 21, \"status\": null, \"incoming\": 0, \"incoming_by\": []}, {\"type\": \"SCHEMA\", \"name\": \"TASK\", \"target\": \"@SCHEMA.TASK\", \"file\": \"<tmp:0>/cache/brigade/plans/shop_r1/corpus/_schema.awawa\", \"line\": 1, \"status\": null, \"incoming\": 0, \"incoming_by\": []}, {\"type\": \"TASK\", \"name\": \"S0\", \"target\": \"@TASK.S0\", \"file\": \"<tmp:0>/cache/brigade/plans/shop_r1/corpus/tasks.awawa\", \"line\": 1, \"status\": \"implemented\", \"incoming\": 0, \"incoming_by\": []}], \"references\": {\"sites\": 0, \"unresolved\": 0, \"by_file\": []}, \"diagnostics\": {\"errors\": 0, \"warnings\": 0, \"by_rule\": []}, \"summary\": {\"files\": 3, \"entities\": 5}}\n"
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}

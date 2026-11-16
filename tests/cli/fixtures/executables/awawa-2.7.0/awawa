@@ -5,5 +5,6 @@ case "$*" in
   "status PROJECT --json "*) echo '{"entities":[{"type":"PROJECT","name":"shop"}]}' ;;
   "show @PROJECT.shop --json "*) echo '{"fields":[{"name":"PATH","atoms":["/"]},{"name":"MAIN","atoms":["main"]},{"name":"FORGE","atoms":["github"]}]}' ;;
   "status POLICY --json "*) echo '{"entities":[]}' ;;
+  "status --json /") echo '{"entities":[]}' ;;
   *) exit 2 ;;
 esac

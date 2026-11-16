@@ -2,6 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tests.cli.recipe_schema import RECIPE_SCHEMA
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import PINNED_COMMIT_DATES, TemporaryProject
 
@@ -17,6 +18,7 @@ PROJECT_SCHEMA = (
     '\tDESC "the tasks planned for one request"\n'
     "\tFIELD TITLE string\n\t\tREQUIRED\n"
     "\tFIELD STATUS planned|running\n\t\tREQUIRED\n"
+    f"{RECIPE_SCHEMA}"
 )
 MAIN_TASKS = 'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS implemented\n'
 WAVE_TASKS = (
@@ -37,8 +39,12 @@ WAVE_STARTED = (
     '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
     f' "project": "shop", "branch": "{MILESTONE_BRANCH}", "tasks": ["S3", "S6"]}}\n'
 )
-ACCEPTANCE_COMMAND = "python3 -m unittest"
-HEAVY_COMMAND = "python3 -m unittest discover tests/e2e"
+PROJECT_RECIPES = (
+    'RECIPE acceptance\n\tSCHEMA_VERSION 1\n\tMAX_WALL 10\n\tSTEP command\n\t\tARGV "python3"\n'
+    '\t\tARGV "-m"\n\t\tARGV "unittest"\n\n'
+    'RECIPE heavy\n\tSCHEMA_VERSION 1\n\tMAX_WALL 10\n\tSTEP command\n\t\tARGV "python3"\n'
+    '\t\tARGV "-m"\n\t\tARGV "unittest"\n\t\tARGV "discover"\n\t\tARGV "tests/e2e"\n'
+)
 SETUP_LOG = "$ touch setup-ran\n"
 FAKE_CLIENT = 'client = "fake"\n{keys}[clients.fake]\nrecordings = "{recordings}"\n{settings}'
 
@@ -57,6 +63,7 @@ class TaskContextTestCase(unittest.TestCase):
         self.project = TemporaryProject(root / "projects" / "shop", self.describe_environment())
         self.project.write("corpus/_schema.awawa", PROJECT_SCHEMA)
         self.project.write("corpus/tasks.awawa", MAIN_TASKS)
+        self.project.write("corpus/recipes.awawa", self.describe_project_recipes())
         self.project.track("corpus")
         self.project.run_git("commit", "--quiet", "-m", "the corpus")
         self.project.run_git("checkout", "--quiet", "-b", MILESTONE_BRANCH)
@@ -72,7 +79,6 @@ class TaskContextTestCase(unittest.TestCase):
             str(self.project.path),
             "--corpus-mode",
             "control",
-            *self.describe_project_commands(),
         )
         self.wave_started = self.state / "ledger" / "2026-10.jsonl"
         self.wave_started.parent.mkdir(parents=True)
@@ -89,8 +95,8 @@ class TaskContextTestCase(unittest.TestCase):
     def describe_environment(self) -> dict:
         return {**self.machine.describe_environment(), **PINNED_COMMIT_DATES}
 
-    def describe_project_commands(self) -> tuple[str, ...]:
-        return ("--acceptance", ACCEPTANCE_COMMAND, "--heavy", HEAVY_COMMAND)
+    def describe_project_recipes(self) -> str:
+        return PROJECT_RECIPES
 
     def configure(self, keys: str = "", settings: str = "") -> None:
         self.machine.write_configuration(FAKE_CLIENT.format(keys=keys, recordings=self.recordings, settings=settings))
