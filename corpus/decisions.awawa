@@ -7534,3 +7534,22 @@ DECISION TheAnswerOfAnOrderIsAResultEntityTheOutputStepKeepsInTheOperationalCorp
 		+ "leaves where the answer of a judge step is kept"
 		REF @TASK.B51
 		REF @DECISION.BrigadeReportsListsTheWaveReportsAndStudyAnswersTheOperationalCorpusKeeps
+
+DECISION AnOrderAnswerIsLintedAgainstTheTypeOfTheFirstUndoneJudgeStepAndKeptAsTheAnswerOfItsRun
+	TITLE "brigade order answer lints the answer against the type the first judge step of the run"
+		+ "not yet done names, refuses it when it changed ORDER, RUN or COLLECTED, and keeps it as"
+		+ "answer.awawa of the run directory, which the output step reads through the awawa"
+		+ "document plugin"
+	STATUS active
+	DESC "the run directory records the recipe beside the order in order.json, so brigade order"
+		+ "context and brigade order answer read the recipe the run was started with, not the"
+		+ "recipe as it stands"
+	DESC "brigade order context prints the collected documents of the run, the RESULT skeleton the"
+		+ "CLI fills and the schema of the type the judge step names"
+	REJECTED "a store operation added to the plugin kind document: the output step already reads"
+		+ "answer.awawa through the awawa document plugin, and a second way to keep the answer"
+		+ "would be a second path"
+	REJECTED "the recipe resolved again from the project at each order context: a recipe changed"
+		+ "while a run waits would name another schema than the one its judge step was launched for"
+	SOURCE "the pull request of @TASK.B51"
+		REF @TASK.B51
