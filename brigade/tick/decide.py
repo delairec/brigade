@@ -510,9 +510,9 @@ def _decide_catch_up(
 
 
 def _describe_spent_rounds(task: TaskFacts, project: ProjectFacts) -> str | None:
-    if task.repair_rounds < project.verify_rounds:
+    if task.repair_rounds < project.repair_rounds:
         return None
-    return f"past {project.verify_rounds} repair rounds"
+    return f"past {project.repair_rounds} repair rounds"
 
 
 def _decide_review_launch(
@@ -520,7 +520,7 @@ def _decide_review_launch(
 ) -> LaunchVerification | ParkTask | None:
     if task.worktree is None or task.worktree in occupancy.worktrees or (launch.wave, task.name) in occupancy.tasks:
         return None
-    if len(task.review_runs) > project.verify_rounds:
+    if len(task.review_runs) > project.repair_rounds:
         return ParkTask(
             wave=launch.wave,
             task=task.name,

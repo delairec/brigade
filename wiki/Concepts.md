@@ -7,7 +7,7 @@ of another page is unknown.
 | `config.toml` | the machine configuration, beside the operational corpus and never committed | [Install](Install.md) |
 | project | a git repository brigade works on, a `PROJECT` entity of `projects.awawa` in the operational corpus, the registry; its `SLOTS` bounds its live build runs | [Projects](Projects.md) |
 | forge | where a project's pull requests live: `github` for a remote on github.com, or `none` | [Projects](Projects.md) |
-| `POLICY` | the entity that sets, per project, how brigade acts on it: `PLAN_REVIEW`, `WAVE_START`, `REVIEW`, `VERIFY_ROUNDS`, `HANDOVERS`, `AUTO_MERGE` | [Tick and scheduler](Tick-and-scheduler.md) |
+| `POLICY` | the entity that sets, per project, how brigade acts on it: `PLAN_REVIEW`, `WAVE_START`, `REVIEW`, `REPAIR_ROUNDS`, `HANDOVERS`, `AUTO_MERGE` | [Tick and scheduler](Tick-and-scheduler.md) |
 | `[forge_accounts]` | the table of `config.toml` that binds a forge login to each slot, `plan`, `build`, `review`, `remediate`, `rebase`, `report`, `triage`, `rules` and `explore`, and to the key `cli` for the gh calls brigade makes itself | [Waves](Waves.md) |
 | request | what the user wants for one project, in their words, and the plan it receives, a `REQUEST` entity | [Waves](Waves.md) |
 | plan | one `MILESTONE` and its tasks, recorded for a request on the branch `plan/<request>` | [Waves](Waves.md) |

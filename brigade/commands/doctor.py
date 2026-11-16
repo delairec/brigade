@@ -17,6 +17,7 @@ from brigade.git.read_git_version import read_git_version
 from brigade.python_floor import PYTHON_FLOOR
 from brigade.recipes.locate_recipes import locate_recipes
 from brigade.recipes.read_project_commands import read_project_commands
+from brigade.registry.find_retired_schema_fields import find_retired_schema_fields
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_project_forge import NO_FORGE, read_project_forge
 from brigade.registry.read_projects import read_projects
@@ -345,7 +346,14 @@ def _check_schema(runtime: Runtime) -> list[dict]:
     schema = runtime.paths.schema_file
     if not schema.exists() or schema.read_bytes() == SHIPPED_SCHEMA.read_bytes():
         return []
-    return [_create_optional("schema", "warning", f"{schema} differs from the shipped schema", SCHEMA_FALLBACK)]
+    retired = [
+        _create_prerequisite("schema", "finding", f"{name.old} is now named {name.new}")
+        for name in find_retired_schema_fields(schema.read_text())
+    ]
+    return [
+        *retired,
+        _create_optional("schema", "warning", f"{schema} differs from the shipped schema", SCHEMA_FALLBACK),
+    ]
 
 
 def _check_configuration(reading: Configuration | BrigadeError) -> list[dict]:

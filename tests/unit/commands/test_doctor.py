@@ -965,6 +965,25 @@ class DoctorSchemaTest(DoctorTestCase):
         # Assert
         self.assertIn(self.schema_warning, document["items"])
 
+    def test_should_list_a_retired_field_of_the_schema_with_its_new_name(self):
+        # Arrange
+        self.runtime.paths.schema_file.write_text("SCHEMA POLICY\n\tFIELD VERIFY_ROUNDS uint\n")
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "schema",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": "POLICY.VERIFY_ROUNDS is now named POLICY.REPAIR_ROUNDS",
+                "fallback": None,
+            },
+            document["items"],
+        )
+
     def test_should_not_warn_of_the_shipped_schema(self):
         # Arrange
         self.runtime.paths.schema_file.write_bytes(SHIPPED_SCHEMA.read_bytes())
