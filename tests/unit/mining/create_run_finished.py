@@ -12,8 +12,8 @@ def create_run_finished(run: str, session: str | None, task: str | None = "B42")
         client="vibe",
         project="oak",
         session=session,
-        main_steps=12,
-        total_steps=12,
+        main_turns=12,
+        total_turns=12,
         duration_ms=60000,
         usage=TokenUsage(
             input_tokens=10, output_tokens=200, cache_creation_input_tokens=0, cache_read_input_tokens=3000

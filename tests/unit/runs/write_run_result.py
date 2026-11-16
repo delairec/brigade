@@ -12,10 +12,10 @@ def write_run_result(
     *,
     message: str | None = None,
     session: str | None = None,
-    main_steps: int | None = None,
+    main_turns: int | None = None,
 ) -> Path:
     finished = dataclasses.replace(
-        create_run_finished(path.parent.name, outcome=outcome, main_steps=main_steps), message=message, session=session
+        create_run_finished(path.parent.name, outcome=outcome, main_turns=main_turns), message=message, session=session
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({"schema_version": RUN_FINISHED_SCHEMA_VERSION, **finished.to_document()}))

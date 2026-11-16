@@ -363,7 +363,7 @@ WAVE_W4_SHOWN = (
     '{"schema_version": 1, "wave": "w4", "project": "oak", "branch": "integration/w4", "started_at":'
     ' "2026-10-19T07:00:00Z", "last_event": "task.parked", "pull_request": null, "tasks": [{"task": "B28",'
     ' "state": "parked", "pull_request": null, "run": "r28", "reason": "blocked"}], "ledger": {"view": "wave",'
-    ' "wave": "w4", "rounds_by_task": {}, "steps_by_task": {"B28": 12}, "events":'
+    ' "wave": "w4", "rounds_by_task": {}, "turns_by_task": {"B28": 12}, "events":'
     ' [{"at": "2026-10-19T07:00:00Z", "event": "wave.started", "fields": {"wave": "w4"}}]}}\n'
 )
 

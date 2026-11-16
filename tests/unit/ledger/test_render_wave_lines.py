@@ -25,11 +25,11 @@ class RenderWaveLinesTest(unittest.TestCase):
                 "cache_read_input_tokens": 44,
             },
             "by_task": [
-                {"task": "T7", "steps": 80, "partial": True, "duration_ms": 1500000, "cost_usd": 4.75},
-                {"task": "T8", "steps": None, "partial": False, "duration_ms": None, "cost_usd": None},
+                {"task": "T7", "turns": 80, "partial": True, "duration_ms": 1500000, "cost_usd": 4.75},
+                {"task": "T8", "turns": None, "partial": False, "duration_ms": None, "cost_usd": None},
             ],
             "pull_requests": [{"task": "T7", "pr": 42, "rounds": 2}],
-            "steps": {"by_slot": {"build": build_steps}, "by_role": {}},
+            "turns": {"by_slot": {"build": build_steps}, "by_role": {}},
             "pauses": [
                 {"paused_at": "2026-10-01T00:15:00Z", "resumed_at": "2026-10-01T01:15:00Z", "duration_ms": 3600000},
                 {"paused_at": "2026-10-01T02:00:00Z", "resumed_at": None, "duration_ms": None},
@@ -50,14 +50,14 @@ class RenderWaveLinesTest(unittest.TestCase):
             "cost: 4.75 USD\n"
             "tokens: input 11, output 22, cache creation 33, cache read 44\n"
             "tasks:\n"
-            "  T7  steps 80 partial  duration 0h25m  cost 4.75 USD\n"
-            "  T8  steps -  duration -  cost -\n"
+            "  T7  turns 80 partial  duration 0h25m  cost 4.75 USD\n"
+            "  T8  turns -  duration -  cost -\n"
             "pull requests: #42 T7 rounds 2\n"
-            "steps by slot:\n"
+            "turns by slot:\n"
             "  build\n"
             "    runs p50 40  p90 52  measured 2  partial 0  unmeasured 0\n"
             "    segments p50 40  p90 52  measured 2  unmeasured 0\n"
-            "steps by role: none\n"
+            "turns by role: none\n"
             "pauses: 2, 1h00m in all\n"
             "  2026-10-01T00:15:00Z to 2026-10-01T01:15:00Z  1h00m\n"
             "  2026-10-01T02:00:00Z, still paused\n"
@@ -79,7 +79,7 @@ class RenderWaveLinesTest(unittest.TestCase):
             "usage": None,
             "by_task": [],
             "pull_requests": [],
-            "steps": {"by_slot": {}, "by_role": {}},
+            "turns": {"by_slot": {}, "by_role": {}},
             "pauses": [{"paused_at": "2026-10-02T10:00:00Z", "resumed_at": None, "duration_ms": None}],
             "paused_ms": 0,
             "handovers": [],
@@ -98,8 +98,8 @@ class RenderWaveLinesTest(unittest.TestCase):
             "tokens: none\n"
             "tasks: none\n"
             "pull requests: none\n"
-            "steps by slot: none\n"
-            "steps by role: none\n"
+            "turns by slot: none\n"
+            "turns by role: none\n"
             "pauses: 1, 0h00m in all\n"
             "  2026-10-02T10:00:00Z, still paused\n"
             "handovers: none\n"
@@ -122,9 +122,9 @@ class RenderWaveLinesTest(unittest.TestCase):
             "tasks": ["TP147"],
             "cost_usd": None,
             "usage": None,
-            "by_task": [{"task": "TP147", "steps": 40, "partial": False, "duration_ms": 60000, "cost_usd": None}],
+            "by_task": [{"task": "TP147", "turns": 40, "partial": False, "duration_ms": 60000, "cost_usd": None}],
             "pull_requests": [],
-            "steps": {"by_slot": {}, "by_role": {"ada": ada_steps}},
+            "turns": {"by_slot": {}, "by_role": {"ada": ada_steps}},
             "pauses": [],
             "paused_ms": 0,
             "handovers": [],
@@ -142,10 +142,10 @@ class RenderWaveLinesTest(unittest.TestCase):
             "cost: none\n"
             "tokens: none\n"
             "tasks:\n"
-            "  TP147  steps 40  duration 0h01m  cost -\n"
+            "  TP147  turns 40  duration 0h01m  cost -\n"
             "pull requests: none\n"
-            "steps by slot: none\n"
-            "steps by role:\n"
+            "turns by slot: none\n"
+            "turns by role:\n"
             "  ada\n"
             "    runs p50 40  p90 40  measured 1  partial 1  unmeasured 0\n"
             "    segments p50 40  p90 40  measured 1  unmeasured 1\n"
@@ -168,7 +168,7 @@ class RenderWaveLinesTest(unittest.TestCase):
             "usage": None,
             "by_task": [],
             "pull_requests": [],
-            "steps": {"by_slot": {}, "by_role": {}},
+            "turns": {"by_slot": {}, "by_role": {}},
             "pauses": [],
             "paused_ms": 0,
             "handovers": [],
@@ -190,8 +190,8 @@ class RenderWaveLinesTest(unittest.TestCase):
             "tokens: none\n"
             "tasks: none\n"
             "pull requests: none\n"
-            "steps by slot: none\n"
-            "steps by role: none\n"
+            "turns by slot: none\n"
+            "turns by role: none\n"
             "pauses: 0, 0h00m in all\n"
             "handovers: none\n"
             "parked: none\n"

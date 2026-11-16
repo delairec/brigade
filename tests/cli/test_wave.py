@@ -21,21 +21,21 @@ SHOWN_WAVE_EVENTS = (
     ' "project": "cafe", "branch": "integration/cafe_w1", "tasks": ["S3"]}\n'
     '{"schema_version": 1, "ts": "2026-10-13T12:00:00Z", "event": "task.state", "wave": "cafe_w1", "task": "S3",'
     ' "state": "merged"}\n'
-    '{"schema_version": 2, "ts": "2026-10-13T12:10:00Z", "event": "run.finished", "wave": "shop_w1", "task": "S3",'
+    '{"schema_version": 3, "ts": "2026-10-13T12:10:00Z", "event": "run.finished", "wave": "shop_w1", "task": "S3",'
     ' "run": "20261013T110000Z-a00001", "client": "fake", "project": "shop", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "build-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "failed",'
-    ' "error_class": "rate_limit", "main_steps": 50, "total_steps": null}\n'
-    '{"schema_version": 2, "ts": "2026-10-13T12:20:00Z", "event": "run.finished", "wave": "shop_w1", "task": "S3",'
+    ' "error_class": "rate_limit", "main_turns": 50, "total_turns": null}\n'
+    '{"schema_version": 3, "ts": "2026-10-13T12:20:00Z", "event": "run.finished", "wave": "shop_w1", "task": "S3",'
     ' "run": "20261013T121500Z-a00002", "client": "fake", "project": "shop", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "build-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": 30, "total_steps": null}\n'
-    '{"schema_version": 2, "ts": "2026-10-13T12:30:00Z", "event": "run.finished", "wave": "cafe_w1", "task": "S3",'
+    ' "error_class": null, "main_turns": 30, "total_turns": null}\n'
+    '{"schema_version": 3, "ts": "2026-10-13T12:30:00Z", "event": "run.finished", "wave": "cafe_w1", "task": "S3",'
     ' "run": "20261013T122500Z-a00003", "client": "fake", "project": "cafe", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "build-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": 30, "total_steps": null}\n'
+    ' "error_class": null, "main_turns": 30, "total_turns": null}\n'
 )
 LISTED_WAVE_EVENTS = (
     '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
@@ -65,38 +65,38 @@ CANCELLED_WAVE_EVENTS = (
 RECORDED_WAVE_EVENTS = (
     '{"schema_version": 2, "ts": "2026-09-30T22:00:00Z", "event": "wave.started", "wave": "tidepool_w16",'
     ' "project": "tidepool", "branch": "integration/M1", "tasks": ["T1"]}\n'
-    '{"schema_version": 2, "ts": "2026-09-30T22:10:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
+    '{"schema_version": 3, "ts": "2026-09-30T22:10:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
     ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "failed",'
-    ' "error_class": "rate_limit", "main_steps": 50, "total_steps": null}\n'
+    ' "error_class": "rate_limit", "main_turns": 50, "total_turns": null}\n'
     '{"schema_version": 1, "ts": "2026-09-30T22:15:00Z", "event": "wave.paused", "wave": "tidepool_w16", "reason": "quota",'
     ' "resume_at": null}\n'
     '{"schema_version": 1, "ts": "2026-10-01T00:15:00Z", "event": "wave.resumed", "wave": "tidepool_w16", "reason": "quota"}\n'
-    '{"schema_version": 2, "ts": "2026-10-01T00:40:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
+    '{"schema_version": 3, "ts": "2026-10-01T00:40:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
     ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 2, "outcome": "done",'
-    ' "error_class": null, "main_steps": 30, "total_steps": null}\n'
-    '{"schema_version": 2, "ts": "2026-10-01T00:50:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP147",'
+    ' "error_class": null, "main_turns": 30, "total_turns": null}\n'
+    '{"schema_version": 3, "ts": "2026-10-01T00:50:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP147",'
     ' "run": "20261001T000000Z-a00002", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": null, "total_steps": null}\n'
-    '{"schema_version": 2, "ts": "2026-10-01T01:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
+    ' "error_class": null, "main_turns": null, "total_turns": null}\n'
+    '{"schema_version": 3, "ts": "2026-10-01T01:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
     ' "run": "20261001T000000Z-a00003", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-pr-review", "role": "remi", "slot": "review", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": 12, "total_steps": null}\n'
+    ' "error_class": null, "main_turns": 12, "total_turns": null}\n'
     '{"schema_version": 1, "ts": "2026-10-01T01:30:00Z", "event": "pr.merged", "project": "tidepool", "wave": "tidepool_w16",'
     ' "task": "TP146", "pr": 291, "rounds": 1, "login": "tidepool-cli"}\n'
     '{"schema_version": 1, "ts": "2026-10-01T01:40:00Z", "event": "task.parked", "wave": "tidepool_w16", "task": "TP147",'
     ' "reason": "blocked", "blockers": ["OPEN_QUESTION.Undecided"]}\n'
-    '{"schema_version": 2, "ts": "2026-10-01T02:00:00Z", "event": "run.finished", "wave": "tidepool_w17", "task": "TP150",'
+    '{"schema_version": 3, "ts": "2026-10-01T02:00:00Z", "event": "run.finished", "wave": "tidepool_w17", "task": "TP150",'
     ' "run": "20261001T000000Z-a00004", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": 20, "total_steps": null}\n'
+    ' "error_class": null, "main_turns": 20, "total_turns": null}\n'
 )
 
 
@@ -179,17 +179,17 @@ class BrigadeWaveShowEventsTest(WaveTestCase):
                 "cost: none",
                 "tokens: none",
                 "tasks:",
-                "  TP146  steps 92  duration 0h00m  cost -",
-                "  TP147  steps -  duration 0h00m  cost -",
+                "  TP146  turns 92  duration 0h00m  cost -",
+                "  TP147  turns -  duration 0h00m  cost -",
                 "pull requests: #291 TP146 rounds 1",
-                "steps by slot:",
+                "turns by slot:",
                 "  build",
                 "    runs p50 80  p90 80  measured 1  partial 0  unmeasured 1",
                 "    segments p50 30  p90 50  measured 2  unmeasured 1",
                 "  review",
                 "    runs p50 12  p90 12  measured 1  partial 0  unmeasured 0",
                 "    segments p50 12  p90 12  measured 1  unmeasured 0",
-                "steps by role:",
+                "turns by role:",
                 "  builder",
                 "    runs p50 80  p90 80  measured 1  partial 0  unmeasured 1",
                 "    segments p50 30  p90 50  measured 2  unmeasured 1",

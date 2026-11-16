@@ -146,7 +146,7 @@ class RunSegmentsOfARunDoneInOneSegmentTest(RunSegmentsTestCase):
         self.assertEqual(
             json.loads((plan.run_directory / "result.json").read_text()),
             {
-                "schema_version": 2,
+                "schema_version": 3,
                 "ts": "2026-10-19T09:00:00Z",
                 "event": "run.finished",
                 "run": RUN_ID,
@@ -157,8 +157,8 @@ class RunSegmentsOfARunDoneInOneSegmentTest(RunSegmentsTestCase):
                 "client": "fake",
                 "project": None,
                 "session": "session-b73",
-                "main_steps": 12,
-                "total_steps": None,
+                "main_turns": 12,
+                "total_turns": None,
                 "duration_ms": 0,
                 "usage": None,
                 "outcome": "done",
@@ -170,12 +170,12 @@ class RunSegmentsOfARunDoneInOneSegmentTest(RunSegmentsTestCase):
                 "procedure_digest": PROCEDURE_DIGEST,
                 "shipped_budget": 40,
                 "nulls": {
-                    "steps_to_first_edit": NO_EDIT_TOOL,
+                    "turns_to_first_edit": NO_EDIT_TOOL,
                     "tokens_to_first_edit": NO_EDIT_TOOL,
                     "project": "no project given",
                     "wave": "not launched by a wave",
                     "task": "not launched for a task",
-                    "total_steps": "the client reads no transcript",
+                    "total_turns": "the client reads no transcript",
                     "usage": "the client reported no usage",
                     "error_class": "the run did not fail",
                 },
@@ -217,7 +217,7 @@ class RunSegmentsOfARunHandedOverTest(RunSegmentsTestCase):
             self.read_events(),
             [
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "run.finished",
                     "run": RUN_ID,
@@ -228,8 +228,8 @@ class RunSegmentsOfARunHandedOverTest(RunSegmentsTestCase):
                     "client": "fake",
                     "project": None,
                     "session": "session-b73",
-                    "main_steps": 12,
-                    "total_steps": None,
+                    "main_turns": 12,
+                    "total_turns": None,
                     "duration_ms": 0,
                     "usage": None,
                     "outcome": "handed_over",
@@ -241,12 +241,12 @@ class RunSegmentsOfARunHandedOverTest(RunSegmentsTestCase):
                     "procedure_digest": PROCEDURE_DIGEST,
                     "shipped_budget": 40,
                     "nulls": {
-                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "turns_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
-                        "total_steps": "the client reads no transcript",
+                        "total_turns": "the client reads no transcript",
                         "usage": "the client reported no usage",
                         "error_class": "the client reported no error class",
                     },
@@ -633,7 +633,7 @@ class RunSegmentsCutOnTheClockTest(RunSegmentsTestCase):
             self.read_events(),
             [
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "run.finished",
                     "run": RUN_ID,
@@ -644,8 +644,8 @@ class RunSegmentsCutOnTheClockTest(RunSegmentsTestCase):
                     "client": "fake",
                     "project": None,
                     "session": None,
-                    "main_steps": None,
-                    "total_steps": None,
+                    "main_turns": None,
+                    "total_turns": None,
                     "duration_ms": 0,
                     "usage": None,
                     "outcome": "wall_limit",
@@ -657,14 +657,14 @@ class RunSegmentsCutOnTheClockTest(RunSegmentsTestCase):
                     "procedure_digest": PROCEDURE_DIGEST,
                     "shipped_budget": 40,
                     "nulls": {
-                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "turns_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
                         "session": "the client names no session at launch",
-                        "main_steps": "the client reads no transcript",
-                        "total_steps": "the client reads no transcript",
+                        "main_turns": "the client reads no transcript",
+                        "total_turns": "the client reads no transcript",
                         "usage": "the client reads no transcript",
                         "error_class": "cut at the wall-time limit",
                         "exit": "cut at the wall-time limit",
@@ -764,7 +764,7 @@ class RunSegmentsStoppedAtTheSoftLimitTest(RunSegmentsTestCase):
             self.read_events(),
             [
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "run.finished",
                     "run": RUN_ID,
@@ -775,8 +775,8 @@ class RunSegmentsStoppedAtTheSoftLimitTest(RunSegmentsTestCase):
                     "client": "fake",
                     "project": None,
                     "session": "session-b73",
-                    "main_steps": 12,
-                    "total_steps": None,
+                    "main_turns": 12,
+                    "total_turns": None,
                     "duration_ms": 0,
                     "usage": None,
                     "outcome": "soft_limit",
@@ -788,12 +788,12 @@ class RunSegmentsStoppedAtTheSoftLimitTest(RunSegmentsTestCase):
                     "procedure_digest": PROCEDURE_DIGEST,
                     "shipped_budget": 40,
                     "nulls": {
-                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "turns_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
-                        "total_steps": "the client reads no transcript",
+                        "total_turns": "the client reads no transcript",
                         "usage": "the client reported no usage",
                         "error_class": "the client reported no error class",
                     },
@@ -902,7 +902,7 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
             self.read_events(),
             [
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "run.finished",
                     "run": RUN_ID,
@@ -913,8 +913,8 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "client": "fake",
                     "project": None,
                     "session": "session-b73",
-                    "main_steps": 12,
-                    "total_steps": None,
+                    "main_turns": 12,
+                    "total_turns": None,
                     "duration_ms": 0,
                     "usage": None,
                     "outcome": "done",
@@ -926,12 +926,12 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
                     "shipped_budget": 10,
                     "nulls": {
-                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "turns_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
-                        "total_steps": "the client reads no transcript",
+                        "total_turns": "the client reads no transcript",
                         "usage": "the client reported no usage",
                         "error_class": "the run did not fail",
                     },
@@ -946,17 +946,17 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "run": RUN_ID,
                     "segment": 1,
                     "budget": 5,
-                    "steps": 12,
+                    "turns": 12,
                 },
             ],
         )
 
-    def test_should_measure_the_steps_against_the_applied_cap_below_the_shipped_budget(self):
+    def test_should_measure_the_turns_against_the_applied_cap_below_the_shipped_budget(self):
         # Arrange
-        cap_of_ten_steps = RoleBudget(
+        cap_of_ten_turns = RoleBudget(
             shipped=15, computed=10, applied=10, segments=6, restarts=3, growth=8000.0, restart_tokens=400000.0
         )
-        plan = self.create_plan(["done"], procedure=ONE_DOT_PROCEDURE, budget=cap_of_ten_steps)
+        plan = self.create_plan(["done"], procedure=ONE_DOT_PROCEDURE, budget=cap_of_ten_turns)
 
         # Act
         run_segments(plan, self.runtime, StopSignalReceiver())
@@ -966,7 +966,7 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
             self.read_events(),
             [
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "run.finished",
                     "run": RUN_ID,
@@ -977,8 +977,8 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "client": "fake",
                     "project": None,
                     "session": "session-b73",
-                    "main_steps": 12,
-                    "total_steps": None,
+                    "main_turns": 12,
+                    "total_turns": None,
                     "duration_ms": 0,
                     "usage": None,
                     "outcome": "done",
@@ -990,12 +990,12 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
                     "shipped_budget": 15,
                     "nulls": {
-                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "turns_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
-                        "total_steps": "the client reads no transcript",
+                        "total_turns": "the client reads no transcript",
                         "usage": "the client reported no usage",
                         "error_class": "the run did not fail",
                     },
@@ -1010,17 +1010,17 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "run": RUN_ID,
                     "segment": 1,
                     "budget": 10,
-                    "steps": 12,
+                    "turns": 12,
                 },
             ],
         )
 
-    def test_should_measure_the_steps_against_the_applied_cap_above_the_shipped_budget(self):
+    def test_should_measure_the_turns_against_the_applied_cap_above_the_shipped_budget(self):
         # Arrange
-        cap_of_twenty_steps = RoleBudget(
+        cap_of_twenty_turns = RoleBudget(
             shipped=10, computed=20, applied=20, segments=6, restarts=3, growth=2000.0, restart_tokens=400000.0
         )
-        plan = self.create_plan(["done"], procedure=ONE_DOT_PROCEDURE, budget=cap_of_twenty_steps)
+        plan = self.create_plan(["done"], procedure=ONE_DOT_PROCEDURE, budget=cap_of_twenty_turns)
 
         # Act
         run_segments(plan, self.runtime, StopSignalReceiver())
@@ -1030,7 +1030,7 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
             self.read_events(),
             [
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "run.finished",
                     "run": RUN_ID,
@@ -1041,8 +1041,8 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "client": "fake",
                     "project": None,
                     "session": "session-b73",
-                    "main_steps": 12,
-                    "total_steps": None,
+                    "main_turns": 12,
+                    "total_turns": None,
                     "duration_ms": 0,
                     "usage": None,
                     "outcome": "done",
@@ -1054,12 +1054,12 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
                     "shipped_budget": 10,
                     "nulls": {
-                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "turns_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
-                        "total_steps": "the client reads no transcript",
+                        "total_turns": "the client reads no transcript",
                         "usage": "the client reported no usage",
                         "error_class": "the run did not fail",
                     },
@@ -1079,7 +1079,7 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
             self.read_events(),
             [
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "run.finished",
                     "run": RUN_ID,
@@ -1090,8 +1090,8 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "client": "fake",
                     "project": None,
                     "session": "session-b73",
-                    "main_steps": 12,
-                    "total_steps": None,
+                    "main_turns": 12,
+                    "total_turns": None,
                     "duration_ms": 0,
                     "usage": None,
                     "outcome": "done",
@@ -1103,12 +1103,12 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
                     "shipped_budget": 12,
                     "nulls": {
-                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "turns_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
-                        "total_steps": "the client reads no transcript",
+                        "total_turns": "the client reads no transcript",
                         "usage": "the client reported no usage",
                         "error_class": "the run did not fail",
                     },
@@ -1128,7 +1128,7 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
             self.read_events(),
             [
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "run.finished",
                     "run": RUN_ID,
@@ -1139,8 +1139,8 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "client": "fake",
                     "project": None,
                     "session": "session-b73",
-                    "main_steps": None,
-                    "total_steps": None,
+                    "main_turns": None,
+                    "total_turns": None,
                     "duration_ms": 0,
                     "usage": None,
                     "outcome": "done",
@@ -1152,13 +1152,13 @@ class RunSegmentsOverItsBudgetTest(RunSegmentsTestCase):
                     "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
                     "shipped_budget": 10,
                     "nulls": {
-                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "turns_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
-                        "main_steps": "the client counts no steps and the client reads no transcript",
-                        "total_steps": "the client reads no transcript",
+                        "main_turns": "the client counts no turns and the client reads no transcript",
+                        "total_turns": "the client reads no transcript",
                         "usage": "the client reported no usage",
                         "error_class": "the run did not fail",
                     },
@@ -1256,7 +1256,7 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
             self.read_events(),
             [
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "run.finished",
                     "run": RUN_ID,
@@ -1267,8 +1267,8 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
                     "client": "fake",
                     "project": None,
                     "session": "session-b73",
-                    "main_steps": 12,
-                    "total_steps": None,
+                    "main_turns": 12,
+                    "total_turns": None,
                     "usage": REPORTED_USAGE,
                     "outcome": "done",
                     "error_class": None,
@@ -1280,12 +1280,12 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
                     "procedure_digest": PROCEDURE_DIGEST,
                     "shipped_budget": 40,
                     "nulls": {
-                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "turns_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
-                        "total_steps": "the client reads no transcript",
+                        "total_turns": "the client reads no transcript",
                         "error_class": "the run did not fail",
                     },
                 }
@@ -1303,7 +1303,7 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
         self.assertEqual(
             json.loads((plan.run_directory / "segments" / "1" / "result.json").read_text()),
             {
-                "schema_version": 2,
+                "schema_version": 3,
                 "ts": "2026-10-19T09:00:00Z",
                 "event": "run.finished",
                 "run": RUN_ID,
@@ -1314,8 +1314,8 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
                 "client": "fake",
                 "project": None,
                 "session": "session-b73",
-                "main_steps": 12,
-                "total_steps": None,
+                "main_turns": 12,
+                "total_turns": None,
                 "duration_ms": 0,
                 "usage": {
                     "input_tokens": 120,
@@ -1332,12 +1332,12 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
                 "procedure_digest": PROCEDURE_DIGEST,
                 "shipped_budget": 40,
                 "nulls": {
-                    "steps_to_first_edit": NO_EDIT_TOOL,
+                    "turns_to_first_edit": NO_EDIT_TOOL,
                     "tokens_to_first_edit": NO_EDIT_TOOL,
                     "project": "no project given",
                     "wave": "not launched by a wave",
                     "task": "not launched for a task",
-                    "total_steps": "the client reads no transcript",
+                    "total_turns": "the client reads no transcript",
                     "error_class": "the run did not fail",
                 },
             },
@@ -1345,7 +1345,7 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
         self.assertEqual(
             json.loads((plan.run_directory / "result.json").read_text()),
             {
-                "schema_version": 2,
+                "schema_version": 3,
                 "ts": "2026-10-19T09:00:00Z",
                 "event": "run.finished",
                 "run": RUN_ID,
@@ -1356,8 +1356,8 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
                 "client": "fake",
                 "project": None,
                 "session": "session-b73",
-                "main_steps": 12,
-                "total_steps": None,
+                "main_turns": 12,
+                "total_turns": None,
                 "duration_ms": 0,
                 "usage": {
                     "input_tokens": 120,
@@ -1374,12 +1374,12 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
                 "procedure_digest": PROCEDURE_DIGEST,
                 "shipped_budget": 40,
                 "nulls": {
-                    "steps_to_first_edit": NO_EDIT_TOOL,
+                    "turns_to_first_edit": NO_EDIT_TOOL,
                     "tokens_to_first_edit": NO_EDIT_TOOL,
                     "project": "no project given",
                     "wave": "not launched by a wave",
                     "task": "not launched for a task",
-                    "total_steps": "the client reads no transcript",
+                    "total_turns": "the client reads no transcript",
                     "error_class": "the run did not fail",
                 },
             },
@@ -1471,7 +1471,7 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
             self.read_events(),
             [
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "run.finished",
                     "run": RUN_ID,
@@ -1482,8 +1482,8 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "client": "fake",
                     "project": None,
                     "session": "session-b73",
-                    "main_steps": 12,
-                    "total_steps": None,
+                    "main_turns": 12,
+                    "total_turns": None,
                     "duration_ms": 0,
                     "usage": None,
                     "outcome": "turn_limit",
@@ -1495,12 +1495,12 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "procedure_digest": PROCEDURE_DIGEST,
                     "shipped_budget": 40,
                     "nulls": {
-                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "turns_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
-                        "total_steps": "the client reads no transcript",
+                        "total_turns": "the client reads no transcript",
                         "usage": "the client reported no usage",
                     },
                 },
@@ -1516,7 +1516,7 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "budget": 40,
                 },
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "run.finished",
                     "run": RUN_ID,
@@ -1527,8 +1527,8 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "client": "fake",
                     "project": None,
                     "session": "session-b73",
-                    "main_steps": 12,
-                    "total_steps": None,
+                    "main_turns": 12,
+                    "total_turns": None,
                     "duration_ms": 0,
                     "usage": None,
                     "outcome": "turn_limit",
@@ -1540,12 +1540,12 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "procedure_digest": PROCEDURE_DIGEST,
                     "shipped_budget": 40,
                     "nulls": {
-                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "turns_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
-                        "total_steps": "the client reads no transcript",
+                        "total_turns": "the client reads no transcript",
                         "usage": "the client reported no usage",
                     },
                 },
@@ -1561,7 +1561,7 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "budget": 40,
                 },
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "run.finished",
                     "run": RUN_ID,
@@ -1572,8 +1572,8 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "client": "fake",
                     "project": None,
                     "session": "session-b73",
-                    "main_steps": 12,
-                    "total_steps": None,
+                    "main_turns": 12,
+                    "total_turns": None,
                     "duration_ms": 0,
                     "usage": None,
                     "outcome": "turn_limit",
@@ -1585,12 +1585,12 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "procedure_digest": PROCEDURE_DIGEST,
                     "shipped_budget": 40,
                     "nulls": {
-                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "turns_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
-                        "total_steps": "the client reads no transcript",
+                        "total_turns": "the client reads no transcript",
                         "usage": "the client reported no usage",
                     },
                 },
@@ -1655,7 +1655,7 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
             self.read_events(),
             [
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "run.finished",
                     "run": RUN_ID,
@@ -1666,8 +1666,8 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "client": "fake",
                     "project": None,
                     "session": "session-b73",
-                    "main_steps": 12,
-                    "total_steps": None,
+                    "main_turns": 12,
+                    "total_turns": None,
                     "duration_ms": 0,
                     "usage": None,
                     "outcome": "turn_limit",
@@ -1679,12 +1679,12 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "procedure_digest": ONE_DOT_PROCEDURE_DIGEST,
                     "shipped_budget": 10,
                     "nulls": {
-                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "turns_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
-                        "total_steps": "the client reads no transcript",
+                        "total_turns": "the client reads no transcript",
                         "usage": "the client reported no usage",
                     },
                 },
@@ -1698,7 +1698,7 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                     "run": RUN_ID,
                     "segment": 1,
                     "budget": 5,
-                    "steps": 12,
+                    "turns": 12,
                 },
                 {
                     "schema_version": 1,
@@ -1725,7 +1725,7 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
         self.assertEqual(
             json.loads((plan.run_directory / "result.json").read_text()),
             {
-                "schema_version": 2,
+                "schema_version": 3,
                 "ts": "2026-10-19T09:00:00Z",
                 "event": "run.finished",
                 "run": RUN_ID,
@@ -1736,8 +1736,8 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                 "client": "fake",
                 "project": None,
                 "session": "session-b73",
-                "main_steps": 12,
-                "total_steps": None,
+                "main_turns": 12,
+                "total_turns": None,
                 "duration_ms": 0,
                 "usage": None,
                 "outcome": "turn_limit",
@@ -1749,12 +1749,12 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
                 "procedure_digest": PROCEDURE_DIGEST,
                 "shipped_budget": 40,
                 "nulls": {
-                    "steps_to_first_edit": NO_EDIT_TOOL,
+                    "turns_to_first_edit": NO_EDIT_TOOL,
                     "tokens_to_first_edit": NO_EDIT_TOOL,
                     "project": "no project given",
                     "wave": "not launched by a wave",
                     "task": "not launched for a task",
-                    "total_steps": "the client reads no transcript",
+                    "total_turns": "the client reads no transcript",
                     "usage": "the client reported no usage",
                 },
             },
@@ -1968,7 +1968,7 @@ class RunSegmentsOfASegmentEndedWithoutDeclarationTest(RunSegmentsTestCase):
             self.read_events(),
             [
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "run.finished",
                     "run": RUN_ID,
@@ -1979,8 +1979,8 @@ class RunSegmentsOfASegmentEndedWithoutDeclarationTest(RunSegmentsTestCase):
                     "client": "fake",
                     "project": None,
                     "session": "session-b73",
-                    "main_steps": 12,
-                    "total_steps": None,
+                    "main_turns": 12,
+                    "total_turns": None,
                     "duration_ms": 0,
                     "usage": None,
                     "outcome": "undeclared",
@@ -1992,12 +1992,12 @@ class RunSegmentsOfASegmentEndedWithoutDeclarationTest(RunSegmentsTestCase):
                     "procedure_digest": PROCEDURE_DIGEST,
                     "shipped_budget": 40,
                     "nulls": {
-                        "steps_to_first_edit": NO_EDIT_TOOL,
+                        "turns_to_first_edit": NO_EDIT_TOOL,
                         "tokens_to_first_edit": NO_EDIT_TOOL,
                         "project": "no project given",
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
-                        "total_steps": "the client reads no transcript",
+                        "total_turns": "the client reads no transcript",
                         "usage": "the client reported no usage",
                         "error_class": "the client reported no error class",
                     },

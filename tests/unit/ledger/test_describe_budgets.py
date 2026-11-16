@@ -17,15 +17,15 @@ class DescribeBudgetsTest(unittest.TestCase):
         reading = create_reading(
             LedgerEntry(
                 instant=datetime(2026, 10, 10, 9, 0, tzinfo=UTC),
-                event=create_run_finished("r1", procedure="awawa-task", main_steps=10),
+                event=create_run_finished("r1", procedure="awawa-task", main_turns=10),
             ),
             LedgerEntry(
                 instant=datetime(2026, 10, 10, 9, 1, tzinfo=UTC),
-                event=create_run_finished("r2", procedure="awawa-task", main_steps=30),
+                event=create_run_finished("r2", procedure="awawa-task", main_turns=30),
             ),
             LedgerEntry(
                 instant=datetime(2026, 10, 10, 9, 2, tzinfo=UTC),
-                event=create_run_finished("r3", procedure="awawa-review", main_steps=8),
+                event=create_run_finished("r3", procedure="awawa-review", main_turns=8),
             ),
         )
 
@@ -59,23 +59,23 @@ class DescribeBudgetsTest(unittest.TestCase):
         reading = create_reading(
             LedgerEntry(
                 instant=datetime(2026, 10, 10, 9, 0, tzinfo=UTC),
-                event=create_run_finished("r1", main_steps=10),
+                event=create_run_finished("r1", main_turns=10),
             ),
             LedgerEntry(
                 instant=datetime(2026, 10, 10, 9, 1, tzinfo=UTC),
-                event=create_run_finished("r2", main_steps=11),
+                event=create_run_finished("r2", main_turns=11),
             ),
             LedgerEntry(
                 instant=datetime(2026, 10, 10, 9, 2, tzinfo=UTC),
-                event=create_run_finished("r3", main_steps=12),
+                event=create_run_finished("r3", main_turns=12),
             ),
             LedgerEntry(
                 instant=datetime(2026, 10, 10, 9, 3, tzinfo=UTC),
-                event=create_run_finished("r4", main_steps=13),
+                event=create_run_finished("r4", main_turns=13),
             ),
             LedgerEntry(
                 instant=datetime(2026, 10, 10, 9, 4, tzinfo=UTC),
-                event=create_run_finished("r5", main_steps=14),
+                event=create_run_finished("r5", main_turns=14),
             ),
         )
 
@@ -92,15 +92,15 @@ class DescribeBudgetsTest(unittest.TestCase):
         reading = create_reading(
             LedgerEntry(
                 instant=datetime(2026, 11, 1, 9, 0, tzinfo=UTC),
-                event=create_run_finished("r1", procedure="build-task", client="claude-code", main_steps=23),
+                event=create_run_finished("r1", procedure="build-task", client="claude-code", main_turns=23),
             ),
             LedgerEntry(
                 instant=datetime(2026, 11, 1, 9, 1, tzinfo=UTC),
-                event=create_run_finished("r2", procedure="build-task", client="vibe", main_steps=41),
+                event=create_run_finished("r2", procedure="build-task", client="vibe", main_turns=41),
             ),
             LedgerEntry(
                 instant=datetime(2026, 11, 1, 9, 2, tzinfo=UTC),
-                event=create_run_finished("r3", procedure="review-pr", client="claude-code", main_steps=9),
+                event=create_run_finished("r3", procedure="review-pr", client="claude-code", main_turns=9),
             ),
         )
 

@@ -14,8 +14,8 @@ SEGMENT = RunFinished(
     client="claude-code",
     project="tidepool",
     session=None,
-    main_steps=None,
-    total_steps=None,
+    main_turns=None,
+    total_turns=None,
     duration_ms=1000,
     usage=None,
     outcome="done",
@@ -51,10 +51,10 @@ class FinishedRunTest(unittest.TestCase):
     def test_should_sum_the_steps_of_its_measured_segments_and_be_partial_when_one_is_not_measured(self):
         # Arrange
         rows = [
-            ((create_segment(main_steps=40),), RunMeasure(value=40, partial=False)),
+            ((create_segment(main_turns=40),), RunMeasure(value=40, partial=False)),
             ((create_segment(),), RunMeasure(value=None, partial=False)),
-            ((create_segment(main_steps=30), create_segment(main_steps=45)), RunMeasure(value=75, partial=False)),
-            ((create_segment(), create_segment(main_steps=30)), RunMeasure(value=30, partial=True)),
+            ((create_segment(main_turns=30), create_segment(main_turns=45)), RunMeasure(value=75, partial=False)),
+            ((create_segment(), create_segment(main_turns=30)), RunMeasure(value=30, partial=True)),
             ((create_segment(), create_segment()), RunMeasure(value=None, partial=False)),
         ]
         for segments, expected_measure in rows:
@@ -63,20 +63,20 @@ class FinishedRunTest(unittest.TestCase):
                 run = create_run(segments)
 
                 # Act
-                measure = run.main_steps
+                measure = run.main_turns
 
                 # Assert
                 self.assertEqual(measure, expected_measure)
 
-    def test_should_sum_the_oversized_output_steps_of_the_segments_reporting_them(self):
+    def test_should_sum_the_oversized_output_turns_of_the_segments_reporting_them(self):
         # Arrange
         rows = [
-            ((create_segment(oversized_output_steps=1),), RunMeasure(value=1, partial=False)),
+            ((create_segment(oversized_output_turns=1),), RunMeasure(value=1, partial=False)),
             (
-                (create_segment(oversized_output_steps=1), create_segment(oversized_output_steps=2)),
+                (create_segment(oversized_output_turns=1), create_segment(oversized_output_turns=2)),
                 RunMeasure(value=3, partial=False),
             ),
-            ((create_segment(oversized_output_steps=2), create_segment()), RunMeasure(value=2, partial=True)),
+            ((create_segment(oversized_output_turns=2), create_segment()), RunMeasure(value=2, partial=True)),
             ((create_segment(), create_segment()), RunMeasure(value=None, partial=False)),
         ]
         for segments, expected_measure in rows:
@@ -85,37 +85,37 @@ class FinishedRunTest(unittest.TestCase):
                 run = create_run(segments)
 
                 # Act
-                measure = run.oversized_output_steps
+                measure = run.oversized_output_turns
 
                 # Assert
                 self.assertEqual(measure, expected_measure)
 
-    def test_should_count_the_steps_to_first_edit_from_the_start_of_the_run(self):
+    def test_should_count_the_turns_to_first_edit_from_the_start_of_the_run(self):
         # Arrange
         rows = [
-            ((create_segment(main_steps=40, steps_to_first_edit=12),), RunMeasure(value=12, partial=False)),
-            ((create_segment(main_steps=40),), RunMeasure(value=None, partial=False)),
+            ((create_segment(main_turns=40, turns_to_first_edit=12),), RunMeasure(value=12, partial=False)),
+            ((create_segment(main_turns=40),), RunMeasure(value=None, partial=False)),
             (
                 (
-                    create_segment(main_steps=40, steps_to_first_edit=12),
-                    create_segment(main_steps=30, steps_to_first_edit=5),
+                    create_segment(main_turns=40, turns_to_first_edit=12),
+                    create_segment(main_turns=30, turns_to_first_edit=5),
                 ),
                 RunMeasure(value=12, partial=False),
             ),
             (
-                (create_segment(main_steps=40), create_segment(main_steps=30, steps_to_first_edit=5)),
+                (create_segment(main_turns=40), create_segment(main_turns=30, turns_to_first_edit=5)),
                 RunMeasure(value=45, partial=False),
             ),
             (
-                (create_segment(main_steps=40, steps_to_first_edit=12), create_segment(main_steps=30)),
+                (create_segment(main_turns=40, turns_to_first_edit=12), create_segment(main_turns=30)),
                 RunMeasure(value=12, partial=False),
             ),
             (
-                (create_segment(main_steps=40, steps_to_first_edit=12), create_segment()),
+                (create_segment(main_turns=40, turns_to_first_edit=12), create_segment()),
                 RunMeasure(value=12, partial=False),
             ),
             (
-                (create_segment(), create_segment(main_steps=30, steps_to_first_edit=5)),
+                (create_segment(), create_segment(main_turns=30, turns_to_first_edit=5)),
                 RunMeasure(value=5, partial=True),
             ),
         ]
@@ -125,7 +125,7 @@ class FinishedRunTest(unittest.TestCase):
                 run = create_run(segments)
 
                 # Act
-                measure = run.steps_to_first_edit
+                measure = run.turns_to_first_edit
 
                 # Assert
                 self.assertEqual(measure, expected_measure)

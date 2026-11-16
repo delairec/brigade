@@ -20,7 +20,7 @@ SHOWN = {
         "view": "wave",
         "wave": "w4",
         "rounds_by_task": {"B27": 2},
-        "steps_by_task": {"B27": 40, "B28": 12, "B29": 9},
+        "turns_by_task": {"B27": 40, "B28": 12, "B29": 9},
         "events": [
             {"at": "2026-10-19T07:00:00Z", "event": "wave.started", "fields": {"wave": "w4"}},
             {"at": "2026-10-19T08:00:00Z", "event": "task.parked", "fields": {"wave": "w4", "task": "B28"}},

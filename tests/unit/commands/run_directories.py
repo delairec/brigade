@@ -31,7 +31,7 @@ def create_run_record(run_id: str, wave: str | None, task: str | None) -> dict:
 
 def create_run_result(run_id: str, outcome: str, ts: str) -> dict:
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "ts": ts,
         "event": "run.finished",
         "run": run_id,
@@ -42,8 +42,8 @@ def create_run_result(run_id: str, outcome: str, ts: str) -> dict:
         "client": "fake",
         "project": None,
         "session": "session-b74",
-        "main_steps": 12,
-        "total_steps": 12,
+        "main_turns": 12,
+        "total_turns": 12,
         "duration_ms": 4200,
         "usage": None,
         "outcome": outcome,

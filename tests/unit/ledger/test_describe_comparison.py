@@ -13,17 +13,17 @@ MID_OCTOBER = DayRange(start=date(2026, 10, 5), end=date(2026, 10, 12))
 NO_REFERENCE = {}
 READING = LedgerReading(
     entries=(
-        LedgerEntry(datetime(2026, 9, 30, 23, 59, tzinfo=UTC), create_run_finished("r0", main_steps=90)),
+        LedgerEntry(datetime(2026, 9, 30, 23, 59, tzinfo=UTC), create_run_finished("r0", main_turns=90)),
         LedgerEntry(
             datetime(2026, 10, 1, 0, 0, tzinfo=UTC),
-            create_run_finished("r1", main_steps=20, task="TP1", steps_to_first_edit=4, oversized_output_steps=3),
+            create_run_finished("r1", main_turns=20, task="TP1", turns_to_first_edit=4, oversized_output_turns=3),
         ),
         LedgerEntry(
             datetime(2026, 10, 4, 23, 59, tzinfo=UTC),
-            create_run_finished("r2", main_steps=10, oversized_output_steps=0),
+            create_run_finished("r2", main_turns=10, oversized_output_turns=0),
         ),
         LedgerEntry(datetime(2026, 10, 5, 0, 0, tzinfo=UTC), create_run_finished("r3")),
-        LedgerEntry(datetime(2026, 10, 13, 0, 0, tzinfo=UTC), create_run_finished("r4", main_steps=90)),
+        LedgerEntry(datetime(2026, 10, 13, 0, 0, tzinfo=UTC), create_run_finished("r4", main_turns=90)),
     ),
     files=(),
     skipped=(),
@@ -47,22 +47,22 @@ class DescribeComparisonTest(unittest.TestCase):
                 "end": "2026-10-04",
                 "runs": 2,
                 "segments": 2,
-                "steps": {
+                "turns": {
                     "runs": {"measured": 2, "unmeasured": 0, "p50": 10, "p90": 20, "partial": 0},
                     "segments": {"measured": 2, "unmeasured": 0, "p50": 10, "p90": 20},
                 },
-                "steps_to_first_edit": {
+                "turns_to_first_edit": {
                     "runs": {"measured": 1, "unmeasured": 1, "p50": 4, "p90": 4, "partial": 0},
                     "segments": {"measured": 1, "unmeasured": 1, "p50": 4, "p90": 4},
                 },
-                "oversized_output_steps": {
+                "oversized_output_turns": {
                     "runs": {"measured": 2, "unmeasured": 0, "p50": 0, "p90": 3, "partial": 0},
                     "segments": {"measured": 2, "unmeasured": 0, "p50": 0, "p90": 3},
                 },
                 "figures": {
-                    "steps_to_first_edit_p50": 4,
-                    "task_run_steps_p50": 20,
-                    "oversized_output_steps_per_launch": 1.5,
+                    "turns_to_first_edit_p50": 4,
+                    "task_run_turns_p50": 20,
+                    "oversized_output_turns_per_launch": 1.5,
                 },
             },
         )
@@ -81,29 +81,29 @@ class DescribeComparisonTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             comparison["ranges"][1]["figures"],
-            {"steps_to_first_edit_p50": None, "task_run_steps_p50": None, "oversized_output_steps_per_launch": None},
+            {"turns_to_first_edit_p50": None, "task_run_turns_p50": None, "oversized_output_turns_per_launch": None},
         )
 
-    def test_should_round_the_oversized_output_steps_per_launch_to_two_decimals(self):
+    def test_should_round_the_oversized_output_turns_per_launch_to_two_decimals(self):
         # Arrange
         reading = create_reading(
-            LedgerEntry(datetime(2026, 10, 1, 9, tzinfo=UTC), create_run_finished("r1", oversized_output_steps=1)),
-            LedgerEntry(datetime(2026, 10, 1, 10, tzinfo=UTC), create_run_finished("r2", oversized_output_steps=1)),
-            LedgerEntry(datetime(2026, 10, 1, 11, tzinfo=UTC), create_run_finished("r3", oversized_output_steps=0)),
+            LedgerEntry(datetime(2026, 10, 1, 9, tzinfo=UTC), create_run_finished("r1", oversized_output_turns=1)),
+            LedgerEntry(datetime(2026, 10, 1, 10, tzinfo=UTC), create_run_finished("r2", oversized_output_turns=1)),
+            LedgerEntry(datetime(2026, 10, 1, 11, tzinfo=UTC), create_run_finished("r3", oversized_output_turns=0)),
         )
 
         # Act
-        comparison = describe_comparison(reading, (EARLY_OCTOBER,), {"task_run_steps_p50": 47.0})
+        comparison = describe_comparison(reading, (EARLY_OCTOBER,), {"task_run_turns_p50": 47.0})
 
         # Assert
-        self.assertEqual(comparison["ranges"][0]["figures"]["oversized_output_steps_per_launch"], 0.67)
+        self.assertEqual(comparison["ranges"][0]["figures"]["oversized_output_turns_per_launch"], 0.67)
 
     def test_should_carry_the_reference_figures_it_compares_the_range_with(self):
         # Act
-        comparison = describe_comparison(READING, (EARLY_OCTOBER,), {"task_run_steps_p50": 47.0})
+        comparison = describe_comparison(READING, (EARLY_OCTOBER,), {"task_run_turns_p50": 47.0})
 
         # Assert
-        self.assertEqual(comparison["reference"], {"task_run_steps_p50": 47.0})
+        self.assertEqual(comparison["reference"], {"task_run_turns_p50": 47.0})
 
     def test_should_refuse_a_range_without_runs(self):
         # Arrange

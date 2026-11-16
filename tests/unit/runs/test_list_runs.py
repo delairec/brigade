@@ -51,7 +51,7 @@ RUN_RECORD_WITHOUT_CLIENT = {
 ANOTHER_START_TIME = 1
 ANOTHER_BOOT_ID = "0f2a4c6e-1b3d-4f5a-8c7e-9d0b2a4c6e8f"
 RUN_RESULT = {
-    "schema_version": 2,
+    "schema_version": 3,
     "ts": "2026-10-07T09:12:00Z",
     "event": "run.finished",
     "run": RUN_ID,
@@ -62,8 +62,8 @@ RUN_RESULT = {
     "client": "fake",
     "project": None,
     "session": "session-b74",
-    "main_steps": 12,
-    "total_steps": 12,
+    "main_turns": 12,
+    "total_turns": 12,
     "duration_ms": 4200,
     "usage": None,
     "outcome": "done",
@@ -74,7 +74,7 @@ RUN_RESULT = {
     "nulls": {},
 }
 RUN_RESULT_LACKING_ITS_OUTCOME = {
-    "schema_version": 2,
+    "schema_version": 3,
     "ts": "2026-10-07T09:12:00Z",
     "event": "run.finished",
     "run": RUN_ID,
@@ -85,8 +85,8 @@ RUN_RESULT_LACKING_ITS_OUTCOME = {
     "client": "fake",
     "project": None,
     "session": "session-b74",
-    "main_steps": 12,
-    "total_steps": 12,
+    "main_turns": 12,
+    "total_turns": 12,
     "duration_ms": 4200,
     "usage": None,
     "error_class": None,
@@ -240,7 +240,7 @@ class ListRunsOfARefusedDocumentTest(ListRunsTestCase):
     def test_should_leave_out_a_run_whose_result_is_refused_naming_the_file_and_the_problem(self):
         # Arrange
         rows = [
-            ("a result of an older shape", json.dumps(RUN_RESULT_OF_SCHEMA_1), "schema_version is 1, not one of 2"),
+            ("a result of an older shape", json.dumps(RUN_RESULT_OF_SCHEMA_1), "schema_version is 1, not one of 3"),
             ("a result that is not JSON", "{", "not a JSON document"),
             ("a result lacking its outcome", json.dumps(RUN_RESULT_LACKING_ITS_OUTCOME), "lacks the key outcome"),
         ]

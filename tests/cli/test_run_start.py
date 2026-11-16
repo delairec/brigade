@@ -10,7 +10,7 @@ from tests.value_matchers import DurationUnderMatcher, PatternMatcher
 
 SHA256_DIGEST = PatternMatcher("^[0-9a-f]{64}$")
 NO_EDIT_TOOL_NAMED = {
-    "steps_to_first_edit": "the client names no edit tool",
+    "turns_to_first_edit": "the client names no edit tool",
     "tokens_to_first_edit": "the client names no edit tool",
 }
 
@@ -138,7 +138,7 @@ class BrigadeRunDetachedTest(RunTestCase):
             self.read_events(),
             [
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": PatternMatcher(INSTANT_PATTERN),
                     "event": "run.finished",
                     "run": run_id,
@@ -149,8 +149,8 @@ class BrigadeRunDetachedTest(RunTestCase):
                     "client": "fake",
                     "project": None,
                     "session": "fake-session",
-                    "main_steps": 12,
-                    "total_steps": None,
+                    "main_turns": 12,
+                    "total_turns": None,
                     "duration_ms": DurationUnderMatcher(10000),
                     "usage": {
                         "input_tokens": 120,
@@ -171,7 +171,7 @@ class BrigadeRunDetachedTest(RunTestCase):
                         "project": "no project given",
                         "wave": NOT_IN_A_WAVE,
                         "task": NOT_FOR_A_TASK,
-                        "total_steps": "the client reads no transcript",
+                        "total_turns": "the client reads no transcript",
                         "error_class": "the run did not fail",
                     },
                     "cost_usd": 0.42,
@@ -210,7 +210,7 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
             self.read_events(),
             [
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": PatternMatcher(INSTANT_PATTERN),
                     "event": "run.finished",
                     "run": run_id,
@@ -221,8 +221,8 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
                     "client": "fake",
                     "project": None,
                     "session": PatternMatcher(UUID_PATTERN),
-                    "main_steps": None,
-                    "total_steps": None,
+                    "main_turns": None,
+                    "total_turns": None,
                     "duration_ms": DurationUnderMatcher(10000),
                     "usage": None,
                     "outcome": "stopped",
@@ -238,8 +238,8 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
                         "project": "no project given",
                         "wave": NOT_IN_A_WAVE,
                         "task": NOT_FOR_A_TASK,
-                        "main_steps": "the client reads no transcript",
-                        "total_steps": "the client reads no transcript",
+                        "main_turns": "the client reads no transcript",
+                        "total_turns": "the client reads no transcript",
                         "usage": "the client reads no transcript",
                         "error_class": STOPPED,
                         "exit": STOPPED,
@@ -319,7 +319,7 @@ class BrigadeRunOnTheClockTest(RunTestCase):
             self.read_events(),
             [
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": PatternMatcher(INSTANT_PATTERN),
                     "event": "run.finished",
                     "run": json.loads(completed.stdout)["run"],
@@ -330,8 +330,8 @@ class BrigadeRunOnTheClockTest(RunTestCase):
                     "client": "fake",
                     "project": None,
                     "session": PatternMatcher(UUID_PATTERN),
-                    "main_steps": None,
-                    "total_steps": None,
+                    "main_turns": None,
+                    "total_turns": None,
                     "duration_ms": DurationUnderMatcher(10000),
                     "usage": None,
                     "outcome": "wall_limit",
@@ -347,8 +347,8 @@ class BrigadeRunOnTheClockTest(RunTestCase):
                         "project": "no project given",
                         "wave": NOT_IN_A_WAVE,
                         "task": NOT_FOR_A_TASK,
-                        "main_steps": "the client reads no transcript",
-                        "total_steps": "the client reads no transcript",
+                        "main_turns": "the client reads no transcript",
+                        "total_turns": "the client reads no transcript",
                         "usage": "the client reads no transcript",
                         "error_class": CUT,
                         "exit": CUT,

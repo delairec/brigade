@@ -14,7 +14,7 @@ from tests.value_matchers import PatternMatcher
 
 SHA256_DIGEST = PatternMatcher("^[0-9a-f]{64}$")
 NO_EDIT_TOOL_NAMED = {
-    "steps_to_first_edit": "the client names no edit tool",
+    "turns_to_first_edit": "the client names no edit tool",
     "tokens_to_first_edit": "the client names no edit tool",
 }
 
@@ -121,7 +121,7 @@ class BrigadeTickOfARemediationCutByARateLimitTest(LaunchingTickTestCase):
                     "reason": "resumed after the quota reset",
                 },
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": ANY,
                     "event": "run.finished",
                     "run": ANY,
@@ -132,8 +132,8 @@ class BrigadeTickOfARemediationCutByARateLimitTest(LaunchingTickTestCase):
                     "client": "fake",
                     "project": "shop",
                     "session": "fake-session",
-                    "main_steps": 12,
-                    "total_steps": None,
+                    "main_turns": 12,
+                    "total_turns": None,
                     "duration_ms": ANY,
                     "usage": ANY,
                     "outcome": "done",

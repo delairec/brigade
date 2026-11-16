@@ -6,9 +6,9 @@ from pathlib import Path
 from brigade.commands.ledger_budgets import COMMAND, ledger_budgets
 
 RUN_FINISHED = (
-    '{"schema_version": 2, "ts": "2026-10-09T10:33:00Z", "event": "run.finished", "run": "20261009T101817Z-2ee96f",'
+    '{"schema_version": 3, "ts": "2026-10-09T10:33:00Z", "event": "run.finished", "run": "20261009T101817Z-2ee96f",'
     ' "segment": 1, "procedure": "awawa-task", "slot": "build", "role": "ada", "client": "claude-code",'
-    ' "project": "brigade", "session": "857d4221", "main_steps": 42, "total_steps": 54, "duration_ms": 900000,'
+    ' "project": "brigade", "session": "857d4221", "main_turns": 42, "total_turns": 54, "duration_ms": 900000,'
     ' "usage": null, "outcome": "done", "error_class": null, "exit": 0, "wave": null, "task": null,'
     ' "nulls": {"usage": "the client reported no usage"}, "cost_usd": 3.63, "shipped_budget": 75}\n'
 )
@@ -108,7 +108,7 @@ class LedgerBudgetsTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             text,
-            "steps over the last 20 runs finished of each procedure:\nstep cap of each role at its latest digests:",
+            "turns over the last 20 runs finished of each procedure:\nturn cap of each role at its latest digests:",
         )
 
     def test_should_print_the_step_cap_of_each_role_and_the_measures_it_rests_on(self):
@@ -140,8 +140,8 @@ class LedgerBudgetsTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             text,
-            "steps over the last 20 runs finished of each procedure:\n"
-            "step cap of each role at its latest digests:\n"
+            "turns over the last 20 runs finished of each procedure:\n"
+            "turn cap of each role at its latest digests:\n"
             "  ada  shipped 75  computed 132  applied 132  segments 6  restarts 3  g 2500  R 21667\n"
             "  remi  shipped 50  computed -  applied 50  segments 2  restarts 0  g -  R -",
         )
@@ -171,12 +171,12 @@ class LedgerBudgetsTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             text,
-            "steps over the last 20 runs finished of each procedure:\n"
+            "turns over the last 20 runs finished of each procedure:\n"
             "  awawa-task  estimate\n"
             "    runs p50 40  p90 52  measured 2  partial 0  unmeasured 0\n"
             "    segments p50 40  p90 52  measured 2  unmeasured 0\n"
             "  awawa-review\n"
             "    runs p50 20  p90 31  measured 12  partial 1  unmeasured 0\n"
             "    segments p50 -  p90 -  measured 0  unmeasured 13\n"
-            "step cap of each role at its latest digests:",
+            "turn cap of each role at its latest digests:",
         )

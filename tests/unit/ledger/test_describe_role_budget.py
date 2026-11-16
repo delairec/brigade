@@ -23,8 +23,8 @@ def _create_segment(run: str, segment: int, steps: int, tokens: int, outcome: st
         client="claude-code",
         project="brigade",
         session=None,
-        main_steps=steps,
-        total_steps=steps,
+        main_turns=steps,
+        total_turns=steps,
         duration_ms=1000,
         usage=TokenUsage(
             input_tokens=0, output_tokens=0, cache_creation_input_tokens=0, cache_read_input_tokens=tokens

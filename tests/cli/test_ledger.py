@@ -7,111 +7,111 @@ from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 WAVE_SEPTEMBER_LINES = (
     '{"schema_version": 2, "ts": "2026-09-30T22:00:00Z", "event": "wave.started", "wave": "tidepool_w16",'
     ' "project": "tidepool", "branch": "integration/M1", "tasks": ["T1"]}\n'
-    '{"schema_version": 2, "ts": "2026-09-30T22:10:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
+    '{"schema_version": 3, "ts": "2026-09-30T22:10:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
     ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "failed",'
-    ' "error_class": "rate_limit", "main_steps": 50, "total_steps": null}\n'
+    ' "error_class": "rate_limit", "main_turns": 50, "total_turns": null}\n'
     '{"schema_version": 1, "ts": "2026-09-30T22:15:00Z", "event": "wave.paused", "wave": "tidepool_w16", "reason": "quota", "resume_at": null}\n'
 )
 WAVE_OCTOBER_LINES = (
     '{"schema_version": 1, "ts": "2026-10-01T00:15:00Z", "event": "wave.resumed", "wave": "tidepool_w16", "reason": "quota"}\n'
-    '{"schema_version": 2, "ts": "2026-10-01T00:40:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
+    '{"schema_version": 3, "ts": "2026-10-01T00:40:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
     ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 2, "outcome": "done",'
-    ' "error_class": null, "main_steps": 30, "total_steps": null}\n'
+    ' "error_class": null, "main_turns": 30, "total_turns": null}\n'
     '{"schema_version": 1, "ts": "2026-10-01T00:41\n'
-    '{"schema_version": 2, "ts": "2026-10-01T00:50:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP147",'
+    '{"schema_version": 3, "ts": "2026-10-01T00:50:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP147",'
     ' "run": "20261001T000000Z-a00002", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": null, "total_steps": null}\n'
-    '{"schema_version": 2, "ts": "2026-10-01T01:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
+    ' "error_class": null, "main_turns": null, "total_turns": null}\n'
+    '{"schema_version": 3, "ts": "2026-10-01T01:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
     ' "run": "20261001T000000Z-a00003", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-pr-review", "role": "remi", "slot": "review", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": 12, "total_steps": null}\n'
+    ' "error_class": null, "main_turns": 12, "total_turns": null}\n'
     '{"schema_version": 1, "ts": "2026-10-01T01:30:00Z", "event": "pr.merged", "project": "tidepool", "wave": "tidepool_w16",'
     ' "task": "TP146", "pr": 291, "rounds": 1, "login": "tidepool-cli"}\n'
     '{"schema_version": 1, "ts": "2026-10-01T01:40:00Z", "event": "task.parked", "wave": "tidepool_w16", "task": "TP147",'
     ' "reason": "blocked", "blockers": ["OPEN_QUESTION.Undecided"]}\n'
-    '{"schema_version": 2, "ts": "2026-10-01T02:00:00Z", "event": "run.finished", "wave": "tidepool_w17", "task": "TP150",'
+    '{"schema_version": 3, "ts": "2026-10-01T02:00:00Z", "event": "run.finished", "wave": "tidepool_w17", "task": "TP150",'
     ' "run": "20261001T000000Z-a00004", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": 20, "total_steps": null}\n'
+    ' "error_class": null, "main_turns": 20, "total_turns": null}\n'
 )
 BUDGET_LINES = (
-    '{"schema_version": 2, "ts": "2026-10-01T08:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
+    '{"schema_version": 3, "ts": "2026-10-01T08:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
     ' "run": "20261001T000000Z-b00001", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": 90, "total_steps": null}\n'
-    '{"schema_version": 2, "ts": "2026-10-01T09:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP147",'
+    ' "error_class": null, "main_turns": 90, "total_turns": null}\n'
+    '{"schema_version": 3, "ts": "2026-10-01T09:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP147",'
     ' "run": "20261001T000000Z-b00002", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": 80, "total_steps": null}\n'
-    '{"schema_version": 2, "ts": "2026-10-01T10:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
+    ' "error_class": null, "main_turns": 80, "total_turns": null}\n'
+    '{"schema_version": 3, "ts": "2026-10-01T10:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
     ' "run": "20261001T000000Z-b00003", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-pr-review", "role": "remi", "slot": "review", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": 12, "total_steps": null}\n'
-    '{"schema_version": 2, "ts": "2026-10-01T11:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP148",'
+    ' "error_class": null, "main_turns": 12, "total_turns": null}\n'
+    '{"schema_version": 3, "ts": "2026-10-01T11:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP148",'
     ' "run": "20261001T000000Z-b00004", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": null, "total_steps": null}\n'
-    '{"schema_version": 2, "ts": "2026-10-01T12:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP149",'
+    ' "error_class": null, "main_turns": null, "total_turns": null}\n'
+    '{"schema_version": 3, "ts": "2026-10-01T12:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP149",'
     ' "run": "20261001T000000Z-b00005", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": 10, "total_steps": null}\n'
-    '{"schema_version": 2, "ts": "2026-10-01T13:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP147",'
+    ' "error_class": null, "main_turns": 10, "total_turns": null}\n'
+    '{"schema_version": 3, "ts": "2026-10-01T13:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP147",'
     ' "run": "20261001T000000Z-b00006", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-pr-review", "role": "remi", "slot": "review", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": 8, "total_steps": null, "shipped_budget": 50}\n'
-    '{"schema_version": 2, "ts": "2026-10-01T14:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP150",'
+    ' "error_class": null, "main_turns": 8, "total_turns": null, "shipped_budget": 50}\n'
+    '{"schema_version": 3, "ts": "2026-10-01T14:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP150",'
     ' "run": "20261001T000000Z-b00007", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": 20, "total_steps": null}\n'
-    '{"schema_version": 2, "ts": "2026-10-01T15:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP151",'
+    ' "error_class": null, "main_turns": 20, "total_turns": null}\n'
+    '{"schema_version": 3, "ts": "2026-10-01T15:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP151",'
     ' "run": "20261001T000000Z-b00008", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": 30, "total_steps": null}\n'
+    ' "error_class": null, "main_turns": 30, "total_turns": null}\n'
 )
 COMPARISON_LINES = (
     '{"schema_version": 2, "ts": "2026-10-01T08:00:00Z", "event": "wave.started", "wave": "tidepool_w16",'
     ' "project": "tidepool", "branch": "integration/M1", "tasks": ["T1"]}\n'
-    '{"schema_version": 2, "ts": "2026-10-01T09:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
+    '{"schema_version": 3, "ts": "2026-10-01T09:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
     ' "run": "20261001T000000Z-c00001", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": 40, "total_steps": null, "steps_to_first_edit": 12}\n'
-    '{"schema_version": 2, "ts": "2026-10-02T09:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP147",'
+    ' "error_class": null, "main_turns": 40, "total_turns": null, "turns_to_first_edit": 12}\n'
+    '{"schema_version": 3, "ts": "2026-10-02T09:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP147",'
     ' "run": "20261001T000000Z-c00002", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": 60, "total_steps": null}\n'
-    '{"schema_version": 2, "ts": "2026-10-02T23:59:59Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP148",'
+    ' "error_class": null, "main_turns": 60, "total_turns": null}\n'
+    '{"schema_version": 3, "ts": "2026-10-02T23:59:59Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP148",'
     ' "run": "20261001T000000Z-c00003", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": null, "total_steps": null}\n'
-    '{"schema_version": 2, "ts": "2026-10-03T00:00:00Z", "event": "run.finished", "wave": "tidepool_w17", "task": "TP150",'
+    ' "error_class": null, "main_turns": null, "total_turns": null}\n'
+    '{"schema_version": 3, "ts": "2026-10-03T00:00:00Z", "event": "run.finished", "wave": "tidepool_w17", "task": "TP150",'
     ' "run": "20261001T000000Z-c00004", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": 20, "total_steps": null, "steps_to_first_edit": 4, "oversized_output_steps": 1}\n'
-    '{"schema_version": 2, "ts": "2026-10-04T09:00:00Z", "event": "run.finished", "wave": "tidepool_w17", "task": "TP151",'
+    ' "error_class": null, "main_turns": 20, "total_turns": null, "turns_to_first_edit": 4, "oversized_output_turns": 1}\n'
+    '{"schema_version": 3, "ts": "2026-10-04T09:00:00Z", "event": "run.finished", "wave": "tidepool_w17", "task": "TP151",'
     ' "run": "20261001T000000Z-c00005", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": 30, "total_steps": null}\n'
+    ' "error_class": null, "main_turns": 30, "total_turns": null}\n'
 )
 PROJECT_SEPTEMBER_LINES = (
     '{"schema_version": 2, "ts": "2026-09-20T08:00:00Z", "event": "wave.started", "wave": "tidepool_w15",'
@@ -232,14 +232,14 @@ class BrigadeLedgerBudgetsTest(LedgerTestCase):
         self.assertEqual(
             completed.stdout.splitlines(),
             [
-                "steps over the last 20 runs finished of each procedure:",
+                "turns over the last 20 runs finished of each procedure:",
                 "  awawa-pr-review  estimate",
                 "    runs p50 8  p90 12  measured 2  partial 0  unmeasured 0",
                 "    segments p50 8  p90 12  measured 2  unmeasured 0",
                 "  awawa-task",
                 "    runs p50 30  p90 90  measured 5  partial 0  unmeasured 1",
                 "    segments p50 30  p90 90  measured 5  unmeasured 1",
-                "step cap of each role at its latest digests:",
+                "turn cap of each role at its latest digests:",
                 "  remi  shipped 50  computed -  applied 50  segments 0  restarts 0  g -  R -",
             ],
         )
@@ -254,8 +254,8 @@ class BrigadeLedgerBudgetsTest(LedgerTestCase):
         self.assertEqual(
             completed.stdout.splitlines()[:2],
             [
-                "steps over the last 20 runs finished of each procedure:",
-                "step cap of each role at its latest digests:",
+                "turns over the last 20 runs finished of each procedure:",
+                "turn cap of each role at its latest digests:",
             ],
         )
 
@@ -276,38 +276,38 @@ class BrigadeLedgerCompareTest(LedgerTestCase):
             completed.stdout.splitlines(),
             [
                 "from 2026-10-01 to 2026-10-02: 3 runs finished, 3 segments",
-                "  steps:",
+                "  turns:",
                 "    runs p50 40  p90 60  measured 2  partial 0  unmeasured 1",
                 "    segments p50 40  p90 60  measured 2  unmeasured 1",
-                "  steps to first edit:",
+                "  turns to first edit:",
                 "    runs p50 12  p90 12  measured 1  partial 0  unmeasured 2",
                 "    segments p50 12  p90 12  measured 1  unmeasured 2",
-                "  oversized output steps: not reported",
-                "  steps to first edit p50: 12",
-                "  steps per task run p50: 40",
-                "  oversized output steps per launch: -",
+                "  oversized output turns: not reported",
+                "  turns to first edit p50: 12",
+                "  turns per task run p50: 40",
+                "  oversized output turns per launch: -",
                 "from 2026-10-03 to 2026-10-04: 2 runs finished, 2 segments",
-                "  steps:",
+                "  turns:",
                 "    runs p50 20  p90 30  measured 2  partial 0  unmeasured 0",
                 "    segments p50 20  p90 30  measured 2  unmeasured 0",
-                "  steps to first edit:",
+                "  turns to first edit:",
                 "    runs p50 4  p90 4  measured 1  partial 0  unmeasured 1",
                 "    segments p50 4  p90 4  measured 1  unmeasured 1",
-                "  oversized output steps:",
+                "  oversized output turns:",
                 "    runs p50 1  p90 1  measured 1  partial 0  unmeasured 1",
                 "    segments p50 1  p90 1  measured 1  unmeasured 1",
-                "  steps to first edit p50: 4",
-                "  steps per task run p50: 20",
-                "  oversized output steps per launch: 1",
+                "  turns to first edit p50: 4",
+                "  turns per task run p50: 20",
+                "  oversized output turns per launch: 1",
             ],
         )
 
     def test_should_print_the_reference_figures_after_the_range(self):
         # Act
         completed = self.run_ledger(
-            "compare", "--range", "2026-10-03..2026-10-04", "--reference", "task_run_steps_p50=47"
+            "compare", "--range", "2026-10-03..2026-10-04", "--reference", "task_run_turns_p50=47"
         )
 
         # Assert
         self.assertEqual(completed.returncode, 0)
-        self.assertEqual(completed.stdout.splitlines()[-2:], ["reference:", "  steps per task run p50: 47"])
+        self.assertEqual(completed.stdout.splitlines()[-2:], ["reference:", "  turns per task run p50: 47"])

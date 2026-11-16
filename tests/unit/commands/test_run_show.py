@@ -44,7 +44,7 @@ FOLLOWED_RUN = {
     "wave": None,
     "task": None,
 }
-FINISHED_SEGMENT = {"segment": 1, "outcome": "done", "steps": 12, "duration_ms": 4200}
+FINISHED_SEGMENT = {"segment": 1, "outcome": "done", "turns": 12, "duration_ms": 4200}
 NO_PROGRESS = None
 NO_EXECUTABLE_DIRECTORY = ""
 MARKDOWN_PROGRESS = "- read the task\n- wrote the tests\n"
@@ -74,7 +74,7 @@ class RunsShowTextTest(unittest.TestCase):
         document = {
             "schema_version": 1,
             "run": {**FINISHED_RUN, "project": None, "outcome": None, "message": None},
-            "segments": [{"segment": 1, "outcome": None, "steps": None, "duration_ms": None}],
+            "segments": [{"segment": 1, "outcome": None, "turns": None, "duration_ms": None}],
             "progress": NO_PROGRESS,
             "journal": None,
         }
@@ -94,7 +94,7 @@ class RunsShowTextTest(unittest.TestCase):
             "outcome    -\n"
             "message    -\n"
             "\n"
-            "segment  outcome  steps  duration\n"
+            "segment  outcome  turns  duration\n"
             "1        -        -      -",
         )
 
@@ -123,7 +123,7 @@ class RunsShowTextTest(unittest.TestCase):
             "outcome    done\n"
             "message    the task is delivered\n"
             "\n"
-            "segment  outcome  steps  duration\n"
+            "segment  outcome  turns  duration\n"
             "1        done     12     0m04s\n"
             "\n"
             "2026-10-07T09:01:00Z  1  text  reads the task",
@@ -154,7 +154,7 @@ class RunsShowTextTest(unittest.TestCase):
             "outcome    done\n"
             "message    the task is delivered\n"
             "\n"
-            "segment  outcome  steps  duration\n"
+            "segment  outcome  turns  duration\n"
             "1        done     12     0m04s\n"
             "\n"
             "STEP s1\n"
@@ -281,7 +281,7 @@ class RunsShowFollowingARunningRunTest(unittest.TestCase):
             "outcome    -\n"
             "message    -\n"
             "\n"
-            "segment  outcome  steps  duration\n"
+            "segment  outcome  turns  duration\n"
             "\n"
             f"{JOURNAL_LINE}",
         )
@@ -368,7 +368,7 @@ class RunsShowOfAFinishedRunTest(unittest.TestCase):
             "outcome    done\n"
             "message    the task is delivered\n"
             "\n"
-            "segment  outcome  steps  duration\n"
+            "segment  outcome  turns  duration\n"
             "1        done     12     0m04s\n"
             "\n"
             "2026-10-07T09:01:00Z  1  text  reads the task\n",
@@ -465,7 +465,7 @@ class RunsShowOfARunWithItsProgressTest(unittest.TestCase):
             "outcome    done\n"
             "message    the task is delivered\n"
             "\n"
-            "segment  outcome  steps  duration\n"
+            "segment  outcome  turns  duration\n"
             "1        done     12     0m04s\n"
             "\n",
         )

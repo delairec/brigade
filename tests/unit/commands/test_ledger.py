@@ -11,15 +11,15 @@ WAVE_STARTED = (
     ' "project": "tidepool", "branch": "integration/M4-tides", "tasks": ["T7"]}\n'
 )
 TASK_RUN_EARLIER = (
-    '{"schema_version": 2, "ts": "2026-10-01T09:00:00Z", "event": "run.finished", "run": "r1", "segment": 1,'
+    '{"schema_version": 3, "ts": "2026-10-01T09:00:00Z", "event": "run.finished", "run": "r1", "segment": 1,'
     ' "procedure": "build-task", "slot": "build", "role": "ada", "client": "claude-code", "project": "tidepool",'
-    ' "session": null, "main_steps": 40, "total_steps": null, "duration_ms": 60000, "usage": null, "outcome": "done",'
+    ' "session": null, "main_turns": 40, "total_turns": null, "duration_ms": 60000, "usage": null, "outcome": "done",'
     ' "error_class": null, "exit": 0, "wave": "tidepool_w16", "task": "TP1", "nulls": {}, "cost_usd": 4.0}\n'
 )
 TASK_RUN_LATER = (
-    '{"schema_version": 2, "ts": "2026-10-06T09:00:00Z", "event": "run.finished", "run": "r2", "segment": 1,'
+    '{"schema_version": 3, "ts": "2026-10-06T09:00:00Z", "event": "run.finished", "run": "r2", "segment": 1,'
     ' "procedure": "build-task", "slot": "build", "role": "ada", "client": "claude-code", "project": "tidepool",'
-    ' "session": null, "main_steps": 30, "total_steps": null, "duration_ms": 120000, "usage": null, "outcome": "done",'
+    ' "session": null, "main_turns": 30, "total_turns": null, "duration_ms": 120000, "usage": null, "outcome": "done",'
     ' "error_class": null, "exit": 0, "wave": "tidepool_w16", "task": "TP1", "nulls": {}, "cost_usd": 2.5}\n'
 )
 from tests.unit.create_test_paths import create_test_paths
@@ -128,7 +128,7 @@ class LedgerSinceTest(unittest.TestCase):
                         "finished_at": "2026-10-06T09:00:00Z",
                         "slot": "build",
                         "outcome": "done",
-                        "steps": 30,
+                        "turns": 30,
                         "partial": False,
                         "duration_ms": 120000,
                         "cost_usd": 2.5,
@@ -298,7 +298,7 @@ class LedgerTaskTextTest(unittest.TestCase):
                     "finished_at": "2026-10-06T09:00:00Z",
                     "slot": "build",
                     "outcome": "done",
-                    "steps": 30,
+                    "turns": 30,
                     "partial": False,
                     "duration_ms": 120000,
                     "cost_usd": 2.5,
@@ -308,7 +308,7 @@ class LedgerTaskTextTest(unittest.TestCase):
                     "finished_at": "2026-10-06T10:00:00Z",
                     "slot": "build",
                     "outcome": "budget_reached",
-                    "steps": 75,
+                    "turns": 75,
                     "partial": True,
                     "duration_ms": 3720000,
                     "cost_usd": None,
@@ -318,7 +318,7 @@ class LedgerTaskTextTest(unittest.TestCase):
                     "finished_at": "2026-10-06T11:00:00Z",
                     "slot": "verify",
                     "outcome": "failed",
-                    "steps": None,
+                    "turns": None,
                     "partial": False,
                     "duration_ms": None,
                     "cost_usd": None,
@@ -333,9 +333,9 @@ class LedgerTaskTextTest(unittest.TestCase):
         self.assertEqual(
             text,
             "task TP1: 3 runs\n"
-            "  r1  2026-10-06T09:00:00Z  build  done  steps 30  duration 0h02m  cost 2.50 USD\n"
-            "  r2  2026-10-06T10:00:00Z  build  budget_reached  steps 75 partial  duration 1h02m  cost -\n"
-            "  r3  2026-10-06T11:00:00Z  verify  failed  steps -  duration -  cost -",
+            "  r1  2026-10-06T09:00:00Z  build  done  turns 30  duration 0h02m  cost 2.50 USD\n"
+            "  r2  2026-10-06T10:00:00Z  build  budget_reached  turns 75 partial  duration 1h02m  cost -\n"
+            "  r3  2026-10-06T11:00:00Z  verify  failed  turns -  duration -  cost -",
         )
 
 
