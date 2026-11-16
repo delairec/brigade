@@ -11,6 +11,7 @@ from brigade.collecting.collector_environment import CollectorInputs
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.collecting.read_stale_branches import read_stale_branches
 from brigade.command import Argument, Command, ExclusiveArguments
+from brigade.commands._equip_registered_collector import equip_registered_collector
 from brigade.commands._launch_branch_rebase import launch_branch_rebase
 from brigade.commands._list_branch_check_runs import list_branch_check_runs
 from brigade.commands._read_cli_login import read_cli_login
@@ -491,9 +492,7 @@ def _preflight(runtime: Runtime, configuration: Configuration, action: RunPrefli
             task=action.task,
             base_branch=action.branch,
             pr=action.pr,
-            forge=runtime.resolve_plugin("forge", read_project_forge(project)),
-            environment=read_forge_environment(configuration, ForgeSlot(read_project_forge(project), CLI_KEY), runtime),
-            configuration=configuration,
+            equipment=equip_registered_collector(project, configuration, runtime),
         ),
     )
 

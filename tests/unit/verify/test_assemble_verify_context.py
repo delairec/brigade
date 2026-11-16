@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.corpus.read_entities import Entity, EntityField
 from brigade.system.parse_configuration import Configuration
 from brigade.verify.assemble_verify_context import assemble_verify_context
@@ -13,7 +14,13 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 from tests.unit.registry_answers import create_registry_answers
-from tests.unit.verify.test_preflight_pull_request import BASE, HEAD, WAVE_HEAD, ForgeDescribingThePullRequestDouble
+from tests.unit.verify.test_preflight_pull_request import (
+    BASE,
+    HEAD,
+    NO_CLIENT_RESOLVER,
+    WAVE_HEAD,
+    ForgeDescribingThePullRequestDouble,
+)
 
 DIFF = "--- a/brigade/cart.py\n+++ b/brigade/cart.py\n@@ -0,0 +1 @@\n+def empty_cart():\n"
 INSTRUCTIONS = "/srv/instructions"
@@ -92,9 +99,12 @@ class AssembleVerifyContextTest(unittest.TestCase):
             task="B1",
             base_branch="integration/w1",
             pr=160,
-            forge=ForgeDescribingThePullRequestDouble(),
-            environment={},
-            configuration=configuration,
+            equipment=CollectorEquipment(
+                configuration=configuration,
+                forge=ForgeDescribingThePullRequestDouble(),
+                forge_name="github",
+                resolve_client=NO_CLIENT_RESOLVER,
+            ),
         )
         return assemble_verify_context(create_test_runtime(self.paths, run_process=self.runner), demand)
 
