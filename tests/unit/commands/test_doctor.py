@@ -55,6 +55,7 @@ PROJECT_OF_NO_FORGE = json.dumps(
 COMMENT_POLICY = json.dumps(
     {"fields": [{"name": "PROJECT", "atoms": ["@PROJECT.lib"]}, {"name": "REVIEW", "atoms": ["comment"]}]}
 )
+from tests.unit.create_recipe_answers import create_recipe_answers
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
@@ -101,6 +102,18 @@ def _create_doctor_answers() -> dict:
         ("awawa", "show", "@PROJECT.app"): ProcessAnswer(stdout=PROJECT_ON_GITHUB),
         ("awawa", "show", "@PROJECT.lib"): ProcessAnswer(stdout=PROJECT_OF_NO_FORGE),
     }
+
+
+SETUP_RECIPE_WITH_AN_EMPTY_ARGV = """schema_version = 1
+name = "setup"
+description = "the setup of the project"
+params = []
+max_wall = 30
+
+[[steps]]
+kind = "command"
+argv = []
+"""
 
 
 class DoctorTestCase(unittest.TestCase):
@@ -1250,11 +1263,12 @@ class DoctorProjectsTest(DoctorTestCase):
                     document["items"],
                 )
 
-    def test_should_find_a_project_command_whose_first_word_is_no_executable(self):
+    def test_should_find_a_step_of_a_project_recipe_whose_program_is_no_executable(self):
         # Arrange
-        for field_name in ["SETUP", "ACCEPTANCE", "HEAVY"]:
-            with self.subTest(field=field_name):
-                self.register((field_name, "ghost --check"))
+        self.register()
+        for recipe in ["setup", "acceptance", "heavy"]:
+            with self.subTest(recipe=recipe):
+                self.answers.update(create_recipe_answers(self.project, {recipe: (("ghost", "--check"),)}))
 
                 # Act
                 document = doctor(self.no_option, self.runtime)
@@ -1265,56 +1279,43 @@ class DoctorProjectsTest(DoctorTestCase):
                         "name": "project",
                         "kind": "prerequisite",
                         "state": "finding",
-                        "detail": f"@PROJECT.app: {field_name} ghost --check: no executable ghost",
+                        "detail": f"@PROJECT.app: recipe {recipe}, step ghost --check: no executable ghost",
                         "fallback": None,
                     },
                     document["items"],
                 )
 
-    def test_should_not_find_a_project_command_whose_first_word_is_an_executable_on_path(self):
+    def test_should_not_find_a_step_of_a_project_recipe_whose_program_is_an_executable_on_path(self):
         # Arrange
-        self.register(("ACCEPTANCE", "make check"))
+        self.register()
+        self.answers.update(create_recipe_answers(self.project, {"acceptance": (("make", "check"),)}))
 
         # Act
         document = doctor(self.no_option, self.runtime)
 
         # Assert
-        self.assertNotIn(
-            {
-                "name": "project",
-                "kind": "prerequisite",
-                "state": "finding",
-                "detail": "@PROJECT.app: ACCEPTANCE make check: no executable make",
-                "fallback": None,
-            },
-            document["items"],
-        )
+        self.assertNotIn("project", [item["name"] for item in document["items"]])
 
-    def test_should_not_find_a_project_command_running_a_script_the_project_versions(self):
+    def test_should_not_find_a_step_of_a_project_recipe_running_a_script_the_project_versions(self):
         # Arrange
         (self.project / "scripts").mkdir()
         (self.project / "scripts" / "check").write_text("#!/bin/sh\n")
         (self.project / "scripts" / "check").chmod(EXECUTABLE)
-        self.register(("ACCEPTANCE", "scripts/check --fast"))
+        self.register()
+        self.answers.update(create_recipe_answers(self.project, {"acceptance": (("scripts/check", "--fast"),)}))
 
         # Act
         document = doctor(self.no_option, self.runtime)
 
         # Assert
-        self.assertNotIn(
-            {
-                "name": "project",
-                "kind": "prerequisite",
-                "state": "finding",
-                "detail": "@PROJECT.app: ACCEPTANCE scripts/check --fast: no executable scripts/check",
-                "fallback": None,
-            },
-            document["items"],
-        )
+        self.assertNotIn("project", [item["name"] for item in document["items"]])
 
-    def test_should_find_a_project_command_shlex_refuses(self):
+    def test_should_find_a_step_of_a_project_recipe_with_an_empty_argv(self):
         # Arrange
-        self.register(("ACCEPTANCE", 'make "check'))
+        recipes = self.project / ".brigade" / "recipes"
+        recipes.mkdir(parents=True)
+        (recipes / "setup.toml").write_text(SETUP_RECIPE_WITH_AN_EMPTY_ARGV)
+        self.register(("MODE", "none"))
 
         # Act
         document = doctor(self.no_option, self.runtime)
@@ -1325,15 +1326,18 @@ class DoctorProjectsTest(DoctorTestCase):
                 "name": "project",
                 "kind": "prerequisite",
                 "state": "finding",
-                "detail": '@PROJECT.app: ACCEPTANCE make "check: shlex.split refuses it, No closing quotation',
+                "detail": "@PROJECT.app: recipe setup, a step with an empty argv",
                 "fallback": None,
             },
             document["items"],
         )
 
-    def test_should_find_an_empty_project_command(self):
+    def test_should_find_the_recipes_of_a_project_unreadable(self):
         # Arrange
-        self.register(("SETUP", ""))
+        self.register()
+        self.answers["awawa", "status", "--json", str(self.project)] = ToolFailure(
+            "awawa status --json timed out after 30 s"
+        )
 
         # Act
         document = doctor(self.no_option, self.runtime)
@@ -1344,7 +1348,7 @@ class DoctorProjectsTest(DoctorTestCase):
                 "name": "project",
                 "kind": "prerequisite",
                 "state": "finding",
-                "detail": "@PROJECT.app: SETUP is an empty line",
+                "detail": "@PROJECT.app: recipes unreadable: awawa status --json timed out after 30 s",
                 "fallback": None,
             },
             document["items"],

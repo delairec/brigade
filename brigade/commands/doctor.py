@@ -15,6 +15,8 @@ from brigade.git.describe_checkout_lag import describe_checkout_lag
 from brigade.git.find_branch import find_branch
 from brigade.git.read_git_version import read_git_version
 from brigade.python_floor import PYTHON_FLOOR
+from brigade.recipes.locate_recipes import locate_recipes
+from brigade.recipes.read_project_commands import read_project_commands
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_project_forge import NO_FORGE, read_project_forge
 from brigade.registry.read_projects import read_projects
@@ -65,7 +67,7 @@ REVIEW_FALLBACK = "GitHub refuses the approval of the review slot"
 POLICIES_FALLBACK = "the review mode of each project unchecked"
 AGENT_TYPE = "AGENT"
 UNLOCATED_ROLESETS = (None, BUILT_IN_ROLESET, CORPUS_ROLESET)
-PROJECT_COMMAND_FIELDS = ("SETUP", "ACCEPTANCE", "HEAVY")
+PROJECT_RECIPES = ("setup", "acceptance", "heavy")
 PATH_SEPARATOR = "/"
 STATE_WIDTH = 9
 NAME_WIDTH = 13
@@ -431,33 +433,33 @@ def _locate_program(word: str, checkout: Path) -> str:
     return word
 
 
-def _find_command_problems(field_name: str, line: str, checkout: Path, search_path: str) -> list[str]:
-    try:
-        argv = shlex.split(line)
-    except ValueError as error:
-        return [f"{field_name} {line}: shlex.split refuses it, {error}"]
+def _find_step_problems(recipe: str, argv: tuple[str, ...], checkout: Path, search_path: str) -> list[str]:
     if not argv:
-        return [f"{field_name} is an empty line"]
+        return [f"recipe {recipe}, a step with an empty argv"]
     if shutil.which(_locate_program(argv[0], checkout), path=search_path) is None:
-        return [f"{field_name} {line}: no executable {argv[0]}"]
+        return [f"recipe {recipe}, step {shlex.join(argv)}: no executable {argv[0]}"]
     return []
 
 
-def _read_values(project: Entity, field_name: str) -> list[str]:
-    return [field.value for field in project.fields if field.name == field_name]
+def _find_recipe_problems(project: Entity, checkout: Path, runtime: Runtime) -> list[str]:
+    places = locate_recipes(checkout, project, runtime.paths)
+    try:
+        commands = {recipe: read_project_commands(places, recipe, runtime.run_process) for recipe in PROJECT_RECIPES}
+    except ToolFailure as error:
+        return [f"recipes unreadable: {error}"]
+    return [
+        problem
+        for recipe, argvs in commands.items()
+        for argv in argvs
+        for problem in _find_step_problems(recipe, argv, checkout, runtime.paths.executable_search_path)
+    ]
 
 
 def _inspect_checkout(project: Entity, checkout: Path, runtime: Runtime) -> list[str]:
-    search_path = runtime.paths.executable_search_path
     return [
         *_find_roleset_problems(read_project_field(project, "ROLESET"), checkout),
         *_find_main_problems(read_project_field(project, "MAIN"), checkout, runtime),
-        *(
-            problem
-            for field_name in PROJECT_COMMAND_FIELDS
-            for line in _read_values(project, field_name)
-            for problem in _find_command_problems(field_name, line, checkout, search_path)
-        ),
+        *_find_recipe_problems(project, checkout, runtime),
     ]
 
 
