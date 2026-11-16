@@ -154,3 +154,48 @@ class RenderWaveLinesTest(unittest.TestCase):
             "parked: TP147\n"
             "events:",
         )
+
+    def test_should_list_each_event_of_the_wave_with_the_task_it_names(self):
+        # Arrange
+        document = {
+            "view": "wave",
+            "wave": "tidepool_w18",
+            "first": "2026-10-04T09:00:00Z",
+            "last": "2026-10-04T10:00:00Z",
+            "wall_time_ms": 3600000,
+            "tasks": ["T9"],
+            "cost_usd": None,
+            "usage": None,
+            "by_task": [],
+            "pull_requests": [],
+            "steps": {"by_slot": {}, "by_role": {}},
+            "pauses": [],
+            "paused_ms": 0,
+            "hand_overs": [],
+            "parked": [],
+            "events": [
+                {"at": "2026-10-04T09:00:00Z", "event": "wave.started", "fields": {"wave": "tidepool_w18"}},
+                {"at": "2026-10-04T10:00:00Z", "event": "task.state", "fields": {"task": "T9", "state": "merged"}},
+            ],
+        }
+
+        # Act
+        text = "\n".join(render_wave_lines(document))
+
+        # Assert
+        self.assertEqual(
+            text,
+            "wave tidepool_w18: 2026-10-04T09:00:00Z to 2026-10-04T10:00:00Z, wall time 1h00m\n"
+            "cost: none\n"
+            "tokens: none\n"
+            "tasks: none\n"
+            "pull requests: none\n"
+            "steps by slot: none\n"
+            "steps by role: none\n"
+            "pauses: 0, 0h00m in all\n"
+            "hand-overs: none\n"
+            "parked: none\n"
+            "events:\n"
+            "  2026-10-04T09:00:00Z  wave.started\n"
+            "  2026-10-04T10:00:00Z  task.state  T9",
+        )
