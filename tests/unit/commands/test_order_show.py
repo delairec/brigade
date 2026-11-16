@@ -33,6 +33,7 @@ NIGHTLY_SHOWN = {
         "text": "the cost of the review",
         "params": ["pull_request=12"],
         "every": "daily@07:00",
+        "output": None,
         "status": "active",
     },
     "runs": [

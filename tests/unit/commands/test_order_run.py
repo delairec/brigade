@@ -68,6 +68,23 @@ JUDGED = (
     'schema_version = 1\nname = "judged"\ndescription = "a judged triage"\nparams = []\nmax_wall = 30\n'
     '[[steps]]\nkind = "judge"\nslot = "judging"\nprocedure = "triage"\nanswer = "ANSWER"\n'
 )
+KEPT = (
+    'schema_version = 1\nname = "kept"\ndescription = "the open issues, kept"\nparams = []\nmax_wall = 30\n'
+    '[[steps]]\nkind = "collect"\ncollector = "open-issues"\n'
+    '[[steps]]\nkind = "output"\noutput = "inbox"\n'
+)
+KEPT_ORDER = ProcessAnswer(
+    stdout=json.dumps(
+        {
+            "fields": [
+                {"name": "RECIPE", "atoms": ['"kept"']},
+                {"name": "PROJECT", "atoms": ['"@PROJECT.shop"']},
+                {"name": "OUTPUT", "atoms": ['"entity:RESULT"']},
+                {"name": "STATUS", "atoms": ['"active"']},
+            ]
+        }
+    )
+)
 OPEN_ISSUES = {
     "schema_version": 1,
     "collector": "open-issues",
@@ -107,6 +124,7 @@ class OrderRunTest(unittest.TestCase):
         (self.paths.config_root / "recipes" / "gated.toml").write_text(GATED, encoding="utf-8")
         (self.paths.config_root / "recipes" / "collected.toml").write_text(COLLECTED, encoding="utf-8")
         (self.paths.config_root / "recipes" / "judged.toml").write_text(JUDGED, encoding="utf-8")
+        (self.paths.config_root / "recipes" / "kept.toml").write_text(KEPT, encoding="utf-8")
         (self.paths.config_root / "preflights").mkdir()
         (self.paths.config_root / "preflights" / "quiet.toml").write_text(QUIET, encoding="utf-8")
         self.shop = root / "shop"
@@ -125,6 +143,7 @@ class OrderRunTest(unittest.TestCase):
                 ("awawa", "show", "@ORDER.gated", "--json", config): GATED_ORDER,
                 ("awawa", "show", "@ORDER.collected", "--json", config): create_order_answer("collected"),
                 ("awawa", "show", "@ORDER.judged", "--json", config): create_order_answer("judged"),
+                ("awawa", "show", "@ORDER.kept", "--json", config): KEPT_ORDER,
                 (str(collector),): ProcessAnswer(stdout=json.dumps(OPEN_ISSUES)),
             }
         )
@@ -245,6 +264,19 @@ class OrderRunTest(unittest.TestCase):
                 "reason": f"no configuration at {self.paths.config_root / 'config.toml'}; run brigade init",
             },
         )
+
+    def test_should_keep_the_result_of_the_order_and_hand_it_to_the_output_the_order_names(self):
+        # Act
+        document = order_run(argparse.Namespace(name="kept"), self.runtime)
+
+        # Assert
+        run_directory = self.paths.state_root / "runs" / document["run"]
+        step_file = run_directory / "steps" / "2-output.json"
+        self.assertEqual(
+            json.loads(step_file.read_text(encoding="utf-8")),
+            {"output": "entity:RESULT", "answer": str(run_directory / "answer.awawa")},
+        )
+        self.assertIn(("git", "add", "--", "results.awawa"), self.runner.list_argvs())
 
 
 class OrderRunTextTest(unittest.TestCase):

@@ -1,8 +1,9 @@
 import shutil
 
 from brigade.errors import BrigadeError
+from brigade.studies.choose_answer_publisher import PUBLISHERS_BY_OUTPUT
 from brigade.studies.hand_answer_to_output import OUTPUT_EXECUTABLE_PREFIX
-from brigade.studies.write_answer import ENTITY_OUTPUT_PREFIX, PUBLISHERS_BY_OUTPUT
+from brigade.studies.write_answer import ENTITY_OUTPUT_PREFIX
 from brigade.studies.write_answer_to_file import FILE_OUTPUT_PREFIX
 
 

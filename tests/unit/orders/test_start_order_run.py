@@ -19,6 +19,7 @@ NIGHTLY = Order(
     text="the cost",
     params=("pull_request=12",),
     every=None,
+    output=None,
     status="active",
 )
 
@@ -46,6 +47,7 @@ class StartOrderRunTest(unittest.TestCase):
                     "text": "the cost",
                     "params": ["pull_request=12"],
                     "every": None,
+                    "output": None,
                     "status": "active",
                 },
             },
