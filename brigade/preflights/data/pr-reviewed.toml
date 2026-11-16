@@ -1,0 +1,5 @@
+schema_version = 1
+name = "pr-reviewed"
+description = "the open pull request the parameter pr names, checked to carry at least one submitted review"
+collectors = [{ name = "pr-list" }]
+checks = [{ name = "reviewed" }]

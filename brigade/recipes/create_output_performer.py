@@ -1,6 +1,7 @@
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
+from brigade.recipes.lint_recipe import PLACEHOLDER
 from brigade.recipes.render_result import render_result
 from brigade.recipes.run_order import OrderRun, StepPerformer
 from brigade.studies.study_run_context import ANSWER_FILE
@@ -15,11 +16,14 @@ def _read_answer(run: OrderRun) -> str:
 
 
 def create_output_performer(
-    keep: Callable[[str], None], hand: Callable[[str, Path], dict], output: str | None
+    keep: Callable[[str], None],
+    hand: Callable[[str, Path], dict],
+    output: str | None,
+    values: Mapping[str, str],
 ) -> StepPerformer:
     def perform(step: dict, run: OrderRun) -> dict:
         keep(_read_answer(run))
-        target = output or step["output"]
+        target = PLACEHOLDER.sub(lambda match: values[match.group(1)], output or step["output"])
         answer_path = run.run_directory / ANSWER_FILE
         return {"output": target, "answer": str(answer_path), **hand(target, answer_path)}
 

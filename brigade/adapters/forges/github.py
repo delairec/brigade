@@ -24,6 +24,7 @@ PULL_REQUESTS_QUERY = """query($owner: String!, $name: String!, $states: [PullRe
     pullRequests(first: 100, after: $endCursor, states: $states, orderBy: {field: CREATED_AT, direction: DESC}) {
       nodes {
         number title headRefName headRefOid baseRefName state isDraft reviewDecision
+        reviews { totalCount }
         author { login }
         commits(last: 1) {
           nodes { commit { statusCheckRollup { contexts(first: 100) {
@@ -241,6 +242,7 @@ def _describe_listed_pull_request(pull_request: dict) -> dict:
         "author": _read_login(pull_request["author"]),
         "draft": pull_request["isDraft"],
         "review": _describe_review(pull_request["reviewDecision"]),
+        "reviews": pull_request["reviews"]["totalCount"],
         "checks": _describe_check_runs(_read_check_contexts(pull_request)),
     }
 
