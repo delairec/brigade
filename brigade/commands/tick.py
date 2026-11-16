@@ -47,6 +47,7 @@ from brigade.ledger.tick_action_failed import TickActionFailed
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
+from brigade.orders.detach_order_run import detach_order_run
 from brigade.orders.start_order_run import start_order_run
 from brigade.orders.stop_order_run import stop_order_run
 from brigade.preflights.read_preflight_file import read_preflight_file
@@ -58,7 +59,6 @@ from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_project_forge import NO_FORGE, read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.runs.create_run_id import create_run_id
-from brigade.runs.detach_brigade_command import DetachedCommand, detach_brigade_command
 from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
 from brigade.runs.is_run_live_on import is_run_live_on
 from brigade.runs.read_run_document import read_run_document
@@ -445,12 +445,7 @@ def _launch_order(runtime: Runtime, action: LaunchOrder) -> None:
     run_id = create_run_id(runtime.now)
     resolved = resolve_order(runtime, action.order)
     start_order_run(runtime, resolved.order, resolved.recipe, run_id)
-    detached = DetachedCommand(
-        command=("order", "run", action.order, "--run-id", run_id),
-        cwd=str(runtime.paths.config_root),
-        run_directory=runtime.paths.state_root / RUNS_DIRECTORY / run_id,
-    )
-    detach_brigade_command(runtime, detached, record_run_pid)
+    detach_order_run(runtime, action.order, run_id)
 
 
 def _report_milestone(runtime: Runtime, configuration: Configuration, action: ReportMilestone) -> None:
