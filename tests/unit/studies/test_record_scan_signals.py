@@ -57,7 +57,7 @@ class RecordScanSignalsTest(unittest.TestCase):
             path.write_text(json.dumps({"collector": collector, "summary": {}, "items": items}), encoding="utf-8")
             collected.append({"collector": collector, "summary": {}, "document": str(path)})
         (self.run_directory / "steps").mkdir(parents=True)
-        (self.run_directory / "steps" / "collect.json").write_text(
+        (self.run_directory / "steps" / "1-collect.json").write_text(
             json.dumps({"collected": collected}), encoding="utf-8"
         )
 

@@ -49,6 +49,7 @@ class RecipeListTest(unittest.TestCase):
                     {"name": "review", "source": "project"},
                     {"name": "nightly", "source": "machine"},
                     {"name": "pr-usage-report", "source": "built-in"},
+                    {"name": "study", "source": "built-in"},
                     {"name": "wave", "source": "native"},
                 ],
             },
@@ -89,6 +90,7 @@ class RecipeListTest(unittest.TestCase):
                     {"name": "triage", "source": "project"},
                     {"name": "nightly", "source": "machine"},
                     {"name": "pr-usage-report", "source": "built-in"},
+                    {"name": "study", "source": "built-in"},
                     {"name": "wave", "source": "native"},
                 ],
             },
@@ -118,6 +120,7 @@ class RecipeListTest(unittest.TestCase):
                 "recipes": [
                     {"name": "nightly", "source": "machine"},
                     {"name": "pr-usage-report", "source": "built-in"},
+                    {"name": "study", "source": "built-in"},
                     {"name": "wave", "source": "native"},
                 ],
             },

@@ -67,7 +67,7 @@ class StudyAnswerOfAJudgingRunTest(unittest.TestCase):
         self.run_directory.mkdir(parents=True)
         (self.run_directory / "study.json").write_text(json.dumps({"study": "health"}), encoding="utf-8")
         (self.run_directory / "steps").mkdir()
-        (self.run_directory / "steps" / "collect.json").write_text(json.dumps({"collected": []}), encoding="utf-8")
+        (self.run_directory / "steps" / "1-collect.json").write_text(json.dumps({"collected": []}), encoding="utf-8")
         outputs = {("awawa", "lint"): "", ("awawa", "show", "@ANSWER.health_20261019T090000Z_e10d04"): NO_FILLED_FIELD}
         self.runtime = create_test_runtime(
             create_test_paths(self.root),

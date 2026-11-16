@@ -140,7 +140,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         steps = self.runs / json.loads(completed.stdout)["run"] / "steps"
-        self.assertEqual(list_entry_names(steps), ["collect.json", "judge.json", "output.json"])
+        self.assertEqual(list_entry_names(steps), ["1-collect.json", "2-judge.json", "3-output.json"])
 
     def test_should_print_the_step_a_study_parked_at(self):
         # Arrange
@@ -151,7 +151,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 1)
-        self.assertRegex(completed.stdout, r"^@STUDY\.trees run \d{8}T\d{6}Z-[0-9a-f]{6} parked at collect: ")
+        self.assertRegex(completed.stdout, r"^@STUDY\.trees run \d{8}T\d{6}Z-[0-9a-f]{6} parked at 1-collect: ")
 
     def test_should_print_the_run_of_a_study_recorded_with_no_schedule(self):
         # Act
@@ -211,7 +211,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
                 "study": "weekly",
                 "run": study_run,
                 "state": "parked",
-                "step": "judge",
+                "step": "2-judge",
                 "reason": reason,
             },
         )
@@ -233,7 +233,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
                     "event": "step.done",
                     "kind": "study",
                     "run": study_run,
-                    "step": "collect",
+                    "step": "1-collect",
                 },
                 {
                     "schema_version": 2,
@@ -279,7 +279,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
                     "event": "step.failed",
                     "kind": "study",
                     "run": study_run,
-                    "step": "judge",
+                    "step": "2-judge",
                     "reason": reason,
                 },
                 {
@@ -290,7 +290,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
                     "kind": "study",
                     "order": "weekly",
                     "run": study_run,
-                    "step": "judge",
+                    "step": "2-judge",
                     "reason": reason,
                 },
             ],

@@ -45,13 +45,26 @@ class PluginResolverDouble:
         return PluginDouble(kind=kind, name=name)
 
 
-def _write_steps_done(root: Path, study_record: str) -> None:
+def _write_study_record(root: Path, study_record: str) -> Path:
     steps = root / "state" / "runs" / RUN_ID / "steps"
     steps.mkdir(parents=True)
     (steps.parent / "study.json").write_text(study_record, encoding="utf-8")
-    (steps / "collect.json").write_text("{}", encoding="utf-8")
-    (steps / "judge.json").write_text("{}", encoding="utf-8")
-    (steps / "output.json").write_text("{}", encoding="utf-8")
+    return steps
+
+
+def _write_milestone_report_steps_done(steps: Path) -> None:
+    (steps / "1-collect.json").write_text("{}", encoding="utf-8")
+    (steps / "2-collect.json").write_text("{}", encoding="utf-8")
+    (steps / "3-collect.json").write_text("{}", encoding="utf-8")
+    (steps / "4-collect.json").write_text("{}", encoding="utf-8")
+    (steps / "5-judge.json").write_text("{}", encoding="utf-8")
+    (steps / "6-output.json").write_text("{}", encoding="utf-8")
+
+
+def _write_mine_transcripts_steps_done(steps: Path) -> None:
+    (steps / "1-collect.json").write_text("{}", encoding="utf-8")
+    (steps / "2-judge.json").write_text("{}", encoding="utf-8")
+    (steps / "3-output.json").write_text("{}", encoding="utf-8")
 
 
 class StudyRunTextTest(unittest.TestCase):
@@ -61,8 +74,8 @@ class StudyRunTextTest(unittest.TestCase):
             ("a run done", {"state": "done"}, f"@STUDY.health run {RUN_ID} done"),
             (
                 "a run parked",
-                {"state": "parked", "step": "judge", "reason": "the slot answered nothing"},
-                f"@STUDY.health run {RUN_ID} parked at judge: the slot answered nothing",
+                {"state": "parked", "step": "2-judge", "reason": "the slot answered nothing"},
+                f"@STUDY.health run {RUN_ID} parked at 2-judge: the slot answered nothing",
             ),
         ]
         for case, ending, expected_text in rows:
@@ -128,9 +141,7 @@ class StudyRunOfAStudyTest(unittest.TestCase):
             ' "milestone": "M6", "branch": "integration/hardening", "waves": ["oak_w2"], "tasks": ["B17"]}}',
             encoding="utf-8",
         )
-        (steps / "collect.json").write_text("{}", encoding="utf-8")
-        (steps / "judge.json").write_text("{}", encoding="utf-8")
-        (steps / "output.json").write_text("{}", encoding="utf-8")
+        _write_milestone_report_steps_done(steps)
         runtime = create_test_runtime(
             create_test_paths(root),
             run_process=create_corpus_double({"PROJECT": {"oak": (("PATH", "/srv/oak"),)}}),
@@ -173,7 +184,7 @@ class StudyRunOfMineTranscriptsTest(unittest.TestCase):
 
         # Assert
         collected = json.loads(
-            (runtime.paths.state_root / "runs" / ending["run"] / "steps" / "collect.json").read_text()
+            (runtime.paths.state_root / "runs" / ending["run"] / "steps" / "1-collect.json").read_text()
         )
         self.assertEqual(
             collected["collected"][0]["summary"],
@@ -193,11 +204,13 @@ class StudyRunForgeTest(unittest.TestCase):
                 root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
                 self.enterContext(contextlib.chdir(root))
                 write_operational_corpus(root)
-                _write_steps_done(
-                    root,
-                    '{"schema_version": 1, "study": "milestone-report", "project": "oak", "milestone": {"project":'
-                    ' "oak", "milestone": "M6", "branch": "integration/hardening", "waves": ["oak_w2"], "tasks":'
-                    ' ["B17"]}}',
+                _write_milestone_report_steps_done(
+                    _write_study_record(
+                        root,
+                        '{"schema_version": 1, "study": "milestone-report", "project": "oak", "milestone": {"project":'
+                        ' "oak", "milestone": "M6", "branch": "integration/hardening", "waves": ["oak_w2"], "tasks":'
+                        ' ["B17"]}}',
+                    )
                 )
                 resolver = PluginResolverDouble()
                 runtime = create_test_runtime(
@@ -217,7 +230,9 @@ class StudyRunForgeTest(unittest.TestCase):
         root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
         self.enterContext(contextlib.chdir(root))
         write_operational_corpus(root)
-        _write_steps_done(root, '{"schema_version": 1, "study": "mine_transcripts", "project": null}')
+        _write_mine_transcripts_steps_done(
+            _write_study_record(root, '{"schema_version": 1, "study": "mine_transcripts", "project": null}')
+        )
         resolver = PluginResolverDouble()
         runtime = create_test_runtime(
             create_test_paths(root),

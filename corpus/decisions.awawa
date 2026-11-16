@@ -7790,3 +7790,27 @@ DECISION PreflightVerifyPullRequestReadsItsTaskFromThePullRequest
 		+ "and fail alone, and the size judges nothing"
 	SOURCE "the build run of @TASK.B256, SPEC 4"
 		REF @TASK.B256
+
+DECISION TheRecipeStudyCollectsEachCollectorLineInAStepOfItsOwnAndParksWithoutAnInboxSignal
+	TITLE "the built-in recipe study runs a collect step for each COLLECTOR line of its STUDY, a"
+		+ "run past a max_wall of 1440 minutes parks, and a parked study records no signal in the"
+		+ "inbox"
+	STATUS active
+	DESC "the collect step of brigade/recipes/data/study.toml is a template the run of a study"
+		+ "repeats for each COLLECTOR line, in their order, each step keeping {collected: [one"
+		+ "entry]} so that brigade/studies/read_collected.py reads the evidence of every"
+		+ "<rank>-collect.json in the order of its rank"
+	DESC "max_wall is 1440 minutes: before @TASK.B251 a study had no bound on its wall time, and a"
+		+ "day bounds a judging run without stopping one that ran as before"
+		REF @TASK.B251
+	DESC "run_order takes the parking of its caller: an order of an ORDER entity parks through"
+		+ "park_order, which records a signal in the inbox that brigade order resume answers; a"
+		+ "study records order.parked alone, as before @TASK.B251, brigade order resume running no"
+		+ "study"
+		REF @TASK.B251
+	REJECTED "the inbox signal of park_order for a parked study: a signal whose action, brigade"
+		+ "order resume, cannot resume a study"
+	REJECTED "the steps of a study passed as a recipe file per STUDY: the COLLECTOR lines are the"
+		+ "facts of the STUDY entity, read where they are"
+	SOURCE "the pull request of @TASK.B251"
+		REF @TASK.B251

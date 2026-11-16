@@ -19,6 +19,7 @@ from brigade.corpus.read_entities import Entity
 from brigade.corpus.read_entity import read_entity
 from brigade.orders.convert_order import Order, convert_order
 from brigade.orders.find_parked_order_run import find_parked_order_run
+from brigade.orders.park_order import park_order
 from brigade.orders.read_order_run import read_order_run
 from brigade.orders.start_order_run import start_order_run
 from brigade.preflights.run_preflight import PreflightOutcome, PreflightRun, run_preflight
@@ -162,7 +163,7 @@ def order_run(request: argparse.Namespace, runtime: Runtime) -> dict:
         "judge": create_judge_performer(lambda request: launch_run(request, runtime)),
         "output": _equip_output(order, project_entity, run_id, runtime),
     }
-    return {"schema_version": DOCUMENT_SCHEMA_VERSION, **run_order(runtime, run, performers)}
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, **run_order(runtime, run, performers, park_order)}
 
 
 COMMAND = Command(

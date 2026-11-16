@@ -13,6 +13,7 @@ from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.step_done import StepDone
 from brigade.ledger.step_failed import StepFailed
+from brigade.orders.park_order import park_order
 from brigade.recipes.run_order import OrderRun, run_order
 from tests.list_entry_names import list_entry_names
 from tests.unit.create_test_paths import create_test_paths
@@ -71,7 +72,9 @@ class RunOrderTest(unittest.TestCase):
         steps = StepsDouble(failures={})
 
         # Act
-        ran = run_order(self.runtime, self.create_run(create_recipe(COLLECT, OUTPUT)), steps.create_performers())
+        ran = run_order(
+            self.runtime, self.create_run(create_recipe(COLLECT, OUTPUT)), steps.create_performers(), park_order
+        )
 
         # Assert
         self.assertEqual(ran, {"order": "nightly", "run": RUN_ID, "state": "done"})
@@ -81,7 +84,7 @@ class RunOrderTest(unittest.TestCase):
         steps = StepsDouble(failures={})
 
         # Act
-        run_order(self.runtime, self.create_run(create_recipe(COLLECT, OUTPUT)), steps.create_performers())
+        run_order(self.runtime, self.create_run(create_recipe(COLLECT, OUTPUT)), steps.create_performers(), park_order)
 
         # Assert
         self.assertEqual(list_entry_names(self.steps_directory), ["1-collect.json", "2-output.json"])
@@ -91,7 +94,7 @@ class RunOrderTest(unittest.TestCase):
         steps = StepsDouble(failures={})
 
         # Act
-        run_order(self.runtime, self.create_run(create_recipe(COLLECT, OUTPUT)), steps.create_performers())
+        run_order(self.runtime, self.create_run(create_recipe(COLLECT, OUTPUT)), steps.create_performers(), park_order)
 
         # Assert
         self.assertEqual(
@@ -113,7 +116,7 @@ class RunOrderTest(unittest.TestCase):
         steps = StepsDouble(failures={})
 
         # Act
-        run_order(self.runtime, self.create_run(create_recipe(COLLECT, OUTPUT)), steps.create_performers())
+        run_order(self.runtime, self.create_run(create_recipe(COLLECT, OUTPUT)), steps.create_performers(), park_order)
 
         # Assert
         self.assertEqual(steps.performed, ["output"])
@@ -123,7 +126,9 @@ class RunOrderTest(unittest.TestCase):
         steps = StepsDouble(failures={"gate": 1})
 
         # Act
-        ran = run_order(self.runtime, self.create_run(create_recipe(GATE, OUTPUT)), steps.create_performers())
+        ran = run_order(
+            self.runtime, self.create_run(create_recipe(GATE, OUTPUT)), steps.create_performers(), park_order
+        )
 
         # Assert
         self.assertEqual(
@@ -136,7 +141,7 @@ class RunOrderTest(unittest.TestCase):
         steps = StepsDouble(failures={"gate": 1})
 
         # Act
-        run_order(self.runtime, self.create_run(create_recipe(GATE, OUTPUT)), steps.create_performers())
+        run_order(self.runtime, self.create_run(create_recipe(GATE, OUTPUT)), steps.create_performers(), park_order)
 
         # Assert
         self.assertEqual(
@@ -171,7 +176,7 @@ class RunOrderTest(unittest.TestCase):
         steps = StepsDouble(failures={"gate": 1})
 
         # Act
-        run_order(self.runtime, self.create_run(create_recipe(GATE, OUTPUT)), steps.create_performers())
+        run_order(self.runtime, self.create_run(create_recipe(GATE, OUTPUT)), steps.create_performers(), park_order)
 
         # Assert
         self.assertEqual(
@@ -184,7 +189,7 @@ class RunOrderTest(unittest.TestCase):
         steps = StepsDouble(failures={"gate": 1})
 
         # Act
-        run_order(self.runtime, self.create_run(create_recipe(GATE, OUTPUT)), steps.create_performers())
+        run_order(self.runtime, self.create_run(create_recipe(GATE, OUTPUT)), steps.create_performers(), park_order)
 
         # Assert
         self.assertEqual(steps.performed, ["gate"])
@@ -195,7 +200,9 @@ class RunOrderTest(unittest.TestCase):
         skipped_gate = {**GATE, "on_fail": "skip"}
 
         # Act
-        ran = run_order(self.runtime, self.create_run(create_recipe(skipped_gate, OUTPUT)), steps.create_performers())
+        ran = run_order(
+            self.runtime, self.create_run(create_recipe(skipped_gate, OUTPUT)), steps.create_performers(), park_order
+        )
 
         # Assert
         self.assertEqual(ran, {"order": "nightly", "run": RUN_ID, "state": "done"})
@@ -206,7 +213,9 @@ class RunOrderTest(unittest.TestCase):
         skipped_gate = {**GATE, "on_fail": "skip"}
 
         # Act
-        run_order(self.runtime, self.create_run(create_recipe(skipped_gate, OUTPUT)), steps.create_performers())
+        run_order(
+            self.runtime, self.create_run(create_recipe(skipped_gate, OUTPUT)), steps.create_performers(), park_order
+        )
 
         # Assert
         self.assertEqual(list_entry_names(self.steps_directory), ["1-gate.json", "2-output.json"])
@@ -217,7 +226,7 @@ class RunOrderTest(unittest.TestCase):
         skipped_gate = {**GATE, "on_fail": "skip"}
 
         # Act
-        run_order(self.runtime, self.create_run(create_recipe(skipped_gate)), steps.create_performers())
+        run_order(self.runtime, self.create_run(create_recipe(skipped_gate)), steps.create_performers(), park_order)
 
         # Assert
         self.assertEqual(
@@ -240,7 +249,9 @@ class RunOrderTest(unittest.TestCase):
         stopping_gate = {**GATE, "on_fail": "stop"}
 
         # Act
-        ran = run_order(self.runtime, self.create_run(create_recipe(stopping_gate, OUTPUT)), steps.create_performers())
+        ran = run_order(
+            self.runtime, self.create_run(create_recipe(stopping_gate, OUTPUT)), steps.create_performers(), park_order
+        )
 
         # Assert
         self.assertEqual(
@@ -254,7 +265,9 @@ class RunOrderTest(unittest.TestCase):
         stopping_gate = {**GATE, "on_fail": "stop"}
 
         # Act
-        run_order(self.runtime, self.create_run(create_recipe(stopping_gate, OUTPUT)), steps.create_performers())
+        run_order(
+            self.runtime, self.create_run(create_recipe(stopping_gate, OUTPUT)), steps.create_performers(), park_order
+        )
 
         # Assert
         self.assertEqual(
@@ -270,7 +283,9 @@ class RunOrderTest(unittest.TestCase):
         retried_command = {"kind": "command", "argv": ["make", "lint"], "on_fail": "retry:2"}
 
         # Act
-        ran = run_order(self.runtime, self.create_run(create_recipe(retried_command)), steps.create_performers())
+        ran = run_order(
+            self.runtime, self.create_run(create_recipe(retried_command)), steps.create_performers(), park_order
+        )
 
         # Assert
         self.assertEqual(ran, {"order": "nightly", "run": RUN_ID, "state": "done"})
@@ -281,7 +296,9 @@ class RunOrderTest(unittest.TestCase):
         retried_command = {"kind": "command", "argv": ["make", "lint"], "on_fail": "retry:2"}
 
         # Act
-        ran = run_order(self.runtime, self.create_run(create_recipe(retried_command)), steps.create_performers())
+        ran = run_order(
+            self.runtime, self.create_run(create_recipe(retried_command)), steps.create_performers(), park_order
+        )
 
         # Assert
         self.assertEqual(
@@ -301,7 +318,7 @@ class RunOrderTest(unittest.TestCase):
         runtime = dataclasses.replace(self.runtime, read_clock=lambda: PAST_THE_WALL)
 
         # Act
-        ran = run_order(runtime, self.create_run(create_recipe(COLLECT, OUTPUT)), steps.create_performers())
+        ran = run_order(runtime, self.create_run(create_recipe(COLLECT, OUTPUT)), steps.create_performers(), park_order)
 
         # Assert
         self.assertEqual(

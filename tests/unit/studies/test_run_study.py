@@ -1,10 +1,12 @@
 import dataclasses
+import json
 import tempfile
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.errors import BrigadeError
+from brigade.inbox.read_inbox import read_inbox
 from brigade.ledger.append_event import append_event
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.order_done import OrderDone
@@ -20,6 +22,7 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 from tests.unit.studies.create_study_equipment import create_study_equipment
+from tests.unit.studies.test_collect_evidence import CollectorDouble
 
 RUN_ID = "20261019T090000Z-aaaaaa"
 ANSWER = 'FINDING trees_20261019T090000Z_aaaaaa\n\tSTUDY "trees"\n\tRUN "20261019T090000Z-aaaaaa"\n'
@@ -63,6 +66,17 @@ JUDGED_STUDY = Study(
     question="are the trees healthy?",
     collectors=(),
     slot="report",
+    every=None,
+    output="entity:FINDING",
+    answer_type="FINDING",
+    status="active",
+)
+SCAN_OF_TWO_COLLECTORS = Study(
+    name="trees",
+    project=None,
+    question=None,
+    collectors=("weather city=Lyon", "weather city=Paris"),
+    slot="none",
     every=None,
     output="entity:FINDING",
     answer_type="FINDING",
@@ -141,9 +155,8 @@ class RunStudyTest(RunStudyTestCase):
         self.assertEqual(
             read_ledger(self.root / "state").entries,
             (
-                LedgerEntry(instant=FIXED_NOW, event=StepDone(kind="study", run=RUN_ID, step="collect")),
-                LedgerEntry(instant=FIXED_NOW, event=StepDone(kind="study", run=RUN_ID, step="judge")),
-                LedgerEntry(instant=FIXED_NOW, event=StepDone(kind="study", run=RUN_ID, step="output")),
+                LedgerEntry(instant=FIXED_NOW, event=StepDone(kind="study", run=RUN_ID, step="1-judge")),
+                LedgerEntry(instant=FIXED_NOW, event=StepDone(kind="study", run=RUN_ID, step="2-output")),
                 LedgerEntry(instant=FIXED_NOW, event=OrderDone(project=None, kind="study", order="trees", run=RUN_ID)),
             ),
         )
@@ -156,13 +169,13 @@ class RunStudyTest(RunStudyTestCase):
         run_study(self.runtime, SCAN, self.equipment, RUN_ID)
 
         # Assert
-        self.assertEqual(list_entry_names(steps), ["collect.json", "judge.json", "output.json"])
+        self.assertEqual(list_entry_names(steps), ["1-judge.json", "2-output.json"])
 
     def test_should_resume_a_run_past_the_steps_it_completed(self):
         # Arrange
         steps = self.root / "state" / "runs" / RUN_ID / "steps"
         steps.mkdir(parents=True)
-        (steps / "collect.json").write_text('{"collected": []}', encoding="utf-8")
+        (steps / "1-collect.json").write_text('{"collected": []}', encoding="utf-8")
 
         # Act
         ran = run_study(self.runtime, SCAN_OF_A_MISSING_COLLECTOR, self.equipment, RUN_ID)
@@ -173,7 +186,7 @@ class RunStudyTest(RunStudyTestCase):
     def test_should_resume_the_parked_run_of_the_study(self):
         # Arrange
         self.record_order(
-            OrderParked(project=None, kind="study", order="trees", run=RUN_ID, step="collect", reason="quota")
+            OrderParked(project=None, kind="study", order="trees", run=RUN_ID, step="1-collect", reason="quota")
         )
         self.record_order(OrderDone(project=None, kind="study", order="ash", run="20261018T070000Z-bbbbbb"))
 
@@ -187,7 +200,7 @@ class RunStudyTest(RunStudyTestCase):
         # Arrange
         self.create_live_run("20261019T080000Z-bbbbbb", "ash")
         self.record_order(
-            OrderParked(project=None, kind="study", order="trees", run=RUN_ID, step="collect", reason="quota")
+            OrderParked(project=None, kind="study", order="trees", run=RUN_ID, step="1-collect", reason="quota")
         )
 
         # Act
@@ -217,7 +230,7 @@ class RunStudyParkingTest(RunStudyTestCase):
         # Assert
         self.assertEqual(
             ran,
-            {"study": "trees", "run": RUN_ID, "state": "parked", "step": "collect", "reason": "no collector weather"},
+            {"study": "trees", "run": RUN_ID, "state": "parked", "step": "1-collect", "reason": "no collector weather"},
         )
 
     def test_should_record_the_failed_step_and_the_order_parked(self):
@@ -230,7 +243,7 @@ class RunStudyParkingTest(RunStudyTestCase):
             (
                 LedgerEntry(
                     instant=FIXED_NOW,
-                    event=StepFailed(kind="study", run=RUN_ID, step="collect", reason="no collector weather"),
+                    event=StepFailed(kind="study", run=RUN_ID, step="1-collect", reason="no collector weather"),
                 ),
                 LedgerEntry(
                     instant=FIXED_NOW,
@@ -239,12 +252,19 @@ class RunStudyParkingTest(RunStudyTestCase):
                         kind="study",
                         order="trees",
                         run=RUN_ID,
-                        step="collect",
+                        step="1-collect",
                         reason="no collector weather",
                     ),
                 ),
             ),
         )
+
+    def test_should_record_no_signal_in_the_inbox_for_the_parked_study(self):
+        # Act
+        run_study(self.runtime, SCAN_OF_A_MISSING_COLLECTOR, self.equipment, RUN_ID)
+
+        # Assert
+        self.assertEqual(read_inbox(self.root / "state", FIXED_NOW), ())
 
     def test_should_refuse_a_study_whose_run_is_alive(self):
         # Arrange
@@ -284,7 +304,7 @@ class RunStudyParkedAtItsJudgingRunTest(RunStudyTestCase):
         # Arrange
         run_directory = self.root / "state" / "runs" / RUN_ID
         (run_directory / "steps").mkdir(parents=True)
-        (run_directory / "steps" / "collect.json").write_text('{"collected": []}', encoding="utf-8")
+        (run_directory / "steps" / "1-collect.json").write_text('{"collected": []}', encoding="utf-8")
         (run_directory / "answer.awawa").write_text(RECORDED_ANSWER, encoding="utf-8")
         self.record_order(
             OrderParked(
@@ -292,7 +312,7 @@ class RunStudyParkedAtItsJudgingRunTest(RunStudyTestCase):
                 kind="study",
                 order="trees",
                 run=RUN_ID,
-                step="judge",
+                step="1-judge",
                 reason="the judging run 20261019T080000Z-dddddd gave no answer",
             )
         )
@@ -306,3 +326,61 @@ class RunStudyParkedAtItsJudgingRunTest(RunStudyTestCase):
         # Assert
         self.assertEqual(ran, {"study": "trees", "run": RUN_ID, "state": "done"})
         self.assertEqual((self.config_root / "findings.awawa").read_text(encoding="utf-8"), RECORDED_ANSWER)
+
+
+class RunStudyOfSeveralCollectorsTest(RunStudyTestCase):
+    def setUp(self):
+        super().setUp()
+        self.equipment = dataclasses.replace(
+            self.equipment,
+            resolve_collector=lambda name, project: CollectorDouble(),
+            working_directory=Path("/srv/elm"),
+        )
+        self.run_directory = self.root / "state" / "runs" / RUN_ID
+
+    def test_should_run_a_collect_step_for_each_collector_line(self):
+        # Act
+        run_study(self.runtime, SCAN_OF_TWO_COLLECTORS, self.equipment, RUN_ID)
+
+        # Assert
+        self.assertEqual(
+            list_entry_names(self.run_directory / "steps"),
+            ["1-collect.json", "2-collect.json", "3-judge.json", "4-output.json"],
+        )
+
+    def test_should_keep_the_document_of_a_collect_step_under_its_rank(self):
+        # Act
+        run_study(self.runtime, SCAN_OF_TWO_COLLECTORS, self.equipment, RUN_ID)
+
+        # Assert
+        self.assertEqual(
+            json.loads((self.run_directory / "steps" / "2-collect.json").read_text(encoding="utf-8")),
+            {
+                "collected": [
+                    {
+                        "collector": "weather",
+                        "summary": {"days": 1},
+                        "document": str(
+                            self.run_directory / "collectors" / "2" / "collect" / "weather" / "document.json"
+                        ),
+                    }
+                ]
+            },
+        )
+
+    def test_should_answer_with_the_evidence_of_every_collect_step(self):
+        # Arrange
+        documents = self.run_directory / "collectors"
+
+        # Act
+        run_study(self.runtime, SCAN_OF_TWO_COLLECTORS, self.equipment, RUN_ID)
+
+        # Assert
+        self.assertEqual(
+            (self.config_root / "findings.awawa").read_text(encoding="utf-8"),
+            'FINDING trees_20261019T090000Z_aaaaaa\n\tSTUDY "trees"\n\tRUN "20261019T090000Z-aaaaaa"\n'
+            '\tCOLLECTED "weather"\n\t\tSUMMARY "{\\"days\\": 1}"\n'
+            f'\t\tDOCUMENT "{documents}/1/collect/weather/document.json"\n'
+            '\tCOLLECTED "weather"\n\t\tSUMMARY "{\\"days\\": 1}"\n'
+            f'\t\tDOCUMENT "{documents}/2/collect/weather/document.json"\n',
+        )
