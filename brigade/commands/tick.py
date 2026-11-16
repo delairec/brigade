@@ -837,6 +837,14 @@ def _list_cleanup_executors(runtime: Runtime) -> dict:
     }
 
 
+def _list_recipe_executors(runtime: Runtime) -> dict:
+    return {
+        LaunchStudy: lambda action: _launch_study(runtime, action),
+        LaunchOrder: lambda action: _launch_order(runtime, action),
+        StopOrderRun: lambda action: stop_order_run(runtime, action, runtime.signal_process),
+    }
+
+
 def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
     return {
         RecordTaskState: lambda action: _record_task_state(runtime, action),
@@ -848,9 +856,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         MergeTaskBranch: lambda action: _merge_task_branch(runtime, configuration, action),
         OpenMergeWorktree: lambda action: _open_merge_worktree(runtime, action),
         **_list_task_run_executors(runtime, configuration),
-        LaunchStudy: lambda action: _launch_study(runtime, action),
-        LaunchOrder: lambda action: _launch_order(runtime, action),
-        StopOrderRun: lambda action: stop_order_run(runtime, action, runtime.signal_process),
+        **_list_recipe_executors(runtime),
         PauseWave: lambda action: _pause_wave(runtime, action),
         ResumeWave: lambda action: append_event(
             runtime.paths, runtime.now, WaveResumed(wave=action.wave, reason=action.reason)
