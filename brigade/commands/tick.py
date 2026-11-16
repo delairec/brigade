@@ -144,7 +144,7 @@ from brigade.tick.redirect_tick_output import redirect_tick_output
 from brigade.tick.remove_integration_branch import remove_integration_branch
 from brigade.tick.remove_leftover import remove_leftover
 from brigade.tick.remove_task_worktree import remove_task_worktree
-from brigade.tick.run_rounds import Rounds, RoundsOutcome, run_rounds
+from brigade.tick.run_cycles import Cycles, CyclesOutcome, run_cycles
 from brigade.tick.tick_forge import TickForge
 from brigade.tick.write_build_brief import write_build_brief
 from brigade.tick.write_rebuild_brief import write_rebuild_brief
@@ -186,7 +186,7 @@ NO_LOGIN = None
 NO_PULL_REQUEST_OFF_A_FORGE = None
 FAILED_VERDICT = "fail"
 TICK_INTERVAL_S = 300
-ROUND_CAP = 10
+CYCLE_CAP = 10
 LOCK_NAME = "tick.lock"
 COMMAND_NAME = "tick"
 CLI_KEY = "cli"
@@ -963,7 +963,7 @@ def _name_the_merge_commands(named: set[str], actions: tuple) -> tuple:
     return tuple(action for action in actions if action not in commands)
 
 
-def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuration) -> RoundsOutcome:
+def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuration) -> CyclesOutcome:
     forge = _read_the_forge(runtime, configuration)
     merge_commands: set[str] = set()
     stalls: list[SignalStall] = []
@@ -972,20 +972,20 @@ def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuratio
         executors=_list_executors(runtime, configuration),
         record_failure=lambda event: _record_failure(runtime, event),
     )
-    outcome = run_rounds(
-        Rounds(
+    outcome = run_cycles(
+        Cycles(
             build_snapshot=lambda: _name_the_blocked_milestone_rebases(build_snapshot(runtime, configuration, forge)),
-            plan=lambda snapshot: _hold_the_stall_signals(
+            decide=lambda snapshot: _hold_the_stall_signals(
                 stalls,
                 _name_the_merge_commands(merge_commands, decide(snapshot)),
             ),
             apply=apply,
-            cap=ROUND_CAP,
+            cap=CYCLE_CAP,
         )
     )
     signals = apply(tuple(stalls))
     connectors = apply(_plan_registered_connectors(runtime))
-    return RoundsOutcome(
+    return CyclesOutcome(
         actions_applied=outcome.actions_applied + signals.applied + connectors.applied,
         actions_failed=outcome.actions_failed + len(signals.failed) + len(connectors.failed),
         merge_commands=tuple(sorted(merge_commands)),
@@ -1057,17 +1057,17 @@ def _tick_once(runtime: Runtime) -> dict:
 DEFERRED_REBASES = (LaunchTask, RebaseTask, RebaseMilestone)
 
 
-def _describe_planned_action(
+def _describe_decided_action(
     runtime: Runtime, list_check_runs_of: Callable[[str], Callable[[str, str], list[dict]]], action
 ) -> dict:
-    planned = dataclasses.asdict(action)
+    decided = dataclasses.asdict(action)
     if not isinstance(action, DEFERRED_REBASES):
-        return planned
+        return decided
     project = find_project(read_projects(runtime), action.project)
     held_by = find_holding_head(runtime, project, action, list_check_runs_of(read_project_forge(project)))
     if held_by is None:
-        return planned
-    return {**planned, "waits": describe_holding_head(held_by)}
+        return decided
+    return {**decided, "waits": describe_holding_head(held_by)}
 
 
 def _plan_dry(runtime: Runtime) -> dict:
@@ -1079,7 +1079,7 @@ def _plan_dry(runtime: Runtime) -> dict:
         "mode": "dry-run",
         "snapshot": snapshot.to_document(),
         "decisions": [
-            _describe_planned_action(runtime, list_check_runs_of, action)
+            _describe_decided_action(runtime, list_check_runs_of, action)
             for action in (*decide(snapshot), *_plan_registered_connectors(runtime))
         ],
     }
@@ -1161,7 +1161,7 @@ COMMAND = Command(
                         "dest": "mode",
                         "action": "store_const",
                         "const": "dry-run",
-                        "help": "print the snapshot and the plan",
+                        "help": "print the snapshot and the decisions",
                     },
                 ),
                 Argument(

@@ -3756,8 +3756,8 @@ DECISION AFailedActionIsNotAppliedAgainInTheTickThatSawItFail
 	TITLE "an action of the tick that fails with a BrigadeError is recorded once and not applied"
 		+ "again in a later round of the same tick; any other exception ends the tick"
 	STATUS active
-	DESC "run_rounds leaves out of every later round of a tick the actions that failed in an"
-		+ "earlier one; the next tick plans them again from the facts"
+	DESC "run_cycles leaves out of every later cycle of a tick the actions that failed in an"
+		+ "earlier one; the next tick decides them again from the facts"
 	DESC "a failed action is one whose executor raised a BrigadeError; any other exception is a"
 		+ "defect of brigade and ends the tick as before"
 	DESC "a heartbeat that holds no actions_failed, written before failed actions were counted,"
@@ -4712,7 +4712,7 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		+ "branches in brigade/waves/start_project_wave.py, after a StartWave was planned from"
 		+ "candidates the snapshot had read on the branch before the rebase, so a task ratified on"
 		+ "main after the cut was never a candidate; the run held that an action of the plan makes"
-		+ "the candidates arrive one tick later, but brigade/tick/run_rounds.py rebuilds the"
+		+ "the candidates arrive one tick later, but brigade/tick/run_cycles.py rebuilds the"
 		+ "snapshot at each round, so a rebase applied in one round is read in the next round of"
 		+ "the same tick"
 		REF @TASK.B214
@@ -4778,7 +4778,7 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 	SOURCE "the user's ruling of 2026-10-30 on the question of the run 20261030T005500Z-2f5135 of"
 		+ "@TASK.B214, pull request #260, DESC 14: « Une action du plan (Recommended) », the option"
 		+ "« Dès que la branche du milestone ne descend plus de main, le plan produit une action de"
-		+ "rebase. Le tick relit l'état à chaque tour (brigade/tick/run_rounds.py), donc les"
+		+ "rebase. Le tick relit l'état à chaque tour (brigade/tick/run_cycles.py), donc les"
 		+ "candidats sont relus après le rebase dans le même tick. Cela respecte"
 		+ "TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction », against « Une étape avant la"
 		+ "lecture »"
@@ -7182,7 +7182,7 @@ DECISION TheStallOfATaskIsReadFromItsLastLedgerEventAndRaisedOnceTheRoundsOfTheT
 		+ "stall folded ten times in one tick and recorded for a task launched in the next round"
 		REF @TASK.B244
 	SOURCE "the build run of @TASK.B244 of 2026-11-14, on the declared events of"
-		+ "brigade/ledger/declared_events.py and the rounds of brigade/tick/run_rounds.py"
+		+ "brigade/ledger/declared_events.py and the rounds of brigade/tick/run_cycles.py"
 		REF @TASK.B244
 
 DECISION TheTickKeepsALeftoverHoldingUncommittedChangesOrTheMainCheckoutAndReachesAGoneBaseThroughMain
