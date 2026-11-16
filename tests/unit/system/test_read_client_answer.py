@@ -26,6 +26,7 @@ LAUNCH_QUESTION = ClientQuestion(
         progress_file="/state/brigade/runs/r1/progress.md",
         session_id="6f1c2a9e-3b7d-4e21-9a55-0c8d4b7e2f13",
         stop_at=None,
+        stop_hook=None,
     ),
 )
 PROBE_QUESTION = ClientQuestion("vibe", ProbeRequest())

@@ -7610,3 +7610,22 @@ DECISION TheRecipePrUsageReportCollectsTheReviewThreadsWholeAndItsJudgeReadsItsP
 		+ "threads, for a document the judge already reads by the number of its pull request"
 	SOURCE "the pull request of @TASK.B52"
 		REF @TASK.B52
+
+DECISION TheStopHookOfAClientIsAnArgvOfBrigadeRunsStopHookThatBrigadeComposes
+	TITLE "the hook that stops a client session past its soft limit is brigade runs stop-hook --at"
+		+ "<epoch>, an argv brigade composes and hands to the adapter as stop_hook beside stop_at"
+	STATUS active
+	DESC "the launch-argv and resume-argv requests carry stop_hook, the argv of the interpreter,"
+		+ "the entry point of brigade, runs stop-hook and --at with the epoch of stop_at, null when"
+		+ "stop_at is null; the adapter of Claude Code hands it as the command of its PostToolUse"
+		+ "hook, each argument quoted, and composes nothing"
+	DESC "brigade runs stop-hook prints the stop document once its instant has passed and nothing"
+		+ "before it, and exits 0 either way"
+	REJECTED "brigade run stop-hook, the name the task gives for instance: brigade run is a command"
+		+ "taking a procedure as its first word, which a subcommand would shadow; runs is the group"
+		+ "of the commands on runs"
+	REJECTED "the adapter composing the call of brigade from its own name: an adapter does not know"
+		+ "the entry point and the interpreter brigade runs under, which brigade detaches its own"
+		+ "commands with"
+	SOURCE "the pull request of @TASK.B163"
+		REF @TASK.B163

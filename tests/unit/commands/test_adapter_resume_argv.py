@@ -9,7 +9,7 @@ from brigade.system.ask_configured_client import ConfiguredClientAnswer
 from tests.unit.commands.create_plugin_resolver import ScriptedClient, create_plugin_resolver
 
 RESUME_REQUEST = (
-    '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Carry on.", "session_id": "s1", "stop_at": null,'
+    '{"schema_version": 1, "worktree": "/srv/b42", "brief": "Carry on.", "session_id": "s1", "stop_at": null, "stop_hook": null,'
     ' "progress_file": "/state/brigade/runs/r1/progress.md", "role": {"name": "builder", "package": "AGENT builder",'
     ' "package_file": "/state/brigade/runs/r1/role.md", "capabilities": ["read"], "reasoning": "standard",'
     ' "budget": 75}}'

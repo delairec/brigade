@@ -1,6 +1,7 @@
 import json
 import shutil
 import signal
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -427,6 +428,14 @@ class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
                     "progress_file": f"{self.root}/state/runs/20261019T090000Z-c0ffee/progress.md",
                     "session_id": "rate-limited-session",
                     "stop_at": "2026-10-19T09:23:00Z",
+                    "stop_hook": [
+                        sys.executable,
+                        "/srv/brigade/bin/brigade",
+                        "runs",
+                        "stop-hook",
+                        "--at",
+                        "1792401780",
+                    ],
                     "reasoning_table": {},
                     "settings": {},
                     "home": f"{self.root}/home",
@@ -479,6 +488,14 @@ class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
                     "progress_file": f"{self.root}/state/runs/20261019T090000Z-c0ffee/progress.md",
                     "session_id": PatternMatcher(UUID_PATTERN),
                     "stop_at": "2026-10-19T09:23:00Z",
+                    "stop_hook": [
+                        sys.executable,
+                        "/srv/brigade/bin/brigade",
+                        "runs",
+                        "stop-hook",
+                        "--at",
+                        "1792401780",
+                    ],
                     "reasoning_table": {},
                     "settings": {},
                     "home": f"{self.root}/home",
@@ -567,6 +584,14 @@ class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
                     "progress_file": f"{self.root}/state/runs/20261019T090000Z-c0ffee/progress.md",
                     "session_id": PatternMatcher(UUID_PATTERN),
                     "stop_at": "2026-10-19T09:23:00Z",
+                    "stop_hook": [
+                        sys.executable,
+                        "/srv/brigade/bin/brigade",
+                        "runs",
+                        "stop-hook",
+                        "--at",
+                        "1792401780",
+                    ],
                     "reasoning_table": {},
                     "settings": {},
                     "home": f"{self.root}/home",

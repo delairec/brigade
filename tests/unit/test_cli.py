@@ -254,7 +254,7 @@ class MainRefusalTest(MainTestCase):
             ),
             (
                 ["runs", "frobnicate"],
-                r"invalid choice: 'frobnicate' \(choose from '?list'?, '?prune'?, '?show'?, '?stop'?\)\n$",
+                r"invalid choice: 'frobnicate' \(choose from '?list'?, '?prune'?, '?show'?, '?stop'?, '?stop-hook'?\)\n$",
             ),
             (["frobnicate"], r"invalid choice: 'frobnicate' \(choose from '?adapter'?, .+, '?wave'?\)\n$"),
             (["runs", "show"], r"\nbrigade runs show: error: the following arguments are required: run\n$"),
