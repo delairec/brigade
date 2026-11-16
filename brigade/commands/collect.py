@@ -4,34 +4,20 @@ from pathlib import Path
 
 from brigade.collecting.collect_document import CollectionRequest, collect_document
 from brigade.collecting.collector_environment import CollectorInputs
-from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.command import Argument, Command
-from brigade.commands._resolve_project_forge import resolve_project_forge
-from brigade.registry.find_project_at import find_project_at
-from brigade.registry.read_project_forge import read_project_forge
-from brigade.registry.read_projects import read_projects
+from brigade.commands._accept_parameter import accept_parameter
+from brigade.commands._equip_collector import equip_collector
+from brigade.commands._read_parameters import read_parameters
 from brigade.runtime import Runtime
 from brigade.system.collector_places import locate_collectors
-from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.read_since import read_since
 from brigade.system.render_inline_json import render_inline_json
 
 DOCUMENT_SCHEMA_VERSION = 1
-CLIENT_KIND = "client"
 COLLECTOR_KIND = "collector"
-PARAMETER_SEPARATOR = "="
-OPTION_PREFIX = "-"
 BEGINNING = date(1970, 1, 1)
 DOCUMENT_ROW = "document"
 COLUMN_GAP = 2
-
-
-def _accept_parameter(argument: str) -> bool:
-    return PARAMETER_SEPARATOR in argument and not argument.startswith(OPTION_PREFIX)
-
-
-def _read_parameters(arguments: list[str]) -> dict:
-    return dict(argument.split(PARAMETER_SEPARATOR, 1) for argument in arguments)
 
 
 def _resolve_since_day(since: timedelta | date | None, now: datetime) -> date:
@@ -58,30 +44,20 @@ def _render_text(document: dict) -> str:
     return "\n".join([f"{document['collector']} {origin}", *(f"{key:<{width}}{value}" for key, value in rows)])
 
 
-def _equip_collector(project: Path, runtime: Runtime) -> CollectorEquipment:
-    registered = find_project_at(read_projects(runtime), project)
-    return CollectorEquipment(
-        configuration=read_configuration(runtime, CONFIGURATION_OPTIONAL),
-        forge=resolve_project_forge(registered, runtime),
-        forge_name=read_project_forge(registered),
-        resolve_client=lambda name: runtime.resolve_plugin(CLIENT_KIND, name),
-    )
-
-
 def collect(request: argparse.Namespace, runtime: Runtime) -> dict:
     project = Path.cwd()
     collector = runtime.resolve_plugin(COLLECTOR_KIND, request.name, places=locate_collectors(project, runtime.paths))
     inputs = CollectorInputs(
         project=project,
         since=_resolve_since_day(request.since, runtime.now),
-        parameters=_read_parameters(request.extra_arguments),
+        parameters=read_parameters(request.extra_arguments),
     )
     collection = collect_document(
         collector,
         CollectionRequest(
             inputs=inputs,
             refresh=request.refresh,
-            equipment=_equip_collector(project, runtime),
+            equipment=equip_collector(project, runtime),
         ),
         runtime,
     )
@@ -107,5 +83,5 @@ COMMAND = Command(
     ),
     run=collect,
     render_text=_render_text,
-    accept_extra_argument=_accept_parameter,
+    accept_extra_argument=accept_parameter,
 )
