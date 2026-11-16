@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+from tests.cli.recipe_schema import RECIPE_SCHEMA
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
 from tests.cli.test_collect import install_executable
 from tests.cli.test_task import MILESTONE_BRANCH, TASK_BRANCH
@@ -21,6 +22,7 @@ TYPED_SCHEMA = (
     '\tDESC "the tasks planned for one request"\n'
     "\tFIELD TITLE string\n\t\tREQUIRED\n"
     "\tFIELD STATUS planned|running\n\t\tREQUIRED\n"
+    f"{RECIPE_SCHEMA}"
 )
 TYPED_TASKS = (
     'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS implemented\n\n'
