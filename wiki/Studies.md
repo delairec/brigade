@@ -35,7 +35,7 @@ a scan: no judging run, the answer holds the fields brigade filled.
 | every day at an hour, `daily@HH:MM` | `daily@07:30` |
 | a day of the week at an hour, `mon@HH:MM` to `sun@HH:MM` | `mon@09:00` |
 
-Times are in the machine's timezone. Each tick runs every due study through `study run`, detached.
+Times are in the machine's timezone. Each tick runs every due study as an order of the built-in recipe `study`, through `order run`, detached.
 
 ## Collectors
 
@@ -98,7 +98,8 @@ the kind of each report, `milestone-report`, `task-report` or, for one written b
 
 <details><summary>Steps, ledger events and resumption</summary>
 
-`study run` runs the steps `collect`, `judge` and `output`, each writing its result under `runs/<id>/steps/` and the
+`study run` runs the steps of the recipe `study`, named `<rank>-<kind>`: a `collect` step for each `COLLECTOR` line,
+then `judge` and `output`, each writing its result under `runs/<id>/steps/` and the
 ledger events `order.started`, `step.done`, `step.failed`, `order.parked` and `order.done` with the kind `study`.
 `study new` records the study through `awawa fmt`, `awawa lint --strict` and a commit.
 

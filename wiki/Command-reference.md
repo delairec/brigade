@@ -45,7 +45,7 @@ Every command of brigade, what it does in one line, and the page that documents 
 | `brigade recipe show <name>` | print the recipe named, as it resolves, and its source | [Recipes](Recipes.md) |
 | `brigade recipe lint <name>` | check a recipe against its schema, its names and its params; refuse a client or model key and a command running the client's binary | [Recipes](Recipes.md) |
 | `brigade order new <recipe> [--project] [--every] [key=value...] [text]` | record an ORDER of the recipe, named after the recipe and the instant, and run it once unless `--every` gives it a schedule; `key=value` is a param the recipe declares, any other word the text, one at most | [Recipes](Recipes.md) |
-| `brigade order run <order>` | run the steps of the recipe of an order, each result a file under `runs/<id>/steps/`; a parked order resumes at its first undone step | [Recipes](Recipes.md) |
+| `brigade order run <order>` | run the steps of the recipe of an order, each result a file under `runs/<id>/steps/`; a parked order resumes at its first undone step; a name no `ORDER` defines runs as a study | [Recipes](Recipes.md) |
 | `brigade order context <run>` | print the documents of a run of an order and the schema of the answer its judge step writes | [Recipes](Recipes.md) |
 | `brigade order answer <run> --file <file>` | validate the answer of the judge step of a run of an order against the schema it names and record it | [Recipes](Recipes.md) |
 | `brigade order list` | list every order with its recipe, its project, its schedule and its status | [Recipes](Recipes.md) |
