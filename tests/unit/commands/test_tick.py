@@ -3419,7 +3419,8 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
 
         # Assert
         ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
-        self.assertIn(
+        self.assertEqual(
+            json.loads(ledger[-1]),
             {
                 "schema_version": 1,
                 "ts": ANY,
@@ -3428,7 +3429,6 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
                 "reason": "forge_account",
                 "resume_at": None,
             },
-            [json.loads(line) for line in ledger],
         )
         self.assertEqual(spawner.argvs, [])
 
