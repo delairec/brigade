@@ -198,6 +198,8 @@ SCHEMA ORDER
 		DESC "an override of the recipe's output"
 	FIELD STATUS active|paused|archived
 		REQUIRED
+	FIELD FROM @PATTERN
+		DESC "the pattern whose ratification placed the order"
 	WHEN STATUS archived
 		GATE suppressed
 

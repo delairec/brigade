@@ -135,6 +135,27 @@ class InboxRatifyTest(unittest.TestCase):
             ),
         )
 
+    def _create_order_of_two_evidences_runtime(self):
+        return self._create_runtime(
+            "PATTERN CartTimeouts\n"
+            '\tTITLE "the cart tests fail on a timeout"\n'
+            "\tSTATUS new\n"
+            '\tEVIDENCE "note:474fa40ae4db the checkout test timed out"\n'
+            '\tEVIDENCE "rt:PRRT_kwDO the reviewer asked for a rename"\n'
+            "\tACTION order\n"
+            '\tRECIPE "flaky-tests"\n'
+            '\tTARGET "shop"\n',
+            (
+                ("TITLE", CART_TIMEOUT_TITLE),
+                ("STATUS", "new"),
+                ("EVIDENCE", NOTE_EVIDENCE),
+                ("EVIDENCE", THREAD_EVIDENCE),
+                ("ACTION", "order"),
+                ("RECIPE", "flaky-tests"),
+                ("TARGET", "shop"),
+            ),
+        )
+
     def _read_corpus_file(self, file_name: str) -> str:
         return (self.config / file_name).read_text(encoding="utf-8")
 
@@ -233,9 +254,9 @@ class InboxRatifyTest(unittest.TestCase):
             ),
         )
 
-    def test_should_record_the_order_of_the_recipe_on_the_project_of_the_target(self):
+    def test_should_record_the_order_of_the_recipe_on_the_project_of_the_target_from_its_pattern_and_evidence(self):
         # Arrange
-        runtime = self._create_order_runtime()
+        runtime = self._create_order_of_two_evidences_runtime()
 
         # Act
         document = COMMAND.run(Namespace(pattern="CartTimeouts", kind=None), runtime)
@@ -246,7 +267,13 @@ class InboxRatifyTest(unittest.TestCase):
         )
         self.assertEqual(
             self._read_corpus_file("orders.awawa"),
-            'ORDER CartTimeouts\n\tRECIPE "flaky-tests"\n\tPROJECT @PROJECT.shop\n\tSTATUS active\n',
+            "ORDER CartTimeouts\n"
+            '\tRECIPE "flaky-tests"\n'
+            "\tPROJECT @PROJECT.shop\n"
+            '\tPARAM "evidence=note:474fa40ae4db the checkout test timed out"\n'
+            '\tPARAM "evidence=rt:PRRT_kwDO the reviewer asked for a rename"\n'
+            "\tSTATUS active\n"
+            "\tFROM @PATTERN.CartTimeouts\n",
         )
 
     def test_should_set_the_pattern_ratified(self):

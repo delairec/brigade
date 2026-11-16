@@ -7553,3 +7553,17 @@ DECISION AnOrderAnswerIsLintedAgainstTheTypeOfTheFirstUndoneJudgeStepAndKeptAsTh
 		+ "while a run waits would name another schema than the one its judge step was launched for"
 	SOURCE "the pull request of @TASK.B51"
 		REF @TASK.B51
+
+DECISION EveryReportNamesThePatternItsOrderComesFromAndNoneOutsideTheResultOfAnOrderPlacedByAPattern
+	TITLE "brigade reports show gives every report a pattern, the name of the PATTERN the ORDER of"
+		+ "a RESULT comes from by its FROM, and none for any other report; its text lists it first"
+		+ "as PATTERN"
+	STATUS active
+	DESC "binds @TASK.B53"
+		REF @TASK.B53
+	REJECTED "the pattern carried by Order and its to_document: the record of every order run would"
+		+ "change shape, which no reader asks for"
+	REJECTED "the key present only on a result whose order names a pattern: a reader of --json"
+		+ "would test the presence of a key by kind of report"
+	SOURCE "the pull request of @TASK.B53"
+		REF @TASK.B53
