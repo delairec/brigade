@@ -76,6 +76,26 @@ class LintRecipeTest(unittest.TestCase):
                 create_recipe([{"kind": "gate", "preflight": "verify-pull-request", "on_fail": "retry"}]),
                 ["schema: steps[0]: on_fail is 'retry', not park, skip, stop or retry:N"],
             ),
+            (
+                "a key the recipe does not take",
+                create_recipe([], timeout=5),
+                ["schema: holds the key timeout, which a recipe does not take"],
+            ),
+            (
+                "a gate step holding a check of its own",
+                create_recipe([{"kind": "gate", "preflight": "verify-pull-request", "check": "mine"}]),
+                ["schema: steps[0]: holds the key check, which a gate step does not take"],
+            ),
+            (
+                "a misspelt on_fail",
+                create_recipe([{"kind": "gate", "preflight": "verify-pull-request", "on_fial": "skip"}]),
+                ["schema: steps[0]: holds the key on_fial, which a gate step does not take"],
+            ),
+            (
+                "a parameter that is not a text",
+                create_recipe([{"kind": "collect", "collector": "pull-request", "parameters": {"limit": 3}}]),
+                ["schema: steps[0]: parameters.limit is an integer, not a string"],
+            ),
         )
         for title, recipe, expected in rows:
             with self.subTest(title):
