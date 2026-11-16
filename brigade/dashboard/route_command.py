@@ -21,8 +21,8 @@ class CommandRoute:
 
 WAVE_LISTING = Listing(arguments=("wave", "list", "--json"), names=(("waves", "wave"),))
 PROJECT_LISTING = Listing(arguments=("project", "list", "--json"), names=(("projects", "name"),))
-REPORT_LISTING = Listing(arguments=("reports", "list", "--json"), names=(("reports", "id"),))
-RUN_LISTING = Listing(arguments=("runs", "list", "--json"), names=(("runs", "run"),))
+REPORT_LISTING = Listing(arguments=("report", "list", "--json"), names=(("reports", "id"),))
+RUN_LISTING = Listing(arguments=("run", "list", "--json"), names=(("runs", "run"),))
 INBOX_LISTING = Listing(arguments=("inbox", "list", "--json"), names=(("signals", "id"), ("answers", "id")))
 HOME_ROUTE = CommandRoute(arguments=("status", "--json"))
 ROUTES_WITHOUT_IDENTIFIER = {
@@ -46,11 +46,11 @@ def _route_corpus(project: str, query: dict) -> CommandRoute:
 
 
 def _route_report(report: str, query: dict) -> CommandRoute:
-    return CommandRoute(arguments=("reports", "show", "--json", report), identifier=report, listing=REPORT_LISTING)
+    return CommandRoute(arguments=("report", "show", "--json", report), identifier=report, listing=REPORT_LISTING)
 
 
 def _route_run(run: str, query: dict) -> CommandRoute:
-    return CommandRoute(arguments=("runs", "show", "--json", run), identifier=run, listing=RUN_LISTING)
+    return CommandRoute(arguments=("run", "show", "--json", run), identifier=run, listing=RUN_LISTING)
 
 
 def _route_inbox(item: str, query: dict) -> CommandRoute:

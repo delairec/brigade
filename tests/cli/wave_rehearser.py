@@ -11,7 +11,7 @@ from tests.cli.recipe_schema import RECIPE_SCHEMA
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FILE_POLL_S, FILE_WAIT_S
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
-from tests.cli.test_collect import install_executable
+from tests.cli.test_collector_run import install_executable
 
 FORGE = REPOSITORY_ROOT / "tests" / "cli" / "fixtures" / "executables" / "github-over-a-bare-remote"
 REMOTE_URL = "https://github.com/sandbox/shop.git"
@@ -54,13 +54,13 @@ BUILDER_PLAY = (
     READ_THE_BRIEF + AWAIT_THE_RELEASE + 'task=$(read_argument task | sed "s/^@TASK\\.//")\n'
     'printf \'%s\\n\' "$task" > "delivered-$task.txt"\n'
     'git add -- "delivered-$task.txt" && git commit --quiet -m "feat: deliver $task" >&2\n'
-    'brigade task check >&2 && brigade task pr --subject "deliver $task" >&2 && brigade task promote >&2\n'
+    'brigade build check >&2 && brigade build pr --subject "deliver $task" >&2 && brigade build promote >&2\n'
     'cat -- "$1"\n'
 )
 REVIEWER_PLAY = (
     READ_THE_BRIEF + AWAIT_THE_RELEASE + 'verdict="$BRIGADE_RUN_DIR/verdict.json"\n'
     'printf \'{"head": "%s", "verdict": "pass", "findings": []}\\n\' "$(git rev-parse HEAD)" > "$verdict"\n'
-    'brigade verify verdict "$(read_argument pr)" --file "$verdict" >&2\n'
+    'brigade review verdict "$(read_argument pr)" --file "$verdict" >&2\n'
     'cat -- "$1"\n'
 )
 REPORTER_PLAY = (

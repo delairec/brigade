@@ -5,7 +5,7 @@ from pathlib import Path
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.commands._read_forge_environment import FORGE_KIND
 from brigade.commands._resolve_project_forge import resolve_project_forge
-from brigade.commands.run import run
+from brigade.commands.run_start import run
 from brigade.corpus.read_entities import Entity
 from brigade.registry.read_project_forge import read_project_forge
 from brigade.runs.create_run_id import create_run_id

@@ -4,15 +4,15 @@ how it is held on the clock, stopped and pruned, and how `brigade runs` lists, s
 ## Commands
 
 ```
-brigade run <procedure> --slot <slot> [--project <name>] [--cwd <dir>] [--brief <file>] [--wave <wave>] [--task <task>]
+brigade run start <procedure> --slot <slot> [--project <name>] [--cwd <dir>] [--brief <file>] [--wave <wave>] [--task <task>]
             [--detach] [key=value ...]
-brigade runs list [--wave <wave>] [--task <task>] [--state running|finished|dead] [--json]
+brigade run list [--wave <wave>] [--task <task>] [--state running|finished|dead] [--json]
                                                  # every run: id, procedure, slot, role, project, wave, task, state, outcome
-brigade runs show <id> [--log] [--json]          # the summary of a run, its segments and its progress; --log adds its journal
-brigade runs show <id> --follow                  # the same with --log, then each record as it is written
-brigade runs stop <id>                           # stop a running run; exit 0 once it finished on stopped
-brigade runs stop-hook --at <epoch>              # the stop document a client hook prints once the soft limit has passed
-brigade runs prune [--keep <n>] [--before <YYYY-MM-DD>] [--resumable] [--dry-run] [--json]
+brigade run show <id> [--log] [--json]          # the summary of a run, its segments and its progress; --log adds its journal
+brigade run show <id> --follow                  # the same with --log, then each record as it is written
+brigade run stop <id>                           # stop a running run; exit 0 once it finished on stopped
+brigade run stop-hook --at <epoch>              # the stop document a client hook prints once the soft limit has passed
+brigade run prune [--keep <n>] [--before <YYYY-MM-DD>] [--resumable] [--dry-run] [--json]
 ```
 
 ## What a run is
@@ -201,7 +201,7 @@ and the ledger as the foreground command does.
 - The soft limit of a segment is its wall-time limit minus `soft_limit_margin_s` of `config.toml`, a positive number
   defaulting to 120, none when the limit is not above it. The `launch-argv` and `resume-argv` requests carry it as
   `stop_at`, the UTC instant to the second computed at launch, null without one, and as `stop_hook`, the argv of
-  `brigade runs stop-hook --at <epoch>` that prints the stop document once that instant has passed, null without one.
+  `brigade run stop-hook --at <epoch>` that prints the stop document once that instant has passed, null without one.
 - A client whose probe declares `graceful_stop` ends its session between two steps once `stop_at` has passed and
   answers the outcome `soft_limit`. brigade records that segment as one ended `done`, its session, steps, usage and
   `cost_usd` included, and the run goes on as after a cut on the clock.
@@ -236,7 +236,7 @@ and the ledger as the foreground command does.
   `processes.jsonl` on `stopped`, and no segment is launched again. A signal received before the client starts or
   between two segments ends the run the same way.
 - `brigade run` exits 21, and `runs list` shows the run `finished` on `stopped`.
-- `brigade runs stop <id>` sends that SIGTERM and exits 0 once the run has finished on `stopped`. A run already
+- `brigade run stop <id>` sends that SIGTERM and exits 0 once the run has finished on `stopped`. A run already
   finished, holding no pid file, unknown, or whose pid no process holds, and a run the signal leaves on any other end
   than `stopped`, exit 1 naming the run and why.
 
@@ -258,7 +258,7 @@ Two fallbacks follow the probe of the adapter:
 - After `brigade run` writes its result, the finished and dead runs beyond `runs_kept` of `config.toml`, 100 by
   default, are removed, oldest first. A running run and a run the resume after a rate limit takes up are neither
   removed nor counted. A `runs_kept` that is no integer of 1 or more exits 1 naming the key and the file.
-- `brigade runs prune` runs the same removal on demand and prints each run removed: `--keep` replaces `runs_kept` for
+- `brigade run prune` runs the same removal on demand and prints each run removed: `--keep` replaces `runs_kept` for
   the call, `--before` removes as well every run settled before that day in UTC, `--resumable` removes the runs to
   resume too, and `--dry-run` prints what would go and removes nothing.
 - A removal holds `locks/runs.lock`, first empties `runs-removed/` of what an interrupted removal left there, and

@@ -1,6 +1,6 @@
 import argparse
 
-from brigade.commands.run import run
+from brigade.commands.run_start import run
 from brigade.runtime import Runtime
 from brigade.waves.read_planner_run import PLANNER_PROCEDURE
 

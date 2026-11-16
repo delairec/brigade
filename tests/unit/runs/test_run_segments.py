@@ -431,7 +431,7 @@ class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
                     "stop_hook": [
                         sys.executable,
                         "/srv/brigade/bin/brigade",
-                        "runs",
+                        "run",
                         "stop-hook",
                         "--at",
                         "1792401780",
@@ -491,7 +491,7 @@ class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
                     "stop_hook": [
                         sys.executable,
                         "/srv/brigade/bin/brigade",
-                        "runs",
+                        "run",
                         "stop-hook",
                         "--at",
                         "1792401780",
@@ -587,7 +587,7 @@ class RunSegmentsOfAResumedRunTest(RunSegmentsTestCase):
                     "stop_hook": [
                         sys.executable,
                         "/srv/brigade/bin/brigade",
-                        "runs",
+                        "run",
                         "stop-hook",
                         "--at",
                         "1792401780",

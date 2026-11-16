@@ -3,7 +3,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from brigade.commands.run import run
+from brigade.commands.run_start import run
 from brigade.corpus.read_entities import Entity
 from brigade.git.add_branch_worktree import BranchWorktree, add_branch_worktree
 from brigade.git.add_worktree_on_branch import add_worktree_on_branch

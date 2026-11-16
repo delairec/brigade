@@ -15,7 +15,7 @@ from brigade.commands._find_study_project import find_study_project
 from brigade.commands._locate_checkout import locate_checkout
 from brigade.commands._locate_preflights import locate_preflights
 from brigade.commands._locate_recipe_places import locate_recipe_places
-from brigade.commands.run import run as launch_run
+from brigade.commands.run_start import run as launch_run
 from brigade.corpus.read_entities import Entity
 from brigade.corpus.read_entity import read_entity
 from brigade.errors import EntityNotDefined

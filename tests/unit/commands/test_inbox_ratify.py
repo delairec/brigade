@@ -463,7 +463,7 @@ class InboxRatifyTextTest(unittest.TestCase):
             (
                 "a wave",
                 {"schema_version": 1, "pattern": "P", "action": "wave", "request": "shop_r1", "run": "R"},
-                "@PATTERN.P ratified: @REQUEST.shop_r1 planning, run R\nbrigade runs show R --log",
+                "@PATTERN.P ratified: @REQUEST.shop_r1 planning, run R\nbrigade run show R --log",
             ),
             (
                 "a constraint",
@@ -477,7 +477,7 @@ class InboxRatifyTextTest(unittest.TestCase):
                 },
                 (
                     "@PATTERN.P ratified: @CONSTRAINT.P proposed, @REQUEST.shop_r1 planning, run R\n"
-                    "brigade runs show R --log"
+                    "brigade run show R --log"
                 ),
             ),
             (

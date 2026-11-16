@@ -80,7 +80,7 @@ class ShellLinesGuardTest(unittest.TestCase):
         # Arrange
         rows = [
             'argv = ("git", "log", "--format=%H %s", "--", "corpus")\n',
-            'argv = [sys.executable, entry_point, "runs", "stop-hook", "--at", epoch]\n',
+            'argv = [sys.executable, entry_point, "run", "stop-hook", "--at", epoch]\n',
             'message = "the role has a shell: " + name\n',
             'capabilities = ("read", "shell")\n',
             "import subprocess\nsubprocess.run(argv, shell=False)\n",

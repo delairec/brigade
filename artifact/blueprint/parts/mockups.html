@@ -9,14 +9,14 @@
     <li><a href="#m-status">brigade status</a></li>
     <li><a href="#m-wave-new">brigade wave new</a></li>
     <li><a href="#m-tick">brigade tick</a></li>
-    <li><a href="#m-task-context">brigade task context (what an agent gets)</a></li>
+    <li><a href="#m-task-context">brigade build context (what an agent gets)</a></li>
     <li><a href="#m-verify">brigade verify preflight</a></li>
     <li><a href="#m-wave-show">brigade wave show</a></li>
     <li><a href="#m-inbox">brigade inbox, triage</a></li>
     <li><a href="#m-ledger">brigade ledger</a></li>
     <li><a href="#m-corpus">brigade corpus at a ref</a></li>
     <li><a href="#m-units">The scheduler, the adapter and a run</a></li>
-    <li><a href="#m-roles">brigade roles list</a></li>
+    <li><a href="#m-roles">brigade role list</a></li>
     <li><a href="#m-doctor">brigade doctor</a></li>
     <li><a href="#m-study">brigade study run</a></li>
     <li><a href="#m-order">brigade order new</a></li>
@@ -97,8 +97,8 @@ WAVE tp/16  integration/station-page  POLICY plan_review=auto → starting at ne
 <section id="m-task-context">
   <h2>What a build run receives, instead of twenty-three steps of discovery</h2>
   <figure class="shot">
-    <div class="shot-bar"><span></span><span></span><span></span><em>brigade task context TP146 (abridged)</em></div>
-<pre class="term" id="t-task-context"><span class="p">$</span> <span class="c">brigade task context TP146</span>
+    <div class="shot-bar"><span></span><span></span><span></span><em>brigade build context TP146 (abridged)</em></div>
+<pre class="term" id="t-task-context"><span class="p">$</span> <span class="c">brigade build context TP146</span>
 <span class="hl">## worktree</span>  .worktrees/tp-16-tp146 · branch feat/tp146-phone-and-keyboard
   git merge-base --is-ancestor origin/integration/station-page HEAD → <span class="ok">yes</span>
   setup done: bun install --frozen-lockfile (12 s) · data → symlink · .private → symlink
@@ -113,7 +113,7 @@ WAVE tp/16  integration/station-page  POLICY plan_review=auto → starting at ne
 <span class="hl">## project files that bind you</span>  AGENTS.md, agents/worktree.md, agents/pull-request.md
 <span class="hl">## acceptance</span>  bun test · bun run lint:types · bun run guards · bun run test:coverage   (heavy, CI only: bun run test:ui)
 <span class="hl">## reserved</span>  task number 196 · temp dir runs/r-0193/tmp · attribution lines attached
-<span class="hl">## when done</span>  brigade task check TP146 → brigade task pr TP146 → brigade task promote TP146 --pr N
+<span class="hl">## when done</span>  brigade build check TP146 → brigade build pr TP146 → brigade build promote TP146 --pr N
 <span class="dim">full package written to runs/r-0193/context.md (14 200 chars)</span></pre>
     <figcaption>The measured median was 23 steps and 134 000 tokens before the first edit; the package replaces the discovery with one read.</figcaption>
   </figure>
@@ -268,8 +268,8 @@ claude -p "@runs/r-0193/brief.md" --output-format stream-json \
 <section id="m-roles">
   <h2>Slots and the roles that fill them</h2>
   <figure class="shot">
-    <div class="shot-bar"><span></span><span></span><span></span><em>brigade roles list</em></div>
-<pre class="term" id="t-roles"><span class="p">$</span> <span class="c">brigade roles list</span>
+    <div class="shot-bar"><span></span><span></span><span></span><em>brigade role list</em></div>
+<pre class="term" id="t-roles"><span class="p">$</span> <span class="c">brigade role list</span>
 <span class="tagc">cli</span>  resolution: PROJECT.ROLE → machine roles/ → instructions corpus (&lt;rootDir&gt;) → built-in
 SLOT      ROLE       SOURCE                 REASONING  MODEL (claude adapter)
 plan      ada        built-in               deep       fable · high

@@ -37,8 +37,8 @@ are one argv, run without a shell:
 | Recipe | What brigade does with its steps |
 |---|---|
 | `setup` | runs them in each new task worktree, stopping at the first that fails |
-| `acceptance` | `brigade task check`, the preflight and the tick's commit checks run each, whatever the others returned |
-| `heavy` | never runs them: `brigade task context` prints each as its argv joined, left to continuous integration |
+| `acceptance` | `brigade build check`, the preflight and the tick's commit checks run each, whatever the others returned |
+| `heavy` | never runs them: `brigade build context` prints each as its argv joined, left to continuous integration |
 
 A recipe is a `RECIPE` entity of the project's corpus, or a TOML file of `.brigade/recipes/` for a project without
 corpus; brigade reads it in the worktree it checks or sets up, so a branch that changes a recipe is checked under

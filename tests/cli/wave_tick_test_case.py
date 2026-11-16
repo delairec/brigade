@@ -9,7 +9,7 @@ from tests.cli.recipe_schema import RECIPE_SCHEMA
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import PINNED_COMMIT_DATES, TemporaryProject
-from tests.cli.test_collect import install_executable
+from tests.cli.test_collector_run import install_executable
 
 PROJECT_SCHEMA = (
     "SCHEMA TASK\n"

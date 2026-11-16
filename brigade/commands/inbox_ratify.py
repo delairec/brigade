@@ -12,9 +12,7 @@ def _render_text(document: dict) -> str:
     ratified = f"@PATTERN.{document['pattern']} ratified: "
     if "order" in document:
         return ratified + f"@ORDER.{document['order']} active"
-    placed = (
-        f"@REQUEST.{document['request']} planning, run {document['run']}\nbrigade runs show {document['run']} --log"
-    )
+    placed = f"@REQUEST.{document['request']} planning, run {document['run']}\nbrigade run show {document['run']} --log"
     if "constraint" in document:
         return ratified + f"@CONSTRAINT.{document['constraint']} proposed, " + placed
     return ratified + placed

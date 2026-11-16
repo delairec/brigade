@@ -16,7 +16,7 @@ class JudgeHeadTest(unittest.TestCase):
         evidence = HeadEvidence(
             commit="c0ffee",
             forge_checks=(ForgeCheck(name="unit", verdict="success"), ForgeCheck(name="lint", verdict="success")),
-            task_check=NO_TASK_CHECK,
+            build_check=NO_TASK_CHECK,
             commit_checks=NO_COMMIT_CHECKS,
         )
 
@@ -31,7 +31,7 @@ class JudgeHeadTest(unittest.TestCase):
         evidence = HeadEvidence(
             commit="c0ffee",
             forge_checks=NO_FORGE_CHECK,
-            task_check=TaskCheck(head="c0ffee", failed_commands=NOTHING_FAILED),
+            build_check=TaskCheck(head="c0ffee", failed_commands=NOTHING_FAILED),
             commit_checks=NO_COMMIT_CHECKS,
         )
 
@@ -46,7 +46,7 @@ class JudgeHeadTest(unittest.TestCase):
         evidence = HeadEvidence(
             commit="c0ffee",
             forge_checks=NO_FORGE_CHECK,
-            task_check=TaskCheck(head="5e2a7c1", failed_commands=NOTHING_FAILED),
+            build_check=TaskCheck(head="5e2a7c1", failed_commands=NOTHING_FAILED),
             commit_checks=NO_COMMIT_CHECKS,
         )
 
@@ -61,7 +61,7 @@ class JudgeHeadTest(unittest.TestCase):
         evidence = HeadEvidence(
             commit="c0ffee",
             forge_checks=NO_FORGE_CHECK,
-            task_check=NO_TASK_CHECK,
+            build_check=NO_TASK_CHECK,
             commit_checks=CommitChecks(
                 project="oak", commit="c0ffee", results=(CommandResult(command="npm test", exit_code=0),)
             ),
@@ -78,7 +78,7 @@ class JudgeHeadTest(unittest.TestCase):
         evidence = HeadEvidence(
             commit="c0ffee",
             forge_checks=(ForgeCheck(name="unit", verdict="pending"), ForgeCheck(name="lint", verdict="success")),
-            task_check=NO_TASK_CHECK,
+            build_check=NO_TASK_CHECK,
             commit_checks=NO_COMMIT_CHECKS,
         )
 
@@ -93,7 +93,7 @@ class JudgeHeadTest(unittest.TestCase):
         evidence = HeadEvidence(
             commit="c0ffee",
             forge_checks=(ForgeCheck(name="unit", verdict="failure"), ForgeCheck(name="lint", verdict="success")),
-            task_check=NO_TASK_CHECK,
+            build_check=NO_TASK_CHECK,
             commit_checks=NO_COMMIT_CHECKS,
         )
 
@@ -108,7 +108,7 @@ class JudgeHeadTest(unittest.TestCase):
         evidence = HeadEvidence(
             commit="c0ffee",
             forge_checks=NO_FORGE_CHECK,
-            task_check=TaskCheck(head="c0ffee", failed_commands=("python3 -m unittest",)),
+            build_check=TaskCheck(head="c0ffee", failed_commands=("python3 -m unittest",)),
             commit_checks=NO_COMMIT_CHECKS,
         )
 
@@ -123,7 +123,7 @@ class JudgeHeadTest(unittest.TestCase):
         evidence = HeadEvidence(
             commit="c0ffee",
             forge_checks=NO_FORGE_CHECK,
-            task_check=NO_TASK_CHECK,
+            build_check=NO_TASK_CHECK,
             commit_checks=CommitChecks(
                 project="oak",
                 commit="c0ffee",
@@ -143,7 +143,7 @@ class JudgeHeadTest(unittest.TestCase):
     def test_should_leave_unproven_a_head_with_no_check_run_and_no_record(self):
         # Arrange
         evidence = HeadEvidence(
-            commit="c0ffee", forge_checks=NO_FORGE_CHECK, task_check=NO_TASK_CHECK, commit_checks=NO_COMMIT_CHECKS
+            commit="c0ffee", forge_checks=NO_FORGE_CHECK, build_check=NO_TASK_CHECK, commit_checks=NO_COMMIT_CHECKS
         )
 
         # Act
@@ -157,7 +157,7 @@ class JudgeHeadTest(unittest.TestCase):
         evidence = HeadEvidence(
             commit="c0ffee",
             forge_checks=(ForgeCheck(name="unit", verdict="failure"),),
-            task_check=NO_TASK_CHECK,
+            build_check=NO_TASK_CHECK,
             commit_checks=CommitChecks(
                 project="oak", commit="c0ffee", results=(CommandResult(command="npm test", exit_code=0),)
             ),

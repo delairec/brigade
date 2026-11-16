@@ -14,13 +14,13 @@ FORGELESS_BUILDER_PLAY = (
     'printf \'%s\\n\' "$task" > "delivered-$task.txt"\n'
     "grep -rl 'STATUS todo' corpus | xargs sed -i 's/STATUS todo/STATUS implemented/'\n"
     'git add -- "delivered-$task.txt" corpus && git commit --quiet -m "feat: deliver $task" >&2\n'
-    "brigade task check >&2\n"
+    "brigade build check >&2\n"
     'cat -- "$1"\n'
 )
 FORGELESS_REVIEWER_PLAY = (
     READ_THE_BRIEF + AWAIT_THE_RELEASE + 'verdict="$BRIGADE_RUN_DIR/verdict.json"\n'
     'printf \'{"head": "%s", "verdict": "pass", "findings": []}\\n\' "$(git rev-parse HEAD)" > "$verdict"\n'
-    'brigade verify verdict --file "$verdict" >&2\n'
+    'brigade review verdict --file "$verdict" >&2\n'
     'cat -- "$1"\n'
 )
 

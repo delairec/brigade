@@ -1,0 +1,141 @@
+import argparse
+import sys
+from pathlib import Path
+
+from brigade.command import Argument, Command
+from brigade.errors import UsageError
+from brigade.runs.decide_run_exit_code import decide_run_exit_code
+from brigade.runs.describe_run import describe_run
+from brigade.runs.find_progress_file import find_progress_file
+from brigade.runs.format_duration import format_duration
+from brigade.runs.render_progress import render_progress
+from brigade.runs.run_follower import RunFollower
+from brigade.runs.run_locations import RUNS_DIRECTORY
+from brigade.runs.show_run import show_run
+from brigade.runtime import Runtime
+from brigade.system.name_document_plugin import name_document_plugin
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
+from brigade.system.render_table import render_table
+
+DOCUMENT_SCHEMA_VERSION = 1
+ABSENT = "-"
+SUMMARY_FIELDS = ("run", "procedure", "slot", "role", "project", "state", "outcome", "message")
+SUMMARY_WIDTH = max(len(field) for field in SUMMARY_FIELDS)
+ENDING_FIELDS = ("state", "outcome")
+SEGMENT_COLUMNS = ("segment", "outcome", "steps", "duration")
+RECORD_SEPARATOR = "  "
+LINE_END = "\n"
+RUNNING = "running"
+NO_JOURNAL_YET = ()
+NO_PROGRESS = None
+
+
+def _render_value(value) -> str:
+    if value is None:
+        return ABSENT
+    return value
+
+
+def _render_field(run: dict, field: str) -> str:
+    return f"{field:<{SUMMARY_WIDTH}}{RECORD_SEPARATOR}{_render_value(run[field])}"
+
+
+def _render_segment(segment: dict) -> tuple[str, ...]:
+    steps = segment["steps"]
+    duration_ms = segment["duration_ms"]
+    return (
+        str(segment["segment"]),
+        _render_value(segment["outcome"]),
+        ABSENT if steps is None else str(steps),
+        ABSENT if duration_ms is None else format_duration(duration_ms),
+    )
+
+
+def _render_record(record: dict) -> str:
+    return RECORD_SEPARATOR.join((record["at"], str(record["segment"]), record["kind"], record["summary"]))
+
+
+def _render_text(document: dict) -> str:
+    if "interrupted" in document:
+        return "\n".join(["", *(_render_field(document["run"], field) for field in ENDING_FIELDS)])
+    summary = [_render_field(document["run"], field) for field in SUMMARY_FIELDS]
+    segments = render_table(SEGMENT_COLUMNS, [_render_segment(segment) for segment in document["segments"]])
+    lines = [*summary, "", segments]
+    if document["progress"] is not None:
+        lines += ["", document["progress"]["text"].rstrip(LINE_END)]
+    if document["journal"] is not None:
+        lines += ["", *(_render_record(record) for record in document["journal"])]
+    return "\n".join(lines)
+
+
+def _read_request(options):
+    if options.follow and getattr(options, "json", False):
+        raise UsageError("--follow and --json exclude each other")
+    return options
+
+
+def _decide_exit_code(document: dict) -> int:
+    if "interrupted" not in document or document["interrupted"]:
+        return 0
+    return decide_run_exit_code(document["run"]["outcome"])
+
+
+def _print(text: str) -> None:
+    sys.stdout.write(text)
+    sys.stdout.flush()
+
+
+class _FollowPrinter:
+    def __init__(self, state_root: Path, run_id: str):
+        self.state_root = state_root
+        self.run_id = run_id
+        self.follower = RunFollower(state_root / RUNS_DIRECTORY / run_id, describe_run)
+        self.opened = False
+
+    def poll(self) -> bool:
+        if not self.opened:
+            opening = show_run(self.state_root, self.run_id, with_journal=False)
+            _print(_render_text({**opening, "progress": NO_PROGRESS, "journal": NO_JOURNAL_YET}) + LINE_END)
+            self.opened = True
+        _print("".join(_render_record(record) + LINE_END for record in self.follower.read_records()))
+        return self.follower.run["state"] != RUNNING
+
+
+def _follow_run(run_id: str, runtime: Runtime) -> dict:
+    printer = _FollowPrinter(runtime.paths.state_root, run_id)
+    interval_s = read_configuration(runtime, CONFIGURATION_OPTIONAL).journal_poll_s
+    interrupted = runtime.poll_until_signalled(printer.poll, interval_s)
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, "run": printer.follower.run, "interrupted": interrupted}
+
+
+def _read_progress(run_id: str, runtime: Runtime) -> dict | None:
+    progress_file = find_progress_file(runtime.paths.state_root / RUNS_DIRECTORY / run_id)
+    if progress_file is None:
+        return NO_PROGRESS
+    document = runtime.resolve_plugin("document", name_document_plugin(progress_file))
+    return render_progress(progress_file, document, runtime)
+
+
+def run_show(request: argparse.Namespace, runtime: Runtime) -> dict:
+    if request.follow:
+        return _follow_run(request.run, runtime)
+    shown = show_run(runtime.paths.state_root, request.run, with_journal=request.log)
+    return {**shown, "progress": _read_progress(request.run, runtime)}
+
+
+COMMAND = Command(
+    path=("run", "show"),
+    help="print the summary of a run, its segments and its progress, and with --log its journal",
+    group_help="start a procedure as a slot through the client adapter, list the runs, show one, stop one and prune them",
+    arguments=(
+        Argument(("run",)),
+        Argument(("--log",), {"action": "store_true", "help": "add the journal of the run, one line per record"}),
+        Argument(
+            ("--follow",), {"action": "store_true", "help": "print the journal as it is written, until the run ends"}
+        ),
+    ),
+    run=run_show,
+    read_request=_read_request,
+    render_text=_render_text,
+    decide_exit_code=_decide_exit_code,
+)

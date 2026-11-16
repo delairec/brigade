@@ -24,7 +24,7 @@ class BuildRuntimeTest(unittest.TestCase):
         }
 
     def report(self, *, verbose: bool) -> str:
-        runtime = build_runtime(Invocation(command="runs list", verbose=verbose), self.environment)
+        runtime = build_runtime(Invocation(command="run list", verbose=verbose), self.environment)
         stderr = io.StringIO()
         with contextlib.redirect_stderr(stderr):
             runtime.trail.append(TRACE)
@@ -32,7 +32,7 @@ class BuildRuntimeTest(unittest.TestCase):
 
     def test_should_root_the_runtime_in_the_directories_of_the_environment(self):
         # Act
-        runtime = build_runtime(Invocation(command="runs list", verbose=False), self.environment)
+        runtime = build_runtime(Invocation(command="run list", verbose=False), self.environment)
 
         # Assert
         self.assertEqual(runtime.paths.config_root, self.root / "config" / "brigade")
@@ -44,7 +44,7 @@ class BuildRuntimeTest(unittest.TestCase):
         report = self.report(verbose=True)
 
         # Assert
-        self.assertEqual(report, "brigade runs list: ran git status, exit 0 in 12 ms\n")
+        self.assertEqual(report, "brigade run list: ran git status, exit 0 in 12 ms\n")
 
     def test_should_report_nothing_when_quiet(self):
         # Act
@@ -56,7 +56,7 @@ class BuildRuntimeTest(unittest.TestCase):
     def test_should_withhold_the_stderr_of_a_failed_process_when_the_projects_cannot_be_read(self):
         # Arrange
         runtime = build_runtime(
-            Invocation(command="runs list", verbose=False), {**self.environment, "PATH": str(self.root / "no-tool")}
+            Invocation(command="run list", verbose=False), {**self.environment, "PATH": str(self.root / "no-tool")}
         )
         trail = self.root / "trail.jsonl"
         runtime.trail.locate(trail)

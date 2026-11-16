@@ -118,10 +118,10 @@ class AnswerDashboardRequestOfAnApiRouteTest(unittest.TestCase):
                 ("corpus", "--ref=main", "--type=TASK", "--field=STATUS", "--entity=@TASK.B30", "--json", "oak"),
             ),
             ("/api/corpus", ("project", "list", "--json")),
-            ("/api/reports", ("reports", "list", "--json")),
-            ("/api/reports/oak_w3", ("reports", "show", "--json", "oak_w3")),
-            ("/api/runs", ("runs", "list", "--json")),
-            ("/api/runs/20261031T135554Z-513a4f", ("runs", "show", "--json", "20261031T135554Z-513a4f")),
+            ("/api/reports", ("report", "list", "--json")),
+            ("/api/reports/oak_w3", ("report", "show", "--json", "oak_w3")),
+            ("/api/runs", ("run", "list", "--json")),
+            ("/api/runs/20261031T135554Z-513a4f", ("run", "show", "--json", "20261031T135554Z-513a4f")),
         ]
         for target, arguments in rows:
             with self.subTest(target=target):
@@ -500,8 +500,8 @@ class AnswerDashboardRequestOfAReportNoListingNamesTest(unittest.TestCase):
         # Arrange
         runner = ScriptedProcessRunner(
             {
-                (PYTHON, ENTRY_POINT, "reports", "show"): ProcessAnswer(exit_code=1, stderr="no report oak_w9\n"),
-                (PYTHON, ENTRY_POINT, "reports", "list"): ProcessAnswer(stdout='{"schema_version": 1, "reports": []}'),
+                (PYTHON, ENTRY_POINT, "report", "show"): ProcessAnswer(exit_code=1, stderr="no report oak_w9\n"),
+                (PYTHON, ENTRY_POINT, "report", "list"): ProcessAnswer(stdout='{"schema_version": 1, "reports": []}'),
             }
         )
 
@@ -517,7 +517,7 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
         # Arrange
         listed = '{"schema_version": 1, "reports": []}'
         runner = ScriptedProcessRunner(
-            {(PYTHON, ENTRY_POINT, "reports", "list", "--json"): ProcessAnswer(stdout=listed)}
+            {(PYTHON, ENTRY_POINT, "report", "list", "--json"): ProcessAnswer(stdout=listed)}
         )
 
         # Act
@@ -535,7 +535,7 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
             ' "type": "REPORT", "fields": [{"name": "WAVE", "value": "oak_w3"}]}}'
         )
         runner = ScriptedProcessRunner(
-            {(PYTHON, ENTRY_POINT, "reports", "show", "--json", "oak_w3"): ProcessAnswer(stdout=shown)}
+            {(PYTHON, ENTRY_POINT, "report", "show", "--json", "oak_w3"): ProcessAnswer(stdout=shown)}
         )
 
         # Act
@@ -736,7 +736,7 @@ class AnswerDashboardRequestOfAMethodNeitherReadingNorChangingStateTest(unittest
         )
 
 
-RUN_LIST = (PYTHON, ENTRY_POINT, "runs", "list", "--json")
+RUN_LIST = (PYTHON, ENTRY_POINT, "run", "list", "--json")
 NO_RUN = '{"schema_version": 1, "runs": [], "skipped": []}\n'
 RUN_R1_SHOWN = (
     '{"schema_version": 1, "run": {"run": "r1", "procedure": "build-task", "slot": "build", "role": "ada",'
@@ -751,8 +751,8 @@ class AnswerDashboardRequestOfARunNoListingNamesTest(unittest.TestCase):
         # Arrange
         runner = ScriptedProcessRunner(
             {
-                (PYTHON, ENTRY_POINT, "runs", "show"): ProcessAnswer(
-                    exit_code=1, stderr="brigade runs show: no run r9\n"
+                (PYTHON, ENTRY_POINT, "run", "show"): ProcessAnswer(
+                    exit_code=1, stderr="brigade run show: no run r9\n"
                 ),
                 RUN_LIST: ProcessAnswer(stdout=NO_RUN),
             }
@@ -781,7 +781,7 @@ class AnswerDashboardRequestOfTheRunsViewsTest(unittest.TestCase):
     def test_should_render_the_run_asked_with_its_progress(self):
         # Arrange
         runner = ScriptedProcessRunner(
-            {(PYTHON, ENTRY_POINT, "runs", "show", "--json", "r1"): ProcessAnswer(stdout=RUN_R1_SHOWN)}
+            {(PYTHON, ENTRY_POINT, "run", "show", "--json", "r1"): ProcessAnswer(stdout=RUN_R1_SHOWN)}
         )
 
         # Act
@@ -795,8 +795,8 @@ class AnswerDashboardRequestOfTheRunsViewsTest(unittest.TestCase):
         # Arrange
         runner = ScriptedProcessRunner(
             {
-                (PYTHON, ENTRY_POINT, "runs", "show"): ProcessAnswer(
-                    exit_code=1, stderr="brigade runs show: no run r9\n"
+                (PYTHON, ENTRY_POINT, "run", "show"): ProcessAnswer(
+                    exit_code=1, stderr="brigade run show: no run r9\n"
                 ),
                 RUN_LIST: ProcessAnswer(stdout=NO_RUN),
             }
@@ -807,7 +807,7 @@ class AnswerDashboardRequestOfTheRunsViewsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(response.status, 404)
-        self.assertEqual(response.body, b"<dl><dt>error</dt><dd>brigade runs show: no run r9\n</dd></dl>")
+        self.assertEqual(response.body, b"<dl><dt>error</dt><dd>brigade run show: no run r9\n</dd></dl>")
 
 
 INBOX_HOLDING_A_NOTE_AND_A_STUDY_ANSWER = (

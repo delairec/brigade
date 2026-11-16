@@ -3,10 +3,10 @@ What a slot and a role are, where a slot finds its role, and how `brigade roles`
 ## Commands
 
 ```
-brigade roles list [--json]                  # the slot, the role, its source and the model of each slot
-brigade roles show <slot> [--json]           # the role file the slot resolves to
-brigade roles show <slot> --short [--json]   # its front matter and the size of its body, in lines and bytes
-brigade roles lint [--json]                  # the built-in and the machine role files; exit 1 on a finding
+brigade role list [--json]                  # the slot, the role, its source and the model of each slot
+brigade role show <slot> [--json]           # the role file the slot resolves to
+brigade role show <slot> --short [--json]   # its front matter and the size of its body, in lines and bytes
+brigade role lint [--json]                  # the built-in and the machine role files; exit 1 on a finding
 ```
 
 ## Slots

@@ -21,7 +21,7 @@ from brigade.commands._read_forge_environment import FORGE_KIND, ForgeSlot, read
 from brigade.commands._remember_forge_logins import remember_forge_logins
 from brigade.commands._repair_red_head import repair_red_head
 from brigade.commands.order_run import resolve_order
-from brigade.commands.run import run
+from brigade.commands.run_start import run
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity
 from brigade.corpus.read_entity import read_entity

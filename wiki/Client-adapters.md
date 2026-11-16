@@ -103,12 +103,12 @@ The `outcome` of a `parse-result` answer is `done`, `handed_over`, `blocked`, `u
 
 <details><summary>How the commands report a slot bound to another client</summary>
 
-- `brigade roles list`, `brigade doctor` and `brigade adapter <operation>` answer for the `client` key, and name every
+- `brigade role list`, `brigade doctor` and `brigade adapter <operation>` answer for the `client` key, and name every
   slot the table binds to another client: `slot <slot> runs on <client>`.
-- `brigade roles list` and `brigade adapter` state that key as `answers for <client>`; `brigade adapter` writes it on
+- `brigade role list` and `brigade adapter` state that key as `answers for <client>`; `brigade adapter` writes it on
   stderr, its stdout holding the adapter's answer alone.
 - `brigade doctor` names it on its `client` line.
-- `brigade roles list` probes the client of each such slot too, its model column showing the model that client binds,
+- `brigade role list` probes the client of each such slot too, its model column showing the model that client binds,
   and exits 1 naming an adapter it finds nowhere.
 
 </details>

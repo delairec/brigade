@@ -15,7 +15,7 @@ PAUSED_STATUS = "paused"
 
 
 def _render_text(document: dict) -> str:
-    return f"@REQUEST.{document['request']} planning, run {document['run']}\nbrigade runs show {document['run']} --log"
+    return f"@REQUEST.{document['request']} planning, run {document['run']}\nbrigade run show {document['run']} --log"
 
 
 def _describe_diagnostics(document: dict) -> list[str]:

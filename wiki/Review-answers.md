@@ -1,9 +1,9 @@
-How a run of the `remediate` slot answers the review of a task: what `brigade review context` prints and how
-`brigade review reply` validates and records the answers.
+How a run of the `remediate` slot answers the review of a task: what `brigade remediate context` prints and how
+`brigade remediate reply` validates and records the answers.
 
 ```
-brigade review context <pr>                       # the findings to answer
-brigade review reply <pr> --file <answers.json>   # validate and record the answers
+brigade remediate context <pr>                       # the findings to answer
+brigade remediate reply <pr> --file <answers.json>   # validate and record the answers
 ```
 
 Both run from the worktree of the task whose review a run of the `remediate` slot answers.

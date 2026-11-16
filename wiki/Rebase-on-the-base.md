@@ -13,7 +13,7 @@ Both run from the worktree of the task whose rebase conflicted, in a run of the 
 - `rebase context` prints the branch of the pull request, its base, the branch the `wave.started` of its wave names,
   and the files `git merge-tree` reports in conflict between the head and `origin/<base>`.
 - `rebase done` fetches both branches, checks that the head descends from `origin/<base>` and prints it; it pushes
-  nothing. The run then pushes the branch with `brigade task push`, once `brigade task check` passed on that head.
+  nothing. The run then pushes the branch with `brigade build push`, once `brigade build check` passed on that head.
 
 > **Watch out:** `rebase done` refuses a head that does not descend from `origin/<base>`: exit 1, and the run pushes
 > nothing.

@@ -35,7 +35,7 @@ TRAILING_PUNCTUATION = ",."
 AGENTS_FILE = "AGENTS.md"
 TEMPORARY_DIRECTORY = "tmp"
 WORKTREE_ROOT = "."
-WHEN_DONE = ["brigade task check", "brigade task push", "brigade task pr", "brigade task promote"]
+WHEN_DONE = ["brigade build check", "brigade build push", "brigade build pr", "brigade build promote"]
 NEIGHBOURS = ("--depth", "1", "--skip", "reasoning", "--with-schema")
 
 

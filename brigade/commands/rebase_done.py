@@ -23,7 +23,7 @@ NOT_AN_ANCESTOR = 1
 def _render_text(document: dict) -> str:
     return (
         f"{document['branch']} at {document['head']} descends from {document['base']}"
-        f" for #{document['pr']}, @TASK.{document['task']}; push it with brigade task push"
+        f" for #{document['pr']}, @TASK.{document['task']}; push it with brigade build push"
     )
 
 

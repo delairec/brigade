@@ -103,7 +103,7 @@ class TaskContextTestCase(unittest.TestCase):
 
     def run_task_context(self):
         return self.machine.run_brigade(
-            CLONE_ENTRY_POINT, "task", "context", environment=self.describe_environment(), cwd=self.worktree
+            CLONE_ENTRY_POINT, "build", "context", environment=self.describe_environment(), cwd=self.worktree
         )
 
 
@@ -124,5 +124,5 @@ class BrigadeTaskContextInTheWorktreeOfATaskTest(TaskContextTestCase):
             r"\$ awawa lint --closure @TASK\.S3 \.\nexit 0\n(?s:.*)\n"
             r"# acceptance\npython3 -m unittest\npython3 -m unittest discover tests/e2e  \(left to CI\)\n\n"
             r"# reserved\ntask number 7\n\n"
-            r"# when done\nbrigade task check\nbrigade task push\nbrigade task pr\nbrigade task promote\n\Z",
+            r"# when done\nbrigade build check\nbrigade build push\nbrigade build pr\nbrigade build promote\n\Z",
         )

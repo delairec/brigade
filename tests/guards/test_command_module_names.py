@@ -22,6 +22,6 @@ class CommandModuleNamesGuardTest(unittest.TestCase):
             misnamings,
             [
                 "tests.guards.fixtures.command_modules.awawa declares brigade corpus",
-                "tests.guards.fixtures.command_modules.runs_stop declares brigade runs list",
+                "tests.guards.fixtures.command_modules.run_stop declares brigade run list",
             ],
         )

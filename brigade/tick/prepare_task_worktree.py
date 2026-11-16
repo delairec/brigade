@@ -102,7 +102,7 @@ def _prove_task_head(runtime: Runtime, launch: _Launch) -> HeadProof:
             project=launch.project,
             repository=launch.repository,
             commit=commit,
-            task_check=read_task_check(runtime.paths.state_root, launch.project.name, launch.action.task),
+            build_check=read_task_check(runtime.paths.state_root, launch.project.name, launch.action.task),
             forge_checks=read_pull_request_checks(launch.action, commit),
         ),
     )

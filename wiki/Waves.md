@@ -25,7 +25,7 @@ A request is a `REQUEST` entity of `requests.awawa` in the operational corpus: w
 in their words, and the plan it receives.
 
 1. `request new` records the request as `<project>_r<n>` with the status `planning`, launches the planner on it
-   detached, and prints the request, the run and `brigade runs show <run> --log`, the command that follows the planner.
+   detached, and prints the request, the run and `brigade run show <run> --log`, the command that follows the planner.
 2. The planner hands its plan, one `MILESTONE` and its tasks, to `plan record`, which commits it on `plan/<request>`
    and delivers it to the main branch.
 3. The request goes `planned` with its `MILESTONE` and, under `github`, its `PR`.
@@ -76,7 +76,7 @@ exists.
 
 - `request new` takes `n` one above the highest its project holds, under the lock of the corpus, with the UTC instant
   of its creation. The planner is launched as
-  `brigade run wave-plan --slot plan --project <project> --detach request=<name>`. A project that is not registered or
+  `brigade run start wave-plan --slot plan --project <project> --detach request=<name>`. A project that is not registered or
   is paused exits 1.
 - `request show` prints a request, its status, its milestone, its pull request and the instant of its creation, `-`
   for a field it does not hold yet. `request list` prints one row per request, those of one project with `--project`.
@@ -126,7 +126,7 @@ exists.
 
 <details><summary><code>wave cancel</code> in detail</summary>
 
-`wave cancel` records `wave.cancelled`, stops the live run of each task of the wave as `brigade runs stop` does and
+`wave cancel` records `wave.cancelled`, stops the live run of each task of the wave as `brigade run stop` does and
 lists, per task, the run it stopped, the worktree of its last run, and the branch and the pull request it opened. A wave
 already closed or cancelled exits 1 naming that event.
 

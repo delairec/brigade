@@ -15,7 +15,7 @@ Every command of brigade, what it does in one line, and the page that documents 
 | `brigade project add\|list\|show\|pause\|resume` | register the projects brigade works on, list and show them | [Projects](Projects.md) |
 | `brigade adapter <operation>` | answer one operation of the configured client adapter: `probe`, `launch-argv`, `parse-result`, `resume-argv`, `transcripts`, `actions` | [Client adapters](Client-adapters.md) |
 | `brigade adapter matrix` | print the capabilities every client adapter declares | [Client adapters](Client-adapters.md) |
-| `brigade roles list\|show\|lint` | list, show and lint the roles each slot resolves to | [Roles](Roles.md) |
+| `brigade role list\|show\|lint` | list, show and lint the roles each slot resolves to | [Roles](Roles.md) |
 | `brigade scheduler install\|status` | install what fires the tick, and report it | [Tick and scheduler](Tick-and-scheduler.md) |
 
 ## Running work
@@ -27,16 +27,16 @@ Every command of brigade, what it does in one line, and the page that documents 
 | `brigade plan record` | record the plan of a request, one `MILESTONE` and its tasks, on `plan/<request>` and deliver it to the main branch | [Waves](Waves.md) |
 | `brigade plan context` | print the package a planner reads to cut a request into a wave | — |
 | `brigade wave start\|show\|list\|cancel\|resume\|requeue` | start the waves of the projects, list, show and cancel them | [Waves](Waves.md) |
-| `brigade task context\|check\|push\|pr\|promote` | work on a task of a wave from its worktree | [Tasks](Tasks.md) |
-| `brigade verify context\|verdict` | print what the verification of the pull request of a task judges, and record its verdict | [Verification](Verification.md) |
-| `brigade review context\|reply` | answer the review of the pull request of a task | [Review answers](Review-answers.md) |
+| `brigade build context\|check\|push\|pr\|promote` | work on a task of a wave from its worktree | [Tasks](Tasks.md) |
+| `brigade review context\|verdict` | print what the verification of the pull request of a task judges, and record its verdict | [Verification](Verification.md) |
+| `brigade remediate context\|reply` | answer the review of the pull request of a task | [Review answers](Review-answers.md) |
 | `brigade rebase context\|done\|pr` | put the pull request of a task back on its base, or open the pull request repairing a red main branch | [Rebase on the base](Rebase-on-the-base.md) |
-| `brigade run <procedure>` | run a procedure as a slot through the client adapter | [Runs](Runs.md) |
-| `brigade runs list\|show\|stop\|prune\|stop-hook` | list the runs, show one, stop one and prune them; the hook a client calls past the soft limit of its run | [Runs](Runs.md) |
+| `brigade run start <procedure>` | run a procedure as a slot through the client adapter | [Runs](Runs.md) |
+| `brigade run list\|show\|stop\|prune\|stop-hook` | list the runs, show one, stop one and prune them; the hook a client calls past the soft limit of its run | [Runs](Runs.md) |
 | `brigade tick --once\|--dry-run\|--loop` | plan and apply what the facts call for, once or in a loop | [Tick and scheduler](Tick-and-scheduler.md) |
 | `brigade study new\|run\|context\|answer\|list\|show\|pause\|resume` | record the studies, run them, print their context and take their answers | [Studies](Studies.md) |
-| `brigade collect <name>` | run a collector and print the summary and the path of its document; `key=value` pairs are its parameters | [Studies](Studies.md) |
-| `brigade collectors list` | list every collector found, its name and its source | [Studies](Studies.md) |
+| `brigade collector run <name>` | run a collector and print the summary and the path of its document; `key=value` pairs are its parameters | [Studies](Studies.md) |
+| `brigade collector list` | list every collector found, its name and its source | [Studies](Studies.md) |
 | `brigade preflight <name>` | run the collectors and the checks of a named preflight; `key=value` pairs are their parameters | [Preflight](Preflight.md) |
 | `brigade preflight verify-pull-request pr=<pr>` | run the deterministic checks of the pull request of a task before any judgment, the size included | [Preflight](Preflight.md) |
 | `brigade preflight add <name> <step>` | add a collector or a check, `key=value` pairs its parameters, to a custom preflight of the project, committing nothing | [Preflight](Preflight.md) |
@@ -62,7 +62,7 @@ Every command of brigade, what it does in one line, and the page that documents 
 | `brigade note <text>` | record a note in the inbox | [Inbox](Inbox.md) |
 | `brigade inbox list\|show\|dismiss` | list, show and dismiss the signals of the inbox and show its study answers | [Inbox](Inbox.md) |
 | `brigade inbox ratify` | ratify a pattern by its action | [Dashboard](Dashboard.md) |
-| `brigade reports list\|show` | print one row per report, of a milestone, of a task or of a wave, and per order result, or one of them rendered from its entity | — |
+| `brigade report list\|show` | print one row per report, of a milestone, of a task or of a wave, and per order result, or one of them rendered from its entity | — |
 | `brigade ledger [budgets\|compare]` | read the event journal: an overview, a task or a project | [Ledger](Ledger.md) |
 | `brigade processes list\|show` | list the subprocesses brigade started and show those of one run, tick or command | [Trails](Trails.md) |
 | `brigade corpus <project>` | read a registered project's tree at a branch, a SHA or a worktree; `-- <awawa args>` runs awawa there | [Project tree at a ref](Project-tree-at-a-ref.md) |
@@ -72,7 +72,7 @@ Every command of brigade, what it does in one line, and the page that documents 
 
 - `brigade adapter <operation>`: the line names the six operations in place of the help line of `brigade adapter`,
   which covers `matrix` too.
-- `brigade verify context|verdict` and `brigade reports list|show`: each line joins the help lines of its two
+- `brigade review context|verdict` and `brigade report list|show`: each line joins the help lines of its two
   subcommands, `verify context` and `verify verdict`, `reports list` and `reports show`.
 - `brigade reports`: `brigade --help` prints an empty line for it; its line comes from its two subcommands.
 

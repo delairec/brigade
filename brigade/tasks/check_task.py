@@ -74,7 +74,7 @@ def _require_worktree_at_head(runtime: Runtime, worktree: TaskWorktree) -> None:
     if changed:
         raise BrigadeError(
             f"the worktree of @TASK.{worktree.task} holds changes HEAD does not: {', '.join(changed)};"
-            " commit them, then run brigade task check"
+            " commit them, then run brigade build check"
         )
 
 

@@ -9,4 +9,4 @@ def describe_stop_hook(entry_point: Path, stop_at: str | None) -> tuple[str, ...
     if stop_at is None:
         return None
     epoch = round(datetime.strptime(stop_at, ISO_INSTANT_FORMAT).replace(tzinfo=UTC).timestamp())
-    return (sys.executable, str(entry_point), "runs", "stop-hook", "--at", str(epoch))
+    return (sys.executable, str(entry_point), "run", "stop-hook", "--at", str(epoch))

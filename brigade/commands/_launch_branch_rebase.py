@@ -1,6 +1,6 @@
 import argparse
 
-from brigade.commands.run import run
+from brigade.commands.run_start import run
 from brigade.runtime import Runtime
 from brigade.system.parse_configuration import Configuration
 from brigade.waves.rebase_milestone_branches import BranchRebaseRun

@@ -93,7 +93,7 @@ judging run completes with its prose. A wave has no report of its own.
 | `milestone-report` | once every task of the milestone at its branch is merged or parked and no wave of it is open; `milestone.reported` | `ledger` for each wave of the milestone, `pr-list state=all`, `corpus ref=<branch>` on its tasks, `git-diff-stat to=<branch>` | `<project>_<milestone>`; its `GRAPH` holds every `AFTER` between two tasks of the milestone | `<CORPUS>/milestones/<milestone>-report.md` | committed on the branch of the milestone, then the body of its pull request into the main branch, opened then; no pull request under `FORGE none` |
 | `task-report` | for a task naming no milestone, once its pull request is ready to merge or the task is parked; `task.reported` | the same, narrowed to the wave of the task, the task and its branch | `<project>_<task>` | `<CORPUS>/tasks/<task>-report.md` | committed on the branch of the task, then the body of its pull request, replaced whole |
 
-The commit is pushed without force as the login of the key `cli` of `[forge_accounts]`. `brigade reports list` names
+The commit is pushed without force as the login of the key `cli` of `[forge_accounts]`. `brigade report list` names
 the kind of each report, `milestone-report`, `task-report` or, for one written before them, `wave-report`.
 
 <details><summary>Steps, ledger events and resumption</summary>
@@ -131,7 +131,7 @@ ledger events `order.started`, `step.done`, `step.failed`, `order.parked` and `o
 - Each carries its number, title, head and base branches, state, author, draft state, review decision, the verdict of
   its check runs and the task its head branch `task/<slug>/<task>` names.
 - It reads every one of them, page after page, and is collected afresh on every call.
-- It is absent under `FORGE none`: `brigade collect pr-list` exits 1 naming it, and `brigade collectors list` prints it
+- It is absent under `FORGE none`: `brigade collector run pr-list` exits 1 naming it, and `brigade collector list` prints it
   in its `absent` column.
 
 </details>

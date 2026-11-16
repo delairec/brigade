@@ -24,7 +24,7 @@ writes them, stdout keeping the document alone:
 
 ```
 brigade run: ran claude --print --output-format stream-json --verbose, exit 0 in 41250 ms
-brigade run: ran /usr/bin/python3 /opt/brigade/bin/brigade run deliver --run-id 20261007T120000Z-48201, spawned pid 48213
+brigade run: ran /usr/bin/python3 /opt/brigade/bin/brigade run start deliver --run-id 20261007T120000Z-48201, spawned pid 48213
 brigade scheduler status: ran crontab -l, not on PATH
 ```
 

@@ -43,7 +43,7 @@ class BrigadeVersionImportsTest(CommandImportsTestCase):
 class BrigadeCommandLineImportsTest(CommandImportsTestCase):
     def test_should_import_the_module_of_the_command_line_alone(self):
         # Act
-        imported = self.run_listing_command_imports("runs", "list")
+        imported = self.run_listing_command_imports("run", "list")
 
         # Assert
-        self.assertEqual(imported, ["brigade.commands.runs_list"])
+        self.assertEqual(imported, ["brigade.commands.run_list"])

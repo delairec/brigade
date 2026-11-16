@@ -7,7 +7,7 @@ from pathlib import Path
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
-from tests.cli.test_collect import install_executable
+from tests.cli.test_collector_run import install_executable
 from tests.process_launcher import ProcessLauncher
 
 TASK_SCHEMA = (

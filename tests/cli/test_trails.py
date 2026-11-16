@@ -18,7 +18,7 @@ def read_trail(path: Path) -> list:
 
 class BrigadeRunTrailTest(RunTestCase):
     def run_in_workspace(self, *options: str):
-        return self.run_brigade("run", str(self.procedure), "--cwd", str(self.workspace), *options)
+        return self.run_brigade("run", "start", str(self.procedure), "--cwd", str(self.workspace), *options)
 
     def test_should_record_the_client_segment_after_its_wait(self):
         # Arrange

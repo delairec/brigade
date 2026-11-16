@@ -4,11 +4,11 @@ push the branch, open the pull request and promote the task.
 ## Commands
 
 ```
-brigade task context [<task>]                  # the starting package of the run
-brigade task check [<task>]                    # the acceptance commands and the corpus checks; exit 1 when one fails
-brigade task push [<task>]                     # push the branch with a lease once a check of HEAD passed
-brigade task pr [<task>] --subject <subject>   # push the branch with a lease and open the pull request on its base
-brigade task promote [<task>] [--pr <n>]       # STATUS implemented and DELIVERED_BY, committed and pushed with a lease
+brigade build context [<task>]                  # the starting package of the run
+brigade build check [<task>]                    # the acceptance commands and the corpus checks; exit 1 when one fails
+brigade build push [<task>]                     # push the branch with a lease once a check of HEAD passed
+brigade build pr [<task>] --subject <subject>   # push the branch with a lease and open the pull request on its base
+brigade build promote [<task>] [--pr <n>]       # STATUS implemented and DELIVERED_BY, committed and pushed with a lease
 ```
 
 A build run works in the worktree of its task, on the branch `<prefix>/<id>-<slug>` the tick cut from the branch of

@@ -141,7 +141,7 @@ class RequestReplanTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             text,
-            "@REQUEST.shop_r2 planning, run 20261019T090000Z-a1b2c3\nbrigade runs show 20261019T090000Z-a1b2c3 --log",
+            "@REQUEST.shop_r2 planning, run 20261019T090000Z-a1b2c3\nbrigade run show 20261019T090000Z-a1b2c3 --log",
         )
 
 

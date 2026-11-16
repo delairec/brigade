@@ -205,7 +205,7 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
                 self.assertEqual(launch["argv"][13:15], ["--max-turns", expected_max_turns])
 
 
-STOP_HOOK = ["/usr/bin/python3", "/srv/brigade/bin/brigade", "runs", "stop-hook", "--at", "1791364980"]
+STOP_HOOK = ["/usr/bin/python3", "/srv/brigade/bin/brigade", "run", "stop-hook", "--at", "1791364980"]
 
 
 class ClaudeCodeGracefulStopTest(unittest.TestCase):
@@ -223,14 +223,14 @@ class ClaudeCodeGracefulStopTest(unittest.TestCase):
                 "--settings",
                 (
                     '{"hooks": {"PostToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": '
-                    '"/usr/bin/python3 /srv/brigade/bin/brigade runs stop-hook --at 1791364980"}]}]}}'
+                    '"/usr/bin/python3 /srv/brigade/bin/brigade run stop-hook --at 1791364980"}]}]}}'
                 ),
             ],
         )
 
     def test_should_quote_each_argument_of_the_stop_hook(self):
         # Arrange
-        stop_hook = ["/opt/my tools/python3", "/srv/brigade/bin/brigade", "runs", "stop-hook", "--at", "1791364980"]
+        stop_hook = ["/opt/my tools/python3", "/srv/brigade/bin/brigade", "run", "stop-hook", "--at", "1791364980"]
         request = {**LAUNCH_REQUEST, "stop_at": "2026-10-07T09:23:00Z", "stop_hook": stop_hook}
 
         # Act
@@ -239,7 +239,7 @@ class ClaudeCodeGracefulStopTest(unittest.TestCase):
         # Assert
         hook = json.loads(launch["argv"][-1])["hooks"]["PostToolUse"][0]["hooks"][0]
         self.assertEqual(
-            hook["command"], "'/opt/my tools/python3' /srv/brigade/bin/brigade runs stop-hook --at 1791364980"
+            hook["command"], "'/opt/my tools/python3' /srv/brigade/bin/brigade run stop-hook --at 1791364980"
         )
 
     def test_should_add_no_settings_without_a_stop_at(self):
