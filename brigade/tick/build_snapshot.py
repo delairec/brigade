@@ -399,6 +399,8 @@ class Snapshot:
             "projects": [project.to_document() for project in self.projects],
             "studies": [study.to_document() for study in self.studies],
             "live_study_runs": [live.to_document() for live in self.live_study_runs],
+            "orders": [order.to_document() for order in self.orders],
+            "live_order_runs": [live.to_document() for live in self.live_order_runs],
             "study_runs": self.study_runs,
             "rate_limits": [rate_limit.to_document() for rate_limit in self.rate_limits],
             "milestones": [milestone.to_document() for milestone in self.milestones],
