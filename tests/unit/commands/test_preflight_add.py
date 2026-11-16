@@ -103,7 +103,7 @@ class PreflightAddTest(unittest.TestCase):
     def test_should_add_the_step_to_the_preflight_entity_the_corpus_already_holds(self):
         # Arrange
         (self.project / "preflights.awawa").write_text(NIGHTLY_BLOCK)
-        entity = ProcessAnswer(stdout=json.dumps(NIGHTLY_ENTITY))
+        entity = ProcessAnswer(stdout=json.dumps({"file": str(self.project / "preflights.awawa"), **NIGHTLY_ENTITY}))
         answers = self.corpus_answers(declared=DECLARED, entity=entity, lint=CLEAN)
 
         # Act
@@ -114,6 +114,33 @@ class PreflightAddTest(unittest.TestCase):
             (self.project / "preflights.awawa").read_text(),
             'PREFLIGHT nightly\n\tTITLE "the nightly checks of the shop"\n\tCOLLECTOR "notes"\n\t\tPARAMETER "depth=1"\n'
             '\tCHECK "coverage"\n',
+        )
+
+    def test_should_add_the_step_to_the_preflight_entity_in_the_file_of_the_corpus_that_holds_it(self):
+        # Arrange
+        gates = self.project / "gates.awawa"
+        gates.write_text(NIGHTLY_BLOCK)
+        entity = ProcessAnswer(stdout=json.dumps({"file": str(gates), **NIGHTLY_ENTITY}))
+        answers = self.corpus_answers(declared=DECLARED, entity=entity, lint=CLEAN)
+
+        # Act
+        runner, document = self.add("control", answers)
+
+        # Assert
+        self.assertEqual(
+            (
+                gates.read_text(),
+                (self.project / "preflights.awawa").exists(),
+                document["file"],
+                runner.list_argvs()[-2],
+            ),
+            (
+                'PREFLIGHT nightly\n\tTITLE "the nightly checks of the shop"\n\tCOLLECTOR "notes"\n'
+                '\t\tPARAMETER "depth=1"\n\tCHECK "coverage"\n',
+                False,
+                str(gates),
+                ("awawa", "fmt", str(gates)),
+            ),
         )
 
     def test_should_restore_the_file_it_wrote_when_the_lint_of_the_corpus_fails(self):

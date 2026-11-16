@@ -1,5 +1,6 @@
 import json
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.corpus.decode_atom import decode_atom
@@ -33,16 +34,31 @@ def _read_title(fields: list[dict]) -> str:
     return next(_decode(field) for field in fields if field["name"] == "TITLE")
 
 
-def read_preflight_entity(run_process: Callable[[ProcessRequest], ProcessRecord], root: Path, name: str) -> dict | None:
+@dataclass(frozen=True)
+class PreflightEntity:
+    preflight: dict
+    file: Path
+
+
+def locate_preflight_entity(
+    run_process: Callable[[ProcessRequest], ProcessRecord], root: Path, name: str
+) -> PreflightEntity | None:
     target = f"@{ENTITY_TYPE}.{name_preflight_entity(name)}"
     record = run_awawa(run_process, root, ("show", target, "--json", str(root)), (SHOWN, NOT_SHOWN))
     if record.exit_code == NOT_SHOWN:
         return None
-    fields = json.loads(record.stdout)["fields"]
-    return {
+    shown = json.loads(record.stdout)
+    fields = shown["fields"]
+    preflight = {
         "schema_version": PREFLIGHT_SCHEMA_VERSION,
         "name": name,
         "description": _read_title(fields),
         "collectors": _read_steps(fields, "COLLECTOR"),
         "checks": _read_steps(fields, "CHECK"),
     }
+    return PreflightEntity(preflight=preflight, file=Path(shown["file"]))
+
+
+def read_preflight_entity(run_process: Callable[[ProcessRequest], ProcessRecord], root: Path, name: str) -> dict | None:
+    entity = locate_preflight_entity(run_process, root, name)
+    return None if entity is None else entity.preflight
