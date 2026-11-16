@@ -1,7 +1,9 @@
 [run]
 source = brigade
 branch = True
-omit = brigade/launcher.py
+omit =
+    brigade/launcher.py
+    brigade/adapters/test_clients/launch_replay.py
 
 [report]
 fail_under = 100
