@@ -41,7 +41,7 @@ class BrigadeHelpTest(HelpTestCase):
                 "start a procedure as a slot through the client adapter, list the runs, show one, stop one and prune them",
             ),
             ("scheduler", "install what fires the tick, and report it"),
-            ("tick", "plan and apply what the facts call for, once or in a loop"),
+            ("tick", "decide and apply what the facts call for, once or in a loop"),
         ]
 
         # Act

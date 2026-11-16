@@ -7,7 +7,7 @@ minutes.
 ```
 brigade tick --once         # one tick, under the lock $XDG_STATE_HOME/brigade/locks/tick.lock
 brigade tick --once --log-file <file>   # the same, its stderr appended to <file>, its directory created, nothing printed
-brigade tick --dry-run      # the snapshot and the plan, applied to nothing
+brigade tick --dry-run      # the snapshot and the decisions, applied to nothing
 brigade tick --loop         # a tick at once, then one every five minutes, until SIGTERM or SIGINT
 brigade scheduler install   # install what fires brigade tick --once every five minutes
 brigade scheduler status    # the scheduler, the last tick, the paused waves and the parked tasks
@@ -150,7 +150,7 @@ The tick launches no run of a paused wave.
   that record and runs nothing again on that commit.
 - A red base holds the launch: the task is not launched while the head of its base is red, the tick names on stderr
   at each tick the base, its commit and the command that failed (`@TASK.T7 waits: integration/M4 is red at 8885daa,
-  `make test` failed`), and `brigade tick --dry-run` names it in its plan. The red head launches one detached run of the
+  `make test` failed`), and `brigade tick --dry-run` names it in its decisions. The red head launches one detached run of the
   slot `rebase` that repairs it, one per red head whatever the tasks waiting on it, launched again neither while it
   lives nor once it ended blocked, its question named on stderr at each tick. The launches resume at the tick that
   reads the head of the base green.

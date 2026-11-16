@@ -275,7 +275,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
                     "leftovers": [],
                     "kept_branches": [],
                 },
-                "plan": [],
+                "decisions": [],
             },
         )
 
@@ -387,7 +387,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
             document = COMMAND.run(request, _create_quiet_runtime(self.root))
 
         # Assert
-        self.assertEqual(document["plan"], [])
+        self.assertEqual(document["decisions"], [])
 
     def test_should_count_a_round_of_the_loop_another_tick_holds_and_write_no_heartbeat(self):
         # Arrange
@@ -456,8 +456,8 @@ class TickTextTest(unittest.TestCase):
             ("a loop", {"mode": "loop", "ticks_attempted": 3}, "tick --loop: 3 ticks attempted"),
             (
                 "a dry run planning nothing",
-                {"mode": "dry-run", "snapshot": {"schema_version": 1, "now": "2026-10-07T09:00:00Z"}, "plan": []},
-                "snapshot\n  now  2026-10-07T09:00:00Z\nplan\n  no action",
+                {"mode": "dry-run", "snapshot": {"schema_version": 1, "now": "2026-10-07T09:00:00Z"}, "decisions": []},
+                "snapshot\n  now  2026-10-07T09:00:00Z\ndecisions\n  no action",
             ),
             (
                 "a dry run of an empty machine",
@@ -474,18 +474,18 @@ class TickTextTest(unittest.TestCase):
                         "rate_limits": [],
                         "milestones": [],
                     },
-                    "plan": [],
+                    "decisions": [],
                 },
                 (
                     "snapshot\n  now  2026-10-07T09:00:00Z\n  waves  []\n  projects  []\n  studies  []"
                     "\n  live_study_runs  []\n  study_runs  2\n  rate_limits  []"
-                    "\n  milestones  []\nplan\n  no action"
+                    "\n  milestones  []\ndecisions\n  no action"
                 ),
             ),
             (
                 "a dry run planning an action",
-                {"mode": "dry-run", "snapshot": {}, "plan": [{"wave": "tidepool_w16"}]},
-                "snapshot\nplan\n  {'wave': 'tidepool_w16'}",
+                {"mode": "dry-run", "snapshot": {}, "decisions": [{"wave": "tidepool_w16"}]},
+                "snapshot\ndecisions\n  {'wave': 'tidepool_w16'}",
             ),
         ]
         for case, document, expected_text in rows:
@@ -2984,7 +2984,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         # Assert
         self.assertIn(
             {"project": "tidepool", "wave": "tidepool_w16", "task": "T8", "last_action": "2026-10-18T09:00:00Z"},
-            json.loads(json.dumps(document["plan"])),
+            json.loads(json.dumps(document["decisions"])),
         )
 
     def test_should_print_the_merge_with_the_head_it_names_on_a_dry_run(self):
@@ -2993,7 +2993,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            document["plan"],
+            document["decisions"],
             [
                 {
                     "project": "tidepool",
@@ -3531,7 +3531,9 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
         document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), self.runtime)
 
         # Assert
-        self.assertEqual(document["plan"], [{"project": "tidepool", "milestone": "M4", "branch": "integration/tides"}])
+        self.assertEqual(
+            document["decisions"], [{"project": "tidepool", "milestone": "M4", "branch": "integration/tides"}]
+        )
 
     def test_should_name_on_stderr_the_milestone_whose_unrecorded_branch_it_refuses_to_cut(self):
         # Arrange
@@ -3956,7 +3958,9 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), self.runtime)
 
         # Assert
-        self.assertNotIn({"project": "tidepool", "milestone": "M4", "branch": "integration/tides"}, document["plan"])
+        self.assertNotIn(
+            {"project": "tidepool", "milestone": "M4", "branch": "integration/tides"}, document["decisions"]
+        )
 
     def test_should_launch_a_rebase_run_on_the_worktree_of_the_milestone_branch_stopped_on_a_conflict(self):
         # Arrange
@@ -4553,7 +4557,7 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
                 "pull_request_checks": None,
                 "waits": "integration/M4 is red at 8885daa, `make test` failed",
             },
-            document["plan"],
+            document["decisions"],
         )
 
     def test_should_run_no_command_of_the_project_on_a_dry_run(self):
@@ -4573,7 +4577,7 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
                 "task_branch": "feature/T7-tide-table",
                 "pull_request_checks": None,
             },
-            document["plan"],
+            document["decisions"],
         )
 
 
@@ -5084,7 +5088,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
                 "holds_uncommitted_changes": False,
                 "waits": f"integration/M4 is red at {WAVE_HEAD}, `ci / tests` failed",
             },
-            document["plan"],
+            document["decisions"],
         )
 
     def test_should_launch_one_run_repairing_the_red_wave_branch_holding_the_catch_up(self):
@@ -5579,7 +5583,7 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            document["plan"],
+            document["decisions"],
             [
                 {
                     "project": "tidepool",
@@ -5851,7 +5855,7 @@ class TickRunningTheConnectorsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            document["plan"], [{"project": "elm"}, {"project": "elm"}, {"project": "oak"}, {"project": "oak"}]
+            document["decisions"], [{"project": "elm"}, {"project": "elm"}, {"project": "oak"}, {"project": "oak"}]
         )
         self.assertFalse(self.root.joinpath("state", "inbox", "signals.jsonl").exists())
 
@@ -6527,7 +6531,7 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            document["plan"],
+            document["decisions"],
             [
                 {
                     "project": "tidepool",
@@ -6915,7 +6919,7 @@ class TickRemovingTheBranchOfAClosedMilestoneTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            document["plan"],
+            document["decisions"],
             [
                 {
                     "project": "tidepool",
@@ -7112,7 +7116,7 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
         # Assert
         self.assertIn(
             {"project": "tidepool", "milestone": "M4", "branch": "integration/tides", "pr": 77, "head": "8885daa"},
-            document["plan"],
+            document["decisions"],
         )
 
 

@@ -127,12 +127,12 @@ from brigade.tick.actions import (
 )
 from brigade.tick.apply_actions import apply_actions
 from brigade.tick.build_snapshot import CLIENT_LOGIN_REASON, ForgeReaders, Snapshot, build_snapshot
+from brigade.tick.decide import decide
 from brigade.tick.describe_holding_head import describe_holding_head
 from brigade.tick.find_holding_head import find_holding_head
 from brigade.tick.head_proof import HoldingHead
 from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.ledger_reading_keeper import LedgerReadingKeeper
-from brigade.tick.plan import plan
 from brigade.tick.plan_connectors import plan_connectors
 from brigade.tick.prepare_task_worktree import prepare_task_worktree
 from brigade.tick.read_ruled_task import read_ruled_task
@@ -977,7 +977,7 @@ def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuratio
             build_snapshot=lambda: _name_the_blocked_milestone_rebases(build_snapshot(runtime, configuration, forge)),
             plan=lambda snapshot: _hold_the_stall_signals(
                 stalls,
-                _name_the_merge_commands(merge_commands, plan(snapshot)),
+                _name_the_merge_commands(merge_commands, decide(snapshot)),
             ),
             apply=apply,
             cap=ROUND_CAP,
@@ -1078,9 +1078,9 @@ def _plan_dry(runtime: Runtime) -> dict:
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "mode": "dry-run",
         "snapshot": snapshot.to_document(),
-        "plan": [
+        "decisions": [
             _describe_planned_action(runtime, list_check_runs_of, action)
-            for action in (*plan(snapshot), *_plan_registered_connectors(runtime))
+            for action in (*decide(snapshot), *_plan_registered_connectors(runtime))
         ],
     }
 
@@ -1119,8 +1119,8 @@ def _render_once(document: dict) -> list[str]:
 
 def _render_dry_run(document: dict) -> list[str]:
     snapshot_lines = [f"  {key}  {value}" for key, value in document["snapshot"].items() if key != "schema_version"]
-    plan_lines = [f"  {action}" for action in document["plan"]] or ["  no action"]
-    return ["snapshot", *snapshot_lines, "plan", *plan_lines]
+    decision_lines = [f"  {action}" for action in document["decisions"]] or ["  no action"]
+    return ["snapshot", *snapshot_lines, "decisions", *decision_lines]
 
 
 def _render_loop(document: dict) -> list[str]:
@@ -1148,7 +1148,7 @@ def tick(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("tick",),
-    help="plan and apply what the facts call for, once or in a loop",
+    help="decide and apply what the facts call for, once or in a loop",
     arguments=(
         ExclusiveArguments(
             (

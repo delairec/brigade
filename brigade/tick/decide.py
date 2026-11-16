@@ -121,7 +121,7 @@ RUN_LAUNCHES = (
 )
 
 
-def plan(snapshot: Snapshot) -> tuple:
+def decide(snapshot: Snapshot) -> tuple:
     actions = _plan_every_action(snapshot)
     if _decide_quota_resume_at(snapshot) is None:
         return actions
