@@ -1,6 +1,7 @@
 import argparse
 
 from brigade.command import Command
+from brigade.commands._locate_checkout import locate_checkout
 from brigade.commands._locate_recipe_places import locate_recipe_places
 from brigade.recipes.list_recipes import list_recipes
 from brigade.runtime import Runtime
@@ -16,7 +17,7 @@ def _render_text(document: dict) -> str:
 
 
 def recipe_list(request: argparse.Namespace, runtime: Runtime) -> dict:
-    recipes = list_recipes(locate_recipe_places(runtime), runtime.run_process)
+    recipes = list_recipes(locate_recipe_places(locate_checkout(runtime), runtime), runtime.run_process)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "recipes": [*({"name": recipe.name, "source": recipe.source} for recipe in recipes), *NATIVE_RECIPES],

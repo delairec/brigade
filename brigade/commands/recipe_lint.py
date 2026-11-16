@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
+from brigade.commands._locate_checkout import locate_checkout
 from brigade.commands._locate_recipe_places import locate_recipe_places
 from brigade.preflights.locate_preflight import locate_preflight
 from brigade.preflights.run_preflight import BUILT_IN_PREFLIGHTS
@@ -54,8 +55,9 @@ def _equip_resolvers(project: Path, runtime: Runtime) -> RecipeResolvers:
 
 
 def recipe_lint(request: argparse.Namespace, runtime: Runtime) -> dict:
-    recipe = resolve_recipe(request.name, locate_recipe_places(runtime), runtime.run_process)
-    findings = lint_recipe(recipe.document, _equip_resolvers(Path.cwd(), runtime))
+    project = locate_checkout(runtime)
+    recipe = resolve_recipe(request.name, locate_recipe_places(project, runtime), runtime.run_process)
+    findings = lint_recipe(recipe.document, _equip_resolvers(project, runtime))
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "recipe": request.name,

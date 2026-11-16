@@ -36,7 +36,7 @@ def _read_files(directory: Traversable, source: str) -> list[RecipeFound]:
 
 
 def _read_entities(corpus: Path, run_process: Callable[[ProcessRequest], ProcessRecord]) -> list[RecipeFound]:
-    status = read_awawa_document(run_process, corpus, ("status", RECIPE_TYPE))
+    status = read_awawa_document(run_process, corpus, ("status",))
     return [
         RecipeFound(
             name=entity["name"],
@@ -46,6 +46,7 @@ def _read_entities(corpus: Path, run_process: Callable[[ProcessRequest], Process
             ),
         )
         for entity in status["entities"]
+        if entity["type"] == RECIPE_TYPE
     ]
 
 
