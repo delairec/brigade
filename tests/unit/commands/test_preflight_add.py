@@ -135,8 +135,10 @@ class PreflightAddTest(unittest.TestCase):
                 runner.list_argvs()[-2],
             ),
             (
-                'PREFLIGHT nightly\n\tTITLE "the nightly checks of the shop"\n\tCOLLECTOR "notes"\n'
-                '\t\tPARAMETER "depth=1"\n\tCHECK "coverage"\n',
+                (
+                    'PREFLIGHT nightly\n\tTITLE "the nightly checks of the shop"\n\tCOLLECTOR "notes"\n'
+                    '\t\tPARAMETER "depth=1"\n\tCHECK "coverage"\n'
+                ),
                 False,
                 str(gates),
                 ("awawa", "fmt", str(gates)),
