@@ -1,6 +1,8 @@
 import unittest
 from datetime import UTC, datetime
 
+from brigade.orders.is_order_due import OrderFacts
+from brigade.orders.live_order_run import LiveOrderRun
 from brigade.studies.read_live_study_runs import LiveStudyRun
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.reset_hour import ResetHour
@@ -40,6 +42,8 @@ class SnapshotTest(unittest.TestCase):
                 "projects": [],
                 "studies": [],
                 "live_study_runs": [],
+                "orders": [],
+                "live_order_runs": [],
                 "study_runs": 2,
                 "rate_limits": [],
                 "milestones": [],
@@ -221,6 +225,53 @@ class SnapshotTest(unittest.TestCase):
             ],
         )
         self.assertEqual(document["live_study_runs"], [{"study": "weekly", "run": "20261006T110000Z-a1b2c3"}])
+
+    def test_should_carry_the_orders_and_their_live_runs_in_its_document(self):
+        # Arrange
+        nightly = OrderFacts(
+            name="nightly",
+            every="24h",
+            status="active",
+            last_started=datetime(2026, 10, 5, 7, 0, 2, tzinfo=UTC),
+            parked=True,
+        )
+        live = LiveOrderRun(
+            order="nightly",
+            recipe="usage-report",
+            run="20261006T110000Z-a1b2c3",
+            started=datetime(2026, 10, 6, 11, 0, tzinfo=UTC),
+            max_wall=30,
+        )
+        snapshot = Snapshot(now=datetime(2026, 10, 6, 12, 0, tzinfo=UTC), orders=(nightly,), live_order_runs=(live,))
+
+        # Act
+        document = snapshot.to_document()
+
+        # Assert
+        self.assertEqual(
+            document["orders"],
+            [
+                {
+                    "order": "nightly",
+                    "every": "24h",
+                    "status": "active",
+                    "last_started": "2026-10-05T07:00:02Z",
+                    "parked": True,
+                }
+            ],
+        )
+        self.assertEqual(
+            document["live_order_runs"],
+            [
+                {
+                    "order": "nightly",
+                    "recipe": "usage-report",
+                    "run": "20261006T110000Z-a1b2c3",
+                    "started": "2026-10-06T11:00:00Z",
+                    "max_wall": 30,
+                }
+            ],
+        )
 
     def test_should_carry_the_pause_of_a_wave_and_the_rate_limit_of_its_task_in_its_document(self):
         # Arrange

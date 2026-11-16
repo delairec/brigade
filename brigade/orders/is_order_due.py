@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from brigade.errors import BrigadeError
+from brigade.ledger.format_instant import format_instant
 from brigade.studies.read_schedule import read_schedule
 
 ACTIVE_STATUS = "active"
@@ -14,6 +15,15 @@ class OrderFacts:
     status: str
     last_started: datetime | None
     parked: bool
+
+    def to_document(self) -> dict:
+        return {
+            "order": self.name,
+            "every": self.every,
+            "status": self.status,
+            "last_started": None if self.last_started is None else format_instant(self.last_started),
+            "parked": self.parked,
+        }
 
 
 def is_order_due(order: OrderFacts, now: datetime) -> bool:

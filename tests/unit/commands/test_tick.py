@@ -236,6 +236,8 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
                     "projects": [],
                     "studies": [],
                     "live_study_runs": [],
+                    "orders": [],
+                    "live_order_runs": [],
                     "study_runs": 2,
                     "rate_limits": [],
                     "milestones": [],
