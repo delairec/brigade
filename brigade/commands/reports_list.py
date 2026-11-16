@@ -10,6 +10,7 @@ DOCUMENT_KIND = "document"
 OPERATIONAL_CORPUS_DOCUMENT = "awawa"
 HEADER = ("id", "kind", "project")
 NO_PROJECT = "-"
+NO_KIND = "-"
 NO_REPORT = "no report"
 
 
@@ -17,7 +18,9 @@ def _render_text(document: dict) -> str:
     reports = document["reports"]
     if not reports:
         return NO_REPORT
-    return render_table(HEADER, [(report["id"], report["kind"], report["project"] or NO_PROJECT) for report in reports])
+    return render_table(
+        HEADER, [(report["id"], report["kind"] or NO_KIND, report["project"] or NO_PROJECT) for report in reports]
+    )
 
 
 def reports_list(request: argparse.Namespace, runtime: Runtime) -> dict:

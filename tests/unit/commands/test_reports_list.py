@@ -28,6 +28,19 @@ class ReportsListTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(text, "id       kind          project\noak_w3   wave-report   oak\ndisk_r2  study-answer  -")
 
+    def test_should_print_a_dash_for_the_kind_of_the_result_of_an_order_no_longer_recorded(self):
+        # Arrange
+        document = {
+            "schema_version": 1,
+            "reports": [{"id": "gone_r1", "kind": None, "project": None}],
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(text, "id       kind  project\ngone_r1  -     -")
+
     def test_should_say_there_is_no_report(self):
         # Arrange
         document = {"schema_version": 1, "reports": []}

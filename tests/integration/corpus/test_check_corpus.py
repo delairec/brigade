@@ -35,6 +35,16 @@ REPORT_OF_A_WAVE = (
 
 REPORT_OF_A_MILESTONE = 'REPORT shop_M6\n\tMILESTONE "M6"\n\tPROJECT "shop"\n\tNARRATIVE "every task merged"\n'
 REPORT_OF_A_TASK = 'REPORT shop_B46\n\tTASK "B46"\n\tPROJECT "shop"\n\tNARRATIVE "the task merged"\n'
+RESULT_OF_AN_ORDER = (
+    "RESULT nightly_20261019T090000Z_a1b2c3\n"
+    '\tORDER "nightly"\n'
+    '\tRUN "20261019T090000Z-a1b2c3"\n'
+    '\tCOLLECTED "open-issues"\n'
+    '\t\tSUMMARY "{\\"open\\": 2}"\n'
+    '\t\tDOCUMENT "/state/runs/20261019T090000Z-a1b2c3/collected/open-issues.json"\n'
+    '\tNARRATIVE "two issues stay open"\n'
+    '\tFINDING "the oldest issue waits for a reply"\n'
+)
 
 
 class CheckCorpusTest(unittest.TestCase):
@@ -218,3 +228,13 @@ class CheckCorpusUnderTheShippedSchemaTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(checks[1].record.exit_code, 0, checks[1].record.stdout)
+
+    def test_should_accept_the_result_of_an_order(self):
+        # Arrange
+        (self.corpus / "results.awawa").write_text(RESULT_OF_AN_ORDER)
+
+        # Act
+        checks = check_corpus(self.run_process, self.corpus)
+
+        # Assert
+        self.assertEqual(checks[1].record.exit_code, 0, checks[1].record.stdout)
