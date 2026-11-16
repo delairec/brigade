@@ -1,12 +1,10 @@
 import json
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
 from brigade.adapters.clients.claude_code import answer
 from brigade.errors import BrigadeError
-from tests.process_launcher import ProcessLauncher
 
 FIXTURES = Path(__file__).parent / "fixtures" / "claude-code"
 CLI_FIXTURES = Path(__file__).parents[3] / "cli" / "fixtures" / "claude-code"
@@ -18,6 +16,7 @@ LAUNCH_REQUEST = {
     "progress_file": "/state/brigade/runs/r1/progress.md",
     "session_id": "6f1c2a9e-3b7d-4e21-9a55-0c8d4b7e2f13",
     "stop_at": None,
+    "stop_hook": None,
     "role": {
         "name": "builder",
         "package": "AGENT builder",
@@ -206,23 +205,13 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
                 self.assertEqual(launch["argv"][13:15], ["--max-turns", expected_max_turns])
 
 
-def run_stop_hook(stop_at: str) -> subprocess.CompletedProcess:
-    argv = answer("launch-argv", {**LAUNCH_REQUEST, "stop_at": stop_at})["argv"]
-    settings = json.loads(argv[argv.index("--settings") + 1])
-    command = settings["hooks"]["PostToolUse"][0]["hooks"][0]["command"]
-    return ProcessLauncher.run(
-        ["sh", "-c", command],
-        input="{}",
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+STOP_HOOK = ["/usr/bin/python3", "/srv/brigade/bin/brigade", "runs", "stop-hook", "--at", "1791364980"]
 
 
 class ClaudeCodeGracefulStopTest(unittest.TestCase):
-    def test_should_add_a_hook_stopping_the_session_after_the_tool_call_that_passes_its_stop_at(self):
+    def test_should_add_a_hook_calling_the_stop_hook_of_brigade_after_each_tool_call(self):
         # Arrange
-        request = {**LAUNCH_REQUEST, "stop_at": "2026-10-07T09:23:00Z"}
+        request = {**LAUNCH_REQUEST, "stop_at": "2026-10-07T09:23:00Z", "stop_hook": STOP_HOOK}
 
         # Act
         launch = answer("launch-argv", request)
@@ -234,31 +223,24 @@ class ClaudeCodeGracefulStopTest(unittest.TestCase):
                 "--settings",
                 (
                     '{"hooks": {"PostToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": '
-                    '"[ \\"$(date -u +%s)\\" -ge 1791364980 ] && printf \'%s\\\\n\' '
-                    '\'{\\"continue\\": false, \\"stopReason\\": \\"the soft limit 2026-10-07T09:23:00Z has passed\\"}\'; '
-                    'exit 0"}]}]}}'
+                    '"/usr/bin/python3 /srv/brigade/bin/brigade runs stop-hook --at 1791364980"}]}]}}'
                 ),
             ],
         )
 
-    def test_should_print_nothing_before_the_stop_at_and_the_stop_once_it_has_passed(self):
+    def test_should_quote_each_argument_of_the_stop_hook(self):
         # Arrange
-        rows = [
-            ("before", "2100-01-01T00:00:00Z", ""),
-            (
-                "after",
-                "2000-01-01T00:00:00Z",
-                '{"continue": false, "stopReason": "the soft limit 2000-01-01T00:00:00Z has passed"}\n',
-            ),
-        ]
-        for case, stop_at, expected_stdout in rows:
-            with self.subTest(case=case):
-                # Act
-                completed = run_stop_hook(stop_at)
+        stop_hook = ["/opt/my tools/python3", "/srv/brigade/bin/brigade", "runs", "stop-hook", "--at", "1791364980"]
+        request = {**LAUNCH_REQUEST, "stop_at": "2026-10-07T09:23:00Z", "stop_hook": stop_hook}
 
-                # Assert
-                self.assertEqual(completed.returncode, 0)
-                self.assertEqual(completed.stdout, expected_stdout)
+        # Act
+        launch = answer("launch-argv", request)
+
+        # Assert
+        hook = json.loads(launch["argv"][-1])["hooks"]["PostToolUse"][0]["hooks"][0]
+        self.assertEqual(
+            hook["command"], "'/opt/my tools/python3' /srv/brigade/bin/brigade runs stop-hook --at 1791364980"
+        )
 
     def test_should_add_no_settings_without_a_stop_at(self):
         # Act
