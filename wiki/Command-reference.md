@@ -28,7 +28,7 @@ Every command of brigade, what it does in one line, and the page that documents 
 | `brigade plan context` | print the package a planner reads to cut a request into a wave | — |
 | `brigade wave start\|show\|list\|cancel\|resume\|requeue` | start the waves of the projects, list, show and cancel them | [Waves](Waves.md) |
 | `brigade build context\|check\|push\|pr\|promote` | work on a task of a wave from its worktree | [Tasks](Tasks.md) |
-| `brigade review context\|verdict` | print what the verification of the pull request of a task judges, and record its verdict | [Verification](Verification.md) |
+| `brigade review context\|verdict` | print what the verification of the pull request of a task judges, and record its verdict | [Verification](Review.md) |
 | `brigade remediate context\|reply` | answer the review of the pull request of a task | [Review answers](Review-answers.md) |
 | `brigade rebase context\|done\|pr` | put the pull request of a task back on its base, or open the pull request repairing a red main branch | [Rebase on the base](Rebase-on-the-base.md) |
 | `brigade run start <procedure>` | run a procedure as a slot through the client adapter | [Runs](Runs.md) |

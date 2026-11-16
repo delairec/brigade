@@ -8,7 +8,7 @@ from brigade.recipes.run_order import OrderRun
 
 COLLECT_STEP = {"kind": "collect", "collector": "open-issues"}
 FIRST_JUDGE = {"kind": "judge", "slot": "judging", "procedure": "triage", "answer": "RESULT"}
-SECOND_JUDGE = {"kind": "judge", "slot": "review", "procedure": "verify-pr", "answer": "REPORT"}
+SECOND_JUDGE = {"kind": "judge", "slot": "review", "procedure": "review-pr", "answer": "REPORT"}
 
 
 class FindAnswerTypeTest(unittest.TestCase):

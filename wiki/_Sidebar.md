@@ -18,7 +18,7 @@
 - [Tasks](Tasks.md)
 - [Preflight](Preflight.md)
 - [Runs](Runs.md)
-- [Verification](Verification.md)
+- [Verification](Review.md)
 - [Review answers](Review-answers.md)
 - [Rebase on the base](Rebase-on-the-base.md)
 - [Studies](Studies.md)

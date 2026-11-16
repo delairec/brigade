@@ -76,7 +76,7 @@ exists.
 
 - `request new` takes `n` one above the highest its project holds, under the lock of the corpus, with the UTC instant
   of its creation. The planner is launched as
-  `brigade run start wave-plan --slot plan --project <project> --detach request=<name>`. A project that is not registered or
+  `brigade run start request-plan --slot plan --project <project> --detach request=<name>`. A project that is not registered or
   is paused exits 1.
 - `request show` prints a request, its status, its milestone, its pull request and the instant of its creation, `-`
   for a field it does not hold yet. `request list` prints one row per request, those of one project with `--project`.
@@ -118,7 +118,7 @@ exists.
   `task.state`, its pull request, its last run in the wave and, for a parked task, the reason of its `task.parked`,
   `-` when none. With `--events`, it adds what `brigade ledger` once printed for a wave: its cost and tokens, the
   steps, duration and cost of each task, its merged pull requests, its steps by slot and by role, its pauses, its
-  hand-overs, its parked tasks, then every event the ledger holds for the wave, in the order recorded.
+  handovers, its parked tasks, then every event the ledger holds for the wave, in the order recorded.
 - `wave list` prints one row per wave of the ledger, its project, branch, last wave event and task count, the open
   waves first, those of one project with `--project`.
 

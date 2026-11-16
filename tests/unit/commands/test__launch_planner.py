@@ -42,7 +42,7 @@ class LaunchPlannerTest(unittest.TestCase):
 
         # Assert
         record = json.loads((self.root / "state" / "runs" / launched["run"] / "run.json").read_text(encoding="utf-8"))
-        self.assertEqual(record["procedure"], "wave-plan")
+        self.assertEqual(record["procedure"], "request-plan")
         self.assertEqual(record["slot"], "plan")
         self.assertEqual(record["project"], "shop")
         self.assertEqual(record["arguments"], {"request": "shop_r2"})

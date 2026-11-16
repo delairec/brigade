@@ -133,7 +133,7 @@ The fake reads these keys of `[clients.fake]`:
 |---|---|
 | `recordings` | the directory whose `<role>.json` it replays, or `<role>.resumed.json` when that file exists and its brief opens on the `Progress so far` section |
 | `features` | the comma-separated features its probe declares: `step_count`, `tool_grants`, `reset_hour`, `graceful_stop`; none by default |
-| `hold` | for tests of the clock and of the hand-over: a file whose presence it waits out before answering |
+| `hold` | for tests of the clock and of the handover: a file whose presence it waits out before answering |
 | `progress` | for those tests: a text it appends as it is to the progress file of the run, in either form |
 | `interval` | for those tests: the seconds it waits after each line of its recording |
 | `operations` | comma-separated, adds operations to its probe: with `actions`, a line of its recording that is a result document is a result and any other line a text; with `transcripts`, it answers the document `<session_id>.transcripts.json` of `recordings` |

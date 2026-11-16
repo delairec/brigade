@@ -70,7 +70,7 @@ def write_run(state_root: Path, record: dict, result: dict | None) -> Path:
 def create_planner_record(run_id: str, request: str) -> dict:
     return {
         **create_run_record(run_id, None, None),
-        "procedure": "wave-plan",
+        "procedure": "request-plan",
         "slot": "plan",
         "role": "planner",
         "arguments": {"request": request},

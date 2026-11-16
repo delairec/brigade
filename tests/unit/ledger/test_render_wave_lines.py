@@ -35,7 +35,7 @@ class RenderWaveLinesTest(unittest.TestCase):
                 {"paused_at": "2026-10-01T02:00:00Z", "resumed_at": None, "duration_ms": None},
             ],
             "paused_ms": 3600000,
-            "hand_overs": [{"task": "T7", "role": "ada", "slot": "build", "segment": 2}],
+            "handovers": [{"task": "T7", "role": "ada", "slot": "build", "segment": 2}],
             "parked": [],
             "events": [],
         }
@@ -61,7 +61,7 @@ class RenderWaveLinesTest(unittest.TestCase):
             "pauses: 2, 1h00m in all\n"
             "  2026-10-01T00:15:00Z to 2026-10-01T01:15:00Z  1h00m\n"
             "  2026-10-01T02:00:00Z, still paused\n"
-            "hand-overs: T7 ada build segment 2\n"
+            "handovers: T7 ada build segment 2\n"
             "parked: none\n"
             "events:",
         )
@@ -82,7 +82,7 @@ class RenderWaveLinesTest(unittest.TestCase):
             "steps": {"by_slot": {}, "by_role": {}},
             "pauses": [{"paused_at": "2026-10-02T10:00:00Z", "resumed_at": None, "duration_ms": None}],
             "paused_ms": 0,
-            "hand_overs": [],
+            "handovers": [],
             "parked": [],
             "events": [],
         }
@@ -102,7 +102,7 @@ class RenderWaveLinesTest(unittest.TestCase):
             "steps by role: none\n"
             "pauses: 1, 0h00m in all\n"
             "  2026-10-02T10:00:00Z, still paused\n"
-            "hand-overs: none\n"
+            "handovers: none\n"
             "parked: none\n"
             "events:",
         )
@@ -127,7 +127,7 @@ class RenderWaveLinesTest(unittest.TestCase):
             "steps": {"by_slot": {}, "by_role": {"ada": ada_steps}},
             "pauses": [],
             "paused_ms": 0,
-            "hand_overs": [],
+            "handovers": [],
             "parked": ["TP147"],
             "events": [],
         }
@@ -150,7 +150,7 @@ class RenderWaveLinesTest(unittest.TestCase):
             "    runs p50 40  p90 40  measured 1  partial 1  unmeasured 0\n"
             "    segments p50 40  p90 40  measured 1  unmeasured 1\n"
             "pauses: 0, 0h00m in all\n"
-            "hand-overs: none\n"
+            "handovers: none\n"
             "parked: TP147\n"
             "events:",
         )
@@ -171,7 +171,7 @@ class RenderWaveLinesTest(unittest.TestCase):
             "steps": {"by_slot": {}, "by_role": {}},
             "pauses": [],
             "paused_ms": 0,
-            "hand_overs": [],
+            "handovers": [],
             "parked": [],
             "events": [
                 {"at": "2026-10-04T09:00:00Z", "event": "wave.started", "fields": {"wave": "tidepool_w18"}},
@@ -193,7 +193,7 @@ class RenderWaveLinesTest(unittest.TestCase):
             "steps by slot: none\n"
             "steps by role: none\n"
             "pauses: 0, 0h00m in all\n"
-            "hand-overs: none\n"
+            "handovers: none\n"
             "parked: none\n"
             "events:\n"
             "  2026-10-04T09:00:00Z  wave.started\n"

@@ -17,7 +17,7 @@ RESOLVERS = RecipeResolvers(
     resolve_collector=create_resolver("collector", "pull-request"),
     resolve_preflight=create_resolver("preflight", "verify-pull-request"),
     resolve_output=create_resolver("output", "inbox"),
-    resolve_procedure=create_resolver("procedure", "verify-pr"),
+    resolve_procedure=create_resolver("procedure", "review-pr"),
     slots=("review", "report"),
     client_binary="claude",
 )
@@ -128,7 +128,7 @@ class LintRecipeTest(unittest.TestCase):
             ),
             (
                 "a slot",
-                {"kind": "judge", "slot": "deploy", "procedure": "verify-pr", "answer": "REPORT"},
+                {"kind": "judge", "slot": "deploy", "procedure": "review-pr", "answer": "REPORT"},
                 "steps[0]: no slot deploy: the slots are review, report",
             ),
         )
@@ -161,7 +161,7 @@ class LintRecipeTest(unittest.TestCase):
             (
                 "a model key of a step",
                 create_recipe(
-                    [{"kind": "judge", "slot": "review", "procedure": "verify-pr", "answer": "R", "model": "opus"}]
+                    [{"kind": "judge", "slot": "review", "procedure": "review-pr", "answer": "R", "model": "opus"}]
                 ),
                 "steps[0]: the key model names a client or a model, which a recipe never sets",
             ),

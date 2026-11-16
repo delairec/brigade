@@ -77,7 +77,7 @@ The progress of a run is one file, in the form the key `document` of `config.tom
 
 | `document` | File |
 |---|---|
-| `awawa`, the default | `progress.awawa`, an awawa corpus holding the STEP and HANDOVER schema brigade ships, then one `STEP` per step completed and one `HANDOVER` per hand-over, named `s1`, `s2`, `h1` in order of writing |
+| `awawa`, the default | `progress.awawa`, an awawa corpus holding the STEP and HANDOVER schema brigade ships, then one `STEP` per step completed and one `HANDOVER` per handover, named `s1`, `s2`, `h1` in order of writing |
 | `markdown` | `progress.md`, created empty |
 
 A segment ended on the client's step cap, on the clock, on `soft_limit`, on `handed_over` or on `undeclared` is

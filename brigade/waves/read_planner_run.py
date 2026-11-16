@@ -6,7 +6,7 @@ from brigade.runs.read_run_document import read_run_document
 from brigade.runs.run_locations import RUN_RECORD_FILE, RUNS_DIRECTORY
 from brigade.runs.run_record import RUN_RECORD_SHAPE
 
-PLANNER_PROCEDURE = "wave-plan"
+PLANNER_PROCEDURE = "request-plan"
 PLANNER_STATES = {"running": "live", "dead": "dead"}
 
 

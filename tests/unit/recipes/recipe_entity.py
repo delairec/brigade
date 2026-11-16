@@ -22,7 +22,7 @@ argv = ["uvx", "ruff", "check", "."]
 [[steps]]
 kind = "judge"
 slot = "review"
-procedure = "verify-pr"
+procedure = "review-pr"
 answer = "REPORT"
 
 [[steps]]
@@ -70,7 +70,7 @@ REVIEW_RECIPE_ENTITY = {
             "atoms": ["judge"],
             "fields": [
                 {"name": "SLOT", "atoms": ['"review"'], "fields": []},
-                {"name": "PROCEDURE", "atoms": ['"verify-pr"'], "fields": []},
+                {"name": "PROCEDURE", "atoms": ['"review-pr"'], "fields": []},
                 {"name": "ANSWER", "atoms": ['"REPORT"'], "fields": []},
             ],
         },
@@ -89,7 +89,7 @@ REVIEW_RECIPE_DOCUMENT = {
         {"kind": "collect", "collector": "pull-request", "parameters": {"number": "{pr}", "project": "{project}"}},
         {"kind": "gate", "preflight": "verify-pull-request", "on_fail": "retry:2"},
         {"kind": "command", "argv": ["uvx", "ruff", "check", "."]},
-        {"kind": "judge", "slot": "review", "procedure": "verify-pr", "answer": "REPORT"},
+        {"kind": "judge", "slot": "review", "procedure": "review-pr", "answer": "REPORT"},
         {"kind": "output", "output": "inbox"},
     ],
 }

@@ -15,7 +15,7 @@ the Artifact sources and the documentation.
 | `tests/cli/fixtures/recordings/` | the recordings the test suite replays |
 | `brigade/roles/data/` | the nine built-in role files, one per slot |
 | `brigade/adapters/schedulers/` | the scheduler plugins, `systemd.py`, `cron.py` and `loop.py`, reached by name only; the templates of the units and of the cron line live in its `data/` folder |
-| `brigade/runs/` | the run machinery: the procedure resolution, the brief, the segments and their hand-over, the run directory read by `runs list` and `runs show` |
+| `brigade/runs/` | the run machinery: the procedure resolution, the brief, the segments and their handover, the run directory read by `runs list` and `runs show` |
 | `brigade/corpus/data/schema.awawa.tpl` | the schema of the operational corpus `brigade init` installs in the config directory |
 | `corpus/` | the project's own awawa corpus: the schema, the milestones, the tasks, the decisions of the plan; read it with `awawa status .` from the root of the repository |
 | `artifact/blueprint/` | the sources of the published Artifact "Brigade Blueprint" (overview, plan, mockups, task board, demo, brief); `index.html` is the page, `parts/` the fragments it fetches |

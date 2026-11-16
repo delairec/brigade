@@ -100,7 +100,7 @@ class DescribeBudgetsTest(unittest.TestCase):
             ),
             LedgerEntry(
                 instant=datetime(2026, 11, 1, 9, 2, tzinfo=UTC),
-                event=create_run_finished("r3", procedure="verify-pr", client="claude-code", main_steps=9),
+                event=create_run_finished("r3", procedure="review-pr", client="claude-code", main_steps=9),
             ),
         )
 
