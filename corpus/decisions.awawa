@@ -7351,3 +7351,31 @@ DECISION APreflightEntityIsNamedWithUnderscoresAndPreflightAddResolvesItsStepAsA
 		+ "entity, the file it lives in, the order of the two kinds and the description of a"
 		+ "created preflight open"
 		REF @TASK.B252
+
+DECISION ARecipeStepHoldsTheKeysOfItsKindAndARecipeEntityWritesThemAsSubFieldsOfItsStep
+	TITLE "a step of a recipe holds the keys its kind declares, and a RECIPE entity writes the"
+		+ "recipe's keys as its fields and each step's keys as the sub-fields of its STEP"
+	STATUS active
+	DESC "a collect step holds collector and parameters, a command step argv, a gate step"
+		+ "preflight, a judge step slot, procedure and answer, the entity type of its answer, an"
+		+ "output step output, an order step recipe and parameters, a corpus step entity, an op"
+		+ "step op; every step may hold on_fail"
+	DESC "max_wall is a whole number of minutes, as stall_after and tick_stale_after of config.toml"
+		+ "count"
+	DESC "a RECIPE entity is named after its recipe, its DESC the description, SCHEMA_VERSION,"
+		+ "PARAM and MAX_WALL the other keys; a STEP holds its kind as value and each key in upper"
+		+ "case beneath it, ARGV once per argument and PARAMETER once per key=value pair"
+	DESC "a value substitutes {project}, the name of the project, beside the params of the recipe"
+	DESC "brigade recipe list, show and lint read the project of the current directory, as brigade"
+		+ "check list reads it; the group is brigade recipe, singular, as"
+		+ "@DECISION.ACommandGroupIsNamedInTheSingularAfterItsEntityOrItsSlot rules for the brigade"
+		+ "recipes show SPEC 6 of @TASK.B50 writes"
+		REF @DECISION.ACommandGroupIsNamedInTheSingularAfterItsEntityOrItsSlot
+		REF @TASK.B50
+	REJECTED "a step written as one string in the entity and parsed: a command line in a string,"
+		+ "which the decision ProjectCommandsRunAsAnArgvWithoutAShell refuses"
+	REJECTED "max_wall_ms: the key is named max_wall by the task B50, and a recipe's wall is set in"
+		+ "minutes, not to the millisecond"
+	SOURCE "the pull request of @TASK.B50, whose SPEC names the kinds of step and max_wall and"
+		+ "leaves the keys of each kind, the unit of max_wall and the form of the entity open"
+		REF @TASK.B50
