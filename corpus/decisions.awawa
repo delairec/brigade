@@ -7437,9 +7437,9 @@ DECISION TheRefinementPreflightReportsTheFactsOfADraftAndJudgesNone
 		+ "later ruling dates the citations the ruling rests on"
 	REJECTED "the implemented tasks compared too: a delivered task needs no AFTER and shares no"
 		+ "deliverable still to come"
-	SOURCE "taken by the run delivering @TASK.B253 on 2026-11-16, whose SPEC leaves open when a"
-		+ "check fails, the fields the files, entities and citations are read from, and the commit"
-		+ "of the SOURCE"
+	SOURCE "pull request #420 of the brigade repository, delivering @TASK.B253, whose SPEC leaves"
+		+ "open when a check fails, the fields the files, entities and citations are read from, and"
+		+ "the commit of the SOURCE"
 		REF @TASK.B253
 
 DECISION AFailedPreflightWavePausesTheWaveOnTheForgeAccount
@@ -7457,6 +7457,6 @@ DECISION AFailedPreflightWavePausesTheWaveOnTheForgeAccount
 	REJECTED "the wave left unstarted while its preflight fails: the user ruled a broken login"
 		+ "parking the wave, and wave resume, which the user runs once the login is repaired, takes"
 		+ "a wave the ledger holds"
-	SOURCE "taken by the run delivering @TASK.B253 on 2026-11-16, whose SPEC asks a failed login to"
-		+ "pause the wave before any run and leaves the reason open"
+	SOURCE "pull request #420 of the brigade repository, delivering @TASK.B253, whose SPEC asks a"
+		+ "failed login to pause the wave before any run and leaves the reason open"
 		REF @TASK.B253
