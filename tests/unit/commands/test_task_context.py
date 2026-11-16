@@ -6,6 +6,7 @@ from pathlib import Path
 from brigade.commands.task_context import COMMAND
 from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import create_machine_double, write_ledger
+from tests.unit.create_recipe_outputs import create_recipe_outputs
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.forge_double import ForgeDouble
@@ -163,7 +164,7 @@ TASK_CHECKOUT = {
     ("awawa", "status", "--json"): '{"entities": [{"type": "TASK", "name": "T190"}]}',
 }
 TIDEPOOL_CORPUS = {
-    "PROJECT": {"tidepool": (("PATH", "/srv/tidepool"), ("ACCEPTANCE", "python3 -m unittest"))},
+    "PROJECT": {"tidepool": (("PATH", "/srv/tidepool"),)},
     "TASK": {"T7": (("MILESTONE", "@MILESTONE.M4"),)},
 }
 TIDEPOOL_MILESTONE_BRANCH_CUT = {
@@ -193,7 +194,10 @@ class TaskContextOfABuildRunTest(unittest.TestCase):
         (self.root / "config" / "_schema.awawa").write_text("", encoding="utf-8")
         (self.root / "cache" / "refs" / "tidepool" / "8885daa").mkdir(parents=True)
         write_ledger(self.root, [TIDEPOOL_MILESTONE_BRANCH_CUT, TIDEPOOL_WAVE_STARTED])
-        self.run_process = create_machine_double(TIDEPOOL_CORPUS, TASK_CHECKOUT)
+        acceptance_recipe = create_recipe_outputs(
+            Path("/srv/tidepool-T7"), {"acceptance": (("python3", "-m", "unittest"),)}
+        )
+        self.run_process = create_machine_double(TIDEPOOL_CORPUS, {**TASK_CHECKOUT, **acceptance_recipe})
 
     def test_should_write_the_package_to_the_directory_of_the_run(self):
         # Arrange
