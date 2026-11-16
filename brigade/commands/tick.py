@@ -48,6 +48,7 @@ from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.orders.start_order_run import start_order_run
+from brigade.orders.stop_order_run import stop_order_run
 from brigade.preflights.read_preflight_file import read_preflight_file
 from brigade.preflights.run_preflight import BUILT_IN_PREFLIGHTS, PreflightOutcome, PreflightRun, run_preflight
 from brigade.registry.find_project import find_project
@@ -122,6 +123,7 @@ from brigade.tick.actions import (
     RunPreflight,
     SignalStall,
     StartWave,
+    StopOrderRun,
 )
 from brigade.tick.apply_actions import apply_actions
 from brigade.tick.build_snapshot import CLIENT_LOGIN_REASON, ForgeReaders, Snapshot, build_snapshot
@@ -848,6 +850,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         **_list_task_run_executors(runtime, configuration),
         LaunchStudy: lambda action: _launch_study(runtime, action),
         LaunchOrder: lambda action: _launch_order(runtime, action),
+        StopOrderRun: lambda action: stop_order_run(runtime, action, runtime.signal_process),
         PauseWave: lambda action: _pause_wave(runtime, action),
         ResumeWave: lambda action: append_event(
             runtime.paths, runtime.now, WaveResumed(wave=action.wave, reason=action.reason)

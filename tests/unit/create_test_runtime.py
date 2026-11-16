@@ -19,6 +19,10 @@ def _refuse_to_spawn(request):
     raise AssertionError(f"{' '.join(request.argv)} should not be spawned")
 
 
+def _refuse_to_signal(pid: int, sent: int):
+    raise AssertionError(f"the process {pid} should not be signalled")
+
+
 def _refuse_to_resolve(kind: str, name: str, *arguments):
     raise AssertionError(f"the {kind} plugin {name} should not be resolved")
 
@@ -35,6 +39,7 @@ def create_test_runtime(
     paths: Paths = UNWRITTEN_PATHS,
     run_process=refuse_to_run,
     spawn_process=_refuse_to_spawn,
+    signal_process=_refuse_to_signal,
     resolve_plugin=_refuse_to_resolve,
     now: datetime = FIXED_NOW,
     trail: TrailWriter | None = None,
@@ -46,6 +51,7 @@ def create_test_runtime(
     return Runtime(
         run_process=run_process,
         spawn_process=spawn_process,
+        signal_process=signal_process,
         paths=paths,
         now=now,
         read_clock=lambda: now,

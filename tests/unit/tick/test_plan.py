@@ -4083,3 +4083,14 @@ class PlanOrderRunsPastTheirMaxWallTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(actions, ())
+
+    def test_should_leave_a_live_run_past_the_max_wall_once_its_order_is_parked(self):
+        # Arrange
+        live = dataclasses.replace(LIVE_NIGHTLY, started=TWO_HOURS_AGO)
+        snapshot = Snapshot(now=NOW, orders=(create_order(parked=True),), live_order_runs=(live,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
