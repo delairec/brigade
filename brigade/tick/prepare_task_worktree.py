@@ -27,6 +27,7 @@ from brigade.system.locate_setup_log import locate_setup_log
 from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
+from brigade.system.validate_document import DocumentInvalid
 from brigade.system.write_text_atomically import write_text_atomically
 from brigade.tick.actions import LaunchTask
 from brigade.tick.head_proof import GREEN, RED, HeadProof, HoldingHead
@@ -159,7 +160,7 @@ def _set_up_or_park(runtime: Runtime, project: Entity, action: LaunchTask, prepa
             prepared,
             locate_setup_log(runtime.paths.setup_directory, action.project, action.task),
         )
-    except ToolFailure as failure:
+    except (ToolFailure, DocumentInvalid) as failure:
         append_event(
             runtime.paths,
             runtime.now,

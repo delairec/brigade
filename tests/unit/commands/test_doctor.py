@@ -114,6 +114,16 @@ max_wall = 30
 kind = "command"
 argv = []
 """
+SETUP_RECIPE_WITH_A_GATE_STEP = """schema_version = 1
+name = "setup"
+description = "the setup of the project"
+params = []
+max_wall = 30
+
+[[steps]]
+kind = "gate"
+preflight = "ancestry"
+"""
 
 
 class DoctorTestCase(unittest.TestCase):
@@ -1345,6 +1355,29 @@ class DoctorProjectsTest(DoctorTestCase):
                 "kind": "prerequisite",
                 "state": "finding",
                 "detail": "@PROJECT.app: recipe setup, a step with an empty argv",
+                "fallback": None,
+            },
+            document["items"],
+        )
+
+    def test_should_find_a_recipe_of_a_project_holding_a_step_that_is_no_command_step(self):
+        # Arrange
+        recipes = self.project / ".brigade" / "recipes"
+        recipes.mkdir(parents=True)
+        (recipes / "setup.toml").write_text(SETUP_RECIPE_WITH_A_GATE_STEP)
+        self.register(("MODE", "none"))
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "project",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": "@PROJECT.app: recipes unreadable: the recipe setup of the project: steps[0].kind is"
+                " 'gate', not one of command",
                 "fallback": None,
             },
             document["items"],
