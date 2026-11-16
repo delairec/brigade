@@ -142,10 +142,8 @@ class PreflightCommandTest(unittest.TestCase):
         document = preflight(request, self.runtime)
 
         # Assert
-        self.assertEqual(
-            (document["verdict"], document["checks"]),
-            ("pass", [{"name": "body", "verdict": "pass", "findings": []}]),
-        )
+        self.assertEqual(document["checks"], [{"name": "body", "verdict": "pass", "findings": []}])
+        self.assertEqual(document["verdict"], "pass")
 
     def test_should_refuse_a_name_no_preflight_carries(self):
         # Arrange
