@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from argparse import Namespace
 from contextlib import redirect_stderr
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import ANY
 
@@ -18,6 +18,7 @@ from brigade.commands.tick import COMMAND
 from brigade.errors import BrigadeError, CommandFailed, StandingDown, UsageError
 from brigade.inbox.read_inbox import Signal, read_inbox
 from brigade.ledger.ledger_entry import LedgerEntry
+from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.read_ledger import read_ledger
 from brigade.runs.record_run_pid import record_run_pid
@@ -4674,6 +4675,54 @@ class TickLaunchingAStudyTest(unittest.TestCase):
                     instant=FIXED_NOW,
                     event=OrderStarted(project="oak", kind="usage-report", order="hourly", run=run_id),
                 ),
+            ),
+        )
+
+    def test_should_stop_a_live_order_run_past_the_max_wall_of_its_recipe_and_park_its_order(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(root)
+        signals = []
+        hourly = (("RECIPE", "usage-report"), ("PROJECT", "@PROJECT.oak"), ("EVERY", "1h"), ("STATUS", "active"))
+        oak = (("PATH", str(root / "oak")), ("MAIN", "main"), ("FORGE", "none"), ("STATUS", "paused"))
+        live_run = root / "state" / "runs" / "20261019T082800Z-aaaaaa"
+        live_run.mkdir(parents=True)
+        (live_run / "order.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "order": {"name": "hourly", "project": "oak"},
+                    "recipe": {"name": "usage-report", "max_wall": 30, "steps": [{"kind": "command"}]},
+                }
+            ),
+            encoding="utf-8",
+        )
+        os.utime(live_run / "order.json", ((FIXED_NOW - timedelta(minutes=31)).timestamp(),) * 2)
+        record_run_pid(live_run, os.getpid())
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_machine_double(
+                {"PROJECT": {"oak": oak}, "STUDY": PAUSED_BUILT_IN_STUDIES, "ORDER": {"hourly": hourly}},
+                MACHINE_OUTPUTS,
+            ),
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
+            signal_process=lambda pid, sent: signals.append((pid, sent)),
+        )
+
+        # Act
+        COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(signals, [(os.getpid(), signal.SIGTERM)])
+        self.assertEqual(
+            read_ledger(root / "state").entries[-1].event,
+            OrderParked(
+                project="oak",
+                kind="usage-report",
+                order="hourly",
+                run="20261019T082800Z-aaaaaa",
+                step="1-command",
+                reason="the run passed the max_wall of 30 minutes of the recipe usage-report",
             ),
         )
 
