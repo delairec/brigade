@@ -36,6 +36,13 @@ class OrderRun:
 StepPerformer = Callable[[dict, OrderRun], dict]
 
 
+@dataclass(frozen=True)
+class _RankedStep:
+    name: str
+    step: dict
+    perform: StepPerformer
+
+
 class _StepFailure(Exception):
     def __init__(self, step: str, reason: str, on_fail: str):
         super().__init__(reason)
@@ -50,12 +57,13 @@ def _count_retries(on_fail: str) -> int:
     return NO_RETRY
 
 
-def _perform(runtime: Runtime, run: OrderRun, step: dict, perform: StepPerformer, name: str) -> dict:
-    on_fail = step.get(ON_FAIL_KEY, PARK)
+def _perform(runtime: Runtime, run: OrderRun, ranked: _RankedStep) -> dict:
+    name = ranked.name
+    on_fail = ranked.step.get(ON_FAIL_KEY, PARK)
     attempts_left = _count_retries(on_fail)
     while True:
         try:
-            return perform(step, run)
+            return ranked.perform(ranked.step, run)
         except BrigadeError as error:
             reason = str(error)
             append_event(
@@ -108,7 +116,7 @@ def _run_steps(runtime: Runtime, run: OrderRun, performers: Mapping[str, StepPer
             continue
         _check_wall(runtime, run, name)
         try:
-            result = _perform(runtime, run, step, performers[step["kind"]], name)
+            result = _perform(runtime, run, _RankedStep(name=name, step=step, perform=performers[step["kind"]]))
         except _StepFailure as failure:
             if failure.on_fail != SKIP:
                 raise

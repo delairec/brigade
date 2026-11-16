@@ -7409,3 +7409,21 @@ DECISION TheEngineNamesEachStepByItsRankAndKindAndAStoppedOrderEndsDoneWithoutPa
 	SOURCE "the pull request of @TASK.B51, whose SPEC 4, 5 and 8 leave the name of a step file, the"
 		+ "outcome of stop and the start of max_wall open"
 		REF @TASK.B51
+
+DECISION OrderNewNamesTheOrderAfterItsRecipeAndInstantAndTakesADeclaredKeyAsAParamAndAnyOtherWordAsTheText
+	TITLE "brigade order new names its order after its recipe, hyphens as underscores, and the"
+		+ "instant, and takes a word key=value whose key the recipe declares as a PARAM and any"
+		+ "other word as the TEXT, one at most"
+	STATUS active
+	DESC "the name of the order is <recipe with hyphens as underscores>_<YYYYMMDDTHHMMSSZ>, the"
+		+ "instant of the command"
+	DESC "a word key=value is a PARAM only when the recipe declares the key in its params; any"
+		+ "other word is the TEXT, and a second such word is refused"
+	DESC "brigade order run resumes the parked run of an order, read from the last order event"
+		+ "carrying the name of the order and of its recipe, or starts a new one"
+	REJECTED "a name given by the user: an order is an instance, recorded and run in one command"
+	REJECTED "every word holding = taken as a PARAM: a text may hold an =, and a key the recipe"
+		+ "does not declare reaches no step"
+	SOURCE "the pull request of @TASK.B51, whose SPEC 1 leaves the name of the order and the"
+		+ "reading of its words open"
+		REF @TASK.B51
