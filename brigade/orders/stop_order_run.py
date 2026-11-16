@@ -11,8 +11,9 @@ from brigade.tick.actions import StopOrderRun
 
 
 def _find_first_undone_step(run: OrderRun) -> str:
-    names = (f"{rank}-{step['kind']}" for rank, step in enumerate(run.recipe["steps"], start=FIRST_STEP))
-    return next(name for name in names if not (run.run_directory / STEPS_DIRECTORY / f"{name}.json").is_file())
+    names = [f"{rank}-{step['kind']}" for rank, step in enumerate(run.recipe["steps"], start=FIRST_STEP)]
+    undone = (name for name in names if not (run.run_directory / STEPS_DIRECTORY / f"{name}.json").is_file())
+    return next(undone, names[-1])
 
 
 def stop_order_run(runtime: Runtime, action: StopOrderRun, signal_process: Callable[[int, int], None]) -> None:

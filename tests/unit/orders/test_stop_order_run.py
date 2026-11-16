@@ -57,6 +57,16 @@ class StopOrderRunTest(unittest.TestCase):
             ),
         )
 
+    def test_should_park_its_order_at_its_last_step_when_every_step_file_is_written(self):
+        # Arrange
+        (self.runtime.paths.state_root / "runs" / RUN_ID / "steps" / "2-judge.json").write_text("{}", encoding="utf-8")
+
+        # Act
+        stop_order_run(self.runtime, StopOrderRun(order="nightly", run=RUN_ID, reason=REASON), self.signals_sent)
+
+        # Assert
+        self.assertEqual(read_ledger(self.runtime.paths.state_root).entries[-2].event.step, "2-judge")
+
     def test_should_signal_in_the_inbox_the_order_it_parked(self):
         # Act
         stop_order_run(self.runtime, StopOrderRun(order="nightly", run=RUN_ID, reason=REASON), self.signals_sent)
