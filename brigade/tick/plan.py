@@ -1055,6 +1055,7 @@ def _plan_orders(snapshot: Snapshot, free_runs: int) -> tuple:
 
 
 def _plan_order_stops(snapshot: Snapshot) -> tuple:
+    parked = {order.name for order in snapshot.orders if order.parked}
     return tuple(
         StopOrderRun(
             order=live.order,
@@ -1062,7 +1063,7 @@ def _plan_order_stops(snapshot: Snapshot) -> tuple:
             reason=f"the run passed the max_wall of {live.max_wall} minutes of the recipe {live.recipe}",
         )
         for live in snapshot.live_order_runs
-        if snapshot.now - live.started > timedelta(minutes=live.max_wall)
+        if live.order not in parked and snapshot.now - live.started > timedelta(minutes=live.max_wall)
     )
 
 
