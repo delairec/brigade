@@ -11,6 +11,7 @@ from tests.awawa.list_temporary_roots import list_temporary_roots
 from tests.awawa.read_input import read_input
 from tests.awawa.volatile_value_masker import (
     COMMIT_PLACEHOLDER,
+    COMPACT_INSTANT_PLACEHOLDER,
     INSTANT_PLACEHOLDER,
     PLACEHOLDER,
     RUN_PLACEHOLDER,
@@ -41,6 +42,10 @@ def _replay_instant(number: str) -> str:
     return (REPLAYED_INSTANT + timedelta(seconds=int(number))).strftime(ISO_INSTANT_FORMAT)
 
 
+def _replay_compact_instant(number: str) -> str:
+    return (REPLAYED_INSTANT + timedelta(seconds=int(number))).strftime(COMPACT_INSTANT_FORMAT)
+
+
 def _replay_commit_name(number: str) -> str:
     return format(int(number), COMMIT_NAME_FORMAT)
 
@@ -56,6 +61,12 @@ def replay_recording(test_case: unittest.TestCase, recording: dict, search_path:
     placeholders = sorted(set(PLACEHOLDER.findall(recorded)), key=int)
     known = {f"<tmp:{number}>": _create_temporary_directory(test_case) for number in placeholders}
     known.update({f"<instant:{number}>": _replay_instant(number) for number in INSTANT_PLACEHOLDER.findall(recorded)})
+    known.update(
+        {
+            f"<compact_instant:{number}>": _replay_compact_instant(number)
+            for number in COMPACT_INSTANT_PLACEHOLDER.findall(recorded)
+        }
+    )
     known.update({f"<commit:{number}>": _replay_commit_name(number) for number in COMMIT_PLACEHOLDER.findall(recorded)})
     known.update(
         {placeholder: _replay_run_id(placeholder, rank) for rank, placeholder in enumerate(recording["run_order"])}

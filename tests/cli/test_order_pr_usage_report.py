@@ -3,6 +3,8 @@ import sys
 import unittest
 from pathlib import Path
 
+from tests.cli.list_finished_run_roles import list_finished_run_roles
+from tests.cli.list_order_steps import list_order_steps
 from tests.cli.wave_rehearser import READ_THE_BRIEF, ClassCleanupRegistrar, WaveRehearser
 
 REVIEWED_BRANCH = "feature/S1-empty-the-cart"
@@ -58,7 +60,7 @@ class BrigadeOrderOfTheRecipePrUsageReportTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            [(event["event"], event.get("step")) for event in events if event.get("kind") == "pr-usage-report"],
+            list_order_steps(events, "pr-usage-report"),
             [
                 ("order.started", None),
                 ("step.done", "1-collect"),
@@ -70,4 +72,4 @@ class BrigadeOrderOfTheRecipePrUsageReportTest(unittest.TestCase):
                 ("order.done", None),
             ],
         )
-        self.assertEqual([event["role"] for event in events if event["event"] == "run.finished"], ["reporter"])
+        self.assertEqual(list_finished_run_roles(events), ["reporter"])

@@ -1,3 +1,6 @@
+from dataclasses import dataclass
+from pathlib import Path
+
 from brigade.errors import BrigadeError
 from brigade.git.add_detached_worktree import DetachedWorktree, add_detached_worktree
 from brigade.git.commit_files import CommitRequest, commit_files
@@ -19,6 +22,26 @@ WRITING_REASON = "brigade writing an answer on a pull request"
 CHECKOUT_DIRECTORY = "checkout"
 
 
+@dataclass(frozen=True)
+class AnswerCommit:
+    checkout: Path
+    relative_path: str
+    markdown: str
+
+
+def _commit_answer(context: StudyRunContext, answer: AnswerCommit) -> None:
+    create_directory((answer.checkout / answer.relative_path).parent)
+    write_text_file(answer.checkout / answer.relative_path, answer.markdown)
+    commit_files(
+        context.runtime.run_process,
+        CommitRequest(
+            repository=answer.checkout,
+            files=(answer.relative_path,),
+            message=f"docs(reports): add the answer of {context.study.name}, run {context.run_id}",
+        ),
+    )
+
+
 def write_answer_to_pull_request(context: StudyRunContext, publication: AnswerPublication) -> dict:
     project = locate_study_project(context)
     if project.forge is None:
@@ -33,21 +56,10 @@ def write_answer_to_pull_request(context: StudyRunContext, publication: AnswerPu
     head = ask_pull_request_details(forge, project.forge, query, context.runtime)["head"]
     fetch_branches(run_process, BranchesFetch(repository=project.path, branches=(head,), environment=environment))
     checkout = context.run_directory / CHECKOUT_DIRECTORY
-    worktree = DetachedWorktree(
-        repository=project.path, path=checkout, start=f"{REMOTE}/{head}", reason=WRITING_REASON
-    )
+    worktree = DetachedWorktree(repository=project.path, path=checkout, start=f"{REMOTE}/{head}", reason=WRITING_REASON)
     add_detached_worktree(run_process, worktree)
     try:
-        create_directory((checkout / relative_path).parent)
-        write_text_file(checkout / relative_path, publication.markdown)
-        commit_files(
-            run_process,
-            CommitRequest(
-                repository=checkout,
-                files=(relative_path,),
-                message=f"docs(reports): add the answer of {context.study.name}, run {context.run_id}",
-            ),
-        )
+        _commit_answer(context, AnswerCommit(checkout, relative_path, publication.markdown))
         push_head_to_branch(run_process, BranchPush(repository=checkout, branch=head, environment=environment))
     finally:
         remove_detached_worktree(run_process, worktree)

@@ -9,7 +9,9 @@ from brigade.studies.write_answer_to_pull_request import PULL_REQUEST_FILE_OUTPU
 
 
 def resolve_output(name: str, executable_search_path: str) -> None:
-    if name in PUBLISHERS_BY_OUTPUT or name.startswith((FILE_OUTPUT_PREFIX, ENTITY_OUTPUT_PREFIX, PULL_REQUEST_FILE_OUTPUT_PREFIX)):
+    if name in PUBLISHERS_BY_OUTPUT or name.startswith(
+        (FILE_OUTPUT_PREFIX, ENTITY_OUTPUT_PREFIX, PULL_REQUEST_FILE_OUTPUT_PREFIX)
+    ):
         return
     executable_name = f"{OUTPUT_EXECUTABLE_PREFIX}{name}"
     if shutil.which(executable_name, path=executable_search_path) is None:

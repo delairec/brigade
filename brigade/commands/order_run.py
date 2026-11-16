@@ -116,9 +116,7 @@ def _equip_collect(project: Path, runtime: Runtime) -> Callable[[str, Mapping[st
     return collect
 
 
-def _equip_output(
-    order: Order, project: Entity | None, run_id: str, runtime: Runtime, values: Mapping[str, str]
-) -> StepPerformer:
+def _equip_output(order: Order, project: Entity | None, run_id: str, runtime: Runtime) -> StepPerformer:
     def hand(output: str, answer: Path) -> dict:
         handoff = ResultHandoff(
             runtime=runtime,
@@ -132,7 +130,7 @@ def _equip_output(
         return hand_result(handoff)
 
     return create_output_performer(
-        lambda result: keep_result(runtime, order.name, result), hand, order.output, values
+        lambda result: keep_result(runtime, order.name, result), hand, order.output, _read_values(order)
     )
 
 
@@ -160,11 +158,9 @@ def order_run(request: argparse.Namespace, runtime: Runtime) -> dict:
     performers = {
         "collect": create_collect_performer(_equip_collect(project, runtime), values),
         "command": create_command_performer(runtime.run_process, project, values),
-        "gate": create_gate_performer(
-            lambda name, parameters: _run_gate(name, parameters, project, runtime), values
-        ),
+        "gate": create_gate_performer(lambda name, parameters: _run_gate(name, parameters, project, runtime), values),
         "judge": create_judge_performer(lambda request: launch_run(request, runtime)),
-        "output": _equip_output(order, project_entity, run_id, runtime, values),
+        "output": _equip_output(order, project_entity, run_id, runtime),
     }
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, **run_order(runtime, run, performers)}
 
