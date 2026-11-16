@@ -20,7 +20,7 @@ class PreflightedWaveStart:
 def start_preflighted_wave(runtime: Runtime, demand: PreflightedWaveStart) -> dict:
     outcome = demand.preflight()
     started = demand.start()
-    if outcome.verdict == FAILED:
+    if outcome.result == FAILED:
         wave = started["wave"]
         append_event(runtime.paths, runtime.now, WavePaused(wave=wave, reason=FORGE_ACCOUNT_REASON, resume_at=None))
         findings = "; ".join(finding for check in outcome.checks for finding in check["findings"])

@@ -29,8 +29,8 @@ NOTES = {
     "summary": {"open": 2},
     "items": [],
 }
-FAILED_COVERAGE = {"schema_version": 1, "name": "coverage", "verdict": "fail", "findings": ["cart.py: 80%"]}
-PASSED_COVERAGE = {"schema_version": 1, "name": "coverage", "verdict": "pass", "findings": []}
+FAILED_COVERAGE = {"schema_version": 1, "name": "coverage", "result": "fail", "findings": ["cart.py: 80%"]}
+PASSED_COVERAGE = {"schema_version": 1, "name": "coverage", "result": "ok", "findings": []}
 
 
 def refuse_to_resolve_a_client(name: str):
@@ -97,21 +97,21 @@ class RunPreflightTest(unittest.TestCase):
         _runner, outcome = self.run_nightly("nightly", FAILED_COVERAGE)
 
         # Assert
-        self.assertEqual(outcome.verdict, "fail")
+        self.assertEqual(outcome.result, "fail")
 
     def test_should_pass_a_preflight_every_check_of_which_passes(self):
         # Act
         _runner, outcome = self.run_nightly("nightly", PASSED_COVERAGE)
 
         # Assert
-        self.assertEqual(outcome.verdict, "pass")
+        self.assertEqual(outcome.result, "ok")
 
     def test_should_return_the_verdict_and_the_findings_of_each_check(self):
         # Act
         _runner, outcome = self.run_nightly("nightly", FAILED_COVERAGE)
 
         # Assert
-        self.assertEqual(outcome.checks, [{"name": "coverage", "verdict": "fail", "findings": ["cart.py: 80%"]}])
+        self.assertEqual(outcome.checks, [{"name": "coverage", "result": "fail", "findings": ["cart.py: 80%"]}])
 
     def test_should_hand_each_check_the_parameters_and_the_documents_of_the_collectors(self):
         # Act

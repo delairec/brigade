@@ -637,7 +637,7 @@ OPEN_PULL_REQUEST = {
 }
 MERGED_PULL_REQUEST = {**OPEN_PULL_REQUEST, "state": "merged"}
 TASK_PREFLIGHTED_AT_THE_HEAD = {
-    "schema_version": 1,
+    "schema_version": 2,
     "ts": "2026-10-18T11:30:00Z",
     "event": "task.preflighted",
     "project": "tidepool",
@@ -654,13 +654,13 @@ PULL_REQUEST_FAILING_TWO_CHECKS = {
 }
 TASK_PREFLIGHTED_ON_FAILING_CHECKS = {
     **TASK_PREFLIGHTED_AT_THE_HEAD,
-    "checks": [{"name": "checks", "verdict": "fail", "findings": ["ci: failure", "coverage: failure"]}],
+    "checks": [{"name": "checks", "result": "fail", "findings": ["ci: failure", "coverage: failure"]}],
 }
 TASK_PREFLIGHTED_ON_FAILING_CHECKS_AND_PRIVACY = {
     **TASK_PREFLIGHTED_AT_THE_HEAD,
     "checks": [
-        {"name": "checks", "verdict": "fail", "findings": ["ci: failure", "coverage: failure"]},
-        {"name": "privacy", "verdict": "fail", "findings": ["src/cart.py:12: an e-mail address"]},
+        {"name": "checks", "result": "fail", "findings": ["ci: failure", "coverage: failure"]},
+        {"name": "privacy", "result": "fail", "findings": ["src/cart.py:12: an e-mail address"]},
     ],
 }
 PULL_REQUEST_DETAILS = {
@@ -1203,7 +1203,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -1214,17 +1214,17 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "checks": [
                         {
                             "name": "ancestry",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "checks",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "corpus",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                             "commands": [
                                 {"command": "awawa fmt --check .", "exit_code": 0},
@@ -1233,27 +1233,27 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                         },
                         {
                             "name": "promotion",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "untouched_files",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "privacy",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "body",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "size",
-                            "verdict": "info",
+                            "result": "info",
                             "findings": ["0 files", "0 lines", "0 packages", "0 layers"],
                         },
                     ],
@@ -1377,7 +1377,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -1388,17 +1388,17 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "checks": [
                         {
                             "name": "ancestry",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "checks",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "corpus",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                             "commands": [
                                 {"command": "awawa fmt --check .", "exit_code": 0},
@@ -1407,27 +1407,27 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                         },
                         {
                             "name": "promotion",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "untouched_files",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "privacy",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "body",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "size",
-                            "verdict": "info",
+                            "result": "info",
                             "findings": ["0 files", "0 lines", "0 packages", "0 layers"],
                         },
                     ],
@@ -1627,7 +1627,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-18T11:30:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -1788,7 +1788,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-18T11:30:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -1799,12 +1799,12 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "checks": [
                         {
                             "name": "checks",
-                            "verdict": "fail",
+                            "result": "fail",
                             "findings": ["ci: failure", "coverage: failure"],
                         },
                         {
                             "name": "privacy",
-                            "verdict": "fail",
+                            "result": "fail",
                             "findings": ["src/cart.py:12: an e-mail address"],
                         },
                     ],
@@ -1877,7 +1877,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-18T11:30:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -2587,7 +2587,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -2598,17 +2598,17 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "checks": [
                         {
                             "name": "ancestry",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "checks",
-                            "verdict": "fail",
+                            "result": "fail",
                             "findings": ["ci: failure"],
                         },
                         {
                             "name": "corpus",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                             "commands": [
                                 {"command": "awawa fmt --check .", "exit_code": 0},
@@ -2617,27 +2617,27 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                         },
                         {
                             "name": "promotion",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "untouched_files",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "privacy",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "body",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "size",
-                            "verdict": "info",
+                            "result": "info",
                             "findings": ["0 files", "0 lines", "0 packages", "0 layers"],
                         },
                     ],
@@ -3049,7 +3049,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-18T11:30:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -3143,7 +3143,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-18T11:30:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -5247,7 +5247,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-18T11:30:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -5376,7 +5376,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-18T11:30:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -7172,7 +7172,7 @@ class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
             self._read_events_of_the_tick(),
             [
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -7180,28 +7180,28 @@ class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
                     "task": "T7",
                     "head": "8885daa",
                     "checks": [
-                        {"name": "ancestry", "verdict": "pass", "findings": []},
+                        {"name": "ancestry", "result": "ok", "findings": []},
                         {
                             "name": "acceptance",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                             "commands": [{"command": "python3 -m unittest", "exit_code": 0}],
                         },
                         {
                             "name": "corpus",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                             "commands": [
                                 {"command": "awawa fmt --check .", "exit_code": 0},
                                 {"command": "awawa lint --strict .", "exit_code": 0},
                             ],
                         },
-                        {"name": "promotion", "verdict": "pass", "findings": []},
-                        {"name": "untouched_files", "verdict": "pass", "findings": []},
-                        {"name": "privacy", "verdict": "pass", "findings": []},
+                        {"name": "promotion", "result": "ok", "findings": []},
+                        {"name": "untouched_files", "result": "ok", "findings": []},
+                        {"name": "privacy", "result": "ok", "findings": []},
                         {
                             "name": "size",
-                            "verdict": "info",
+                            "result": "info",
                             "findings": ["0 files", "0 lines", "0 packages", "0 layers"],
                         },
                     ],

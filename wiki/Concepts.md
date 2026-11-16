@@ -15,7 +15,8 @@ of another page is unknown.
 | wave | a batch of ratified tasks started together, recorded in the ledger alone, with no branch and no pull request of its own | [Waves](Waves.md) |
 | task | a `TASK` entity of the project corpus, delivered by a build run on the branch `<prefix>/<id>-<slug>` | [Tasks](Tasks.md) |
 | preflight | a named set of collectors and checks run by `brigade preflight <name>`; `verify-pull-request` holds the deterministic checks of the pull request of a task, before any judgment | [Preflight](Preflight.md) |
-| verdict | `pass` or `changes`, the judgment of a review run on the pull request of a task, recorded as `task.verdict` | [Verification](Review.md) |
+| check | one deterministic judgment of a preflight, answering `result` `ok` or `fail` with its findings; a check run of the forge keeps the forge's sense | [Preflight](Preflight.md) |
+| verdict | `pass` or `changes`, the judgment of a review run on the pull request of a task, recorded as `task.verdict` | [Review](Review.md) |
 | finding | one defect a verdict names, graded `critical`, `high`, `medium` or `low`, which a remediation run answers | [Review answers](Review-answers.md) |
 | procedure | a Markdown file whose front matter declares `capabilities`: what the agent is asked to do | [Runs](Runs.md) |
 | slot | what a procedure calls, never a role: `plan`, `build`, `review`, `remediate`, `rebase`, `report`, `triage`, `rules`, `explore` | [Roles](Roles.md) |
@@ -25,7 +26,7 @@ of another page is unknown.
 | run | a procedure run as a slot through the client adapter, kept in `$XDG_STATE_HOME/brigade/runs/<run id>/` | [Runs](Runs.md) |
 | segment | one launch of the client within a run; a run cut and resumed is one run of several segments | [Runs](Runs.md) |
 | progress file | `progress.awawa` or `progress.md`, what a run hands from one segment to the next | [Runs](Runs.md) |
-| tick | one pass that builds a snapshot of the facts, plans the actions they call for and applies them | [Tick and scheduler](Tick-and-scheduler.md) |
+| tick | one pass that builds a snapshot of the facts, decides the actions they call for and applies them | [Tick and scheduler](Tick-and-scheduler.md) |
 | scheduler | what fires `brigade tick --once` every five minutes: `systemd`, `cron` or `loop` | [Tick and scheduler](Tick-and-scheduler.md) |
 | ledger | every event brigade records, one JSON line in `$XDG_STATE_HOME/brigade/ledger/<YYYY-MM>.jsonl` | [Ledger](Ledger.md) |
 | trail | the JSON lines of the subprocesses one invocation started | [Trails](Trails.md) |

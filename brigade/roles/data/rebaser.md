@@ -13,4 +13,4 @@ Read the base the branch targets from its pull request when one exists, never by
 
 Run the project's tests after the rebase, and push only when they pass.
 
-Answer with the new head of the branch, each conflict and how it was resolved, and the test verdict.
+Answer with the new head of the branch, each conflict and how it was resolved, and the test result.

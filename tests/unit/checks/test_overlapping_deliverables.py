@@ -54,7 +54,7 @@ class OverlappingDeliverablesCheckTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "name": "overlapping_deliverables",
-                "verdict": "fail",
+                "result": "fail",
                 "findings": [
                     "@TASK.B3 (todo) cites brigade/till.py, @DECISION.ReceiptsAreKept as @TASK.B9 does",
                     "@TASK.B4 (draft) cites brigade/till.py, @DECISION.ReceiptsAreKept as @TASK.B9 does",
@@ -80,5 +80,5 @@ class OverlappingDeliverablesCheckTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            document, {"schema_version": 1, "name": "overlapping_deliverables", "verdict": "pass", "findings": []}
+            document, {"schema_version": 1, "name": "overlapping_deliverables", "result": "ok", "findings": []}
         )

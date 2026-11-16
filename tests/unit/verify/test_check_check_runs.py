@@ -17,5 +17,5 @@ class CheckCheckRunsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            check, {"name": "checks", "verdict": "fail", "findings": ["lint: failure", "coverage: pending"]}
+            check, {"name": "checks", "result": "fail", "findings": ["lint: failure", "coverage: pending"]}
         )

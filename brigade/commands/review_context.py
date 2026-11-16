@@ -36,7 +36,7 @@ def _render_commands(entries: list[dict]) -> str:
 
 def _render_preflight(checks: list[dict]) -> str:
     return "".join(
-        f"{check['verdict']}  {check['name']}\n" + "".join(f"  {finding}\n" for finding in check["findings"])
+        f"{check['result']}  {check['name']}\n" + "".join(f"  {finding}\n" for finding in check["findings"])
         for check in checks
     )
 

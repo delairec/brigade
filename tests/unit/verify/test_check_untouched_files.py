@@ -43,7 +43,7 @@ class CheckUntouchedFilesTest(unittest.TestCase):
             check,
             {
                 "name": "untouched_files",
-                "verdict": "fail",
+                "result": "fail",
                 "findings": ["corpus/rules.awawa changes while none of its entities does"],
             },
         )
@@ -76,7 +76,7 @@ class CheckUntouchedFilesTest(unittest.TestCase):
             check,
             {
                 "name": "untouched_files",
-                "verdict": "fail",
+                "result": "fail",
                 "findings": ["brigade/rules.awawa changes while none of its entities does"],
             },
         )

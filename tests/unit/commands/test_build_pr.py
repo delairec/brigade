@@ -210,7 +210,7 @@ class TaskPrPushTest(unittest.TestCase):
                     "\n"
                     "## Checks of d00d\n"
                     "\n"
-                    "- pass `python3 -m unittest` 1.2 s\n"
+                    "- ok `python3 -m unittest` 1.2 s\n"
                     "\n"
                     "Co-Authored-By: Ada <ada@example.org>\n",
                     "milestone": "Parser",

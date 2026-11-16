@@ -21,7 +21,7 @@ class MeasureSizeTest(unittest.TestCase):
             size,
             {
                 "name": "size",
-                "verdict": "info",
+                "result": "info",
                 "findings": ["3 files", "15 lines", "2 packages: docs, shop/domain", "1 layers: domain"],
             },
         )

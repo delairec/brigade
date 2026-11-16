@@ -42,7 +42,7 @@ def preflight_pull_request(runtime: Runtime, demand: PreflightDemand) -> dict:
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "preflight": VERIFY_PULL_REQUEST,
-        "verdict": outcome.verdict,
+        "result": outcome.result,
         "project": demand.project.name,
         "pr": demand.pr,
         "task": demand.task,

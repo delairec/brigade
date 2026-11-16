@@ -94,4 +94,4 @@ class AssembleLocalVerifyContextTest(unittest.TestCase):
         document = self.assemble()
 
         # Assert
-        self.assertEqual(document["preflight"][0], {"name": "ancestry", "verdict": "pass", "findings": []})
+        self.assertEqual(document["preflight"][0], {"name": "ancestry", "result": "ok", "findings": []})

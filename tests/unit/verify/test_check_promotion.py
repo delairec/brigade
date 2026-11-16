@@ -46,7 +46,7 @@ class CheckPromotionTest(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual(check, {"name": "promotion", "verdict": "pass", "findings": []})
+        self.assertEqual(check, {"name": "promotion", "result": "ok", "findings": []})
 
     def test_should_fail_a_task_left_unpromoted_and_unanchored(self):
         # Act
@@ -63,7 +63,7 @@ class CheckPromotionTest(unittest.TestCase):
             check,
             {
                 "name": "promotion",
-                "verdict": "fail",
+                "result": "fail",
                 "findings": [
                     "@TASK.B1 is STATUS todo, not implemented",
                     "@TASK.B1 is delivered by no pull request, not by #160",
@@ -100,7 +100,7 @@ class CheckPromotionTest(unittest.TestCase):
             check,
             {
                 "name": "promotion",
-                "verdict": "fail",
+                "result": "fail",
                 "findings": [r"SPEC 1 has no IMPL whose anchor resolves: matches brigade/cli\.py"],
             },
         )
@@ -128,7 +128,7 @@ class CheckPromotionTest(unittest.TestCase):
         check = check_promotion(awawa, facts)
 
         # Assert
-        self.assertEqual(check, {"name": "promotion", "verdict": "pass", "findings": []})
+        self.assertEqual(check, {"name": "promotion", "result": "ok", "findings": []})
 
 
 class CheckPromotionOfAnAreaTest(unittest.TestCase):
@@ -167,7 +167,7 @@ class CheckPromotionOfAnAreaTest(unittest.TestCase):
         check = self.check("src/cart.py::def add_item")
 
         # Assert
-        self.assertEqual(check, {"name": "promotion", "verdict": "pass", "findings": []})
+        self.assertEqual(check, {"name": "promotion", "result": "ok", "findings": []})
 
     def test_should_refuse_an_anchor_read_from_the_area_instead_of_the_repository(self):
         # Act
@@ -217,4 +217,4 @@ class CheckPromotionOfAnAreaTest(unittest.TestCase):
         check = self.check("src/alias.py::def add_item")
 
         # Assert
-        self.assertEqual(check, {"name": "promotion", "verdict": "pass", "findings": []})
+        self.assertEqual(check, {"name": "promotion", "result": "ok", "findings": []})

@@ -9,7 +9,7 @@ from brigade.collecting.collector_environment import CollectorInputs
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.preflights.find_preflight import find_preflight
 from brigade.runtime import Runtime
-from brigade.system.check_shapes import FAILED, PASSED
+from brigade.system.check_shapes import FAILED, OK
 from brigade.system.document_shapes import SCHEMA_VERSION, TEXT
 from brigade.system.validate_document import Field
 
@@ -47,7 +47,7 @@ class PreflightRun:
 
 @dataclass(frozen=True)
 class PreflightOutcome:
-    verdict: str
+    result: str
     checks: list
     collected: dict
 
@@ -79,5 +79,5 @@ def run_preflight(run: PreflightRun, runtime: Runtime) -> PreflightOutcome:
     preflight = find_preflight(run.name, run.preflights)
     collected = {step["name"]: _collect(step, run, runtime) for step in preflight["collectors"]}
     checks = [_judge(step, run, collected, runtime) for step in preflight["checks"]]
-    verdict = FAILED if any(check["verdict"] == FAILED for check in checks) else PASSED
-    return PreflightOutcome(verdict=verdict, checks=checks, collected=collected)
+    result = FAILED if any(check["result"] == FAILED for check in checks) else OK
+    return PreflightOutcome(result=result, checks=checks, collected=collected)

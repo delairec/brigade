@@ -19,7 +19,7 @@ from brigade.system.write_text_atomically import write_text_atomically
 from brigade.tasks.locate_check_record import locate_check_record
 from brigade.tasks.locate_task_worktree import TaskWorktree
 from brigade.verify.check_privacy import check_privacy
-from brigade.verify.judge_findings import PASSED
+from brigade.verify.judge_findings import OK
 from brigade.verify.read_privacy_patterns import read_privacy_patterns
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -91,7 +91,7 @@ def _check_privacy_of_the_task(runtime: Runtime, worktree: TaskWorktree, head: s
     judgment = check_privacy(read_privacy_patterns(worktree.project), added_lines)
     return {
         "command": judgment["name"],
-        "passed": judgment["verdict"] == PASSED,
+        "passed": judgment["result"] == OK,
         "duration_ms": round((runtime.read_monotonic() - started) * MS_PER_S),
         "tail": judgment["findings"],
     }

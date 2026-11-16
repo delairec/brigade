@@ -15,7 +15,7 @@ class CheckCorpusAtHeadTest(unittest.TestCase):
             check,
             {
                 "name": "corpus",
-                "verdict": "pass",
+                "result": "ok",
                 "findings": [],
                 "commands": [
                     {"command": "awawa fmt --check .", "exit_code": 0, "duration_ms": 0, "output": ""},
@@ -38,7 +38,7 @@ class CheckCorpusAtHeadTest(unittest.TestCase):
             check,
             {
                 "name": "corpus",
-                "verdict": "fail",
+                "result": "fail",
                 "findings": ["awawa lint --strict . exited 1", "tasks.awawa:3: L002"],
                 "commands": [
                     {"command": "awawa fmt --check .", "exit_code": 0, "duration_ms": 0, "output": ""},

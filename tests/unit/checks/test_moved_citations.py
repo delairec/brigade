@@ -56,7 +56,7 @@ class MovedCitationsCheckTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "name": "moved_citations",
-                "verdict": "fail",
+                "result": "fail",
                 "findings": ["brigade/cart.py:3-4 moved since 22222222 to brigade/cart.py:5-6"],
             },
         )
@@ -111,4 +111,4 @@ class MovedCitationsCheckTest(unittest.TestCase):
         document = check(subject, create_test_runtime())
 
         # Assert
-        self.assertEqual(document, {"schema_version": 1, "name": "moved_citations", "verdict": "pass", "findings": []})
+        self.assertEqual(document, {"schema_version": 1, "name": "moved_citations", "result": "ok", "findings": []})

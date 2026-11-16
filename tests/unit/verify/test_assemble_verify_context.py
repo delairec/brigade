@@ -186,11 +186,11 @@ class AssembleVerifyContextTest(unittest.TestCase):
         self.assertEqual(
             document["preflight"],
             [
-                {"name": "ancestry", "verdict": "pass", "findings": []},
-                {"name": "checks", "verdict": "pass", "findings": []},
+                {"name": "ancestry", "result": "ok", "findings": []},
+                {"name": "checks", "result": "ok", "findings": []},
                 {
                     "name": "corpus",
-                    "verdict": "pass",
+                    "result": "ok",
                     "findings": [],
                     "commands": [
                         {"command": "awawa fmt --check .", "exit_code": 0, "duration_ms": 0, "output": ""},
@@ -199,18 +199,18 @@ class AssembleVerifyContextTest(unittest.TestCase):
                 },
                 {
                     "name": "promotion",
-                    "verdict": "fail",
+                    "result": "fail",
                     "findings": [
                         "@TASK.B1 is STATUS None, not implemented",
                         "@TASK.B1 is delivered by no pull request, not by #160",
                     ],
                 },
-                {"name": "untouched_files", "verdict": "pass", "findings": []},
-                {"name": "privacy", "verdict": "pass", "findings": []},
-                {"name": "body", "verdict": "pass", "findings": []},
+                {"name": "untouched_files", "result": "ok", "findings": []},
+                {"name": "privacy", "result": "ok", "findings": []},
+                {"name": "body", "result": "ok", "findings": []},
                 {
                     "name": "size",
-                    "verdict": "info",
+                    "result": "info",
                     "findings": ["1 files", "1 lines", "1 packages: brigade", "0 layers"],
                 },
             ],

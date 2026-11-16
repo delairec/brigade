@@ -9,7 +9,7 @@ class CheckBodyTest(unittest.TestCase):
         check = check_body("feat(cart): empty the cart\n\nDelivers @TASK.S3.\n")
 
         # Assert
-        self.assertEqual(check, {"name": "body", "verdict": "pass", "findings": []})
+        self.assertEqual(check, {"name": "body", "result": "ok", "findings": []})
 
     def test_should_fail_a_body_keeping_a_placeholder_of_its_template(self):
         # Act
@@ -20,7 +20,7 @@ class CheckBodyTest(unittest.TestCase):
             check,
             {
                 "name": "body",
-                "verdict": "fail",
+                "result": "fail",
                 "findings": ["the body keeps the placeholder $title", "the body keeps the placeholder $specs"],
             },
         )

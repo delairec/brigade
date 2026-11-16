@@ -99,14 +99,14 @@ class PreflightPullRequestOfAnAreaTest(unittest.TestCase):
         document = self.run_preflight()
 
         # Assert
-        self.assertIn({"name": "untouched_files", "verdict": "pass", "findings": []}, document["checks"])
+        self.assertIn({"name": "untouched_files", "result": "ok", "findings": []}, document["checks"])
 
     def test_should_resolve_the_anchors_of_the_task_from_the_root_of_the_repository(self):
         # Act
         document = self.run_preflight()
 
         # Assert
-        self.assertIn({"name": "promotion", "verdict": "pass", "findings": []}, document["checks"])
+        self.assertIn({"name": "promotion", "result": "ok", "findings": []}, document["checks"])
 
 
 class PreflightPullRequestTest(unittest.TestCase):
@@ -189,30 +189,30 @@ class PreflightPullRequestTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "preflight": "verify-pull-request",
-                "verdict": "pass",
+                "result": "ok",
                 "project": "shop",
                 "pr": 160,
                 "task": "B1",
                 "head": HEAD,
                 "checks": [
-                    {"name": "ancestry", "verdict": "pass", "findings": []},
-                    {"name": "checks", "verdict": "pass", "findings": []},
+                    {"name": "ancestry", "result": "ok", "findings": []},
+                    {"name": "checks", "result": "ok", "findings": []},
                     {
                         "name": "corpus",
-                        "verdict": "pass",
+                        "result": "ok",
                         "findings": [],
                         "commands": [
                             {"command": "awawa fmt --check .", "exit_code": 0, "duration_ms": 0, "output": ""},
                             {"command": "awawa lint --strict .", "exit_code": 0, "duration_ms": 0, "output": ""},
                         ],
                     },
-                    {"name": "promotion", "verdict": "pass", "findings": []},
-                    {"name": "untouched_files", "verdict": "pass", "findings": []},
-                    {"name": "privacy", "verdict": "pass", "findings": []},
-                    {"name": "body", "verdict": "pass", "findings": []},
+                    {"name": "promotion", "result": "ok", "findings": []},
+                    {"name": "untouched_files", "result": "ok", "findings": []},
+                    {"name": "privacy", "result": "ok", "findings": []},
+                    {"name": "body", "result": "ok", "findings": []},
                     {
                         "name": "size",
-                        "verdict": "info",
+                        "result": "info",
                         "findings": ["1 files", "1 lines", "1 packages: brigade", "0 layers"],
                     },
                 ],

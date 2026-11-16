@@ -32,7 +32,7 @@ class ForgeLoginsCheckTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "name": "forge_logins",
-                "verdict": "fail",
+                "result": "fail",
                 "findings": ["gh printed no token for the login prudence-bot, bound to review"],
             },
         )
@@ -45,4 +45,4 @@ class ForgeLoginsCheckTest(unittest.TestCase):
         document = check(subject, create_test_runtime())
 
         # Assert
-        self.assertEqual(document, {"schema_version": 1, "name": "forge_logins", "verdict": "pass", "findings": []})
+        self.assertEqual(document, {"schema_version": 1, "name": "forge_logins", "result": "ok", "findings": []})

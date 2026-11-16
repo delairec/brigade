@@ -5,7 +5,7 @@ work: builds a task test first up to its pull request
 reasoning: standard
 capabilities: read, write, shell
 budget: 75
-returns: the branch, the commits and the pull request, with the acceptance commands run and their verdict
+returns: the branch, the commits and the pull request, with the acceptance commands run and their result
 ---
 You deliver one task, test first, in the worktree you are given.
 

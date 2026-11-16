@@ -45,7 +45,7 @@ class TasksOutsideAfterCheckTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "name": "tasks_outside_after",
-                "verdict": "fail",
+                "result": "fail",
                 "findings": ["@TASK.B4 (draft) touches brigade/till.py, outside the AFTER of @TASK.B9"],
             },
         )
@@ -65,5 +65,5 @@ class TasksOutsideAfterCheckTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            document, {"schema_version": 1, "name": "tasks_outside_after", "verdict": "pass", "findings": []}
+            document, {"schema_version": 1, "name": "tasks_outside_after", "result": "ok", "findings": []}
         )

@@ -29,7 +29,7 @@ class AcceptanceCheckTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "name": "acceptance",
-                "verdict": "fail",
+                "result": "fail",
                 "findings": ["python3 -m unittest exited 1", "FAILED"],
                 "commands": [
                     {"command": "python3 -m unittest", "exit_code": 1, "duration_ms": 0, "output": "FAILED\n"}

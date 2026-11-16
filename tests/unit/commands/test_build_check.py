@@ -42,7 +42,7 @@ class TaskCheckTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             text,
-            "pass  python3 -m unittest  1.2 s\n"
+            "ok  python3 -m unittest  1.2 s\n"
             "fail  awawa lint --strict .  0.3 s\n"
             "\n"
             "$ awawa lint --strict .\n"

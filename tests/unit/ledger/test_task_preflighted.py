@@ -2,7 +2,7 @@ import unittest
 
 from brigade.ledger.task_preflighted import TaskPreflighted
 
-PASSING_ANCESTRY = {"name": "ancestry", "verdict": "pass", "findings": []}
+PASSING_ANCESTRY = {"name": "ancestry", "result": "ok", "findings": []}
 
 
 class TaskPreflightedTest(unittest.TestCase):
@@ -46,7 +46,7 @@ class TaskPreflightedTest(unittest.TestCase):
                 "task": "S3",
                 "pr": 42,
                 "head": "0123abc",
-                "checks": [{"name": "ancestry", "verdict": "pass", "findings": []}],
+                "checks": [{"name": "ancestry", "result": "ok", "findings": []}],
             },
         )
 
