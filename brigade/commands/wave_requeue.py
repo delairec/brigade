@@ -1,5 +1,6 @@
 import argparse
 from dataclasses import dataclass
+from pathlib import Path
 
 from brigade.command import Argument, Command
 from brigade.commands._read_forge_environment import ForgeSlot, read_forge_environment
@@ -7,6 +8,7 @@ from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.prepare_tree import Tree
 from brigade.corpus.read_entity import Entity, read_entity
 from brigade.errors import BrigadeError, EntityNotDefined
+from brigade.git.find_merge_base import find_merge_base
 from brigade.ledger.append_event import append_event
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.read_ledger import read_ledger
@@ -14,6 +16,7 @@ from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_state import REQUEUE_REASON, TaskState
 from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.find_project import find_project
+from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_project_forge import read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
@@ -30,6 +33,7 @@ DOCUMENT_SCHEMA_VERSION = 1
 QUEUED_STATE = "queued"
 PR_OPEN_STATE = "pr_open"
 TASK_TYPE = "TASK"
+REPOSITORY_FIELD = "PATH"
 NO_WORKTREE = None
 
 
@@ -37,19 +41,16 @@ def _render_text(document: dict) -> str:
     return f"task {document['task']} of {document['wave']} {document['state']}"
 
 
-def _read_task_on_main(runtime: Runtime, configuration: Configuration, started: WaveStarted, task: str):
-    project = find_project(read_projects(runtime), started.project)
-    main = locate_project_main(
-        runtime.run_process,
-        project,
-        lambda key: read_forge_environment(configuration, ForgeSlot(read_project_forge(project), key), runtime),
-    )
-    query = argparse.Namespace(project=started.project, ref=main, worktree=NO_WORKTREE)
+def _prepare_tree_at(runtime: Runtime, configuration: Configuration, started: WaveStarted, ref: str) -> Tree:
+    query = argparse.Namespace(project=started.project, ref=ref, worktree=NO_WORKTREE)
+    return prepare_project_tree(query, configuration, runtime)
+
+
+def _read_task_or_none(runtime: Runtime, tree: Tree, task: str) -> Entity | None:
     try:
-        tree = prepare_project_tree(query, configuration, runtime)
-        return main, read_entity(runtime.run_process, tree.root, TASK_TYPE, task)
+        return read_entity(runtime.run_process, tree.root, TASK_TYPE, task)
     except EntityNotDefined:
-        return main, None
+        return None
 
 
 @dataclass(frozen=True)
@@ -59,10 +60,27 @@ class TaskOfWave:
     entity: Entity
 
 
+def _read_task_at_the_fork(
+    runtime: Runtime, configuration: Configuration, task: TaskOfWave, main_tree: Tree, repository: Path
+) -> Entity | None:
+    fork = find_merge_base(runtime.run_process, repository, main_tree.sha, task.tree.sha)
+    return _read_task_or_none(runtime, _prepare_tree_at(runtime, configuration, task.started, fork), task.entity.name)
+
+
 def _require_unruled_on_main(runtime: Runtime, configuration: Configuration, task: TaskOfWave):
     started = task.started
-    main, on_main = _read_task_on_main(runtime, configuration, started, task.entity.name)
-    if on_main is not None and on_main != task.entity:
+    project = find_project(read_projects(runtime), started.project)
+    main = locate_project_main(
+        runtime.run_process,
+        project,
+        lambda key: read_forge_environment(configuration, ForgeSlot(read_project_forge(project), key), runtime),
+    )
+    main_tree = _prepare_tree_at(runtime, configuration, started, main)
+    on_main = _read_task_or_none(runtime, main_tree, task.entity.name)
+    if on_main is None or on_main == task.entity:
+        return
+    repository = Path(read_project_field(project, REPOSITORY_FIELD))
+    if _read_task_at_the_fork(runtime, configuration, task, main_tree, repository) != on_main:
         raise BrigadeError(
             f"the task {task.entity.name} of the wave {started.wave} differs between {main} and {task.tree.ref}:"
             f" the ruling on main reaches it through brigade wave cancel {started.wave} and a new wave cut from {main}"

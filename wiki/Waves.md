@@ -147,6 +147,10 @@ AI client again: the next tick launches its task again from the state it holds, 
 - `wave requeue` records `task.state` `queued` for a parked task of the wave named, and prints the task queued.
 - It exits 1 on a task that is not parked, naming its state; on a task outside the wave, naming the wave; on a parked
   task the branch of its milestone, or the main branch, holds implemented, naming the branch; and on a wave no `wave.started` names, naming it.
+- On an open wave, it also exits 1 on a task the main branch ruled since the branch of the wave left it: its entity on
+  the main branch differs from the one on the branch of the wave and from the one at the merge base of the two. It
+  names both branches and `brigade wave cancel`, whose new wave reads the ruling. A task ruled on the branch of the
+  wave alone, by a pull request into that branch, is queued.
 - A queued task that branch holds implemented is followed through its pull request, and recorded merged once it
   is.
 
