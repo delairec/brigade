@@ -7381,3 +7381,31 @@ DECISION ARecipeStepHoldsTheKeysOfItsKindAndARecipeEntityWritesThemAsSubFieldsOf
 	SOURCE "the pull request of @TASK.B50, whose SPEC names the kinds of step and max_wall and"
 		+ "leaves the keys of each kind, the unit of max_wall and the form of the entity open"
 		REF @TASK.B50
+
+DECISION TheEngineNamesEachStepByItsRankAndKindAndAStoppedOrderEndsDoneWithoutParking
+	TITLE "the engine names the result of each step of a recipe steps/<rank>-<kind>.json, rank from"
+		+ "1, and a failed step the recipe stops at ends its order done, not parked"
+	STATUS active
+	DESC "a step of a recipe holds no name: its file and the step of its ledger events are its rank"
+		+ "in the recipe and its kind, 1-collect, 2-judge"
+	DESC "on_fail skip writes the file of the step with the reason it was skipped, so a resumed run"
+		+ "does not run it again, and records step.failed and no step.done"
+	DESC "on_fail stop records step.failed then order.done, and the run answers the state stopped:"
+		+ "the order stays due by its schedule"
+	DESC "on_fail retry:N runs the step again up to N times, a step.failed recorded at each"
+		+ "failure, and parks the order once the retries are spent"
+	DESC "max_wall is the minutes from the start of the process running the run to the clock read"
+		+ "before each step; a run past it parks its order on the step it would have run, with the"
+		+ "reason the run passed the max_wall of N minutes of the recipe R"
+	DESC "the field kind of the order and step events holds the name of the recipe, study for a"
+		+ "study, so an event recorded before @TASK.B51 is read unchanged"
+		REF @TASK.B51
+	REJECTED "a name key on each step: a step holds the keys of its kind alone, and the lint"
+		+ "refuses any other"
+	REJECTED "stop parking the order: a parked order waits for the user, while stop is the recipe"
+		+ "saying the run ends there"
+	REJECTED "a field recipe beside kind in the events: two fields carrying one fact for every"
+		+ "order, the study included"
+	SOURCE "the pull request of @TASK.B51, whose SPEC 4, 5 and 8 leave the name of a step file, the"
+		+ "outcome of stop and the start of max_wall open"
+		REF @TASK.B51
