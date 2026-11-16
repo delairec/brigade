@@ -56,9 +56,6 @@ class BrigadeProjectAddOnAGitHubRepositoryTest(ProjectTestCase):
                 "REMOTE      acme/my-app",
                 "MAIN        trunk",
                 "CORPUS      corpus",
-                "ACCEPTANCE  npm run test  (guessed)",
-                "ACCEPTANCE  npm run lint  (guessed)",
-                "SETUP       npm ci  (guessed)",
                 "FORGE       github",
                 "STATUS      active",
             ],
@@ -71,9 +68,6 @@ class BrigadeProjectAddOnAGitHubRepositoryTest(ProjectTestCase):
             '\tREMOTE "acme/my-app"\n'
             '\tMAIN "trunk"\n'
             '\tCORPUS "corpus"\n'
-            '\tACCEPTANCE "npm run test"\n'
-            '\tACCEPTANCE "npm run lint"\n'
-            '\tSETUP "npm ci"\n'
             '\tFORGE "github"\n'
             "\tSTATUS active\n",
         )
@@ -114,7 +108,7 @@ class BrigadeProjectShowTest(ProjectTestCase):
     def setUp(self):
         super().setUp()
         self.project = self.create_project("app")
-        self.run_project("add", str(self.project.path), "--heavy", "make e2e")
+        self.run_project("add", str(self.project.path))
 
     def test_should_print_the_fields_of_the_project_as_text(self):
         # Act
@@ -129,7 +123,6 @@ class BrigadeProjectShowTest(ProjectTestCase):
                 "@PROJECT.app",
                 f"PATH        {self.project.path}",
                 "MAIN        main",
-                "HEAVY       make e2e",
                 "FORGE       none",
                 "STATUS      active",
             ],

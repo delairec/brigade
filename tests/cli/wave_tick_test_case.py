@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from tests.cli.read_ledger_events import read_ledger_events
+from tests.cli.recipe_schema import RECIPE_SCHEMA
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FileWaitingTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import PINNED_COMMIT_DATES, TemporaryProject
@@ -29,6 +30,10 @@ PROJECT_SCHEMA = (
     "\tFIELD STATUS open|closed\n\t\tREQUIRED\n"
     "\tFIELD BLOCKS @TASK\n\t\tREPEATABLE\n\t\tCONVERSE BLOCKED_BY\n"
     "\tWHEN STATUS closed\n\t\tGATE suppressed\n"
+    f"{RECIPE_SCHEMA}"
+)
+SETUP_RECIPE = (
+    'RECIPE setup\n\tSCHEMA_VERSION 1\n\tMAX_WALL 10\n\tSTEP command\n\t\tARGV "touch"\n\t\tARGV "setup-ran"\n'
 )
 MAIN_TASKS = 'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS implemented\n'
 WAVE_TASKS = (
@@ -83,8 +88,6 @@ FAKE_GH = (
 
 
 class WaveTickTestCase(unittest.TestCase):
-    setup_commands = ("touch setup-ran",)
-
     def run_tick(self, *options: str):
         return self.machine.run_brigade(CLONE_ENTRY_POINT, "tick", *options, environment=self.describe_environment())
 
@@ -121,6 +124,7 @@ class WaveTickTestCase(unittest.TestCase):
         )
         self.project.write("corpus/_schema.awawa", PROJECT_SCHEMA)
         self.project.write("corpus/tasks.awawa", MAIN_TASKS)
+        self.project.write("corpus/recipes.awawa", SETUP_RECIPE)
         self.project.track("corpus")
         self.project.run_git("commit", "--quiet", "-m", "the corpus")
         self.project.run_git("checkout", "--quiet", "-b", MILESTONE_BRANCH)
@@ -137,7 +141,6 @@ class WaveTickTestCase(unittest.TestCase):
             str(self.project.path),
             "--corpus-mode",
             "control",
-            *(argument for command in self.setup_commands for argument in ("--setup", command)),
         )
         (self.state / "ledger").mkdir(parents=True)
         (self.state / "ledger" / "2026-10.jsonl").write_text(WAVE_EVENTS)
