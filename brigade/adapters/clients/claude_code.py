@@ -1,12 +1,11 @@
 import json
 import math
 import re
-from datetime import UTC, datetime
+import shlex
 from pathlib import Path
 
 from brigade.adapters.clients.describe_unreadable_output import describe_unreadable_output
 from brigade.errors import BrigadeError
-from brigade.system.instant_formats import ISO_INSTANT_FORMAT
 
 SCHEMA_VERSION = 1
 CLIENT_NAME = "claude-code"
@@ -93,16 +92,10 @@ def _build_role_options(request: dict) -> list[str]:
     ]
 
 
-def _build_stop_hook(stop_at: str) -> str:
-    epoch = round(datetime.strptime(stop_at, ISO_INSTANT_FORMAT).replace(tzinfo=UTC).timestamp())
-    stop = json.dumps({"continue": False, "stopReason": f"the soft limit {stop_at} has passed"})
-    return f"[ \"$(date -u +%s)\" -ge {epoch} ] && printf '%s\\n' '{stop}'; exit 0"
-
-
-def _build_stop_options(stop_at) -> list[str]:
-    if stop_at is None:
+def _build_stop_options(stop_hook) -> list[str]:
+    if stop_hook is None:
         return []
-    hook = {"type": "command", "command": _build_stop_hook(stop_at)}
+    hook = {"type": "command", "command": shlex.join(stop_hook)}
     return ["--settings", json.dumps({"hooks": {"PostToolUse": [{"matcher": "*", "hooks": [hook]}]}})]
 
 
@@ -114,7 +107,7 @@ def _build_command(request: dict, session_options: list[str]) -> dict:
             *UNATTENDED_OPTIONS,
             *session_options,
             *_build_role_options(request),
-            *_build_stop_options(request["stop_at"]),
+            *_build_stop_options(request["stop_hook"]),
         ],
         "environment": {},
         "stdin": request["brief"],

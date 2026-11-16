@@ -11,6 +11,7 @@ brigade runs list [--wave <wave>] [--task <task>] [--state running|finished|dead
 brigade runs show <id> [--log] [--json]          # the summary of a run, its segments and its progress; --log adds its journal
 brigade runs show <id> --follow                  # the same with --log, then each record as it is written
 brigade runs stop <id>                           # stop a running run; exit 0 once it finished on stopped
+brigade runs stop-hook --at <epoch>              # the stop document a client hook prints once the soft limit has passed
 brigade runs prune [--keep <n>] [--before <YYYY-MM-DD>] [--resumable] [--dry-run] [--json]
 ```
 
@@ -199,12 +200,13 @@ and the ledger as the foreground command does.
   segment ends with the outcome `wall_limit`, whether its soft limit has passed or not.
 - The soft limit of a segment is its wall-time limit minus `soft_limit_margin_s` of `config.toml`, a positive number
   defaulting to 120, none when the limit is not above it. The `launch-argv` and `resume-argv` requests carry it as
-  `stop_at`, the UTC instant to the second computed at launch, null without one.
+  `stop_at`, the UTC instant to the second computed at launch, null without one, and as `stop_hook`, the argv of
+  `brigade runs stop-hook --at <epoch>` that prints the stop document once that instant has passed, null without one.
 - A client whose probe declares `graceful_stop` ends its session between two steps once `stop_at` has passed and
   answers the outcome `soft_limit`. brigade records that segment as one ended `done`, its session, steps, usage and
   `cost_usd` included, and the run goes on as after a cut on the clock.
-- The Claude Code adapter passes a `PostToolUse` hook in `--settings` that stops the main session and its sub-agents
-  after the tool call that passes `stop_at`. A client declaring no `graceful_stop` keeps the hard cut.
+- The Claude Code adapter passes a `PostToolUse` hook in `--settings`, the argv of `stop_hook` and no shell test, that
+  stops the main session and its sub-agents after the tool call that passes `stop_at`. A client declaring no `graceful_stop` keeps the hard cut.
 
 </details>
 

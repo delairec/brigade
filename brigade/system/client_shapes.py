@@ -36,6 +36,7 @@ LAUNCH_REQUEST = {
     "progress_file": TEXT,
     "session_id": TEXT,
     "stop_at": OPTIONAL_TEXT,
+    "stop_hook": Field(kinds=(list,), nullable=True, items=TEXT, non_empty=True),
 }
 
 CLIENT_REQUEST_SHAPES = {

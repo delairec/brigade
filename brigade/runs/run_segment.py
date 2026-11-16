@@ -9,6 +9,7 @@ from brigade.runs.ask_progress import ask_progress
 from brigade.runs.compose_brief import BriefParts, compose_brief
 from brigade.runs.count_session_steps import SessionSteps, count_session_steps
 from brigade.runs.decide_stop_at import decide_stop_at
+from brigade.runs.describe_stop_hook import describe_stop_hook
 from brigade.runs.locate_first_edit import FirstEdit, locate_first_edit
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.run_locations import (
@@ -194,13 +195,15 @@ def _record_ending_before_launch(number: int, ending: Ending, session_id: str | 
 def _describe_launch(plan: RunPlan, number: int, runtime: Runtime, brief: str) -> LaunchArgvRequest | ResumeArgvRequest:
     resumes_session = number == plan.first_segment and plan.resumed_session is not None
     request = ResumeArgvRequest if resumes_session else LaunchArgvRequest
+    stop_at = decide_stop_at(runtime.read_clock(), plan.wall_limit_s, plan.configuration.soft_limit_margin_s)
     return request(
         worktree=str(plan.worktree),
         brief=brief,
         role=_describe_role(plan),
         progress_file=str(plan.progress_file),
         session_id=plan.resumed_session if resumes_session else str(uuid.uuid4()),
-        stop_at=decide_stop_at(runtime.read_clock(), plan.wall_limit_s, plan.configuration.soft_limit_margin_s),
+        stop_at=stop_at,
+        stop_hook=describe_stop_hook(runtime.entry_point, stop_at),
     )
 
 
