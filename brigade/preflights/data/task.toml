@@ -1,0 +1,5 @@
+schema_version = 1
+name = "task"
+description = "the acceptance commands and the checks of the corpus at the head of the worktree of a task"
+collectors = [{ name = "task-worktree" }]
+checks = [{ name = "acceptance" }, { name = "corpus_at_head" }]

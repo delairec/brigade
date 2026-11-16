@@ -188,7 +188,15 @@ class AssembleVerifyContextTest(unittest.TestCase):
             [
                 {"name": "ancestry", "verdict": "pass", "findings": []},
                 {"name": "checks", "verdict": "pass", "findings": []},
-                {"name": "corpus", "verdict": "pass", "findings": []},
+                {
+                    "name": "corpus",
+                    "verdict": "pass",
+                    "findings": [],
+                    "commands": [
+                        {"command": "awawa fmt --check .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                        {"command": "awawa lint --strict .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                    ],
+                },
                 {
                     "name": "promotion",
                     "verdict": "fail",

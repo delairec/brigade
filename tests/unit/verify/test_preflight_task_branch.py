@@ -105,9 +105,19 @@ class PreflightTaskBranchTest(unittest.TestCase):
                         "name": "acceptance",
                         "verdict": "pass",
                         "findings": [],
-                        "commands": [{"command": "python3 -m unittest", "exit_code": 0}],
+                        "commands": [
+                            {"command": "python3 -m unittest", "exit_code": 0, "duration_ms": 0, "output": ""}
+                        ],
                     },
-                    {"name": "corpus", "verdict": "pass", "findings": []},
+                    {
+                        "name": "corpus",
+                        "verdict": "pass",
+                        "findings": [],
+                        "commands": [
+                            {"command": "awawa fmt --check .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                            {"command": "awawa lint --strict .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                        ],
+                    },
                     {"name": "promotion", "verdict": "pass", "findings": []},
                     {"name": "untouched_files", "verdict": "pass", "findings": []},
                     {"name": "privacy", "verdict": "pass", "findings": []},
@@ -135,7 +145,14 @@ class PreflightTaskBranchTest(unittest.TestCase):
                 "name": "acceptance",
                 "verdict": "fail",
                 "findings": ["python3 -m unittest exited 1", "FAILED (failures=1)"],
-                "commands": [{"command": "python3 -m unittest", "exit_code": 1}],
+                "commands": [
+                    {
+                        "command": "python3 -m unittest",
+                        "exit_code": 1,
+                        "duration_ms": 0,
+                        "output": "FAILED (failures=1)\n",
+                    }
+                ],
             },
         )
 

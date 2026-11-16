@@ -2,8 +2,11 @@ import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
+from brigade.commands._equip_collector import equip_collector
+from brigade.commands._equip_preflight import equip_preflight
+from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
-from brigade.tasks.check_task import check_task
+from brigade.tasks.check_task import TaskCheckDemand, check_task
 from brigade.tasks.locate_task_worktree import locate_task_worktree
 
 PASSED = "pass"
@@ -33,7 +36,11 @@ def _decide_exit_code(document: dict) -> int:
 
 
 def task_check(request: argparse.Namespace, runtime: Runtime) -> dict:
-    return check_task(runtime, locate_task_worktree(runtime, Path.cwd(), request.task))
+    worktree = locate_task_worktree(runtime, Path.cwd(), request.task)
+    equipment = equip_collector(Path(read_project_field(worktree.project, "PATH")), runtime)
+    return check_task(
+        runtime, TaskCheckDemand(worktree=worktree, equipment=equipment, plugins=equip_preflight(runtime))
+    )
 
 
 COMMAND = Command(

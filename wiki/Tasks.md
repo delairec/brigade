@@ -49,8 +49,9 @@ attribution reserved for it. A run reads a further entity with `awawa show` when
 <details><summary><code>task check</code></summary>
 
 - It refuses a worktree whose files differ from `HEAD`, naming them.
-- It runs each step of the recipe `acceptance` of the project, read in the worktree, as an argv, never through a
-  shell, then `awawa fmt --check .` and `awawa lint --strict .`.
+- It runs the built-in preflight `task`: each step of the recipe `acceptance` of the project, read in the worktree, as
+  an argv, never through a shell, then `awawa fmt --check .` and `awawa lint --strict .`. It then runs the privacy
+  check on the lines the branch adds since its base.
 - It prints one line per command with its verdict and its duration, and the last 20 lines of each failing one.
 - It records the verdicts with the sha of `HEAD` in `$XDG_STATE_HOME/brigade/checks/<project>/<task>.json`.
 
