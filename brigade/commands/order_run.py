@@ -45,7 +45,6 @@ PARKED_EXIT_CODE = 1
 PARAM_SEPARATOR = "="
 PROJECT_VALUE = "project"
 NO_PROJECT = None
-NO_GATE_PARAMETERS = {}
 COLLECTOR_KIND = "collector"
 BEGINNING = date(1970, 1, 1)
 
@@ -91,11 +90,11 @@ def _read_values(order: Order) -> dict[str, str | None]:
     return {**dict(param.partition(PARAM_SEPARATOR)[::2] for param in order.params), PROJECT_VALUE: order.project}
 
 
-def _run_gate(name: str, project: Path, runtime: Runtime) -> PreflightOutcome:
+def _run_gate(name: str, parameters: Mapping[str, str], project: Path, runtime: Runtime) -> PreflightOutcome:
     run = PreflightRun(
         name=name,
         project=project,
-        parameters=NO_GATE_PARAMETERS,
+        parameters=dict(parameters),
         equipment=equip_collector(project, runtime),
         preflights=locate_preflights(project, runtime),
         plugins=equip_preflight(runtime),
@@ -117,7 +116,9 @@ def _equip_collect(project: Path, runtime: Runtime) -> Callable[[str, Mapping[st
     return collect
 
 
-def _equip_output(order: Order, project: Entity | None, run_id: str, runtime: Runtime) -> StepPerformer:
+def _equip_output(
+    order: Order, project: Entity | None, run_id: str, runtime: Runtime, values: Mapping[str, str]
+) -> StepPerformer:
     def hand(output: str, answer: Path) -> dict:
         handoff = ResultHandoff(
             runtime=runtime,
@@ -130,7 +131,9 @@ def _equip_output(order: Order, project: Entity | None, run_id: str, runtime: Ru
         )
         return hand_result(handoff)
 
-    return create_output_performer(lambda result: keep_result(runtime, order.name, result), hand, order.output)
+    return create_output_performer(
+        lambda result: keep_result(runtime, order.name, result), hand, order.output, values
+    )
 
 
 def resolve_order(runtime: Runtime, name: str) -> ResolvedOrder:
@@ -157,9 +160,11 @@ def order_run(request: argparse.Namespace, runtime: Runtime) -> dict:
     performers = {
         "collect": create_collect_performer(_equip_collect(project, runtime), values),
         "command": create_command_performer(runtime.run_process, project, values),
-        "gate": create_gate_performer(lambda name: _run_gate(name, project, runtime)),
+        "gate": create_gate_performer(
+            lambda name, parameters: _run_gate(name, parameters, project, runtime), values
+        ),
         "judge": create_judge_performer(lambda request: launch_run(request, runtime)),
-        "output": _equip_output(order, project_entity, run_id, runtime),
+        "output": _equip_output(order, project_entity, run_id, runtime, values),
     }
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, **run_order(runtime, run, performers)}
 

@@ -1,0 +1,13 @@
+schema_version = 1
+name = "pr-usage-report"
+description = "the usage report of one reviewed pull request, committed on its branch before the merge"
+params = ["pr"]
+max_wall = 60
+steps = [
+    { kind = "collect", collector = "ledger" },
+    { kind = "collect", collector = "pr-threads" },
+    { kind = "collect", collector = "corpus" },
+    { kind = "gate", preflight = "pr-reviewed", parameters = { pr = "{pr}" } },
+    { kind = "judge", slot = "report", procedure = "pr-usage-report", answer = "RESULT" },
+    { kind = "output", output = "pr-file:{pr}:docs/usage-reports/pull-requests/{pr}.md" },
+]

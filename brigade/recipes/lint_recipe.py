@@ -29,7 +29,7 @@ RECIPE_SHAPE = {
 STEP_SHAPES = {
     "collect": {"collector": TEXT, PARAMETERS_KEY: PARAMETERS},
     "command": {"argv": Field(kinds=(list,), items=TEXT)},
-    "gate": {"preflight": TEXT},
+    "gate": {"preflight": TEXT, PARAMETERS_KEY: PARAMETERS},
     "judge": {"slot": TEXT, "procedure": TEXT, "answer": TEXT},
     "output": {"output": TEXT},
     "order": {"recipe": TEXT, PARAMETERS_KEY: PARAMETERS},
