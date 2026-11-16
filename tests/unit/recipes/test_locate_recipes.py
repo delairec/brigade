@@ -26,14 +26,14 @@ class LocateRecipesTest(unittest.TestCase):
         for title, entity, corpus in rows:
             with self.subTest(title):
                 # Act
-                places = locate_recipes(PROJECT, entity, create_test_paths(Path("/home/ada")))
+                places = locate_recipes(PROJECT, entity, create_test_paths(Path("/srv/machine")))
 
                 # Assert
                 self.assertEqual(places.project_corpus, corpus)
 
     def test_should_place_the_recipe_files_of_the_project_the_machine_and_brigade(self):
         # Act
-        places = locate_recipes(PROJECT, UNREGISTERED, create_test_paths(Path("/home/ada")))
+        places = locate_recipes(PROJECT, UNREGISTERED, create_test_paths(Path("/srv/machine")))
 
         # Assert
         self.assertEqual(
@@ -41,7 +41,7 @@ class LocateRecipesTest(unittest.TestCase):
             RecipePlaces(
                 project_corpus=None,
                 project_directory=Path("/srv/shop/.brigade/recipes"),
-                machine_directory=Path("/home/ada/config/recipes"),
+                machine_directory=Path("/srv/machine/config/recipes"),
                 built_ins=BUILT_IN_RECIPES,
             ),
         )
