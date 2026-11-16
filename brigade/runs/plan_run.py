@@ -165,7 +165,7 @@ def _read_role_capabilities(role: ResolvedRole) -> set[str]:
 
 def _describe_clock_warning(client: str, budget: int, wall_limit_s: float) -> str:
     return (
-        f"{client} counts no steps: the budget of {budget} steps is held on the clock"
+        f"{client} counts no turns: the budget of {budget} turns is held on the clock"
         f" and the run cut at its limit of {wall_limit_s:g} s"
     )
 

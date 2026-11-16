@@ -899,10 +899,10 @@ class DoctorStepsTest(DoctorTestCase):
         super().setUp()
         self.configure(CONFIGURATION)
         self.steps_warning = {
-            "name": "steps",
+            "name": "turns",
             "kind": "optional",
             "state": "warning",
-            "detail": "scripted counts no steps: the budget is held on the clock and the run cut at its limit",
+            "detail": "scripted counts no turns: the budget is held on the clock and the run cut at its limit",
             "fallback": "the wall-time limit of each run",
         }
 
