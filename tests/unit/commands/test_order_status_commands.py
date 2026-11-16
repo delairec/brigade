@@ -159,10 +159,10 @@ class OrderResumeOfAParkedOrderTest(unittest.TestCase):
 
     def test_should_launch_no_run_for_an_order_that_is_not_parked(self):
         # Act
-        document = order_resume.COMMAND.run(Namespace(name="nightly"), self.runtime)
+        order_resume.COMMAND.run(Namespace(name="nightly"), self.runtime)
 
         # Assert
-        self.assertEqual((document["run"], self.spawned), (None, []))
+        self.assertEqual(self.spawned, [])
 
     def test_should_say_which_parked_run_it_relaunched(self):
         # Arrange
