@@ -38,6 +38,7 @@ from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_confi
 from brigade.system.read_user_systemd_state import SYSTEMD_STATES_FIT_FOR_TIMERS, read_user_systemd_state
 from brigade.system.require_configured_client import require_configured_client
 from brigade.system.run_process import ProcessRequest
+from brigade.system.validate_document import DocumentInvalid
 
 DOCUMENT_SCHEMA_VERSION = 1
 AWAWA_FLOOR = (2, 7)
@@ -445,7 +446,7 @@ def _find_recipe_problems(project: Entity, checkout: Path, runtime: Runtime) -> 
     places = locate_recipes(checkout, project, runtime.paths)
     try:
         commands = {recipe: read_project_commands(places, recipe, runtime.run_process) for recipe in PROJECT_RECIPES}
-    except ToolFailure as error:
+    except (ToolFailure, DocumentInvalid) as error:
         return [f"recipes unreadable: {error}"]
     return [
         problem
