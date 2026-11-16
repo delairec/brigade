@@ -46,6 +46,31 @@ class ResolveRecipeTest(unittest.TestCase):
             ),
         )
 
+    def test_should_resolve_the_recipe_named_among_the_recipes_of_its_place(self):
+        # Arrange
+        write_recipe(self.places.machine_directory, "nightly", "the machine's nightly")
+        write_recipe(self.places.machine_directory, "review", "the machine's review")
+
+        # Act
+        recipe = resolve_recipe("review", self.places, refuse_to_run)
+
+        # Assert
+        self.assertEqual(
+            recipe,
+            RecipeFound(
+                name="review",
+                source="machine",
+                document={
+                    "schema_version": 1,
+                    "name": "review",
+                    "description": "the machine's review",
+                    "params": [],
+                    "max_wall": 5,
+                    "steps": [],
+                },
+            ),
+        )
+
     def test_should_refuse_a_name_no_place_holds_naming_it(self):
         # Act
         with self.assertRaises(BrigadeError) as raised:
