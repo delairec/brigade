@@ -36,7 +36,7 @@ def reports_show(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("reports", "show"),
-    help="print a wave report or a study answer, rendered from its entity",
+    help="print a wave, task or milestone report or an order result, rendered from its entity",
     arguments=(Argument(("id",), {"help": "the id of the report, as brigade reports list prints it"}),),
     run=reports_show,
     render_text=_render_text,

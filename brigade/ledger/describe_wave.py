@@ -113,10 +113,10 @@ def _cost_wave(events: list, runs: list[FinishedRun], tasks: list[str]) -> dict:
     }
 
 
-def _date_entries(entries: list[LedgerEntry]) -> list[dict]:
+def _list_events(entries: list[LedgerEntry]) -> list[dict]:
     return [
         {"at": format_instant(entry.instant), "event": entry.event.name, "fields": entry.event.to_document()}
-        for entry in sorted(entries, key=lambda entry: entry.instant)
+        for entry in entries
     ]
 
 
@@ -146,5 +146,5 @@ def describe_wave(reading: LedgerReading, wave: str) -> dict:
         "parked": [event.task for event in events if isinstance(event, TaskParked)],
         "rounds_by_task": count_repair_rounds(tuple(entries), _list_runs(events), wave),
         "steps_by_task": _sum_steps_by_task(events),
-        "timeline": _date_entries(entries),
+        "events": _list_events(entries),
     }

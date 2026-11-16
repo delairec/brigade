@@ -46,8 +46,18 @@ def _render_pattern(pattern: dict) -> str:
     )
 
 
+def _render_answer(answer: dict) -> str:
+    address = f"#inbox/{quote(answer['id'], safe='')}"
+    return (
+        f'<li><a href="{escape(address)}">{escape(answer["id"])}</a>'
+        f" {escape(answer['study'] or NO_PROJECT)} {escape(answer['project'] or NO_PROJECT)}</li>"
+    )
+
+
 def render_inbox_view(document: dict) -> str:
     signals = {signal["id"]: signal for signal in document["signals"]}
     families = "".join(_render_family(family, signals) for family in document["families"]) or NO_SIGNAL
     patterns = "".join(_render_pattern(pattern) for pattern in document["patterns"]) or NO_PATTERN
-    return f"<section><h2>Signals</h2>{families}</section><section><h2>Patterns</h2>{patterns}</section>"
+    answers = "".join(_render_answer(answer) for answer in document["answers"])
+    listed = f"<section><h2>Study answers</h2><ul>{answers}</ul></section>" if answers else ""
+    return f"<section><h2>Signals</h2>{families}</section><section><h2>Patterns</h2>{patterns}</section>{listed}"

@@ -190,51 +190,6 @@ class BrigadeLedgerOverviewTest(LedgerTestCase):
         )
 
 
-class BrigadeLedgerWaveTest(LedgerTestCase):
-    def setUp(self):
-        super().setUp()
-        self.write_ledger("2026-09", WAVE_SEPTEMBER_LINES)
-        self.october = self.write_ledger("2026-10", WAVE_OCTOBER_LINES)
-
-    def test_should_print_the_wave_as_text(self):
-        # Act
-        completed = self.run_ledger("--wave", "tidepool_w16")
-
-        # Assert
-        self.assertEqual(completed.returncode, 0)
-        self.assertEqual(completed.stderr, f"brigade ledger: skipped {self.october}:3: not JSON\n")
-        self.assertEqual(
-            completed.stdout.splitlines(),
-            [
-                "wave tidepool_w16: 2026-09-30T22:00:00Z to 2026-10-01T01:40:00Z, wall time 3h40m",
-                "cost: none",
-                "tokens: none",
-                "tasks:",
-                "  TP146  steps 92  duration 0h00m  cost -",
-                "  TP147  steps -  duration 0h00m  cost -",
-                "pull requests: #291 TP146 rounds 1",
-                "steps by slot:",
-                "  build",
-                "    runs p50 80  p90 80  measured 1  partial 0  unmeasured 1",
-                "    segments p50 30  p90 50  measured 2  unmeasured 1",
-                "  review",
-                "    runs p50 12  p90 12  measured 1  partial 0  unmeasured 0",
-                "    segments p50 12  p90 12  measured 1  unmeasured 0",
-                "steps by role:",
-                "  builder",
-                "    runs p50 80  p90 80  measured 1  partial 0  unmeasured 1",
-                "    segments p50 30  p90 50  measured 2  unmeasured 1",
-                "  remi",
-                "    runs p50 12  p90 12  measured 1  partial 0  unmeasured 0",
-                "    segments p50 12  p90 12  measured 1  unmeasured 0",
-                "pauses: 1, 2h00m in all",
-                "  2026-09-30T22:15:00Z to 2026-10-01T00:15:00Z  2h00m",
-                "hand-overs: TP146 builder build segment 2",
-                "parked: TP147",
-            ],
-        )
-
-
 class BrigadeLedgerProjectTest(LedgerTestCase):
     def setUp(self):
         super().setUp()

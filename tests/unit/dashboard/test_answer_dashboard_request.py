@@ -106,6 +106,7 @@ class AnswerDashboardRequestOfAnApiRouteTest(unittest.TestCase):
         rows = [
             ("/api/waves", ("wave", "list", "--json")),
             ("/api/waves/w4", ("wave", "show", "--json", "w4")),
+            ("/api/inbox/disk_r2", ("inbox", "show", "--json", "disk_r2")),
             ("/api/inbox", ("inbox", "list", "--json")),
             ("/api/ledger", ("ledger", "--json")),
             ("/api/status", ("status", "--json")),
@@ -313,7 +314,7 @@ class AnswerDashboardRequestOfTheInboxViewTest(unittest.TestCase):
         runner = ScriptedProcessRunner(
             {
                 (PYTHON, ENTRY_POINT, "inbox", "list", "--json"): ProcessAnswer(
-                    stdout='{"schema_version": 1, "signals": [], "families": [], "patterns": []}\n'
+                    stdout='{"schema_version": 1, "signals": [], "families": [], "patterns": [], "answers": []}\n'
                 )
             }
         )
@@ -361,11 +362,9 @@ HOME = (
 WAVE_W4_SHOWN = (
     '{"schema_version": 1, "wave": "w4", "project": "oak", "branch": "integration/w4", "started_at":'
     ' "2026-10-19T07:00:00Z", "last_event": "task.parked", "pull_request": null, "tasks": [{"task": "B28",'
-    ' "state": "parked", "pull_request": null, "run": "r28", "reason": "blocked"}]}\n'
-)
-WAVE_W4_LEDGER = (
-    '{"view": "wave", "wave": "w4", "rounds_by_task": {}, "steps_by_task": {"B28": 12}, "timeline":'
-    ' [{"at": "2026-10-19T07:00:00Z", "event": "wave.started", "fields": {"wave": "w4"}}]}\n'
+    ' "state": "parked", "pull_request": null, "run": "r28", "reason": "blocked"}], "ledger": {"view": "wave",'
+    ' "wave": "w4", "rounds_by_task": {}, "steps_by_task": {"B28": 12}, "events":'
+    ' [{"at": "2026-10-19T07:00:00Z", "event": "wave.started", "fields": {"wave": "w4"}}]}}\n'
 )
 
 
@@ -571,7 +570,7 @@ class AnswerDashboardRequestOfTheLedgerViewTest(unittest.TestCase):
                 [
                     (PYTHON, ENTRY_POINT, "ledger", "--json"),
                     (PYTHON, ENTRY_POINT, "ledger", "budgets", "--json"),
-                    (PYTHON, ENTRY_POINT, "ledger", "--wave=w4", "--json"),
+                    (PYTHON, ENTRY_POINT, "wave", "show", "--json", "--events", "w4"),
                     (
                         PYTHON,
                         ENTRY_POINT,
@@ -591,7 +590,7 @@ class AnswerDashboardRequestOfTheLedgerViewTest(unittest.TestCase):
                 [
                     (PYTHON, ENTRY_POINT, "ledger", "--json"),
                     (PYTHON, ENTRY_POINT, "ledger", "budgets", "--json"),
-                    (PYTHON, ENTRY_POINT, "ledger", "--wave=w4", "--json"),
+                    (PYTHON, ENTRY_POINT, "wave", "show", "--json", "--events", "w4"),
                     (
                         PYTHON,
                         ENTRY_POINT,
@@ -610,7 +609,7 @@ class AnswerDashboardRequestOfTheLedgerViewTest(unittest.TestCase):
                     {
                         (PYTHON, ENTRY_POINT, "ledger", "--json"): overview,
                         (PYTHON, ENTRY_POINT, "ledger", "budgets", "--json"): budgets,
-                        (PYTHON, ENTRY_POINT, "ledger", "--wave=w4"): refused,
+                        (PYTHON, ENTRY_POINT, "wave", "show", "--json", "--events", "w4"): refused,
                         (PYTHON, ENTRY_POINT, "ledger", "compare"): refused,
                     }
                 )
@@ -707,13 +706,10 @@ class AnswerDashboardRequestOfTheHomeViewTest(unittest.TestCase):
 
 
 class AnswerDashboardRequestOfTheWaveViewTest(unittest.TestCase):
-    def test_should_render_the_wave_from_its_show_and_its_ledger(self):
+    def test_should_render_the_wave_from_its_show_and_its_events(self):
         # Arrange
         runner = ScriptedProcessRunner(
-            {
-                (PYTHON, ENTRY_POINT, "wave", "show", "--json", "w4"): ProcessAnswer(stdout=WAVE_W4_SHOWN),
-                (PYTHON, ENTRY_POINT, "ledger", "--json", "--wave=w4"): ProcessAnswer(stdout=WAVE_W4_LEDGER),
-            }
+            {(PYTHON, ENTRY_POINT, "wave", "show", "--json", "--events", "w4"): ProcessAnswer(stdout=WAVE_W4_SHOWN)}
         )
 
         # Act
@@ -723,30 +719,6 @@ class AnswerDashboardRequestOfTheWaveViewTest(unittest.TestCase):
         self.assertEqual(response.status, 200)
         self.assertIn(b"<li>B28, pull request -, run r28, 0 rounds, 12 steps, blocked", response.body)
         self.assertIn(b"<li>2026-10-19T07:00:00Z wave.started</li>", response.body)
-
-    def test_should_render_the_error_of_its_ledger_under_the_status_of_its_show(self):
-        # Arrange
-        runner = ScriptedProcessRunner(
-            {
-                (PYTHON, ENTRY_POINT, "wave", "show", "--json", "w4"): ProcessAnswer(stdout=WAVE_W4_SHOWN),
-                (PYTHON, ENTRY_POINT, "ledger", "--json", "--wave=w4"): ProcessAnswer(
-                    exit_code=1, stderr="the ledger is unreadable\n"
-                ),
-            }
-        )
-
-        # Act
-        response = answer_get("/views/waves/w4", create_test_runtime(run_process=runner.run))
-
-        # Assert
-        self.assertEqual(
-            response,
-            DashboardResponse(
-                status=200,
-                content_type="text/html; charset=utf-8",
-                body=b"<dl><dt>error</dt><dd>the ledger is unreadable\n</dd></dl>",
-            ),
-        )
 
 
 class AnswerDashboardRequestOfAMethodNeitherReadingNorChangingStateTest(unittest.TestCase):

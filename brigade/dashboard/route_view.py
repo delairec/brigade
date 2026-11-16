@@ -1,6 +1,6 @@
 import json
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from urllib.parse import parse_qs, urlsplit
 
 from brigade.dashboard.render_answer import render_answer
@@ -13,15 +13,14 @@ from brigade.dashboard.render_reports_fragment import render_reports_fragment
 from brigade.dashboard.render_run_fragment import render_run_fragment
 from brigade.dashboard.render_wave import render_wave
 from brigade.dashboard.route_command import WAVE_LISTING, CommandRoute, route_command
-from brigade.dashboard.run_routed_command import OK, CommandAnswer
+from brigade.dashboard.run_routed_command import CommandAnswer
 
 LEDGER_VIEW = "ledger"
 REPORTS_VIEW = "reports"
 RUNS_VIEW = "runs"
 CORPUS_VIEW = "corpus"
 DOCUMENT = "document"
-WAVE_LEDGER = "ledger"
-OPTIONAL_LEDGER_SECTIONS = {"wave": ("wave", ("ledger",), 1), "range": ("comparison", ("ledger", "compare"), 2)}
+WAVE_EVENTS = ("wave", "show", "--json", "--events")
 
 
 @dataclass(frozen=True)
@@ -42,13 +41,6 @@ def _render_report(answers: dict[str, CommandAnswer]) -> str:
     return render_answer(answers[DOCUMENT], render_report_fragment)
 
 
-def _render_wave(answers: dict[str, CommandAnswer]) -> str:
-    shown, ledger = answers[DOCUMENT], answers[WAVE_LEDGER]
-    if shown.status == OK and ledger.status != OK:
-        return render_fragment(json.loads(ledger.document))
-    return render_answer(shown, lambda document: render_wave(document, json.loads(ledger.document)))
-
-
 def _render_with(render: Callable[[dict], str]) -> Callable[[dict[str, CommandAnswer]], str]:
     return lambda answers: render_answer(answers[DOCUMENT], render)
 
@@ -58,11 +50,14 @@ def _route_ledger(query: dict) -> ViewRoute:
         "overview": CommandRoute(arguments=("ledger", "--json")),
         "budgets": CommandRoute(arguments=("ledger", "budgets", "--json")),
     }
-    for parameter, (section, command, count) in OPTIONAL_LEDGER_SECTIONS.items():
-        values = query.get(parameter, ())[:count]
-        if values:
-            options = tuple(f"--{parameter}={value}" for value in values)
-            routes[section] = CommandRoute(arguments=(*command, *options, "--json"))
+    waves = query.get("wave", ())[:1]
+    if waves:
+        routes["wave"] = CommandRoute(arguments=(*WAVE_EVENTS, *waves))
+    ranges = query.get("range", ())[:2]
+    if ranges:
+        routes["comparison"] = CommandRoute(
+            arguments=("ledger", "compare", *(f"--range={value}" for value in ranges), "--json")
+        )
     return ViewRoute(routes=routes, render=render_ledger_fragment)
 
 
@@ -74,8 +69,8 @@ def route_view(target: str, renderers: dict[str, Callable[[dict], str]]) -> View
     if route is None:
         return None
     if route.listing == WAVE_LISTING:
-        ledger = CommandRoute(arguments=("ledger", "--json", f"--wave={route.identifier}"))
-        return ViewRoute(routes={DOCUMENT: route, WAVE_LEDGER: ledger}, render=_render_wave)
+        shown = replace(route, arguments=(*WAVE_EVENTS, route.identifier))
+        return ViewRoute(routes={DOCUMENT: shown}, render=_render_with(render_wave))
     if address.path in renderers:
         return ViewRoute(routes={DOCUMENT: route}, render=_render_with(renderers[address.path]))
     if address.path == CORPUS_VIEW:
