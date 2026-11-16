@@ -46,6 +46,24 @@ RESULT_OF_AN_ORDER = (
     '\tFINDING "the oldest issue waits for a reply"\n'
 )
 
+RATIFIED_PATTERN_OF_AN_ORDER = (
+    "PATTERN CartTimeouts\n"
+    '\tTITLE "the cart tests fail on a timeout"\n'
+    "\tSTATUS ratified\n"
+    '\tEVIDENCE "note:474fa40ae4db the checkout test timed out"\n'
+    "\tACTION order\n"
+    '\tRECIPE "flaky-tests"\n'
+    '\tTARGET "shop"\n'
+)
+ORDER_FROM_A_PATTERN = (
+    "ORDER CartTimeouts\n"
+    '\tRECIPE "flaky-tests"\n'
+    "\tPROJECT @PROJECT.shop\n"
+    '\tPARAM "evidence=note:474fa40ae4db the checkout test timed out"\n'
+    "\tSTATUS active\n"
+    "\tFROM @PATTERN.CartTimeouts\n"
+)
+
 
 class CheckCorpusTest(unittest.TestCase):
     def setUp(self):
@@ -232,6 +250,18 @@ class CheckCorpusUnderTheShippedSchemaTest(unittest.TestCase):
     def test_should_accept_the_result_of_an_order(self):
         # Arrange
         (self.corpus / "results.awawa").write_text(RESULT_OF_AN_ORDER)
+
+        # Act
+        checks = check_corpus(self.run_process, self.corpus)
+
+        # Assert
+        self.assertEqual(checks[1].record.exit_code, 0, checks[1].record.stdout)
+
+    def test_should_accept_the_order_a_ratified_pattern_places(self):
+        # Arrange
+        (self.corpus / "projects.awawa").write_text(SHOP_PROJECT)
+        (self.corpus / "patterns.awawa").write_text(RATIFIED_PATTERN_OF_AN_ORDER)
+        (self.corpus / "orders.awawa").write_text(ORDER_FROM_A_PATTERN)
 
         # Act
         checks = check_corpus(self.run_process, self.corpus)
