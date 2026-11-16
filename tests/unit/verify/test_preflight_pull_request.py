@@ -213,4 +213,6 @@ class PreflightPullRequestTest(unittest.TestCase):
             preflight_pull_request(create_test_runtime(self.paths, run_process=self.create_runner()), demand)
 
         # Assert
-        self.assertRegex(str(raised.exception), "^forge plugin gitlab answered read_pull_request")
+        self.assertRegex(
+            str(raised.exception), "^collector pull-request exited 1\nforge plugin gitlab answered read_pull_request"
+        )

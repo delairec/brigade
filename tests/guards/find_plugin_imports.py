@@ -1,10 +1,12 @@
 import ast
 from pathlib import Path
 
+from brigade.system.check_places import BUILT_IN_PACKAGE as CHECK_PACKAGE
 from brigade.system.collector_places import BUILT_IN_PACKAGE as COLLECTOR_PACKAGE
 from brigade.system.resolve_plugin import (
     BUILT_IN_ENTRY_POINTS,
     BUILT_IN_PLUGIN_PACKAGES,
+    CHECK_KIND,
     CLIENT_ENTRY_POINT,
     CLIENT_PACKAGES,
     COLLECTOR_KIND,
@@ -14,12 +16,19 @@ from tests.guards.find_violations import Finding, GuardedModule, find_violations
 PLUGIN_PACKAGES = ("adapters", "collectors", "checks", "outputs")
 COMMANDS_PACKAGE = "commands"
 COLLECTOR_ENTRY_POINT = "collect"
+CHECK_ENTRY_POINT = "check"
 KIND_PACKAGES = {
     "client": CLIENT_PACKAGES,
     COLLECTOR_KIND: (COLLECTOR_PACKAGE,),
+    CHECK_KIND: (CHECK_PACKAGE,),
     **{kind: (package,) for kind, package in BUILT_IN_PLUGIN_PACKAGES.items()},
 }
-ENTRY_POINTS = {"client": CLIENT_ENTRY_POINT, COLLECTOR_KIND: COLLECTOR_ENTRY_POINT, **BUILT_IN_ENTRY_POINTS}
+ENTRY_POINTS = {
+    "client": CLIENT_ENTRY_POINT,
+    COLLECTOR_KIND: COLLECTOR_ENTRY_POINT,
+    CHECK_KIND: CHECK_ENTRY_POINT,
+    **BUILT_IN_ENTRY_POINTS,
+}
 
 
 def _name_module(package_root: Path, relative_path: Path) -> list[str]:
