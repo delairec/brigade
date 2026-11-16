@@ -104,3 +104,22 @@ SCHEMA OPEN_QUESTION
 		DESC "a task that cannot be ratified until the question is ruled"
 	WHEN STATUS closed
 		GATE suppressed
+
+SCHEMA PREFLIGHT
+	DESC "a custom preflight of the project, a named set of collectors and checks brigade preflight"
+		+ "<name> runs; the entity is named after the preflight, its hyphens as underscores"
+	FIELD TITLE string
+		REQUIRED
+		DESC "what the preflight checks, in one line"
+	FIELD COLLECTOR string
+		REPEATABLE
+		DESC "a collector the preflight runs first, by name"
+		FIELD PARAMETER string
+			REPEATABLE
+			DESC "a parameter of the collector, key=value"
+	FIELD CHECK string
+		REPEATABLE
+		DESC "a check the preflight runs on the documents of its collectors, by name"
+		FIELD PARAMETER string
+			REPEATABLE
+			DESC "a parameter of the check, key=value"
