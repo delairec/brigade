@@ -23,15 +23,6 @@ SCHEMA PROJECT
 		DEFAULT control
 		DESC "how brigade uses the corpus of the repository: control, every file of it; area, the"
 			+ "folder CORPUS names alone, read as the awawa workspace; none, not delivered yet"
-	FIELD ACCEPTANCE string
-		REPEATABLE
-		DESC "a light command run by task check"
-	FIELD HEAVY string
-		REPEATABLE
-		DESC "a suite left to continuous integration, read on the pull request"
-	FIELD SETUP string
-		REPEATABLE
-		DESC "a per-worktree command"
 	FIELD SLOTS uint
 		DEFAULT 4
 	FIELD MERGE squash|rebase|merge
