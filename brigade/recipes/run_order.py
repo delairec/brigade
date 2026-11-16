@@ -9,6 +9,7 @@ from brigade.ledger.order_done import OrderDone
 from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.step_done import StepDone
 from brigade.ledger.step_failed import StepFailed
+from brigade.orders.park_order import park_order
 from brigade.recipes.lint_recipe import ON_FAIL_KEY, PARK
 from brigade.runtime import Runtime
 from brigade.system.write_json_atomically import write_json_atomically
@@ -93,9 +94,8 @@ def _end(runtime: Runtime, run: OrderRun) -> None:
 
 
 def _park(runtime: Runtime, run: OrderRun, failure: _StepFailure) -> dict:
-    append_event(
-        runtime.paths,
-        runtime.now,
+    park_order(
+        runtime,
         OrderParked(
             project=run.project,
             kind=run.recipe["name"],
