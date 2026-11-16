@@ -180,12 +180,29 @@ class OrderRunTest(unittest.TestCase):
             document, {"schema_version": 1, "order": "nightly", "run": "20261019T085500Z-cccccc", "state": "done"}
         )
         self.assertEqual(
-            [
-                entry.event
-                for entry in read_ledger(self.paths.state_root).entries
-                if isinstance(entry.event, OrderStarted)
-            ],
-            [OrderStarted(project="shop", kind="usage-report", order="nightly", run="20261019T085500Z-cccccc")],
+            read_ledger(self.paths.state_root).entries,
+            (
+                LedgerEntry(
+                    instant=FIXED_NOW,
+                    event=OrderStarted(
+                        project="shop", kind="usage-report", order="nightly", run="20261019T085500Z-cccccc"
+                    ),
+                ),
+                LedgerEntry(
+                    instant=FIXED_NOW,
+                    event=StepDone(kind="usage-report", run="20261019T085500Z-cccccc", step="1-command"),
+                ),
+                LedgerEntry(
+                    instant=FIXED_NOW,
+                    event=StepDone(kind="usage-report", run="20261019T085500Z-cccccc", step="2-command"),
+                ),
+                LedgerEntry(
+                    instant=FIXED_NOW,
+                    event=OrderDone(
+                        project="shop", kind="usage-report", order="nightly", run="20261019T085500Z-cccccc"
+                    ),
+                ),
+            ),
         )
 
     def test_should_record_the_run_of_the_order_under_the_name_of_its_recipe(self):

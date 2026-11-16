@@ -1265,6 +1265,16 @@ def _read_kept_branches(reading: WaveReading) -> frozenset[BranchKept]:
     return frozenset(event for event in reading.events if isinstance(event, BranchKept))
 
 
+def _read_orders(runtime: Runtime, reading: WaveReading) -> tuple[OrderFacts, ...]:
+    return read_order_facts(
+        tuple(
+            convert_order(entity)
+            for entity in read_entities(runtime.run_process, runtime.paths.config_root, ORDER_ENTITY_TYPE)
+        ),
+        reading.entries,
+    )
+
+
 def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeReaders) -> Snapshot:
     if not runtime.paths.schema_file.exists():
         return Snapshot(now=runtime.now)
@@ -1282,13 +1292,7 @@ def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeR
             describe_study_facts(study, last_orders.get(study.name), quota_resumes) for study in read_studies(runtime)
         ),
         live_study_runs=read_live_study_runs(runtime.paths.state_root, is_recorded_process_alive),
-        orders=read_order_facts(
-            tuple(
-                convert_order(entity)
-                for entity in read_entities(runtime.run_process, runtime.paths.config_root, ORDER_ENTITY_TYPE)
-            ),
-            reading.entries,
-        ),
+        orders=_read_orders(runtime, reading),
         live_order_runs=read_live_order_runs(runtime.paths.state_root, is_recorded_process_alive),
         study_runs=configuration.study_runs,
         stall_after=configuration.stall_after,
