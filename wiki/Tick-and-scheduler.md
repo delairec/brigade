@@ -144,7 +144,8 @@ The tick launches no run of a paused wave.
 - A head is green once one of its proofs passed whole: the check runs of the forge on its commit, the record of
   `brigade task check` of the task at that commit, or the record the tick kept for that commit. A check run of the
   forge pending on the commit is waited for. A head with none of them is checked by the tick on a checkout of its
-  commit: the `SETUP` lines, the `ACCEPTANCE` lines and the checks of the corpus, as `brigade task check` runs them,
+  commit: the steps of the recipes `setup` and `acceptance` of the project and the checks of the corpus, as
+  `brigade task check` runs them,
   written to `<state root>/commit-checks/<project>/<commit>.json`, each command with its exit code; a later tick reads
   that record and runs nothing again on that commit.
 - A red base holds the launch: the task is not launched while the head of its base is red, the tick names on stderr
@@ -242,8 +243,8 @@ dies before it records a `run.finished` does.
   the branch holds past the head of its base it was last cut from or rebased onto, read from the reflog of that base.
   When the reflog no longer holds that head, git falls back to the merge base.
 - A conflict is aborted and handed to a detached run of the slot `rebase`.
-- A milestone branch git rebased cleanly is checked before it is pushed: in its worktree the tick runs the `SETUP`
-  lines of the project, then its `ACCEPTANCE` lines and `awawa fmt --check .` and `awawa lint --strict .`, as
+- A milestone branch git rebased cleanly is checked before it is pushed: in its worktree the tick runs the steps of
+  the recipe `setup` of the project, then those of its recipe `acceptance` and `awawa fmt --check .` and `awawa lint --strict .`, as
   `brigade task check` does, and writes the result to the record of that commit. A failing one pushes nothing: the
   rebased head stays in the worktree and a detached run of the slot `rebase` repairs it there, then pushes it once its
   tests pass.
