@@ -37,7 +37,6 @@ CHECK = "check"
 STEP_LISTS = {COLLECTOR: "collectors", CHECK: "checks"}
 ENTITY_FIELDS = {"collectors": "COLLECTOR", "checks": "CHECK"}
 NO_PARAMETERS = {}
-NO_PREFLIGHT = None
 TOML_INDENT = "    "
 ENTITY_INDENT = "\t"
 
