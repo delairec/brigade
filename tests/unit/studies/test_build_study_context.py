@@ -104,6 +104,27 @@ class BuildStudyContextTest(unittest.TestCase):
         # Assert
         self.assertEqual(json.loads((self.run_directory / "context.json").read_text(encoding="utf-8")), PACKAGE)
 
+    def test_should_package_no_evidence_for_a_study_with_no_collector(self):
+        # Arrange
+        self.script_study_run()
+        (self.run_directory / "steps" / "1-collect.json").unlink()
+        (self.run_directory / "order.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "order": {"name": "trees", "params": []},
+                    "recipe": {"steps": [{"kind": "judge", "slot": "review"}, {"kind": "output"}]},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        # Act
+        package = build_study_context(self.runtime, RUN_ID)
+
+        # Assert
+        self.assertEqual(package["collected"], [])
+
     def test_should_refuse_a_run_that_is_not_a_run_of_a_study(self):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
