@@ -7509,3 +7509,28 @@ DECISION OrderNewNamesTheOrderAfterItsRecipeAndInstantAndTakesADeclaredKeyAsAPar
 	SOURCE "the pull request of @TASK.B51, whose SPEC 1 leaves the name of the order and the"
 		+ "reading of its words open"
 		REF @TASK.B51
+
+DECISION TheAnswerOfAnOrderIsAResultEntityTheOutputStepKeepsInTheOperationalCorpus
+	TITLE "the answer of an order is a RESULT entity of the operational corpus, which its judge"
+		+ "step writes and its output step keeps in results.awawa before handing it to the output"
+		+ "the order or its recipe names; brigade reports lists it, its kind the name of its recipe"
+	STATUS active
+	DESC "the operational schema declares RESULT: ORDER, RUN and COLLECTED with its SUMMARY and"
+		+ "DOCUMENT, filled by the CLI, NARRATIVE and FINDING, filled by the judging slot"
+	DESC "the output step reads answer.awawa of the run directory, rendered by the CLI when no"
+		+ "judge step wrote it, appends it to the file of its type in the operational corpus"
+		+ "through fmt, lint and a commit, then hands it to the OUTPUT of the order, or else to the"
+		+ "output of the step"
+	DESC "brigade reports lists a RESULT with the recipe of its order as its kind and the project"
+		+ "of its order as its project, so the outputs of milestone-report and task-report keep"
+		+ "their kind once @TASK.B251 moves them onto the engine"
+		REF @TASK.B251
+	REJECTED "the ANSWER of a study for the answer of an order: its STUDY field is required and"
+		+ "names no order"
+	REJECTED "a kind order-output for every order: two recipes would share one kind, and a report"
+		+ "would change kind on its move onto the engine"
+	SOURCE "the pull request of @TASK.B51, to which DESC 3 of"
+		+ "@DECISION.BrigadeReportsListsTheWaveReportsAndStudyAnswersTheOperationalCorpusKeeps"
+		+ "leaves where the answer of a judge step is kept"
+		REF @TASK.B51
+		REF @DECISION.BrigadeReportsListsTheWaveReportsAndStudyAnswersTheOperationalCorpusKeeps
