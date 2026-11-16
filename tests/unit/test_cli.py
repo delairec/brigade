@@ -259,8 +259,12 @@ class MainRefusalTest(MainTestCase):
             (["frobnicate"], r"invalid choice: 'frobnicate' \(choose from '?adapter'?, .+, '?wave'?\)\n$"),
             (["runs", "show"], r"\nbrigade runs show: error: the following arguments are required: run\n$"),
             (
-                ["ledger", "--wave", "tidepool_w16", "--project", "tidepool"],
-                r"\nbrigade ledger: error: argument --project: not allowed with argument --wave\n$",
+                ["ledger", "--task", "TP146", "--project", "tidepool"],
+                r"\nbrigade ledger: error: argument --project: not allowed with argument --task\n$",
+            ),
+            (
+                ["ledger", "--wave=tidepool_w16"],
+                r"\nbrigade: error: unrecognized arguments: --wave=tidepool_w16\n$",
             ),
             (
                 ["ledger", "--project", "tidepool", "--since", "yesterday"],

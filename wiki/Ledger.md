@@ -1,11 +1,10 @@
-Where brigade records its events and how `brigade ledger` summarises them: an overview, a wave, a task, a project, the
+Where brigade records its events and how `brigade ledger` summarises them: an overview, a task, a project, the
 step budgets and a comparison of two ranges of days, or of one range with reference figures.
 
 ## Views
 
 ```
 brigade ledger                                        # events by name, first and last instant, runs and segments by outcome
-brigade ledger --wave <id>                            # cost, tokens, steps, duration and cost per task, pull requests, pauses
 brigade ledger --task <id>                            # the runs of a task: outcome, steps, duration, cost
 brigade ledger --project <name>                       # waves, orders, pull requests, signals, patterns, constraints
 brigade ledger budgets [--last N] [--client <name>]   # p50 and p90 steps per procedure, 20 runs by default, every client by default; step cap per role
@@ -13,8 +12,9 @@ brigade ledger compare --range <start>..<end> --range <start>..<end>
 brigade ledger compare --range <start>..<end> --reference <measure>=<value> ...
 ```
 
-Every view prints text or, with `--json`, a JSON document. `--since <n>d|<YYYY-MM-DD>` narrows the overview, `--wave`,
-`--task` and `--project` to the events from that instant on.
+Every view prints text or, with `--json`, a JSON document. `--since <n>d|<YYYY-MM-DD>` narrows the overview, `--task`
+and `--project` to the events from that instant on. What happened in a wave, its cost, tokens, steps and events, is
+printed by `brigade wave show <wave> --events`, [Waves](Waves.md).
 
 ## Comparing ranges
 

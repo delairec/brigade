@@ -3,9 +3,8 @@ from brigade.corpus.read_entity import Entity
 from brigade.orders.convert_order import convert_order
 from brigade.runtime import Runtime
 from brigade.studies.name_answer_file import name_answer_file
-from brigade.studies.read_studies import read_studies
 
-KINDS_BY_TYPE = {"REPORT": "wave-report", "ANSWER": "study-answer"}
+WAVE_REPORT_KIND = "wave-report"
 REPORT_KINDS_BY_FIELD = {"MILESTONE": "milestone-report", "TASK": "task-report"}
 ORDER_TYPE = "ORDER"
 RESULT_TYPE = "RESULT"
@@ -28,7 +27,7 @@ def _read_entities(runtime: Runtime, document: object, entity_type: str) -> list
 def _read_kind(entity: dict) -> str:
     return next(
         (kind for field, kind in REPORT_KINDS_BY_FIELD.items() if _read_field(entity, field) is not None),
-        KINDS_BY_TYPE[entity["type"]],
+        WAVE_REPORT_KIND,
     )
 
 
@@ -54,14 +53,9 @@ def _describe_report(entity: dict, kind: str | None, project: str | None, patter
 
 
 def read_reports(runtime: Runtime, document: object) -> list[dict]:
-    projects_by_study = {study.name: study.project for study in read_studies(runtime)}
     wave_reports = [
         _describe_report(entity, _read_kind(entity), _read_field(entity, "PROJECT"))
         for entity in _read_entities(runtime, document, "REPORT")
-    ]
-    study_answers = [
-        _describe_report(entity, _read_kind(entity), projects_by_study.get(_read_field(entity, "STUDY")))
-        for entity in _read_entities(runtime, document, "ANSWER")
     ]
     origins_by_order = {
         entity.name: _read_origin(entity)
@@ -71,4 +65,4 @@ def read_reports(runtime: Runtime, document: object) -> list[dict]:
         _describe_report(entity, *origins_by_order.get(_read_field(entity, ORDER_TYPE), UNRECORDED_ORDER))
         for entity in _read_entities(runtime, document, RESULT_TYPE)
     ]
-    return wave_reports + study_answers + order_results
+    return wave_reports + order_results

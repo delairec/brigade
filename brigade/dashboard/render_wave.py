@@ -37,9 +37,10 @@ def _render_entry(entry: dict) -> str:
     return f"<li>{escape(entry['at'])} {escape(entry['event'])}{subject}</li>"
 
 
-def render_wave(shown: dict, ledger: dict) -> str:
+def render_wave(shown: dict) -> str:
+    ledger = shown["ledger"]
     return (
         f"<section><h2>Wave {escape(shown['wave'])} of {escape(shown['project'])}</h2>"
         f"{_render_groups(shown, ledger)}</section>"
-        f"<section><h2>Timeline</h2><ol>{''.join(_render_entry(entry) for entry in ledger['timeline'])}</ol></section>"
+        f"<section><h2>Timeline</h2><ol>{''.join(_render_entry(entry) for entry in ledger['events'])}</ol></section>"
     )

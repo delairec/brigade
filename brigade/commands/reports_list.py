@@ -35,7 +35,7 @@ def reports_list(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("reports", "list"),
-    help="print one row per wave report and study answer",
+    help="print one row per wave, task and milestone report and per order result",
     run=reports_list,
     render_text=_render_text,
 )

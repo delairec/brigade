@@ -714,7 +714,7 @@ branch = "pr"</pre>
   <div class="tbl"><table>
     <thead><tr><th>Report</th><th>Command</th><th>Answers</th></tr></thead>
     <tbody>
-      <tr><td>Wave</td><td><code>brigade ledger --wave tp/16</code></td><td>tasks, PRs, rounds, steps p50/p90 per slot and role, wall time, pauses, hand-overs, parked</td></tr>
+      <tr><td>Wave</td><td><code>brigade wave show tp/16 --events</code></td><td>tasks, PRs, rounds, steps p50/p90 per slot and role, wall time, pauses, hand-overs, parked</td></tr>
       <tr><td>Budgets</td><td><code>brigade ledger budgets</code></td><td>p90 steps per procedure over the last N runs: the number <code>@RULE.procedure_step_budget</code> asks for, measured on distinct answers</td></tr>
       <tr><td>Baseline comparison</td><td><code>brigade ledger compare --before 2026-10-03</code></td><td>steps to first edit, steps per task run, steps spent on oversized outputs, against the reference figures of the user's notes (26/09–03/10)</td></tr>
       <tr><td>Project</td><td><code>brigade ledger --project tidepool --since 30d</code></td><td>waves, studies, orders, PRs merged, signals, patterns ratified, constraints delivered</td></tr>

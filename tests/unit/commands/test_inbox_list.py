@@ -4,10 +4,12 @@ import unittest
 from pathlib import Path
 
 from brigade.commands.inbox_list import COMMAND, inbox_list
-from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.commands.command_runtime import create_corpus_double, write_operational_corpus
+from tests.unit.commands.create_plugin_resolver import create_plugin_resolver
 from tests.unit.commands.inbox_lines import NOTE_ON_OAK_RECORDED, THREAD_DISMISSED, THREAD_RECORDED
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.reports.document_plugin_double import DocumentPluginDouble
 from tests.unit.scripted_processes import ScriptedProcesses
 
 
@@ -51,6 +53,7 @@ class InboxListTest(unittest.TestCase):
                     }
                 ],
                 "patterns": [],
+                "answers": [],
             },
         )
 
@@ -99,6 +102,7 @@ class InboxListTest(unittest.TestCase):
                     },
                 ],
                 "patterns": [],
+                "answers": [],
             },
         )
 
@@ -221,6 +225,7 @@ class InboxListTextTest(unittest.TestCase):
             ],
             "families": [],
             "patterns": [],
+            "answers": [],
         }
 
         # Act
@@ -236,7 +241,7 @@ class InboxListTextTest(unittest.TestCase):
 
     def test_should_say_the_inbox_holds_no_signal(self):
         # Arrange
-        document = {"schema_version": 1, "signals": [], "families": [], "patterns": []}
+        document = {"schema_version": 1, "signals": [], "families": [], "patterns": [], "answers": []}
 
         # Act
         text = COMMAND.render_text(document)
@@ -271,6 +276,7 @@ class InboxListTextTest(unittest.TestCase):
                 },
                 {"name": "LongNames", "action": None, "signals": []},
             ],
+            "answers": [],
         }
 
         # Act
@@ -294,6 +300,7 @@ class InboxListTextTest(unittest.TestCase):
             "signals": [],
             "families": [],
             "patterns": [{"name": "LongNames", "action": "wave", "signals": []}],
+            "answers": [],
         }
 
         # Act
@@ -303,4 +310,46 @@ class InboxListTextTest(unittest.TestCase):
         self.assertEqual(
             text,
             "no signal in the inbox\n\npattern    action  signals\nLongNames  wave    -",
+        )
+
+
+class InboxListOfStudyAnswersTest(unittest.TestCase):
+    def test_should_list_each_study_answer_with_its_study_and_its_project(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(root)
+        (root / "config" / "answers.awawa").write_text("", encoding="utf-8")
+        answer = {"type": "ANSWER", "name": "disk_20261019T090000Z_b2", "fields": [{"name": "STUDY", "value": "disk"}]}
+        plugin = DocumentPluginDouble({str(root / "config" / "answers.awawa"): [answer]})
+        no_study = {}
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_corpus_double(no_study),
+            resolve_plugin=create_plugin_resolver({("document", "awawa"): plugin}),
+        )
+        request = argparse.Namespace(all=False)
+
+        # Act
+        document = inbox_list(request, runtime)
+
+        # Assert
+        self.assertEqual(document["answers"], [{"id": "disk_20261019T090000Z_b2", "study": "disk", "project": None}])
+
+    def test_should_print_the_study_answers_after_the_signals(self):
+        # Arrange
+        document = {
+            "schema_version": 1,
+            "signals": [],
+            "families": [],
+            "patterns": [],
+            "answers": [{"id": "disk_20261019T090000Z_b2", "study": "disk", "project": None}],
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text,
+            "no signal in the inbox\n\nanswer                    study  project\ndisk_20261019T090000Z_b2  disk   -",
         )

@@ -10,7 +10,7 @@ brigade request list [--project P]
 brigade request cancel <request>
 brigade plan record <request> --file <plan>
 brigade wave start <project> [--task T ...]
-brigade wave show <wave>
+brigade wave show <wave> [--events]
 brigade wave list [--project P]
 brigade wave cancel <wave>
 brigade wave resume [<wave>]
@@ -116,7 +116,9 @@ exists.
 
 - `wave show` prints a wave, its branch, the instant it started and its last wave event, then each task with its last
   `task.state`, its pull request, its last run in the wave and, for a parked task, the reason of its `task.parked`,
-  `-` when none.
+  `-` when none. With `--events`, it adds what `brigade ledger` once printed for a wave: its cost and tokens, the
+  steps, duration and cost of each task, its merged pull requests, its steps by slot and by role, its pauses, its
+  hand-overs, its parked tasks, then every event the ledger holds for the wave, in the order recorded.
 - `wave list` prints one row per wave of the ledger, its project, branch, last wave event and task count, the open
   waves first, those of one project with `--project`.
 

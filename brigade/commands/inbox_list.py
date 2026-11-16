@@ -6,6 +6,7 @@ from brigade.inbox.group_signals import group_signals
 from brigade.inbox.inbox_locations import SHOWN_ID_LENGTH
 from brigade.inbox.is_signal_cited import is_signal_cited
 from brigade.inbox.read_inbox import NEW_STATUS, Signal, read_inbox
+from brigade.inbox.read_study_answers import read_study_answers
 from brigade.inbox.render_age import render_age
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
@@ -14,12 +15,15 @@ from brigade.triage.read_new_pattern import NEW_STATUS as PROPOSED_STATUS
 from brigade.triage.read_new_pattern import PATTERN_TYPE
 
 DOCUMENT_SCHEMA_VERSION = 1
+DOCUMENT_KIND = "document"
+OPERATIONAL_CORPUS_DOCUMENT = "awawa"
 NO_SIGNAL = "no signal in the inbox"
 NO_PROJECT = "-"
 NO_ACTION = "-"
 NO_CITED_SIGNAL = "-"
 HEADER = ("id", "kind", "project", "count", "age", "status")
 PATTERN_HEADER = ("pattern", "action", "signals")
+ANSWER_HEADER = ("answer", "study", "project")
 EVIDENCE_FIELD = "EVIDENCE"
 SECTION_SEPARATOR = "\n\n"
 
@@ -40,16 +44,24 @@ def _render_pattern_row(pattern: dict) -> tuple[str, ...]:
     return (pattern["name"], pattern["action"] or NO_ACTION, cited or NO_CITED_SIGNAL)
 
 
+def _render_answer_row(answer: dict) -> tuple[str, ...]:
+    return (answer["id"], answer["study"] or NO_PROJECT, answer["project"] or NO_PROJECT)
+
+
 def _render_text(document: dict) -> str:
     signals = (
         render_table(HEADER, [_render_row(signal) for signal in document["signals"]])
         if document["signals"]
         else NO_SIGNAL
     )
-    if not document["patterns"]:
-        return signals
-    patterns = render_table(PATTERN_HEADER, [_render_pattern_row(pattern) for pattern in document["patterns"]])
-    return signals + SECTION_SEPARATOR + patterns
+    sections = [signals]
+    if document["patterns"]:
+        sections.append(
+            render_table(PATTERN_HEADER, [_render_pattern_row(pattern) for pattern in document["patterns"]])
+        )
+    if document["answers"]:
+        sections.append(render_table(ANSWER_HEADER, [_render_answer_row(answer) for answer in document["answers"]]))
+    return SECTION_SEPARATOR.join(sections)
 
 
 def _read_proposed_patterns(runtime: Runtime) -> tuple[Entity, ...]:
@@ -92,13 +104,19 @@ def inbox_list(request: argparse.Namespace, runtime: Runtime) -> dict:
             for family in group_signals(listed)
         ],
         "patterns": [_describe_pattern(pattern, signals) for pattern in _read_proposed_patterns(runtime)],
+        "answers": [
+            {"id": answer["id"], "study": answer["study"], "project": answer["project"]}
+            for answer in read_study_answers(
+                runtime, lambda: runtime.resolve_plugin(DOCUMENT_KIND, OPERATIONAL_CORPUS_DOCUMENT)
+            )
+        ],
     }
 
 
 COMMAND = Command(
     path=("inbox", "list"),
-    help="list the new signals of the inbox, their families and the proposed patterns",
-    group_help="list, show and dismiss the signals of the inbox",
+    help="list the new signals of the inbox, their families, the proposed patterns and the study answers",
+    group_help="list, show and dismiss the signals of the inbox and show its study answers",
     arguments=(Argument(("--all",), {"action": "store_true", "help": "add the dismissed signals"}),),
     run=inbox_list,
     render_text=_render_text,

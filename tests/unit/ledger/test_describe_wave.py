@@ -194,7 +194,7 @@ class DescribeWaveOfEachTaskTest(unittest.TestCase):
         # Assert
         self.assertEqual(wave["steps_by_task"], {"TP7": 9})
 
-    def test_should_date_each_entry_of_the_wave_oldest_first(self):
+    def test_should_list_each_event_of_the_wave_in_the_order_recorded(self):
         # Arrange
         reading = LedgerReading(
             entries=(
@@ -210,17 +210,17 @@ class DescribeWaveOfEachTaskTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            wave["timeline"],
+            wave["events"],
             [
-                {
-                    "at": "2026-10-10T09:00:00Z",
-                    "event": "wave.started",
-                    "fields": {"wave": "w7", "project": "tidepool", "branch": "main", "tasks": ["TP7"]},
-                },
                 {
                     "at": "2026-10-10T09:05:00Z",
                     "event": "task.state",
                     "fields": {"wave": "w7", "task": "TP7", "state": "running"},
+                },
+                {
+                    "at": "2026-10-10T09:00:00Z",
+                    "event": "wave.started",
+                    "fields": {"wave": "w7", "project": "tidepool", "branch": "main", "tasks": ["TP7"]},
                 },
             ],
         )
