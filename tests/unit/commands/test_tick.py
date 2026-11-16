@@ -1224,6 +1224,10 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                             "name": "corpus",
                             "verdict": "pass",
                             "findings": [],
+                            "commands": [
+                                {"command": "awawa fmt --check .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                                {"command": "awawa lint --strict .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                            ],
                         },
                         {
                             "name": "promotion",
@@ -1394,6 +1398,10 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                             "name": "corpus",
                             "verdict": "pass",
                             "findings": [],
+                            "commands": [
+                                {"command": "awawa fmt --check .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                                {"command": "awawa lint --strict .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                            ],
                         },
                         {
                             "name": "promotion",
@@ -2593,6 +2601,10 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                             "name": "corpus",
                             "verdict": "pass",
                             "findings": [],
+                            "commands": [
+                                {"command": "awawa fmt --check .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                                {"command": "awawa lint --strict .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                            ],
                         },
                         {
                             "name": "promotion",
@@ -7150,9 +7162,19 @@ class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
                             "name": "acceptance",
                             "verdict": "pass",
                             "findings": [],
-                            "commands": [{"command": "python3 -m unittest", "exit_code": 0}],
+                            "commands": [
+                                {"command": "python3 -m unittest", "exit_code": 0, "duration_ms": 0, "output": ""}
+                            ],
                         },
-                        {"name": "corpus", "verdict": "pass", "findings": []},
+                        {
+                            "name": "corpus",
+                            "verdict": "pass",
+                            "findings": [],
+                            "commands": [
+                                {"command": "awawa fmt --check .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                                {"command": "awawa lint --strict .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                            ],
+                        },
                         {"name": "promotion", "verdict": "pass", "findings": []},
                         {"name": "untouched_files", "verdict": "pass", "findings": []},
                         {"name": "privacy", "verdict": "pass", "findings": []},

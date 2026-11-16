@@ -7760,3 +7760,18 @@ DECISION WaveShowEventsCarriesTheLedgerViewOfItsWave
 		+ "asks for the order recorded"
 	SOURCE "the build run of @TASK.B256, SPEC 1"
 		REF @TASK.B256
+
+DECISION TaskCheckRunsTheBuiltInPreflightTask
+	TITLE "brigade task check runs the built-in preflight task, the collector task-worktree and the"
+		+ "checks acceptance and corpus_at_head, and builds its document from the commands entries"
+		+ "of those checks, each naming its command, exit code, duration and output; the privacy"
+		+ "check of the lines the branch adds stays in brigade task check"
+	STATUS active
+	REJECTED "the tail alone in the commands entries, to keep the output of the acceptance commands"
+		+ "out of the ledger: the log of each command in the run directory would lose the output of"
+		+ "a long or passing command"
+	REJECTED "a check reading a collector named by a step parameter: the checks acceptance and"
+		+ "corpus_at_head read the summary of pull-request or task-worktree, whichever the"
+		+ "preflight collected"
+	SOURCE "the build run of @TASK.B256, SPEC 3"
+		REF @TASK.B256

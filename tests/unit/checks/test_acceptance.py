@@ -31,6 +31,28 @@ class AcceptanceCheckTest(unittest.TestCase):
                 "name": "acceptance",
                 "verdict": "fail",
                 "findings": ["python3 -m unittest exited 1", "FAILED"],
-                "commands": [{"command": "python3 -m unittest", "exit_code": 1}],
+                "commands": [
+                    {"command": "python3 -m unittest", "exit_code": 1, "duration_ms": 0, "output": "FAILED\n"}
+                ],
             },
         )
+
+    def test_should_run_the_acceptance_commands_in_the_worktree_of_a_task(self):
+        # Arrange
+        runner = RecordingProcessRunner()
+        subject = {
+            "schema_version": 1,
+            "project": "/srv/oak",
+            "parameters": {"worktree": "/srv/oak-b12"},
+            "collected": {
+                "task-worktree": {
+                    "summary": {"checkout": "/srv/oak-b12", "acceptance": [["python3", "-m", "unittest"]]}
+                }
+            },
+        }
+
+        # Act
+        check(subject, create_test_runtime(run_process=runner))
+
+        # Assert
+        self.assertEqual(runner.commands, [("/srv/oak-b12", ("python3", "-m", "unittest"))])

@@ -24,8 +24,8 @@ class CheckAcceptanceTest(unittest.TestCase):
                 "verdict": "pass",
                 "findings": [],
                 "commands": [
-                    {"command": "python3 -m unittest", "exit_code": 0},
-                    {"command": "ruff check .", "exit_code": 0},
+                    {"command": "python3 -m unittest", "exit_code": 0, "duration_ms": 0, "output": ""},
+                    {"command": "ruff check .", "exit_code": 0, "duration_ms": 0, "output": ""},
                 ],
             },
         )
@@ -48,8 +48,13 @@ class CheckAcceptanceTest(unittest.TestCase):
                 "verdict": "fail",
                 "findings": ["ruff check . exited 1", "brigade/cli.py:3:1: F401"],
                 "commands": [
-                    {"command": "python3 -m unittest", "exit_code": 0},
-                    {"command": "ruff check .", "exit_code": 1},
+                    {"command": "python3 -m unittest", "exit_code": 0, "duration_ms": 0, "output": ""},
+                    {
+                        "command": "ruff check .",
+                        "exit_code": 1,
+                        "duration_ms": 0,
+                        "output": "brigade/cli.py:3:1: F401\n",
+                    },
                 ],
             },
         )
@@ -83,4 +88,6 @@ class CheckAcceptanceTest(unittest.TestCase):
         check = check_acceptance(RecordingProcessRunner(), facts)
 
         # Assert
-        self.assertEqual(check["commands"], [{"command": "pytest -k 'not slow'", "exit_code": 0}])
+        self.assertEqual(
+            check["commands"], [{"command": "pytest -k 'not slow'", "exit_code": 0, "duration_ms": 0, "output": ""}]
+        )

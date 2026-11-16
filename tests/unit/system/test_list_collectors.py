@@ -69,6 +69,7 @@ class ListCollectorsTest(unittest.TestCase):
                 {"name": "stale-branches", "source": "built-in"},
                 {"name": "stale-worktrees", "source": "built-in"},
                 {"name": "study", "source": "built-in"},
+                {"name": "task-worktree", "source": "built-in"},
                 {"name": "transcript-findings", "source": "built-in"},
                 {"name": "transcripts", "source": "built-in"},
                 {"name": "worktrees", "source": "built-in"},
