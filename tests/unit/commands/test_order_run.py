@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 from brigade.commands.order_run import COMMAND, order_run
+from brigade.inbox.read_inbox import read_inbox
 from brigade.ledger.append_event import append_event
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.order_done import OrderDone
@@ -326,6 +327,32 @@ class OrderRunTest(unittest.TestCase):
                 "step": "1-judge",
                 "reason": f"no configuration at {self.paths.config_root / 'config.toml'}; run brigade init",
             },
+        )
+
+    def test_should_signal_the_parked_order_in_the_inbox(self):
+        # Act
+        document = order_run(argparse.Namespace(name="judged", run_id=None), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            [
+                (signal.kind, signal.project, signal.fingerprint, signal.evidence)
+                for signal in read_inbox(self.paths.state_root, FIXED_NOW)
+            ],
+            [
+                (
+                    "order_parked",
+                    "shop",
+                    f"order_parked:judged:{document['run']}",
+                    {
+                        "order": "judged",
+                        "recipe": "judged",
+                        "run": document["run"],
+                        "step": "1-judge",
+                        "reason": f"no configuration at {self.paths.config_root / 'config.toml'}; run brigade init",
+                    },
+                )
+            ],
         )
 
     def test_should_keep_the_result_of_the_order_and_hand_it_to_the_output_the_order_names(self):
