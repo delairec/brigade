@@ -4488,7 +4488,8 @@ TASK B49
 TASK B50
 	TITLE "Recipes: their two forms, a TOML file or a RECIPE entity of the project's corpus, their"
 		+ "resolution and their lint"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 419
 	TYPE feat
 	MILESTONE @MILESTONE.M8
 	COMPONENT "recipes"
