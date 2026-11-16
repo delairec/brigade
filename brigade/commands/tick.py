@@ -519,6 +519,13 @@ def _preflight(runtime: Runtime, configuration: Configuration, action: RunPrefli
     )
 
 
+def _describe_recorded_check(check: dict) -> dict:
+    if "commands" not in check:
+        return check
+    commands = [{"command": command["command"], "exit_code": command["exit_code"]} for command in check["commands"]]
+    return {**check, "commands": commands}
+
+
 def _run_preflight(runtime: Runtime, configuration: Configuration, action: RunPreflight) -> None:
     findings = _preflight(runtime, configuration, action)
     append_event(
@@ -530,7 +537,7 @@ def _run_preflight(runtime: Runtime, configuration: Configuration, action: RunPr
             task=action.task,
             pr=action.pr,
             head=findings["head"],
-            checks=tuple(findings["checks"]),
+            checks=tuple(map(_describe_recorded_check, findings["checks"])),
         ),
     )
     if all(check["verdict"] != FAILED_VERDICT for check in findings["checks"]):

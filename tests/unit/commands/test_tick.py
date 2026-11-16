@@ -1225,8 +1225,8 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                             "verdict": "pass",
                             "findings": [],
                             "commands": [
-                                {"command": "awawa fmt --check .", "exit_code": 0, "duration_ms": 0, "output": ""},
-                                {"command": "awawa lint --strict .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                                {"command": "awawa fmt --check .", "exit_code": 0},
+                                {"command": "awawa lint --strict .", "exit_code": 0},
                             ],
                         },
                         {
@@ -1399,8 +1399,8 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                             "verdict": "pass",
                             "findings": [],
                             "commands": [
-                                {"command": "awawa fmt --check .", "exit_code": 0, "duration_ms": 0, "output": ""},
-                                {"command": "awawa lint --strict .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                                {"command": "awawa fmt --check .", "exit_code": 0},
+                                {"command": "awawa lint --strict .", "exit_code": 0},
                             ],
                         },
                         {
@@ -2602,8 +2602,8 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                             "verdict": "pass",
                             "findings": [],
                             "commands": [
-                                {"command": "awawa fmt --check .", "exit_code": 0, "duration_ms": 0, "output": ""},
-                                {"command": "awawa lint --strict .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                                {"command": "awawa fmt --check .", "exit_code": 0},
+                                {"command": "awawa lint --strict .", "exit_code": 0},
                             ],
                         },
                         {
@@ -7138,7 +7138,7 @@ class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
 
     def test_should_hold_for_verification_the_head_its_build_run_delivered_once_its_acceptance_passes(self):
         # Arrange
-        passing_acceptance = {("python3", "-m", "unittest"): ""}
+        passing_acceptance = {("python3", "-m", "unittest"): "Ran 412 tests in 9.1s\n\nOK\n"}
         runtime = self._create_runtime(passing_acceptance)
 
         # Act
@@ -7162,17 +7162,15 @@ class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
                             "name": "acceptance",
                             "verdict": "pass",
                             "findings": [],
-                            "commands": [
-                                {"command": "python3 -m unittest", "exit_code": 0, "duration_ms": 0, "output": ""}
-                            ],
+                            "commands": [{"command": "python3 -m unittest", "exit_code": 0}],
                         },
                         {
                             "name": "corpus",
                             "verdict": "pass",
                             "findings": [],
                             "commands": [
-                                {"command": "awawa fmt --check .", "exit_code": 0, "duration_ms": 0, "output": ""},
-                                {"command": "awawa lint --strict .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                                {"command": "awawa fmt --check .", "exit_code": 0},
+                                {"command": "awawa lint --strict .", "exit_code": 0},
                             ],
                         },
                         {"name": "promotion", "verdict": "pass", "findings": []},
