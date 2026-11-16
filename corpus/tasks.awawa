@@ -18311,7 +18311,8 @@ TASK B252
 	TITLE "brigade preflight add writes a custom preflight in the tree of the project and commits"
 		+ "nothing; a custom preflight is a PREFLIGHT entity of the project's corpus, or a TOML"
 		+ "file where the project has none"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 418
 	TYPE feat
 	MILESTONE @MILESTONE.M8
 	COMPONENT "preflight"
