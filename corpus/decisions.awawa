@@ -5069,15 +5069,20 @@ DECISION TheInboxViewRendersTheFamiliesAndPatternsOfInboxListAndPostsItsActionsU
 		REF @TASK.B29
 
 DECISION BrigadeReportsListsTheWaveReportsAndStudyAnswersTheOperationalCorpusKeeps
-	TITLE "brigade reports reads the REPORT and ANSWER entities of the operational corpus through"
-		+ "the awawa document plugin; the outputs of an order join it with the engine that writes"
-		+ "them"
+	TITLE "brigade reports reads the REPORT entities of the operational corpus through the awawa"
+		+ "document plugin, and the RESULT entities the engine writes for an order; brigade inbox"
+		+ "reads its ANSWER entities"
 	STATUS active
 	DESC "a report is a REPORT entity of reports.awawa, its kind milestone-report, task-report or,"
 		+ "written before @TASK.B232, wave-report by the field it carries, MILESTONE, TASK or WAVE,"
-		+ "its project its PROJECT field; a study answer is an ANSWER entity of answers.awawa, kind"
-		+ "study-answer, its project that of the STUDY it answers; the id is the name of the entity"
+		+ "its project its PROJECT field; the id is the name of the entity"
 		REF @TASK.B232
+	DESC "a study answer is an ANSWER entity of answers.awawa, its project that of the STUDY it"
+		+ "answers; brigade inbox list lists it after the signals and the patterns, brigade inbox"
+		+ "show <id> shows it when its name is the id, before any signal the id starts, and the"
+		+ "Inbox view of the dashboard links it to that show"
+	DESC "the RESULT of an order stays with brigade reports: the answer of a judge step of an order"
+		+ "is a report of the recipe it runs, not a study answer"
 	DESC "an answer a study hands to a file, an issue, the inbox or an output on PATH is read where"
 		+ "it was handed: brigade reports lists what the operational corpus keeps"
 	DESC "no order output exists when @TASK.B31 is delivered: the engine of @TASK.B51 is a draft,"
@@ -5101,6 +5106,10 @@ DECISION BrigadeReportsListsTheWaveReportsAndStudyAnswersTheOperationalCorpusKee
 	SOURCE "the user's ruling of 2026-11-02 carried by @TASK.B232: DESC 1 and DESC 4 read the"
 		+ "milestone report and the task report where they read the wave report"
 		REF @TASK.B232
+	SOURCE "the user's ruling of 2026-11-14 carried by @TASK.B256, the study answers out of brigade"
+		+ "reports, being signals of the inbox; the build run of @TASK.B256 keeps the RESULT of an"
+		+ "order with the reports"
+		REF @TASK.B256
 
 DECISION TheCorpusViewReadsBrigadeCorpusAndItsBoardReadsEachEntity
 	TITLE "the Corpus view reads brigade corpus --type, --field and --entity through"
@@ -5178,7 +5187,11 @@ DECISION TheWaveViewRunsItsShowAndItsLedgerAsOneViewUnderTheStatusOfItsShow
 	TITLE "the Wave view is a view of route_view with two commands, brigade wave show and brigade"
 		+ "ledger --wave, run together; it answers the status of brigade wave show, and renders the"
 		+ "error of the ledger when the show succeeded and the ledger failed"
-	STATUS active
+	STATUS archived
+	DESC "archived by @TASK.B256, which removes brigade ledger --wave: the Wave view runs brigade"
+		+ "wave show --events alone, @DECISION.WaveShowEventsCarriesTheLedgerViewOfItsWave"
+		REF @TASK.B256
+		REF @DECISION.WaveShowEventsCarriesTheLedgerViewOfItsWave
 	REJECTED "the ledger run only once the show succeeded, under the status of the ledger: a second"
 		+ "path beside the view registry every other view of several commands goes through"
 	RATIONALE "@TASK.B31 merged the view registry, whose status is that of the first command and"
@@ -7734,3 +7747,16 @@ DECISION TheCommandsOfAProjectAreItsRecipesSetupAcceptanceAndHeavyRunOutsideAnOr
 		+ "already holds an argv"
 	SOURCE "the pull request of @TASK.B163"
 		REF @TASK.B163
+
+DECISION WaveShowEventsCarriesTheLedgerViewOfItsWave
+	TITLE "brigade wave show --events adds to its document the view brigade ledger --wave printed,"
+		+ "under the key ledger, its events in the order the ledger recorded them; the Wave view"
+		+ "and the wave section of the Ledger view of the dashboard run that one command"
+	STATUS active
+	REJECTED "the events alone under --events: the cost, the tokens, the steps by slot and by role,"
+		+ "the pauses and the parked tasks of a wave would leave brigade with the command that"
+		+ "printed them"
+	REJECTED "the events sorted by their instant, as the timeline of the ledger view was: the SPEC"
+		+ "asks for the order recorded"
+	SOURCE "the build run of @TASK.B256, SPEC 1"
+		REF @TASK.B256

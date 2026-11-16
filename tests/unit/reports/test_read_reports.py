@@ -10,7 +10,7 @@ from tests.unit.reports.document_plugin_double import DocumentPluginDouble
 
 
 class ReadReportsTest(unittest.TestCase):
-    def test_should_read_the_wave_reports_then_the_study_answers_through_the_document_plugin(self):
+    def test_should_read_the_wave_reports_and_leave_the_study_answers_to_the_inbox(self):
         # Arrange
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(root)
@@ -30,37 +30,12 @@ class ReadReportsTest(unittest.TestCase):
                         "type": "ANSWER",
                         "name": "health_20261018T090000Z_a1",
                         "fields": [{"name": "STUDY", "value": "health"}],
-                    },
-                    {
-                        "type": "ANSWER",
-                        "name": "disk_20261019T090000Z_b2",
-                        "fields": [{"name": "STUDY", "value": "disk"}],
-                    },
+                    }
                 ],
             }
         )
-        studies = {
-            "STUDY": {
-                "health": (
-                    ("TITLE", "the health of oak"),
-                    ("PROJECT", "@PROJECT.oak"),
-                    ("COLLECTOR", "ledger"),
-                    ("SLOT", "none"),
-                    ("OUTPUT", "entity:ANSWER"),
-                    ("ANSWER", "ANSWER"),
-                    ("STATUS", "active"),
-                ),
-                "disk": (
-                    ("TITLE", "the disk of the machine"),
-                    ("COLLECTOR", "shell: df"),
-                    ("SLOT", "none"),
-                    ("OUTPUT", "entity:ANSWER"),
-                    ("ANSWER", "ANSWER"),
-                    ("STATUS", "active"),
-                ),
-            }
-        }
-        runtime = create_test_runtime(create_test_paths(root), run_process=create_corpus_double(studies))
+        no_study = {}
+        runtime = create_test_runtime(create_test_paths(root), run_process=create_corpus_double(no_study))
 
         # Act
         reports = read_reports(runtime, plugin)
@@ -76,23 +51,7 @@ class ReadReportsTest(unittest.TestCase):
                     "pattern": None,
                     "type": "REPORT",
                     "fields": [{"name": "WAVE", "value": "oak_w3"}, {"name": "PROJECT", "value": "oak"}],
-                },
-                {
-                    "id": "health_20261018T090000Z_a1",
-                    "kind": "study-answer",
-                    "project": "oak",
-                    "pattern": None,
-                    "type": "ANSWER",
-                    "fields": [{"name": "STUDY", "value": "health"}],
-                },
-                {
-                    "id": "disk_20261019T090000Z_b2",
-                    "kind": "study-answer",
-                    "project": None,
-                    "pattern": None,
-                    "type": "ANSWER",
-                    "fields": [{"name": "STUDY", "value": "disk"}],
-                },
+                }
             ],
         )
 

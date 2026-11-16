@@ -90,8 +90,9 @@ def _render_pause(pause: dict) -> tuple[str, ...]:
 
 
 def _render_wave(document: dict) -> str:
-    roles = [_render_steps(role, summary["runs"]) for role, summary in document["steps"]["by_role"].items()]
-    pauses = [_render_pause(pause) for pause in document["pauses"]]
+    ledger = document["ledger"]
+    roles = [_render_steps(role, summary["runs"]) for role, summary in ledger["steps"]["by_role"].items()]
+    pauses = [_render_pause(pause) for pause in ledger["pauses"]]
     return (
         f"<p>wave {escape(document['wave'])}</p>"
         f"{render_html_table(('role', *STEPS_HEADER), roles, 'no run finished')}"
