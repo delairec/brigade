@@ -201,6 +201,31 @@ SCHEMA ORDER
 	WHEN STATUS archived
 		GATE suppressed
 
+SCHEMA RESULT
+	DESC "the answer of one run of an order: the CLI fills what the collectors gave, the judging"
+		+ "slot the prose"
+	FIELD ORDER string
+		REQUIRED
+		DESC "the name of the ORDER answered"
+	FIELD RUN string
+		REQUIRED
+		DESC "the run of the order"
+	FIELD COLLECTED string
+		REPEATABLE
+		DESC "one per collector, its name, filled by the CLI"
+		FIELD SUMMARY string
+			REQUIRED
+			DESC "the summary of its document, as JSON"
+		FIELD DOCUMENT string
+			REQUIRED
+			DESC "the path of its full document"
+	FIELD NARRATIVE string
+		REPEATABLE
+		DESC "filled by the judging slot"
+	FIELD FINDING string
+		REPEATABLE
+		DESC "one finding with its evidence, filled by the judging slot"
+
 SCHEMA REQUEST
 	DESC "what the user wants for one project, in their words, and the plan it receives"
 	FIELD PROJECT @PROJECT

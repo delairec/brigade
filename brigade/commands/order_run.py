@@ -9,10 +9,12 @@ from brigade.collecting.collector_environment import CollectorInputs
 from brigade.command import Argument, Command
 from brigade.commands._equip_collector import equip_collector
 from brigade.commands._equip_preflight import equip_preflight
+from brigade.commands._equip_study import equip_study
 from brigade.commands._locate_checkout import locate_checkout
 from brigade.commands._locate_preflights import locate_preflights
 from brigade.commands._locate_recipe_places import locate_recipe_places
 from brigade.commands.run import run as launch_run
+from brigade.corpus.read_entities import Entity
 from brigade.corpus.read_entity import read_entity
 from brigade.ledger.order_done import OrderDone
 from brigade.ledger.order_parked import OrderParked
@@ -25,8 +27,11 @@ from brigade.recipes.create_collect_performer import create_collect_performer
 from brigade.recipes.create_command_performer import create_command_performer
 from brigade.recipes.create_gate_performer import create_gate_performer
 from brigade.recipes.create_judge_performer import create_judge_performer
+from brigade.recipes.create_output_performer import create_output_performer
+from brigade.recipes.hand_result import ResultHandoff, hand_result
+from brigade.recipes.keep_result import keep_result
 from brigade.recipes.resolve_recipe import resolve_recipe
-from brigade.recipes.run_order import DONE, OrderRun, run_order
+from brigade.recipes.run_order import DONE, OrderRun, StepPerformer, run_order
 from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
@@ -42,6 +47,7 @@ PARKED_EXIT_CODE = 1
 PARAM_SEPARATOR = "="
 PROJECT_VALUE = "project"
 NO_PARKED_RUN = None
+NO_PROJECT = None
 NO_GATE_PARAMETERS = {}
 COLLECTOR_KIND = "collector"
 BEGINNING = date(1970, 1, 1)
@@ -58,10 +64,16 @@ def _decide_exit_code(document: dict) -> int:
     return 0 if document["state"] == DONE else PARKED_EXIT_CODE
 
 
-def _locate_project(order: Order, runtime: Runtime) -> Path:
+def _find_order_project(order: Order, runtime: Runtime) -> Entity | None:
     if order.project is None:
+        return NO_PROJECT
+    return find_project(read_projects(runtime), order.project)
+
+
+def _locate_project(project: Entity | None, runtime: Runtime) -> Path:
+    if project is None:
         return locate_checkout(runtime)
-    return Path(read_project_field(find_project(read_projects(runtime), order.project), "PATH"))
+    return Path(read_project_field(project, "PATH"))
 
 
 def _find_parked_run(runtime: Runtime, order: Order) -> str | None:
@@ -112,10 +124,27 @@ def _equip_collect(project: Path, runtime: Runtime) -> Callable[[str, Mapping[st
     return collect
 
 
+def _equip_output(order: Order, project: Entity | None, run_id: str, runtime: Runtime) -> StepPerformer:
+    def hand(output: str, answer: Path) -> dict:
+        handoff = ResultHandoff(
+            runtime=runtime,
+            order=order.name,
+            project=order.project,
+            output=output,
+            run_id=run_id,
+            run_directory=answer.parent,
+            equipment=equip_study(project, runtime),
+        )
+        return hand_result(handoff)
+
+    return create_output_performer(lambda result: keep_result(runtime, order.name, result), hand, order.output)
+
+
 def order_run(request: argparse.Namespace, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     order = convert_order(read_entity(runtime.run_process, runtime.paths.config_root, ENTITY_TYPE, request.name))
-    project = _locate_project(order, runtime)
+    project_entity = _find_order_project(order, runtime)
+    project = _locate_project(project_entity, runtime)
     recipe = resolve_recipe(order.recipe, locate_recipe_places(project, runtime), runtime.run_process).document
     run_id = _find_parked_run(runtime, order) or _start_new_run(runtime, order)
     run = OrderRun(
@@ -131,6 +160,7 @@ def order_run(request: argparse.Namespace, runtime: Runtime) -> dict:
         "command": create_command_performer(runtime.run_process, project, values),
         "gate": create_gate_performer(lambda name: _run_gate(name, project, runtime)),
         "judge": create_judge_performer(lambda request: launch_run(request, runtime)),
+        "output": _equip_output(order, project_entity, run_id, runtime),
     }
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, **run_order(runtime, run, performers)}
 
