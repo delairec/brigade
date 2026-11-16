@@ -15,10 +15,7 @@ from tests.unit.scripted_processes import ScriptedProcesses
 
 PROJECT = Entity(
     name="oak",
-    fields=(
-        EntityField(name="PATH", value="/srv/oak"),
-        EntityField(name="ACCEPTANCE", value="npm test"),
-    ),
+    fields=(EntityField(name="PATH", value="/srv/oak"),),
 )
 REPOSITORY = Path("/srv/oak")
 NO_FORGE_CHECK = ()
@@ -39,6 +36,7 @@ class ProveHeadTest(unittest.TestCase):
         self.processes = ScriptedProcesses()
         self.runtime = create_test_runtime(self.paths, run_process=self.processes)
         self.checkout = self.paths.state_root / "head-checks" / "oak" / "c0ffee"
+        self.processes.answer_recipes(self.checkout, {"acceptance": (("npm", "test"),)})
 
     def write_record(self, relative: str, document: dict) -> None:
         record = self.paths.state_root / relative

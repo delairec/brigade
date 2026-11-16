@@ -7,6 +7,7 @@ from pathlib import Path
 from brigade.corpus.read_entities import Entity, EntityField
 from brigade.system.parse_configuration import Configuration
 from brigade.verify.preflight_task_branch import BranchPreflightDemand, preflight_task_branch
+from tests.unit.create_recipe_answers import create_recipe_answers
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
@@ -50,6 +51,7 @@ class PreflightTaskBranchTest(unittest.TestCase):
         return RecordingProcessRunner(
             {
                 **create_registry_answers(self.paths.config_root, {"shop": {"PATH": "/srv/shop"}}),
+                **create_recipe_answers(self.head_tree, {"acceptance": (("python3", "-m", "unittest"),)}),
                 _resolve(TASK_BRANCH): ProcessAnswer(stdout=f"{HEAD}\n"),
                 _resolve(MILESTONE_BRANCH): ProcessAnswer(stdout=f"{MILESTONE_HEAD}\n"),
                 ("git", "merge-base", "--end-of-options", MILESTONE_HEAD, HEAD): ProcessAnswer(stdout=f"{BASE}\n"),
@@ -73,7 +75,6 @@ class PreflightTaskBranchTest(unittest.TestCase):
                 fields=(
                     EntityField(name="PATH", value="/srv/shop"),
                     EntityField(name="FORGE", value="none"),
-                    EntityField(name="ACCEPTANCE", value="python3 -m unittest"),
                 ),
             ),
             task="B1",
@@ -159,6 +160,7 @@ class PreflightTaskBranchOfAnAreaTest(unittest.TestCase):
         runner = RecordingProcessRunner(
             {
                 **create_registry_answers(self.paths.config_root, {"shop": fields}),
+                **create_recipe_answers(head_area, {"acceptance": (("python3", "-m", "unittest"),)}),
                 _resolve(TASK_BRANCH): ProcessAnswer(stdout=f"{HEAD}\n"),
                 _resolve(MILESTONE_BRANCH): ProcessAnswer(stdout=f"{MILESTONE_HEAD}\n"),
                 ("git", "merge-base", "--end-of-options", MILESTONE_HEAD, HEAD): ProcessAnswer(stdout=f"{BASE}\n"),
@@ -184,7 +186,6 @@ class PreflightTaskBranchOfAnAreaTest(unittest.TestCase):
                     EntityField(name="CORPUS", value="brigade"),
                     EntityField(name="MODE", value="area"),
                     EntityField(name="FORGE", value="none"),
-                    EntityField(name="ACCEPTANCE", value="python3 -m unittest"),
                 ),
             ),
             task="B1",

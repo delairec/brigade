@@ -13,6 +13,8 @@ from brigade.git.fetch_branches import BranchesFetch, fetch_branches
 from brigade.git.find_merge_base import find_merge_base
 from brigade.git.list_added_lines import list_added_lines
 from brigade.git.resolve_commit import resolve_commit
+from brigade.recipes.locate_recipes import locate_recipes
+from brigade.recipes.read_project_commands import read_project_commands
 from brigade.registry.read_corpus_workspace import read_corpus_workspace
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_project_forge import NO_FORGE
@@ -22,13 +24,13 @@ from brigade.runtime import Runtime
 from brigade.system.ask_pull_request_details import PullRequestDetailsQuery, ask_pull_request_details
 from brigade.system.parse_configuration import CLI_KEY
 from brigade.system.read_account_environment import UNBOUND_ENVIRONMENT, ForgeAccount, read_account_environment
-from brigade.tasks.run_project_checks import ACCEPTANCE_FIELD
 from brigade.verify.read_privacy_patterns import read_privacy_patterns
 
 NAME = "pull-request"
 REMOTE_BRANCH_PREFIX = "refs/remotes/origin/"
 FRESH_AT_EACH_CALL = False
 NO_ITEMS = []
+ACCEPTANCE_RECIPE = "acceptance"
 
 
 @dataclass(frozen=True)
@@ -94,10 +96,11 @@ def _describe_revisions(project: Entity, query: _PullRequestQuery, head: str, ru
     }
 
 
-def _describe_project_rules(project: Entity) -> dict:
+def _describe_project_rules(project: Entity, checkout: Path, runtime: Runtime) -> dict:
     privacy = read_privacy_patterns(project)
+    places = locate_recipes(checkout, project, runtime.paths)
     return {
-        "acceptance": [field.value for field in project.fields if field.name == ACCEPTANCE_FIELD],
+        "acceptance": [list(argv) for argv in read_project_commands(places, ACCEPTANCE_RECIPE, runtime.run_process)],
         "privacy": {"private": list(privacy.private), "public": list(privacy.public)},
     }
 
@@ -113,15 +116,16 @@ def collect(environment: dict, runtime: Runtime, equipment: CollectorEquipment) 
         equipment=equipment,
     )
     pull_request = _fetch_pull_request(query, runtime)
+    revisions = _describe_revisions(project, query, pull_request["head_sha"], runtime)
     summary = {
         "project": project.name,
         "pr": query.pr,
         "task": inputs.parameters["task"],
         "base_branch": query.base_branch,
         "repository": str(repository),
-        **_describe_revisions(project, query, pull_request["head_sha"], runtime),
+        **revisions,
         "check_runs": pull_request["checks"],
         "body": pull_request["body"],
-        **_describe_project_rules(project),
+        **_describe_project_rules(project, Path(revisions["checkout"]), runtime),
     }
     return {**describe_collection(NAME, runtime, summary, NO_ITEMS), "cache": FRESH_AT_EACH_CALL}

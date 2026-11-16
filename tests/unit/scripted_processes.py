@@ -4,6 +4,7 @@ from pathlib import Path
 
 from brigade.errors import CommandFailed
 from brigade.system.run_process import ProcessRecord, ProcessRequest
+from tests.unit.create_recipe_answers import create_recipe_answers
 
 ANSWER_DURATION_MS = 7
 LINT_REFUSED = 1
@@ -38,6 +39,10 @@ class ScriptedProcesses:
         )
         for name, fields in entities.items():
             self.answer_entity(root, entity_type, name, fields)
+
+    def answer_recipes(self, corpus: Path, recipes: dict[str, tuple[tuple[str, ...], ...]]) -> None:
+        for argv, answer in create_recipe_answers(corpus, recipes).items():
+            self.answer(argv, stdout=answer.stdout)
 
     def answer_corpus_change(
         self, root: Path, file_names: tuple[str, ...], message: str, lint_output: str = ""

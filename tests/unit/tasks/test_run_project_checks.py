@@ -2,9 +2,9 @@ import unittest
 from pathlib import Path
 
 from brigade.corpus.read_entities import Entity, EntityField
-from brigade.errors import BrigadeError
 from brigade.system.run_process import ProcessRecord
 from brigade.tasks.run_project_checks import ProjectCheck, run_project_checks
+from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 ROOT = Path("/srv/oak/.brigade/worktrees/integration-dashboard")
@@ -18,19 +18,16 @@ class RunProjectChecksTest(unittest.TestCase):
         # Arrange
         project = Entity(
             name="oak",
-            fields=(
-                EntityField(name="PATH", value="/srv/oak"),
-                EntityField(name="ACCEPTANCE", value="ruff check ."),
-                EntityField(name="ACCEPTANCE", value="python3 -m unittest"),
-            ),
+            fields=(EntityField(name="PATH", value="/srv/oak"),),
         )
+        self.processes.answer_recipes(ROOT, {"acceptance": (("ruff", "check", "."), ("python3", "-m", "unittest"))})
         self.processes.answer(("ruff", "check", "."), exit_code=1, stdout="F401 unused import\n")
         self.processes.answer(("python3", "-m", "unittest"), stderr="OK\n")
         self.processes.answer(("awawa", "fmt", "--check", "."))
         self.processes.answer(("awawa", "lint", "--strict", "."), exit_code=1, stdout="L025 a mention in prose\n")
 
         # Act
-        checks = run_project_checks(self.processes, project, ROOT)
+        checks = run_project_checks(create_test_runtime(run_process=self.processes), project, ROOT)
 
         # Assert
         self.assertEqual(
@@ -83,25 +80,45 @@ class RunProjectChecksTest(unittest.TestCase):
             ),
         )
 
-    def test_should_refuse_a_line_that_cannot_be_split_by_name_before_any_command_runs(self):
+    def test_should_run_only_the_checks_of_the_corpus_when_the_project_has_no_acceptance_recipe(self):
         # Arrange
-        project = Entity(
-            name="oak",
-            fields=(
-                EntityField(name="ACCEPTANCE", value="python3 -m unittest"),
-                EntityField(name="ACCEPTANCE", value="printf 'oak"),
-            ),
-        )
+        project = Entity(name="oak", fields=(EntityField(name="PATH", value="/srv/oak"),))
+        no_recipe = {}
+        self.processes.answer_recipes(ROOT, no_recipe)
+        self.processes.answer(("awawa", "fmt", "--check", "."))
+        self.processes.answer(("awawa", "lint", "--strict", "."))
 
         # Act
-        with self.assertRaises(BrigadeError) as refusal:
-            run_project_checks(self.processes, project, ROOT)
+        checks = run_project_checks(create_test_runtime(run_process=self.processes), project, ROOT)
 
         # Assert
         self.assertEqual(
-            str(refusal.exception), "the command printf 'oak cannot be split into an argv: No closing quotation"
+            checks,
+            (
+                ProjectCheck(
+                    command="awawa fmt --check .",
+                    record=ProcessRecord(
+                        argv=("awawa", "fmt", "--check", "."),
+                        cwd="/srv/oak/.brigade/worktrees/integration-dashboard",
+                        exit_code=0,
+                        stdout="",
+                        stderr="",
+                        duration_ms=7,
+                    ),
+                ),
+                ProjectCheck(
+                    command="awawa lint --strict .",
+                    record=ProcessRecord(
+                        argv=("awawa", "lint", "--strict", "."),
+                        cwd="/srv/oak/.brigade/worktrees/integration-dashboard",
+                        exit_code=0,
+                        stdout="",
+                        stderr="",
+                        duration_ms=7,
+                    ),
+                ),
+            ),
         )
-        self.assertEqual(self.processes.list_argvs(), [])
 
 
 class RunProjectChecksOfAnAreaTest(unittest.TestCase):
@@ -113,15 +130,15 @@ class RunProjectChecksOfAnAreaTest(unittest.TestCase):
             fields=(
                 EntityField(name="CORPUS", value="brigade"),
                 EntityField(name="MODE", value="area"),
-                EntityField(name="ACCEPTANCE", value="ruff check ."),
             ),
         )
+        processes.answer_recipes(ROOT / "brigade", {"acceptance": (("ruff", "check", "."),)})
         processes.answer(("ruff", "check", "."))
         processes.answer(("awawa", "fmt", "--check", "."))
         processes.answer(("awawa", "lint", "--strict", "."))
 
         # Act
-        checks = run_project_checks(processes, project, ROOT)
+        checks = run_project_checks(create_test_runtime(run_process=processes), project, ROOT)
 
         # Assert
         self.assertEqual(checks[0].record.cwd, str(ROOT))

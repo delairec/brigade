@@ -10,12 +10,14 @@ from brigade.errors import BrigadeError
 from brigade.system.parse_configuration import Configuration
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
 from tests.unit.create_preflight_plugins import create_preflight_plugins
+from tests.unit.create_recipe_answers import create_recipe_answers
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 from tests.unit.registry_answers import create_registry_answers
 
 NO_CLIENT_RESOLVER = None
+NO_RECIPE = {}
 
 HEAD = "2222222"
 WAVE_HEAD = "1111111"
@@ -53,6 +55,7 @@ class PreflightPullRequestOfAnAreaTest(unittest.TestCase):
         answers = PreflightPullRequestTest.create_answers(self)
         head_area = self.head_tree / "brigade"
         base_area = self.base_tree / "brigade"
+        answers.update(create_recipe_answers(head_area, NO_RECIPE))
         answers[("awawa", "show", "@TASK.B1", "--json", str(head_area))] = answers[
             ("awawa", "show", "@TASK.B1", "--json", str(self.head_tree))
         ]
@@ -136,6 +139,7 @@ class PreflightPullRequestTest(unittest.TestCase):
         }
         return {
             **create_registry_answers(self.paths.config_root, {"shop": {"PATH": "/srv/shop"}}),
+            **create_recipe_answers(self.head_tree, NO_RECIPE),
             (
                 "git",
                 "rev-parse",

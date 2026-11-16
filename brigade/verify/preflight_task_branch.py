@@ -8,11 +8,12 @@ from brigade.git.count_changed_lines import ChangedFile, count_changed_lines
 from brigade.git.find_merge_base import find_merge_base
 from brigade.git.list_added_lines import list_added_lines
 from brigade.git.resolve_commit import resolve_commit
+from brigade.recipes.locate_recipes import locate_recipes
+from brigade.recipes.read_project_commands import read_project_commands
 from brigade.registry.read_corpus_workspace import read_corpus_workspace
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.system.parse_configuration import Configuration
-from brigade.tasks.run_project_checks import ACCEPTANCE_FIELD
 from brigade.verify.check_acceptance import AcceptanceFacts, check_acceptance
 from brigade.verify.check_ancestry import AncestryFacts, check_ancestry
 from brigade.verify.check_corpus_at_head import check_corpus_at_head
@@ -24,6 +25,7 @@ from brigade.verify.read_privacy_patterns import read_privacy_patterns
 
 DOCUMENT_SCHEMA_VERSION = 1
 NO_PULL_REQUEST = None
+ACCEPTANCE_RECIPE = "acceptance"
 
 
 @dataclass(frozen=True)
@@ -40,10 +42,6 @@ class TreeDemand:
     project: str
     ref: str
     worktree: None = None
-
-
-def _read_acceptance(project: Entity) -> tuple[str, ...]:
-    return tuple(field.value for field in project.fields if field.name == ACCEPTANCE_FIELD)
 
 
 @dataclass(frozen=True)
@@ -90,6 +88,9 @@ def preflight_task_branch(runtime: Runtime, demand: BranchPreflightDemand) -> di
         demand.project, TreeDemand(project=project, ref=head), demand.configuration, runtime
     ).root
     changed = count_changed_lines(run_process, repository, base, head)
+    acceptance = read_project_commands(
+        locate_recipes(checkout, demand.project, runtime.paths), ACCEPTANCE_RECIPE, run_process
+    )
     ancestry = AncestryFacts(repository=repository, base_branch=demand.base_branch, base_head=base_head, head=head)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
@@ -98,9 +99,7 @@ def preflight_task_branch(runtime: Runtime, demand: BranchPreflightDemand) -> di
         "head": head,
         "checks": [
             check_ancestry(run_process, ancestry),
-            check_acceptance(
-                run_process, AcceptanceFacts(head_tree=checkout, commands=_read_acceptance(demand.project))
-            ),
+            check_acceptance(run_process, AcceptanceFacts(head_tree=checkout, commands=acceptance)),
             *_run_corpus_checks(
                 runtime, demand, _ComparedHead(head=head, base=base, changed=changed, checkout=checkout)
             ),
