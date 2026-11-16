@@ -40,7 +40,7 @@ class RebaseDoneTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             text,
-            "task/M4-tides/T7 at 9a9a9a9 descends from integration/M4-tides for #42, @TASK.T7; push it with brigade task push",
+            "task/M4-tides/T7 at 9a9a9a9 descends from integration/M4-tides for #42, @TASK.T7; push it with brigade build push",
         )
 
 

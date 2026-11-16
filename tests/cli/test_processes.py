@@ -52,7 +52,7 @@ RUN_SPAWNED = (
     json.dumps(
         {
             "schema_version": 1,
-            "argv": ["brigade", "run", "awawa-task", "--detach"],
+            "argv": ["brigade", "run", "start", "awawa-task", "--detach"],
             "cwd": "/work",
             "exit": None,
             "duration_ms": None,

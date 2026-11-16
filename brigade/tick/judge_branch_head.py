@@ -17,7 +17,7 @@ def judge_branch_head(runtime: Runtime, head: BranchHead) -> HeadProof:
                     project=head.project, branch=head.branch, commit=commit, list_check_runs=head.list_check_runs
                 )
             ),
-            task_check=NO_TASK_CHECK,
+            build_check=NO_TASK_CHECK,
             commit_checks=read_commit_checks(runtime.paths.state_root, head.project.name, commit),
         )
     )

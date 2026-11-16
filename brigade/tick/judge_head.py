@@ -12,9 +12,9 @@ def _list_forge_failures(evidence: HeadEvidence) -> tuple[str, ...] | None:
 
 
 def _list_task_check_failures(evidence: HeadEvidence) -> tuple[str, ...] | None:
-    if evidence.task_check is None or evidence.task_check.head != evidence.commit:
+    if evidence.build_check is None or evidence.build_check.head != evidence.commit:
         return None
-    return evidence.task_check.failed_commands
+    return evidence.build_check.failed_commands
 
 
 def _list_commit_check_failures(evidence: HeadEvidence) -> tuple[str, ...] | None:

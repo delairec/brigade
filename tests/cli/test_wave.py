@@ -270,7 +270,7 @@ class BrigadeWaveCancelOfAWaveWithALiveRunTest(RunTestCase):
         self.record("builder", DONE_RESULT)
         self.ledger.mkdir(parents=True)
         (self.ledger / "2026-10.jsonl").write_text(CANCELLED_WAVE_EVENTS)
-        deliver = ("run", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace))
+        deliver = ("run", "start", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace))
         self.run_id = self.run_brigade(*deliver, "--wave", "shop_w1", "--task", "S3", "--detach").stdout.strip()
         self.client_pid = self.wait_for_client(self.read_run_pid(self.run_id))
 

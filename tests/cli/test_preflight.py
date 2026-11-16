@@ -3,9 +3,9 @@ import os
 from pathlib import Path
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
-from tests.cli.test_collect import install_executable
+from tests.cli.test_build_pr import TYPED_SCHEMA
+from tests.cli.test_collector_run import install_executable
 from tests.cli.test_task import MILESTONE_BRANCH, MILESTONE_BRANCH_CUT, TASK_BRANCH, TaskContextTestCase
-from tests.cli.test_task_pr import TYPED_SCHEMA
 
 DELIVERED_TASKS = (
     'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS implemented\n\n'

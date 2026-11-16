@@ -132,7 +132,7 @@ class AssembleTaskContextTest(unittest.TestCase):
                 "project": None,
                 "acceptance": {"acceptance": ["python3 -m unittest"], "heavy": ["npm run e2e"]},
                 "reserved": {"task_number": 16, "temporary_directory": None, "attribution": ATTRIBUTION},
-                "when_done": ["brigade task check", "brigade task push", "brigade task pr", "brigade task promote"],
+                "when_done": ["brigade build check", "brigade build push", "brigade build pr", "brigade build promote"],
             },
         )
 

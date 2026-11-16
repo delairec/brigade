@@ -166,7 +166,7 @@ class CheckTaskTest(unittest.TestCase):
         self.assertEqual(
             str(refusal.exception),
             "the worktree of @TASK.B12 holds changes HEAD does not: src/parse.py, notes.md;"
-            " commit them, then run brigade task check",
+            " commit them, then run brigade build check",
         )
 
 

@@ -148,7 +148,7 @@ class PushTaskBranchTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            str(refusal.exception), "the last check of @TASK.B12 failed on coverage report; run brigade task check"
+            str(refusal.exception), "the last check of @TASK.B12 failed on coverage report; run brigade build check"
         )
 
     def test_should_push_nothing_when_no_check_of_the_task_is_recorded(self):

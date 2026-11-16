@@ -1,52 +1,99 @@
+import argparse
+import json
 import tempfile
 import unittest
 from argparse import Namespace
 from pathlib import Path
 
+from brigade.add_command_parsers import add_command_parsers
 from brigade.commands.review_context import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_machine_double, write_ledger
+from tests.unit.commands.command_runtime import (
+    create_machine_double,
+    create_worktrees_double,
+    write_ledger,
+    write_operational_corpus,
+)
+from tests.unit.commands.run_directories import create_run_record
 from tests.unit.commands.test_preflight import (
+    M4_BRANCH_CUT,
     TASK_PR_OPENED,
     TASK_WORKTREE,
     TIDEPOOL_PROJECT,
+    TIDEPOOL_TASKS,
     WAVE_STARTED,
-    ForgeBindingItsLoginsDouble,
+    ForgeDeclineDouble,
 )
+from tests.unit.create_preflight_plugins import resolve_preflight_kinds_or
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
-from tests.unit.verify.test_record_verdict import create_review_forge
 
-GITHUB_PROJECT = (*TIDEPOOL_PROJECT, ("FORGE", "github"))
-VERDICT_FINDING = {"id": "1", "grade": "high", "file": "src/tides.py", "line": 12, "broken": "SPEC 2 of @TASK.T7"}
-CHANGES_REQUESTED = {
-    "schema_version": 1,
-    "ts": "2026-10-18T12:00:00Z",
-    "event": "task.state",
-    "wave": "tidepool_w16",
-    "task": "T7",
-    "state": "changes_requested",
-    "reason": "body: the body keeps the placeholder $checks",
+AWAWA_CONTEXT = {
+    "command": "awawa context @TASK.T7 --with-schema .",
+    "exit_code": 0,
+    "stderr": "",
+    "output": "TASK T7\n",
 }
+DIFF = {"command": "git diff 0000000 8885daa", "exit_code": 0, "stderr": "", "output": "+def tide():\n"}
+RULES = [
+    {
+        "trigger": "python_file",
+        "command": "awawa context @TRIGGER.python_file",
+        "exit_code": 0,
+        "stderr": "",
+        "output": "RULE pure\n",
+    }
+]
+GITHUB_PROJECT = (*TIDEPOOL_PROJECT, ("FORGE", "github"))
+FAILED_CHECK = {"verdict": "fail", "name": "scope", "findings": ["brigade/cli.py is outside the task"]}
 
 
-def create_document(request: str | None) -> dict:
+PREVIOUS_VERDICT = {
+    "head": "efd5ed1",
+    "verdict": "changes",
+    "findings": [
+        {
+            "id": "1",
+            "grade": "high",
+            "file": "src/tides.py",
+            "line": 12,
+            "broken": "SPEC 2 of @TASK.T7",
+            "summary": "the tide table is read twice",
+            "answer": "fixed by 8885daa: the table is read once",
+        },
+        {
+            "id": "2",
+            "grade": "low",
+            "file": "src/ebb.py",
+            "line": 3,
+            "broken": "@RULE.kiss",
+            "summary": None,
+            "answer": None,
+        },
+    ],
+}
+REPAIR = {"command": "git diff efd5ed1 8885daa", "exit_code": 0, "stderr": "", "output": "-read()\n+cached()\n"}
+
+
+def create_document(rules: list[dict] | None, previous: dict | None = None, repair: dict | None = None) -> dict:
     return {
-        "schema_version": 1,
-        "project": "tidepool",
         "pr": 42,
         "task": "T7",
         "head": "8885daa",
-        "request": request,
-        "review": "verdict",
-        "findings": [VERDICT_FINDING],
+        "context": [AWAWA_CONTEXT],
+        "diff": DIFF,
+        "previous": previous,
+        "repair": repair,
+        "preflight": [FAILED_CHECK],
+        "rules": rules,
+        "grades": ["critical", "high", "medium", "low"],
     }
 
 
-class ReviewContextTextTest(unittest.TestCase):
-    def test_should_print_the_head_the_request_and_each_finding_under_its_identifier(self):
+class VerifyContextTextTest(unittest.TestCase):
+    def test_should_print_each_section_under_its_heading(self):
         # Arrange
-        document = create_document("body: the body keeps the placeholder $checks")
+        document = create_document(RULES)
 
         # Act
         text = COMMAND.render_text(document)
@@ -55,23 +102,60 @@ class ReviewContextTextTest(unittest.TestCase):
         self.assertEqual(
             text,
             "# head\n8885daa\n\n"
-            "# request\nbody: the body keeps the placeholder $checks\n\n"
-            "# review\nverdict\n\n"
-            "# findings\n## 1\ngrade: high\nfile: src/tides.py\nline: 12\nbroken: SPEC 2 of @TASK.T7",
+            "# task\n$ awawa context @TASK.T7 --with-schema .\nexit 0\nTASK T7\n\n"
+            "# diff\n$ git diff 0000000 8885daa\nexit 0\n+def tide():\n\n"
+            "# preflight\nfail  scope\n  brigade/cli.py is outside the task\n\n"
+            "# rules\n$ awawa context @TRIGGER.python_file\nexit 0\nRULE pure\n\n"
+            "# grades\ncritical\nhigh\nmedium\nlow",
         )
 
-    def test_should_leave_the_request_out_when_no_preflight_sent_the_task_back(self):
+    def test_should_leave_the_rules_out_without_an_instructions_corpus(self):
         # Arrange
-        no_request = None
+        no_instructions_corpus = None
 
         # Act
-        text = COMMAND.render_text(create_document(no_request))
+        text = COMMAND.render_text(create_document(no_instructions_corpus))
 
         # Assert
-        self.assertNotIn("# request", text)
+        self.assertNotIn("# rules", text)
+
+    def test_should_print_the_previous_verdict_and_the_repair_diff_after_the_diff(self):
+        # Arrange
+        document = create_document(RULES, PREVIOUS_VERDICT, REPAIR)
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text,
+            "# head\n8885daa\n\n"
+            "# task\n$ awawa context @TASK.T7 --with-schema .\nexit 0\nTASK T7\n\n"
+            "# diff\n$ git diff 0000000 8885daa\nexit 0\n+def tide():\n\n"
+            "# previous verdict\nhead efd5ed1\nverdict changes\n"
+            "finding 1: high src/tides.py:12, broken SPEC 2 of @TASK.T7\n"
+            "  summary: the tide table is read twice\n"
+            "  answer: fixed by 8885daa: the table is read once\n"
+            "finding 2: low src/ebb.py:3, broken @RULE.kiss\n"
+            "  summary: none\n"
+            "  answer: none\n\n"
+            "# repair diff\n$ git diff efd5ed1 8885daa\nexit 0\n-read()\n+cached()\n\n"
+            "# preflight\nfail  scope\n  brigade/cli.py is outside the task\n\n"
+            "# rules\n$ awawa context @TRIGGER.python_file\nexit 0\nRULE pure\n\n"
+            "# grades\ncritical\nhigh\nmedium\nlow",
+        )
 
 
-class ReviewContextRequestTest(unittest.TestCase):
+class VerifyContextExitCodeTest(unittest.TestCase):
+    def test_should_exit_0_whatever_the_preflight_found(self):
+        # Act
+        exit_code = COMMAND.decide_exit_code(create_document(RULES))
+
+        # Assert
+        self.assertEqual(exit_code, 0)
+
+
+class VerifyContextRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
         options = Namespace(pr=42)
@@ -82,45 +166,49 @@ class ReviewContextRequestTest(unittest.TestCase):
         # Assert
         self.assertIs(request, options)
 
+    def test_should_take_a_context_naming_no_pull_request(self):
+        # Arrange
+        parser = argparse.ArgumentParser(prog="brigade")
+        add_command_parsers(parser, (COMMAND,), argparse.ArgumentParser(add_help=False))
 
-class ReviewContextExitCodeTest(unittest.TestCase):
-    def test_should_exit_0(self):
         # Act
-        exit_code = COMMAND.decide_exit_code(create_document(None))
+        options = parser.parse_args(["review", "context"])
 
         # Assert
-        self.assertEqual(exit_code, 0)
+        self.assertIsNone(options.pr)
 
 
-class ReviewContextOfAPullRequestTest(unittest.TestCase):
+class VerifyContextOfAPullRequestTest(unittest.TestCase):
     def setUp(self):
-        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
         (self.root / "config").mkdir()
         (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
-        write_ledger(self.root, [WAVE_STARTED, TASK_PR_OPENED, CHANGES_REQUESTED])
+        write_ledger(self.root, [M4_BRANCH_CUT, WAVE_STARTED, TASK_PR_OPENED])
+        self.forge = ForgeDeclineDouble()
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
-            run_process=create_machine_double({"PROJECT": {"tidepool": GITHUB_PROJECT}, "POLICY": {}}, TASK_WORKTREE),
-            resolve_plugin=lambda kind, name, **places: create_review_forge(),
+            run_process=create_machine_double(
+                {"PROJECT": {"tidepool": GITHUB_PROJECT}, "TASK": TIDEPOOL_TASKS}, TASK_WORKTREE
+            ),
+            resolve_plugin=resolve_preflight_kinds_or(lambda kind, name, **places: self.forge),
         )
 
-    def test_should_give_the_context_of_the_review_of_the_task_of_the_pull_request(self):
+    def test_should_ask_the_forge_about_the_pull_request_of_the_task(self):
         # Act
-        document = COMMAND.run(Namespace(pr=42), self.runtime)
+        with self.assertRaises(BrigadeError):
+            COMMAND.run(Namespace(pr=42), self.runtime)
 
         # Assert
         self.assertEqual(
-            document,
-            {
-                "schema_version": 1,
-                "project": "tidepool",
-                "pr": 42,
-                "task": "T7",
-                "head": "8885daa",
-                "request": "body: the body keeps the placeholder $checks",
-                "review": "verdict",
-                "findings": [],
-            },
+            self.forge.questions,
+            [
+                (
+                    "read_pull_request",
+                    {"schema_version": 1, "repository": "/srv/tidepool", "number": 42, "environment": {}},
+                )
+            ],
         )
 
     def test_should_refuse_a_pull_request_no_task_opened(self):
@@ -131,25 +219,131 @@ class ReviewContextOfAPullRequestTest(unittest.TestCase):
         # Assert
         self.assertEqual(str(raised.exception), "no task.pr_opened of @PROJECT.tidepool names the pull request #41")
 
-
-class ReviewContextOfAProjectOfForgeNoneTest(unittest.TestCase):
-    def test_should_read_no_login_environment(self):
+    def test_should_refuse_a_context_naming_no_pull_request_on_a_project_with_a_forge(self):
         # Arrange
-        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        (root / "config").mkdir()
-        (root / "config" / "config.toml").write_text('[forge_accounts]\ncli = "octo-cli"\n', encoding="utf-8")
-        write_ledger(root, [WAVE_STARTED, TASK_PR_OPENED, CHANGES_REQUESTED])
-        forge = ForgeBindingItsLoginsDouble()
-        local_project = (*TIDEPOOL_PROJECT, ("FORGE", "none"))
-        runtime = create_test_runtime(
-            create_test_paths(root),
-            run_process=create_machine_double({"PROJECT": {"tidepool": local_project}, "POLICY": {}}, TASK_WORKTREE),
-            resolve_plugin=lambda kind, name, **places: forge,
-        )
+        no_pull_request = None
 
         # Act
-        with self.assertRaises(BrigadeError):
-            COMMAND.run(Namespace(pr=42), runtime)
+        with self.assertRaises(BrigadeError) as raised:
+            COMMAND.run(Namespace(pr=no_pull_request), self.runtime)
 
         # Assert
-        self.assertEqual(forge.questions[0][1]["environment"], {})
+        self.assertEqual(
+            str(raised.exception),
+            "@PROJECT.tidepool acts through the forge github: the context names its pull request",
+        )
+
+
+def _resolve(ref: str) -> tuple[str, ...]:
+    return ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}^{{commit}}")
+
+
+TASK_HEAD = "8885daa"
+MAIN_HEAD = "4c1d2e0"
+MERGE_BASE = "0000000"
+LOCAL_PROJECT = (("PATH", "/srv/tidepool"), ("MAIN", "main"), ("FORGE", "none"))
+LOCAL_TASK_WORKTREE = {
+    **TASK_WORKTREE,
+    ("git", "branch", "--show-current"): "feature/T7-tide-table\n",
+    _resolve("feature/T7-tide-table"): f"{TASK_HEAD}\n",
+    _resolve("main"): f"{MAIN_HEAD}\n",
+    _resolve(TASK_HEAD): f"{TASK_HEAD}\n",
+    _resolve(MERGE_BASE): f"{MERGE_BASE}\n",
+    ("git", "merge-base", "--end-of-options", MAIN_HEAD, TASK_HEAD): f"{MERGE_BASE}\n",
+    ("git", "merge-base", "--is-ancestor"): "",
+    ("git", "diff", "--numstat"): "1\t0\tsrc/tides.py\n",
+    ("git", "diff"): "+def tide():\n",
+    ("awawa", "diff"): '{"added": [], "changed": [], "removed": []}',
+    ("awawa", "context"): "TASK T7\n",
+    ("awawa", "lint"): "",
+    ("awawa", "fmt"): "",
+}
+
+
+class RefusingForgeResolverDouble:
+    def __call__(self, kind: str, name: str, **places):
+        raise AssertionError(f"the command resolved the {kind} {name}")
+
+
+class VerifyContextOfATaskWithoutAForgeTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
+        for ref in (TASK_HEAD, MERGE_BASE):
+            (self.root / "cache" / "refs" / "tidepool" / ref).mkdir(parents=True)
+        write_ledger(self.root, [WAVE_STARTED])
+        corpus = {"PROJECT": {"tidepool": LOCAL_PROJECT}, "TASK": {"T7": ()}, "POLICY": {}}
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_machine_double(corpus, LOCAL_TASK_WORKTREE),
+            resolve_plugin=RefusingForgeResolverDouble(),
+        )
+        self.no_pull_request = None
+
+    def test_should_judge_the_head_of_the_task_branch_with_no_pull_request(self):
+        # Act
+        document = COMMAND.run(Namespace(pr=self.no_pull_request), self.runtime)
+
+        # Assert
+        self.assertEqual(document["project"], "tidepool")
+        self.assertIsNone(document["pr"])
+        self.assertEqual(document["task"], "T7")
+        self.assertEqual(document["head"], TASK_HEAD)
+
+    def test_should_print_the_diff_of_the_task_branch_from_its_merge_base_with_the_branch_of_its_milestone(self):
+        # Act
+        document = COMMAND.run(Namespace(pr=self.no_pull_request), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["diff"],
+            {"command": f"git diff {MERGE_BASE} {TASK_HEAD}", "exit_code": 0, "stderr": "", "output": "+def tide():\n"},
+        )
+
+
+class VerifyContextFromTheDisposableWorktreeOfAReadingRunTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
+        for ref in (TASK_HEAD, MERGE_BASE):
+            (self.root / "cache" / "refs" / "tidepool" / ref).mkdir(parents=True)
+        write_ledger(self.root, [WAVE_STARTED])
+        run_directory = self.root / "state" / "runs" / "20261111T090000Z-e10d04"
+        run_directory.mkdir(parents=True)
+        disposable_worktree = str(run_directory / "worktree")
+        record = {
+            **create_run_record("20261111T090000Z-e10d04", "tidepool_w16", "T7"),
+            "slot": "review",
+            "cwd": "/srv/tidepool-T7",
+            "worktree": disposable_worktree,
+        }
+        (run_directory / "run.json").write_text(json.dumps(record), encoding="utf-8")
+        detached = {
+            ("git", "rev-parse", "--show-toplevel"): f"{disposable_worktree}\n",
+            ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): "/srv/tidepool/.git\n",
+            ("git", "branch", "--show-current"): "\n",
+        }
+        corpus = {"PROJECT": {"tidepool": LOCAL_PROJECT}, "TASK": {"T7": ()}, "POLICY": {}}
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root, run_directory=run_directory),
+            run_process=create_worktrees_double(
+                corpus,
+                {str(Path.cwd()): detached, disposable_worktree: detached},
+                LOCAL_TASK_WORKTREE,
+            ),
+            resolve_plugin=RefusingForgeResolverDouble(),
+        )
+        self.no_pull_request = None
+
+    def test_should_judge_the_task_of_the_worktree_the_run_was_cut_from(self):
+        # Act
+        document = COMMAND.run(Namespace(pr=self.no_pull_request), self.runtime)
+
+        # Assert
+        self.assertEqual(document["task"], "T7")

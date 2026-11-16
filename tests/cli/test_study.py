@@ -8,7 +8,7 @@ from unittest.mock import ANY
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
-from tests.cli.test_collect import install_executable
+from tests.cli.test_collector_run import install_executable
 from tests.list_entry_names import list_entry_names
 from tests.value_matchers import PatternMatcher
 
@@ -314,7 +314,7 @@ class BrigadeRunsPruneOfStudyRunsTest(StudyRunTestCase):
         done = json.loads(self.run_study("run", "trees", "--json").stdout)["run"]
 
         # Act
-        completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "runs", "prune", "--before", "2099-01-01")
+        completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "run", "prune", "--before", "2099-01-01")
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)

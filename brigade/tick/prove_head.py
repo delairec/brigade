@@ -20,7 +20,7 @@ class HeadQuery:
     project: Entity
     repository: Path
     commit: str
-    task_check: TaskCheck | None
+    build_check: TaskCheck | None
     forge_checks: tuple[ForgeCheck, ...]
 
 
@@ -36,7 +36,7 @@ def _check_on_a_checkout(runtime: Runtime, query: HeadQuery, evidence: HeadEvide
         HeadEvidence(
             commit=evidence.commit,
             forge_checks=evidence.forge_checks,
-            task_check=evidence.task_check,
+            build_check=evidence.build_check,
             commit_checks=commit_checks,
         )
     )
@@ -46,7 +46,7 @@ def prove_head(runtime: Runtime, query: HeadQuery) -> HeadProof:
     evidence = HeadEvidence(
         commit=query.commit,
         forge_checks=query.forge_checks,
-        task_check=query.task_check,
+        build_check=query.build_check,
         commit_checks=read_commit_checks(runtime.paths.state_root, query.project.name, query.commit),
     )
     proof = judge_head(evidence)

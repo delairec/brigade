@@ -41,5 +41,5 @@ class ComposePullRequestTitleTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(
                     str(refusal.exception),
-                    "brigade task pr needs --subject, the subject of the pull request in the imperative",
+                    "brigade build pr needs --subject, the subject of the pull request in the imperative",
                 )

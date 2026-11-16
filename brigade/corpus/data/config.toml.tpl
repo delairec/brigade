@@ -80,7 +80,7 @@ $client_line
 # plan = ""
 
 # The procedure the tick launches for a slot in place of the one brigade ships, a name or a path resolved as the
-# argument of brigade run is; key build, in place of build-task.
+# argument of brigade run start is; key build, in place of build-task.
 # [procedures]
 # build = ""
 

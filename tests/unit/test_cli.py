@@ -102,11 +102,11 @@ class MainGroupHelpTest(MainTestCase):
             ("project", "pause", "pause a project"),
             ("project", "resume", "resume a paused project"),
             ("project", "show", "print the fields of a project"),
-            ("roles", "lint", "check the built-in and the machine role files"),
-            ("roles", "list", "list the role, the source and the model of each slot"),
-            ("roles", "show", "print the role file a slot resolves to"),
-            ("runs", "list", "list every run with its state and outcome"),
-            ("runs", "show", "print the summary of a run, its segments and its progress, and with --log its journal"),
+            ("role", "lint", "check the built-in and the machine role files"),
+            ("role", "list", "list the role, the source and the model of each slot"),
+            ("role", "show", "print the role file a slot resolves to"),
+            ("run", "list", "list every run with its state and outcome"),
+            ("run", "show", "print the summary of a run, its segments and its progress, and with --log its journal"),
             ("scheduler", "install", "install the scheduler config.toml names, or the default"),
             (
                 "scheduler",
@@ -160,11 +160,11 @@ class MainOfACommandTest(MainTestCase):
 
     def test_should_report_a_refusal_of_the_command_on_its_exit_code(self):
         # Act
-        exit_code, _, stderr = self.run_main(["runs", "show", "20261019T090000Z-c0ffee"])
+        exit_code, _, stderr = self.run_main(["run", "show", "20261019T090000Z-c0ffee"])
 
         # Assert
         self.assertEqual(exit_code, 1)
-        self.assertEqual(stderr, "brigade runs show: no run 20261019T090000Z-c0ffee\n")
+        self.assertEqual(stderr, "brigade run show: no run 20261019T090000Z-c0ffee\n")
 
 
 class MainOfACommandWithDiagnosticsTest(MainTestCase):
@@ -246,18 +246,18 @@ class MainRefusalTest(MainTestCase):
             (["--version", "--frobnicate"], r"unrecognized arguments: --frobnicate\n$"),
             (["--json"], r"\nbrigade: error: no option given\n$"),
             (
-                ["runs"],
+                ["run"],
                 (
-                    r"^usage: brigade runs \[-h\] \[--json\] \[--verbose\] action \.\.\.\n"
-                    r"brigade runs: error: the following arguments are required: action\n$"
+                    r"^usage: brigade run \[-h\] \[--json\] \[--verbose\] action \.\.\.\n"
+                    r"brigade run: error: the following arguments are required: action\n$"
                 ),
             ),
             (
-                ["runs", "frobnicate"],
-                r"invalid choice: 'frobnicate' \(choose from '?list'?, '?prune'?, '?show'?, '?stop'?, '?stop-hook'?\)\n$",
+                ["run", "frobnicate"],
+                r"invalid choice: 'frobnicate' \(choose from '?list'?, '?prune'?, '?show'?, '?start'?, '?stop'?, '?stop-hook'?\)\n$",
             ),
             (["frobnicate"], r"invalid choice: 'frobnicate' \(choose from '?adapter'?, .+, '?wave'?\)\n$"),
-            (["runs", "show"], r"\nbrigade runs show: error: the following arguments are required: run\n$"),
+            (["run", "show"], r"\nbrigade run show: error: the following arguments are required: run\n$"),
             (
                 ["ledger", "--task", "TP146", "--project", "tidepool"],
                 r"\nbrigade ledger: error: argument --project: not allowed with argument --task\n$",

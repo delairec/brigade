@@ -11,7 +11,7 @@ def run_nothing(request, runtime):
 class CommandByDefaultTest(unittest.TestCase):
     def setUp(self):
         self.command = Command(
-            path=("runs", "list"),
+            path=("run", "list"),
             help="list the runs",
             run=run_nothing,
             render_text=str,

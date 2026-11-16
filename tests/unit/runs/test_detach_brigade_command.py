@@ -31,7 +31,9 @@ class DetachBrigadeCommandTest(unittest.TestCase):
     def detach_on_a_session_bus(self, session_bus_address: str | None) -> None:
         paths = dataclasses.replace(create_test_paths(self.root), session_bus_address=session_bus_address)
         runtime = create_test_runtime(paths, spawn_process=self.spawn)
-        detached = DetachedCommand(command=("run", "build-task"), cwd="/srv/project", run_directory=self.root / "r1")
+        detached = DetachedCommand(
+            command=("run", "start", "build-task"), cwd="/srv/project", run_directory=self.root / "r1"
+        )
         detach_brigade_command(runtime, detached, self.record_pid)
 
     def test_should_hand_the_session_bus_of_brigade_to_the_brigade_it_detaches(self):
@@ -43,7 +45,7 @@ class DetachBrigadeCommandTest(unittest.TestCase):
             self.spawned,
             [
                 SpawnRequest(
-                    argv=(sys.executable, "/srv/brigade/bin/brigade", "run", "build-task"),
+                    argv=(sys.executable, "/srv/brigade/bin/brigade", "run", "start", "build-task"),
                     cwd="/srv/project",
                     environment={"DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/1000/bus"},
                     stdin=None,

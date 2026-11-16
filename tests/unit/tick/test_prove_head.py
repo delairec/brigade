@@ -84,10 +84,10 @@ class ProveHeadTest(unittest.TestCase):
 
     def test_should_prove_red_a_commit_the_task_check_holds_with_a_failed_command(self):
         # Arrange
-        task_check = TaskCheck(head="c0ffee", failed_commands=("npm test",))
+        build_check = TaskCheck(head="c0ffee", failed_commands=("npm test",))
 
         # Act
-        proof = prove_head(self.runtime, HeadQuery(PROJECT, REPOSITORY, "c0ffee", task_check, NO_FORGE_CHECK))
+        proof = prove_head(self.runtime, HeadQuery(PROJECT, REPOSITORY, "c0ffee", build_check, NO_FORGE_CHECK))
 
         # Assert
         self.assertEqual(proof, HeadProof(commit="c0ffee", state="red", failed_commands=("npm test",)))

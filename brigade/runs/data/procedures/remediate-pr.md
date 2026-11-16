@@ -19,7 +19,7 @@ step needs and no command gives back (a commit, an answer decided), and the next
 
 ## 1. Read the request
 
-`brigade review context <pr>`, from the worktree. It prints the head of the pull request, the request of the
+`brigade remediate context <pr>`, from the worktree. It prints the head of the pull request, the request of the
 preflight when one moved the task to changes requested, and the findings to answer: the findings of the verdict when
 the project's review policy is verdict, the open review threads when it is approval. Each finding carries the
 identifier its answer names.
@@ -33,7 +33,7 @@ blocked, your final message stating the question and the finding it comes from o
 
 ## 3. Push
 
-Commit, then `brigade task check` until it passes, as the build does, then `brigade task push`: it pushes the branch
+Commit, then `brigade build check` until it passes, as the build does, then `brigade build push`: it pushes the branch
 of the pull request with a lease, and refuses, pushing nothing, a `HEAD` on which no check passed. The push moves the
 task back to its preflight.
 
@@ -46,6 +46,6 @@ identifier:
 {"answers": [{"finding": "1", "answer": "fixed by 8885daa: the cart total ignores removed lines"}]}
 ```
 
-Then `brigade review reply <pr> --file <path>`. It records the answers, and posts each on its review thread when the
+Then `brigade remediate reply <pr> --file <path>`. It records the answers, and posts each on its review thread when the
 project's review policy is approval. A refusal names what to correct: correct the file and hand it back again. The
 answers it accepts are your result; end there.

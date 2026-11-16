@@ -872,6 +872,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "build-task",
                     "task=@TASK.T7",
                     "base=integration/M4",
@@ -1001,6 +1002,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "build-task",
                     "--slot",
                     "build",
@@ -1461,6 +1463,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     f"{self.root}/deliver.md",
                     "task=@TASK.T7",
                     "base=integration/M4",
@@ -1499,6 +1502,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "verify-pr",
                     "pr=42",
                     "task=@TASK.T7",
@@ -1542,6 +1546,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "verify-pr",
                     "pr=42",
                     "task=@TASK.T7",
@@ -1579,6 +1584,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "remediate-pr",
                     "pr=42",
                     "task=@TASK.T7",
@@ -1706,6 +1712,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "build-task",
                     "task=@TASK.T7",
                     "base=integration/M4",
@@ -2383,6 +2390,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "build-task",
                     "task=@TASK.T7",
                     "base=integration/M4",
@@ -2515,6 +2523,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "build-task",
                     "task=@TASK.T7",
                     "base=integration/M4",
@@ -3231,6 +3240,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "build-task",
                     "task=@TASK.T8",
                     "base=integration/M4",
@@ -3792,6 +3802,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "rebase-on-base",
                     f"branch=fix/repair-main-{WAVE_HEAD}",
                     f"head={WAVE_HEAD}",
@@ -3959,6 +3970,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
             self.spawn.argvs[0],
             (
                 "run",
+                "start",
                 "rebase-on-base",
                 "base=main",
                 "--slot",
@@ -4219,6 +4231,7 @@ class TickLaunchingATaskWhoseChecksPassedAndWhoseBranchConflictsWithTheWaveBranc
             [
                 (
                     "run",
+                    "start",
                     "rebase-on-base",
                     "task=@TASK.T7",
                     "base=integration/M4",
@@ -4307,6 +4320,7 @@ class TickLaunchingATaskWithoutAPullRequestWhoseBranchConflictsWithTheWaveBranch
             [
                 (
                     "run",
+                    "start",
                     "rebase-on-base",
                     "task=@TASK.T7",
                     "base=integration/M4",
@@ -4374,6 +4388,7 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "rebase-on-base",
                     "branch=integration/M4",
                     f"head={WAVE_HEAD}",
@@ -4473,6 +4488,7 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
             self.spawn.argvs[-1],
             (
                 "run",
+                "start",
                 "rebase-on-base",
                 "task=@TASK.T7",
                 "base=integration/M4",
@@ -5087,6 +5103,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "rebase-on-base",
                     "branch=integration/M4",
                     f"head={WAVE_HEAD}",
@@ -5132,6 +5149,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "rebase-on-base",
                     "branch=integration/M4",
                     f"head={WAVE_HEAD}",
@@ -5310,6 +5328,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "rebase-on-base",
                     "pr=42",
                     "task=@TASK.T7",
@@ -5396,6 +5415,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "rebase-on-base",
                     "pr=42",
                     "task=@TASK.T7",
@@ -6461,6 +6481,7 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "build-task",
                     "task=@TASK.T7",
                     "base=integration/M4",
@@ -7211,6 +7232,7 @@ class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "verify-pr",
                     "task=@TASK.T7",
                     "--slot",

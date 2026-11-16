@@ -1,6 +1,6 @@
 import json
 
-from tests.cli.test_collect import CollectTestCase, install_executable
+from tests.cli.test_collector_run import CollectTestCase, install_executable
 
 SILENT_CHECK = "#!/bin/sh\n"
 

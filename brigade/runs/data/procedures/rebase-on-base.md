@@ -39,9 +39,9 @@ it at each tick for a milestone branch.
 
 ## 3. Hand the branch back
 
-Run the project's tests. On the branch of a task with a `pr`, `brigade task check` until it passes, then
+Run the project's tests. On the branch of a task with a `pr`, `brigade build check` until it passes, then
 `brigade rebase done <pr>`, which refuses, pushing nothing, a branch that does not descend from the head of the base,
-then `brigade task push`, which pushes the branch with `--force-with-lease` and refuses a `HEAD` on which no check
+then `brigade build push`, which pushes the branch with `--force-with-lease` and refuses a `HEAD` on which no check
 passed. The push moves the task back to its preflight; end there. On the branch of a task with no `pr`, push nothing
 and end done once the tests pass: the next tick launches the build run of the task on the rebased branch, which
 pushes it. With no `task`, the branch of a wave or of a milestone, `git push --force-with-lease origin <branch>` once

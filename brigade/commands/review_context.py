@@ -2,61 +2,123 @@ import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
-from brigade.commands._read_forge_environment import ForgeSlot, read_forge_environment
+from brigade.commands._equip_preflight import equip_preflight
+from brigade.commands._equip_registered_collector import equip_registered_collector
+from brigade.errors import BrigadeError
 from brigade.git.locate_main_checkout import locate_main_checkout
 from brigade.git.locate_worktree_root import locate_worktree_root
-from brigade.registry.read_project_field import read_project_field
-from brigade.registry.read_project_forge import read_project_forge
+from brigade.git.read_current_branch import read_current_branch
+from brigade.registry.read_project_forge import NO_FORGE, read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
-from brigade.review.assemble_review_context import ReviewDemand, assemble_review_context
+from brigade.runs.locate_source_worktree import locate_source_worktree
 from brigade.runtime import Runtime
+from brigade.system.parse_configuration import Configuration
 from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
+from brigade.tasks.find_task_base import find_task_base
+from brigade.tasks.locate_task_worktree import locate_task_worktree
+from brigade.verify.assemble_local_verify_context import assemble_local_verify_context
+from brigade.verify.assemble_verify_context import assemble_verify_context
 from brigade.verify.find_opened_task import find_opened_task
+from brigade.verify.preflight_pull_request import PreflightDemand
+from brigade.verify.preflight_task_branch import BranchPreflightDemand
 
 DOCUMENT_SCHEMA_VERSION = 1
-CLI_KEY = "cli"
-PATH_FIELD = "PATH"
-IDENTIFIER_FIELD = "id"
+ABSENT = "none"
+NAMED_BY_THE_BRANCH = None
 
 
-def _render_finding(finding: dict) -> str:
-    fields = "".join(f"{name}: {value}\n" for name, value in finding.items() if name != IDENTIFIER_FIELD)
-    return f"## {finding[IDENTIFIER_FIELD]}\n{fields}"
+def _render_commands(entries: list[dict]) -> str:
+    return "".join(
+        f"$ {entry['command']}\nexit {entry['exit_code']}\n{entry['stderr']}{entry['output']}" for entry in entries
+    )
+
+
+def _render_preflight(checks: list[dict]) -> str:
+    return "".join(
+        f"{check['verdict']}  {check['name']}\n" + "".join(f"  {finding}\n" for finding in check["findings"])
+        for check in checks
+    )
+
+
+def _render_previous(previous: dict) -> str:
+    findings = "".join(
+        f"finding {finding['id']}: {finding['grade']} {finding['file']}:{finding['line']}, broken {finding['broken']}\n"
+        f"  summary: {finding['summary'] or ABSENT}\n"
+        f"  answer: {finding['answer'] or ABSENT}\n"
+        for finding in previous["findings"]
+    )
+    return f"head {previous['head']}\nverdict {previous['verdict']}\n{findings}"
+
+
+def _render_re_verification(document: dict) -> list[str]:
+    if document["previous"] is None:
+        return []
+    return [
+        f"# previous verdict\n{_render_previous(document['previous'])}",
+        f"# repair diff\n{_render_commands([document['repair']])}",
+    ]
 
 
 def _render_text(document: dict) -> str:
     sections = [
         f"# head\n{document['head']}\n",
-        *([] if document["request"] is None else [f"# request\n{document['request']}\n"]),
-        f"# review\n{document['review']}\n",
-        "# findings\n" + "".join(_render_finding(finding) for finding in document["findings"]),
+        f"# task\n{_render_commands(document['context'])}",
+        f"# diff\n{_render_commands([document['diff']])}",
+        *_render_re_verification(document),
+        f"# preflight\n{_render_preflight(document['preflight'])}",
+        *([] if document["rules"] is None else [f"# rules\n{_render_commands(document['rules'])}"]),
+        "# grades\n" + "".join(f"{grade}\n" for grade in document["grades"]),
     ]
     return "\n".join(sections).removesuffix("\n")
+
+
+def _assemble_task_branch_context(runtime: Runtime, configuration: Configuration, worktree: Path) -> dict:
+    located = locate_task_worktree(runtime, locate_source_worktree(runtime.paths, worktree), NAMED_BY_THE_BRANCH)
+    branch_demand = BranchPreflightDemand(
+        project=located.project,
+        task=located.task,
+        task_branch=read_current_branch(runtime.run_process, located.path),
+        base_branch=located.base,
+        configuration=configuration,
+    )
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, **assemble_local_verify_context(runtime, branch_demand)}
 
 
 def review_context(request: argparse.Namespace, runtime: Runtime) -> dict:
     configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)
     run_process = runtime.run_process
-    project = require_project_at(
-        read_projects(runtime), locate_main_checkout(run_process, locate_worktree_root(run_process, Path.cwd()))
-    )
+    worktree = locate_worktree_root(run_process, Path.cwd())
+    project = require_project_at(read_projects(runtime), locate_main_checkout(run_process, worktree))
     forge_name = read_project_forge(project)
-    demand = ReviewDemand(
-        opened=find_opened_task(runtime, project.name, request.pr).opened,
-        project_path=read_project_field(project, PATH_FIELD),
-        forge=runtime.resolve_plugin("forge", forge_name),
-        forge_name=forge_name,
-        environment=read_forge_environment(configuration, ForgeSlot(forge_name, CLI_KEY), runtime),
+    if forge_name == NO_FORGE:
+        return _assemble_task_branch_context(runtime, configuration, worktree)
+    if request.pr is None:
+        raise BrigadeError(
+            f"@PROJECT.{project.name} acts through the forge {forge_name}: the context names its pull request"
+        )
+    found = find_opened_task(runtime, project.name, request.pr)
+    demand = PreflightDemand(
+        project=project,
+        task=found.opened.task,
+        base_branch=find_task_base(runtime, worktree, project, found.opened.task),
+        pr=request.pr,
+        equipment=equip_registered_collector(project, configuration, runtime),
+        plugins=equip_preflight(runtime),
     )
-    return {"schema_version": DOCUMENT_SCHEMA_VERSION, **assemble_review_context(runtime, demand)}
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, **assemble_verify_context(runtime, demand)}
 
 
 COMMAND = Command(
     path=("review", "context"),
-    help="print in one read the findings the remediation of the pull request of a task answers",
-    group_help="answer the review of the pull request of a task",
-    arguments=(Argument(("pr",), {"type": int, "help": "the number of the pull request"}),),
+    help="print in one read what the verification of the pull request of a task judges",
+    group_help="review the pull request of a task",
+    arguments=(
+        Argument(
+            ("pr",),
+            {"type": int, "nargs": "?", "help": "the number of the pull request, none on a project without a forge"},
+        ),
+    ),
     run=review_context,
     render_text=_render_text,
 )

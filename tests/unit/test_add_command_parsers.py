@@ -252,7 +252,7 @@ class AddCommandParsersWithExclusiveArgumentsTest(unittest.TestCase):
     def test_should_refuse_two_arguments_of_an_exclusive_group_together(self):
         # Arrange
         command = Command(
-            path=("runs", "show"),
+            path=("run", "show"),
             help="show a run",
             run=print,
             read_request=vars,
@@ -272,7 +272,7 @@ class AddCommandParsersWithExclusiveArgumentsTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as exit_:
-            parser.parse_args(["runs", "show", "--all", "--last"])
+            parser.parse_args(["run", "show", "--all", "--last"])
 
         # Assert
         self.assertEqual(exit_.exception.code, 2)

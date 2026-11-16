@@ -44,7 +44,7 @@ def select_counts(result: dict) -> dict:
 def create_command(**changes) -> Command:
     return Command(
         **{
-            "path": ("runs", "list"),
+            "path": ("run", "list"),
             "help": "list the runs",
             "run": run_nothing,
             "read_request": read_options,
@@ -75,7 +75,7 @@ class WriteCommandOutputAsTextTest(WriteCommandOutputTestCase):
         written = self.write(create_command(describe_diagnostics=describe_skipped), NO_OPTION)
 
         # Assert
-        self.assertEqual(written, (3, "2 runs\n", "brigade runs list: run r9 skipped\n"))
+        self.assertEqual(written, (3, "2 runs\n", "brigade run list: run r9 skipped\n"))
 
 
 class WriteCommandOutputAsAskedTest(WriteCommandOutputTestCase):
@@ -112,4 +112,4 @@ class WriteCommandOutputOfAPassthroughTest(WriteCommandOutputTestCase):
         )
 
         # Assert
-        self.assertEqual(written, (3, "2 runs", "brigade runs list: run r9 skipped\n1 warning\n"))
+        self.assertEqual(written, (3, "2 runs", "brigade run list: run r9 skipped\n1 warning\n"))

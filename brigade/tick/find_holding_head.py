@@ -65,7 +65,7 @@ def _judge_task_head(runtime: Runtime, held: _HeldAction, action: LaunchTask, co
         HeadEvidence(
             commit=commit,
             forge_checks=read_pull_request_checks(action, commit),
-            task_check=read_task_check(state_root, held.project.name, action.task),
+            build_check=read_task_check(state_root, held.project.name, action.task),
             commit_checks=read_commit_checks(state_root, held.project.name, commit),
         )
     )

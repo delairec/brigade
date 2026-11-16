@@ -101,7 +101,7 @@ class RunTestCase(FileWaitingTestCase):
         return started
 
     def list_the_runs(self) -> list:
-        return json.loads(self.run_brigade("runs", "list", "--json").stdout)["runs"]
+        return json.loads(self.run_brigade("run", "list", "--json").stdout)["runs"]
 
     def read_run_pid(self, run_id: str) -> int:
         pid, _start_time, _boot_id = (self.runs / run_id / "pid").read_text().split()

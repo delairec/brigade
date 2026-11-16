@@ -17,7 +17,7 @@ LAUNCH_DOCUMENT = {
     "progress_file": "/state/runs/20261008T090000Z-b74a01/progress.md",
     "session_id": "6f1c2a9e-3b7d-4e21-9a55-0c8d4b7e2f13",
     "stop_at": "2026-10-08T09:23:00Z",
-    "stop_hook": ["/usr/bin/python3", "/srv/brigade/bin/brigade", "runs", "stop-hook", "--at", "1791451380"],
+    "stop_hook": ["/usr/bin/python3", "/srv/brigade/bin/brigade", "run", "stop-hook", "--at", "1791451380"],
 }
 
 
@@ -47,7 +47,7 @@ class LaunchArgvRequestTest(unittest.TestCase):
                 "stop_hook": [
                     "/usr/bin/python3",
                     "/srv/brigade/bin/brigade",
-                    "runs",
+                    "run",
                     "stop-hook",
                     "--at",
                     "1791451380",

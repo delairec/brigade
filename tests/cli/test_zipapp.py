@@ -89,7 +89,7 @@ class BrigadeZipappTest(unittest.TestCase):
         machine = TemporaryMachine(machine_root)
 
         # Act
-        completed = machine.run_brigade(clone_root / "dist" / "brigade.pyz", "roles", "show", "plan")
+        completed = machine.run_brigade(clone_root / "dist" / "brigade.pyz", "role", "show", "plan")
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)

@@ -1,9 +1,9 @@
-How a review run judges the pull request of a task: what `brigade verify context` prints and how
-`brigade verify verdict` validates and records the verdict.
+How a review run judges the pull request of a task: what `brigade review context` prints and how
+`brigade review verdict` validates and records the verdict.
 
 ```
-brigade verify context <pr>                        # everything the review judges, in one read
-brigade verify verdict <pr> --file <verdict.json>  # validate and record the verdict
+brigade review context <pr>                        # everything the review judges, in one read
+brigade review verdict <pr> --file <verdict.json>  # validate and record the verdict
 ```
 
 Both run from the worktree of the task whose pull request they judge.
