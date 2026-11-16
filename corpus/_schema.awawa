@@ -125,3 +125,36 @@ SCHEMA OPEN_QUESTION
 		DESC "a task that cannot be ratified until the question is ruled"
 	WHEN STATUS closed
 		GATE suppressed
+
+SCHEMA RECIPE
+	DESC "a kind of work brigade runs as ordered steps; its name is the name of the recipe"
+	FIELD SCHEMA_VERSION uint
+		REQUIRED
+	FIELD PARAM string
+		REPEATABLE
+		DESC "a parameter the order gives, substituted where a value holds {name}"
+	FIELD MAX_WALL uint
+		REQUIRED
+		DESC "the minutes a run of the recipe may last"
+	FIELD STEP collect|command|gate|judge|output|order|corpus|op
+		REQUIRED
+		REPEATABLE
+		DESC "one step, in the order the recipe runs them"
+		FIELD COLLECTOR string
+		FIELD PARAMETER string
+			REPEATABLE
+			DESC "key=value, a parameter of the collector or of the order"
+		FIELD ARGV string
+			REPEATABLE
+			DESC "one argument of the command, in order"
+		FIELD PREFLIGHT string
+		FIELD SLOT string
+		FIELD PROCEDURE string
+		FIELD ANSWER string
+			DESC "the schema of the answer of a judge step, the entity it fills"
+		FIELD OUTPUT string
+		FIELD RECIPE string
+		FIELD ENTITY string
+		FIELD OP worktree|commit|pull-request|merge
+		FIELD ON_FAIL string
+			DESC "park by default, else skip, stop or retry:N"
