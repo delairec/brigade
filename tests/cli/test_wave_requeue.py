@@ -259,6 +259,43 @@ class BrigadeWaveRequeueOfATaskRuledOnTheMainBranchTest(LaunchingTickTestCase):
         self.assertEqual(requeued.stdout, "task S3 of shop_w1 queued\n", requeued.stderr)
 
 
+S3_RULED_ON_THE_MILESTONE_BRANCH = (
+    'TASK S2\n\tTITLE "Remove an item from the cart"\n\tSTATUS implemented\n\n'
+    'TASK S3\n\tTITLE "Empty the cart in two clicks"\n\tSTATUS todo\n\tTYPE feat\n\tMILESTONE @MILESTONE.M1\n'
+    "\tAFTER @TASK.S2\n\n"
+    'TASK S4\n\tTITLE "Confirm before emptying the cart"\n\tSTATUS todo\n\tTYPE feat\n\tMILESTONE @MILESTONE.M1\n'
+    "\tAFTER @TASK.S3\n\n"
+    'TASK S5\n\tTITLE "Undo the emptying"\n\tSTATUS todo\n\tTYPE feat\n\tMILESTONE @MILESTONE.M1\n\n'
+    'TASK S6\n\tTITLE "Count the emptied carts"\n\tSTATUS todo\n\tTYPE feat\n\tMILESTONE @MILESTONE.M1\n'
+)
+
+
+class BrigadeWaveRequeueOfATaskRuledOnItsMilestoneBranchAloneTest(LaunchingTickTestCase):
+    def setUp(self):
+        super().setUp()
+        (self.state / "ledger" / "2026-10.jsonl").write_text(MILESTONE_BRANCH_CUT + S3_PARKED_ON_A_DEAD_RUN)
+        self.project.write("corpus/tasks.awawa", S3_AS_PLANNED)
+        self.project.track("corpus")
+        self.project.run_git("commit", "--quiet", "-m", "S3 as planned")
+        self.project.run_git("checkout", "--quiet", MILESTONE_BRANCH)
+        self.project.run_git("merge", "--quiet", "--strategy", "ours", "-m", "main into M1", "main")
+
+    def test_should_queue_the_task(self):
+        # Arrange
+        self.project.write("corpus/tasks.awawa", S3_RULED_ON_THE_MILESTONE_BRANCH)
+        self.project.track("corpus")
+        self.project.run_git("commit", "--quiet", "-m", "a ruling on S3")
+        self.project.run_git("checkout", "--quiet", "main")
+
+        # Act
+        requeued = self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "wave", "requeue", "shop_w1", "S3", environment=self.describe_environment()
+        )
+
+        # Assert
+        self.assertEqual(requeued.stdout, "task S3 of shop_w1 queued\n", requeued.stderr)
+
+
 SUCCESSFUL_CHECK_RUN = {"__typename": "CheckRun", "name": "tests", "status": "COMPLETED", "conclusion": "SUCCESS"}
 S3_PARKED_AFTER_ITS_FIRST_VERDICT = (
     '{{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'

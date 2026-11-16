@@ -66,11 +66,17 @@ PARKED_ON_A_FAILED_SETUP = {
 }
 WAVE_HEAD = "8885daa"
 MAIN_HEAD = "5c2e854"
+FORK_HEAD = "3f1d0b7"
 TIDEPOOL_WITHOUT_FORGE = (("PATH", "/srv/tidepool"), ("MAIN", "main"))
 TIDEPOOL_ON_GITHUB = (("PATH", "/srv/tidepool"), ("MAIN", "main"), ("FORGE", "github"))
 GITHUB_FORGE = object()
 T7_RULED_ON_MAIN = ProcessAnswer(stdout='{"fields": [{"name": "STATUS", "atoms": ["\\"draft\\""]}]}')
-T7_ABSENT_FROM_MAIN = ProcessAnswer(exit_code=1, stderr="@TASK.T7 is not defined in the workspace")
+T7_NOT_DEFINED = ProcessAnswer(exit_code=1, stderr="@TASK.T7 is not defined in the workspace")
+T7_AS_PLANNED = ProcessAnswer(stdout='{"fields": [{"name": "STATUS", "atoms": ["\\"todo\\""]}]}')
+T7_AS_DRAFTED = ProcessAnswer(stdout='{"fields": [{"name": "STATUS", "atoms": ["\\"draft\\""]}]}')
+T7_RULED_ON_MAIN_OTHERWISE = ProcessAnswer(
+    stdout='{"fields": [{"name": "STATUS", "atoms": ["\\"todo\\""]}, {"name": "DESC", "atoms": ["\\"held\\""]}]}'
+)
 IMPLEMENTED_TASKS_QUERY = ("awawa", "status", "TASK", "--where", "STATUS==implemented")
 NO_TASK_IMPLEMENTED = '{"entities": []}'
 T7_IMPLEMENTED = '{"entities": [{"type": "TASK", "name": "T7"}]}'
@@ -153,25 +159,36 @@ def create_wave_tree_runtime(root: Path, implemented_tasks: str) -> Runtime:
 
 
 def create_main_tree_runtime(
-    root: Path, task_on_main: ProcessAnswer, project: tuple = TIDEPOOL_WITHOUT_FORGE, main: str = "main"
+    root: Path,
+    task_on_main: ProcessAnswer,
+    project: tuple = TIDEPOOL_WITHOUT_FORGE,
+    main: str = "main",
+    task_at_the_fork: ProcessAnswer = T7_AS_PLANNED,
 ) -> Runtime:
     write_operational_corpus(root)
     (root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
     (root / "cache" / "refs" / "tidepool" / MAIN_HEAD).mkdir(parents=True)
+    (root / "cache" / "refs" / "tidepool" / FORK_HEAD).mkdir(parents=True)
     corpus = {
         "PROJECT": {"tidepool": project},
         "TASK": {"T7": (("STATUS", "todo"),), "T8": (("STATUS", "todo"),)},
     }
     main_root = str(root / "cache" / "refs" / "tidepool" / MAIN_HEAD)
+    fork_root = str(root / "cache" / "refs" / "tidepool" / FORK_HEAD)
     answers = {
         ("git", "rev-parse", "--verify"): ProcessAnswer(stdout=f"{WAVE_HEAD}\n"),
         ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{main}^{{commit}}"): ProcessAnswer(
             stdout=f"{MAIN_HEAD}\n"
         ),
+        ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{FORK_HEAD}^{{commit}}"): ProcessAnswer(
+            stdout=f"{FORK_HEAD}\n"
+        ),
+        ("git", "merge-base", "--end-of-options", MAIN_HEAD, WAVE_HEAD): ProcessAnswer(stdout=f"{FORK_HEAD}\n"),
         ("git", "fetch", "--quiet", "origin"): ProcessAnswer(),
         ("git", "ls-remote"): ProcessAnswer(),
         IMPLEMENTED_TASKS_QUERY: ProcessAnswer(stdout=NO_TASK_IMPLEMENTED),
         ("awawa", "show", "@TASK.T7", "--json", main_root): task_on_main,
+        ("awawa", "show", "@TASK.T7", "--json", fork_root): task_at_the_fork,
     }
     runner = ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus))
     return create_test_runtime(
@@ -252,7 +269,7 @@ class WaveRequeueOfAParkedTaskTheMainBranchDoesNotHoldTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
-        runtime = create_main_tree_runtime(root, T7_ABSENT_FROM_MAIN)
+        runtime = create_main_tree_runtime(root, T7_NOT_DEFINED)
         write_ledger(root, [MILESTONE_BRANCH_CUT, WAVE_STARTED, PARKED_ON_A_DEAD_RUN])
 
         # Act
@@ -265,6 +282,28 @@ class WaveRequeueOfAParkedTaskTheMainBranchDoesNotHoldTest(unittest.TestCase):
         )
 
 
+class WaveRequeueOfAParkedTaskRuledOnTheBranchOfItsWaveAloneTest(unittest.TestCase):
+    def test_should_record_the_parked_task_queued(self):
+        for case, project, main in [
+            ("a project without a forge", TIDEPOOL_WITHOUT_FORGE, "main"),
+            ("a project on GitHub", TIDEPOOL_ON_GITHUB, "origin/main"),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+                runtime = create_main_tree_runtime(root, T7_AS_DRAFTED, project, main, task_at_the_fork=T7_AS_DRAFTED)
+                write_ledger(root, [MILESTONE_BRANCH_CUT, WAVE_STARTED, PARKED_ON_A_DEAD_RUN])
+
+                # Act
+                COMMAND.run(Namespace(wave="tidepool_w16", task="T7"), runtime)
+
+                # Assert
+                self.assertEqual(
+                    read_ledger(runtime.paths.state_root).entries[-1].event,
+                    TaskState(wave="tidepool_w16", task="T7", state="queued", reason="brigade wave requeue"),
+                )
+
+
 class WaveRequeueOfATaskOfAClosedWaveTest(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
@@ -274,7 +313,7 @@ class WaveRequeueOfATaskOfAClosedWaveTest(unittest.TestCase):
 
     def test_should_record_the_parked_task_queued(self):
         # Arrange
-        runtime = create_main_tree_runtime(self.root, T7_ABSENT_FROM_MAIN)
+        runtime = create_main_tree_runtime(self.root, T7_NOT_DEFINED)
         write_ledger(self.root, self.closed_wave_parking_t7)
 
         # Act
@@ -395,3 +434,26 @@ class WaveRequeueRefusalTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(str(raised.exception), expected_refusal)
+
+    def test_should_refuse_a_parked_task_main_ruled_since_the_branch_of_its_wave_left_main(self):
+        for case, task_on_main, task_at_the_fork in [
+            ("ruled on main alone", T7_RULED_ON_MAIN, T7_AS_PLANNED),
+            ("ruled otherwise on each branch", T7_RULED_ON_MAIN_OTHERWISE, T7_AS_DRAFTED),
+            ("written otherwise on each branch", T7_RULED_ON_MAIN, T7_NOT_DEFINED),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+                runtime = create_main_tree_runtime(root, task_on_main, task_at_the_fork=task_at_the_fork)
+                write_ledger(root, [MILESTONE_BRANCH_CUT, WAVE_STARTED, PARKED_ON_A_DEAD_RUN])
+
+                # Act
+                with self.assertRaises(BrigadeError) as raised:
+                    COMMAND.run(Namespace(wave="tidepool_w16", task="T7"), runtime)
+
+                # Assert
+                self.assertEqual(
+                    str(raised.exception),
+                    "the task T7 of the wave tidepool_w16 differs between main and integration/tidepool:"
+                    " the ruling on main reaches it through brigade wave cancel tidepool_w16 and a new wave cut from main",
+                )

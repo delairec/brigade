@@ -4477,11 +4477,16 @@ DECISION ARebaseRunOfATaskWithoutAPullRequestEndsDoneAndTheTickLaunchesItsBuild
 		+ "last run is a rebase run ended done is launched again, not parked as a dead run"
 	DESC "brigade wave requeue compares the entity of the task on both branches only when the main"
 		+ "branch defines it"
+	DESC "brigade wave requeue refuses a task whose entity differs between the two branches only"
+		+ "when main changed it since the branch of the wave left main: its entity on main differs"
+		+ "from the one at the merge base of the two branches; a task ruled on the branch of the"
+		+ "wave alone is queued"
 	REJECTED "a state of its own for a task under a rebase run: running already parks the task on"
 		+ "the question of a run that ended blocked, and a new state would add a case to every"
 		+ "reader of the states"
 	REJECTED "a push of the rebased branch by the rebase run: a branch with no pull request is"
 		+ "pushed by the build run when it opens one"
+	REJECTED "dropping the comparison altogether: a ruling on main would then be run stale"
 	RATIONALE "@TASK.B210 leaves open how a run of the rebase slot works on a task that has no pull"
 		+ "request, which brigade rebase context and the procedure rebase-on-base named by its"
 		+ "number"
@@ -4492,6 +4497,10 @@ DECISION ARebaseRunOfATaskWithoutAPullRequestEndsDoneAndTheTickLaunchesItsBuild
 		+ "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch:"
 		+ "DESC 2 reads the branch <prefix>/<id>-<slug> where it read task/<slug>/<task>"
 		REF @DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch
+	SOURCE "the user's ruling of 2026-11-16, « Ça fait plusieurs fois que la règle nous bloque donc"
+		+ "il faut faire un quick fix pour l'autoriser », after brigade wave requeue refused"
+		+ "@TASK.B98, ruled on integration/recipes, on 2026-11-15"
+		REF @TASK.B98
 
 DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 	TITLE "a milestone has one integration branch, named after its title; each task pull request"
