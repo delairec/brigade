@@ -6,6 +6,7 @@ minutes.
 
 ```
 brigade tick --once         # one tick, under the lock $XDG_STATE_HOME/brigade/locks/tick.lock
+brigade tick --once --log-file <file>   # the same, its stderr appended to <file>, its directory created, nothing printed
 brigade tick --dry-run      # the snapshot and the plan, applied to nothing
 brigade tick --loop         # a tick at once, then one every five minutes, until SIGTERM or SIGINT
 brigade scheduler install   # install what fires brigade tick --once every five minutes
@@ -110,7 +111,7 @@ The tick launches no run of a paused wave.
 | Scheduler | Chosen by the probe when | Installs |
 |---|---|---|
 | `systemd` | `systemctl --user is-system-running` answers `running` or `degraded` | `brigade.service` and `brigade.timer` in `$XDG_CONFIG_HOME/systemd/user/`, the timer enabled now |
-| `cron` | otherwise | the crontab line marked `# brigade scheduler install`; each tick's stderr goes to `$XDG_STATE_HOME/brigade/tick.log` |
+| `cron` | otherwise | the crontab line marked `# brigade scheduler install`, one argv with no shell operator: `env <variables> brigade tick --once --log-file $XDG_STATE_HOME/brigade/tick.log`, the tick creating the directory of its log, appending its stderr to it and printing nothing |
 | `loop` | never | nothing: it names the `brigade tick --loop` command to keep running |
 
 `brigade scheduler status` reports the scheduler and the last tick, and exits 1 when the last tick is older than

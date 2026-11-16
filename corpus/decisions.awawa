@@ -7629,3 +7629,19 @@ DECISION TheStopHookOfAClientIsAnArgvOfBrigadeRunsStopHookThatBrigadeComposes
 		+ "commands with"
 	SOURCE "the pull request of @TASK.B163"
 		REF @TASK.B163
+
+DECISION TheCrontabLineCallsEnvAndTheTickWritesItsOwnLogFile
+	TITLE "the crontab line is env, the variables of the install, brigade tick --once --log-file"
+		+ "<file>, one argv; with --log-file the tick creates the directory of the file, appends"
+		+ "its stderr to it and discards its stdout"
+	STATUS active
+	DESC "the redirection is of the file descriptors of the process, so a subprocess the tick runs"
+		+ "writes to the log as it did under the shell redirection"
+	DESC "env carries the variables of the install, where a NAME=value prefix of the line was a"
+		+ "shell assignment"
+	REJECTED "the variables as NAME=value lines at the head of the crontab: they would apply to"
+		+ "every other line of the user's crontab"
+	REJECTED "the log written by the trail of the tick alone: a traceback, a refusal of argparse"
+		+ "past the parse and the stderr of a subprocess would be lost where the line kept them"
+	SOURCE "the pull request of @TASK.B163"
+		REF @TASK.B163
