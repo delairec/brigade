@@ -8,6 +8,7 @@ from brigade.preflights.read_preflight_file import read_preflight_file
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
 NIGHTLY_GATE_ENTITY = {
+    "file": "/srv/shop/preflights.awawa",
     "fields": [
         {"name": "TITLE", "atoms": ['"the nightly checks of the shop"'], "fields": []},
         {
@@ -16,7 +17,7 @@ NIGHTLY_GATE_ENTITY = {
             "fields": [{"name": "PARAMETER", "atoms": ['"depth=1"'], "fields": []}],
         },
         {"name": "CHECK", "atoms": ['"coverage"'], "fields": []},
-    ]
+    ],
 }
 NIGHTLY_GATE_FILE = (
     "schema_version = 1\n"
@@ -51,6 +52,27 @@ class ReadPreflightEntityTest(unittest.TestCase):
                 "checks": [{"name": "coverage", "parameters": {}}],
             },
         )
+
+    def test_should_keep_every_separator_after_the_first_in_the_value_of_a_parameter(self):
+        # Arrange
+        entity = {
+            "file": "/srv/shop/preflights.awawa",
+            "fields": [
+                {"name": "TITLE", "atoms": ['"the nightly checks of the shop"'], "fields": []},
+                {
+                    "name": "CHECK",
+                    "atoms": ['"coverage"'],
+                    "fields": [{"name": "PARAMETER", "atoms": ['"filter=kind=unit"'], "fields": []}],
+                },
+            ],
+        }
+        runner = create_runner(ProcessAnswer(stdout=json.dumps(entity)))
+
+        # Act
+        preflight = read_preflight_entity(runner, ROOT, "nightly-gate")
+
+        # Assert
+        self.assertEqual(preflight["checks"], [{"name": "coverage", "parameters": {"filter": "kind=unit"}}])
 
     def test_should_hold_no_preflight_where_the_corpus_defines_no_such_entity(self):
         # Arrange
