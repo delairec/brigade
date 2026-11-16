@@ -13,7 +13,7 @@ BOUND_LOGINS = Configuration(forge_accounts={"build": "clauche-bot", "cli": "cla
 NO_FORGE_PLUGIN = None
 
 
-class TokenOfClaucheBotForge:
+class TokenOfClaucheBotForgeDouble:
     def read_login_environment(self, request: dict, runtime) -> dict:
         environment = {"GH_TOKEN": "gho_clauche"} if request["login"] == "clauche-bot" else None
         return {"schema_version": 1, "environment": environment}
@@ -28,7 +28,7 @@ class ForgeLoginsCollectorTest(unittest.TestCase):
     def test_should_tell_of_each_bound_login_whether_gh_prints_its_token(self):
         # Arrange
         equipment = CollectorEquipment(
-            configuration=BOUND_LOGINS, forge=TokenOfClaucheBotForge(), forge_name="github", resolve_client=None
+            configuration=BOUND_LOGINS, forge=TokenOfClaucheBotForgeDouble(), forge_name="github", resolve_client=None
         )
 
         # Act

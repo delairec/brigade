@@ -8,6 +8,7 @@ CHANGED_LINES = None
 
 class MapCitedLinesTest(unittest.TestCase):
     def test_should_tell_where_the_cited_lines_stand_after_the_diff(self):
+        # Arrange
         rows = (
             ("a file the diff does not touch", UNCHANGED, (3, 4)),
             ("two lines inserted above", "@@ -1,0 +2,2 @@\n+one\n+two\n", (5, 6)),

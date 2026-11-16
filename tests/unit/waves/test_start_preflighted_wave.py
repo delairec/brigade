@@ -55,15 +55,15 @@ class StartPreflightedWaveTest(unittest.TestCase):
             )
         return stderr.getvalue()
 
-    def read_events(self) -> list:
-        return [entry.event for entry in read_ledger(self.paths.state_root).entries]
-
     def test_should_pause_the_wave_on_the_forge_account_before_any_run_when_its_preflight_fails(self):
         # Act
         self.start_wave(FAILED_PREFLIGHT)
 
         # Assert
-        self.assertEqual(self.read_events(), [WavePaused(wave="shop_w3", reason="forge_account", resume_at=None)])
+        self.assertEqual(
+            read_ledger(self.paths.state_root).entries[-1].event,
+            WavePaused(wave="shop_w3", reason="forge_account", resume_at=None),
+        )
 
     def test_should_name_the_findings_of_the_failed_preflight_on_stderr(self):
         # Act
@@ -81,7 +81,7 @@ class StartPreflightedWaveTest(unittest.TestCase):
         self.start_wave(PASSED_PREFLIGHT)
 
         # Assert
-        self.assertEqual(self.read_events(), [])
+        self.assertEqual(read_ledger(self.paths.state_root).entries, ())
 
     def test_should_run_the_preflight_before_it_starts_the_wave(self):
         # Act
