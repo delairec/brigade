@@ -6,6 +6,7 @@ from pathlib import Path
 from brigade.commands.verify_preflight import COMMAND
 from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import create_machine_double, write_ledger
+from tests.unit.create_preflight_plugins import resolve_preflight_kinds_or
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
@@ -122,7 +123,7 @@ class VerifyPreflightOfAPullRequestTest(unittest.TestCase):
             run_process=create_machine_double(
                 {"PROJECT": {"tidepool": GITHUB_PROJECT}, "TASK": TIDEPOOL_TASKS}, TASK_WORKTREE
             ),
-            resolve_plugin=lambda kind, name, **places: self.forge,
+            resolve_plugin=resolve_preflight_kinds_or(lambda kind, name, **places: self.forge),
         )
 
     def test_should_ask_the_forge_about_the_pull_request_of_the_task(self):
@@ -165,7 +166,7 @@ class VerifyPreflightAsTheLoginOfTheCliKeyTest(unittest.TestCase):
             run_process=create_machine_double(
                 {"PROJECT": {"tidepool": GITHUB_PROJECT}, "TASK": TIDEPOOL_TASKS}, TASK_WORKTREE
             ),
-            resolve_plugin=lambda kind, name, **places: forge,
+            resolve_plugin=resolve_preflight_kinds_or(lambda kind, name, **places: forge),
         )
 
         # Act
@@ -201,7 +202,7 @@ class VerifyPreflightAsTheLoginOfTheCliKeyTest(unittest.TestCase):
             run_process=create_machine_double(
                 {"PROJECT": {"tidepool": local_project}, "TASK": TIDEPOOL_TASKS}, TASK_WORKTREE
             ),
-            resolve_plugin=lambda kind, name, **places: forge,
+            resolve_plugin=resolve_preflight_kinds_or(lambda kind, name, **places: forge),
         )
 
         # Act
