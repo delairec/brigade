@@ -11,7 +11,7 @@ NO_PARAMETERS = {}
 
 def _describe_failed_checks(checks: list) -> str:
     return ", ".join(
-        f"{check['name']}: {'; '.join(check['findings'])}" for check in checks if check["verdict"] == FAILED
+        f"{check['name']}: {'; '.join(check['findings'])}" for check in checks if check["result"] == FAILED
     )
 
 
@@ -24,8 +24,8 @@ def create_gate_performer(
             for key, value in step.get(PARAMETERS_KEY, NO_PARAMETERS).items()
         }
         outcome = run_gate(step["preflight"], parameters)
-        if outcome.verdict == FAILED:
+        if outcome.result == FAILED:
             raise BrigadeError(f"the preflight {step['preflight']} failed: {_describe_failed_checks(outcome.checks)}")
-        return {"preflight": step["preflight"], "verdict": outcome.verdict, "checks": outcome.checks}
+        return {"preflight": step["preflight"], "result": outcome.result, "checks": outcome.checks}
 
     return perform

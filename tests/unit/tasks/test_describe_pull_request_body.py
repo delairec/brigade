@@ -34,8 +34,8 @@ class DescribePullRequestBodyTest(unittest.TestCase):
             "\n"
             "## Checks of 4b825dc642cb6eb9a060e54bf8d69288fbee4904\n"
             "\n"
-            "- pass `python3 -m unittest` 1.2 s\n"
-            "- pass `awawa lint --strict .` 0.1 s\n"
+            "- ok `python3 -m unittest` 1.2 s\n"
+            "- ok `awawa lint --strict .` 0.1 s\n"
             "\n"
             "Co-Authored-By: Fake Client <fake@example.org>\n",
         )

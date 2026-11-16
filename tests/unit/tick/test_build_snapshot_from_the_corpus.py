@@ -2217,10 +2217,10 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
 
 REQUEUE_REASON = "brigade wave requeue"
 REBUILD_REASON = "the entity of the task amended on integration/w1"
-FAILING_CHECKS = {"name": "checks", "verdict": "fail", "findings": ["tests: failure"]}
-FAILING_BODY = {"name": "body", "verdict": "fail", "findings": ["the body names no task"]}
-PASSING_PRIVACY = {"name": "privacy", "verdict": "pass", "findings": []}
-MEASURED_SIZE = {"name": "size", "verdict": "info", "findings": ["3 files"]}
+FAILING_CHECKS = {"name": "checks", "result": "fail", "findings": ["tests: failure"]}
+FAILING_BODY = {"name": "body", "result": "fail", "findings": ["the body names no task"]}
+PASSING_PRIVACY = {"name": "privacy", "result": "ok", "findings": []}
+MEASURED_SIZE = {"name": "size", "result": "info", "findings": ["3 files"]}
 
 
 class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):

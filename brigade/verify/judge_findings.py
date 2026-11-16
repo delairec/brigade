@@ -1,6 +1,6 @@
-PASSED = "pass"
+OK = "ok"
 FAILED = "fail"
 
 
 def judge_findings(name: str, findings: list[str]) -> dict:
-    return {"name": name, "verdict": FAILED if findings else PASSED, "findings": findings}
+    return {"name": name, "result": FAILED if findings else OK, "findings": findings}

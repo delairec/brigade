@@ -55,8 +55,8 @@ TASK_PR_OPENED = {
     "pr": 42,
     "login": "tidepool-bot",
 }
-PASSED_CHECK = {"verdict": "pass", "name": "ci", "findings": []}
-FAILED_CHECK = {"verdict": "fail", "name": "scope", "findings": ["brigade/cli.py is outside the task"]}
+PASSED_CHECK = {"result": "ok", "name": "ci", "findings": []}
+FAILED_CHECK = {"result": "fail", "name": "scope", "findings": ["brigade/cli.py is outside the task"]}
 
 
 class ForgeDeclineDouble:
@@ -188,28 +188,28 @@ class PreflightCommandTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "preflight": "verify-pull-request",
-                "verdict": "pass",
+                "result": "ok",
                 "project": "shop",
                 "pr": 42,
                 "task": "B1",
                 "head": "2222222",
                 "checks": [
-                    {"name": "ancestry", "verdict": "pass", "findings": []},
-                    {"name": "checks", "verdict": "pass", "findings": []},
+                    {"name": "ancestry", "result": "ok", "findings": []},
+                    {"name": "checks", "result": "ok", "findings": []},
                     {
                         "name": "corpus",
-                        "verdict": "pass",
+                        "result": "ok",
                         "findings": [],
                         "commands": [
                             {"command": "awawa fmt --check .", "exit_code": 0, "duration_ms": 0, "output": ""},
                             {"command": "awawa lint --strict .", "exit_code": 0, "duration_ms": 0, "output": ""},
                         ],
                     },
-                    {"name": "promotion", "verdict": "pass", "findings": []},
-                    {"name": "untouched_files", "verdict": "pass", "findings": []},
-                    {"name": "privacy", "verdict": "pass", "findings": []},
-                    {"name": "body", "verdict": "pass", "findings": []},
-                    {"name": "size", "verdict": "info", "findings": ["0 files", "0 lines", "0 packages", "0 layers"]},
+                    {"name": "promotion", "result": "ok", "findings": []},
+                    {"name": "untouched_files", "result": "ok", "findings": []},
+                    {"name": "privacy", "result": "ok", "findings": []},
+                    {"name": "body", "result": "ok", "findings": []},
+                    {"name": "size", "result": "info", "findings": ["0 files", "0 lines", "0 packages", "0 layers"]},
                 ],
             },
         )
@@ -233,8 +233,8 @@ class PreflightCommandTest(unittest.TestCase):
         document = preflight(request, self.runtime)
 
         # Assert
-        self.assertEqual(document["checks"], [{"name": "body", "verdict": "pass", "findings": []}])
-        self.assertEqual(document["verdict"], "pass")
+        self.assertEqual(document["checks"], [{"name": "body", "result": "ok", "findings": []}])
+        self.assertEqual(document["result"], "ok")
 
     def test_should_refuse_a_name_no_preflight_carries(self):
         # Arrange
@@ -258,10 +258,10 @@ class PreflightCommandRenderingTest(unittest.TestCase):
             "schema_version": 1,
             "preflight": "verify-pull-request",
             "parameters": {"pr": "42"},
-            "verdict": "fail",
+            "result": "fail",
             "checks": [
-                {"name": "privacy", "verdict": "fail", "findings": ["cart.py:1: a home path"]},
-                {"name": "body", "verdict": "pass", "findings": []},
+                {"name": "privacy", "result": "fail", "findings": ["cart.py:1: a home path"]},
+                {"name": "body", "result": "ok", "findings": []},
             ],
         }
 
@@ -269,15 +269,15 @@ class PreflightCommandRenderingTest(unittest.TestCase):
         text = COMMAND.render_text(document)
 
         # Assert
-        self.assertEqual(text, "preflight verify-pull-request\nfail  privacy\n  cart.py:1: a home path\npass  body")
+        self.assertEqual(text, "preflight verify-pull-request\nfail  privacy\n  cart.py:1: a home path\nok  body")
 
     def test_should_exit_1_on_a_preflight_that_fails_and_0_on_one_that_passes(self):
         # Arrange
-        rows = [("fail", 1), ("pass", 0)]
-        for verdict, expected_exit_code in rows:
-            with self.subTest(verdict=verdict):
+        rows = [("fail", 1), ("ok", 0)]
+        for result, expected_exit_code in rows:
+            with self.subTest(result=result):
                 # Act
-                exit_code = COMMAND.decide_exit_code({"verdict": verdict})
+                exit_code = COMMAND.decide_exit_code({"result": result})
 
                 # Assert
                 self.assertEqual(exit_code, expected_exit_code)

@@ -12,7 +12,7 @@ from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessR
 
 NO_EXECUTABLE_DIRECTORY = ""
 SUBJECT = {"schema_version": 1, "project": "/srv/shop", "parameters": {"pr": "42"}, "collected": {}}
-FAILED_COVERAGE = {"schema_version": 1, "name": "coverage", "verdict": "fail", "findings": ["cart.py: 80%"]}
+FAILED_COVERAGE = {"schema_version": 1, "name": "coverage", "result": "fail", "findings": ["cart.py: 80%"]}
 COVERAGE_COMMAND = "/opt/checks/brigade-check-coverage"
 
 
@@ -50,7 +50,7 @@ class ExecutableCheckTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            document, {"schema_version": 1, "name": "coverage", "verdict": "fail", "findings": ["cart.py: 80%"]}
+            document, {"schema_version": 1, "name": "coverage", "result": "fail", "findings": ["cart.py: 80%"]}
         )
 
     def test_should_run_the_executable_in_the_project_the_subject_on_its_standard_input(self):
@@ -73,8 +73,8 @@ class ExecutableCheckTest(unittest.TestCase):
         rows = [
             ("Usage: coverage\n", "check coverage answered no JSON document"),
             (
-                '{"schema_version": 1, "name": "coverage", "verdict": "maybe", "findings": []}',
-                "check coverage answered no check document: verdict is 'maybe', not one of pass, fail",
+                '{"schema_version": 1, "name": "coverage", "result": "maybe", "findings": []}',
+                "check coverage answered no check document: result is 'maybe', not one of ok, fail",
             ),
         ]
         for stdout, expected_refusal in rows:
@@ -92,7 +92,7 @@ class ExecutableCheckTest(unittest.TestCase):
 
 class BuiltInAnsweringWithoutFindingsDouble:
     def check(self, subject: dict, runtime: Runtime) -> dict:
-        return {"schema_version": 1, "name": "ancestry", "verdict": "pass"}
+        return {"schema_version": 1, "name": "ancestry", "result": "ok"}
 
 
 class BuiltInCheckTest(unittest.TestCase):

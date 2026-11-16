@@ -30,7 +30,7 @@ PULL_REQUEST_TITLE = "feat(cart-button): empty the cart in one click (@TASK.S3)"
 PULL_REQUEST_BODY = (
     "Empty the cart in one click\n\n## Acceptance criteria\n\n"
     "- the button of src/cart/button.py, once pressed, empties the cart\n- the emptying charges nothing\n\n"
-    "## Checks of 0123abc\n\n- pass `python3 -m unittest` 1.0 s\n"
+    "## Checks of 0123abc\n\n- ok `python3 -m unittest` 1.0 s\n"
 )
 SUCCESSFUL_CHECK_RUN = {"__typename": "CheckRun", "name": "tests", "status": "COMPLETED", "conclusion": "SUCCESS"}
 FAKE_GH = (
@@ -131,7 +131,7 @@ class BrigadePreflightVerifyPullRequestTest(PullRequestPreflightTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             completed.stdout,
-            "preflight verify-pull-request\npass  ancestry\npass  checks\npass  corpus\npass  promotion\n"
-            "pass  untouched_files\npass  privacy\npass  body\ninfo  size\n  3 files\n  9 lines\n"
+            "preflight verify-pull-request\nok  ancestry\nok  checks\nok  corpus\nok  promotion\n"
+            "ok  untouched_files\nok  privacy\nok  body\ninfo  size\n  3 files\n  9 lines\n"
             "  3 packages: corpus, src/billing, src/cart\n  0 layers\n",
         )

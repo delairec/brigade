@@ -12,7 +12,7 @@ from brigade.recipes.resolve_recipe import resolve_recipe
 from brigade.runs.plan_run import SHIPPED_PROCEDURES
 from brigade.runs.resolve_procedure import ProcedureDirectories, resolve_procedure
 from brigade.runtime import Runtime
-from brigade.system.check_shapes import FAILED, PASSED
+from brigade.system.check_shapes import FAILED, OK
 from brigade.system.collector_places import locate_collectors
 from brigade.system.parse_configuration import SLOTS, Configuration
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
@@ -24,13 +24,13 @@ EXECUTABLE_ATTRIBUTE = "EXECUTABLE"
 
 
 def _render_text(document: dict) -> str:
-    lines = [f"{document['verdict']}  recipe {document['recipe']} ({document['source']})"]
+    lines = [f"{document['result']}  recipe {document['recipe']} ({document['source']})"]
     lines.extend(f"  {finding}" for finding in document["findings"])
     return "\n".join(lines)
 
 
 def _decide_exit_code(document: dict) -> int:
-    return int(document["verdict"] == FAILED)
+    return int(document["result"] == FAILED)
 
 
 def _read_client_binary(configuration: Configuration, runtime: Runtime) -> str | None:
@@ -62,7 +62,7 @@ def recipe_lint(request: argparse.Namespace, runtime: Runtime) -> dict:
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "recipe": request.name,
         "source": recipe.source,
-        "verdict": FAILED if findings else PASSED,
+        "result": FAILED if findings else OK,
         "findings": findings,
     }
 

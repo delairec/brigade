@@ -19,7 +19,7 @@ def measure_size(changed: tuple[ChangedFile, ...]) -> dict:
     layers = sorted({part for path in paths for part in path.parts[:-1] if part in LAYERS})
     return {
         "name": NAME,
-        "verdict": INFORMATION,
+        "result": INFORMATION,
         "findings": [
             f"{len(changed)} files",
             f"{sum(file.insertions + file.deletions for file in changed)} lines",

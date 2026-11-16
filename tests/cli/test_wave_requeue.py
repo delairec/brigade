@@ -304,7 +304,7 @@ S3_PARKED_AFTER_ITS_FIRST_VERDICT = (
     ' "task": "S3", "wave": "shop_w1", "branch": "{task_branch}", "pr": 12, "login": "octo-bot"}}\n'
     '{{"schema_version": 1, "ts": "2026-10-13T09:15:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
     ' "state": "pr_open"}}\n'
-    '{{"schema_version": 1, "ts": "2026-10-13T09:20:00Z", "event": "task.preflighted", "project": "shop",'
+    '{{"schema_version": 2, "ts": "2026-10-13T09:20:00Z", "event": "task.preflighted", "project": "shop",'
     ' "wave": "shop_w1", "task": "S3", "pr": 12, "head": "{head}", "checks": []}}\n'
     '{{"schema_version": 1, "ts": "2026-10-13T09:20:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
     ' "state": "verifying"}}\n'
@@ -379,7 +379,7 @@ class BrigadeWaveRequeueOfATaskParkedAfterItsFirstVerdictTest(LaunchingTickTestC
                     "reason": "brigade wave requeue",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": ANY,
                     "event": "task.preflighted",
                     "project": "shop",

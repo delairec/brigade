@@ -27,7 +27,7 @@ class ReviewedCheckTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "name": "reviewed",
-                "verdict": "fail",
+                "result": "fail",
                 "findings": ["no review was submitted on the pull request 12"],
             },
         )
@@ -40,7 +40,7 @@ class ReviewedCheckTest(unittest.TestCase):
         document = check(subject, create_test_runtime())
 
         # Assert
-        self.assertEqual(document, {"schema_version": 1, "name": "reviewed", "verdict": "pass", "findings": []})
+        self.assertEqual(document, {"schema_version": 1, "name": "reviewed", "result": "ok", "findings": []})
 
     def test_should_fail_on_a_pull_request_the_forge_does_not_list(self):
         # Arrange
@@ -55,7 +55,7 @@ class ReviewedCheckTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "name": "reviewed",
-                "verdict": "fail",
+                "result": "fail",
                 "findings": ["the forge lists no pull request 12"],
             },
         )

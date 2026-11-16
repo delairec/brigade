@@ -21,7 +21,7 @@ class CheckAcceptanceTest(unittest.TestCase):
             check,
             {
                 "name": "acceptance",
-                "verdict": "pass",
+                "result": "ok",
                 "findings": [],
                 "commands": [
                     {"command": "python3 -m unittest", "exit_code": 0, "duration_ms": 0, "output": ""},
@@ -45,7 +45,7 @@ class CheckAcceptanceTest(unittest.TestCase):
             check,
             {
                 "name": "acceptance",
-                "verdict": "fail",
+                "result": "fail",
                 "findings": ["ruff check . exited 1", "brigade/cli.py:3:1: F401"],
                 "commands": [
                     {"command": "python3 -m unittest", "exit_code": 0, "duration_ms": 0, "output": ""},

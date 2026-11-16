@@ -45,7 +45,7 @@ RULES = [
     }
 ]
 GITHUB_PROJECT = (*TIDEPOOL_PROJECT, ("FORGE", "github"))
-FAILED_CHECK = {"verdict": "fail", "name": "scope", "findings": ["brigade/cli.py is outside the task"]}
+FAILED_CHECK = {"result": "fail", "name": "scope", "findings": ["brigade/cli.py is outside the task"]}
 
 
 PREVIOUS_VERDICT = {

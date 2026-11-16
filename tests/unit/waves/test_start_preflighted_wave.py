@@ -12,18 +12,18 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
 FAILED_PREFLIGHT = PreflightOutcome(
-    verdict="fail",
+    result="fail",
     checks=[
         {
             "name": "forge_logins",
-            "verdict": "fail",
+            "result": "fail",
             "findings": ["gh printed no token for the login prudence-bot, bound to review"],
         }
     ],
     collected={},
 )
 PASSED_PREFLIGHT = PreflightOutcome(
-    verdict="pass", checks=[{"name": "forge_logins", "verdict": "pass", "findings": []}], collected={}
+    result="ok", checks=[{"name": "forge_logins", "result": "ok", "findings": []}], collected={}
 )
 STARTED = {"wave": "shop_w3", "project": "shop", "tasks": ["S1"]}
 

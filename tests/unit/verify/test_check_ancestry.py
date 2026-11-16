@@ -14,7 +14,7 @@ class CheckAncestryTest(unittest.TestCase):
         check = check_ancestry(RecordingProcessRunner(), FACTS)
 
         # Assert
-        self.assertEqual(check, {"name": "ancestry", "verdict": "pass", "findings": []})
+        self.assertEqual(check, {"name": "ancestry", "result": "ok", "findings": []})
 
     def test_should_fail_a_head_off_the_wave_branch(self):
         # Arrange
@@ -28,7 +28,7 @@ class CheckAncestryTest(unittest.TestCase):
             check,
             {
                 "name": "ancestry",
-                "verdict": "fail",
+                "result": "fail",
                 "findings": ["2222222 does not descend from integration/w1 at 1111111"],
             },
         )

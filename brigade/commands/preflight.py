@@ -26,13 +26,13 @@ DOCUMENT_SCHEMA_VERSION = 1
 def _render_text(document: dict) -> str:
     lines = [f"preflight {document['preflight']}"]
     for check in document["checks"]:
-        lines.append(f"{check['verdict']}  {check['name']}")
+        lines.append(f"{check['result']}  {check['name']}")
         lines.extend(f"  {finding}" for finding in check["findings"])
     return "\n".join(lines)
 
 
 def _decide_exit_code(document: dict) -> int:
-    return int(document["verdict"] == FAILED)
+    return int(document["result"] == FAILED)
 
 
 def _preflight_pull_request(pr: int, runtime: Runtime) -> dict:
@@ -71,7 +71,7 @@ def preflight(request: argparse.Namespace, runtime: Runtime) -> dict:
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "preflight": request.name,
         "parameters": parameters,
-        "verdict": outcome.verdict,
+        "result": outcome.result,
         "checks": outcome.checks,
     }
 

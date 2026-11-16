@@ -187,7 +187,7 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
                     "\n"
                     "## Checks of c0ffee\n"
                     "\n"
-                    "- pass `python3 -m unittest` 1.2 s\n"
+                    "- ok `python3 -m unittest` 1.2 s\n"
                     "\n"
                     "Co-Authored-By: Ada <ada@example.org>\n",
                     "milestone": "Parser",
@@ -333,7 +333,7 @@ class OpenTaskPullRequestWithNoMilestoneTest(OpenTaskPullRequestTestCase):
                     "\n"
                     "## Checks of c0ffee\n"
                     "\n"
-                    "- pass `python3 -m unittest` 1.2 s\n"
+                    "- ok `python3 -m unittest` 1.2 s\n"
                     "\n"
                     "Co-Authored-By: Ada <ada@example.org>\n",
                     "milestone": None,

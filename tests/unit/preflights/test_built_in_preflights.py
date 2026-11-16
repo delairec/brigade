@@ -56,7 +56,7 @@ class BuiltInPreflightsTest(unittest.TestCase):
             [
                 {
                     "name": "forge_logins",
-                    "verdict": "fail",
+                    "result": "fail",
                     "findings": ["gh printed no token for the login clauche-bot, bound to build"],
                 }
             ],
@@ -78,7 +78,7 @@ class BuiltInPreflightsTest(unittest.TestCase):
             [
                 {
                     "name": "moved_citations",
-                    "verdict": "fail",
+                    "result": "fail",
                     "findings": [
                         "brigade/cart.py:3-4 moved since 22222222 to brigade/cart.py:5-6",
                         "brigade/shelf.py:9 changed since 22222222",
@@ -86,17 +86,17 @@ class BuiltInPreflightsTest(unittest.TestCase):
                 },
                 {
                     "name": "tasks_outside_after",
-                    "verdict": "fail",
+                    "result": "fail",
                     "findings": ["@TASK.B4 (draft) touches brigade/till.py, outside the AFTER of @TASK.B9"],
                 },
                 {
                     "name": "overlapping_deliverables",
-                    "verdict": "fail",
+                    "result": "fail",
                     "findings": [
                         "@TASK.B3 (todo) cites brigade/till.py as @TASK.B9 does",
                         "@TASK.B4 (draft) cites brigade/till.py, @DECISION.ReceiptsAreKept as @TASK.B9 does",
                     ],
                 },
-                {"name": "forge_logins", "verdict": "pass", "findings": []},
+                {"name": "forge_logins", "result": "ok", "findings": []},
             ],
         )

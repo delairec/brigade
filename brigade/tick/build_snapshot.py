@@ -474,7 +474,7 @@ def _list_preflight_failures(preflighted: TaskPreflighted) -> tuple[PreflightFai
     return tuple(
         PreflightFailure(name=check["name"], findings=tuple(check["findings"]))
         for check in preflighted.checks
-        if check["verdict"] == FAILED_PREFLIGHT_CHECK
+        if check["result"] == FAILED_PREFLIGHT_CHECK
     )
 
 

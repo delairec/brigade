@@ -184,7 +184,7 @@ WAVE_PREFLIGHT = "wave"
 NO_PREFLIGHT_PARAMETERS = {}
 NO_LOGIN = None
 NO_PULL_REQUEST_OFF_A_FORGE = None
-FAILED_VERDICT = "fail"
+FAILED_RESULT = "fail"
 TICK_INTERVAL_S = 300
 CYCLE_CAP = 10
 LOCK_NAME = "tick.lock"
@@ -540,7 +540,7 @@ def _run_preflight(runtime: Runtime, configuration: Configuration, action: RunPr
             checks=tuple(map(_describe_recorded_check, findings["checks"])),
         ),
     )
-    if all(check["verdict"] != FAILED_VERDICT for check in findings["checks"]):
+    if all(check["result"] != FAILED_RESULT for check in findings["checks"]):
         _record_task_state(
             runtime, RecordTaskState(wave=action.wave, task=action.task, state=VERIFYING_STATE, reason=None)
         )

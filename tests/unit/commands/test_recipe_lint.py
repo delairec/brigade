@@ -65,7 +65,7 @@ class RecipeLintTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            document, {"schema_version": 1, "recipe": "review", "source": "project", "verdict": "pass", "findings": []}
+            document, {"schema_version": 1, "recipe": "review", "source": "project", "result": "ok", "findings": []}
         )
 
     def test_should_resolve_the_collector_of_the_project_and_refuse_every_other_name_found_nowhere(self):
@@ -114,14 +114,14 @@ class RecipeLintTest(unittest.TestCase):
                 "schema_version": 1,
                 "recipe": "ask",
                 "source": "project",
-                "verdict": "fail",
+                "result": "fail",
                 "findings": ["steps[0]: runs claude, the binary of the configured client"],
             },
         )
 
     def test_should_fail_a_recipe_holding_a_finding(self):
         # Arrange
-        document = {"schema_version": 1, "recipe": "ask", "source": "project", "verdict": "fail", "findings": ["x"]}
+        document = {"schema_version": 1, "recipe": "ask", "source": "project", "result": "fail", "findings": ["x"]}
 
         # Act
         exit_code = COMMAND.decide_exit_code(document)
@@ -135,7 +135,7 @@ class RecipeLintTest(unittest.TestCase):
             "schema_version": 1,
             "recipe": "ask",
             "source": "project",
-            "verdict": "fail",
+            "result": "fail",
             "findings": ["steps[0]: no output slack"],
         }
 

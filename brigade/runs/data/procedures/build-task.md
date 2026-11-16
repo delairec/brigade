@@ -72,7 +72,7 @@ lints, commits and pushes the corpus. Never promote before the pull request exis
 ## 8. Report
 
 The verdict first, in one line: the task delivered, or what stopped it. Then one fact per line: the pull request by
-its number, the branch, the verdict of each acceptance command, the evidence of each failing test seen before its
+its number, the branch, the result of each acceptance command, the evidence of each failing test seen before its
 code, the test each added branch failed on its removal, the entities written in the corpus by name, and the question
 left to a ruling, verbatim, if there is one.
 

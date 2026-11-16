@@ -201,6 +201,10 @@ class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
                 "schema_version is 4, not one of 3",
             ),
             (
+                b'{"schema_version": 1, "ts": "2026-10-01T00:41:00Z", "event": "task.preflighted", "task": "T7"}\n',
+                "schema_version is 1, not one of 2",
+            ),
+            (
                 (
                     b'{"schema_version": 1, "ts": "2026-10-01T00:41:00Z", "event": "wave.started", "wave": "M1",'
                     b' "project": "tidepool"}\n'
@@ -433,7 +437,7 @@ class ReadLedgerSinceAnEarlierReadingTest(ReadLedgerTestCase):
 
 
 TASK_PREFLIGHTED_WITHOUT_A_PULL_REQUEST = (
-    '{"schema_version": 1, "ts": "2026-10-19T09:00:00Z", "event": "task.preflighted", "project": "tidepool",'
+    '{"schema_version": 2, "ts": "2026-10-19T09:00:00Z", "event": "task.preflighted", "project": "tidepool",'
     ' "wave": "tidepool_w16", "task": "T7", "head": "8885daa", "checks": []}\n'
 )
 TASK_VERDICT_WITHOUT_A_PULL_REQUEST = (

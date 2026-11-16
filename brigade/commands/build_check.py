@@ -9,15 +9,15 @@ from brigade.runtime import Runtime
 from brigade.tasks.check_task import TaskCheckDemand, check_task
 from brigade.tasks.locate_task_worktree import locate_task_worktree
 
-PASSED = "pass"
+OK = "ok"
 FAILED = "fail"
 MS_PER_S = 1000
 ONE_FAILED = 1
 
 
-def _describe_verdict(check: dict) -> str:
-    verdict = PASSED if check["passed"] else FAILED
-    return f"{verdict}  {check['command']}  {check['duration_ms'] / MS_PER_S:.1f} s\n"
+def _describe_result(check: dict) -> str:
+    result = OK if check["passed"] else FAILED
+    return f"{result}  {check['command']}  {check['duration_ms'] / MS_PER_S:.1f} s\n"
 
 
 def _describe_tail(check: dict) -> str:
@@ -26,9 +26,9 @@ def _describe_tail(check: dict) -> str:
 
 def _render_text(document: dict) -> str:
     checks = document["checks"]
-    verdicts = "".join(_describe_verdict(check) for check in checks)
+    results = "".join(_describe_result(check) for check in checks)
     tails = "".join(_describe_tail(check) for check in checks if not check["passed"])
-    return f"{verdicts}{tails}".removesuffix("\n")
+    return f"{results}{tails}".removesuffix("\n")
 
 
 def _decide_exit_code(document: dict) -> int:

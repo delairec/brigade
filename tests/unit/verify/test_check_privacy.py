@@ -23,7 +23,7 @@ class CheckPrivacyTest(unittest.TestCase):
             check,
             {
                 "name": "privacy",
-                "verdict": "fail",
+                "result": "fail",
                 "findings": [
                     "README.md:3: an e-mail address",
                     "README.md:4: a home path",
@@ -41,4 +41,4 @@ class CheckPrivacyTest(unittest.TestCase):
         check = check_privacy(patterns, added_lines)
 
         # Assert
-        self.assertEqual(check, {"name": "privacy", "verdict": "fail", "findings": ["src/notes.py:4: a home path"]})
+        self.assertEqual(check, {"name": "privacy", "result": "fail", "findings": ["src/notes.py:4: a home path"]})

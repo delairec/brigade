@@ -28,9 +28,9 @@ S3_REBUILT_TWICE_THEN_PREFLIGHTED_ON_A_FAILING_CHECK = (
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {{}},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "main_turns": 40, "total_turns": null}}\n'
-    '{{"schema_version": 1, "ts": "2026-10-13T10:20:00Z", "event": "task.preflighted", "project": "shop",'
+    '{{"schema_version": 2, "ts": "2026-10-13T10:20:00Z", "event": "task.preflighted", "project": "shop",'
     ' "wave": "shop_w1", "task": "S3", "pr": 12, "head": "{head}",'
-    ' "checks": [{{"name": "checks", "verdict": "fail", "findings": ["tests: failure"]}}]}}\n'
+    ' "checks": [{{"name": "checks", "result": "fail", "findings": ["tests: failure"]}}]}}\n'
 )
 
 

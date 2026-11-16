@@ -82,7 +82,7 @@ A check resolves by name in the order of a collector, the first place holding it
 
 An executable check runs in the project, the subject on its standard input: `schema_version`, `project`, `parameters`
 and `collected`, the documents of the collectors by name. It answers one JSON document, `schema_version` 1, `name`,
-`verdict` `pass` or `fail` and `findings`, a list of strings; an answer that is not that document is refused, naming
+`result` `ok` or `fail` and `findings`, a list of strings; an answer that is not that document is refused, naming
 the check.
 
 ## verify-pull-request
