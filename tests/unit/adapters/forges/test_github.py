@@ -666,6 +666,7 @@ LISTED_PAGE = {
                         "state": "OPEN",
                         "isDraft": False,
                         "reviewDecision": None,
+                        "reviews": {"totalCount": 0},
                         "author": None,
                         "commits": {"nodes": [{"commit": {"statusCheckRollup": None}}]},
                     },
@@ -678,6 +679,7 @@ LISTED_PAGE = {
                         "state": "OPEN",
                         "isDraft": True,
                         "reviewDecision": "APPROVED",
+                        "reviews": {"totalCount": 2},
                         "author": {"login": "Clauche-bot"},
                         "commits": {
                             "nodes": [
@@ -717,6 +719,7 @@ MERGED_PAGE = {
                         "state": "MERGED",
                         "isDraft": False,
                         "reviewDecision": None,
+                        "reviews": {"totalCount": 0},
                         "author": {"login": "ada"},
                         "commits": {"nodes": [{"commit": {"statusCheckRollup": None}}]},
                     }
@@ -779,6 +782,7 @@ class ListPullRequestsOfEveryStateTest(unittest.TestCase):
                         "author": None,
                         "draft": False,
                         "review": None,
+                        "reviews": 0,
                         "checks": [],
                     },
                     {
@@ -791,6 +795,7 @@ class ListPullRequestsOfEveryStateTest(unittest.TestCase):
                         "author": "Clauche-bot",
                         "draft": True,
                         "review": "approved",
+                        "reviews": 2,
                         "checks": [{"name": "unit", "verdict": "pending"}],
                     },
                     {
@@ -803,6 +808,7 @@ class ListPullRequestsOfEveryStateTest(unittest.TestCase):
                         "author": "ada",
                         "draft": False,
                         "review": None,
+                        "reviews": 0,
                         "checks": [],
                     },
                 ],
@@ -835,6 +841,7 @@ class ListOpenPullRequestsTest(unittest.TestCase):
                         "author": None,
                         "draft": False,
                         "review": None,
+                        "reviews": 0,
                         "checks": [],
                     },
                     {
@@ -847,6 +854,7 @@ class ListOpenPullRequestsTest(unittest.TestCase):
                         "author": "Clauche-bot",
                         "draft": True,
                         "review": "approved",
+                        "reviews": 2,
                         "checks": [{"name": "unit", "verdict": "pending"}],
                     },
                 ],

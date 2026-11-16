@@ -105,6 +105,16 @@ class LintRecipeTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(findings, expected)
 
+    def test_should_pass_a_gate_step_handing_its_preflight_a_declared_param(self):
+        # Arrange
+        recipe = create_recipe([{"kind": "gate", "preflight": "verify-pull-request", "parameters": {"pr": "{pr}"}}])
+
+        # Act
+        findings = lint_recipe(recipe, RESOLVERS)
+
+        # Assert
+        self.assertEqual(findings, [])
+
     def test_should_refuse_a_name_that_does_not_resolve(self):
         # Arrange
         rows = (

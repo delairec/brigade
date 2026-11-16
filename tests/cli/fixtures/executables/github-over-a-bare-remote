@@ -45,6 +45,7 @@ class Forge:
             "updatedAt": "2026-10-18T11:00:00Z",
             "author": {"login": pull["author"]},
             "isDraft": False,
+            "reviews": {"totalCount": pull.get("reviews", 0)},
             "commits": {"nodes": [{"commit": {"statusCheckRollup": None}}]},
         }
 

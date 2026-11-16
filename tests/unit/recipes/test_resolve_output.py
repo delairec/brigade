@@ -10,7 +10,7 @@ NO_SEARCH_PATH = ""
 
 class ResolveOutputTest(unittest.TestCase):
     def test_should_accept_the_outputs_brigade_publishes_itself(self):
-        for output in ("inbox", "issue", "file:docs/report-{run}.md", "entity:REPORT"):
+        for output in ("inbox", "issue", "file:docs/report-{run}.md", "entity:REPORT", "pr-file:{pr}:docs/reports/{pr}.md"):
             with self.subTest(output):
                 # Act
                 resolved = resolve_output(output, NO_SEARCH_PATH)

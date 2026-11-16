@@ -38,6 +38,7 @@ class BrigadeCheckListTest(CollectTestCase):
                     {"name": "overlapping_deliverables", "source": "built-in"},
                     {"name": "privacy", "source": "built-in"},
                     {"name": "promotion", "source": "built-in"},
+                    {"name": "reviewed", "source": "built-in"},
                     {"name": "tasks_outside_after", "source": "built-in"},
                     {"name": "untouched_files", "source": "built-in"},
                 ],

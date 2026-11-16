@@ -7,6 +7,8 @@ from brigade.recipes.run_order import OrderRun
 
 INBOX_OUTPUT_STEP = {"kind": "output", "output": "inbox"}
 NO_OUTPUT_OF_THE_ORDER = None
+ORDER_VALUES = {"pr": "12", "project": "shop"}
+PULL_REQUEST_FILE_STEP = {"kind": "output", "output": "pr-file:{pr}:docs/reports/{pr}.md"}
 JUDGED_ANSWER = 'RESULT triage_20261019T090000Z_20261019T090000Z_aaaaaa\n\tORDER "triage_20261019T090000Z"\n'
 
 
@@ -40,7 +42,7 @@ class CreateOutputPerformerTest(unittest.TestCase):
         # Arrange
         (self.run_directory / "answer.awawa").write_text(JUDGED_ANSWER, encoding="utf-8")
         output = OutputDouble()
-        perform = create_output_performer(output.keep, output.hand, NO_OUTPUT_OF_THE_ORDER)
+        perform = create_output_performer(output.keep, output.hand, NO_OUTPUT_OF_THE_ORDER, ORDER_VALUES)
 
         # Act
         result = perform(INBOX_OUTPUT_STEP, self.run)
@@ -55,7 +57,7 @@ class CreateOutputPerformerTest(unittest.TestCase):
     def test_should_keep_the_answer_brigade_fills_when_no_judge_step_answered(self):
         # Arrange
         output = OutputDouble()
-        perform = create_output_performer(output.keep, output.hand, NO_OUTPUT_OF_THE_ORDER)
+        perform = create_output_performer(output.keep, output.hand, NO_OUTPUT_OF_THE_ORDER, ORDER_VALUES)
 
         # Act
         perform(INBOX_OUTPUT_STEP, self.run)
@@ -73,10 +75,22 @@ class CreateOutputPerformerTest(unittest.TestCase):
         # Arrange
         (self.run_directory / "answer.awawa").write_text(JUDGED_ANSWER, encoding="utf-8")
         output = OutputDouble()
-        perform = create_output_performer(output.keep, output.hand, "issue")
+        perform = create_output_performer(output.keep, output.hand, "issue", ORDER_VALUES)
 
         # Act
         perform(INBOX_OUTPUT_STEP, self.run)
 
         # Assert
         self.assertEqual(output.handed, [("issue", self.run_directory / "answer.awawa")])
+
+    def test_should_hand_the_answer_to_the_output_of_the_step_filled_from_the_values_of_the_order(self):
+        # Arrange
+        (self.run_directory / "answer.awawa").write_text(JUDGED_ANSWER, encoding="utf-8")
+        output = OutputDouble()
+        perform = create_output_performer(output.keep, output.hand, NO_OUTPUT_OF_THE_ORDER, ORDER_VALUES)
+
+        # Act
+        perform(PULL_REQUEST_FILE_STEP, self.run)
+
+        # Assert
+        self.assertEqual(output.handed, [("pr-file:12:docs/reports/12.md", self.run_directory / "answer.awawa")])
