@@ -61,6 +61,9 @@ class OrderShowTest(unittest.TestCase):
             paths, MONDAY, OrderDone(project="oak", kind="usage-report", order="nightly", run="20261019T070000Z-aaaaaa")
         )
         append_event(
+            paths, MONDAY, OrderDone(project=None, kind="cleanup", order="cleanup", run="20261019T070000Z-dddddd")
+        )
+        append_event(
             paths,
             TUESDAY,
             OrderStarted(project="oak", kind="usage-report", order="nightly", run="20261020T070000Z-bbbbbb"),
@@ -102,3 +105,25 @@ class OrderShowTest(unittest.TestCase):
             "20261020T070000Z-bbbbbb  2026-10-20T07:00:00Z  parked\n"
             "20261021T070000Z-cccccc  2026-10-21T07:00:00Z  running",
         )
+
+    def test_should_print_a_machine_wide_order_on_demand_with_no_run(self):
+        # Arrange
+        document = {
+            "schema_version": 1,
+            "order": {
+                "name": "cleanup",
+                "recipe": "cleanup",
+                "project": None,
+                "text": None,
+                "params": [],
+                "every": None,
+                "status": "paused",
+            },
+            "runs": [],
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(text, "@ORDER.cleanup: recipe cleanup, machine-wide, on demand, paused\nrun  started  outcome")
