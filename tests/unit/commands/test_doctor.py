@@ -1294,7 +1294,16 @@ class DoctorProjectsTest(DoctorTestCase):
         document = doctor(self.no_option, self.runtime)
 
         # Assert
-        self.assertNotIn("project", [item["name"] for item in document["items"]])
+        self.assertNotIn(
+            {
+                "name": "project",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": "@PROJECT.app: recipe acceptance, step make check: no executable make",
+                "fallback": None,
+            },
+            document["items"],
+        )
 
     def test_should_not_find_a_step_of_a_project_recipe_running_a_script_the_project_versions(self):
         # Arrange
@@ -1308,7 +1317,16 @@ class DoctorProjectsTest(DoctorTestCase):
         document = doctor(self.no_option, self.runtime)
 
         # Assert
-        self.assertNotIn("project", [item["name"] for item in document["items"]])
+        self.assertNotIn(
+            {
+                "name": "project",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": "@PROJECT.app: recipe acceptance, step scripts/check --fast: no executable scripts/check",
+                "fallback": None,
+            },
+            document["items"],
+        )
 
     def test_should_find_a_step_of_a_project_recipe_with_an_empty_argv(self):
         # Arrange
