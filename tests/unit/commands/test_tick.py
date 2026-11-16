@@ -64,6 +64,8 @@ STAGED_CHANGES_FOUND = 1
 GIT_REBASE = ("git", "rebase")
 
 LOOP_MODE = "loop"
+STDOUT = 1
+STDERR = 2
 WAKE_THE_LOOP = signal.SIGUSR1
 
 
@@ -162,6 +164,32 @@ def _create_single_round_factory(runtime: Runtime):
         return runtime
 
     return create_runtime
+
+
+class TickWithALogFileTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.saved_stdout = os.dup(STDOUT)
+        self.saved_stderr = os.dup(STDERR)
+
+    def tearDown(self):
+        os.dup2(self.saved_stdout, STDOUT)
+        os.dup2(self.saved_stderr, STDERR)
+        os.close(self.saved_stdout)
+        os.close(self.saved_stderr)
+
+    def test_should_keep_its_log_in_the_log_file_it_is_given(self):
+        # Arrange
+        log_file = self.root / "state" / "logs" / "tick.log"
+        request = Namespace(log_file=str(log_file), mode="once")
+
+        # Act
+        COMMAND.run(request, _create_quiet_runtime(self.root))
+
+        # Assert
+        self.assertEqual(log_file.read_text(encoding="utf-8"), "")
 
 
 class TickOnAnEmptyMachineTest(unittest.TestCase):

@@ -10,12 +10,12 @@ from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessR
 LIST_CRONTAB = ("crontab", "-l")
 REQUEST = {
     "brigade": "/opt/brigade/bin/brigade",
-    "log_file": "/home/ada/.local/state/brigade/tick.log",
+    "log_file": "/srv/brigade/state/brigade/tick.log",
     "environment": {"PATH": "/usr/bin:/bin", "BRIGADE_NOTE": "100%"},
 }
 CRON_LINE = (
     "*/5 * * * * env PATH=/usr/bin:/bin BRIGADE_NOTE=100\\% /opt/brigade/bin/brigade tick --once"
-    " --log-file /home/ada/.local/state/brigade/tick.log # brigade scheduler install"
+    " --log-file /srv/brigade/state/brigade/tick.log # brigade scheduler install"
 )
 
 
@@ -61,7 +61,7 @@ class InstallCronTest(unittest.TestCase):
                     acceptable_exit_codes=(0,),
                     stdin="0 3 * * * backup\n"
                     "*/5 * * * * env PATH=/usr/bin:/bin BRIGADE_NOTE=100\\% /opt/brigade/bin/brigade "
-                    "tick --once --log-file /home/ada/.local/state/brigade/tick.log # brigade scheduler install\n",
+                    "tick --once --log-file /srv/brigade/state/brigade/tick.log # brigade scheduler install\n",
                 ),
             ],
         )
@@ -86,7 +86,7 @@ class InstallCronTest(unittest.TestCase):
                     timeout_s=30.0,
                     acceptable_exit_codes=(0,),
                     stdin="*/5 * * * * env PATH=/usr/bin:/bin BRIGADE_NOTE=100\\% /opt/brigade/bin/brigade "
-                    "tick --once --log-file /home/ada/.local/state/brigade/tick.log # brigade scheduler install\n",
+                    "tick --once --log-file /srv/brigade/state/brigade/tick.log # brigade scheduler install\n",
                 ),
             ],
         )
