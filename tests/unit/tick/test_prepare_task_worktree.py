@@ -385,16 +385,30 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
         # Assert
         self.assertEqual(runner.commands[-1], (str(WORKTREE), ("false",)))
 
+    def create_runner_with_a_gate_step_in_the_setup(self) -> RecordingProcessRunner:
+        gate_step = {"name": "STEP", "atoms": ["gate"], "fields": [{"name": "PREFLIGHT", "atoms": ['"ancestry"']}]}
+        recipe = {"type": "RECIPE", "name": "setup", "fields": [gate_step]}
+        return self.create_runner(answers={SHOW_SETUP_RECIPE: ProcessAnswer(stdout=json.dumps(recipe))})
+
     def test_should_park_the_task_on_a_setup_recipe_holding_a_step_that_is_no_command_step(self):
         # Arrange
-        gate_step = {"name": "STEP", "atoms": ["gate"], "fields": [{"name": "PREFLIGHT", "atoms": ['"ancestry"']}]}
-        runner = self.create_runner(
-            answers={
-                SHOW_SETUP_RECIPE: ProcessAnswer(
-                    stdout=json.dumps({"type": "RECIPE", "name": "setup", "fields": [gate_step]})
-                )
-            }
+        runner = self.create_runner_with_a_gate_step_in_the_setup()
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            prepare_task_worktree(
+                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
+            )
+
+        # Assert
+        self.assertEqual(
+            read_ledger(self.paths.state_root).entries[0].event,
+            TaskState(wave="w1", task="B1", state="parked", reason="setup failed"),
         )
+
+    def test_should_name_the_step_of_the_setup_recipe_that_is_no_command_step(self):
+        # Arrange
+        runner = self.create_runner_with_a_gate_step_in_the_setup()
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -403,10 +417,9 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
             )
 
         # Assert
-        refused = "the setup of @TASK.B1 failed: the recipe setup of the project: steps[0].kind is 'gate', not one of"
         self.assertEqual(
-            (str(refusal.exception), read_ledger(self.paths.state_root).entries[0].event),
-            (f"{refused} command", TaskState(wave="w1", task="B1", state="parked", reason="setup failed")),
+            str(refusal.exception),
+            "the setup of @TASK.B1 failed: the recipe setup of the project: steps[0].kind is 'gate', not one of command",
         )
 
     def test_should_name_the_setup_line_exiting_non_zero(self):
