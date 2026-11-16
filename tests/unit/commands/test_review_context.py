@@ -6,7 +6,7 @@ from pathlib import Path
 from brigade.commands.review_context import COMMAND
 from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import create_machine_double, write_ledger
-from tests.unit.commands.test_verify_preflight import (
+from tests.unit.commands.test_preflight import (
     TASK_PR_OPENED,
     TASK_WORKTREE,
     TIDEPOOL_PROJECT,

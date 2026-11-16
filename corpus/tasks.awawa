@@ -1634,7 +1634,10 @@ TASK B14
 TASK B15
 	TITLE "brigade verify preflight runs the deterministic checks of a pull request before any"
 		+ "judgment"
-	STATUS implemented
+	STATUS archived
+	DESC "archived on 2026-11-16: @TASK.B256 makes false its SPEC that brigade verify preflight"
+		+ "<pr> prints the findings of the pull request; brigade preflight verify-pull-request"
+		+ "pr=<pr> prints them"
 	DELIVERED_BY 157
 	TYPE feat
 	MILESTONE @MILESTONE.M1
@@ -1647,11 +1650,11 @@ TASK B15
 		IMPL "brigade/commands/verify_preflight.py::def _decide_exit_code(document: dict) -> int:"
 		IMPL "brigade/verify/preflight_pull_request.py::def preflight_pull_request(runtime:"
 			+ "Runtime, demand: PreflightDemand) -> dict:"
-		IMPL "tests/cli/test_verify_preflight.py::class"
-			+ "BrigadeVerifyPreflightOfASoundPullRequestTest(VerifyPreflightTestCase):"
-		IMPL "tests/unit/commands/test_verify_preflight.py::class"
-			+ "VerifyPreflightExitCodeTest(unittest.TestCase):"
-		IMPL "tests/unit/commands/test_verify_preflight.py::def"
+		IMPL "tests/cli/test_preflight.py::class"
+			+ "BrigadePreflightVerifyPullRequestTest(PullRequestPreflightTestCase):"
+		IMPL "tests/unit/commands/test_preflight.py::def"
+			+ "test_should_exit_1_on_a_preflight_that_fails_and_0_on_one_that_passes(self):"
+		IMPL "tests/unit/commands/test_preflight.py::def"
 			+ "test_should_refuse_a_pull_request_no_task_opened(self):"
 	SPEC "ancestry fails when the head of the pull request does not descend from the head of the"
 		+ "wave's BRANCH; checks fails when a check run of the pull request is not completed and"
@@ -1788,7 +1791,6 @@ TASK B16
 			+ "approving else None,"
 		IMPL "tests/unit/verify/test_record_verdict.py::def"
 			+ "test_should_record_the_login_the_review_ran_as(self):"
-	AFTER @TASK.B15
 	AFTER @TASK.B75
 	AFTER @TASK.B99
 	RATIONALE "the clause \"as the configured forge account\" moved to @TASK.B75, which hands the"
@@ -8290,8 +8292,8 @@ TASK B98
 		+ "of a task records task.preflighted as today"
 		IMPL "brigade/verify/preflight_pull_request.py::VERIFY_PULL_REQUEST ="
 			+ "\"verify-pull-request\""
-		IMPL "tests/cli/test_verify_preflight.py::def"
-			+ "test_should_print_one_line_per_check_its_verdict_and_its_name(self):"
+		IMPL "tests/cli/test_preflight.py::def"
+			+ "test_should_print_one_line_per_check_its_verdict_and_its_name_the_size_included(self):"
 	SPEC "wiki/Preflight.md describes a preflight as a named set of collectors and checks, the"
 		+ "places a check resolves from, brigade check list and brigade preflight <name>, and the"
 		+ "row preflight of wiki/Concepts.md reads the same"
@@ -8307,7 +8309,7 @@ TASK B98
 		IMPL "tests/unit/preflights/test_run_preflight.py::def"
 			+ "test_should_refuse_a_name_no_preflight_carries(self):"
 		IMPL "tests/cli/test_preflight.py::def"
-			+ "test_should_print_one_line_per_check_of_the_preflight(self):"
+			+ "test_should_print_one_line_per_check_its_verdict_and_its_name_the_size_included(self):"
 		IMPL "tests/cli/test_check_list.py::class BrigadeCheckListTest(CollectTestCase):"
 	RATIONALE "the planning this task asked for as drafted, a milestone and its draft tasks, was"
 		+ "carried out with the user in the refinement of M8 on 2026-11-13: the task is rewritten"
@@ -18950,10 +18952,14 @@ TASK B256
 		+ "the document it printed, the size it measures included, the tick runs that preflight on"
 		+ "the pull request of a task and records task.preflighted as today, and the procedures and"
 		+ "the wiki name brigade preflight verify-pull-request"
+		IMPL "brigade/commands/preflight.py::def _preflight_pull_request(pr: int, runtime: Runtime)"
+			+ "-> dict:"
 	SPEC "the commands that remain doing the same work under one slot are listed in the pull"
 		+ "request body with the reason each stays, the six context commands and the six answer"
 		+ "commands one per slot among them; python3 -m unittest passes, the tests of the removed"
 		+ "commands moved to the commands that replace them"
+		IMPL "tests/unit/commands/test_preflight.py::class"
+			+ "PreflightOfAPullRequestTest(unittest.TestCase):"
 	AFTER @TASK.B98
 	AFTER @TASK.B163
 	AFTER @TASK.B253

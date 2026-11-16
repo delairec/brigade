@@ -188,6 +188,8 @@ class PreflightPullRequestTest(unittest.TestCase):
             document,
             {
                 "schema_version": 1,
+                "preflight": "verify-pull-request",
+                "verdict": "pass",
                 "project": "shop",
                 "pr": 160,
                 "task": "B1",

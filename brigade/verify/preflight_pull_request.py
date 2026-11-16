@@ -41,6 +41,8 @@ def preflight_pull_request(runtime: Runtime, demand: PreflightDemand) -> dict:
     changed = tuple(ChangedFile(**changed) for changed in facts["changed"])
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
+        "preflight": VERIFY_PULL_REQUEST,
+        "verdict": outcome.verdict,
         "project": demand.project.name,
         "pr": demand.pr,
         "task": demand.task,

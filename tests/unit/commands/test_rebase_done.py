@@ -6,7 +6,7 @@ from pathlib import Path
 from brigade.commands.rebase_done import COMMAND
 from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_corpus_double, write_ledger
-from tests.unit.commands.test_verify_preflight import (
+from tests.unit.commands.test_preflight import (
     M4_BRANCH_CUT,
     TASK_PR_OPENED,
     TIDEPOOL_PROJECT,
