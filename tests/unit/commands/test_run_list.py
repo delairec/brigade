@@ -56,7 +56,7 @@ SECOND_LISTED = {
 }
 
 
-class RunsListTextTest(unittest.TestCase):
+class RunListTextTest(unittest.TestCase):
     def test_should_say_that_no_run_was_started(self):
         # Arrange
         document = {"schema_version": 1, "runs": []}
@@ -85,7 +85,7 @@ class RunsListTextTest(unittest.TestCase):
                 },
                 {
                     "run": SECOND_RUN,
-                    "procedure": "wave-plan",
+                    "procedure": "request-plan",
                     "slot": "plan",
                     "role": "planner",
                     "project": None,
@@ -103,13 +103,13 @@ class RunsListTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             text,
-            "run                      procedure  slot   role     project  wave         task  state    outcome\n"
-            f"{FIRST_RUN}  deliver    build  builder  -        tidepool_w1  T1    dead     -\n"
-            f"{SECOND_RUN}  wave-plan  plan   planner  -        -            -     running  -",
+            "run                      procedure     slot   role     project  wave         task  state    outcome\n"
+            f"{FIRST_RUN}  deliver       build  builder  -        tidepool_w1  T1    dead     -\n"
+            f"{SECOND_RUN}  request-plan  plan   planner  -        -            -     running  -",
         )
 
 
-class RunsListDiagnosticsTest(unittest.TestCase):
+class RunListDiagnosticsTest(unittest.TestCase):
     def test_should_name_each_run_skipped_with_its_reason(self):
         # Arrange
         document = {"schema_version": 1, "runs": [], "skipped": [{"run": FIRST_RUN, "reason": "run.json is empty"}]}

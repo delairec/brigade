@@ -70,7 +70,7 @@ class DescribeWaveTest(unittest.TestCase):
         # Assert
         self.assertEqual(wave["tasks"], ["TP1", "TP2"])
         self.assertEqual(wave["pull_requests"], [{"task": "TP1", "pr": 7, "rounds": 2}])
-        self.assertEqual(wave["hand_overs"], [{"task": "TP1", "role": "builder", "slot": "build", "segment": 2}])
+        self.assertEqual(wave["handovers"], [{"task": "TP1", "role": "builder", "slot": "build", "segment": 2}])
         self.assertEqual(wave["parked"], ["TP2"])
 
     def test_should_summarize_the_steps_by_slot_and_by_role(self):

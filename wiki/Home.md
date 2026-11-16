@@ -29,7 +29,7 @@ decide whether to read on. The pages are written in `wiki/` of the repository an
 - [Preflight](Preflight.md) — where a preflight resolves from, how a project adds a custom one with `brigade preflight add`, and which deterministic checks run on the pull request of a task before any judgment.
 - [Runs](Runs.md) — how a procedure runs as a slot, what a run keeps, and how it is held on the clock, stopped and
   pruned.
-- [Verification](Verification.md) — how a review run judges the pull request of a task and records its verdict.
+- [Verification](Review.md) — how a review run judges the pull request of a task and records its verdict.
 - [Review answers](Review-answers.md) — how a remediation run answers the findings of a review.
 - [Rebase on the base](Rebase-on-the-base.md) — how a rebase run puts the branch of a task back on its base after a
   conflict.

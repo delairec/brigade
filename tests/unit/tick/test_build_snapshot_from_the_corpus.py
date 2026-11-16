@@ -1717,7 +1717,7 @@ class BuildSnapshotOfAWaveWhoseTaskCarriesNoTypeTest(BuildSnapshotTestCase):
 
 def create_review_run_finished(run: str, task: str, error_class: str | None = None) -> RunFinished:
     return dataclasses.replace(
-        create_run_finished(run, procedure="verify-pr", wave="w1", task=task, error_class=error_class), slot="review"
+        create_run_finished(run, procedure="review-pr", wave="w1", task=task, error_class=error_class), slot="review"
     )
 
 
@@ -1988,7 +1988,7 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
         self.record(30, create_run_finished("r4", wave="w1", task="B4"))
         self.record(
             29,
-            dataclasses.replace(create_run_finished("r5", procedure="verify-pr", wave="w4", task="B4"), slot="review"),
+            dataclasses.replace(create_run_finished("r5", procedure="review-pr", wave="w4", task="B4"), slot="review"),
         )
 
     def test_should_carry_the_last_verdict_of_each_task_and_the_head_its_verification_ended_on(self):

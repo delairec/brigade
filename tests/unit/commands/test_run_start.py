@@ -196,7 +196,7 @@ class RunDetachedTest(unittest.TestCase):
         (self.root / "config").mkdir()
         (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
         self.request = Namespace(
-            procedure="wave-plan",
+            procedure="request-plan",
             slot="plan",
             project=None,
             cwd=str(self.root),
@@ -226,7 +226,7 @@ class RunDetachedTest(unittest.TestCase):
             (self.root / "state" / "runs" / "20261019T090000Z-a1b2c3" / "run.json").read_text(encoding="utf-8")
         )
         self.assertEqual(document, {"schema_version": 1, "run": "20261019T090000Z-a1b2c3", "pid": this_process})
-        self.assertEqual(record["procedure"], "wave-plan")
+        self.assertEqual(record["procedure"], "request-plan")
         self.assertEqual(record["arguments"], {"request": "tidepool_1"})
 
     def test_should_write_the_spawned_run_in_the_trail_of_its_run(self):
@@ -255,7 +255,7 @@ class RunDetachedTest(unittest.TestCase):
                     "/srv/brigade/bin/brigade",
                     "run",
                     "start",
-                    "wave-plan",
+                    "request-plan",
                     "request=tidepool_1",
                     "--slot",
                     "plan",

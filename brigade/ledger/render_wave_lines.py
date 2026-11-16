@@ -55,8 +55,8 @@ def _render_event(entry: dict) -> str:
 
 def render_wave_lines(document: dict) -> list[str]:
     pull_requests = [f"#{item['pr']} {item['task']} rounds {item['rounds']}" for item in document["pull_requests"]]
-    hand_overs = [
-        f"{item['task']} {item['role']} {item['slot']} segment {item['segment']}" for item in document["hand_overs"]
+    handovers = [
+        f"{item['task']} {item['role']} {item['slot']} segment {item['segment']}" for item in document["handovers"]
     ]
     return [
         (
@@ -71,7 +71,7 @@ def render_wave_lines(document: dict) -> list[str]:
         *_render_steps("steps by role", document["steps"]["by_role"]),
         f"pauses: {len(document['pauses'])}, {format_duration(document['paused_ms'])} in all",
         *(_render_pause(pause) for pause in document["pauses"]),
-        f"hand-overs: {_join_or_none(hand_overs)}",
+        f"handovers: {_join_or_none(handovers)}",
         f"parked: {_join_or_none(document['parked'])}",
         "events:",
         *(_render_event(entry) for entry in document["events"]),

@@ -65,7 +65,7 @@ closed, as below, and a parked task of a closed wave keeps its worktree and its 
 | launch | cuts a worktree for each startable task of an open wave and launches a detached build run of `build-task` | `running` |
 | pull request | follows the pull request of the task | `pr_open` when it opens |
 | preflight | once every check run completed, runs the preflight `verify-pull-request` on the pull request; no failing check moves the task on | `verifying` |
-| review | starts a detached run of the slot `review`, of `verify-pr`; its `task.verdict` decides | `verified` on `pass`, `changes_requested` on `changes` |
+| review | starts a detached run of the slot `review`, of `review-pr`; its `task.verdict` decides | `verified` on `pass`, `changes_requested` on `changes` |
 | repair | starts a detached run of the slot `remediate`, of `remediate-pr`, or of the slot `build` for a failing check | `fixing`, back to `pr_open` on a push |
 | rebase | rebases a pull request behind its base once its check runs all passed and the heads of its branch and of its base are green; a conflict starts a run of the slot `rebase`; a red head launches one run of that slot repairing it, a red main branch on `fix/repair-<main>-<commit>` with its pull request, a red milestone branch in place | back to `pr_open`, or `fixing` |
 | merge | merges a verified pull request into the branch of its milestone, never into the main branch, then removes the task's worktree once its pull request is merged or closed | `merged` |

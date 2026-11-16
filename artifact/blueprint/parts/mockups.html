@@ -51,7 +51,7 @@ INBOX    7 signals in 3 families · oldest 2d · 1 pattern proposed (P12, 5 sign
     <div class="shot-bar"><span></span><span></span><span></span><em>brigade wave new</em></div>
 <pre class="term" id="t-wave-new"><span class="p">$</span> <span class="c">brigade wave new tidepool "Finish the station page: phone width, keyboard, buoy icons, the forecast list"</span>
 <span class="tagc">cli</span>  request R-021 recorded · plan context: 433 entities, 4 todo, 21 draft, next task number 196, 38 IMPL files indexed
-<span class="taga">ada</span>  run r-0191 · slot plan · wave-plan.md · 1 segment · 19 steps · 6 m 40 s
+<span class="taga">ada</span>  run r-0191 · slot plan · request-plan.md · 1 segment · 19 steps · 6 m 40 s
 <span class="tagc">cli</span>  plan.json valid · 5 tasks · 1 overlap ruled · awawa fmt + lint --strict: 0 errors
 <span class="tagc">cli</span>  branch integration/station-page from main · WAVE 16 + 5 TASK written · pushed
 
@@ -75,7 +75,7 @@ WAVE tp/16  integration/station-page  POLICY plan_review=auto → starting at ne
     <div class="shot-bar"><span></span><span></span><span></span><em>the tick log, last lines</em></div>
 <pre class="term" id="t-tick">09:10:00 <span class="tagc">cli</span>  tick #4418 · lock ok · 1 active wave · fetch tidepool (0.8 s)
 09:10:01 <span class="tagc">cli</span>  tp/16 TP146 pr 291 · checks 7/7 <span class="ok">green</span> · preflight <span class="ok">ok</span> (ancestry, fmt, lint, promotion, privacy, body)
-09:10:01 <span class="tagc">cli</span>  tp/16 TP146 → verifying · launch <span class="taga">prudence</span> r-0196 slot verify · verify-pr.md (budget 25)
+09:10:01 <span class="tagc">cli</span>  tp/16 TP146 → verifying · launch <span class="taga">prudence</span> r-0196 slot verify · review-pr.md (budget 25)
 09:10:02 <span class="tagc">cli</span>  tp/16 TP151 pr 292 · checks 6/7 · <span class="err">test (coverage) failed</span> · 1st failure → launch <span class="taga">bastien</span> r-0197 "fix a failing check" (round 1/2)
 09:10:02 <span class="tagc">cli</span>  tp/16 TP189 queued · AFTER TP151 not merged · waiting
 09:10:02 <span class="tagc">cli</span>  tp/16 TP195 queued · AFTER TP151 not merged · waiting
@@ -157,7 +157,7 @@ TP195     queued              —     —       —      —        —        A
 TP196     queued              —     —       —      —        —        AFTER TP151
 
 integration → main  pr 290 <span class="dim">draft</span>  body: report pending · 1 of 5 tasks landed
-ledger: 4 runs · 89 steps · 1 pause (quota, 4 h 45) · 0 hand-overs · 0 parked</pre>
+ledger: 4 runs · 89 steps · 1 pause (quota, 4 h 45) · 0 handovers · 0 parked</pre>
     <figcaption>States are the tick's; nothing here was typed by a person or asked of a model.</figcaption>
   </figure>
 </section>
@@ -351,7 +351,7 @@ doctor: 4 of 4 prerequisites · 1 optional item on its fallback · exit 0</pre>
       <div class="scards">
         <div class="scard"><div class="sl">Projects</div><div class="sv">3</div><div class="sd">1 wave running · 1 paused</div></div>
         <div class="scard"><div class="sl">Inbox</div><div class="sv">7</div><div class="sd">3 families · 1 pattern to ratify</div></div>
-        <div class="scard"><div class="sl">Runs today</div><div class="sv">9</div><div class="sd">p50 21 steps · 0 hand-overs</div></div>
+        <div class="scard"><div class="sl">Runs today</div><div class="sv">9</div><div class="sd">p50 21 steps · 0 handovers</div></div>
         <div class="scard warn"><div class="sl">Scans</div><div class="sv">1</div><div class="sd">lint drift · lantern</div></div>
         <div class="scard"><div class="sl">Parked orders</div><div class="sv">0</div><div class="sd">1 study due at 10:00</div></div>
       </div>

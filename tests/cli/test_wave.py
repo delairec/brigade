@@ -198,7 +198,7 @@ class BrigadeWaveShowEventsTest(WaveTestCase):
                 "    segments p50 12  p90 12  measured 1  unmeasured 0",
                 "pauses: 1, 2h00m in all",
                 "  2026-09-30T22:15:00Z to 2026-10-01T00:15:00Z  2h00m",
-                "hand-overs: TP146 builder build segment 2",
+                "handovers: TP146 builder build segment 2",
                 "parked: TP147",
                 "events:",
                 "  2026-09-30T22:00:00Z  wave.started",

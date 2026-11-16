@@ -723,7 +723,7 @@ RESUMED_FROM_THE_CLIENT_LOGIN = {
 }
 REVIEW_RUN_FAILED_WITHOUT_A_VERDICT = {
     **create_run_result(FIRST_RUN, "failed", "2026-10-18T11:40:00Z"),
-    "procedure": "verify-pr",
+    "procedure": "review-pr",
     "slot": "review",
     "role": "reviewer",
     "wave": "tidepool_w16",
@@ -1503,7 +1503,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 (
                     "run",
                     "start",
-                    "verify-pr",
+                    "review-pr",
                     "pr=42",
                     "task=@TASK.T7",
                     "--slot",
@@ -1547,7 +1547,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 (
                     "run",
                     "start",
-                    "verify-pr",
+                    "review-pr",
                     "pr=42",
                     "task=@TASK.T7",
                     "--slot",
@@ -7233,7 +7233,7 @@ class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
                 (
                     "run",
                     "start",
-                    "verify-pr",
+                    "review-pr",
                     "task=@TASK.T7",
                     "--slot",
                     "review",

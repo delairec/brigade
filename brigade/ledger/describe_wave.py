@@ -62,7 +62,7 @@ def _list_merged_pull_requests(events: list) -> list[dict]:
     ]
 
 
-def _list_hand_overs(events: list) -> list[dict]:
+def _list_handovers(events: list) -> list[dict]:
     return [
         {"task": event.task, "role": event.role, "slot": event.slot, "segment": event.segment}
         for event in events
@@ -142,7 +142,7 @@ def describe_wave(reading: LedgerReading, wave: str) -> dict:
         "steps": {"by_slot": _summarize_by(runs, "slot"), "by_role": _summarize_by(runs, "role")},
         "pauses": pauses,
         "paused_ms": sum(pause["duration_ms"] for pause in pauses if pause["duration_ms"] is not None),
-        "hand_overs": _list_hand_overs(events),
+        "handovers": _list_handovers(events),
         "parked": [event.task for event in events if isinstance(event, TaskParked)],
         "rounds_by_task": count_repair_rounds(tuple(entries), _list_runs(events), wave),
         "steps_by_task": _sum_steps_by_task(events),

@@ -15,7 +15,7 @@ of another page is unknown.
 | wave | a batch of ratified tasks started together, recorded in the ledger alone, with no branch and no pull request of its own | [Waves](Waves.md) |
 | task | a `TASK` entity of the project corpus, delivered by a build run on the branch `<prefix>/<id>-<slug>` | [Tasks](Tasks.md) |
 | preflight | a named set of collectors and checks run by `brigade preflight <name>`; `verify-pull-request` holds the deterministic checks of the pull request of a task, before any judgment | [Preflight](Preflight.md) |
-| verdict | `pass` or `changes`, the judgment of a review run on the pull request of a task, recorded as `task.verdict` | [Verification](Verification.md) |
+| verdict | `pass` or `changes`, the judgment of a review run on the pull request of a task, recorded as `task.verdict` | [Verification](Review.md) |
 | finding | one defect a verdict names, graded `critical`, `high`, `medium` or `low`, which a remediation run answers | [Review answers](Review-answers.md) |
 | procedure | a Markdown file whose front matter declares `capabilities`: what the agent is asked to do | [Runs](Runs.md) |
 | slot | what a procedure calls, never a role: `plan`, `build`, `review`, `remediate`, `rebase`, `report`, `triage`, `rules`, `explore` | [Roles](Roles.md) |

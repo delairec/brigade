@@ -168,7 +168,7 @@ BUILD_PROCEDURE = "build-task"
 BUILD_SLOT = "build"
 TASK_TYPE = "TASK"
 MILESTONE_TYPE = "MILESTONE"
-VERIFY_PROCEDURE = "verify-pr"
+REVIEW_PROCEDURE = "review-pr"
 REMEDIATE_PROCEDURE = "remediate-pr"
 REMEDIATE_SLOT = "remediate"
 REBASE_PROCEDURE = "rebase-on-base"
@@ -274,7 +274,7 @@ def _name_verified(action: LaunchVerification) -> tuple[str, ...]:
 
 def _launch_verification(runtime: Runtime, configuration: Configuration, action: LaunchVerification) -> None:
     verifying = argparse.Namespace(
-        procedure=configuration.procedures.get(REVIEW_SLOT, VERIFY_PROCEDURE),
+        procedure=configuration.procedures.get(REVIEW_SLOT, REVIEW_PROCEDURE),
         slot=REVIEW_SLOT,
         project=action.project,
         cwd=action.worktree,
@@ -1054,14 +1054,14 @@ def _tick_once(runtime: Runtime) -> dict:
     }
 
 
-HELD_REBASES = (LaunchTask, RebaseTask, RebaseMilestone)
+DEFERRED_REBASES = (LaunchTask, RebaseTask, RebaseMilestone)
 
 
 def _describe_planned_action(
     runtime: Runtime, list_check_runs_of: Callable[[str], Callable[[str, str], list[dict]]], action
 ) -> dict:
     planned = dataclasses.asdict(action)
-    if not isinstance(action, HELD_REBASES):
+    if not isinstance(action, DEFERRED_REBASES):
         return planned
     project = find_project(read_projects(runtime), action.project)
     held_by = find_holding_head(runtime, project, action, list_check_runs_of(read_project_forge(project)))
