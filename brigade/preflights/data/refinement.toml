@@ -1,0 +1,10 @@
+schema_version = 1
+name = "refinement"
+description = "the facts a refinement weighs on a draft task: its moved citations, the tasks on its files outside its AFTER, the deliverables it shares, and the forge logins"
+collectors = [{ name = "draft" }, { name = "forge-logins" }]
+checks = [
+    { name = "moved_citations" },
+    { name = "tasks_outside_after" },
+    { name = "overlapping_deliverables" },
+    { name = "forge_logins" },
+]

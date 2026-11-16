@@ -1,0 +1,5 @@
+schema_version = 1
+name = "wave"
+description = "the forge logins of config.toml, checked by the tick before it starts a wave"
+collectors = [{ name = "forge-logins" }]
+checks = [{ name = "forge_logins" }]
