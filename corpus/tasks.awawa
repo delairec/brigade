@@ -8087,7 +8087,8 @@ TASK B98
 	TITLE "brigade preflight <name> runs a named set of collectors and checks and returns their"
 		+ "findings as one document; a check resolves by name as a collector does, and brigade"
 		+ "verify preflight runs the built-in preflight verify-pull-request"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 417
 	TYPE feat
 	MILESTONE @MILESTONE.M8
 	COMPONENT "preflight"
