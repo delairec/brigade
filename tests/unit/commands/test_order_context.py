@@ -61,7 +61,7 @@ class OrderContextTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             text,
-            f"order: nightly, run {RUN_ID}\nopen-issues: {{\"open\": 2}}, /srv/document.json\n\nRESULT nightly\n\nSCHEMA RESULT",
+            f'order: nightly, run {RUN_ID}\nopen-issues: {{"open": 2}}, /srv/document.json\n\nRESULT nightly\n\nSCHEMA RESULT',
         )
 
 
