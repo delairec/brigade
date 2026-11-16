@@ -22,6 +22,7 @@
 - [Review answers](Review-answers.md)
 - [Rebase on the base](Rebase-on-the-base.md)
 - [Studies](Studies.md)
+- [Recipes](Recipes.md)
 
 **Observing**
 

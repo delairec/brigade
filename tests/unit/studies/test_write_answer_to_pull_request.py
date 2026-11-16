@@ -125,13 +125,25 @@ class WriteAnswerToPullRequestTest(unittest.TestCase):
             self.processes.requests,
         )
 
+    def test_should_remove_the_checkout_of_the_head_branch_when_its_push_is_refused(self):
+        # Arrange
+        self.processes.answer(PUSH_TO_THE_HEAD, exit_code=1, stderr="rejected")
+        context = self.create_context("github")
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            write_answer_to_pull_request(context, PUBLICATION)
+
+        # Assert
+        self.assertIn(
+            ("git", "worktree", "remove", "--force", "--force", str(self.checkout)),
+            self.processes.list_argvs(),
+        )
+
     def test_should_refuse_a_project_without_forge(self):
         # Act
         with self.assertRaises(BrigadeError) as raised:
             write_answer_to_pull_request(self.create_context("none"), PUBLICATION)
 
         # Assert
-        self.assertEqual(
-            str(raised.exception), f"the output pr-file:12:{RELATIVE_PATH} needs a project with a forge"
-        )
-
+        self.assertEqual(str(raised.exception), f"the output pr-file:12:{RELATIVE_PATH} needs a project with a forge")

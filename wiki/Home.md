@@ -34,6 +34,8 @@ decide whether to read on. The pages are written in `wiki/` of the repository an
 - [Rebase on the base](Rebase-on-the-base.md) — how a rebase run puts the branch of a task back on its base after a
   conflict.
 - [Studies](Studies.md) — how a study collects, judges and outputs an answer, once or on a schedule.
+- [Recipes](Recipes.md) — how to write a recipe from the example `pr-usage-report`: its params, its steps, its gate,
+  its judge and its output.
 
 ## Observing
 

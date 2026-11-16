@@ -8,7 +8,9 @@ NO_REVIEW = 0
 
 
 def _describe_findings(pull_requests: list, number: int) -> list[str]:
-    reviews = next((pull_request["reviews"] for pull_request in pull_requests if pull_request["number"] == number), None)
+    reviews = next(
+        (pull_request["reviews"] for pull_request in pull_requests if pull_request["number"] == number), None
+    )
     if reviews is None:
         return [f"the forge lists no pull request {number}"]
     if reviews == NO_REVIEW:
