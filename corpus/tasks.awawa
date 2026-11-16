@@ -8136,7 +8136,7 @@ TASK B98
 		+ "check list prints each as built-in"
 		IMPL "brigade/system/list_checks.py::def list_checks(places: CheckPlaces) -> list[dict]:"
 		IMPL "tests/unit/system/test_list_checks.py::def"
-			+ "test_should_list_the_eight_checks_of_the_pull_request_as_built_ins(self):"
+			+ "test_should_list_the_checks_of_the_pull_request_the_draft_and_the_forge_logins_as_built_ins(self):"
 	SPEC "a check answers one document holding its verdict, pass or fail, and its findings,"
 		+ "validated on entry as the decision"
 		+ "DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry sets; the answer of an"
