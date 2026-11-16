@@ -31,6 +31,7 @@ class PreflightCommandTest(unittest.TestCase):
         self.addCleanup(self.root.cleanup)
         root = Path(self.root.name).resolve()
         project = root / "shop"
+        self.project = project
         worktree = project / ".brigade" / "worktrees" / "B1"
         worktree.mkdir(parents=True)
         self.enterContext(contextlib.chdir(worktree))
@@ -76,22 +77,21 @@ class PreflightCommandTest(unittest.TestCase):
         paths = create_test_paths(root)
         paths.config_root.mkdir(parents=True)
         paths.schema_file.write_text("SCHEMA PROJECT\n")
-        runner = RecordingProcessRunner(
-            {
-                **create_registry_answers(paths.config_root, {"shop": {"PATH": str(project), "FORGE": "none"}}),
-                ("git", "rev-parse", "--show-toplevel"): ProcessAnswer(stdout=f"{worktree}\n"),
-                ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): ProcessAnswer(
-                    stdout=f"{project / '.git'}\n"
-                ),
-                (str(collector),): ProcessAnswer(stdout=json.dumps(pull_request)),
-                ("awawa", "show", "@TASK.B1", "--json", str(head_tree)): ProcessAnswer(stdout=json.dumps(task)),
-                ("awawa", "show", "@PREFLIGHT.verify_pull_request", "--json", str(project)): NOT_DEFINED,
-                ("awawa", "show", "@PREFLIGHT.nightly", "--json", str(project)): NOT_DEFINED,
-                ("awawa", "diff", str(base_tree), str(head_tree), "--json"): ProcessAnswer(
-                    stdout=json.dumps({"added": [], "changed": [], "removed": []})
-                ),
-            }
-        )
+        self.answers = {
+            **create_registry_answers(paths.config_root, {"shop": {"PATH": str(project), "FORGE": "none"}}),
+            ("git", "rev-parse", "--show-toplevel"): ProcessAnswer(stdout=f"{worktree}\n"),
+            ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): ProcessAnswer(
+                stdout=f"{project / '.git'}\n"
+            ),
+            (str(collector),): ProcessAnswer(stdout=json.dumps(pull_request)),
+            ("awawa", "show", "@TASK.B1", "--json", str(head_tree)): ProcessAnswer(stdout=json.dumps(task)),
+            ("awawa", "show", "@PREFLIGHT.verify_pull_request", "--json", str(project)): NOT_DEFINED,
+            ("awawa", "show", "@PREFLIGHT.nightly", "--json", str(project)): NOT_DEFINED,
+            ("awawa", "diff", str(base_tree), str(head_tree), "--json"): ProcessAnswer(
+                stdout=json.dumps({"added": [], "changed": [], "removed": []})
+            ),
+        }
+        runner = RecordingProcessRunner(self.answers)
         self.runtime = create_test_runtime(
             paths, run_process=runner, resolve_plugin=functools.partial(resolve_plugin, sources=NO_PLUGIN_SOURCES)
         )
@@ -121,6 +121,30 @@ class PreflightCommandTest(unittest.TestCase):
                     {"name": "body", "verdict": "pass", "findings": []},
                 ],
             },
+        )
+
+    def test_should_run_the_checks_of_a_custom_preflight_of_the_project(self):
+        # Arrange
+        nightly = {
+            "file": str(self.project / "preflights.awawa"),
+            "fields": [
+                {"name": "TITLE", "atoms": ['"the nightly checks of the shop"'], "fields": []},
+                {"name": "COLLECTOR", "atoms": ['"pull-request"'], "fields": []},
+                {"name": "CHECK", "atoms": ['"body"'], "fields": []},
+            ],
+        }
+        self.answers[("awawa", "show", "@PREFLIGHT.nightly", "--json", str(self.project))] = ProcessAnswer(
+            stdout=json.dumps(nightly)
+        )
+        request = argparse.Namespace(name="nightly", extra_arguments=PARAMETERS)
+
+        # Act
+        document = preflight(request, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            (document["verdict"], document["checks"]),
+            ("pass", [{"name": "body", "verdict": "pass", "findings": []}]),
         )
 
     def test_should_refuse_a_name_no_preflight_carries(self):
