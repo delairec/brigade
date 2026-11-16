@@ -1,4 +1,5 @@
 import tomllib
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
 from importlib.resources import files
@@ -10,12 +11,8 @@ from brigade.collecting.collector_environment import CollectorInputs
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.errors import BrigadeError
 from brigade.runtime import Runtime
-from brigade.system.check_places import locate_checks
 from brigade.system.check_shapes import FAILED, PASSED
-from brigade.system.collector_places import locate_collectors
 from brigade.system.document_shapes import SCHEMA_VERSION, TEXT
-from brigade.system.resolve_check import resolve_check
-from brigade.system.resolve_collector import resolve_collector
 from brigade.system.validate_document import Field, validate_document
 
 BUILT_IN_PREFLIGHTS = files("brigade.preflights") / "data"
@@ -35,12 +32,19 @@ PREFLIGHT_SHAPE = {
 
 
 @dataclass(frozen=True)
+class PreflightPlugins:
+    resolve_collector: Callable[[str, Path], object]
+    resolve_check: Callable[[str, Path], object]
+
+
+@dataclass(frozen=True)
 class PreflightRun:
     name: str
     project: Path
     parameters: dict
     equipment: CollectorEquipment
     preflights: Traversable
+    plugins: PreflightPlugins
 
 
 @dataclass(frozen=True)
@@ -64,14 +68,14 @@ def _merge_parameters(step: dict, run: PreflightRun) -> dict:
 
 
 def _collect(step: dict, run: PreflightRun, runtime: Runtime) -> dict:
-    collector = resolve_collector(step["name"], locate_collectors(run.project, runtime.paths))
+    collector = run.plugins.resolve_collector(step["name"], run.project)
     inputs = CollectorInputs(project=run.project, since=BEGINNING, parameters=_merge_parameters(step, run))
     request = CollectionRequest(inputs=inputs, refresh=False, equipment=run.equipment)
     return collect_document(collector, request, runtime).document
 
 
 def _judge(step: dict, run: PreflightRun, collected: dict, runtime: Runtime) -> dict:
-    check = resolve_check(step["name"], locate_checks(run.project, runtime.paths))
+    check = run.plugins.resolve_check(step["name"], run.project)
     subject = {
         "schema_version": SUBJECT_SCHEMA_VERSION,
         "project": str(run.project),

@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
+from brigade.commands._equip_preflight import equip_preflight
 from brigade.commands._equip_registered_collector import equip_registered_collector
 from brigade.errors import BrigadeError
 from brigade.git.locate_main_checkout import locate_main_checkout
@@ -103,6 +104,7 @@ def verify_context(request: argparse.Namespace, runtime: Runtime) -> dict:
         base_branch=find_task_base(runtime, worktree, project, found.opened.task),
         pr=request.pr,
         equipment=equip_registered_collector(project, configuration, runtime),
+        plugins=equip_preflight(runtime),
     )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, **assemble_verify_context(runtime, demand)}
 

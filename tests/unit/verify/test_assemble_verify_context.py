@@ -10,6 +10,7 @@ from brigade.system.parse_configuration import Configuration
 from brigade.verify.assemble_verify_context import assemble_verify_context
 from brigade.verify.preflight_pull_request import PreflightDemand
 from tests.unit.commands.command_runtime import write_ledger
+from tests.unit.create_preflight_plugins import create_preflight_plugins
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
@@ -105,6 +106,7 @@ class AssembleVerifyContextTest(unittest.TestCase):
                 forge_name="github",
                 resolve_client=NO_CLIENT_RESOLVER,
             ),
+            plugins=create_preflight_plugins(self.paths),
         )
         return assemble_verify_context(create_test_runtime(self.paths, run_process=self.runner), demand)
 
