@@ -3491,7 +3491,6 @@ TASK B39
 TASK B40
 	TITLE "Evaluate rtk as a candidate filter of shell output"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
 	COMPONENT "runs"
 	ROLE dora
 	ROLE prudence
@@ -6470,7 +6469,6 @@ TASK B76
 	TITLE "The forge and the scheduler kinds resolve an executable brigade-<kind>-<name> on PATH as"
 		+ "the client kind does"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
 	COMPONENT "system"
 	ROLE ada
 	SPEC "resolve_plugin(\"forge\", name, runtime) and resolve_plugin(\"scheduler\", name, runtime)"
@@ -7770,7 +7768,7 @@ TASK B90
 TASK B91
 	TITLE "A message handed to a running run, read by its next segment or by its relaunch"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
+	MILESTONE @MILESTONE.M13
 	COMPONENT "runs"
 	ROLE ada
 	SPEC "a command of brigade appends a text, with its timestamp, to a notes file of runs/<id>/,"
@@ -7797,7 +7795,7 @@ TASK B92
 	TITLE "brigade runs list says what each run worked on and how it went: the arguments of its"
 		+ "procedure, its segments with their outcomes, its duration and its cost"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
+	MILESTONE @MILESTONE.M14
 	COMPONENT "commands"
 	ROLE ada
 	SPEC "brigade runs list prints, for each run, the arguments of its procedure as run.json"
@@ -7828,7 +7826,7 @@ TASK B93
 	TITLE "The installed brigade keeps up to date: brigade updates itself, or the install is"
 		+ "dist/brigade.pyz rather than a clone"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
+	MILESTONE @MILESTONE.M16
 	COMPONENT "install"
 	ROLE ada
 	SPEC "one command of brigade, or the install procedure of the wiki page Install, brings the"
@@ -8129,12 +8127,11 @@ TASK B98
 	RATIONALE "the planning this task asked for as drafted, a milestone and its draft tasks, was"
 		+ "carried out with the user in the refinement of M8 on 2026-11-13: the task is rewritten"
 		+ "as the first of three, @TASK.B252 delivering brigade preflight add and the custom"
-		+ "preflights, @TASK.B253 the built-in preflights refinement and wave; it moves from"
-		+ "@MILESTONE.ADD0 into @MILESTONE.M8, before @TASK.B50, because a gate step of a recipe"
-		+ "calls a named preflight"
+		+ "preflights, @TASK.B253 the built-in preflights refinement and wave; it moves from ADD0"
+		+ "into @MILESTONE.M8, before @TASK.B50, because a gate step of a recipe calls a named"
+		+ "preflight"
 		REF @TASK.B252
 		REF @TASK.B253
-		REF @MILESTONE.ADD0
 		REF @MILESTONE.M8
 		REF @TASK.B50
 	RATIONALE "a preflight is what @DECISION.APreflightIsANamedSetOfCollectorsAndChecks rules, a"
@@ -8258,7 +8255,6 @@ TASK B100
 	TITLE "POLICY.REVIEW local: the tasks of a wave merged into integration on the machine, and one"
 		+ "pull request from integration to main opened once the wave is delivered"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
 	COMPONENT "tick"
 	ROLE ada
 	DESC "to be refined with the user: how the wave counts as delivered, the X tasks of the user's"
@@ -8283,7 +8279,6 @@ TASK B101
 	TITLE "The sensitive data brigade handles audited: what each is, where it is read, held, passed"
 		+ "and written, and the precautions it needs"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
 	COMPONENT "review"
 	ROLE none
 	DESC "to be refined with the user"
@@ -8497,7 +8492,7 @@ TASK B104
 	TITLE "A milestone and its draft tasks plan brigade clean: what brigade leaves behind removed"
 		+ "by kind, each kind enabled in config.toml and purged on the schedule it sets"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
+	MILESTONE @MILESTONE.M16
 	COMPONENT "corpus"
 	ROLE lex
 	DESC "to be refined with the user; the design the user asked for: a clean command whose"
@@ -8576,7 +8571,6 @@ TASK B105
 		+ "--follow gives way to tail -f of the journal of the run, on the user's rulings in the"
 		+ "refinement of B79"
 		REF @TASK.B79
-	MILESTONE @MILESTONE.ADD0
 	COMPONENT "runs"
 	ROLE ada
 	DESC "to be refined with the user: the name and the request of the adapter operation that turns"
@@ -8988,7 +8982,6 @@ TASK B107
 	TITLE "A role file and a procedure file are accepted in an awawa form through the document"
 		+ "kind, the hand-written front-matter parser kept for the Markdown form alone"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
 	COMPONENT "roles"
 	ROLE ada
 	DESC "to settle in the refinement: whether the built-in roles of brigade/roles/data/ convert to"
@@ -9036,11 +9029,10 @@ TASK B107
 	SPEC "the wiki pages Roles and Runs state the two forms, the extension and the schema of each"
 	RATIONALE "comfort, no quota gain: the body of a role and of a procedure is passed whole to the"
 		+ "client in either form, brigade/runs/run_segment.py:65-66 for the role, so the awawa form"
-		+ "saves no token; in @MILESTONE.ADD0 because the Markdown forms already work, @TASK.B43"
-		+ "having delivered the role files and brigade run the procedures, and because the user"
-		+ "wants brigade operational quickly, the improvements that are not indispensable"
-		+ "deliverable by brigade itself"
-		REF @MILESTONE.ADD0
+		+ "saves no token; in ADD0 because the Markdown forms already work, @TASK.B43 having"
+		+ "delivered the role files and brigade run the procedures, and because the user wants"
+		+ "brigade operational quickly, the improvements that are not indispensable deliverable by"
+		+ "brigade itself"
 		REF @TASK.B43
 	RATIONALE "the path of an AGENT entity, brigade/roles/resolve_role.py:108-124, is the model:"
 		+ "awawa --json fills the front matter from the fields and awawa context renders the body;"
@@ -9336,14 +9328,13 @@ TASK B108
 		REF @TASK.B44
 		REF @MILESTONE.M7
 		REF @TASK.B145
-	RATIONALE "in @MILESTONE.M7 rather than @MILESTONE.ADD0: Portability, a fresh-account install"
-		+ "rehearsal and the forge adapter with its local mode in the milestone table of the"
-		+ "Blueprint, artifact/blueprint/parts/plan.html, is brigade run off the author's account"
-		+ "and forge, and a second client is brigade run off the author's AI client, the"
-		+ "portability @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters rules; ADD0 holds what no"
-		+ "milestone of the MVP needs, and the rehearsal of @TASK.B44 on a second client needs one"
+	RATIONALE "in @MILESTONE.M7 rather than ADD0: Portability, a fresh-account install rehearsal"
+		+ "and the forge adapter with its local mode in the milestone table of the Blueprint,"
+		+ "artifact/blueprint/parts/plan.html, is brigade run off the author's account and forge,"
+		+ "and a second client is brigade run off the author's AI client, the portability"
+		+ "@DECISION.BrigadeNamesNoAiClientOutsideItsAdapters rules; ADD0 holds what no milestone"
+		+ "of the MVP needs, and the rehearsal of @TASK.B44 on a second client needs one"
 		REF @MILESTONE.M7
-		REF @MILESTONE.ADD0
 		REF @DECISION.BrigadeNamesNoAiClientOutsideItsAdapters
 		REF @TASK.B44
 	RATIONALE "the Rust CLI of vibe 2.26.1 reaches its credentials in the keyring over the D-Bus"
@@ -9564,7 +9555,6 @@ TASK B111
 	TITLE "a fallback configured in config.toml takes over a run whose client reports its quota"
 		+ "exhausted"
 	STATUS archived
-	MILESTONE @MILESTONE.ADD0
 	COMPONENT "runs"
 	ROLE ada
 	DESC "merged into @TASK.B144, the same fallback on an exhausted quota, which carries its SPEC"
@@ -9586,9 +9576,8 @@ TASK B111
 		+ "usage credits\" while the runs on opus went on; brigade classified it error_class"
 		+ "execution, reset null, RATE_LIMIT_PHRASES of brigade/adapters/clients/claude_code.py"
 		+ "naming no credit, and the review was relaunched by hand on the slot build"
-	RATIONALE "in @MILESTONE.ADD0: the pause of @TASK.B19 covers the MVP, the fallback is an"
-		+ "improvement found while running brigade on itself"
-		REF @MILESTONE.ADD0
+	RATIONALE "in ADD0: the pause of @TASK.B19 covers the MVP, the fallback is an improvement found"
+		+ "while running brigade on itself"
 		REF @TASK.B19
 	SOURCE "the user's words of 2026-10-09, \"je pense on peut ajouter une tâche en ADD0 pour"
 		+ "rendre configurable un fallback quand le quota est épuisé\""
@@ -10936,7 +10925,7 @@ TASK B144
 	TITLE "A fallback client named in config.toml takes the runs of the machine when its client"
 		+ "reaches its rate limit"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
+	MILESTONE @MILESTONE.M13
 	COMPONENT "runs"
 	ROLE ada
 	DESC "to be refined with the user: which runs move to the fallback client, the suspended run or"
@@ -12970,7 +12959,7 @@ TASK B178
 	TITLE "The wave views: wave show --plan, wave reject, the pause shown, wave list --status, and"
 		+ "the cause of each task not launched in tick --dry-run"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
+	MILESTONE @MILESTONE.M14
 	COMPONENT "waves"
 	ROLE ada
 	SPEC "brigade wave show --plan prints, per task of the wave, its AFTER edges and its SPEC"
@@ -12991,7 +12980,7 @@ TASK B179
 	TITLE "brigade scheduler uninstall, one interval constant shared by the timer, the crontab line"
 		+ "and the tick, and scheduler status detecting a drifted installed line"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
+	MILESTONE @MILESTONE.M16
 	COMPONENT "scheduler"
 	ROLE ada
 	SPEC "brigade scheduler uninstall removes the user timer and its unit, or the crontab line by"
@@ -13016,7 +13005,7 @@ TASK B180
 	TITLE "brigade project set merges fields into a PROJECT entity, POLICY included, and brigade"
 		+ "project remove retires one"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
+	MILESTONE @MILESTONE.M15
 	COMPONENT "registry"
 	ROLE ada
 	SPEC "brigade project set <name> <FIELD>=<value> ... merges the fields given, CLIENT, ROLESET,"
@@ -13033,7 +13022,7 @@ TASK B181
 	TITLE "collect and collectors list take --project, collectors show prints a collector with its"
 		+ "parameters, and cache true without declared inputs is refused"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
+	MILESTONE @MILESTONE.M15
 	COMPONENT "studies"
 	ROLE ada
 	SPEC "brigade collect --project <name> and brigade collectors list --project <name> resolve the"
@@ -13116,7 +13105,7 @@ TASK B182
 TASK B183
 	TITLE "brigade config get prints the configuration as brigade reads it, one key or all"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
+	MILESTONE @MILESTONE.M15
 	COMPONENT "system"
 	ROLE ada
 	SPEC "brigade config get [<key>] prints the value of one key of config.toml as"
@@ -13132,7 +13121,7 @@ TASK B184
 	TITLE "brigade roles list and roles show take --project and resolve the ROLESET and ROLE of the"
 		+ "project"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
+	MILESTONE @MILESTONE.M15
 	COMPONENT "roles"
 	ROLE ada
 	SPEC "brigade roles list --project <name> and brigade roles show <slot> --project <name>"
@@ -13144,7 +13133,7 @@ TASK B184
 TASK B185
 	TITLE "A leading ~ in a path of config.toml is expanded, in brigade/system/paths alone"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
+	MILESTONE @MILESTONE.M15
 	COMPONENT "system"
 	ROLE ada
 	SPEC "instructions, worktree_root and every other path key of config.toml expand a leading ~ to"
@@ -13159,7 +13148,7 @@ TASK B186
 	TITLE "The adapter commands refuse a stdin that is a terminal, and their help says what stdin"
 		+ "carries"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
+	MILESTONE @MILESTONE.M15
 	COMPONENT "adapters"
 	ROLE ada
 	SPEC "an adapter command reading its request on stdin exits 2 with a usage message when stdin"
@@ -13951,7 +13940,7 @@ TASK B197
 	TITLE "brigade init upgrades an installed operational schema"
 	STATUS draft
 	TYPE feat
-	MILESTONE @MILESTONE.ADD0
+	MILESTONE @MILESTONE.M16
 	COMPONENT "corpus"
 	ROLE ada
 	SPEC "brigade init brings an installed _schema.awawa that differs from the shipped one to the"
@@ -15904,7 +15893,7 @@ TASK B228
 TASK B229
 	TITLE "The dashboard draws the applied step cap of each role over time"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
+	MILESTONE @MILESTONE.M14
 	COMPONENT "dashboard"
 	ROLE ada
 	SPEC "a chart of the dashboard draws, for each role, its applied cap over time from the"
@@ -15921,7 +15910,6 @@ TASK B229
 TASK B230
 	TITLE "A project in MODE none: its waves and tasks run without awawa on its repository"
 	STATUS draft
-	MILESTONE @MILESTONE.ADD0
 	COMPONENT "registry"
 	ROLE ada
 	SPEC "brigade project add --corpus-mode none registers a project whose repository holds a"
@@ -15950,7 +15938,7 @@ TASK B231
 		+ "outcome in the reason, and a re-queue resumes the run on its progress file"
 	STATUS draft
 	TYPE fix
-	MILESTONE @MILESTONE.ADD0
+	MILESTONE @MILESTONE.M13
 	COMPONENT "tick"
 	ROLE ada
 	SPEC "the snapshot reads the outcome of the last run of a running task from the last"
@@ -16744,7 +16732,7 @@ TASK B236
 		+ "after B37 reached main, against the baseline of the user's notes"
 	STATUS todo
 	TYPE docs
-	MILESTONE @MILESTONE.ADD0
+	MILESTONE @MILESTONE.M14
 	COMPONENT "docs"
 	ROLE ada
 	SPEC "a wiki page quotes the output of brigade wave show --events for each closed wave of one"
@@ -16780,11 +16768,9 @@ TASK B236
 		+ "the user's notes on their largest project (119 sessions, 217 launches), given to brigade"
 		+ "ledger compare as reference figures, which @TASK.B175 delivers"
 		REF @TASK.B175
-	RATIONALE "in @MILESTONE.ADD0 on the user's criterion of 2026-11-04, a milestone after which"
-		+ "ten tasks have passed, « ça dépend du nombre de tâches dans ces milestone »: on"
-		+ "2026-11-04 M7 had 4 open tasks, M8 5 draft tasks, 9 in all, and ADD0, planned after M8,"
-		+ "22 draft tasks"
-		REF @MILESTONE.ADD0
+	RATIONALE "in ADD0 on the user's criterion of 2026-11-04, a milestone after which ten tasks"
+		+ "have passed, « ça dépend du nombre de tâches dans ces milestone »: on 2026-11-04 M7 had"
+		+ "4 open tasks, M8 5 draft tasks, 9 in all, and ADD0, planned after M8, 22 draft tasks"
 	RATIONALE "the run of this task starts only once the sample can exist, so that it never parks"
 		+ "on a missing sample as @TASK.B39 did on 2026-11-03: its AFTER names the last open tasks"
 		+ "of M7, @TASK.B140 and @TASK.B177, which every other open task of M7 precedes, the tasks"
@@ -16874,7 +16860,7 @@ TASK B237
 		+ "it"
 	STATUS todo
 	TYPE feat
-	MILESTONE @MILESTONE.ADD0
+	MILESTONE @MILESTONE.M14
 	COMPONENT "the ledger"
 	ROLE ada
 	SPEC "corpus/_schema.awawa declares on TASK the field CORRECTS, uint, REPEATABLE, the number of"
@@ -16960,8 +16946,7 @@ TASK B237
 		+ "justement permettre de remonter des signaux pour les traiter et améliorer le système au"
 		+ "fil du temps. », then « ok met la tâche dans une milestone appropriée, par contre je ne"
 		+ "souhaite pas enregistrer de nouvelle décision à propos de la review car c'est déjà ce"
-		+ "qu'on fait »; the session chose @MILESTONE.ADD0"
-		REF @MILESTONE.ADD0
+		+ "qu'on fait »; the session chose ADD0"
 	SOURCE "the recommendation the user accepted on 2026-11-07: « Let brigade surface the yield of"
 		+ "its own gate. The ledger already holds what is needed: 123 task.verdict events on 55"
 		+ "PRs, 2.2 repair rounds per merged PR, and 13 fix PRs whose body cites the PR they"
@@ -17206,11 +17191,10 @@ TASK B238
 	SOURCE "the brief of the session of 2026-11-07 to the role lex, on the launch of @TASK.B46 in"
 		+ "brigade_w28, with no words of the user: a task the tick resumes on an existing branch"
 		+ "runs on the code its milestone branch already holds, and a rebase that conflicts is"
-		+ "handled as the tick handles a conflicted rebase today; lex chose @MILESTONE.ADD0, as the"
-		+ "session chose it for @TASK.B237 the same day, an improvement found while running brigade"
-		+ "on itself that no milestone of the MVP needs"
+		+ "handled as the tick handles a conflicted rebase today; lex chose ADD0, as the session"
+		+ "chose it for @TASK.B237 the same day, an improvement found while running brigade on"
+		+ "itself that no milestone of the MVP needs"
 		REF @TASK.B46
-		REF @MILESTONE.ADD0
 		REF @TASK.B237
 	SOURCE "the user's rulings of 2026-11-07 at the refinement, recorded in"
 		+ "@DECISION.TheTickRebasesABranchOnlyBetweenAGreenSourceAndAGreenTargetProvenByCommit: the"
@@ -17220,10 +17204,9 @@ TASK B238
 		+ "ajoute une SPEC : le push d'une branche de tâche se fait en --force-with-lease, jamais"
 		+ "en force simple. »"
 		REF @DECISION.TheTickRebasesABranchOnlyBetweenAGreenSourceAndAGreenTargetProvenByCommit
-	SOURCE "the user's ruling of 2026-11-07, @MILESTONE.ADD0 being planned and its tasks served by"
-		+ "no tick: « dans ce cas on la met dans m7, tant pis »"
+	SOURCE "the user's ruling of 2026-11-07, ADD0 being planned and its tasks served by no tick: «"
+		+ "dans ce cas on la met dans m7, tant pis »"
 		REF @MILESTONE.M7
-		REF @MILESTONE.ADD0
 
 TASK B239
 	TITLE "The first edit of a segment is its first change to the worktree of the run outside the"
@@ -17231,6 +17214,7 @@ TASK B239
 		+ "tokens_to_first_edit as a call of an edit tool does"
 	STATUS draft
 	TYPE fix
+	MILESTONE @MILESTONE.M14
 	COMPONENT "runs"
 	ROLE ada
 	DESC "refines SPEC 9 of @TASK.B37: the first edit is the first change to the worktree of the"
@@ -17426,6 +17410,7 @@ TASK B241
 		+ "from TYPE and TITLE only for a task whose branch is not yet cut"
 	STATUS draft
 	TYPE fix
+	MILESTONE @MILESTONE.M13
 	COMPONENT "the tick"
 	ROLE ada
 	DESC "refines DESC 1 and 5 of"
@@ -17701,11 +17686,10 @@ TASK B243
 		IMPL "tests/unit/tick/test_build_snapshot_from_the_corpus.py::class"
 			+ "BuildSnapshotOfTheMilestonesOrderedByTheirAfterTest("
 	RATIONALE "on 2026-11-09 the user wanted @MILESTONE.M12 delivered before @MILESTONE.M8 and"
-		+ "@MILESTONE.ADD0, whose DESC says planned after M8 in prose a command reads nothing from;"
-		+ "STATUS alone orders milestones by the user activating each in its turn"
+		+ "ADD0, whose DESC says planned after M8 in prose a command reads nothing from; STATUS"
+		+ "alone orders milestones by the user activating each in its turn"
 		REF @MILESTONE.M12
 		REF @MILESTONE.M8
-		REF @MILESTONE.ADD0
 	SOURCE "the user's words of 2026-11-09, « je pense qu'on devrait aussi ajouter un after sur les"
 		+ "milestone pour qu'elles soient livrées dans un ordre donné si on le souhaite, plutôt que"
 		+ "de gérer un statut », then « enfin il faut les deux plutôt »"

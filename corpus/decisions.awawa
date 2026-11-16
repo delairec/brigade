@@ -2102,10 +2102,9 @@ DECISION EveryDocumentBrigadeReadsBackAcceptsAnAwawaFormAndTextIsARenderingHande
 		REF @TASK.B106
 		REF @TASK.B107
 	RATIONALE "the user wants brigade operational quickly: a form that already works is not"
-		+ "rewritten before the MVP, and the comfort of a second form is a task of @MILESTONE.ADD0"
-		+ "that brigade may deliver itself; a document whose code does not exist yet costs nothing"
-		+ "more as entities"
-		REF @MILESTONE.ADD0
+		+ "rewritten before the MVP, and the comfort of a second form is a task of the milestone"
+		+ "post-mvp, ADD0, since split, that brigade may deliver itself; a document whose code does"
+		+ "not exist yet costs nothing more as entities"
 	SOURCE "the user's rulings of 2026-10-07: \"d'ailleurs: tout ce qui est un .md doit pouvoir"
 		+ "être géré en utilisant awawa à la place, c'est à prévoir dans notre plan\"; on the plan"
 		+ "of this decision, of @TASK.B107 and of the amendments: \"ok pour le plan ci-dessus\"; on"
@@ -6517,13 +6516,12 @@ DECISION AMilestoneIsServedByItsStatusAndOrderedByItsAfter
 		+ "un statut »"
 	REJECTED "AFTER alone, STATUS no longer gating the tick: the user ruled both, « enfin il faut"
 		+ "les deux plutôt »"
-	RATIONALE "@MILESTONE.M12 is to be delivered before @MILESTONE.M8 and @MILESTONE.ADD0, whose"
-		+ "DESC says planned after M8, an order no field carried on 2026-11-09; with STATUS alone"
-		+ "the order rests on the user activating each milestone in its turn, with AFTER alone a"
-		+ "milestone planned and not yet wanted would be served"
+	RATIONALE "@MILESTONE.M12 is to be delivered before @MILESTONE.M8 and the milestone post-mvp,"
+		+ "ADD0, since split, whose DESC says planned after M8, an order no field carried on"
+		+ "2026-11-09; with STATUS alone the order rests on the user activating each milestone in"
+		+ "its turn, with AFTER alone a milestone planned and not yet wanted would be served"
 		REF @MILESTONE.M12
 		REF @MILESTONE.M8
-		REF @MILESTONE.ADD0
 	SOURCE "the user's words of 2026-11-09, « tâche en draft dans une nouvelle milestone non active"
 		+ "(planned je crois), on y mets les tâches qui résolvent les signaux relevés. On la"
 		+ "lancera avant les prochaines milestone »"
@@ -7240,3 +7238,72 @@ DECISION ACommandGroupIsNamedInTheSingularAfterItsEntityOrItsSlot
 		+ "review », « Singular, by entity (Recommended) », « Command task becomes build"
 		+ "(Recommended) », « ledger --wave removed, study answers out of reports, task check via a"
 		+ "preflight »"
+
+DECISION ThePostMvpMilestoneAdd0IsSplitIntoFourMilestonesByThemeAndATaskOfNoThemeNamesNoMilestone
+	TITLE "the milestone post-mvp, ADD0, is split into four post-MVP milestones by theme, Run"
+		+ "resumption, Observability, Admin console and Maintenance, each planned after M8; a task"
+		+ "of no theme names no milestone"
+	STATUS active
+	DESC "@MILESTONE.M13 Run resumption holds @TASK.B231, @TASK.B241, @TASK.B144 and @TASK.B91"
+		REF @MILESTONE.M13
+		REF @TASK.B231
+		REF @TASK.B241
+		REF @TASK.B144
+		REF @TASK.B91
+	DESC "@MILESTONE.M14 Observability holds @TASK.B237, @TASK.B236, @TASK.B239, @TASK.B229,"
+		+ "@TASK.B92 and @TASK.B178"
+		REF @MILESTONE.M14
+		REF @TASK.B237
+		REF @TASK.B236
+		REF @TASK.B239
+		REF @TASK.B229
+		REF @TASK.B92
+		REF @TASK.B178
+	DESC "@MILESTONE.M15 Admin console holds @TASK.B180, @TASK.B183, @TASK.B184, @TASK.B181,"
+		+ "@TASK.B185 and @TASK.B186"
+		REF @MILESTONE.M15
+		REF @TASK.B180
+		REF @TASK.B183
+		REF @TASK.B184
+		REF @TASK.B181
+		REF @TASK.B185
+		REF @TASK.B186
+	DESC "@MILESTONE.M16 Maintenance holds @TASK.B93, @TASK.B197, @TASK.B104 and @TASK.B179"
+		REF @MILESTONE.M16
+		REF @TASK.B93
+		REF @TASK.B197
+		REF @TASK.B104
+		REF @TASK.B179
+	DESC "@TASK.B100, @TASK.B101, @TASK.B107, @TASK.B40, @TASK.B76 and @TASK.B230 name no"
+		+ "milestone: once ratified, the tick serves each from main as any task naming no"
+		+ "milestone; the archived @TASK.B105 and @TASK.B111 lose theirs"
+		REF @TASK.B100
+		REF @TASK.B101
+		REF @TASK.B107
+		REF @TASK.B40
+		REF @TASK.B76
+		REF @TASK.B230
+		REF @TASK.B105
+		REF @TASK.B111
+	DESC "the four milestones carry no AFTER between them: the user activates each in its turn"
+	REJECTED "ADD0 kept for the tasks of no theme: the user ruled it dissolved, its remaining tasks"
+		+ "naming no milestone"
+	RATIONALE "ADD0 gathered since 2026-10-07 every improvement found while running brigade on"
+		+ "itself, 25 live tasks of unrelated subjects; a milestone reaches main as one pull"
+		+ "request, so a milestone of one theme is one change the user reviews at once"
+	RATIONALE "the grouping was proposed from the TITLE and the COMPONENT of each task; the"
+		+ "refinement of each milestone checks it against the SPEC of its tasks"
+	SOURCE "the milestone ADD0, created on the user's words of 2026-10-07, « on va créer une"
+		+ "milestone post-mvp avec comme id ADD0 je pense »; docs/follow-up/2026-10-07-b82-run.md,"
+		+ "items 5, 6, 7 and 13"
+	SOURCE "the user's ruling of 2026-11-16 on the split the session proposed: « A noter que toutes"
+		+ "ces milestone sont post-mvp. Runs qui tiennent c'est pas très parlant comme titre, on"
+		+ "pourrait nommer ça Reprise de run. Mais en anglais bien sûr, les milestone se nomment en"
+		+ "anglais. Ensuite Observabilité ou monitoring pour le voir ce que fait brigade. Admin"
+		+ "console. maintenance. On dissout ADD0 et les tâches qui restent se retrouvent sans"
+		+ "jalon. »"
+	SOURCE "the user's ruling of 2026-11-16 on the offer to put @TASK.B239 and @TASK.B241, the two"
+		+ "tasks written with no milestone, with @TASK.B231 into ADD0: « ok »"
+		REF @TASK.B239
+		REF @TASK.B241
+		REF @TASK.B231
