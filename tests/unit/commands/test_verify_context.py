@@ -15,7 +15,7 @@ from tests.unit.commands.command_runtime import (
     write_operational_corpus,
 )
 from tests.unit.commands.run_directories import create_run_record
-from tests.unit.commands.test_verify_preflight import (
+from tests.unit.commands.test_preflight import (
     M4_BRANCH_CUT,
     TASK_PR_OPENED,
     TASK_WORKTREE,

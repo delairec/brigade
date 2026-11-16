@@ -5,7 +5,7 @@ from pathlib import Path
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.verify.find_opened_task import OpenedTask, find_opened_task
 from tests.unit.commands.command_runtime import write_ledger
-from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, WAVE_STARTED
+from tests.unit.commands.test_preflight import TASK_PR_OPENED, WAVE_STARTED
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 

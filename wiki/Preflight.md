@@ -1,5 +1,5 @@
-What a preflight is, where it and its checks come from, how a project adds a custom one, and which deterministic checks `brigade verify preflight` runs on
-the pull request of a task before any judgment.
+What a preflight is, where it and its checks come from, how a project adds a custom one, and which deterministic checks `brigade preflight verify-pull-request` runs
+on the pull request of a task before any judgment.
 
 A preflight is a named set of collectors and checks, run on demand. It declares no action of its own: each action it
 needs is a collector or a check, resolved by name and reusable elsewhere. A built-in preflight is a TOML file of
@@ -9,7 +9,7 @@ needs is a collector or a check, resolved by name and reusable elsewhere. A buil
 brigade preflight <name> [key=value...] [--json]   # exit 1 when a check fails
 brigade preflight add <name> <collector or check> [key=value...]   # adds a step to a custom preflight, commits nothing
 brigade check list [--json]                        # every check found, its name and its source
-brigade verify preflight <pr> [--json]             # the built-in preflight verify-pull-request, and the size
+brigade preflight verify-pull-request pr=<pr> [--json]   # the pull request of a task, and the size
 ```
 
 `brigade preflight <name>` runs from a checkout of a registered project. It runs the collectors of the preflight, then
@@ -87,9 +87,11 @@ the check.
 
 ## verify-pull-request
 
-`brigade verify preflight <pr>` runs the built-in preflight `verify-pull-request`: the collector `pull-request` reads
-the pull request and the trees of its head and of its base, and seven built-in checks judge them. The command adds the
-size beside them. The built-in check `acceptance` is not among them: the preflight of the task branch of a project of
+`brigade preflight verify-pull-request pr=<pr>` runs the built-in preflight `verify-pull-request` on the pull request
+of a task: it reads the task from the `task.pr_opened` naming the pull request and the base from the milestone of the
+task, the collector `pull-request` reads the pull request and the trees of its head and of its base, and seven built-in
+checks judge them. The command adds the size beside them, and prints the project, the pull request, the task and the
+head of the document the tick records in `task.preflighted`. The built-in check `acceptance` is not among them: the preflight of the task branch of a project of
 `FORGE none` runs it.
 
 ## The checks

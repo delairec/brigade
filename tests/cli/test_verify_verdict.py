@@ -5,7 +5,7 @@ from unittest.mock import ANY
 from tests.cli.read_ledger_events import read_ledger_events
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
 from tests.cli.test_collect import install_executable
-from tests.cli.test_verify_preflight import VerifyPreflightTestCase
+from tests.cli.test_preflight import PullRequestPreflightTestCase
 
 REVIEWING_GH = (
     "#!/bin/sh\n"
@@ -25,7 +25,7 @@ BROKEN_SPEC = {
 }
 
 
-class VerifyVerdictTestCase(VerifyPreflightTestCase):
+class VerifyVerdictTestCase(PullRequestPreflightTestCase):
     def setUp(self):
         super().setUp()
         root = Path(self.root.name).resolve()

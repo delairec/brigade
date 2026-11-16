@@ -4,11 +4,14 @@ import functools
 import json
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
 
 from brigade.commands.preflight import COMMAND, preflight
 from brigade.errors import BrigadeError
 from brigade.system.resolve_plugin import resolve_plugin
+from tests.unit.commands.command_runtime import create_machine_double, write_ledger
+from tests.unit.create_preflight_plugins import resolve_preflight_kinds_or
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
@@ -16,6 +19,77 @@ from tests.unit.registry_answers import create_registry_answers
 
 NO_PLUGIN_SOURCES = None
 PARAMETERS = ["pr=42", "task=B1", "base=integration/w1"]
+VERIFY_PULL_REQUEST = "verify-pull-request"
+TASK_WORKTREE = {
+    ("git", "rev-parse", "--show-toplevel"): "/srv/tidepool-T7\n",
+    ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): "/srv/tidepool/.git\n",
+}
+TIDEPOOL_PROJECT = (("PATH", "/srv/tidepool"),)
+GITHUB_PROJECT = (*TIDEPOOL_PROJECT, ("FORGE", "github"))
+TIDEPOOL_TASKS = {"T7": (("MILESTONE", "@MILESTONE.M4"),)}
+M4_BRANCH_CUT = {
+    "schema_version": 1,
+    "ts": "2026-09-29T22:00:00Z",
+    "event": "milestone.branch_cut",
+    "project": "tidepool",
+    "milestone": "M4",
+    "branch": "integration/M4-tides",
+    "login": None,
+}
+WAVE_STARTED = {
+    "schema_version": 2,
+    "ts": "2026-09-30T22:00:00Z",
+    "event": "wave.started",
+    "wave": "tidepool_w16",
+    "project": "tidepool",
+    "tasks": ["T7"],
+}
+TASK_PR_OPENED = {
+    "schema_version": 1,
+    "ts": "2026-10-01T22:00:00Z",
+    "event": "task.pr_opened",
+    "project": "tidepool",
+    "task": "T7",
+    "wave": "tidepool_w16",
+    "branch": "task/M4-tides/T7",
+    "pr": 42,
+    "login": "tidepool-bot",
+}
+PASSED_CHECK = {"verdict": "pass", "name": "ci", "findings": []}
+FAILED_CHECK = {"verdict": "fail", "name": "scope", "findings": ["brigade/cli.py is outside the task"]}
+
+
+class ForgeDeclineDouble:
+    def __init__(self):
+        self.questions = []
+
+    def __getattr__(self, operation: str):
+        def decline(request: dict, runtime) -> dict:
+            self.questions.append((operation, request))
+            raise BrigadeError(f"the forge double declines {operation}")
+
+        return decline
+
+
+class ForgeBindingItsLoginsDouble(ForgeDeclineDouble):
+    def read_login_environment(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "environment": {"GH_TOKEN": f"token-of-{request['login']}"}}
+
+    def describe_account(self, request: dict, runtime) -> dict:
+        return {"schema_version": 1, "login": request["environment"]["GH_TOKEN"].removeprefix("token-of-")}
+
+
+SHOP_PR_OPENED = {
+    "schema_version": 1,
+    "ts": "2026-10-19T08:00:00Z",
+    "event": "task.pr_opened",
+    "project": "shop",
+    "task": "B1",
+    "wave": "shop_w1",
+    "branch": "feature/B1-cart",
+    "pr": 42,
+    "login": "shop-bot",
+}
 NOT_DEFINED = ProcessAnswer(exit_code=1, stderr="awawa show: the preflight is not defined in the workspace\n")
 
 
@@ -77,8 +151,13 @@ class PreflightCommandTest(unittest.TestCase):
         paths = create_test_paths(root)
         paths.config_root.mkdir(parents=True)
         paths.schema_file.write_text("SCHEMA PROJECT\n")
+        (paths.config_root / "config.toml").write_text("", encoding="utf-8")
+        write_ledger(root, [SHOP_PR_OPENED])
         self.answers = {
-            **create_registry_answers(paths.config_root, {"shop": {"PATH": str(project), "FORGE": "none"}}),
+            **create_registry_answers(
+                paths.config_root, {"shop": {"PATH": str(project), "FORGE": "github", "MAIN": "integration/w1"}}
+            ),
+            ("awawa", "show", "@TASK.B1", "--json", str(worktree)): ProcessAnswer(stdout=json.dumps({"fields": []})),
             ("git", "rev-parse", "--show-toplevel"): ProcessAnswer(stdout=f"{worktree}\n"),
             ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): ProcessAnswer(
                 stdout=f"{project / '.git'}\n"
@@ -96,9 +175,9 @@ class PreflightCommandTest(unittest.TestCase):
             paths, run_process=runner, resolve_plugin=functools.partial(resolve_plugin, sources=NO_PLUGIN_SOURCES)
         )
 
-    def test_should_run_the_checks_of_the_preflight_named_on_the_main_checkout(self):
+    def test_should_print_the_document_of_the_preflight_of_the_pull_request_of_a_task(self):
         # Arrange
-        request = argparse.Namespace(name="verify-pull-request", extra_arguments=PARAMETERS)
+        request = argparse.Namespace(name=VERIFY_PULL_REQUEST, extra_arguments=["pr=42"])
 
         # Act
         document = preflight(request, self.runtime)
@@ -109,8 +188,11 @@ class PreflightCommandTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "preflight": "verify-pull-request",
-                "parameters": {"pr": "42", "task": "B1", "base": "integration/w1"},
                 "verdict": "pass",
+                "project": "shop",
+                "pr": 42,
+                "task": "B1",
+                "head": "2222222",
                 "checks": [
                     {"name": "ancestry", "verdict": "pass", "findings": []},
                     {"name": "checks", "verdict": "pass", "findings": []},
@@ -127,6 +209,7 @@ class PreflightCommandTest(unittest.TestCase):
                     {"name": "untouched_files", "verdict": "pass", "findings": []},
                     {"name": "privacy", "verdict": "pass", "findings": []},
                     {"name": "body", "verdict": "pass", "findings": []},
+                    {"name": "size", "verdict": "info", "findings": ["0 files", "0 lines", "0 packages", "0 layers"]},
                 ],
             },
         )
@@ -209,3 +292,115 @@ class PreflightCommandRenderingTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(accepted, expected)
+
+
+class PreflightOfAPullRequestTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        (self.root / "config").mkdir()
+        (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
+        write_ledger(self.root, [M4_BRANCH_CUT, WAVE_STARTED, TASK_PR_OPENED])
+        self.forge = ForgeDeclineDouble()
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_machine_double(
+                {"PROJECT": {"tidepool": GITHUB_PROJECT}, "TASK": TIDEPOOL_TASKS}, TASK_WORKTREE
+            ),
+            resolve_plugin=resolve_preflight_kinds_or(lambda kind, name, **places: self.forge),
+        )
+
+    def test_should_ask_the_forge_about_the_pull_request_of_the_task(self):
+        # Act
+        with self.assertRaises(BrigadeError):
+            preflight(Namespace(name=VERIFY_PULL_REQUEST, extra_arguments=["pr=42"]), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.forge.questions,
+            [
+                (
+                    "read_pull_request",
+                    {"schema_version": 1, "repository": "/srv/tidepool", "number": 42, "environment": {}},
+                )
+            ],
+        )
+
+    def test_should_refuse_a_pull_request_no_task_opened(self):
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            preflight(Namespace(name=VERIFY_PULL_REQUEST, extra_arguments=["pr=41"]), self.runtime)
+
+        # Assert
+        self.assertEqual(str(raised.exception), "no task.pr_opened of @PROJECT.tidepool names the pull request #41")
+
+
+class PreflightOfAPullRequestAsTheLoginOfTheCliKeyTest(unittest.TestCase):
+    def test_should_read_the_pull_request_as_the_login_of_the_cli_key(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (root / "config").mkdir()
+        (root / "config" / "config.toml").write_text(
+            '[forge_accounts]\ncli = "octo-cli"\nbuild = "octo-bot"\n', encoding="utf-8"
+        )
+        write_ledger(root, [M4_BRANCH_CUT, WAVE_STARTED, TASK_PR_OPENED])
+        forge = ForgeBindingItsLoginsDouble()
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_machine_double(
+                {"PROJECT": {"tidepool": GITHUB_PROJECT}, "TASK": TIDEPOOL_TASKS}, TASK_WORKTREE
+            ),
+            resolve_plugin=resolve_preflight_kinds_or(lambda kind, name, **places: forge),
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            preflight(Namespace(name=VERIFY_PULL_REQUEST, extra_arguments=["pr=42"]), runtime)
+
+        # Assert
+        self.assertEqual(
+            forge.questions,
+            [
+                (
+                    "read_pull_request",
+                    {
+                        "schema_version": 1,
+                        "repository": "/srv/tidepool",
+                        "number": 42,
+                        "environment": {"GH_TOKEN": "token-of-octo-cli"},
+                    },
+                )
+            ],
+        )
+
+    def test_should_read_no_login_environment_on_a_project_of_forge_none(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (root / "config").mkdir()
+        (root / "config" / "config.toml").write_text('[forge_accounts]\ncli = "octo-cli"\n', encoding="utf-8")
+        write_ledger(root, [M4_BRANCH_CUT, WAVE_STARTED, TASK_PR_OPENED])
+        forge = ForgeBindingItsLoginsDouble()
+        local_project = (*TIDEPOOL_PROJECT, ("FORGE", "none"))
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_machine_double(
+                {"PROJECT": {"tidepool": local_project}, "TASK": TIDEPOOL_TASKS}, TASK_WORKTREE
+            ),
+            resolve_plugin=resolve_preflight_kinds_or(lambda kind, name, **places: forge),
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            preflight(Namespace(name=VERIFY_PULL_REQUEST, extra_arguments=["pr=42"]), runtime)
+
+        # Assert
+        self.assertEqual(
+            forge.questions,
+            [
+                (
+                    "read_pull_request",
+                    {"schema_version": 1, "repository": "/srv/tidepool", "number": 42, "environment": {}},
+                )
+            ],
+        )

@@ -1,10 +1,10 @@
 import json
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
-from tests.cli.test_verify_preflight import VerifyPreflightTestCase
+from tests.cli.test_preflight import PullRequestPreflightTestCase
 
 
-class VerifyContextTestCase(VerifyPreflightTestCase):
+class VerifyContextTestCase(PullRequestPreflightTestCase):
     def run_verify_context(self, *arguments: str):
         return self.machine.run_brigade(
             CLONE_ENTRY_POINT,
