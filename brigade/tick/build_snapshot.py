@@ -44,6 +44,7 @@ from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_policy_field import read_policy_field
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
+from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
 from brigade.runs.list_runs import list_runs
 from brigade.runs.read_run_question import read_run_question
@@ -134,8 +135,8 @@ REVIEW_FIELD = "REVIEW"
 VERDICT_REVIEW = "verdict"
 AUTO_MERGE_FIELD = "AUTO_MERGE"
 MERGE_INTO_INTEGRATION = "integration"
-VERIFY_ROUNDS_BY_DEFAULT = 2
-VERIFY_ROUNDS_FIELD = "VERIFY_ROUNDS"
+REPAIR_ROUNDS_BY_DEFAULT = 2
+REPAIR_ROUNDS_FIELD = "REPAIR_ROUNDS"
 FIXING_STATE = "fixing"
 QUOTA_PAUSED_STATES = (RUNNING_STATE, FIXING_STATE)
 FAILED_PREFLIGHT_CHECK = "fail"
@@ -303,7 +304,7 @@ class ProjectFacts:
     merge: str = REBASE_MERGE
     review: str = VERDICT_REVIEW
     auto_merge: str = MERGE_INTO_INTEGRATION
-    verify_rounds: int = VERIFY_ROUNDS_BY_DEFAULT
+    repair_rounds: int = REPAIR_ROUNDS_BY_DEFAULT
     on_github: bool = False
     uncut_milestones: tuple[UncutMilestone, ...] = ()
 
@@ -317,7 +318,7 @@ class ProjectFacts:
             "merge": self.merge,
             "review": self.review,
             "auto_merge": self.auto_merge,
-            "verify_rounds": self.verify_rounds,
+            "repair_rounds": self.repair_rounds,
             "awaits_check_runs": self.awaits_check_runs,
             "on_github": self.on_github,
             "uncut_milestones": [
@@ -966,8 +967,8 @@ def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity,
         merge=read_project_field(project, MERGE_FIELD) or REBASE_MERGE,
         review=read_policy_field(policies, project.name, REVIEW_FIELD, VERDICT_REVIEW),
         auto_merge=read_policy_field(policies, project.name, AUTO_MERGE_FIELD, MERGE_INTO_INTEGRATION),
-        verify_rounds=int(
-            read_policy_field(policies, project.name, VERIFY_ROUNDS_FIELD, str(VERIFY_ROUNDS_BY_DEFAULT))
+        repair_rounds=int(
+            read_policy_field(policies, project.name, REPAIR_ROUNDS_FIELD, str(REPAIR_ROUNDS_BY_DEFAULT))
         ),
         on_github=is_on_a_forge(project),
         uncut_milestones=wave_making.uncut_milestones,
@@ -1278,6 +1279,7 @@ def _read_orders(runtime: Runtime, reading: WaveReading) -> tuple[OrderFacts, ..
 def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeReaders) -> Snapshot:
     if not runtime.paths.schema_file.exists():
         return Snapshot(now=runtime.now)
+    require_operational_corpus(runtime.paths)
     runtime = dataclasses.replace(runtime, run_process=remember_process_records(runtime.run_process))
     reading = _assemble_reading(runtime, configuration, forge)
     last_orders = read_last_study_orders(reading.entries)

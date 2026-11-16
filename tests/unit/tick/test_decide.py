@@ -1318,7 +1318,7 @@ NO_PREFLIGHT_FAILURE = ()
 NO_ROUND_TAKEN = 0
 ONE_ROUND_TAKEN = 1
 TWO_ROUNDS_TAKEN = 2
-SHOP_ALLOWING_ONE_ROUND = ProjectFacts(name="shop", slots=4, verify_rounds=1)
+SHOP_ALLOWING_ONE_ROUND = ProjectFacts(name="shop", slots=4, repair_rounds=1)
 RECORD_CHANGES_REQUESTED_BY_THE_BODY = RecordTaskState(
     wave="shop_w1", task="S3", state="changes_requested", reason="body: the body names no task"
 )
@@ -3869,7 +3869,7 @@ def create_task_delivered_and_reviewed_without_a_verdict(review_runs: tuple[str,
 
 
 class PlanReviewEndedWithoutAVerdictTest(unittest.TestCase):
-    def test_should_launch_the_review_again_while_its_runs_without_a_verdict_stay_within_the_verify_rounds(self):
+    def test_should_launch_the_review_again_while_its_runs_without_a_verdict_stay_within_the_repair_rounds(self):
         for case, review_runs in [
             ("one review run without a verdict", (FIRST_REVIEW_RUN,)),
             ("as many review runs without a verdict as the verify rounds", (FIRST_REVIEW_RUN, SECOND_REVIEW_RUN)),
@@ -3885,8 +3885,8 @@ class PlanReviewEndedWithoutAVerdictTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(actions, (VERIFY_S3,))
 
-    def test_should_park_the_task_whose_review_runs_without_a_verdict_pass_the_verify_rounds(self):
-        for case, verify_rounds, review_runs, expected_reason in [
+    def test_should_park_the_task_whose_review_runs_without_a_verdict_pass_the_repair_rounds(self):
+        for case, repair_rounds, review_runs, expected_reason in [
             (
                 "past the verify rounds by default",
                 2,
@@ -3906,7 +3906,7 @@ class PlanReviewEndedWithoutAVerdictTest(unittest.TestCase):
             with self.subTest(case=case):
                 # Arrange
                 task = create_task_reviewed_without_a_verdict(review_runs)
-                project = dataclasses.replace(SHOP, verify_rounds=verify_rounds)
+                project = dataclasses.replace(SHOP, repair_rounds=repair_rounds)
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(project,))
 
                 # Act

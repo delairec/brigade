@@ -80,7 +80,7 @@ The procedure of each run is the one brigade ships, or the one the key of its sl
 | `pull request closed` | its pull request closes unmerged |
 | `setup failed` | the setup of its worktree fails; the worktree and the branch stay in place |
 | `run dead: <run>`, or `run not started` | it is `running`, has no pull request, and no live run names it |
-| the rounds | it passes the `VERIFY_ROUNDS` of the project's `POLICY`, 2 by default |
+| the rounds | it passes the `REPAIR_ROUNDS` of the project's `POLICY`, 2 by default |
 | the run and its question | a run of the slot `remediate`, `build` or `rebase` ended on `brigade-end: blocked` |
 | `blocked by` and the citing entity | it is queued in an open wave and a live blocker cites it |
 
@@ -182,7 +182,7 @@ dies before it records a `run.finished` does.
 - The verdict counts once a `task.verdict` is recorded at the head of the pull request.
 - A review run that ends with no verdict at that head leaves the head unjudged: the tick launches the review again on
   the same head, with no `task.state` and no repair round, while the review runs of the task since its last preflight
-  number at most `VERIFY_ROUNDS` of the `POLICY` of its project, 2 by default. Past them, it parks the task with the
+  number at most `REPAIR_ROUNDS` of the `POLICY` of its project, 2 by default. Past them, it parks the task with the
   reason `<n> review runs without a verdict: <run>, …`. A review run that ends on `rate_limit` or `authentication`
   counts as none: its wave is paused, and the review is launched again once the wave is resumed. The same holds for a
   head delivered without a forge.

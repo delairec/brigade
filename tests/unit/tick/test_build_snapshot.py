@@ -359,7 +359,7 @@ class SnapshotTest(unittest.TestCase):
                     "merge": "rebase",
                     "review": "verdict",
                     "auto_merge": "integration",
-                    "verify_rounds": 2,
+                    "repair_rounds": 2,
                     "awaits_check_runs": True,
                     "on_github": False,
                     "uncut_milestones": [],

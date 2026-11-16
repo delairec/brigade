@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from brigade.corpus.read_entity import Entity, EntityField
-from brigade.errors import CommandFailed, PullRequestCompareFailed
+from brigade.errors import BrigadeError, CommandFailed, PullRequestCompareFailed
 from brigade.ledger.append_event import append_event
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
@@ -216,7 +216,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
                             {"name": "PROJECT", "atoms": ["@PROJECT.shop"]},
                             {"name": "REVIEW", "atoms": ["approval"]},
                             {"name": "AUTO_MERGE", "atoms": ["none"]},
-                            {"name": "VERIFY_ROUNDS", "atoms": ["3"]},
+                            {"name": "REPAIR_ROUNDS", "atoms": ["3"]},
                         ]
                     },
                 ),
@@ -289,6 +289,20 @@ class BuildSnapshotWithoutCorpusTest(BuildSnapshotTestCase):
 
         # Assert
         self.assertEqual(snapshot, Snapshot(now=FIXED_NOW))
+
+
+class BuildSnapshotOfARetiredSchemaTest(BuildSnapshotTestCase):
+    def test_should_refuse_a_schema_declaring_a_retired_field(self):
+        # Arrange
+        self.paths.config_root.mkdir(parents=True)
+        self.paths.schema_file.write_text("SCHEMA POLICY\n\tFIELD VERIFY_ROUNDS uint\n")
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            self.build()
+
+        # Assert
+        self.assertIn("POLICY.VERIFY_ROUNDS, now named POLICY.REPAIR_ROUNDS", str(refusal.exception))
 
 
 class BuildSnapshotOfTheIntegrationBranchesTest(BuildSnapshotTestCase):
@@ -840,7 +854,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 merge="squash",
                 review="approval",
                 auto_merge="none",
-                verify_rounds=3,
+                repair_rounds=3,
                 on_github=True,
             ),
         )
@@ -883,7 +897,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     merge="squash",
                     review="approval",
                     auto_merge="none",
-                    verify_rounds=3,
+                    repair_rounds=3,
                     on_github=True,
                 ),
             ),
@@ -1276,7 +1290,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     merge="rebase",
                     review="verdict",
                     auto_merge="integration",
-                    verify_rounds=2,
+                    repair_rounds=2,
                     on_github=False,
                 ),
                 ProjectFacts(
@@ -1289,7 +1303,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     merge="squash",
                     review="approval",
                     auto_merge="none",
-                    verify_rounds=3,
+                    repair_rounds=3,
                     on_github=True,
                 ),
             ),
