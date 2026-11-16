@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRecord, ProcessRequest
+from brigade.verify.describe_command_record import describe_command_record
 from brigade.verify.judge_findings import judge_findings
 
 NAME = "acceptance"
@@ -43,5 +44,5 @@ def check_acceptance(run_process: Callable[[ProcessRequest], ProcessRecord], fac
     ]
     return {
         **judge_findings(NAME, findings),
-        "commands": [{"command": command, "exit_code": record.exit_code} for command, record in records],
+        "commands": [describe_command_record(command, record) for command, record in records],
     }
