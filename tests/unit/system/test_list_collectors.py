@@ -62,6 +62,7 @@ class ListCollectorsTest(unittest.TestCase):
                 {"name": "ledger", "source": "built-in"},
                 {"name": "pr-list", "source": "built-in"},
                 {"name": "pr-threads", "source": "built-in"},
+                {"name": "pull-request", "source": "built-in"},
                 {"name": "shell", "source": "built-in"},
                 {"name": "stale-branches", "source": "built-in"},
                 {"name": "stale-worktrees", "source": "built-in"},
