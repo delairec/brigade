@@ -9,7 +9,7 @@ from pathlib import Path
 
 from brigade.commands.order_run import COMMAND, order_run
 from brigade.errors import BrigadeError
-from brigade.inbox.read_inbox import read_inbox
+from brigade.inbox.read_inbox import Signal, read_inbox
 from brigade.ledger.append_event import append_event
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.order_done import OrderDone
@@ -20,7 +20,7 @@ from brigade.ledger.step_done import StepDone
 from brigade.orders.convert_order import Order
 from brigade.orders.start_order_run import start_order_run
 from brigade.system.resolve_plugin import resolve_plugin
-from tests.unit.commands.command_runtime import create_corpus_double, write_operational_corpus
+from tests.unit.commands.command_runtime import create_machine_double, write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
 from tests.unit.plugin_double import PluginDouble
@@ -33,6 +33,12 @@ from tests.value_matchers import PatternMatcher
 NO_PLUGIN_SOURCES = None
 PARKED_RUN = "20261018T090000Z-aaaaaa"
 STUDY_RUN = "20261019T090000Z-e10d04"
+NO_OUTPUT = {}
+AWAWA_REFUSING_A_REPORT_NAME = {
+    ("awawa", "show", "@ORDER.milestone-report"): ProcessAnswer(
+        stderr="awawa show: `@ORDER.milestone-report` is not a target; expected @TYPE.Name or TYPE\n", exit_code=2
+    )
+}
 USAGE_REPORT = (
     'schema_version = 1\nname = "usage-report"\ndescription = "the usage report of a pull request"\n'
     'params = ["pull_request"]\nmax_wall = 30\n'
@@ -334,28 +340,29 @@ class OrderRunTest(unittest.TestCase):
 
     def test_should_signal_the_parked_order_in_the_inbox(self):
         # Act
-        document = order_run(argparse.Namespace(name="judged", run_id=None), self.runtime)
+        order_run(argparse.Namespace(name="judged", run_id=None), self.runtime)
 
         # Assert
         self.assertEqual(
-            [
-                (signal.kind, signal.project, signal.fingerprint, signal.evidence)
-                for signal in read_inbox(self.paths.state_root, FIXED_NOW)
-            ],
-            [
-                (
-                    "order_parked",
-                    "shop",
-                    f"order_parked:judged:{document['run']}",
-                    {
+            read_inbox(self.paths.state_root, FIXED_NOW),
+            (
+                Signal(
+                    id=PatternMatcher("[0-9a-f]{64}"),
+                    fingerprint=PatternMatcher("order_parked:judged:20261019T090000Z-[0-9a-f]{6}"),
+                    kind="order_parked",
+                    project="shop",
+                    count=1,
+                    age_s=0,
+                    status="new",
+                    evidence={
                         "order": "judged",
                         "recipe": "judged",
-                        "run": document["run"],
+                        "run": NEW_RUN,
                         "step": "1-judge",
                         "reason": f"no configuration at {self.paths.config_root / 'config.toml'}; run brigade init",
                     },
-                )
-            ],
+                ),
+            ),
         )
 
     def test_should_keep_the_result_of_the_order_and_hand_it_to_the_output_the_order_names(self):
@@ -414,7 +421,9 @@ class OrderRunOfAStudyTest(unittest.TestCase):
         self.steps.mkdir(parents=True)
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
-            run_process=create_corpus_double({"PROJECT": {"oak": (("PATH", "/srv/oak"),)}}),
+            run_process=create_machine_double(
+                {"PROJECT": {"oak": (("PATH", "/srv/oak"),)}}, NO_OUTPUT, AWAWA_REFUSING_A_REPORT_NAME
+            ),
             resolve_plugin=lambda kind, name, **places: PluginDouble(kind=kind, name=name),
         )
 
