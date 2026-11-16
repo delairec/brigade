@@ -16,7 +16,7 @@ from brigade.git.locate_main_checkout import locate_main_checkout
 from brigade.git.locate_worktree_root import locate_worktree_root
 from brigade.preflights.name_preflight_entity import name_preflight_entity
 from brigade.preflights.preflight_places import CORPUS_PREFLIGHTS_FILE, PROJECT_PREFLIGHTS_DIRECTORY
-from brigade.preflights.read_preflight_entity import ENTITY_TYPE, read_preflight_entity
+from brigade.preflights.read_preflight_entity import ENTITY_TYPE, locate_preflight_entity
 from brigade.preflights.read_preflight_file import read_preflight_file
 from brigade.preflights.run_preflight import PREFLIGHT_SUFFIX
 from brigade.registry.find_project_at import find_project_at
@@ -167,8 +167,11 @@ def _add_to_corpus(addition: PreflightAddition, corpus: Path, runtime: Runtime) 
         raise BrigadeError(
             f"the corpus of the project at {project} declares no {ENTITY_TYPE}; add SCHEMA {ENTITY_TYPE} to it"
         )
-    preflight = read_preflight_entity(runtime.run_process, root, name) or _create_preflight(name)
-    file_name = str(corpus / CORPUS_PREFLIGHTS_FILE)
+    entity = locate_preflight_entity(runtime.run_process, root, name)
+    if entity is None:
+        preflight, file_name = _create_preflight(name), str(corpus / CORPUS_PREFLIGHTS_FILE)
+    else:
+        preflight, file_name = entity.preflight, str(entity.file.relative_to(project))
     block = _render_entity(_add_step(preflight, addition.kind, addition.step))
     text = _place_block(_read_text(project / file_name), name, block)
     write_corpus_files(
