@@ -6,6 +6,8 @@ from brigade.corpus.read_entity import Entity, EntityField
 from brigade.errors import BrigadeError
 from brigade.ledger.branch_kept import BranchKept
 from brigade.ledger.task_pr_opened import TaskPrOpened
+from brigade.orders.is_order_due import OrderFacts
+from brigade.orders.live_order_run import LiveOrderRun
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.read_live_study_runs import LiveStudyRun
 from brigade.studies.task_report_order import TaskReportOrder
@@ -19,6 +21,7 @@ from brigade.tick.actions import (
     DescribeMilestonePullRequest,
     KeepBranch,
     LaunchCheckRepair,
+    LaunchOrder,
     LaunchRemediation,
     LaunchStudy,
     LaunchTask,
@@ -44,6 +47,7 @@ from brigade.tick.actions import (
     RunPreflight,
     SignalStall,
     StartWave,
+    StopOrderRun,
 )
 from brigade.tick.build_snapshot import (
     BlockedRun,
@@ -3958,6 +3962,121 @@ class PlanReviewEndedWithoutAVerdictTest(unittest.TestCase):
         task = create_task_reviewed_without_a_verdict((FIRST_REVIEW_RUN, SECOND_REVIEW_RUN, THIRD_REVIEW_RUN))
         project = dataclasses.replace(SHOP, live_runs=(LIVE_RUN_OF_S3,))
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "verifying"}),), projects=(project,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+
+def create_order(name: str = "nightly", status: str = "active", *, parked: bool = False) -> OrderFacts:
+    return OrderFacts(name=name, every="1h", status=status, last_started=TWO_HOURS_AGO, parked=parked)
+
+
+LAUNCH_NIGHTLY = LaunchOrder(order="nightly")
+LIVE_NIGHTLY = LiveOrderRun(
+    order="nightly", recipe="triage", run="20261006T113000Z-c3d4e5", started=HALF_AN_HOUR_AGO, max_wall=45
+)
+
+
+class PlanDueOrdersTest(unittest.TestCase):
+    def test_should_launch_an_order_only_when_it_is_due(self):
+        for case, order, expected in [
+            ("due", create_order(), (LAUNCH_NIGHTLY,)),
+            ("paused", create_order(status="paused"), ()),
+            ("archived", create_order(status="archived"), ()),
+            ("parked", create_order(parked=True), ()),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                snapshot = Snapshot(now=NOW, orders=(order,))
+
+                # Act
+                actions = plan(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+    def test_should_launch_no_order_while_a_run_of_it_is_live(self):
+        # Arrange
+        snapshot = Snapshot(now=NOW, orders=(create_order(),), live_order_runs=(LIVE_NIGHTLY,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+    def test_should_launch_the_due_orders_in_the_order_of_their_names(self):
+        # Arrange
+        orders = (create_order(name="nightly"), create_order(name="hourly"))
+        snapshot = Snapshot(now=NOW, orders=orders, study_runs=2)
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (LaunchOrder(order="hourly"), LAUNCH_NIGHTLY))
+
+
+class PlanOrdersUnderTheStudyRunsTest(unittest.TestCase):
+    def test_should_launch_the_judging_studies_before_the_orders_within_the_study_runs(self):
+        # Arrange
+        snapshot = Snapshot(now=NOW, studies=(create_study(),), orders=(create_order(),), study_runs=1)
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (LAUNCH_WEEKLY,))
+
+    def test_should_launch_the_due_orders_within_the_study_runs(self):
+        # Arrange
+        orders = (create_order(name="nightly"), create_order(name="hourly"))
+        snapshot = Snapshot(now=NOW, orders=orders, study_runs=1)
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (LaunchOrder(order="hourly"),))
+
+    def test_should_count_a_live_order_run_against_the_study_runs(self):
+        # Arrange
+        snapshot = Snapshot(now=NOW, studies=(create_study(),), live_order_runs=(LIVE_NIGHTLY,), study_runs=1)
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+
+class PlanOrderRunsPastTheirMaxWallTest(unittest.TestCase):
+    def test_should_stop_a_live_run_past_the_max_wall_of_its_recipe(self):
+        # Arrange
+        live = dataclasses.replace(LIVE_NIGHTLY, started=TWO_HOURS_AGO)
+        snapshot = Snapshot(now=NOW, live_order_runs=(live,))
+
+        # Act
+        actions = plan(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                StopOrderRun(
+                    order="nightly",
+                    run="20261006T113000Z-c3d4e5",
+                    reason="the run passed the max_wall of 45 minutes of the recipe triage",
+                ),
+            ),
+        )
+
+    def test_should_leave_a_live_run_within_the_max_wall_of_its_recipe(self):
+        # Arrange
+        snapshot = Snapshot(now=NOW, live_order_runs=(LIVE_NIGHTLY,))
 
         # Act
         actions = plan(snapshot)
