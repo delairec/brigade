@@ -1,12 +1,12 @@
 from collections.abc import Callable
 from pathlib import Path
 
+from brigade.corpus.check_corpus import CORPUS_CHECKS
 from brigade.corpus.run_awawa import run_awawa
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 from brigade.verify.judge_findings import judge_findings
 
 NAME = "corpus"
-CORPUS_CHECKS = (("fmt", "--check", "."), ("lint", "--strict", "."))
 
 
 def _describe_failure(record: ProcessRecord) -> list[str]:
