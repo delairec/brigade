@@ -14,7 +14,7 @@ NO_PARAMETERS = {}
 NO_FORGE_PLUGIN = None
 
 
-class NoTokenForge:
+class NoTokenForgeDouble:
     def read_login_environment(self, request: dict, runtime) -> dict:
         return {"schema_version": 1, "environment": None}
 
@@ -40,7 +40,7 @@ class BuiltInPreflightsTest(unittest.TestCase):
         # Arrange
         equipment = CollectorEquipment(
             configuration=Configuration(forge_accounts={"build": "clauche-bot"}),
-            forge=NoTokenForge(),
+            forge=NoTokenForgeDouble(),
             forge_name="github",
             resolve_client=None,
         )
