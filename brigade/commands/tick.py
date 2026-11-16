@@ -140,6 +140,7 @@ from brigade.tick.rebase_task import rebase_task
 from brigade.tick.record_kept_branch import record_kept_branch
 from brigade.tick.record_review_threads import record_review_threads
 from brigade.tick.record_stall import record_stall
+from brigade.tick.redirect_tick_output import redirect_tick_output
 from brigade.tick.remove_integration_branch import remove_integration_branch
 from brigade.tick.remove_leftover import remove_leftover
 from brigade.tick.remove_task_worktree import remove_task_worktree
@@ -1127,6 +1128,8 @@ def _render_text(document: dict) -> str:
 
 
 def tick(request: argparse.Namespace, runtime: Runtime) -> dict:
+    if request.log_file is not None:
+        redirect_tick_output(Path(request.log_file))
     if request.mode == "once":
         return _tick_once(runtime)
     if request.mode == "dry-run":
@@ -1165,6 +1168,10 @@ COMMAND = Command(
                 ),
             ),
             required=True,
+        ),
+        Argument(
+            ("--log-file",),
+            {"help": "append what the tick writes on stderr to this file, creating its directory, and print nothing"},
         ),
     ),
     run=tick,
