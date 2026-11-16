@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from brigade.errors import BrigadeError
+from brigade.system.check_places import CheckPlaces
 from brigade.system.collector_places import CollectorPlaces
 from brigade.system.resolve_plugin import ClientExecutableCaller, PluginSources, resolve_plugin
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
@@ -62,10 +63,10 @@ class ResolvePluginRefusalTest(unittest.TestCase):
     def test_should_refuse_a_kind_of_plugin_brigade_does_not_know(self):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            resolve_plugin("check", "github", NO_SOURCES_NEEDED)
+            resolve_plugin("output", "github", NO_SOURCES_NEEDED)
 
         # Assert
-        self.assertEqual(str(refusal.exception), "no plugin kind check")
+        self.assertEqual(str(refusal.exception), "no plugin kind output")
 
     def test_should_refuse_a_client_found_neither_among_the_modules_nor_on_path(self):
         # Arrange
@@ -133,6 +134,41 @@ class ResolvePluginOfACollectorTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(collector.source, "built-in")
+
+
+def place_executable(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("#!/bin/sh\n")
+    path.chmod(0o755)
+
+
+class ResolvePluginOfACheckTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.addCleanup(self.root.cleanup)
+        root = Path(self.root.name)
+        self.holding = root / "holding"
+        self.empty = root / "empty"
+        self.search_path = str(root / "bin")
+        place_executable(self.holding / "ancestry")
+        place_executable(root / "bin" / "brigade-check-ancestry")
+        self.empty.mkdir()
+
+    def test_should_resolve_a_check_from_the_first_of_its_four_places_holding_it(self):
+        # Arrange
+        rows = [
+            (CheckPlaces(self.holding, self.holding, self.search_path), "project"),
+            (CheckPlaces(self.empty, self.holding, self.search_path), "machine"),
+            (CheckPlaces(self.empty, self.empty, self.search_path), "PATH"),
+            (CheckPlaces(self.empty, self.empty, NO_EXECUTABLE_DIRECTORY), "built-in"),
+        ]
+        for places, expected_source in rows:
+            with self.subTest(expected_source=expected_source):
+                # Act
+                check = resolve_plugin("check", "ancestry", NO_SOURCES_NEEDED, places)
+
+                # Assert
+                self.assertEqual(check.source, expected_source)
 
 
 class ClientExecutableCallerTest(unittest.TestCase):

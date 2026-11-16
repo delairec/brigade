@@ -1,0 +1,13 @@
+schema_version = 1
+name = "verify-pull-request"
+description = "the deterministic checks of the pull request of a task, before any judgment"
+collectors = [{ name = "pull-request" }]
+checks = [
+    { name = "ancestry" },
+    { name = "check_runs" },
+    { name = "corpus_at_head" },
+    { name = "promotion" },
+    { name = "untouched_files" },
+    { name = "privacy" },
+    { name = "body" },
+]

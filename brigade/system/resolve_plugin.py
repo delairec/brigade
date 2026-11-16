@@ -7,7 +7,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from brigade.errors import BrigadeError
+from brigade.system.check_places import CheckPlaces
 from brigade.system.collector_places import CollectorPlaces
+from brigade.system.resolve_check import resolve_check
 from brigade.system.resolve_collector import resolve_collector
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 
@@ -24,6 +26,7 @@ CLIENT_EXECUTABLE_DIRECTORY = "/"
 CLIENT_EXECUTABLE_TIMEOUT_S = 30.0
 CLIENT_ENTRY_POINT = "answer"
 COLLECTOR_KIND = "collector"
+CHECK_KIND = "check"
 
 
 @dataclass(frozen=True)
@@ -83,9 +86,13 @@ def _resolve_client(name: str, sources: PluginSources):
     return plugin
 
 
-def resolve_plugin(kind: str, name: str, sources: PluginSources, places: CollectorPlaces | None = None) -> object:
+def resolve_plugin(
+    kind: str, name: str, sources: PluginSources, places: CollectorPlaces | CheckPlaces | None = None
+) -> object:
     if kind == COLLECTOR_KIND:
         return resolve_collector(name, places)
+    if kind == CHECK_KIND:
+        return resolve_check(name, places)
     if kind in BUILT_IN_ENTRY_POINTS:
         return _resolve_built_in(kind, name)
     if kind == "client":
