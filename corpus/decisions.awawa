@@ -7538,6 +7538,12 @@ DECISION TheEngineNamesEachStepByItsRankAndKindAndAStoppedOrderEndsDoneWithoutPa
 	DESC "the field kind of the order and step events holds the name of the recipe, study for a"
 		+ "study, so an event recorded before @TASK.B51 is read unchanged"
 		REF @TASK.B51
+	DESC "a collect step collects into collectors/<rank> of the run directory, its parameters"
+		+ "taking the values of the order, and its file keeps the collector, its summary and the"
+		+ "path of its document"
+	DESC "a judge step launches its procedure on its slot for the project of the order with the"
+		+ "arguments order=<name> and run=<id>, and fails unless the run directory then holds"
+		+ "answer.awawa, the one answer of a run"
 	REJECTED "a name key on each step: a step holds the keys of its kind alone, and the lint"
 		+ "refuses any other"
 	REJECTED "stop parking the order: a parked order waits for the user, while stop is the recipe"
