@@ -3,7 +3,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from brigade.recipes.list_recipes import RecipeFound, list_recipes
+from brigade.recipes.list_recipes import list_recipes
+from brigade.recipes.recipe_found import RecipeFound
 from brigade.recipes.recipe_places import RecipePlaces
 from tests.unit.recipes.recipe_entity import REVIEW_RECIPE_DOCUMENT, REVIEW_RECIPE_ENTITY, REVIEW_RECIPE_TOML
 from tests.unit.recipes.recipe_files import write_recipe
