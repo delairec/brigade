@@ -8,7 +8,7 @@ from pathlib import Path
 from brigade.commands.recipe_list import COMMAND, recipe_list
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
-from tests.unit.recipes.checkout_answers import create_checkout_answers
+from tests.unit.recipes.checkout_answers import create_checkout_answers, create_outside_repository_answers
 from tests.unit.recipes.recipe_entity import REVIEW_RECIPE_ENTITY
 from tests.unit.recipes.recipe_files import write_recipe
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
@@ -89,6 +89,31 @@ class RecipeListTest(unittest.TestCase):
                     {"name": "nightly", "source": "machine"},
                     {"name": "wave", "source": "native"},
                 ],
+            },
+        )
+
+    def test_should_list_the_machine_recipes_from_a_directory_outside_any_repository(self):
+        # Arrange
+        outside = self.root_path / "outside"
+        outside.mkdir()
+        self.enterContext(contextlib.chdir(outside))
+        runner = RecordingProcessRunner(
+            {
+                **create_registry_answers(self.paths.config_root, NO_PROJECT_REGISTERED),
+                **create_outside_repository_answers(),
+            }
+        )
+        runtime = create_test_runtime(self.paths, run_process=runner)
+
+        # Act
+        document = recipe_list(argparse.Namespace(), runtime)
+
+        # Assert
+        self.assertEqual(
+            document,
+            {
+                "schema_version": 1,
+                "recipes": [{"name": "nightly", "source": "machine"}, {"name": "wave", "source": "native"}],
             },
         )
 
