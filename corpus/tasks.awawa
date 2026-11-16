@@ -4793,7 +4793,8 @@ TASK B52
 TASK B53
 	TITLE "Ratifying a pattern into an order: the evidence of the pattern as parameters of the"
 		+ "order, and the order naming its pattern"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 423
 	TYPE feat
 	MILESTONE @MILESTONE.M8
 	COMPONENT "recipes"
