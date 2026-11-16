@@ -5,7 +5,8 @@ from pathlib import Path
 
 from brigade.commands.task_check import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_machine_double
+from tests.unit.commands.command_runtime import create_machine_double, write_ledger
+from tests.unit.commands.test_preflight import WAVE_STARTED
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
@@ -14,6 +15,13 @@ MAIN_BRANCH_CHECKOUT = {
     ("git", "rev-parse", "--show-toplevel"): "/srv/tidepool\n",
     ("git", "branch", "--show-current"): "main\n",
 }
+TASK_BRANCH_CHECKOUT = {
+    ("git", "rev-parse", "--show-toplevel"): "/srv/tidepool-T7\n",
+    ("git", "branch", "--show-current"): "feature/T7-tides\n",
+    ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): "/srv/tidepool/.git\n",
+    ("git", "status", "--porcelain"): " M src/tide.py\0",
+}
+TIDEPOOL = {"PROJECT": {"tidepool": (("PATH", "/srv/tidepool"), ("MAIN", "main"))}, "TASK": {"T7": ()}}
 PASSED_CHECK = {"command": "python3 -m unittest", "passed": True, "duration_ms": 1200, "tail": []}
 FAILED_CHECK = {
     "command": "awawa lint --strict .",
@@ -82,3 +90,23 @@ class TaskCheckOutsideATaskTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(raised.exception), "the branch main is not a <prefix>/<task>-<slug> branch")
+
+
+class TaskCheckOfATaskWorktreeTest(unittest.TestCase):
+    def test_should_refuse_a_worktree_holding_changes_head_does_not(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_ledger(root, [WAVE_STARTED])
+        runtime = create_test_runtime(
+            create_test_paths(root), run_process=create_machine_double(TIDEPOOL, TASK_BRANCH_CHECKOUT)
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            COMMAND.run(Namespace(task=THE_TASK_OF_THE_BRANCH), runtime)
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception),
+            "the worktree of @TASK.T7 holds changes HEAD does not: src/tide.py; commit them, then run brigade task check",
+        )
