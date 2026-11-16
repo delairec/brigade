@@ -15,7 +15,7 @@ class AcceptanceCheckTest(unittest.TestCase):
             "parameters": {},
             "collected": {
                 "pull-request": {
-                    "summary": {"checkout": "/srv/cache/shop/2222222", "acceptance": ["python3 -m unittest"]}
+                    "summary": {"checkout": "/srv/cache/shop/2222222", "acceptance": [["python3", "-m", "unittest"]]}
                 }
             },
         }

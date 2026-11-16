@@ -19,6 +19,7 @@ from brigade.tick.actions import LaunchTask
 from brigade.tick.head_proof import ForgeCheck, HeadChecks, HeadProof, HoldingHead
 from brigade.tick.prepare_task_worktree import PreparedWorktree, prepare_task_worktree
 from brigade.tick.tick_forge import TickForge
+from tests.unit.create_recipe_answers import create_recipe_answers
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.lock_observing_runner import LockObservingRunner
@@ -81,6 +82,9 @@ TASK_WORKTREE_LISTED = ProcessAnswer(
         "worktree /srv/shop/.brigade/worktrees/B1\0HEAD 5c1d2e0\0branch refs/heads/feature/B1-task\0\0"
     )
 )
+
+
+NO_RECIPE = {}
 
 
 def read_no_environment(key: str) -> dict:
@@ -758,7 +762,12 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
     def test_should_check_the_branch_on_a_checkout_of_its_head_when_its_pull_request_was_checked_at_another(self):
         # Arrange
         self.record_commit_checks(WAVE_HEAD, exit_code=0)
-        runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
+        checkout = self.paths.state_root / "head-checks" / "shop" / TASK_HEAD
+        runner = self.create_runner(
+            MAKE_DEPS,
+            branch=TASK_BRANCH_FOUND,
+            answers={**OFF_THE_WAVE_BRANCH, **create_recipe_answers(checkout, NO_RECIPE)},
+        )
 
         # Act
         prepare_task_worktree(

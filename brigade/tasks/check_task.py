@@ -76,7 +76,7 @@ def _check_privacy_of_the_task(runtime: Runtime, worktree: TaskWorktree, head: s
 
 def check_task(runtime: Runtime, worktree: TaskWorktree) -> dict:
     _require_worktree_at_head(runtime, worktree)
-    checks = run_project_checks(runtime.run_process, worktree.project, worktree.path)
+    checks = run_project_checks(runtime, worktree.project, worktree.path)
     head = resolve_commit(runtime.run_process, worktree.path, HEAD)
     document = {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
