@@ -5,6 +5,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.errors import BrigadeError
+from brigade.inbox.read_inbox import read_inbox
+from brigade.ledger.inbox_recorded import InboxRecorded
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.order_done import OrderDone
 from brigade.ledger.order_parked import OrderParked
@@ -155,7 +157,26 @@ class RunOrderTest(unittest.TestCase):
                         reason="the gate step failed",
                     ),
                 ),
+                LedgerEntry(
+                    instant=FIXED_NOW,
+                    event=InboxRecorded(
+                        fingerprint="order_parked:nightly:20261019T090000Z-aaaaaa", kind="order_parked", project="shop"
+                    ),
+                ),
             ),
+        )
+
+    def test_should_signal_in_the_inbox_the_order_a_failed_gate_parked(self):
+        # Arrange
+        steps = StepsDouble(failures={"gate": 1})
+
+        # Act
+        run_order(self.runtime, self.create_run(create_recipe(GATE, OUTPUT)), steps.create_performers())
+
+        # Assert
+        self.assertEqual(
+            read_inbox(self.root / "state", FIXED_NOW)[0].fingerprint,
+            "order_parked:nightly:20261019T090000Z-aaaaaa",
         )
 
     def test_should_run_no_step_past_the_one_that_parked_the_order(self):

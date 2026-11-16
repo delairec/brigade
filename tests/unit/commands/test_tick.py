@@ -4717,7 +4717,7 @@ class TickLaunchingAStudyTest(unittest.TestCase):
         # Assert
         self.assertEqual(signals, [(os.getpid(), signal.SIGTERM)])
         self.assertEqual(
-            read_ledger(root / "state").entries[-1].event,
+            read_ledger(root / "state").entries[-2].event,
             OrderParked(
                 project="oak",
                 kind="usage-report",
