@@ -1,15 +1,10 @@
 import re
-from dataclasses import dataclass
+
+from brigade.system.retired_name import RetiredName
 
 RETIRED_FIELDS = {("POLICY", "VERIFY_ROUNDS"): "REPAIR_ROUNDS"}
 SCHEMA_LINE = re.compile(r"^SCHEMA (\w+)")
 FIELD_LINE = re.compile(r"^\tFIELD (\w+)")
-
-
-@dataclass(frozen=True)
-class RetiredName:
-    old: str
-    new: str
 
 
 def find_retired_schema_fields(schema: str) -> list[RetiredName]:

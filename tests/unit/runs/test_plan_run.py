@@ -121,7 +121,7 @@ class PlanRunTestCase(unittest.TestCase):
         )
 
     def plan(self, request: RunRequest, settings: dict, project: Entity | None = None, run_process=None):
-        configuration = Configuration(client="fake", clients={"fake": settings}, seconds_per_step=20)
+        configuration = Configuration(client="fake", clients={"fake": settings}, seconds_per_turn=20)
         runtime = create_test_runtime(self.paths, **({} if run_process is None else {"run_process": run_process}))
         return plan_run(
             request,

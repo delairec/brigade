@@ -31,11 +31,13 @@ from brigade.system.client_question import ClientQuestion
 from brigade.system.describe_linger_warning import describe_linger_warning
 from brigade.system.describe_slot_clients import describe_slot_clients
 from brigade.system.find_awawa_web import find_awawa_web
+from brigade.system.find_retired_configuration_keys import find_retired_configuration_keys
 from brigade.system.list_slot_clients_elsewhere import list_slot_clients_elsewhere
-from brigade.system.parse_configuration import CLI_KEY, Configuration, ConfigurationMissing
+from brigade.system.parse_configuration import CLI_KEY, Configuration
 from brigade.system.probe_answer import ProbeAnswer
 from brigade.system.probe_request import ProbeRequest
 from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
+from brigade.system.read_configuration_document import ConfigurationMissing, read_configuration_document
 from brigade.system.read_user_systemd_state import SYSTEMD_STATES_FIT_FOR_TIMERS, read_user_systemd_state
 from brigade.system.require_configured_client import require_configured_client
 from brigade.system.run_process import ProcessRequest
@@ -362,6 +364,17 @@ def _check_configuration(reading: Configuration | BrigadeError) -> list[dict]:
     return [_create_prerequisite("config", "finding", finding) for finding in reading.findings]
 
 
+def _check_retired_keys(runtime: Runtime) -> list[dict]:
+    try:
+        document = read_configuration_document(runtime.paths.configuration_file)
+    except BrigadeError:
+        return []
+    return [
+        _create_prerequisite("config", "finding", f"{name.old} is now named {name.new}")
+        for name in find_retired_configuration_keys(document)
+    ]
+
+
 def _report_findings(name: str, problems) -> list[dict]:
     return [_create_prerequisite(name, "finding", problem) for problem in problems]
 
@@ -564,6 +577,7 @@ def doctor(request: argparse.Namespace, runtime: Runtime) -> dict:
             _check_instructions(reading, runtime),
             *_check_steps(reading, runtime),
             *_check_configuration(reading),
+            *_check_retired_keys(runtime),
             *_check_slots(reading, runtime),
             *_check_slot_clients(reading, runtime),
             *_check_projects(runtime),

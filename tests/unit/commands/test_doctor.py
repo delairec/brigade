@@ -965,6 +965,25 @@ class DoctorSchemaTest(DoctorTestCase):
         # Assert
         self.assertIn(self.schema_warning, document["items"])
 
+    def test_should_list_a_retired_key_of_the_configuration_with_its_new_name(self):
+        # Arrange
+        self.configure("seconds_per_step = 30\n" + CONFIGURATION)
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "config",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": "seconds_per_step is now named seconds_per_turn",
+                "fallback": None,
+            },
+            document["items"],
+        )
+
     def test_should_list_a_retired_field_of_the_schema_with_its_new_name(self):
         # Arrange
         self.runtime.paths.schema_file.write_text("SCHEMA POLICY\n\tFIELD VERIFY_ROUNDS uint\n")

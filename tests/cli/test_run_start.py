@@ -299,7 +299,7 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
 class BrigadeRunOnTheClockTest(RunTestCase):
     def setUp(self):
         super().setUp()
-        self.configure_fake(COUNTING_CLIENT + self.hold_the_client(), keys="seconds_per_step = 0.004\n")
+        self.configure_fake(COUNTING_CLIENT + self.hold_the_client(), keys="seconds_per_turn = 0.004\n")
         self.record("builder", DONE_RESULT)
         self.quick = self.procedure.with_name("quick.md")
         self.quick.write_text(QUICK_PROCEDURE)

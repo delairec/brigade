@@ -3,7 +3,8 @@ import unittest
 from pathlib import Path
 
 from brigade.errors import BrigadeError
-from brigade.system.parse_configuration import Configuration, ConfigurationMissing, ReasoningRow, parse_configuration
+from brigade.system.parse_configuration import Configuration, ReasoningRow, parse_configuration
+from brigade.system.read_configuration_document import ConfigurationMissing
 
 
 class ReadConfigurationTestCase(unittest.TestCase):
@@ -112,6 +113,11 @@ class ReadConfigurationWhenAKeyIsWrongTest(ReadConfigurationTestCase):
         # Arrange
         rows = [
             ("an unknown key", "frobnicate = 1\n", "unknown key frobnicate"),
+            (
+                "the seconds per step the key seconds_per_turn replaced",
+                "seconds_per_step = 30\n",
+                "the key seconds_per_step is now named seconds_per_turn",
+            ),
             (
                 "an unknown reasoning level",
                 '[reasoning.ultra]\nmodel = "opus"\neffort = "max"\n',
@@ -238,7 +244,7 @@ class ReadConfigurationWhenAKeyIsWrongTest(ReadConfigurationTestCase):
         self.assertIn(f"{self.path} is not valid TOML: ", str(raised.exception))
 
 
-class ReadConfigurationOfTheSecondsPerStepTest(ReadConfigurationTestCase):
+class ReadConfigurationOfTheSecondsPerTurnTest(ReadConfigurationTestCase):
     def test_should_answer_30_when_the_key_is_absent(self):
         # Arrange
         self.path.write_text('client = "fake"\n')
@@ -247,24 +253,24 @@ class ReadConfigurationOfTheSecondsPerStepTest(ReadConfigurationTestCase):
         configuration = parse_configuration(self.path)
 
         # Assert
-        self.assertEqual(configuration.seconds_per_step, 30)
+        self.assertEqual(configuration.seconds_per_turn, 30)
 
     def test_should_answer_the_number_the_key_sets(self):
         # Arrange
-        self.path.write_text("seconds_per_step = 0.5\n")
+        self.path.write_text("seconds_per_turn = 0.5\n")
 
         # Act
         configuration = parse_configuration(self.path)
 
         # Assert
-        self.assertEqual(configuration.seconds_per_step, 0.5)
+        self.assertEqual(configuration.seconds_per_turn, 0.5)
 
     def test_should_refuse_a_value_that_is_no_positive_number_naming_the_key_and_the_file(self):
         # Arrange
         rows = [
-            ("a string", 'seconds_per_step = "30"\n', "seconds_per_step is a string, not a number,"),
-            ("zero", "seconds_per_step = 0\n", "seconds_per_step is 0, not a positive number,"),
-            ("a boolean", "seconds_per_step = true\n", "seconds_per_step is a boolean, not a number,"),
+            ("a string", 'seconds_per_turn = "30"\n', "seconds_per_turn is a string, not a number,"),
+            ("zero", "seconds_per_turn = 0\n", "seconds_per_turn is 0, not a positive number,"),
+            ("a boolean", "seconds_per_turn = true\n", "seconds_per_turn is a boolean, not a number,"),
         ]
         for case, content, expected_problem in rows:
             with self.subTest(case=case):
