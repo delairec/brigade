@@ -39,7 +39,7 @@ class ListChecksTest(unittest.TestCase):
             ],
         )
 
-    def test_should_list_the_eight_checks_of_the_pull_request_as_built_ins(self):
+    def test_should_list_the_checks_of_the_pull_request_the_draft_and_the_forge_logins_as_built_ins(self):
         # Arrange
         places = CheckPlaces(
             project_directory=self.root / "no-project-checks",
@@ -59,8 +59,12 @@ class ListChecksTest(unittest.TestCase):
                 {"name": "body", "source": "built-in"},
                 {"name": "check_runs", "source": "built-in"},
                 {"name": "corpus_at_head", "source": "built-in"},
+                {"name": "forge_logins", "source": "built-in"},
+                {"name": "moved_citations", "source": "built-in"},
+                {"name": "overlapping_deliverables", "source": "built-in"},
                 {"name": "privacy", "source": "built-in"},
                 {"name": "promotion", "source": "built-in"},
+                {"name": "tasks_outside_after", "source": "built-in"},
                 {"name": "untouched_files", "source": "built-in"},
             ],
         )
