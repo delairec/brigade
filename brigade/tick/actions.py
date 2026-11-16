@@ -23,6 +23,18 @@ class LaunchStudy:
 
 
 @dataclass(frozen=True)
+class LaunchOrder:
+    order: str
+
+
+@dataclass(frozen=True)
+class StopOrderRun:
+    order: str
+    run: str
+    reason: str
+
+
+@dataclass(frozen=True)
 class RecordTaskState:
     wave: str
     task: str

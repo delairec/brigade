@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from brigade.ledger.branch_kept import BranchKept
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.task_state import REBUILD_REASON
+from brigade.orders.is_order_due import is_order_due
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.task_report_order import TaskReportOrder
 from brigade.system.pull_request_facts import PullRequestFacts
@@ -16,6 +17,7 @@ from brigade.tick.actions import (
     DescribeMilestonePullRequest,
     KeepBranch,
     LaunchCheckRepair,
+    LaunchOrder,
     LaunchRemediation,
     LaunchStudy,
     LaunchTask,
@@ -41,6 +43,7 @@ from brigade.tick.actions import (
     RunPreflight,
     SignalStall,
     StartWave,
+    StopOrderRun,
 )
 from brigade.tick.build_snapshot import (
     CLIENT_LOGIN_REASON,
@@ -151,7 +154,7 @@ def _plan_every_action(snapshot: Snapshot) -> tuple:
         + _plan_milestone_cuts(snapshot)
         + _plan_milestone_rebases(snapshot)
         + _plan_wave_starts(snapshot)
-        + _plan_studies(snapshot)
+        + _plan_study_and_order_runs(snapshot)
         + _plan_integration_branches(snapshot)
     )
     return actions + _plan_leftovers(snapshot, actions) + _plan_stall_signals(snapshot, actions)
@@ -1026,10 +1029,8 @@ def _is_stopped_by_login(task: TaskFacts, wave: WaveFacts, live_tasks: frozenset
     )
 
 
-def _plan_studies(snapshot: Snapshot) -> tuple:
-    scans = {study.name for study in snapshot.studies if study.slot == SCAN_SLOT}
+def _plan_studies(snapshot: Snapshot, free_runs: int) -> tuple[tuple, int]:
     live = {run.study for run in snapshot.live_study_runs}
-    free_runs = snapshot.study_runs - sum(1 for run in snapshot.live_study_runs if run.study not in scans)
     launches = []
     for study in sorted(snapshot.studies, key=lambda study: study.name):
         if study.name in live or not is_study_due(study, snapshot.now):
@@ -1039,7 +1040,38 @@ def _plan_studies(snapshot: Snapshot) -> tuple:
                 continue
             free_runs -= 1
         launches.append(LaunchStudy(study=study.name))
+    return tuple(launches), free_runs
+
+
+def _plan_orders(snapshot: Snapshot, free_runs: int) -> tuple:
+    live = {run.order for run in snapshot.live_order_runs}
+    launches = []
+    for order in sorted(snapshot.orders, key=lambda order: order.name):
+        if order.name in live or not is_order_due(order, snapshot.now) or free_runs <= 0:
+            continue
+        free_runs -= 1
+        launches.append(LaunchOrder(order=order.name))
     return tuple(launches)
+
+
+def _plan_order_stops(snapshot: Snapshot) -> tuple:
+    return tuple(
+        StopOrderRun(
+            order=live.order,
+            run=live.run,
+            reason=f"the run passed the max_wall of {live.max_wall} minutes of the recipe {live.recipe}",
+        )
+        for live in snapshot.live_order_runs
+        if snapshot.now - live.started > timedelta(minutes=live.max_wall)
+    )
+
+
+def _plan_study_and_order_runs(snapshot: Snapshot) -> tuple:
+    scans = {study.name for study in snapshot.studies if study.slot == SCAN_SLOT}
+    live_judging_studies = sum(1 for run in snapshot.live_study_runs if run.study not in scans)
+    free_runs = snapshot.study_runs - live_judging_studies - len(snapshot.live_order_runs)
+    studies, free_runs = _plan_studies(snapshot, free_runs)
+    return studies + _plan_orders(snapshot, free_runs) + _plan_order_stops(snapshot)
 
 
 def _is_paused_on_the_quota(wave: WaveFacts, task: TaskFacts) -> bool:
