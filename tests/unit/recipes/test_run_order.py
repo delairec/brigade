@@ -190,6 +190,29 @@ class RunOrderTest(unittest.TestCase):
         # Assert
         self.assertEqual(list_entry_names(self.steps_directory), ["1-gate.json", "2-output.json"])
 
+    def test_should_record_a_skipped_step_failed_and_never_done(self):
+        # Arrange
+        steps = StepsDouble(failures={"gate": 1})
+        skipped_gate = {**GATE, "on_fail": "skip"}
+
+        # Act
+        run_order(self.runtime, self.create_run(create_recipe(skipped_gate)), steps.create_performers())
+
+        # Assert
+        self.assertEqual(
+            read_ledger(self.root / "state").entries,
+            (
+                LedgerEntry(
+                    instant=FIXED_NOW,
+                    event=StepFailed(kind="usage-report", run=RUN_ID, step="1-gate", reason="the gate step failed"),
+                ),
+                LedgerEntry(
+                    instant=FIXED_NOW,
+                    event=OrderDone(project="shop", kind="usage-report", order="nightly", run=RUN_ID),
+                ),
+            ),
+        )
+
     def test_should_end_the_order_without_parking_it_on_a_failed_step_the_recipe_stops_at(self):
         # Arrange
         steps = StepsDouble(failures={"gate": 1})
