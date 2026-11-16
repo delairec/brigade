@@ -41,6 +41,8 @@ from brigade.registry.require_operational_corpus import require_operational_corp
 from brigade.runs.create_run_id import create_run_id
 from brigade.runs.run_locations import RUNS_DIRECTORY
 from brigade.runtime import Runtime
+from brigade.studies.describe_milestone_report import NAME as MILESTONE_REPORT
+from brigade.studies.describe_task_report import NAME as TASK_REPORT
 from brigade.studies.read_study import Study, read_study
 from brigade.studies.read_study_of_run import read_study_of_run
 from brigade.studies.run_study import run_study
@@ -55,6 +57,7 @@ NO_PROJECT = None
 COLLECTOR_KIND = "collector"
 BEGINNING = date(1970, 1, 1)
 STUDY_KEY = "study"
+REPORTS = (MILESTONE_REPORT, TASK_REPORT)
 
 
 @dataclass(frozen=True)
@@ -171,6 +174,8 @@ def _run_study_order(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 def order_run(request: argparse.Namespace, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
+    if request.name in REPORTS:
+        return _run_study_order(request, runtime)
     try:
         resolved = resolve_order(runtime, request.name)
     except EntityNotDefined:
