@@ -1,6 +1,5 @@
 import shlex
 from importlib.resources import files
-from pathlib import Path
 from string import Template
 
 from brigade.errors import CommandFailed, ToolNotFound
@@ -21,13 +20,11 @@ def _quote(value: str) -> str:
 
 
 def _describe_cron_line(request: dict) -> str:
-    log_file = Path(request["log_file"])
     template = Template((SHIPPED_DATA / "crontab-line.tpl").read_text(encoding="utf-8").rstrip("\n"))
     return template.substitute(
-        state_directory=_quote(str(log_file.parent)),
         environment=" ".join(f"{name}={_quote(value)}" for name, value in request["environment"].items()),
         brigade=_quote(request["brigade"]),
-        log_file=_quote(str(log_file)),
+        log_file=_quote(request["log_file"]),
         marker=MARKER,
     )
 
