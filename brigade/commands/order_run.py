@@ -1,6 +1,7 @@
 import argparse
 import dataclasses
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
@@ -51,6 +52,14 @@ NO_PROJECT = None
 NO_GATE_PARAMETERS = {}
 COLLECTOR_KIND = "collector"
 BEGINNING = date(1970, 1, 1)
+
+
+@dataclass(frozen=True)
+class ResolvedOrder:
+    order: Order
+    project_entity: Entity | None
+    project: Path
+    recipe: dict
 
 
 def _render_text(document: dict) -> str:
@@ -140,13 +149,25 @@ def _equip_output(order: Order, project: Entity | None, run_id: str, runtime: Ru
     return create_output_performer(lambda result: keep_result(runtime, order.name, result), hand, order.output)
 
 
-def order_run(request: argparse.Namespace, runtime: Runtime) -> dict:
-    require_operational_corpus(runtime.paths)
-    order = convert_order(read_entity(runtime.run_process, runtime.paths.config_root, ENTITY_TYPE, request.name))
+def resolve_order(runtime: Runtime, name: str) -> ResolvedOrder:
+    order = convert_order(read_entity(runtime.run_process, runtime.paths.config_root, ENTITY_TYPE, name))
     project_entity = _find_order_project(order, runtime)
     project = _locate_project(project_entity, runtime)
     recipe = resolve_recipe(order.recipe, locate_recipe_places(project, runtime), runtime.run_process).document
-    run_id = _find_parked_run(runtime, order) or _start_new_run(runtime, order, recipe)
+    return ResolvedOrder(order=order, project_entity=project_entity, project=project, recipe=recipe)
+
+
+def _take_run(runtime: Runtime, request: argparse.Namespace, resolved: ResolvedOrder) -> str:
+    if request.run_id is not None:
+        return request.run_id
+    return _find_parked_run(runtime, resolved.order) or _start_new_run(runtime, resolved.order, resolved.recipe)
+
+
+def order_run(request: argparse.Namespace, runtime: Runtime) -> dict:
+    require_operational_corpus(runtime.paths)
+    resolved = resolve_order(runtime, request.name)
+    order, project_entity, project, recipe = resolved.order, resolved.project_entity, resolved.project, resolved.recipe
+    run_id = _take_run(runtime, request, resolved)
     run = OrderRun(
         order=order.name,
         project=order.project,
@@ -168,7 +189,10 @@ def order_run(request: argparse.Namespace, runtime: Runtime) -> dict:
 COMMAND = Command(
     path=("order", "run"),
     help="run an order: the steps of its recipe; resume it at its first undone step where it parked",
-    arguments=(Argument(("name",), {"help": "the name of the ORDER entity"}),),
+    arguments=(
+        Argument(("name",), {"help": "the name of the ORDER entity"}),
+        Argument(("--run-id",), {"help": argparse.SUPPRESS}),
+    ),
     run=order_run,
     render_text=_render_text,
     decide_exit_code=_decide_exit_code,

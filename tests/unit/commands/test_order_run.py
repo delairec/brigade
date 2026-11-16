@@ -155,7 +155,7 @@ class OrderRunTest(unittest.TestCase):
 
     def test_should_run_the_steps_of_the_recipe_of_the_order_in_its_project(self):
         # Act
-        document = order_run(argparse.Namespace(name="nightly"), self.runtime)
+        document = order_run(argparse.Namespace(name="nightly", run_id=None), self.runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "order": "nightly", "run": NEW_RUN, "state": "done"})
@@ -164,9 +164,33 @@ class OrderRunTest(unittest.TestCase):
             [("make", "collect", "PR=12"), ("make", "report", "shop")],
         )
 
+    def test_should_run_the_run_the_tick_started_without_starting_another(self):
+        # Arrange
+        append_event(
+            self.paths,
+            FIXED_NOW,
+            OrderStarted(project="shop", kind="usage-report", order="nightly", run="20261019T085500Z-cccccc"),
+        )
+
+        # Act
+        document = order_run(argparse.Namespace(name="nightly", run_id="20261019T085500Z-cccccc"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document, {"schema_version": 1, "order": "nightly", "run": "20261019T085500Z-cccccc", "state": "done"}
+        )
+        self.assertEqual(
+            [
+                entry.event
+                for entry in read_ledger(self.paths.state_root).entries
+                if isinstance(entry.event, OrderStarted)
+            ],
+            [OrderStarted(project="shop", kind="usage-report", order="nightly", run="20261019T085500Z-cccccc")],
+        )
+
     def test_should_record_the_run_of_the_order_under_the_name_of_its_recipe(self):
         # Act
-        order_run(argparse.Namespace(name="nightly"), self.runtime)
+        order_run(argparse.Namespace(name="nightly", run_id=None), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -203,7 +227,7 @@ class OrderRunTest(unittest.TestCase):
         (steps / "1-command.json").write_text("{}", encoding="utf-8")
 
         # Act
-        document = order_run(argparse.Namespace(name="nightly"), self.runtime)
+        document = order_run(argparse.Namespace(name="nightly", run_id=None), self.runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "order": "nightly", "run": PARKED_RUN, "state": "done"})
@@ -219,21 +243,21 @@ class OrderRunTest(unittest.TestCase):
         )
 
         # Act
-        document = order_run(argparse.Namespace(name="nightly"), self.runtime)
+        document = order_run(argparse.Namespace(name="nightly", run_id=None), self.runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "order": "nightly", "run": NEW_RUN, "state": "done"})
 
     def test_should_run_the_preflight_a_gate_step_names(self):
         # Act
-        document = order_run(argparse.Namespace(name="gated"), self.runtime)
+        document = order_run(argparse.Namespace(name="gated", run_id=None), self.runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "order": "gated", "run": NEW_RUN, "state": "done"})
 
     def test_should_keep_the_document_of_the_collector_a_collect_step_names(self):
         # Act
-        document = order_run(argparse.Namespace(name="collected"), self.runtime)
+        document = order_run(argparse.Namespace(name="collected", run_id=None), self.runtime)
 
         # Assert
         step_file = self.paths.state_root / "runs" / document["run"] / "steps" / "1-collect.json"
@@ -250,7 +274,7 @@ class OrderRunTest(unittest.TestCase):
 
     def test_should_park_the_order_on_a_judging_run_that_cannot_start(self):
         # Act
-        document = order_run(argparse.Namespace(name="judged"), self.runtime)
+        document = order_run(argparse.Namespace(name="judged", run_id=None), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -267,7 +291,7 @@ class OrderRunTest(unittest.TestCase):
 
     def test_should_keep_the_result_of_the_order_and_hand_it_to_the_output_the_order_names(self):
         # Act
-        document = order_run(argparse.Namespace(name="kept"), self.runtime)
+        document = order_run(argparse.Namespace(name="kept", run_id=None), self.runtime)
 
         # Assert
         run_directory = self.paths.state_root / "runs" / document["run"]
