@@ -68,3 +68,14 @@ class RunCommitChecksTest(unittest.TestCase):
                 ],
             },
         )
+
+    def test_should_name_a_step_of_the_setup_quoting_an_argument_that_holds_a_space(self):
+        # Arrange
+        self.processes.answer_recipes(CHECKOUT, {"setup": (("npm", "ci", "--omit", "dev deps"),)})
+        self.processes.answer(("npm", "ci", "--omit", "dev deps"))
+
+        # Act
+        checks = run_commit_checks(self.runtime, PROJECT, CHECKOUT, "c0ffee")
+
+        # Assert
+        self.assertEqual(checks.results[0], CommandResult(command="npm ci --omit 'dev deps'", exit_code=0))
