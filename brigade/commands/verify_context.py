@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 
 from brigade.command import Argument, Command
-from brigade.commands._read_forge_environment import ForgeSlot, read_forge_environment
+from brigade.commands._equip_registered_collector import equip_registered_collector
 from brigade.errors import BrigadeError
 from brigade.git.locate_main_checkout import locate_main_checkout
 from brigade.git.locate_worktree_root import locate_worktree_root
@@ -23,7 +23,6 @@ from brigade.verify.preflight_pull_request import PreflightDemand
 from brigade.verify.preflight_task_branch import BranchPreflightDemand
 
 DOCUMENT_SCHEMA_VERSION = 1
-CLI_KEY = "cli"
 ABSENT = "none"
 NAMED_BY_THE_BRANCH = None
 
@@ -103,9 +102,7 @@ def verify_context(request: argparse.Namespace, runtime: Runtime) -> dict:
         task=found.opened.task,
         base_branch=find_task_base(runtime, worktree, project, found.opened.task),
         pr=request.pr,
-        forge=runtime.resolve_plugin("forge", forge_name),
-        environment=read_forge_environment(configuration, ForgeSlot(forge_name, CLI_KEY), runtime),
-        configuration=configuration,
+        equipment=equip_registered_collector(project, configuration, runtime),
     )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, **assemble_verify_context(runtime, demand)}
 
