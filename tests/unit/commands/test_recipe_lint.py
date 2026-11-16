@@ -74,7 +74,7 @@ class RecipeLintTest(unittest.TestCase):
         (self.recipes / "nightly.toml").write_text(
             'schema_version = 1\nname = "nightly"\ndescription = "nightly"\nparams = []\nmax_wall = 5\n'
             '[[steps]]\nkind = "collect"\ncollector = "issues"\n'
-            '[[steps]]\nkind = "gate"\npreflight = "refinement"\n'
+            '[[steps]]\nkind = "gate"\npreflight = "release-readiness"\n'
             '[[steps]]\nkind = "output"\noutput = "slack"\n'
             '[[steps]]\nkind = "judge"\nslot = "review"\nprocedure = "usage-report"\nanswer = "REPORT"\n'
         )
@@ -86,7 +86,7 @@ class RecipeLintTest(unittest.TestCase):
         self.assertEqual(
             document["findings"],
             [
-                f"steps[1]: no preflight refinement: no refinement.toml in {BUILT_IN_PREFLIGHTS}",
+                f"steps[1]: no preflight release-readiness: no release-readiness.toml in {BUILT_IN_PREFLIGHTS}",
                 "steps[2]: no output slack: no brigade-output-slack on PATH",
                 (
                     "steps[3]: no procedure usage-report: not shipped with brigade and no instructions corpus set"
