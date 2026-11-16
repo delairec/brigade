@@ -60,11 +60,8 @@ class TaskOfWave:
     entity: Entity
 
 
-def _read_task_at_the_fork(
-    runtime: Runtime, configuration: Configuration, task: TaskOfWave, main_tree: Tree, repository: Path
-) -> Entity | None:
-    fork = find_merge_base(runtime.run_process, repository, main_tree.sha, task.tree.sha)
-    return _read_task_or_none(runtime, _prepare_tree_at(runtime, configuration, task.started, fork), task.entity.name)
+def _locate_fork(runtime: Runtime, repository: Path, main_tree: Tree, task: TaskOfWave) -> str:
+    return find_merge_base(runtime.run_process, repository, main_tree.sha, task.tree.sha)
 
 
 def _require_unruled_on_main(runtime: Runtime, configuration: Configuration, task: TaskOfWave):
@@ -80,7 +77,8 @@ def _require_unruled_on_main(runtime: Runtime, configuration: Configuration, tas
     if on_main is None or on_main == task.entity:
         return
     repository = Path(read_project_field(project, REPOSITORY_FIELD))
-    if _read_task_at_the_fork(runtime, configuration, task, main_tree, repository) != on_main:
+    fork_tree = _prepare_tree_at(runtime, configuration, started, _locate_fork(runtime, repository, main_tree, task))
+    if _read_task_or_none(runtime, fork_tree, task.entity.name) != on_main:
         raise BrigadeError(
             f"the task {task.entity.name} of the wave {started.wave} differs between {main} and {task.tree.ref}:"
             f" the ruling on main reaches it through brigade wave cancel {started.wave} and a new wave cut from {main}"
