@@ -74,3 +74,13 @@ class CheckAcceptanceTest(unittest.TestCase):
                 )
             ],
         )
+
+    def test_should_name_a_command_quoting_an_argument_that_holds_a_space(self):
+        # Arrange
+        facts = AcceptanceFacts(head_tree=HEAD_TREE, commands=(("pytest", "-k", "not slow"),))
+
+        # Act
+        check = check_acceptance(RecordingProcessRunner(), facts)
+
+        # Assert
+        self.assertEqual(check["commands"], [{"command": "pytest -k 'not slow'", "exit_code": 0}])

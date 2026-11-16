@@ -120,6 +120,20 @@ class RunProjectChecksTest(unittest.TestCase):
             ),
         )
 
+    def test_should_name_an_acceptance_command_quoting_an_argument_that_holds_a_space(self):
+        # Arrange
+        project = Entity(name="oak", fields=(EntityField(name="PATH", value="/srv/oak"),))
+        self.processes.answer_recipes(ROOT, {"acceptance": (("pytest", "-k", "not slow"),)})
+        self.processes.answer(("pytest", "-k", "not slow"))
+        self.processes.answer(("awawa", "fmt", "--check", "."))
+        self.processes.answer(("awawa", "lint", "--strict", "."))
+
+        # Act
+        checks = run_project_checks(create_test_runtime(run_process=self.processes), project, ROOT)
+
+        # Assert
+        self.assertEqual(checks[0].command, "pytest -k 'not slow'")
+
 
 class RunProjectChecksOfAnAreaTest(unittest.TestCase):
     def test_should_check_the_area_and_run_the_acceptance_at_the_root_of_the_worktree(self):

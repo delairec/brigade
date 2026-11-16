@@ -210,6 +210,16 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
             (self.paths.setup_directory / "shop" / "B1.log").read_text(), "$ make deps\ndeps installed\n1 warning\n"
         )
 
+    def test_should_log_a_setup_step_quoting_an_argument_that_holds_a_space(self):
+        # Arrange
+        runner = self.create_runner(setup={"setup": (("make", "deps", "LEVEL=a b"),)})
+
+        # Act
+        prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE)
+
+        # Assert
+        self.assertEqual((self.paths.setup_directory / "shop" / "B1.log").read_text(), "$ make deps 'LEVEL=a b'\n")
+
     def test_should_leave_the_ignore_file_alone_under_a_configured_worktree_root(self):
         # Arrange
         runner = self.create_runner(worktree=Path("/var/worktrees/B1"))
