@@ -34,8 +34,11 @@ from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
+from brigade.orders.convert_order import convert_order
 from brigade.orders.is_order_due import OrderFacts
 from brigade.orders.live_order_run import LiveOrderRun
+from brigade.orders.read_live_order_runs import read_live_order_runs
+from brigade.orders.read_order_facts import read_order_facts
 from brigade.registry.find_project import find_project
 from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_policy_field import read_policy_field
@@ -92,6 +95,7 @@ from brigade.waves.summarize_waves import summarize_waves
 
 DOCUMENT_SCHEMA_VERSION = 1
 TASK_TYPE = "TASK"
+ORDER_ENTITY_TYPE = "ORDER"
 LIVE_RUN_STATE = "running"
 SLOTS_FIELD = "SLOTS"
 CHECK_RUNS_FIELD = "CHECK_RUNS"
@@ -1276,6 +1280,14 @@ def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeR
             describe_study_facts(study, last_orders.get(study.name), quota_resumes) for study in read_studies(runtime)
         ),
         live_study_runs=read_live_study_runs(runtime.paths.state_root, is_recorded_process_alive),
+        orders=read_order_facts(
+            tuple(
+                convert_order(entity)
+                for entity in read_entities(runtime.run_process, runtime.paths.config_root, ORDER_ENTITY_TYPE)
+            ),
+            reading.entries,
+        ),
+        live_order_runs=read_live_order_runs(runtime.paths.state_root, is_recorded_process_alive),
         study_runs=configuration.study_runs,
         stall_after=configuration.stall_after,
         rate_limits=_read_rate_limits(reading, runtime.now),
