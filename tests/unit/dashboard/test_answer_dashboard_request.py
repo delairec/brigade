@@ -808,3 +808,72 @@ class AnswerDashboardRequestOfTheRunsViewsTest(unittest.TestCase):
         # Assert
         self.assertEqual(response.status, 404)
         self.assertEqual(response.body, b"<dl><dt>error</dt><dd>brigade runs show: no run r9\n</dd></dl>")
+
+
+INBOX_HOLDING_A_NOTE_AND_A_STUDY_ANSWER = (
+    '{"schema_version": 1, "signals": [{"id": "a4a5f464", "fingerprint": "note:474fa40ae4db", "kind": "note",'
+    ' "project": "oak", "count": 1, "age_s": 60, "status": "new"}], "families": [], "patterns": [],'
+    ' "answers": [{"id": "disk_r2", "study": "disk", "project": "oak"}]}\n'
+)
+STUDY_ANSWER_DISK_R2_SHOWN = (
+    '{"schema_version": 1, "answer": {"id": "disk_r2", "study": "disk", "project": "oak", "type": "ANSWER",'
+    ' "fields": [{"name": "STUDY", "value": "disk"}, {"name": "SUMMARY", "value": "the disk <fills>"}]}}\n'
+)
+
+
+class AnswerDashboardRequestOfAnInboxItemTest(unittest.TestCase):
+    def test_should_render_a_study_answer_under_its_title_with_its_fields(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {
+                (PYTHON, ENTRY_POINT, "inbox", "show", "--json", "disk_r2"): ProcessAnswer(
+                    stdout=STUDY_ANSWER_DISK_R2_SHOWN
+                )
+            }
+        )
+
+        # Act
+        response = answer_get("/views/inbox/disk_r2", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(
+            response,
+            DashboardResponse(
+                status=200,
+                content_type="text/html; charset=utf-8",
+                body=b"<h2>study-answer disk_r2</h2>"
+                b"<dl><dt>STUDY</dt><dd>disk</dd><dt>SUMMARY</dt><dd>the disk &lt;fills&gt;</dd></dl>",
+            ),
+        )
+
+    def test_should_answer_not_found_for_an_id_the_inbox_lists_neither_as_a_signal_nor_as_a_study_answer(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {
+                (PYTHON, ENTRY_POINT, "inbox", "show"): ProcessAnswer(exit_code=1, stderr="no signal zz99\n"),
+                INBOX_LIST: ProcessAnswer(stdout=INBOX_HOLDING_A_NOTE_AND_A_STUDY_ANSWER),
+            }
+        )
+
+        # Act
+        response = answer_get("/api/inbox/zz99", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(response.status, 404)
+
+    def test_should_answer_a_server_error_for_a_signal_or_a_study_answer_the_inbox_lists(self):
+        # Arrange
+        for item in ("a4a5f464", "disk_r2"):
+            with self.subTest(item=item):
+                runner = ScriptedProcessRunner(
+                    {
+                        (PYTHON, ENTRY_POINT, "inbox", "show"): ProcessAnswer(exit_code=1, stderr="unreadable\n"),
+                        INBOX_LIST: ProcessAnswer(stdout=INBOX_HOLDING_A_NOTE_AND_A_STUDY_ANSWER),
+                    }
+                )
+
+                # Act
+                response = answer_get(f"/api/inbox/{item}", create_test_runtime(run_process=runner.run))
+
+                # Assert
+                self.assertEqual(response.status, 500)
