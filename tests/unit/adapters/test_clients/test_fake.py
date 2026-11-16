@@ -1,12 +1,15 @@
 import json
 import shutil
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.adapters.test_clients import replay_recording
 from brigade.adapters.test_clients.fake import answer
 from brigade.errors import BrigadeError
 
+PACKAGE_PARENT = str(Path(replay_recording.__file__).parents[3])
 LAUNCH_REQUEST = {
     "schema_version": 1,
     "worktree": "/srv/worktrees/b42",
@@ -211,21 +214,17 @@ class FakeLaunchOfASlowClientWritingProgressTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "argv": [
-                    "sh",
-                    "-c",
-                    (
-                        'while [ -n "$1" ] && [ -e "$1" ]; do sleep 0.05; done; until [ "$(date -u +%s)" -ge "$5" ]; do sleep 0.1; done;'
-                        ' if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
-                        ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"'
-                    ),
-                    "fake",
+                    sys.executable,
+                    "-m",
+                    "brigade.adapters.test_clients.replay_recording",
                     "/srv/hold",
                     "step 1 done",
+                    "/state/brigade/runs/r1/progress.md",
                     "/srv/recordings/builder.json",
                     "0",
                     "0",
                 ],
-                "environment": {},
+                "environment": {"PYTHONPATH": PACKAGE_PARENT},
                 "stdin": None,
                 "session_id": "6f1c2a9e-3b7d-4e21-9a55-0c8d4b7e2f13",
             },
@@ -248,16 +247,12 @@ class FakeLaunchOfAClientStoppingAtItsSoftLimitTest(unittest.TestCase):
         self.assertEqual(
             launch["argv"],
             [
-                "sh",
-                "-c",
-                (
-                    'while [ -n "$1" ] && [ -e "$1" ]; do sleep 0.05; done; until [ "$(date -u +%s)" -ge "$5" ]; do sleep 0.1; done;'
-                    ' if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
-                    ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"'
-                ),
-                "fake",
+                sys.executable,
+                "-m",
+                "brigade.adapters.test_clients.replay_recording",
                 "",
                 "",
+                "/state/brigade/runs/r1/progress.md",
                 "/srv/recordings/builder.json",
                 "0",
                 "1791364980",
@@ -387,16 +382,12 @@ class FakeLaunchOfAClientWritingItsLinesAtIntervalsTest(unittest.TestCase):
         self.assertEqual(
             launch["argv"],
             [
-                "sh",
-                "-c",
-                (
-                    'while [ -n "$1" ] && [ -e "$1" ]; do sleep 0.05; done; until [ "$(date -u +%s)" -ge "$5" ]; do sleep 0.1; done;'
-                    ' if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
-                    ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"'
-                ),
-                "fake",
+                sys.executable,
+                "-m",
+                "brigade.adapters.test_clients.replay_recording",
                 "",
                 "",
+                "/state/brigade/runs/r1/progress.md",
                 "/srv/recordings/builder.json",
                 "1",
                 "0",

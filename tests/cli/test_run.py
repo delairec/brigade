@@ -272,16 +272,12 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
                 {
                     "schema_version": 1,
                     "argv": [
-                        "sh",
-                        "-c",
-                        (
-                            'while [ -n "$1" ] && [ -e "$1" ]; do sleep 0.05; done; until [ "$(date -u +%s)" -ge "$5" ];'
-                            ' do sleep 0.1; done; if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
-                            ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"'
-                        ),
-                        "fake",
+                        sys.executable,
+                        "-m",
+                        "brigade.adapters.test_clients.replay_recording",
                         str(self.hold),
                         "",
+                        str(self.runs / run_id / "progress.md"),
                         str(self.recordings / "builder.json"),
                         "0",
                         "0",
