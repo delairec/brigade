@@ -59,7 +59,9 @@ def _perform(runtime: Runtime, run: OrderRun, step: dict, perform: StepPerformer
         except BrigadeError as error:
             reason = str(error)
             append_event(
-                runtime.paths, runtime.now, StepFailed(kind=run.recipe["name"], run=run.run_id, step=name, reason=reason)
+                runtime.paths,
+                runtime.now,
+                StepFailed(kind=run.recipe["name"], run=run.run_id, step=name, reason=reason),
             )
             if attempts_left == NO_RETRY:
                 raise _StepFailure(name, reason, on_fail) from None
