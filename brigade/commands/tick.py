@@ -62,15 +62,13 @@ from brigade.runs.create_run_id import create_run_id
 from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
 from brigade.runs.is_run_live_on import is_run_live_on
 from brigade.runs.read_run_document import read_run_document
-from brigade.runs.record_run_pid import record_run_pid
 from brigade.runs.run_locations import RUN_RECORD_FILE, RUNS_DIRECTORY
 from brigade.runs.run_record import RUN_RECORD_SHAPE, RunRecord
 from brigade.runtime import Runtime
 from brigade.studies.describe_milestone_report import describe_milestone_report
 from brigade.studies.describe_task_report import describe_task_report
-from brigade.studies.detach_study_run import detach_study_run
+from brigade.studies.launch_study_run import launch_study_run
 from brigade.studies.read_study import read_study
-from brigade.studies.start_study_run import start_study_run
 from brigade.system.ask_check_logs import CheckLogsQuery, ask_check_logs
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
@@ -436,10 +434,7 @@ def _resume_task_run(runtime: Runtime, action: ResumeTaskRun) -> None:
 
 
 def _launch_study(runtime: Runtime, action: LaunchStudy) -> None:
-    study = read_study(runtime, action.study)
-    run_id = create_run_id(runtime.now)
-    start_study_run(runtime, study, run_id)
-    detach_study_run(runtime, study.name, run_id, record_run_pid)
+    launch_study_run(runtime, read_study(runtime, action.study))
 
 
 def _launch_order(runtime: Runtime, action: LaunchOrder) -> None:
@@ -452,10 +447,7 @@ def _launch_order(runtime: Runtime, action: LaunchOrder) -> None:
 def _report_milestone(runtime: Runtime, configuration: Configuration, action: ReportMilestone) -> None:
     project = find_project(read_projects(runtime), action.order.project)
     order = dataclasses.replace(action.order, reads_pull_requests=is_on_a_forge(project))
-    study = describe_milestone_report(order)
-    run_id = create_run_id(runtime.now)
-    start_study_run(runtime, study, run_id)
-    detach_study_run(runtime, study.name, run_id, record_run_pid)
+    run_id = launch_study_run(runtime, describe_milestone_report(order))
     login = read_cli_login(configuration, read_project_forge(project), runtime) if is_on_a_forge(project) else NO_LOGIN
     append_event(
         runtime.paths,
@@ -466,10 +458,7 @@ def _report_milestone(runtime: Runtime, configuration: Configuration, action: Re
 
 def _report_task(runtime: Runtime, configuration: Configuration, action: ReportTask) -> None:
     order = action.order
-    study = describe_task_report(order)
-    run_id = create_run_id(runtime.now)
-    start_study_run(runtime, study, run_id)
-    detach_study_run(runtime, study.name, run_id, record_run_pid)
+    run_id = launch_study_run(runtime, describe_task_report(order))
     project = find_project(read_projects(runtime), order.project)
     login = read_cli_login(configuration, read_project_forge(project), runtime) if is_on_a_forge(project) else NO_LOGIN
     append_event(

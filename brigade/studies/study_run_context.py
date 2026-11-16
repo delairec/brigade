@@ -14,6 +14,7 @@ ANSWER_FILE = "answer.awawa"
 STUDY_RECORD_FILE = "study.json"
 CONTEXT_FILE = "context.json"
 FIELDS_THE_CLI_FILLS = ("STUDY", "RUN", "COLLECTED")
+FIRST_COLLECTOR = 1
 
 
 @dataclass(frozen=True)
@@ -36,3 +37,4 @@ class StudyRunContext:
     run_id: str
     run_directory: Path
     equipment: StudyEquipment
+    first_collector_rank: int = FIRST_COLLECTOR

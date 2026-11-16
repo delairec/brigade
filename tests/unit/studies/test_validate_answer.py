@@ -79,7 +79,7 @@ class ValidateAnswerTest(unittest.TestCase):
         self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         self.run_directory = self.root / "state" / "runs" / RUN_ID
         (self.run_directory / "steps").mkdir(parents=True)
-        (self.run_directory / "steps" / "collect.json").write_text('{"collected": []}', encoding="utf-8")
+        (self.run_directory / "steps" / "1-collect.json").write_text('{"collected": []}', encoding="utf-8")
         self.submitted = self.run_directory / "validation" / "submitted"
         self.filled = self.run_directory / "validation" / "filled"
 
@@ -205,7 +205,7 @@ class ValidateAnswerTest(unittest.TestCase):
             self.write_document("corpus", []),
             self.write_document("git-diff-stat", []),
         ]
-        (self.run_directory / "steps" / "collect.json").write_text(
+        (self.run_directory / "steps" / "1-collect.json").write_text(
             json.dumps({"collected": collected}), encoding="utf-8"
         )
         self.processes.answer_entities(
@@ -268,7 +268,7 @@ class ValidateTriageAnswerTest(unittest.TestCase):
         self.runtime = create_test_runtime(create_test_paths(self.root), run_process=self.processes)
         self.run_directory = self.root / "state" / "runs" / RUN_ID
         (self.run_directory / "steps").mkdir(parents=True)
-        (self.run_directory / "steps" / "collect.json").write_text('{"collected": []}', encoding="utf-8")
+        (self.run_directory / "steps" / "1-collect.json").write_text('{"collected": []}', encoding="utf-8")
         self.submitted = self.run_directory / "validation" / "submitted"
         self.answered = self.run_directory / "validation" / "answered"
         no_held_patterns = {}
@@ -317,7 +317,7 @@ class ValidateTriageAnswerTest(unittest.TestCase):
         families = self.root / "families.json"
         families.write_text(json.dumps(FAMILIES), encoding="utf-8")
         collected = {"collected": [{"collector": "inbox-families", "summary": {}, "document": str(families)}]}
-        (self.run_directory / "steps" / "collect.json").write_text(json.dumps(collected), encoding="utf-8")
+        (self.run_directory / "steps" / "1-collect.json").write_text(json.dumps(collected), encoding="utf-8")
         linted = []
 
         def record_the_corpus_linted(request):

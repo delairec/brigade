@@ -9,7 +9,6 @@ from brigade.ledger.order_done import OrderDone
 from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.step_done import StepDone
 from brigade.ledger.step_failed import StepFailed
-from brigade.orders.park_order import park_order
 from brigade.recipes.lint_recipe import ON_FAIL_KEY, PARK
 from brigade.runtime import Runtime
 from brigade.system.write_json_atomically import write_json_atomically
@@ -35,6 +34,7 @@ class OrderRun:
 
 
 StepPerformer = Callable[[dict, OrderRun], dict]
+OrderParking = Callable[[Runtime, OrderParked], None]
 
 
 @dataclass(frozen=True)
@@ -93,8 +93,8 @@ def _end(runtime: Runtime, run: OrderRun) -> None:
     )
 
 
-def _park(runtime: Runtime, run: OrderRun, failure: _StepFailure) -> dict:
-    park_order(
+def _park(runtime: Runtime, run: OrderRun, failure: _StepFailure, park: OrderParking) -> dict:
+    park(
         runtime,
         OrderParked(
             project=run.project,
@@ -126,12 +126,12 @@ def _run_steps(runtime: Runtime, run: OrderRun, performers: Mapping[str, StepPer
         write_json_atomically(result_path, result)
 
 
-def run_order(runtime: Runtime, run: OrderRun, performers: Mapping[str, StepPerformer]) -> dict:
+def run_order(runtime: Runtime, run: OrderRun, performers: Mapping[str, StepPerformer], park: OrderParking) -> dict:
     try:
         _run_steps(runtime, run, performers)
     except _StepFailure as failure:
         if failure.on_fail != STOP:
-            return _park(runtime, run, failure)
+            return _park(runtime, run, failure, park)
         _end(runtime, run)
         return {"order": run.order, "run": run.run_id, "state": STOPPED, "step": failure.step, "reason": failure.reason}
     _end(runtime, run)

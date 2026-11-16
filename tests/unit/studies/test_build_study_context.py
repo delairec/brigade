@@ -70,7 +70,7 @@ class BuildStudyContextTest(unittest.TestCase):
     def script_study_run(self) -> None:
         config_root = self.runtime.paths.config_root
         (self.run_directory / "study.json").write_text('{"study": "trees"}', encoding="utf-8")
-        (self.run_directory / "steps" / "collect.json").write_text(COLLECTED, encoding="utf-8")
+        (self.run_directory / "steps" / "1-collect.json").write_text(COLLECTED, encoding="utf-8")
         self.processes.answer_entity(config_root, "STUDY", "trees", STUDY_FIELDS)
         self.processes.answer_json(
             ("awawa", "show", "FINDING", "--json", str(config_root)),
@@ -142,7 +142,7 @@ class BuildStudyContextTest(unittest.TestCase):
             self.write_document("corpus", []),
             self.write_document("git-diff-stat", []),
         ]
-        (self.run_directory / "steps" / "collect.json").write_text(
+        (self.run_directory / "steps" / "1-collect.json").write_text(
             json.dumps({"collected": collected}), encoding="utf-8"
         )
         self.processes.answer_entities(config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("CORPUS", "corpus"))})

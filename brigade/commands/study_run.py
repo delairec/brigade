@@ -4,6 +4,7 @@ from pathlib import Path
 from brigade.command import Argument, Command
 from brigade.commands._equip_study import equip_study
 from brigade.corpus.read_entities import Entity
+from brigade.recipes.run_order import DONE
 from brigade.registry.find_project import find_project
 from brigade.registry.find_project_at import find_project_at
 from brigade.registry.read_projects import read_projects
@@ -11,7 +12,7 @@ from brigade.runs.run_locations import RUNS_DIRECTORY
 from brigade.runtime import Runtime
 from brigade.studies.read_study import Study, read_study
 from brigade.studies.read_study_of_run import read_study_of_run
-from brigade.studies.run_study import DONE, run_study
+from brigade.studies.run_study import run_study
 
 DOCUMENT_SCHEMA_VERSION = 1
 PARKED_EXIT_CODE = 1
