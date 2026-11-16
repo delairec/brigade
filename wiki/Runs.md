@@ -195,7 +195,7 @@ and the ledger as the foreground command does.
 
 <details><summary>The clock: wall-time limit and soft limit</summary>
 
-- Every run is held on the clock: at `ceil(cap × 1.25) × seconds_per_step` seconds, `seconds_per_step` a key of
+- Every run is held on the clock: at `ceil(cap × 1.25) × seconds_per_turn` seconds, `seconds_per_turn` a key of
   `config.toml` defaulting to 30, brigade sends SIGTERM to the client's process group, SIGKILL 30 s later, and the
   segment ends with the outcome `wall_limit`, whether its soft limit has passed or not.
 - The soft limit of a segment is its wall-time limit minus `soft_limit_margin_s` of `config.toml`, a positive number

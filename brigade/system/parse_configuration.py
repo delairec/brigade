@@ -1,9 +1,10 @@
-import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from brigade.errors import BrigadeError
+from brigade.system.find_retired_configuration_keys import find_retired_configuration_keys
 from brigade.system.name_toml_type import name_toml_type
+from brigade.system.read_configuration_document import read_configuration_document
 from brigade.system.read_dashboard_port import DASHBOARD_PORT_BY_DEFAULT, DASHBOARD_PORT_KEY, read_dashboard_port
 from brigade.system.read_journal_poll import JOURNAL_POLL_BY_DEFAULT_S, JOURNAL_POLL_KEY, read_journal_poll
 from brigade.system.read_quota_window import QUOTA_WINDOW_BY_DEFAULT_H, QUOTA_WINDOW_KEY, read_quota_window
@@ -22,8 +23,8 @@ DOCUMENT_BY_DEFAULT = "awawa"
 REFS_CACHE_MB_KEY = "refs_cache_mb"
 REASONING_LEVELS = ("deepest", "deep", "standard", "light")
 REASONING_ROW_KEYS = ("model", "effort")
-SECONDS_PER_STEP_KEY = "seconds_per_step"
-SECONDS_PER_STEP_BY_DEFAULT = 30
+SECONDS_PER_TURN_KEY = "seconds_per_turn"
+SECONDS_PER_TURN_BY_DEFAULT = 30
 SOFT_LIMIT_MARGIN_KEY = "soft_limit_margin_s"
 SOFT_LIMIT_MARGIN_BY_DEFAULT_S = 120
 SLOTS = ("plan", "build", "review", "remediate", "rebase", "report", "triage", "rules", "explore")
@@ -37,10 +38,6 @@ FORGE_ATTEMPTS_KEY = "forge_attempts"
 FORGE_ATTEMPTS_BY_DEFAULT = 3
 FEWEST_FORGE_ATTEMPTS = 1
 ATTRIBUTION_KEY = "attribution"
-
-
-class ConfigurationMissing(BrigadeError):
-    pass
 
 
 @dataclass(frozen=True)
@@ -61,7 +58,7 @@ class Configuration:
     slots: dict = field(default_factory=dict)
     slot_clients: dict = field(default_factory=dict)
     procedures: dict = field(default_factory=dict)
-    seconds_per_step: int | float = SECONDS_PER_STEP_BY_DEFAULT
+    seconds_per_turn: int | float = SECONDS_PER_TURN_BY_DEFAULT
     soft_limit_margin_s: int | float = SOFT_LIMIT_MARGIN_BY_DEFAULT_S
     trail_days: int = TRAIL_DAYS_BY_DEFAULT
     runs_kept: int = RUNS_KEPT_BY_DEFAULT
@@ -190,17 +187,6 @@ def _read_attribution(document: dict, path: Path) -> tuple[str, ...] | None:
     return tuple(_require(line, STRING, f"{ATTRIBUTION_KEY}[{index}]", path) for index, line in enumerate(lines))
 
 
-def _parse(path: Path) -> dict:
-    try:
-        content = path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        raise ConfigurationMissing(f"no configuration at {path}; run brigade init") from None
-    try:
-        return tomllib.loads(content)
-    except tomllib.TOMLDecodeError as error:
-        raise BrigadeError(f"{path} is not valid TOML: {error}") from None
-
-
 KNOWN_KEYS = (
     *STRING_KEYS,
     REFS_CACHE_MB_KEY,
@@ -209,7 +195,7 @@ KNOWN_KEYS = (
     "slots",
     SLOT_CLIENTS_KEY,
     PROCEDURES_KEY,
-    SECONDS_PER_STEP_KEY,
+    SECONDS_PER_TURN_KEY,
     SOFT_LIMIT_MARGIN_KEY,
     TRAIL_DAYS_KEY,
     RUNS_KEPT_KEY,
@@ -225,13 +211,24 @@ KNOWN_KEYS = (
 )
 
 
+def _refuse_retired_keys(document: dict, path: Path) -> None:
+    for name in find_retired_configuration_keys(document):
+        raise BrigadeError(f"the key {name.old} is now named {name.new} in {path}")
+
+
+def _read_known_keys(path: Path) -> dict:
+    document = read_configuration_document(path)
+    _refuse_retired_keys(document, path)
+    _refuse_unknown_keys(document, KNOWN_KEYS, "", path)
+    return document
+
+
 def _read_strings(document: dict, path: Path) -> dict:
     return {key: _require(document[key], STRING, key, path) for key in STRING_KEYS if key in document}
 
 
 def parse_configuration(path: Path) -> Configuration:
-    document = _parse(path)
-    _refuse_unknown_keys(document, KNOWN_KEYS, "", path)
+    document = _read_known_keys(path)
     strings = _read_strings(document, path)
     journal_poll_s, findings = read_journal_poll(document, path)
     return Configuration(
@@ -242,7 +239,7 @@ def parse_configuration(path: Path) -> Configuration:
         slots=_read_slots(document.get("slots", {}), path),
         slot_clients=_read_slot_clients(document.get(SLOT_CLIENTS_KEY, {}), path),
         procedures=_read_procedures(document.get(PROCEDURES_KEY, {}), path),
-        seconds_per_step=_read_positive_number(document, SECONDS_PER_STEP_KEY, SECONDS_PER_STEP_BY_DEFAULT, path),
+        seconds_per_turn=_read_positive_number(document, SECONDS_PER_TURN_KEY, SECONDS_PER_TURN_BY_DEFAULT, path),
         soft_limit_margin_s=_read_positive_number(
             document, SOFT_LIMIT_MARGIN_KEY, SOFT_LIMIT_MARGIN_BY_DEFAULT_S, path
         ),

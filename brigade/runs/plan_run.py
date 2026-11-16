@@ -222,7 +222,7 @@ def _plan_work(request: RunRequest, setting: RunSetting, runtime: Runtime) -> di
         "procedure": procedure,
         "role": role,
         "capabilities": tuple(capability for capability in procedure.capabilities if capability in role_capabilities),
-        "wall_limit_s": math.ceil(budget["budget"].applied * CAP_MARGIN) * configuration.seconds_per_step,
+        "wall_limit_s": math.ceil(budget["budget"].applied * CAP_MARGIN) * configuration.seconds_per_turn,
     }
 
 

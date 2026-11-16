@@ -1,7 +1,8 @@
 import unittest
 
 from brigade.corpus.shipped_data import SHIPPED_SCHEMA
-from brigade.registry.find_retired_schema_fields import RetiredName, find_retired_schema_fields
+from brigade.registry.find_retired_schema_fields import find_retired_schema_fields
+from brigade.system.retired_name import RetiredName
 
 POLICY_WITH_VERIFY_ROUNDS = """SCHEMA POLICY
 \tDESC "how far a project's waves run on their own"

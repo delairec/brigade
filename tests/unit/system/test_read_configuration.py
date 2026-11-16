@@ -2,8 +2,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from brigade.system.parse_configuration import Configuration, ConfigurationMissing
+from brigade.system.parse_configuration import Configuration
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, CONFIGURATION_REQUIRED, read_configuration
+from brigade.system.read_configuration_document import ConfigurationMissing
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
