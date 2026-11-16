@@ -12953,8 +12953,12 @@ TASK B172
 TASK B173
 	TITLE "brigade doctor validates the agents of [slots], the CLIENT and ROLESET of each project,"
 		+ "and the path, MAIN and commands of each registered project"
-	STATUS implemented
+	STATUS archived
 	DELIVERED_BY 298
+	DESC "archived on 2026-11-16: @TASK.B163 makes false its SPEC that doctor checks the first word"
+		+ "of the SETUP, ACCEPTANCE and HEAVY lines of a project and the lines shlex.split refuses;"
+		+ "those lines leave the PROJECT entity for the recipes setup, acceptance and heavy of the"
+		+ "project, whose steps doctor checks each by the executable of its argv"
 	TYPE feat
 	MILESTONE @MILESTONE.M6
 	COMPONENT "doctor"
