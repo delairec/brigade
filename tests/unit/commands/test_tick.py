@@ -800,16 +800,23 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         self.worktree = self.repository / ".brigade" / "worktrees" / "T7"
         self.spawn = SpawnRecorderDouble()
 
-    def _create_runtime(self, task: tuple, forge: ForgeDouble, setup: tuple = (), requests: tuple = ()) -> Runtime:
+    def _create_runtime(
+        self,
+        task: tuple,
+        forge: ForgeDouble,
+        recipes: dict | None = None,
+        failures: dict | None = None,
+        requests: tuple = (),
+    ) -> Runtime:
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"), *setup)},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": task},
             "REQUEST": dict(requests),
         }
         return create_test_runtime(
             create_test_paths(self.root),
-            run_process=create_machine_double(corpus, MACHINE_OUTPUTS),
+            run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **(recipes or {})}, failures),
             spawn_process=self.spawn.spawn,
             resolve_plugin=_resolve_the_collectors_beside(
                 create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
@@ -886,8 +893,12 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
     def test_should_record_a_failed_setup_as_a_failed_action_and_count_it_in_the_heartbeat(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED])
-        broken_setup = (("SETUP", 'make "deps'),)
-        runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED), broken_setup)
+        worktree = self.repository / ".brigade" / "worktrees" / "T7"
+        setup_recipe = create_recipe_outputs(worktree, {"setup": (("make", "deps"),)})
+        failing_make = {("make", "deps"): CommandFailed(("make", "deps"), 2, "No rule to make target 'deps'.")}
+        runtime = self._create_runtime(
+            TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED), setup_recipe, failing_make
+        )
 
         # Act
         document = COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
@@ -926,7 +937,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "project": "tidepool",
                     "wave": "tidepool_w16",
                     "task": "T7",
-                    "error": 'the setup of @TASK.T7 failed: the line make "deps splits into no argv: No closing quotation',
+                    "error": "the setup of @TASK.T7 failed: make deps exited 2: No rule to make target 'deps'.",
                 },
                 {
                     "schema_version": 1,
