@@ -17,11 +17,8 @@ from brigade.commands._locate_recipe_places import locate_recipe_places
 from brigade.commands.run import run as launch_run
 from brigade.corpus.read_entities import Entity
 from brigade.corpus.read_entity import read_entity
-from brigade.ledger.order_done import OrderDone
-from brigade.ledger.order_parked import OrderParked
-from brigade.ledger.order_started import OrderStarted
-from brigade.ledger.read_ledger import read_ledger
 from brigade.orders.convert_order import Order, convert_order
+from brigade.orders.find_parked_order_run import find_parked_order_run
 from brigade.orders.read_order_run import read_order_run
 from brigade.orders.start_order_run import start_order_run
 from brigade.preflights.run_preflight import PreflightOutcome, PreflightRun, run_preflight
@@ -47,7 +44,6 @@ ENTITY_TYPE = "ORDER"
 PARKED_EXIT_CODE = 1
 PARAM_SEPARATOR = "="
 PROJECT_VALUE = "project"
-NO_PARKED_RUN = None
 NO_PROJECT = None
 NO_GATE_PARAMETERS = {}
 COLLECTOR_KIND = "collector"
@@ -83,18 +79,6 @@ def _locate_project(project: Entity | None, runtime: Runtime) -> Path:
     if project is None:
         return locate_checkout(runtime)
     return Path(read_project_field(project, "PATH"))
-
-
-def _find_parked_run(runtime: Runtime, order: Order) -> str | None:
-    last_event = None
-    for entry in read_ledger(runtime.paths.state_root).entries:
-        event = entry.event
-        if isinstance(event, OrderStarted | OrderParked | OrderDone) and (event.kind, event.order) == (
-            order.recipe,
-            order.name,
-        ):
-            last_event = event
-    return last_event.run if isinstance(last_event, OrderParked) else NO_PARKED_RUN
 
 
 def _start_new_run(runtime: Runtime, order: Order, recipe: dict) -> str:
@@ -160,7 +144,7 @@ def resolve_order(runtime: Runtime, name: str) -> ResolvedOrder:
 def _take_run(runtime: Runtime, request: argparse.Namespace, resolved: ResolvedOrder) -> str:
     if request.run_id is not None:
         return request.run_id
-    return _find_parked_run(runtime, resolved.order) or _start_new_run(runtime, resolved.order, resolved.recipe)
+    return find_parked_order_run(runtime, resolved.order) or _start_new_run(runtime, resolved.order, resolved.recipe)
 
 
 def order_run(request: argparse.Namespace, runtime: Runtime) -> dict:
