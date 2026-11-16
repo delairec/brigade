@@ -1,5 +1,6 @@
 import argparse
 import contextlib
+import functools
 import json
 import tempfile
 import unittest
@@ -13,6 +14,7 @@ from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.step_done import StepDone
+from brigade.system.resolve_plugin import resolve_plugin
 from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
@@ -22,6 +24,7 @@ from tests.unit.registry_answers import create_registry_answers
 from tests.unit.select_argvs_run_in import select_argvs_run_in
 from tests.value_matchers import PatternMatcher
 
+NO_PLUGIN_SOURCES = None
 PARKED_RUN = "20261018T090000Z-aaaaaa"
 USAGE_REPORT = (
     'schema_version = 1\nname = "usage-report"\ndescription = "the usage report of a pull request"\n'
@@ -57,6 +60,38 @@ GATED_ORDER = ProcessAnswer(
         }
     )
 )
+COLLECTED = (
+    'schema_version = 1\nname = "collected"\ndescription = "the open issues"\nparams = []\nmax_wall = 30\n'
+    '[[steps]]\nkind = "collect"\ncollector = "open-issues"\n'
+)
+JUDGED = (
+    'schema_version = 1\nname = "judged"\ndescription = "a judged triage"\nparams = []\nmax_wall = 30\n'
+    '[[steps]]\nkind = "judge"\nslot = "judging"\nprocedure = "triage"\nanswer = "ANSWER"\n'
+)
+OPEN_ISSUES = {
+    "schema_version": 1,
+    "collector": "open-issues",
+    "collected_at": "2026-10-19T09:00:00Z",
+    "cache": False,
+    "summary": {"open": 2},
+    "items": [],
+}
+
+
+def create_order_answer(recipe: str) -> ProcessAnswer:
+    return ProcessAnswer(
+        stdout=json.dumps(
+            {
+                "fields": [
+                    {"name": "RECIPE", "atoms": [f'"{recipe}"']},
+                    {"name": "PROJECT", "atoms": ['"@PROJECT.shop"']},
+                    {"name": "STATUS", "atoms": ['"active"']},
+                ]
+            }
+        )
+    )
+
+
 NEW_RUN = PatternMatcher("20261019T090000Z-[0-9a-f]{6}")
 
 
@@ -70,11 +105,17 @@ class OrderRunTest(unittest.TestCase):
         (self.paths.config_root / "recipes").mkdir()
         (self.paths.config_root / "recipes" / "usage-report.toml").write_text(USAGE_REPORT, encoding="utf-8")
         (self.paths.config_root / "recipes" / "gated.toml").write_text(GATED, encoding="utf-8")
+        (self.paths.config_root / "recipes" / "collected.toml").write_text(COLLECTED, encoding="utf-8")
+        (self.paths.config_root / "recipes" / "judged.toml").write_text(JUDGED, encoding="utf-8")
         (self.paths.config_root / "preflights").mkdir()
         (self.paths.config_root / "preflights" / "quiet.toml").write_text(QUIET, encoding="utf-8")
         self.shop = root / "shop"
         self.shop.mkdir()
         self.enterContext(contextlib.chdir(self.shop))
+        collector = self.shop / ".brigade" / "collectors" / "open-issues"
+        collector.parent.mkdir(parents=True)
+        collector.write_text("#!/bin/sh\n", encoding="utf-8")
+        collector.chmod(0o755)
         config = str(self.paths.config_root)
         self.runner = RecordingProcessRunner(
             {
@@ -82,9 +123,16 @@ class OrderRunTest(unittest.TestCase):
                 **create_checkout_answers(self.shop, self.shop),
                 ("awawa", "show", "@ORDER.nightly", "--json", config): NIGHTLY,
                 ("awawa", "show", "@ORDER.gated", "--json", config): GATED_ORDER,
+                ("awawa", "show", "@ORDER.collected", "--json", config): create_order_answer("collected"),
+                ("awawa", "show", "@ORDER.judged", "--json", config): create_order_answer("judged"),
+                (str(collector),): ProcessAnswer(stdout=json.dumps(OPEN_ISSUES)),
             }
         )
-        self.runtime = create_test_runtime(self.paths, run_process=self.runner)
+        self.runtime = create_test_runtime(
+            self.paths,
+            run_process=self.runner,
+            resolve_plugin=functools.partial(resolve_plugin, sources=NO_PLUGIN_SOURCES),
+        )
 
     def test_should_run_the_steps_of_the_recipe_of_the_order_in_its_project(self):
         # Act
@@ -163,6 +211,40 @@ class OrderRunTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "order": "gated", "run": NEW_RUN, "state": "done"})
+
+    def test_should_keep_the_document_of_the_collector_a_collect_step_names(self):
+        # Act
+        document = order_run(argparse.Namespace(name="collected"), self.runtime)
+
+        # Assert
+        step_file = self.paths.state_root / "runs" / document["run"] / "steps" / "1-collect.json"
+        self.assertEqual(
+            json.loads(step_file.read_text(encoding="utf-8")),
+            {
+                "collector": "open-issues",
+                "summary": {"open": 2},
+                "document": str(
+                    self.paths.state_root / "runs" / document["run"] / "collectors/1/collect/open-issues/document.json"
+                ),
+            },
+        )
+
+    def test_should_park_the_order_on_a_judging_run_that_cannot_start(self):
+        # Act
+        document = order_run(argparse.Namespace(name="judged"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document,
+            {
+                "schema_version": 1,
+                "order": "judged",
+                "run": NEW_RUN,
+                "state": "parked",
+                "step": "1-judge",
+                "reason": f"no configuration at {self.paths.config_root / 'config.toml'}; run brigade init",
+            },
+        )
 
 
 class OrderRunTextTest(unittest.TestCase):
