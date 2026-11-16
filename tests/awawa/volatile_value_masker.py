@@ -3,12 +3,13 @@ import re
 PLACEHOLDER = re.compile(r"<tmp:(\d+)>")
 INSTANT_PLACEHOLDER = re.compile(r"<instant:(\d+)>")
 COMMIT_PLACEHOLDER = re.compile(r"<commit:(\d+)>")
+COMPACT_INSTANT_PLACEHOLDER = re.compile(r"<compact_instant:(\d+)>")
 RUN_PLACEHOLDER = re.compile(r"<(run|run_name):(\d+)>")
 VOLATILE_PLACEHOLDER = re.compile(r"<(?:tmp|instant|commit|run|run_name|compact_instant):\d+>")
 NAME_IN_TEMPORARY_ROOT = r"/[^/\s\"'`:;,()\[\]{}<>]+"
 UTC_INSTANT = r"(?P<instant>\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ)"
 COMMIT_NAME = r"(?P<commit>\b[0-9a-f]{40}\b)"
-RUN_ID = r"(?P<run>\d{8}T\d{6}Z-[0-9a-f]{6})|(?P<run_name>\d{8}T\d{6}Z_[0-9a-f]{6})"
+RUN_ID = r"(?P<run>\d{8}T\d{6}Z-[0-9a-f]{6})|(?P<run_name>\d{8}T\d{6}Z_[0-9a-f]{6}(?![0-9A-Za-z]))"
 COMPACT_INSTANT = r"(?P<compact_instant>\d{8}T\d{6}Z)"
 
 

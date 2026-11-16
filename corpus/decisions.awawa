@@ -7629,3 +7629,46 @@ DECISION EveryReportNamesThePatternItsOrderComesFromAndNoneOutsideTheResultOfAnO
 		+ "would test the presence of a key by kind of report"
 	SOURCE "the pull request of @TASK.B53"
 		REF @TASK.B53
+
+DECISION AGateStepHandsItsPreflightTheParametersItNamesFilledFromTheOrder
+	TITLE "a gate step of a recipe takes parameters, as a collect step does, each placeholder"
+		+ "filled from the params of the order, and hands them to its preflight as the key=value"
+		+ "pairs of brigade preflight"
+	STATUS active
+	REJECTED "every param of the order handed to the preflight: a param of the recipe named like a"
+		+ "parameter of a check would reach it unasked"
+	SOURCE "the pull request of @TASK.B52, whose gate pr-reviewed needs the pull request the order"
+		+ "names"
+		REF @TASK.B52
+
+DECISION ThePrFileOutputCommitsTheAnswerOnTheHeadBranchOfItsPullRequest
+	TITLE "the output pr-file:<n>:<path> writes the answer at <path> in a detached worktree of the"
+		+ "head branch of the pull request <n>, commits it and pushes that branch; it needs a"
+		+ "project with a forge, and the placeholders of an output step are filled from the params"
+		+ "of the order"
+	STATUS active
+	REJECTED "a commit in the checkout of the project: it would change the branch and the files the"
+		+ "user works on"
+	REJECTED "a pull request of the report into the head branch: the report would wait for a merge"
+		+ "of its own before the merge it reports on"
+	SOURCE "the pull request of @TASK.B52"
+		REF @TASK.B52
+
+DECISION TheCheckReviewedReadsTheReviewCountOfThePullRequestListing
+	TITLE "the check reviewed fails on the pull request its parameter pr names when the listing of"
+		+ "the forge carries no review submitted on it, or does not list it; the listing carries"
+		+ "the count of the reviews submitted"
+	STATUS active
+	REJECTED "the review decision of the pull request: it stays empty on a repository that requires"
+		+ "no review, however many reviews were submitted"
+	SOURCE "the pull request of @TASK.B52"
+		REF @TASK.B52
+
+DECISION TheRecipePrUsageReportCollectsTheReviewThreadsWholeAndItsJudgeReadsItsPullRequest
+	TITLE "the recipe pr-usage-report collects pr-threads with no filter, and its judge step reads"
+		+ "the entry of the pull request its order names"
+	STATUS active
+	REJECTED "a pr parameter added to the collector pr-threads: a second way to read the same"
+		+ "threads, for a document the judge already reads by the number of its pull request"
+	SOURCE "the pull request of @TASK.B52"
+		REF @TASK.B52
