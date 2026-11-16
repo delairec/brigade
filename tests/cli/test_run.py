@@ -274,7 +274,7 @@ class BrigadeRunStoppedBySignalTest(RunTestCase):
                     "argv": [
                         sys.executable,
                         "-m",
-                        "brigade.adapters.test_clients.replay_recording",
+                        "brigade.adapters.test_clients.launch_replay",
                         str(self.hold),
                         "",
                         str(self.runs / run_id / "progress.md"),
