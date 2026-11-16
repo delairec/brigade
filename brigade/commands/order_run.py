@@ -22,6 +22,7 @@ from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.read_ledger import read_ledger
 from brigade.orders.convert_order import Order, convert_order
+from brigade.orders.read_order_run import read_order_run
 from brigade.orders.start_order_run import start_order_run
 from brigade.preflights.run_preflight import PreflightOutcome, PreflightRun, run_preflight
 from brigade.recipes.create_collect_performer import create_collect_performer
@@ -32,13 +33,12 @@ from brigade.recipes.create_output_performer import create_output_performer
 from brigade.recipes.hand_result import ResultHandoff, hand_result
 from brigade.recipes.keep_result import keep_result
 from brigade.recipes.resolve_recipe import resolve_recipe
-from brigade.recipes.run_order import DONE, OrderRun, StepPerformer, run_order
+from brigade.recipes.run_order import DONE, StepPerformer, run_order
 from brigade.registry.find_project import find_project
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runs.create_run_id import create_run_id
-from brigade.runs.run_locations import RUNS_DIRECTORY
 from brigade.runtime import Runtime
 from brigade.system.collector_places import locate_collectors
 
@@ -166,15 +166,9 @@ def _take_run(runtime: Runtime, request: argparse.Namespace, resolved: ResolvedO
 def order_run(request: argparse.Namespace, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     resolved = resolve_order(runtime, request.name)
-    order, project_entity, project, recipe = resolved.order, resolved.project_entity, resolved.project, resolved.recipe
+    order, project_entity, project = resolved.order, resolved.project_entity, resolved.project
     run_id = _take_run(runtime, request, resolved)
-    run = OrderRun(
-        order=order.name,
-        project=order.project,
-        recipe=recipe,
-        run_id=run_id,
-        run_directory=runtime.paths.state_root / RUNS_DIRECTORY / run_id,
-    )
+    run = read_order_run(runtime, run_id)
     values = _read_values(order)
     performers = {
         "collect": create_collect_performer(_equip_collect(project, runtime), values),
