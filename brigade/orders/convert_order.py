@@ -13,6 +13,7 @@ class Order:
     text: str | None
     params: tuple[str, ...]
     every: str | None
+    output: str | None
     status: str
 
     def to_document(self) -> dict:
@@ -23,6 +24,7 @@ class Order:
             "text": self.text,
             "params": list(self.params),
             "every": self.every,
+            "output": self.output,
             "status": self.status,
         }
 
@@ -44,5 +46,6 @@ def convert_order(entity: Entity) -> Order:
         text=_read_optional_value(entity, "TEXT"),
         params=_read_values(entity, "PARAM"),
         every=_read_optional_value(entity, "EVERY"),
+        output=_read_optional_value(entity, "OUTPUT"),
         status=_read_values(entity, "STATUS")[0],
     )
