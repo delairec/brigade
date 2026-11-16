@@ -16,7 +16,7 @@ from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_started import WaveStarted
 from tests.unit.commands.command_runtime import create_machine_double, create_worktrees_double, write_ledger
 from tests.unit.commands.run_directories import create_run_record
-from tests.unit.commands.test_verify_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
+from tests.unit.commands.test_preflight import TASK_PR_OPENED, TASK_WORKTREE, TIDEPOOL_PROJECT, WAVE_STARTED
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.verify.test_record_verdict import create_review_forge

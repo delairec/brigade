@@ -5,13 +5,20 @@ from brigade.command import Argument, Command
 from brigade.commands._accept_parameter import accept_parameter
 from brigade.commands._equip_collector import equip_collector
 from brigade.commands._equip_preflight import equip_preflight
+from brigade.commands._equip_registered_collector import equip_registered_collector
 from brigade.commands._locate_preflights import locate_preflights
 from brigade.commands._read_parameters import read_parameters
 from brigade.git.locate_main_checkout import locate_main_checkout
 from brigade.git.locate_worktree_root import locate_worktree_root
 from brigade.preflights.run_preflight import PreflightRun, run_preflight
+from brigade.registry.read_projects import read_projects
+from brigade.registry.require_project_at import require_project_at
 from brigade.runtime import Runtime
 from brigade.system.check_shapes import FAILED
+from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
+from brigade.tasks.find_task_base import find_task_base
+from brigade.verify.find_opened_task import find_opened_task
+from brigade.verify.preflight_pull_request import VERIFY_PULL_REQUEST, PreflightDemand, preflight_pull_request
 
 DOCUMENT_SCHEMA_VERSION = 1
 
@@ -28,9 +35,29 @@ def _decide_exit_code(document: dict) -> int:
     return int(document["verdict"] == FAILED)
 
 
+def _preflight_pull_request(pr: int, runtime: Runtime) -> dict:
+    configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)
+    worktree = locate_worktree_root(runtime.run_process, Path.cwd())
+    project = require_project_at(read_projects(runtime), locate_main_checkout(runtime.run_process, worktree))
+    task = find_opened_task(runtime, project.name, pr).opened.task
+    return preflight_pull_request(
+        runtime,
+        PreflightDemand(
+            project=project,
+            task=task,
+            base_branch=find_task_base(runtime, worktree, project, task),
+            pr=pr,
+            equipment=equip_registered_collector(project, configuration, runtime),
+            plugins=equip_preflight(runtime),
+        ),
+    )
+
+
 def preflight(request: argparse.Namespace, runtime: Runtime) -> dict:
-    project = locate_main_checkout(runtime.run_process, locate_worktree_root(runtime.run_process, Path.cwd()))
     parameters = read_parameters(request.extra_arguments)
+    if request.name == VERIFY_PULL_REQUEST:
+        return _preflight_pull_request(int(parameters["pr"]), runtime)
+    project = locate_main_checkout(runtime.run_process, locate_worktree_root(runtime.run_process, Path.cwd()))
     run = PreflightRun(
         name=request.name,
         project=project,

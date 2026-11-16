@@ -7350,7 +7350,7 @@ DECISION APreflightHandsItsChecksTheDocumentsOfItsCollectors
 		+ "collector pull-request, parameters pr, task and base, which verify-pull-request names"
 	DESC "the key=value pairs of brigade preflight are the parameters of every collector and every"
 		+ "check of the preflight, over the parameters the preflight declares for each"
-	DESC "brigade verify preflight measures the size of the diff itself, beside the checks of"
+	DESC "preflight_pull_request measures the size of the diff itself, beside the checks of"
 		+ "verify-pull-request, from the changed files of the document of pull-request"
 	REJECTED "each built-in check gathering the facts of the pull request it reads: the pull"
 		+ "request read from the forge and its trees prepared seven times, and an action the"
@@ -7712,4 +7712,19 @@ DECISION TaskCheckRunsTheBuiltInPreflightTask
 		+ "corpus_at_head read the summary of pull-request or task-worktree, whichever the"
 		+ "preflight collected"
 	SOURCE "the build run of @TASK.B256, SPEC 3"
+		REF @TASK.B256
+
+DECISION PreflightVerifyPullRequestReadsItsTaskFromThePullRequest
+	TITLE "brigade preflight verify-pull-request takes pr alone: it reads the task from the"
+		+ "task.pr_opened naming the pull request and the base from the milestone of the task, and"
+		+ "prints the document of preflight_pull_request, which names the preflight and its verdict"
+		+ "beside the project, the pull request, the task, the head and the checks, the size"
+		+ "included; the built-in verify-pull-request is the one this name runs"
+	STATUS active
+	REJECTED "the parameters task and base kept on the command line: the user names the pull"
+		+ "request alone, as brigade verify preflight took it, and the tick passes the task and the"
+		+ "base it already holds to preflight_pull_request"
+	REJECTED "the size as a check of the preflight: CHECK_DOCUMENT_SHAPE allows the verdicts pass"
+		+ "and fail alone, and the size judges nothing"
+	SOURCE "the build run of @TASK.B256, SPEC 4"
 		REF @TASK.B256

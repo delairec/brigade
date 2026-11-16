@@ -28,7 +28,6 @@ Every command of brigade, what it does in one line, and the page that documents 
 | `brigade plan context` | print the package a planner reads to cut a request into a wave | — |
 | `brigade wave start\|show\|list\|cancel\|resume\|requeue` | start the waves of the projects, list, show and cancel them | [Waves](Waves.md) |
 | `brigade task context\|check\|push\|pr\|promote` | work on a task of a wave from its worktree | [Tasks](Tasks.md) |
-| `brigade verify preflight` | run the deterministic checks of a pull request of a task before any judgment | [Preflight](Preflight.md) |
 | `brigade verify context\|verdict` | print what the verification of the pull request of a task judges, and record its verdict | [Verification](Verification.md) |
 | `brigade review context\|reply` | answer the review of the pull request of a task | [Review answers](Review-answers.md) |
 | `brigade rebase context\|done\|pr` | put the pull request of a task back on its base, or open the pull request repairing a red main branch | [Rebase on the base](Rebase-on-the-base.md) |
@@ -39,6 +38,7 @@ Every command of brigade, what it does in one line, and the page that documents 
 | `brigade collect <name>` | run a collector and print the summary and the path of its document; `key=value` pairs are its parameters | [Studies](Studies.md) |
 | `brigade collectors list` | list every collector found, its name and its source | [Studies](Studies.md) |
 | `brigade preflight <name>` | run the collectors and the checks of a named preflight; `key=value` pairs are their parameters | [Preflight](Preflight.md) |
+| `brigade preflight verify-pull-request pr=<pr>` | run the deterministic checks of the pull request of a task before any judgment, the size included | [Preflight](Preflight.md) |
 | `brigade preflight add <name> <step>` | add a collector or a check, `key=value` pairs its parameters, to a custom preflight of the project, committing nothing | [Preflight](Preflight.md) |
 | `brigade check list` | list every check found, its name and its source | [Preflight](Preflight.md) |
 | `brigade recipe list` | list every recipe found, its name and its source — project, machine, built-in, `wave` native — in the order they resolve | [Recipes](Recipes.md) |
