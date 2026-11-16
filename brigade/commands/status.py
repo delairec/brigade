@@ -1,12 +1,15 @@
 import argparse
 
 from brigade.command import Command
-from brigade.corpus.read_entities import Entity
+from brigade.corpus.read_entities import Entity, read_entities
 from brigade.inbox.read_inbox import NEW_STATUS, Signal, read_inbox
 from brigade.inbox.render_age import render_age
 from brigade.ledger.ledger_entry import LedgerEntry
+from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.sum_quota_usage import sum_quota_usage
+from brigade.orders.convert_order import convert_order
+from brigade.orders.read_order_facts import ORDER_EVENTS
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runtime import Runtime
@@ -16,6 +19,7 @@ from brigade.studies.read_quota_resumes import read_quota_resumes
 from brigade.studies.read_studies import read_studies
 from brigade.studies.record_scan_signals import SCAN_KIND
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
+from brigade.tick.build_snapshot import ORDER_ENTITY_TYPE
 from brigade.tick.describe_heartbeat import describe_heartbeat
 from brigade.tick.describe_study_facts import describe_study_facts
 from brigade.tick.is_study_due import is_study_due
@@ -82,6 +86,28 @@ def _list_studies_to_watch(runtime: Runtime) -> list[dict]:
     return studies
 
 
+def _list_parked_orders(runtime: Runtime, entries: tuple[LedgerEntry, ...]) -> list[dict]:
+    last_events = {
+        (entry.event.kind, entry.event.order): entry.event for entry in entries if isinstance(entry.event, ORDER_EVENTS)
+    }
+    orders = (
+        convert_order(entity)
+        for entity in read_entities(runtime.run_process, runtime.paths.config_root, ORDER_ENTITY_TYPE)
+    )
+    return [
+        {
+            "name": order.name,
+            "recipe": order.recipe,
+            "project": order.project,
+            "run": parked.run,
+            "step": parked.step,
+            "reason": parked.reason,
+        }
+        for order in orders
+        if isinstance(parked := last_events.get((order.recipe, order.name)), OrderParked)
+    ]
+
+
 def _list_scans(new_signals: list[Signal]) -> list[dict]:
     ages_by_study: dict[str, list[int]] = {}
     for signal in new_signals:
@@ -124,6 +150,10 @@ def _render_study(study: dict) -> str:
     return f"study      {study['name']}, {DUE if study['due'] else study['outcome']}"
 
 
+def _render_order(order: dict) -> str:
+    return f"order      {order['name']} of {order['project']}, parked at {order['step']}: {order['reason']}"
+
+
 def _render_text(document: dict) -> str:
     return "\n".join(
         [
@@ -137,6 +167,7 @@ def _render_text(document: dict) -> str:
             _render_quota(document["quota"]),
             f"last tick  {_render_last_tick(document['last_tick'])}",
             *(_render_study(study) for study in document["studies"]),
+            *(_render_order(order) for order in document["orders"]),
         ]
     )
 
@@ -156,6 +187,7 @@ def status(request: argparse.Namespace, runtime: Runtime) -> dict:
         "quota": _describe_quota(entries, waves, runtime),
         "last_tick": describe_heartbeat(read_heartbeat(runtime.paths.heartbeat_file)),
         "studies": _list_studies_to_watch(runtime),
+        "orders": _list_parked_orders(runtime, entries),
     }
 
 
