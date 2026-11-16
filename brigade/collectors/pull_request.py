@@ -7,6 +7,7 @@ from brigade.collecting.describe_collection import describe_collection
 from brigade.collecting.read_collector_environment import read_collector_environment
 from brigade.corpus.prepare_project_checkout import prepare_project_checkout
 from brigade.corpus.prepare_project_tree import prepare_project_tree
+from brigade.corpus.read_entities import Entity
 from brigade.git.count_changed_lines import count_changed_lines
 from brigade.git.fetch_branches import BranchesFetch, fetch_branches
 from brigade.git.find_merge_base import find_merge_base
@@ -72,29 +73,13 @@ def _fetch_pull_request(query: _PullRequestQuery, runtime: Runtime) -> dict:
     return pull_request
 
 
-def collect(environment: dict, runtime: Runtime, equipment: CollectorEquipment) -> dict:
-    inputs = read_collector_environment(environment)
-    project = require_project_at(read_projects(runtime), inputs.project)
-    repository = Path(read_project_field(project, "PATH"))
-    query = _PullRequestQuery(
-        repository=repository,
-        pr=int(inputs.parameters["pr"]),
-        base_branch=inputs.parameters["base"],
-        equipment=equipment,
-    )
-    pull_request = _fetch_pull_request(query, runtime)
+def _describe_revisions(project: Entity, query: _PullRequestQuery, head: str, runtime: Runtime) -> dict:
     run_process = runtime.run_process
-    head = pull_request["head_sha"]
+    repository = query.repository
     base_head = resolve_commit(run_process, repository, f"{REMOTE_BRANCH_PREFIX}{query.base_branch}")
     base = find_merge_base(run_process, repository, base_head, head)
-    configuration = equipment.configuration
-    privacy = read_privacy_patterns(project)
-    summary = {
-        "project": project.name,
-        "pr": query.pr,
-        "task": inputs.parameters["task"],
-        "base_branch": query.base_branch,
-        "repository": str(repository),
+    configuration = query.equipment.configuration
+    return {
         "base_head": base_head,
         "base": base,
         "head": head,
@@ -106,9 +91,37 @@ def collect(environment: dict, runtime: Runtime, equipment: CollectorEquipment) 
             dataclasses.asdict(changed) for changed in count_changed_lines(run_process, repository, base, head)
         ],
         "added_lines": [dataclasses.asdict(added) for added in list_added_lines(run_process, repository, base, head)],
-        "check_runs": pull_request["checks"],
-        "body": pull_request["body"],
+    }
+
+
+def _describe_project_rules(project: Entity) -> dict:
+    privacy = read_privacy_patterns(project)
+    return {
         "acceptance": [field.value for field in project.fields if field.name == ACCEPTANCE_FIELD],
         "privacy": {"private": list(privacy.private), "public": list(privacy.public)},
+    }
+
+
+def collect(environment: dict, runtime: Runtime, equipment: CollectorEquipment) -> dict:
+    inputs = read_collector_environment(environment)
+    project = require_project_at(read_projects(runtime), inputs.project)
+    repository = Path(read_project_field(project, "PATH"))
+    query = _PullRequestQuery(
+        repository=repository,
+        pr=int(inputs.parameters["pr"]),
+        base_branch=inputs.parameters["base"],
+        equipment=equipment,
+    )
+    pull_request = _fetch_pull_request(query, runtime)
+    summary = {
+        "project": project.name,
+        "pr": query.pr,
+        "task": inputs.parameters["task"],
+        "base_branch": query.base_branch,
+        "repository": str(repository),
+        **_describe_revisions(project, query, pull_request["head_sha"], runtime),
+        "check_runs": pull_request["checks"],
+        "body": pull_request["body"],
+        **_describe_project_rules(project),
     }
     return {**describe_collection(NAME, runtime, summary, NO_ITEMS), "cache": FRESH_AT_EACH_CALL}
