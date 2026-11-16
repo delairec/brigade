@@ -236,7 +236,7 @@ class PlanRunOfAReadingProcedureTest(PlanRunTestCase):
             plan.warnings,
             (
                 (
-                    "fake counts no steps: the budget of 75 steps is held on the clock"
+                    "fake counts no turns: the budget of 75 turns is held on the clock"
                     " and the run cut at its limit of 1880 s"
                 ),
             ),

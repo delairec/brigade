@@ -58,7 +58,7 @@ class LaunchPlannerTest(unittest.TestCase):
         self.assertEqual(
             launched["warnings"],
             [
-                "double counts no steps: the budget of 50 steps is held on the clock and the run cut at its limit of 1890 s"
+                "double counts no turns: the budget of 50 turns is held on the clock and the run cut at its limit of 1890 s"
             ],
         )
 

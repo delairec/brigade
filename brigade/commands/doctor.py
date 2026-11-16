@@ -58,7 +58,7 @@ NO_SLOT_CLIENTS = {}
 AWAWA_WEB_FALLBACK = "the dashboard's corpus view only"
 INSTRUCTIONS_FALLBACK = "built-in roles and no instructions package"
 NO_INSTRUCTIONS = "none configured"
-STEPS_FALLBACK = "the wall-time limit of each run"
+TURNS_FALLBACK = "the wall-time limit of each run"
 STEP_COUNT_FEATURE = "step_count"
 CHECKOUT_FALLBACK = "git pull in the checkout"
 SCHEMA_FALLBACK = "throw the operational corpus away, then run brigade init"
@@ -90,12 +90,12 @@ def _create_optional(name: str, state: str, detail: str, fallback: str) -> dict:
     return {"name": name, "kind": "optional", "state": state, "detail": detail, "fallback": fallback}
 
 
-def _check_python() -> dict:
+def _inspect_python() -> dict:
     running = _format_version(tuple(sys.version_info[:3]))
     return _create_prerequisite("python", "ok", f"{running} (floor {_format_version(PYTHON_FLOOR)})")
 
 
-def _check_git(runtime: Runtime) -> dict:
+def _inspect_git(runtime: Runtime) -> dict:
     try:
         version = read_git_version(runtime.run_process)
     except ToolNotFound:
@@ -110,7 +110,7 @@ def _read_release(version: str):
         return None
 
 
-def _check_awawa(runtime: Runtime) -> dict:
+def _inspect_awawa(runtime: Runtime) -> dict:
     floor = _format_version(AWAWA_FLOOR)
     try:
         version = read_awawa_version(runtime.run_process)
@@ -141,7 +141,7 @@ def _probe_configured_client(reading: Configuration | BrigadeError, runtime: Run
     return configured.name, ask_named_client(client, question, configured.configuration, runtime)
 
 
-def _check_client(reading: Configuration | BrigadeError, runtime: Runtime) -> dict:
+def _inspect_client(reading: Configuration | BrigadeError, runtime: Runtime) -> dict:
     try:
         name, probe = _probe_configured_client(reading, runtime)
     except BrigadeError as error:
@@ -159,7 +159,7 @@ def _check_client(reading: Configuration | BrigadeError, runtime: Runtime) -> di
     return _create_prerequisite("client", "ok", f"{name}: {first_line}")
 
 
-def _check_scheduler(runtime: Runtime) -> dict:
+def _inspect_scheduler(runtime: Runtime) -> dict:
     try:
         systemd_state = read_user_systemd_state(runtime.run_process)
     except ToolNotFound:
@@ -171,7 +171,7 @@ def _check_scheduler(runtime: Runtime) -> dict:
     return _create_optional("scheduler", "warning", f"no user systemd instance ({systemd_state})", SCHEDULER_FALLBACK)
 
 
-def _check_linger(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
+def _inspect_linger(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
     configured = None if isinstance(reading, BrigadeError) else reading.scheduler
     if choose_scheduler(configured, runtime.run_process).name != "systemd":
         return []
@@ -198,7 +198,7 @@ def _read_login_environment(forge, forge_name: str, login: str, runtime: Runtime
         return error
 
 
-def _check_cli_environment(login: str | None, environment: dict | ToolNotFound | None) -> dict | None:
+def _inspect_cli_environment(login: str | None, environment: dict | ToolNotFound | None) -> dict | None:
     if isinstance(environment, ToolNotFound):
         return _create_optional("forge", "warning", "gh not on PATH", FORGE_FALLBACK)
     if environment is None:
@@ -206,7 +206,7 @@ def _check_cli_environment(login: str | None, environment: dict | ToolNotFound |
     return None
 
 
-def _check_forge(forge, forge_name: str, environment: dict, runtime: Runtime) -> dict:
+def _inspect_forge(forge, forge_name: str, environment: dict, runtime: Runtime) -> dict:
     try:
         account = ask_forge_account(forge, forge_name, environment, runtime)
     except ToolNotFound:
@@ -227,7 +227,7 @@ def _describe_forge_login(state: str, detail: str) -> dict:
     return _create_optional("forge login", state, detail, FORGE_LOGIN_FALLBACK)
 
 
-def _check_forge_login(login: str, keys: list[str], environment: dict | ToolNotFound | None) -> dict:
+def _inspect_forge_login(login: str, keys: list[str], environment: dict | ToolNotFound | None) -> dict:
     bound = ", ".join(keys)
     if isinstance(environment, ToolNotFound):
         return _describe_forge_login("warning", f"gh not on PATH for {login}, bound to {bound}")
@@ -236,7 +236,7 @@ def _check_forge_login(login: str, keys: list[str], environment: dict | ToolNotF
     return _describe_forge_login("ok", f"{login} for {bound}")
 
 
-def _check_forge_and_its_logins(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
+def _inspect_forge_and_its_logins(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
     if _is_unreadable(reading):
         return [
             _create_optional("forge", "warning", str(reading), FORGE_FALLBACK),
@@ -248,7 +248,7 @@ def _check_forge_and_its_logins(reading: Configuration | BrigadeError, runtime: 
         return [_create_optional("forge", "warning", f"PROJECT unreadable: {error}", FORGE_FALLBACK)]
     if not forge_names:
         return [_create_optional("forge", "ok", NO_PROJECT_ON_A_FORGE, FORGE_FALLBACK)]
-    return [item for forge_name in forge_names for item in _check_one_forge(reading, forge_name, runtime)]
+    return [item for forge_name in forge_names for item in _inspect_one_forge(reading, forge_name, runtime)]
 
 
 def _read_project_forges(runtime: Runtime) -> list[str]:
@@ -257,17 +257,17 @@ def _read_project_forges(runtime: Runtime) -> list[str]:
     return sorted({read_project_forge(project) for project in read_projects(runtime)} - {NO_FORGE})
 
 
-def _check_one_forge(reading: Configuration | BrigadeError, forge_name: str, runtime: Runtime) -> list[dict]:
+def _inspect_one_forge(reading: Configuration | BrigadeError, forge_name: str, runtime: Runtime) -> list[dict]:
     forge = runtime.resolve_plugin("forge", forge_name)
     forge_accounts = _read_forge_accounts(reading)
     keys_by_login = _group_keys_by_login(forge_accounts)
     environments = {login: _read_login_environment(forge, forge_name, login, runtime) for login in keys_by_login}
     cli_login = forge_accounts.get(CLI_KEY)
     cli_environment = UNBOUND_ENVIRONMENT if cli_login is None else environments[cli_login]
-    cli_warning = _check_cli_environment(cli_login, cli_environment)
+    cli_warning = _inspect_cli_environment(cli_login, cli_environment)
     return [
-        cli_warning or _check_forge(forge, forge_name, cli_environment, runtime),
-        *(_check_forge_login(login, keys, environments[login]) for login, keys in keys_by_login.items()),
+        cli_warning or _inspect_forge(forge, forge_name, cli_environment, runtime),
+        *(_inspect_forge_login(login, keys, environments[login]) for login, keys in keys_by_login.items()),
     ]
 
 
@@ -283,7 +283,7 @@ def _warn_of_review_by_approval(policy) -> dict:
     return _create_optional("review", "warning", detail, REVIEW_FALLBACK)
 
 
-def _check_review_logins(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
+def _inspect_review_logins(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
     if not runtime.paths.schema_file.exists():
         return []
     if _is_unreadable(reading):
@@ -301,7 +301,7 @@ def _check_review_logins(reading: Configuration | BrigadeError, runtime: Runtime
     ]
 
 
-def _check_awawa_web(runtime: Runtime) -> dict:
+def _inspect_awawa_web(runtime: Runtime) -> dict:
     if not find_awawa_web(runtime.run_process):
         return _create_optional("awawa-web", "warning", "not on PATH", AWAWA_WEB_FALLBACK)
     return _create_optional("awawa-web", "ok", "on PATH", AWAWA_WEB_FALLBACK)
@@ -311,7 +311,7 @@ def _describe_instructions(state: str, detail: str) -> dict:
     return _create_optional("instructions", state, detail, INSTRUCTIONS_FALLBACK)
 
 
-def _check_instructions(reading: Configuration | BrigadeError, runtime: Runtime) -> dict:
+def _inspect_instructions(reading: Configuration | BrigadeError, runtime: Runtime) -> dict:
     if isinstance(reading, ConfigurationMissing):
         return _describe_instructions("warning", NO_INSTRUCTIONS)
     try:
@@ -326,25 +326,25 @@ def _check_instructions(reading: Configuration | BrigadeError, runtime: Runtime)
     return _describe_instructions("warning", f"lint --strict fails in {configuration.instructions}")
 
 
-def _check_steps(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
+def _inspect_turns(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
     try:
         name, probe = _probe_configured_client(reading, runtime)
     except BrigadeError:
         return []
     if STEP_COUNT_FEATURE in probe.features:
         return []
-    detail = f"{name} counts no steps: the budget is held on the clock and the run cut at its limit"
-    return [_create_optional("steps", "warning", detail, STEPS_FALLBACK)]
+    detail = f"{name} counts no turns: the budget is held on the clock and the run cut at its limit"
+    return [_create_optional("turns", "warning", detail, TURNS_FALLBACK)]
 
 
-def _check_checkout(runtime: Runtime) -> list[dict]:
+def _inspect_checkout_lag(runtime: Runtime) -> list[dict]:
     detail = describe_checkout_lag(runtime.run_process, runtime.paths.package_file)
     if detail is None:
         return []
     return [_create_optional("checkout", "warning", detail, CHECKOUT_FALLBACK)]
 
 
-def _check_schema(runtime: Runtime) -> list[dict]:
+def _inspect_schema(runtime: Runtime) -> list[dict]:
     schema = runtime.paths.schema_file
     if not schema.exists() or schema.read_bytes() == SHIPPED_SCHEMA.read_bytes():
         return []
@@ -358,13 +358,13 @@ def _check_schema(runtime: Runtime) -> list[dict]:
     ]
 
 
-def _check_configuration(reading: Configuration | BrigadeError) -> list[dict]:
+def _inspect_configuration(reading: Configuration | BrigadeError) -> list[dict]:
     if isinstance(reading, BrigadeError):
         return []
     return [_create_prerequisite("config", "finding", finding) for finding in reading.findings]
 
 
-def _check_retired_keys(runtime: Runtime) -> list[dict]:
+def _inspect_retired_keys(runtime: Runtime) -> list[dict]:
     try:
         document = read_configuration_document(runtime.paths.configuration_file)
     except BrigadeError:
@@ -390,7 +390,7 @@ def _find_slot_problems(slot: str, agent: str, configuration: Configuration, run
     return []
 
 
-def _check_slots(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
+def _inspect_slots(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
     if isinstance(reading, BrigadeError):
         return []
     return _report_findings(
@@ -411,7 +411,7 @@ def _find_client_problems(client: str, runtime: Runtime) -> list[str]:
     return []
 
 
-def _check_slot_clients(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
+def _inspect_slot_clients(reading: Configuration | BrigadeError, runtime: Runtime) -> list[dict]:
     if isinstance(reading, BrigadeError):
         return []
     return _report_findings(
@@ -493,7 +493,7 @@ def _inspect_project(project: Entity, runtime: Runtime) -> list[str]:
     return [*_find_project_client_problems(read_project_field(project, "CLIENT"), runtime), *located]
 
 
-def _check_projects(runtime: Runtime) -> list[dict]:
+def _inspect_projects(runtime: Runtime) -> list[dict]:
     if not runtime.paths.schema_file.exists():
         return []
     try:
@@ -565,31 +565,31 @@ def doctor(request: argparse.Namespace, runtime: Runtime) -> dict:
         "client": _read_client(reading),
         "slot_clients": _read_slot_clients(reading),
         "items": [
-            _check_python(),
-            _check_git(runtime),
-            _check_awawa(runtime),
-            _check_client(reading, runtime),
-            _check_scheduler(runtime),
-            *_check_linger(reading, runtime),
-            *_check_forge_and_its_logins(reading, runtime),
-            *_check_review_logins(reading, runtime),
-            _check_awawa_web(runtime),
-            _check_instructions(reading, runtime),
-            *_check_steps(reading, runtime),
-            *_check_configuration(reading),
-            *_check_retired_keys(runtime),
-            *_check_slots(reading, runtime),
-            *_check_slot_clients(reading, runtime),
-            *_check_projects(runtime),
-            *_check_checkout(runtime),
-            *_check_schema(runtime),
+            _inspect_python(),
+            _inspect_git(runtime),
+            _inspect_awawa(runtime),
+            _inspect_client(reading, runtime),
+            _inspect_scheduler(runtime),
+            *_inspect_linger(reading, runtime),
+            *_inspect_forge_and_its_logins(reading, runtime),
+            *_inspect_review_logins(reading, runtime),
+            _inspect_awawa_web(runtime),
+            _inspect_instructions(reading, runtime),
+            *_inspect_turns(reading, runtime),
+            *_inspect_configuration(reading),
+            *_inspect_retired_keys(runtime),
+            *_inspect_slots(reading, runtime),
+            *_inspect_slot_clients(reading, runtime),
+            *_inspect_projects(runtime),
+            *_inspect_checkout_lag(runtime),
+            *_inspect_schema(runtime),
         ],
     }
 
 
 COMMAND = Command(
     path=("doctor",),
-    help="check the prerequisites and report the optional items with their fallback",
+    help="inspect the prerequisites and report the optional items with their fallback",
     run=doctor,
     render_text=_render_text,
     decide_exit_code=_decide_exit_code,
