@@ -18713,3 +18713,197 @@ TASK B257
 		+ "8 and 6 of @TASK.B255 and the update of @TASK.B236"
 		REF @TASK.B255
 		REF @TASK.B236
+
+TASK B258
+	TITLE "A dismissed signal recorded again is new again and counts, where the inbox keeps it"
+		+ "dismissed in silence"
+	STATUS draft
+	TYPE feat
+	MILESTONE @MILESTONE.M17
+	COMPONENT "inbox"
+	ROLE ada
+	DESC "delivers DESC 2 of"
+		+ "@DECISION.ASignalIsClosedOnceItsDefectIsCorrectedAndReopensWhenItComesBack"
+		REF @DECISION.ASignalIsClosedOnceItsDefectIsCorrectedAndReopensWhenItComesBack
+	DESC "left to the refinement: whether the reopening is read from the order of the lines, a"
+		+ "recording after the last dismissal, or written as a line of its own, and whether that"
+		+ "line is the one @TASK.B262 appends"
+		REF @TASK.B262
+	DESC "left to the refinement: whether the count of a reopened signal keeps the recordings made"
+		+ "before its dismissal"
+	SPEC "a signal whose fingerprint is recorded after its last dismissal reads new in brigade"
+		+ "inbox list and brigade inbox show, and the collector inbox-families collects it as it"
+		+ "does a new signal"
+	SPEC "a dismissed signal whose fingerprint is recorded no more stays dismissed"
+	SPEC "a reopened signal is dismissed again by brigade inbox dismiss, and reopens at its next"
+		+ "recording"
+	SPEC "a test of tests/unit/inbox proves a signal dismissed then recorded reading new, a signal"
+		+ "dismissed and recorded no more reading dismissed, and a signal reopened then dismissed"
+		+ "reading dismissed"
+	RATIONALE "read on 2026-11-16: read_inbox of brigade/inbox/read_inbox.py folds the lines by"
+		+ "fingerprint and reads a signal dismissed as soon as one dismissal line names its"
+		+ "fingerprint, wherever that line stands; a recording after it raises the count and the"
+		+ "status stays dismissed, so a fact that comes back is shown to no one"
+	RATIONALE "@DECISION.TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint ruled it so on"
+		+ "2026-10-24, and is amended on 2026-11-16"
+		REF @DECISION.TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint
+	SOURCE "the user's words of 2026-11-16, quoted in"
+		+ "@DECISION.ASignalIsClosedOnceItsDefectIsCorrectedAndReopensWhenItComesBack and"
+		+ "@MILESTONE.M17; the task is (a) of the four the session put to the user: a dismissed"
+		+ "signal recorded again reopens, new, and counts, instead of staying dismissed in silence"
+		REF @DECISION.ASignalIsClosedOnceItsDefectIsCorrectedAndReopensWhenItComesBack
+		REF @MILESTONE.M17
+
+TASK B259
+	TITLE "The signals a pattern cites are dismissed when its correction is delivered, the pattern"
+		+ "going delivered, and no longer when it is ratified"
+	STATUS draft
+	TYPE feat
+	MILESTONE @MILESTONE.M17
+	COMPONENT "triage"
+	ROLE ada
+	DESC "left to the refinement: what a signal cited by a ratified pattern reads in brigade inbox"
+		+ "list between the ratification and the delivery"
+	DESC "left to the refinement: when the signals of a pattern of ACTION order are dismissed, its"
+		+ "ratification recording an ORDER and no REQUEST, so that no milestone delivers it"
+	SPEC "brigade inbox ratify <pattern> dismisses no signal: the signals the EVIDENCE of the"
+		+ "pattern cites stay new until the pattern goes delivered"
+	SPEC "when the tick sets a PATTERN delivered, at milestone.closed, it dismisses every new"
+		+ "signal an EVIDENCE of that PATTERN cites, inbox.dismissed appended once per signal"
+	SPEC "brigade inbox dismiss <pattern> dismisses the signals the pattern cites, as today"
+	SPEC "a test of tests/unit/triage proves a ratification dismissing no signal, and the delivery"
+		+ "of the pattern dismissing each new signal it cites"
+	RATIONALE "read on 2026-11-16: ratify_pattern of brigade/triage/ratify_pattern.py calls"
+		+ "dismiss_cited_signals of brigade/triage/dismiss_cited_signals.py, which dismisses at"
+		+ "once every new signal the pattern cites, SPEC 2 of the archived @TASK.B26;"
+		+ "deliver_patterns of brigade/triage/deliver_patterns.py sets the PATTERN delivered at"
+		+ "milestone.closed,"
+		+ "@DECISION.RatificationNamesItsEntitiesAfterThePatternAndTheArrivalInMainDeliversThePattern,"
+		+ "and dismisses nothing; the signal is closed before its defect is corrected, so its"
+		+ "silence after the ratification proves nothing"
+		REF @TASK.B26
+		REF @DECISION.RatificationNamesItsEntitiesAfterThePatternAndTheArrivalInMainDeliversThePattern
+	SOURCE "the user's words of 2026-11-16, « On corrige le défaut et on ferme le signal », quoted"
+		+ "whole in @DECISION.ASignalIsClosedOnceItsDefectIsCorrectedAndReopensWhenItComesBack; the"
+		+ "task is (b) of the four the session put to the user: the cited signals are dismissed"
+		+ "when the correction is delivered, the pattern delivered, not at the ratification"
+		REF @DECISION.ASignalIsClosedOnceItsDefectIsCorrectedAndReopensWhenItComesBack
+
+TASK B260
+	TITLE "A signal that recurs after the delivery of its pattern reopens that pattern and alerts"
+		+ "the user"
+	STATUS draft
+	TYPE feat
+	MILESTONE @MILESTONE.M17
+	COMPONENT "triage"
+	ROLE ada
+	DESC "left to the refinement: the channel of the alert, the inbox, brigade status or another"
+	DESC "left to the refinement: the STATUS a reopened PATTERN takes, the operational schema"
+		+ "declaring new, ratified, dismissed and delivered"
+	DESC "left to the refinement: what dates a recurrence against the delivery, the recording of"
+		+ "the signal or its citation by the pattern"
+	SPEC "a signal recorded after its PATTERN went delivered, its fingerprint cited by an EVIDENCE"
+		+ "of that PATTERN, reopens the PATTERN: it reads delivered no more"
+	SPEC "a signal of a new fingerprint that the triage adds as EVIDENCE to a delivered PATTERN"
+		+ "reopens it likewise"
+	SPEC "the user is alerted once per reopening, the alert naming the PATTERN and the signal that"
+		+ "came back"
+	SPEC "a delivered PATTERN none of whose signals comes back stays delivered, and raises no alert"
+	SPEC "a test of tests/unit proves a delivered PATTERN reopened by a cited fingerprint recorded"
+		+ "again and by an EVIDENCE the triage adds, the alert raised once, and a delivered PATTERN"
+		+ "with no recurrence left delivered"
+	RATIONALE "read on 2026-11-16: a fingerprint often names one occurrence, a check run being"
+		+ "cr:<project>:<pr>:<check name>:<sha>, a stall stall:<project>:<wave>:<task>, a scan"
+		+ "<study>:<project>:<item>, so a defect that comes back shows as new fingerprints; the"
+		+ "triage groups them, brigade/collectors/inbox_families.py and"
+		+ "@DECISION.TheTriageGroupsSignalsByKeyAndAPatternCitesASignalByOpeningAnEvidenceOnItsFingerprint,"
+		+ "and since @TASK.B245 adds them as EVIDENCE to the pattern the operational corpus holds,"
+		+ "@DECISION.AnAnswerOfTheTriageAddsEvidenceToAHeldPatternByAPatternOfItsNameHoldingEvidenceAlone"
+		REF @DECISION.TheTriageGroupsSignalsByKeyAndAPatternCitesASignalByOpeningAnEvidenceOnItsFingerprint
+		REF @TASK.B245
+		REF @DECISION.AnAnswerOfTheTriageAddsEvidenceToAHeldPatternByAPatternOfItsNameHoldingEvidenceAlone
+	RATIONALE "nothing compares an EVIDENCE added with the delivery of its pattern, reopens the"
+		+ "pattern or alerts: before @TASK.B245 the triage proposed new patterns named _recurs,"
+		+ "_recurs_again and _recurs_on_pr_<n>, and « raises no new signal on the runs launched"
+		+ "after the delivery » exists only as SPEC 10 of @TASK.B246, written by hand"
+		REF @TASK.B245
+		REF @TASK.B246
+	SOURCE "the user's words of 2026-11-16, « Si le signal ne revient pas, le défaut est corrigé."
+		+ "S'il revient, c'est que non. », quoted whole in"
+		+ "@DECISION.ASignalIsClosedOnceItsDefectIsCorrectedAndReopensWhenItComesBack; the task is"
+		+ "(c) of the four the session put to the user: a signal recurring after the delivery of"
+		+ "its pattern reopens that pattern and raises an alert to the user"
+		REF @DECISION.ASignalIsClosedOnceItsDefectIsCorrectedAndReopensWhenItComesBack
+
+TASK B261
+	TITLE "A task written by hand to correct a pattern is linked to that pattern, and its delivery"
+		+ "closes the pattern"
+	STATUS draft
+	TYPE feat
+	MILESTONE @MILESTONE.M17
+	COMPONENT "triage"
+	ROLE ada
+	DESC "left to the refinement: how the link is written, a field of TASK, a REQUEST FROM the"
+		+ "pattern or another form"
+	DESC "left to the refinement: what delivers the pattern of a linked task naming no MILESTONE,"
+		+ "the tick delivering patterns at milestone.closed alone"
+	SPEC "a task written by hand in the corpus of a project names the PATTERN of the operational"
+		+ "corpus it corrects"
+	SPEC "once that task is in main, the PATTERN goes delivered and the signals it cites are"
+		+ "dismissed, as for a PATTERN a REQUEST of the project comes FROM"
+	SPEC "a test of tests/unit proves the delivery of a task linked by hand setting its PATTERN"
+		+ "delivered and dismissing each signal the PATTERN cites"
+	RATIONALE "read on 2026-11-16: patterns.awawa of the operational corpus of the machine holds 31"
+		+ "PATTERN, all new, and 0 CONSTRAINT; their corrections went through tasks written by"
+		+ "hand, @TASK.B246 and @TASK.B248 of @MILESTONE.M12 among them, which no pattern is linked"
+		+ "to, while deliver_patterns of brigade/triage/deliver_patterns.py delivers only a PATTERN"
+		+ "a REQUEST of the project comes FROM,"
+		+ "@DECISION.RatificationNamesItsEntitiesAfterThePatternAndTheArrivalInMainDeliversThePattern:"
+		+ "a pattern so corrected stays new, and its signals are closed by hand"
+		REF @TASK.B246
+		REF @TASK.B248
+		REF @MILESTONE.M12
+		REF @DECISION.RatificationNamesItsEntitiesAfterThePatternAndTheArrivalInMainDeliversThePattern
+	SOURCE "the user's words of 2026-11-16, quoted in"
+		+ "@DECISION.ASignalIsClosedOnceItsDefectIsCorrectedAndReopensWhenItComesBack and"
+		+ "@MILESTONE.M17; the task is (d) of the four the session put to the user: a task written"
+		+ "by hand to fix a pattern is linked to that pattern, so that its delivery closes the"
+		+ "pattern"
+		REF @DECISION.ASignalIsClosedOnceItsDefectIsCorrectedAndReopensWhenItComesBack
+		REF @MILESTONE.M17
+
+TASK B262
+	TITLE "The user reopens by a command a signal dismissed too early, or a dismissed pattern with"
+		+ "the signals it cites"
+	STATUS draft
+	TYPE feat
+	MILESTONE @MILESTONE.M17
+	COMPONENT "inbox"
+	ROLE ada
+	DESC "left to the refinement: the name of the command, brigade inbox reopen <id> as drafted"
+	DESC "left to the refinement: whether a reopening by hand and the reopening by recurrence of"
+		+ "@TASK.B258 are one line of the inbox or two"
+		REF @TASK.B258
+	DESC "left to the refinement: the amendment of"
+		+ "@DECISION.TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint, whose TITLE names two"
+		+ "ledger events and whose DESC 1 two kinds of line"
+		REF @DECISION.TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint
+	SPEC "brigade inbox reopen <id> sets a dismissed signal new; it names a PATTERN when the"
+		+ "operational corpus defines one by that name, a signal otherwise, as brigade inbox"
+		+ "dismiss does"
+	SPEC "reopening a dismissed PATTERN sets it new and reopens every dismissed signal its EVIDENCE"
+		+ "cites"
+	SPEC "the inbox stays append-only: a reopening is one line appended to signals.jsonl under its"
+		+ "lock, no line being rewritten or removed"
+	SPEC "the ledger event of a reopening is declared as inbox.dismissed is, and appended once per"
+		+ "signal reopened"
+	SPEC "a signal that is not dismissed is reported as such, and nothing is appended"
+	SPEC "a test of tests/unit proves a dismissed signal reopened reading new, a dismissed PATTERN"
+		+ "reopened with each signal it cites, one line appended and one ledger event per signal"
+		+ "reopened, and nothing appended for a signal that is not dismissed"
+	RATIONALE "on 2026-11-16 the session dismissed 225 signals whose fact had passed and whose"
+		+ "defect was not corrected, and found no way to undo a dismissal: read_inbox of"
+		+ "brigade/inbox/read_inbox.py knows the lines recorded and dismissed and the statuses new"
+		+ "and dismissed, and no line reopens"
+	SOURCE "the user's words of 2026-11-16, the session agreeing: « ajoute aussi une tâche qui"
+		+ "permet de rouvrir un signal fermé manuellement peut être aussi, qu'en penses-tu? »"
