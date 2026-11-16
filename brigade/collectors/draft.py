@@ -9,10 +9,10 @@ from brigade.corpus.decode_atom import decode_atom
 from brigade.corpus.read_entities import Entity, EntityField, read_entities
 from brigade.corpus.run_awawa import SUCCESS, run_awawa
 from brigade.errors import BrigadeError
+from brigade.git.find_latest_commit_of_lines import LinesOfFile, find_latest_commit_of_lines
 from brigade.git.map_cited_lines import map_cited_lines
-from brigade.git.timeouts import GIT_TIMEOUT_S
+from brigade.git.read_file_diff import FileSince, read_file_diff
 from brigade.runtime import Runtime
-from brigade.system.run_process import ProcessRequest
 from brigade.tasks.read_task_after import read_task_after
 
 NAME = "draft"
@@ -27,15 +27,6 @@ FILE_CITATION = re.compile(
     r"(?<![\w./@-])((?:[\w-]+/)*[\w-]*[A-Za-z][\w-]*\.[a-z][a-z0-9]{0,4})(?![\w-])(?::(\d+)(?:-(\d+))?)?"
 )
 ENTITY_CITATION = re.compile(r"@[A-Z][A-Z_]*\.\w+")
-BLAME_HEADER = re.compile(r"([0-9a-f]{40}) ")
-COMMITTER_TIME = "committer-time "
-
-
-def _run_git(runtime: Runtime, root: Path, arguments: tuple[str, ...]) -> str:
-    request = ProcessRequest(
-        argv=("git", *arguments), cwd=str(root), timeout_s=GIT_TIMEOUT_S, acceptable_exit_codes=SUCCESS
-    )
-    return runtime.run_process(request).stdout
 
 
 def _show(runtime: Runtime, root: Path, target: str) -> dict:
@@ -63,16 +54,8 @@ def _find_source_commit(runtime: Runtime, root: Path, task: str, file: str) -> s
     lines = [line["line"] for line in entity["lines"] if line["field_path"][:1] == [SOURCE_FIELD]]
     if not lines:
         raise BrigadeError(f"@{TASK_TYPE}.{task} has no SOURCE: its citations have no commit to be read at")
-    blame = _run_git(runtime, root, ("blame", "--porcelain", "-L", f"{min(lines)},{max(lines)}", "HEAD", "--", file))
-    times = {}
-    commit = None
-    for line in blame.splitlines():
-        header = BLAME_HEADER.match(line)
-        if header:
-            commit = header.group(1)
-        elif line.startswith(COMMITTER_TIME):
-            times[commit] = int(line.removeprefix(COMMITTER_TIME))
-    return max(times, key=times.get)
+    source_lines = LinesOfFile(repository=root, path=file, first=min(lines), last=max(lines))
+    return find_latest_commit_of_lines(runtime.run_process, source_lines)
 
 
 def _describe_citations(runtime: Runtime, root: Path, text: str, source_commit: str) -> list[dict]:
@@ -83,7 +66,7 @@ def _describe_citations(runtime: Runtime, root: Path, text: str, source_commit: 
         path = citation.group(1)
         start = int(citation.group(2))
         end = int(citation.group(3) or start)
-        diff = _run_git(runtime, root, ("diff", "-U0", source_commit, "HEAD", "--", path))
+        diff = read_file_diff(runtime.run_process, FileSince(repository=root, path=path, since=source_commit))
         now = map_cited_lines(diff, start, end)
         citations.append(
             {
