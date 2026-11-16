@@ -18405,7 +18405,8 @@ TASK B250
 TASK B251
 	TITLE "study, milestone-report and task-report run as recipes on the engine, and the native"
 		+ "orchestration of the studies is deleted"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 427
 	TYPE refactor
 	MILESTONE @MILESTONE.M8
 	COMPONENT "recipes"
