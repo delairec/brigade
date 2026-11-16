@@ -18929,7 +18929,8 @@ TASK B256
 	TITLE "One command per thing: brigade ledger --wave, brigade verify preflight and the study"
 		+ "answers of brigade reports leave for wave show --events, brigade preflight"
 		+ "verify-pull-request and the inbox, and brigade task check runs a built-in preflight"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 431
 	TYPE refactor
 	MILESTONE @MILESTONE.M8
 	COMPONENT "audit"
