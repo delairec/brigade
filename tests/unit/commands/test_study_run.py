@@ -48,7 +48,7 @@ class PluginResolverDouble:
 def _write_study_record(root: Path, study_record: str) -> Path:
     steps = root / "state" / "runs" / RUN_ID / "steps"
     steps.mkdir(parents=True)
-    (steps.parent / "study.json").write_text(study_record, encoding="utf-8")
+    (steps.parent / "order.json").write_text(study_record, encoding="utf-8")
     return steps
 
 
@@ -136,9 +136,10 @@ class StudyRunOfAStudyTest(unittest.TestCase):
         write_operational_corpus(root)
         steps = root / "state" / "runs" / RUN_ID / "steps"
         steps.mkdir(parents=True)
-        (steps.parent / "study.json").write_text(
-            '{"schema_version": 1, "study": "milestone-report", "project": "oak", "milestone": {"project": "oak",'
-            ' "milestone": "M6", "branch": "integration/hardening", "waves": ["oak_w2"], "tasks": ["B17"]}}',
+        (steps.parent / "order.json").write_text(
+            '{"order": {"name": "milestone-report", "recipe": "study", "params": ["milestone={\\"project\\":'
+            ' \\"oak\\", \\"milestone\\": \\"M6\\", \\"branch\\": \\"integration/hardening\\",'
+            ' \\"waves\\": [\\"oak_w2\\"], \\"tasks\\": [\\"B17\\"]}"]}}',
             encoding="utf-8",
         )
         _write_milestone_report_steps_done(steps)
@@ -207,9 +208,10 @@ class StudyRunForgeTest(unittest.TestCase):
                 _write_milestone_report_steps_done(
                     _write_study_record(
                         root,
-                        '{"schema_version": 1, "study": "milestone-report", "project": "oak", "milestone": {"project":'
-                        ' "oak", "milestone": "M6", "branch": "integration/hardening", "waves": ["oak_w2"], "tasks":'
-                        ' ["B17"]}}',
+                        '{"order": {"name": "milestone-report", "recipe": "study", "params": ["milestone='
+                        '{\\"project\\": \\"oak\\", \\"milestone\\": \\"M6\\", \\"branch\\":'
+                        ' \\"integration/hardening\\", \\"waves\\": [\\"oak_w2\\"], \\"tasks\\":'
+                        ' [\\"B17\\"]}"]}}',
                     )
                 )
                 resolver = PluginResolverDouble()
@@ -231,7 +233,7 @@ class StudyRunForgeTest(unittest.TestCase):
         self.enterContext(contextlib.chdir(root))
         write_operational_corpus(root)
         _write_mine_transcripts_steps_done(
-            _write_study_record(root, '{"schema_version": 1, "study": "mine_transcripts", "project": null}')
+            _write_study_record(root, '{"order": {"name": "mine_transcripts", "recipe": "study", "params": []}}')
         )
         resolver = PluginResolverDouble()
         runtime = create_test_runtime(

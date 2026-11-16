@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 from brigade.commands.order_run import COMMAND, order_run
+from brigade.errors import BrigadeError
 from brigade.inbox.read_inbox import read_inbox
 from brigade.ledger.append_event import append_event
 from brigade.ledger.ledger_entry import LedgerEntry
@@ -19,9 +20,10 @@ from brigade.ledger.step_done import StepDone
 from brigade.orders.convert_order import Order
 from brigade.orders.start_order_run import start_order_run
 from brigade.system.resolve_plugin import resolve_plugin
-from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.commands.command_runtime import create_corpus_double, write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
+from tests.unit.plugin_double import PluginDouble
 from tests.unit.recipes.checkout_answers import create_checkout_answers
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 from tests.unit.registry_answers import create_registry_answers
@@ -30,6 +32,7 @@ from tests.value_matchers import PatternMatcher
 
 NO_PLUGIN_SOURCES = None
 PARKED_RUN = "20261018T090000Z-aaaaaa"
+STUDY_RUN = "20261019T090000Z-e10d04"
 USAGE_REPORT = (
     'schema_version = 1\nname = "usage-report"\ndescription = "the usage report of a pull request"\n'
     'params = ["pull_request"]\nmax_wall = 30\n'
@@ -401,3 +404,58 @@ class OrderRunTextTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(text, expected_text)
                 self.assertEqual(COMMAND.decide_exit_code(document), expected_exit_code)
+
+
+class OrderRunOfAStudyTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        self.steps = self.root / "state" / "runs" / STUDY_RUN / "steps"
+        self.steps.mkdir(parents=True)
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_corpus_double({"PROJECT": {"oak": (("PATH", "/srv/oak"),)}}),
+            resolve_plugin=lambda kind, name, **places: PluginDouble(kind=kind, name=name),
+        )
+
+    def test_should_run_the_milestone_report_its_run_records_as_the_order_of_the_recipe_study(self):
+        # Arrange
+        (self.steps.parent / "order.json").write_text(
+            '{"order": {"name": "milestone-report", "recipe": "study", "params": ["milestone={\\"project\\":'
+            ' \\"oak\\", \\"milestone\\": \\"M6\\", \\"branch\\": \\"integration/hardening\\",'
+            ' \\"waves\\": [\\"oak_w2\\"], \\"tasks\\": [\\"B17\\"]}"]}}',
+            encoding="utf-8",
+        )
+        for step in ("1-collect", "2-collect", "3-collect", "4-collect", "5-judge", "6-output"):
+            (self.steps / f"{step}.json").write_text("{}", encoding="utf-8")
+
+        # Act
+        ending = order_run(argparse.Namespace(name="milestone-report", run_id=STUDY_RUN), self.runtime)
+
+        # Assert
+        self.assertEqual(ending, {"schema_version": 1, "order": "milestone-report", "run": STUDY_RUN, "state": "done"})
+
+    def test_should_run_a_study_whose_name_is_no_order_as_the_order_of_the_recipe_study(self):
+        # Arrange
+        (self.steps.parent / "order.json").write_text(
+            '{"order": {"name": "mine_transcripts", "recipe": "study", "params": []}}', encoding="utf-8"
+        )
+        for step in ("1-collect", "2-judge", "3-output"):
+            (self.steps / f"{step}.json").write_text("{}", encoding="utf-8")
+
+        # Act
+        ending = order_run(argparse.Namespace(name="mine_transcripts", run_id=STUDY_RUN), self.runtime)
+
+        # Assert
+        self.assertEqual(ending, {"schema_version": 1, "order": "mine_transcripts", "run": STUDY_RUN, "state": "done"})
+
+    def test_should_resolve_a_name_that_is_no_order_as_a_study_of_the_operational_corpus(self):
+        # Arrange
+        request = argparse.Namespace(name="health", run_id=None)
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            order_run(request, self.runtime)
+
+        # Assert
+        self.assertEqual(str(raised.exception), "@STUDY.health is not defined in the operational corpus")

@@ -69,7 +69,7 @@ class BuildStudyContextTest(unittest.TestCase):
 
     def script_study_run(self) -> None:
         config_root = self.runtime.paths.config_root
-        (self.run_directory / "study.json").write_text('{"study": "trees"}', encoding="utf-8")
+        (self.run_directory / "order.json").write_text('{"order": {"name": "trees", "params": []}}', encoding="utf-8")
         (self.run_directory / "steps" / "1-collect.json").write_text(COLLECTED, encoding="utf-8")
         self.processes.answer_entity(config_root, "STUDY", "trees", STUDY_FIELDS)
         self.processes.answer_json(
@@ -114,7 +114,7 @@ class BuildStudyContextTest(unittest.TestCase):
 
     def test_should_refuse_a_run_that_collected_no_evidence_yet(self):
         # Arrange
-        (self.run_directory / "study.json").write_text('{"study": "trees"}', encoding="utf-8")
+        (self.run_directory / "order.json").write_text('{"order": {"name": "trees", "params": []}}', encoding="utf-8")
         self.processes.answer_entity(self.runtime.paths.config_root, "STUDY", "trees", STUDY_FIELDS)
 
         # Act
@@ -131,9 +131,10 @@ class BuildStudyContextTest(unittest.TestCase):
 
     def script_milestone_report_run(self) -> list[dict]:
         config_root = self.runtime.paths.config_root
-        (self.run_directory / "study.json").write_text(
-            '{"study": "milestone-report", "project": "oak", "milestone": {"project": "oak", "milestone": "M6",'
-            ' "branch": "integration/hardening", "waves": ["oak_w2"], "tasks": ["B17"]}}',
+        (self.run_directory / "order.json").write_text(
+            '{"order": {"name": "milestone-report", "params": ["milestone={\\"project\\": \\"oak\\",'
+            ' \\"milestone\\": \\"M6\\", \\"branch\\": \\"integration/hardening\\", \\"waves\\":'
+            ' [\\"oak_w2\\"], \\"tasks\\": [\\"B17\\"]}"]}}',
             encoding="utf-8",
         )
         collected = [

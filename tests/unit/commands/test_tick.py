@@ -4694,7 +4694,7 @@ class TickLaunchingAStudyTest(unittest.TestCase):
         COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
-        self.assertEqual(spawn.argvs, [("study", "run", "health", "--run-id", ANY)])
+        self.assertEqual(spawn.argvs, [("order", "run", "health", "--run-id", ANY)])
 
     def test_should_launch_an_order_whose_schedule_is_due_in_a_run_directory_of_its_own(self):
         # Arrange
@@ -4803,7 +4803,7 @@ class TickLaunchingAStudyTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             spawn.argvs,
-            [("study", "run", "mine_transcripts", "--run-id", ANY), ("study", "run", "triage", "--run-id", ANY)],
+            [("order", "run", "mine_transcripts", "--run-id", ANY), ("order", "run", "triage", "--run-id", ANY)],
         )
 
     def test_should_launch_the_built_in_scans_of_a_registered_project_on_a_machine_that_never_ran_them(self):
@@ -4829,10 +4829,10 @@ class TickLaunchingAStudyTest(unittest.TestCase):
         self.assertEqual(
             spawn.argvs,
             [
-                ("study", "run", "corpus_fmt_oak", "--run-id", ANY),
-                ("study", "run", "corpus_lint_oak", "--run-id", ANY),
-                ("study", "run", "stale_branches_oak", "--run-id", ANY),
-                ("study", "run", "worktrees_oak", "--run-id", ANY),
+                ("order", "run", "corpus_fmt_oak", "--run-id", ANY),
+                ("order", "run", "corpus_lint_oak", "--run-id", ANY),
+                ("order", "run", "stale_branches_oak", "--run-id", ANY),
+                ("order", "run", "worktrees_oak", "--run-id", ANY),
             ],
         )
 
@@ -5986,7 +5986,7 @@ class TickReportingAMilestoneTest(unittest.TestCase):
 
         # Assert
         [[*_, reported_run]] = self.spawn.argvs
-        self.assertEqual(self.spawn.argvs, [("study", "run", "milestone-report", "--run-id", reported_run)])
+        self.assertEqual(self.spawn.argvs, [("order", "run", "milestone-report", "--run-id", reported_run)])
         self.assertEqual(
             self._read_milestone_events(),
             [
@@ -6009,17 +6009,15 @@ class TickReportingAMilestoneTest(unittest.TestCase):
 
         # Assert
         [[*_, reported_run]] = self.spawn.argvs
-        record = json.loads((self.root / "state" / "runs" / reported_run / "study.json").read_text(encoding="utf-8"))
+        record = json.loads((self.root / "state" / "runs" / reported_run / "order.json").read_text(encoding="utf-8"))
         self.assertEqual(
-            record["milestone"],
-            {
-                "project": "tidepool",
-                "milestone": "M4",
-                "branch": "integration/tides",
-                "waves": ["tidepool_w16"],
-                "tasks": ["T7"],
-                "reads_pull_requests": True,
-            },
+            record["order"]["params"],
+            [
+                (
+                    'milestone={"project": "tidepool", "milestone": "M4", "branch": "integration/tides",'
+                    ' "waves": ["tidepool_w16"], "tasks": ["T7"], "reads_pull_requests": true}'
+                )
+            ],
         )
 
     def test_should_record_the_report_of_a_project_without_a_forge_with_no_login(self):
@@ -6724,7 +6722,7 @@ class TickReportingATaskNamingNoMilestoneTest(unittest.TestCase):
 
         # Assert
         reported_run = self.spawn.argvs[0][-1]
-        self.assertEqual(self.spawn.argvs[0], ("study", "run", "task-report", "--run-id", reported_run))
+        self.assertEqual(self.spawn.argvs[0], ("order", "run", "task-report", "--run-id", reported_run))
         self.assertEqual(
             self._read_reported_tasks(),
             [
@@ -7542,5 +7540,13 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
         COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(TASK_DELIVERED, {}))
 
         # Assert
-        report_run = next((self.root / "state" / "runs").glob("*/study.json"))
-        self.assertFalse(json.loads(report_run.read_text())["milestone"]["reads_pull_requests"])
+        report_run = next((self.root / "state" / "runs").glob("*/order.json"))
+        self.assertEqual(
+            json.loads(report_run.read_text())["order"]["params"],
+            [
+                (
+                    'milestone={"project": "tidepool", "milestone": "M4", "branch": "integration/tides",'
+                    ' "waves": ["tidepool_w16"], "tasks": ["T7"], "reads_pull_requests": false}'
+                )
+            ],
+        )

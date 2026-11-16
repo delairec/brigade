@@ -19,7 +19,7 @@ class ReadLiveOrderRunsTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.state_root = Path(directory.name)
 
-    def write_order_record(self, run: str) -> None:
+    def write_order_record(self, run: str, recipe: str = "usage-report") -> None:
         run_directory = self.state_root / "runs" / run
         run_directory.mkdir(parents=True)
         (run_directory / "order.json").write_text(
@@ -27,7 +27,7 @@ class ReadLiveOrderRunsTest(unittest.TestCase):
                 {
                     "schema_version": 1,
                     "order": {"name": "nightly", "project": "shop"},
-                    "recipe": {"name": "usage-report", "max_wall": 30, "steps": []},
+                    "recipe": {"name": recipe, "max_wall": 30, "steps": []},
                 }
             ),
             encoding="utf-8",
@@ -47,3 +47,13 @@ class ReadLiveOrderRunsTest(unittest.TestCase):
             live,
             (LiveOrderRun(order="nightly", recipe="usage-report", run=LIVE_RUN, started=STARTED, max_wall=30),),
         )
+
+    def test_should_leave_out_a_live_run_of_a_study(self):
+        # Arrange
+        self.write_order_record(LIVE_RUN, "study")
+
+        # Act
+        live = read_live_order_runs(self.state_root, lambda run_directory: run_directory.name == LIVE_RUN)
+
+        # Assert
+        self.assertEqual(live, ())

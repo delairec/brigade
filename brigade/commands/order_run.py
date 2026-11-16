@@ -11,12 +11,14 @@ from brigade.command import Argument, Command
 from brigade.commands._equip_collector import equip_collector
 from brigade.commands._equip_preflight import equip_preflight
 from brigade.commands._equip_study import equip_study
+from brigade.commands._find_study_project import find_study_project
 from brigade.commands._locate_checkout import locate_checkout
 from brigade.commands._locate_preflights import locate_preflights
 from brigade.commands._locate_recipe_places import locate_recipe_places
 from brigade.commands.run import run as launch_run
 from brigade.corpus.read_entities import Entity
 from brigade.corpus.read_entity import read_entity
+from brigade.errors import EntityNotDefined
 from brigade.orders.convert_order import Order, convert_order
 from brigade.orders.find_parked_order_run import find_parked_order_run
 from brigade.orders.park_order import park_order
@@ -37,7 +39,11 @@ from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runs.create_run_id import create_run_id
+from brigade.runs.run_locations import RUNS_DIRECTORY
 from brigade.runtime import Runtime
+from brigade.studies.read_study import Study, read_study
+from brigade.studies.read_study_of_run import read_study_of_run
+from brigade.studies.run_study import run_study
 from brigade.system.collector_places import locate_collectors
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -48,6 +54,7 @@ PROJECT_VALUE = "project"
 NO_PROJECT = None
 COLLECTOR_KIND = "collector"
 BEGINNING = date(1970, 1, 1)
+STUDY_KEY = "study"
 
 
 @dataclass(frozen=True)
@@ -149,9 +156,25 @@ def _take_run(runtime: Runtime, request: argparse.Namespace, resolved: ResolvedO
     return find_parked_order_run(runtime, resolved.order) or _start_new_run(runtime, resolved.order, resolved.recipe)
 
 
+def _read_study_of_request(request: argparse.Namespace, runtime: Runtime) -> Study:
+    if request.run_id is None:
+        return read_study(runtime, request.name)
+    return read_study_of_run(runtime, runtime.paths.state_root / RUNS_DIRECTORY / request.run_id)
+
+
+def _run_study_order(request: argparse.Namespace, runtime: Runtime) -> dict:
+    study = _read_study_of_request(request, runtime)
+    equipment = equip_study(find_study_project(study, runtime), runtime)
+    ran = run_study(runtime, study, equipment, request.run_id)
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, "order": ran.pop(STUDY_KEY), **ran}
+
+
 def order_run(request: argparse.Namespace, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
-    resolved = resolve_order(runtime, request.name)
+    try:
+        resolved = resolve_order(runtime, request.name)
+    except EntityNotDefined:
+        return _run_study_order(request, runtime)
     order, project_entity, project = resolved.order, resolved.project_entity, resolved.project
     run_id = _take_run(runtime, request, resolved)
     run = read_order_run(runtime, run_id)
