@@ -12,7 +12,7 @@ $client_line
 # the attempts exhausted, the command stops and no other account is used in its place.
 # forge_attempts = 3
 
-# The form of the progress of a run: awawa, a corpus of STEP and HANDOVER entities, or markdown.
+# The form of the progress of a run: awawa, a corpus of ENTRY and HANDOVER entities, or markdown.
 # document = "awawa"
 
 # The root of an instructions corpus the roles are read from.
@@ -34,7 +34,7 @@ $client_line
 # The seconds a run is given per turn of its budget: the wall-time limit of a run is ceil(budget × 1.25) × seconds_per_turn.
 # seconds_per_turn = 30
 
-# The seconds before the wall-time limit of a segment at which a client that supports it stops between two steps,
+# The seconds before the wall-time limit of a segment at which a client that supports it stops between two turns,
 # a positive number; a wall-time limit not above it gives no such stop.
 # soft_limit_margin_s = 120
 

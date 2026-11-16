@@ -1,4 +1,4 @@
-SCHEMA STEP
+SCHEMA ENTRY
 	DESC "a step the run completed"
 	FIELD DONE string
 		REQUIRED
