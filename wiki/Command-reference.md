@@ -39,6 +39,7 @@ Every command of brigade, what it does in one line, and the page that documents 
 | `brigade collect <name>` | run a collector and print the summary and the path of its document; `key=value` pairs are its parameters | [Studies](Studies.md) |
 | `brigade collectors list` | list every collector found, its name and its source | [Studies](Studies.md) |
 | `brigade preflight <name>` | run the collectors and the checks of a named preflight; `key=value` pairs are their parameters | [Preflight](Preflight.md) |
+| `brigade preflight add <name> <step>` | add a collector or a check, `key=value` pairs its parameters, to a custom preflight of the project, committing nothing | [Preflight](Preflight.md) |
 | `brigade check list` | list every check found, its name and its source | [Preflight](Preflight.md) |
 
 ## Observing

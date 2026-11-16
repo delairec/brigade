@@ -1,5 +1,6 @@
 import argparse
 import json
+from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.command import Argument, Command
@@ -39,6 +40,14 @@ NO_PARAMETERS = {}
 NO_PREFLIGHT = None
 TOML_INDENT = "    "
 ENTITY_INDENT = "\t"
+
+
+@dataclass(frozen=True)
+class PreflightAddition:
+    project: Path
+    name: str
+    kind: str
+    step: dict
 
 
 def _render_text(document: dict) -> str:
@@ -96,13 +105,13 @@ def _render_toml(preflight: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _add_to_file(project: Path, name: str, kind: str, step: dict) -> Path:
-    directory = project / PROJECT_PREFLIGHTS_DIRECTORY
-    preflight = read_preflight_file(directory, name) or _create_preflight(name)
-    file = directory / f"{name}{PREFLIGHT_SUFFIX}"
+def _add_to_file(addition: PreflightAddition) -> Path:
+    directory = addition.project / PROJECT_PREFLIGHTS_DIRECTORY
+    preflight = read_preflight_file(directory, addition.name) or _create_preflight(addition.name)
+    file = directory / f"{addition.name}{PREFLIGHT_SUFFIX}"
     create_directory(directory)
-    write_text_file(file, _render_toml(_add_step(preflight, kind, step)))
-    read_preflight_file(directory, name)
+    write_text_file(file, _render_toml(_add_step(preflight, addition.kind, addition.step)))
+    read_preflight_file(directory, addition.name)
     return file
 
 
@@ -140,7 +149,8 @@ def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def _add_to_corpus(project: Path, corpus: Path, name: str, step: tuple[str, dict], runtime: Runtime) -> Path:
+def _add_to_corpus(addition: PreflightAddition, corpus: Path, runtime: Runtime) -> Path:
+    project, name = addition.project, addition.name
     root = project / corpus
     if not check_type_declared(runtime.run_process, root, ENTITY_TYPE):
         raise BrigadeError(
@@ -148,7 +158,7 @@ def _add_to_corpus(project: Path, corpus: Path, name: str, step: tuple[str, dict
         )
     preflight = read_preflight_entity(runtime.run_process, root, name) or _create_preflight(name)
     file_name = str(corpus / CORPUS_PREFLIGHTS_FILE)
-    block = _render_entity(_add_step(preflight, *step))
+    block = _render_entity(_add_step(preflight, addition.kind, addition.step))
     text = _place_block(_read_text(project / file_name), name, block)
     write_corpus_files(
         runtime.run_process,
@@ -160,16 +170,15 @@ def _add_to_corpus(project: Path, corpus: Path, name: str, step: tuple[str, dict
 def preflight_add(request: argparse.Namespace, runtime: Runtime) -> dict:
     project = locate_main_checkout(runtime.run_process, locate_worktree_root(runtime.run_process, Path.cwd()))
     corpus = locate_project_corpus(find_project_at(read_projects(runtime), project))
-    kind = _classify_step(request.step, project, runtime)
     step = {"name": request.step, "parameters": read_parameters(request.extra_arguments)}
-    if corpus is None:
-        file = _add_to_file(project, request.name, kind, step)
-    else:
-        file = _add_to_corpus(project, corpus, request.name, (kind, step), runtime)
+    addition = PreflightAddition(
+        project=project, name=request.name, kind=_classify_step(request.step, project, runtime), step=step
+    )
+    file = _add_to_file(addition) if corpus is None else _add_to_corpus(addition, corpus, runtime)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "preflight": request.name,
-        "step": {"kind": kind, **step},
+        "step": {"kind": addition.kind, **step},
         "file": str(file),
     }
 

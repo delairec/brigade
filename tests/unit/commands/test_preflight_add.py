@@ -144,9 +144,10 @@ class PreflightAddTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (str(refusal.exception), (self.project / "preflights.awawa").exists()),
-            (f"the corpus of the project at {self.project} declares no PREFLIGHT; add SCHEMA PREFLIGHT to it", False),
+            str(refusal.exception),
+            f"the corpus of the project at {self.project} declares no PREFLIGHT; add SCHEMA PREFLIGHT to it",
         )
+        self.assertFalse((self.project / "preflights.awawa").exists())
 
     def test_should_refuse_a_step_that_resolves_as_no_collector_and_no_check_before_writing_anything(self):
         # Arrange
@@ -157,10 +158,8 @@ class PreflightAddTest(unittest.TestCase):
             self.add("control", answers, step="nope")
 
         # Assert
-        self.assertEqual(
-            (str(refusal.exception), (self.project / "preflights.awawa").exists()),
-            ("no collector and no check nope", False),
-        )
+        self.assertEqual(str(refusal.exception), "no collector and no check nope")
+        self.assertFalse((self.project / "preflights.awawa").exists())
 
     def test_should_write_a_new_toml_file_on_a_project_without_a_corpus_committing_nothing(self):
         # Act
@@ -168,28 +167,24 @@ class PreflightAddTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (
-                (self.project / ".brigade" / "preflights" / "nightly.toml").read_text(),
-                runner.list_argvs(),
-            ),
-            (
-                (
-                    "schema_version = 1\n"
-                    'name = "nightly"\n'
-                    'description = "the custom preflight nightly"\n'
-                    "collectors = [\n"
-                    "]\n"
-                    "checks = [\n"
-                    '    { name = "coverage", parameters = { "depth" = "1" } },\n'
-                    "]\n"
-                ),
-                [
-                    ("git", "rev-parse", "--show-toplevel"),
-                    ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"),
-                    ("awawa", "status", "PROJECT", "--json", str(self.paths.config_root)),
-                    ("awawa", "show", "@PROJECT.shop", "--json", str(self.paths.config_root)),
-                ],
-            ),
+            (self.project / ".brigade" / "preflights" / "nightly.toml").read_text(),
+            "schema_version = 1\n"
+            'name = "nightly"\n'
+            'description = "the custom preflight nightly"\n'
+            "collectors = [\n"
+            "]\n"
+            "checks = [\n"
+            '    { name = "coverage", parameters = { "depth" = "1" } },\n'
+            "]\n",
+        )
+        self.assertEqual(
+            runner.list_argvs(),
+            [
+                ("git", "rev-parse", "--show-toplevel"),
+                ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"),
+                ("awawa", "status", "PROJECT", "--json", str(self.paths.config_root)),
+                ("awawa", "show", "@PROJECT.shop", "--json", str(self.paths.config_root)),
+            ],
         )
 
     def test_should_add_the_step_to_the_toml_file_the_project_already_holds(self):
