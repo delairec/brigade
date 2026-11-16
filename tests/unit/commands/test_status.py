@@ -44,6 +44,17 @@ HEALTH_STUDY = (
 )
 CORPUS = {"PROJECT": {"oak": OAK, "elm": ELM}, "STUDY": {"debt": DEBT_STUDY, "health": HEALTH_STUDY}}
 CORPUS_OF_PROJECTS = {"PROJECT": {"oak": OAK, "elm": ELM}}
+NIGHTLY_ORDER = (("RECIPE", "usage-report"), ("PROJECT", "@PROJECT.oak"), ("EVERY", "24h"), ("STATUS", "active"))
+HOURLY_ORDER = (("RECIPE", "usage-report"), ("PROJECT", "@PROJECT.oak"), ("EVERY", "1h"), ("STATUS", "active"))
+CORPUS_OF_ORDERS = {**CORPUS, "ORDER": {"nightly": NIGHTLY_ORDER, "hourly": HOURLY_ORDER}}
+PARKED_NIGHTLY = {
+    "name": "nightly",
+    "recipe": "usage-report",
+    "project": "oak",
+    "run": "20261019T081500Z-n1",
+    "step": "1-gate",
+    "reason": "the gate step failed",
+}
 HOME = {
     "schema_version": 1,
     "projects": [{"name": "elm", "paused": True}, {"name": "oak", "paused": False}],
@@ -119,6 +130,7 @@ HOME = {
         },
         {"name": "worktrees_oak", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True},
     ],
+    "orders": [],
 }
 
 
@@ -258,6 +270,34 @@ class StatusOfTheMachineTest(unittest.TestCase):
             },
         )
 
+    def test_should_list_the_parked_orders_with_the_step_and_the_reason_that_parked_them(self):
+        # Arrange
+        self.write_machine()
+        events = [
+            (at(8, 15), OrderStarted(project="oak", kind="usage-report", order="nightly", run="20261019T081500Z-n1")),
+            (
+                at(8, 16),
+                OrderParked(
+                    project="oak",
+                    kind="usage-report",
+                    order="nightly",
+                    run="20261019T081500Z-n1",
+                    step="1-gate",
+                    reason="the gate step failed",
+                ),
+            ),
+            (at(8, 20), OrderStarted(project="oak", kind="usage-report", order="hourly", run="20261019T082000Z-h1")),
+        ]
+        for instant, event in events:
+            append_event(self.paths, instant, event)
+        runtime = create_test_runtime(self.paths, run_process=create_corpus_double(CORPUS_OF_ORDERS))
+
+        # Act
+        document = COMMAND.run(Namespace(), runtime)
+
+        # Assert
+        self.assertEqual(document["orders"], [PARKED_NIGHTLY])
+
 
 class StatusOfTheInboxTest(unittest.TestCase):
     def setUp(self):
@@ -336,6 +376,16 @@ class StatusTextTest(unittest.TestCase):
             "study      stale_branches_oak, due\n"
             "study      worktrees_oak, due",
         )
+
+    def test_should_print_one_line_per_parked_order_after_the_studies(self):
+        # Arrange
+        home = {**HOME, "studies": [], "orders": [PARKED_NIGHTLY]}
+
+        # Act
+        text = COMMAND.render_text(home)
+
+        # Assert
+        self.assertEqual(text.splitlines()[-1], "order      nightly of oak, parked at 1-gate: the gate step failed")
 
     def test_should_print_one_line_per_scan_holding_new_signals_after_the_inbox(self):
         # Arrange
