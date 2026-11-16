@@ -1,3 +1,4 @@
+import functools
 import json
 import tempfile
 import unittest
@@ -5,6 +6,7 @@ from pathlib import Path
 
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.errors import BrigadeError
+from brigade.preflights.read_preflight_file import read_preflight_file
 from brigade.preflights.run_preflight import PreflightPlugins, PreflightRun, run_preflight
 from brigade.system.parse_configuration import Configuration
 from tests.unit.create_preflight_plugins import create_preflight_plugins
@@ -83,7 +85,7 @@ class RunPreflightTest(unittest.TestCase):
                 forge_name="none",
                 resolve_client=refuse_to_resolve_a_client,
             ),
-            preflights=self.preflights,
+            preflights=(functools.partial(read_preflight_file, self.preflights),),
             plugins=PreflightPlugins(
                 resolve_collector=self.record_and_resolve_collector, resolve_check=self.record_and_resolve_check
             ),
@@ -155,4 +157,7 @@ class RunPreflightTest(unittest.TestCase):
             self.run_nightly("weekly", PASSED_COVERAGE)
 
         # Assert
-        self.assertEqual(str(refusal.exception), f"no preflight weekly: no weekly.toml in {self.preflights}")
+        self.assertEqual(
+            str(refusal.exception),
+            "no preflight weekly in the project, in the machine's preflights directory or among the built-ins",
+        )

@@ -7322,3 +7322,32 @@ DECISION AFailedPreflightWavePausesTheWaveOnTheForgeAccount
 	SOURCE "pull request #420 of the brigade repository, delivering @TASK.B253, whose SPEC asks a"
 		+ "failed login to pause the wave before any run and leaves the reason open"
 		REF @TASK.B253
+
+DECISION APreflightEntityIsNamedWithUnderscoresAndPreflightAddResolvesItsStepAsACollectorFirst
+	TITLE "a PREFLIGHT entity is named after its preflight, its hyphens as underscores; brigade"
+		+ "preflight add resolves its step as a collector first, appends it, and writes the entity"
+		+ "in preflights.awawa without a commit"
+	STATUS active
+	DESC "a PREFLIGHT entity is named after its preflight, its hyphens as underscores, an awawa"
+		+ "entity name being an identifier; brigade preflight <name> reads that entity, its TITLE"
+		+ "the description, each COLLECTOR and CHECK a step, each PARAMETER a key=value pair of the"
+		+ "step above it"
+	DESC "a project keeps its custom preflights in its corpus when it is registered in MODE control"
+		+ "or area; a project in MODE none, or not registered, keeps them in .brigade/preflights/"
+	DESC "brigade preflight add resolves its step as a collector first, then as a check, and"
+		+ "appends it, a step of that name already in the preflight staying; a preflight it creates"
+		+ "is described as the custom preflight <name>"
+	DESC "on a project with a corpus it writes the entity in preflights.awawa at the root of the"
+		+ "corpus through brigade/corpus/write_corpus_files, the write, format, lint and restore of"
+		+ "change_corpus_file without its commit; on a project without one the lint of the TOML"
+		+ "file is its read back as a preflight"
+	DESC "binds @TASK.B252"
+		REF @TASK.B252
+	REJECTED "a field holding the hyphenated name beside an identifier name: two names for one"
+		+ "preflight, where the command modules already map a hyphen to an underscore"
+	REJECTED "a name that resolves as a collector and as a check refused: such a check could never"
+		+ "be added, and the built-in collectors are hyphenated where the built-in checks are not"
+	SOURCE "the run of @TASK.B252 in the wave brigade_w56, whose SPEC leaves the name of the"
+		+ "entity, the file it lives in, the order of the two kinds and the description of a"
+		+ "created preflight open"
+		REF @TASK.B252

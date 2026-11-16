@@ -1,19 +1,17 @@
-import tomllib
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
 from importlib.resources import files
-from importlib.resources.abc import Traversable
 from pathlib import Path
 
 from brigade.collecting.collect_document import CollectionRequest, collect_document
 from brigade.collecting.collector_environment import CollectorInputs
 from brigade.collecting.collector_equipment import CollectorEquipment
-from brigade.errors import BrigadeError
+from brigade.preflights.find_preflight import find_preflight
 from brigade.runtime import Runtime
 from brigade.system.check_shapes import FAILED, PASSED
 from brigade.system.document_shapes import SCHEMA_VERSION, TEXT
-from brigade.system.validate_document import Field, validate_document
+from brigade.system.validate_document import Field
 
 BUILT_IN_PREFLIGHTS = files("brigade.preflights") / "data"
 PREFLIGHT_SUFFIX = ".toml"
@@ -43,7 +41,7 @@ class PreflightRun:
     project: Path
     parameters: dict
     equipment: CollectorEquipment
-    preflights: Traversable
+    preflights: tuple[Callable[[str], dict | None], ...]
     plugins: PreflightPlugins
 
 
@@ -52,15 +50,6 @@ class PreflightOutcome:
     verdict: str
     checks: list
     collected: dict
-
-
-def _read_preflight(run: PreflightRun) -> dict:
-    file = run.preflights / f"{run.name}{PREFLIGHT_SUFFIX}"
-    if not file.is_file():
-        raise BrigadeError(f"no preflight {run.name}: no {run.name}{PREFLIGHT_SUFFIX} in {run.preflights}")
-    document = tomllib.loads(file.read_text(encoding="utf-8"))
-    validate_document(document, PREFLIGHT_SHAPE)
-    return document
 
 
 def _merge_parameters(step: dict, run: PreflightRun) -> dict:
@@ -87,7 +76,7 @@ def _judge(step: dict, run: PreflightRun, collected: dict, runtime: Runtime) -> 
 
 
 def run_preflight(run: PreflightRun, runtime: Runtime) -> PreflightOutcome:
-    preflight = _read_preflight(run)
+    preflight = find_preflight(run.name, run.preflights)
     collected = {step["name"]: _collect(step, run, runtime) for step in preflight["collectors"]}
     checks = [_judge(step, run, collected, runtime) for step in preflight["checks"]]
     verdict = FAILED if any(check["verdict"] == FAILED for check in checks) else PASSED
