@@ -3930,6 +3930,15 @@ DECISION TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint
 		+ "their content"
 	DESC "binds @TASK.B22"
 		REF @TASK.B22
+	DESC "amended on 2026-11-16 by"
+		+ "@DECISION.ASignalIsClosedOnceItsDefectIsCorrectedAndReopensWhenItComesBack: a dismissed"
+		+ "signal recorded again is new again and counts; « keep a dismissed fact dismissed » of"
+		+ "the RATIONALE and « the same fact would come back as new » of REJECTED 5 no longer hold"
+		+ "and are kept as written, this DESC being the ruling; the signals stay folded by"
+		+ "fingerprint, a signal per recording losing the count of one fact; the reader keeps a"
+		+ "dismissed signal dismissed until @TASK.B258 is delivered"
+		REF @DECISION.ASignalIsClosedOnceItsDefectIsCorrectedAndReopensWhenItComesBack
+		REF @TASK.B258
 	REJECTED "one line per fingerprint, the file rewritten atomically at each recording: the"
 		+ "occurrences of a signal are lost, and the Blueprint draws the connectors as CLI append"
 	REJECTED "a sequential id s<n>: a counter to keep under the lock, where a hash prefix needs no"
@@ -3946,6 +3955,10 @@ DECISION TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint
 		+ "occurrence as the ledger does"
 	SOURCE "the user's rulings of 2026-10-24 in the refinement of @TASK.B22"
 		REF @TASK.B22
+	SOURCE "DESC 5 on the user's words of 2026-11-16, quoted in"
+		+ "@DECISION.ASignalIsClosedOnceItsDefectIsCorrectedAndReopensWhenItComesBack, which"
+		+ "reverse the ruling of 2026-10-24 on a dismissed fact recorded again"
+		REF @DECISION.ASignalIsClosedOnceItsDefectIsCorrectedAndReopensWhenItComesBack
 
 DECISION ConnectorsRunAtEachTickAndRecordAFactOnce
 	TITLE "a connector is a built-in collector the tick runs for every active project at each tick,"
@@ -7307,3 +7320,52 @@ DECISION ThePostMvpMilestoneAdd0IsSplitIntoFourMilestonesByThemeAndATaskOfNoThem
 		REF @TASK.B239
 		REF @TASK.B241
 		REF @TASK.B231
+
+DECISION ASignalIsClosedOnceItsDefectIsCorrectedAndReopensWhenItComesBack
+	TITLE "a signal is closed once its defect is corrected and reopens when it comes back: a closed"
+		+ "signal that does not come back proves its defect corrected, one that comes back proves"
+		+ "it is not"
+	STATUS active
+	DESC "the loop: a signal is emitted; a signal that recurs often may be a defect to correct; the"
+		+ "defect is corrected, then the signal is closed"
+	DESC "a dismissed signal recorded again is new again and counts, where"
+		+ "@DECISION.TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint kept it dismissed: « keep"
+		+ "a dismissed fact dismissed » of its RATIONALE no longer holds"
+		REF @DECISION.TheInboxIsAnAppendOnlySignalsFileFoldedByFingerprint
+	DESC "the 225 signals the session dismissed on 2026-11-16 because their fact had passed, pull"
+		+ "request merged, branch or worktree gone, and not because a defect was corrected, stay"
+		+ "dismissed: one whose fingerprint is recorded again reopens once @TASK.B258 is delivered,"
+		+ "and a defect that returns under another fingerprint is a new signal"
+		REF @TASK.B258
+	DESC "binds @TASK.B258, @TASK.B259, @TASK.B260 and @TASK.B261"
+		REF @TASK.B258
+		REF @TASK.B259
+		REF @TASK.B260
+		REF @TASK.B261
+	REJECTED "a dismissed signal kept dismissed when it is recorded again, as ruled on 2026-10-24:"
+		+ "its return is the proof that its defect is not corrected, and it would be shown to no"
+		+ "one"
+	REJECTED "going back on the 225 dismissals of 2026-11-16: a signal among them whose defect is"
+		+ "not corrected reopens when it recurs, « pas besoin de revenir sur les fermetures, on"
+		+ "laisse »"
+	REJECTED "closing the signals a pattern cites when the pattern is ratified, as"
+		+ "brigade/triage/ratify_pattern.py does: the signal is closed before its defect is"
+		+ "corrected, so its silence proves nothing"
+	RATIONALE "the return of a signal is the proof brigade has that a correction did not hold, « et"
+		+ "ainsi on améliore le système au fil du temps »; read on 2026-11-16 the loop had never"
+		+ "closed, patterns.awawa of the operational corpus of the machine holding 31 PATTERN, all"
+		+ "new, and 0 CONSTRAINT, the corrections having gone through tasks written by hand that no"
+		+ "pattern is linked to"
+	RATIONALE "a fingerprint often names one occurrence, a check run being cr:<project>:<pr>:<check"
+		+ "name>:<sha>, brigade/inbox/fingerprint_check_run.py, and a stall"
+		+ "stall:<project>:<wave>:<task>: a defect that comes back then shows as new signals the"
+		+ "triage groups, which is why the return is also read on the pattern, @TASK.B260"
+		REF @TASK.B260
+	SOURCE "the user's words of 2026-11-16: « on émet un signal, on regarde si le signal se"
+		+ "reproduit souvent: si oui c'est peut être un défaut à corriger. On corrige le défaut et"
+		+ "on ferme le signal. Si le signal ne revient pas, le défaut est corrigé. S'il revient,"
+		+ "c'est que non. Et ainsi on améliore le système au fil du temps. »"
+	SOURCE "the user's words of 2026-11-16 on the 225 dismissals, the session answering yes for a"
+		+ "fingerprint recorded again: « Une fois que a à d sont implémentées, ça devrait rouvrir"
+		+ "les signaux fermés qui ne sont pas corrigés lorsqu'ils se reproduisent, c'est bien ça?"
+		+ "Si oui, alors pas besoin de revenir sur les fermetures, on laisse. »"
