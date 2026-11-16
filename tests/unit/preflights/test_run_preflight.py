@@ -1,4 +1,3 @@
-import functools
 import json
 import tempfile
 import unittest
@@ -6,14 +5,13 @@ from pathlib import Path
 
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.errors import BrigadeError
-from brigade.preflights.run_preflight import PreflightRun, run_preflight
+from brigade.preflights.run_preflight import PreflightPlugins, PreflightRun, run_preflight
 from brigade.system.parse_configuration import Configuration
-from brigade.system.resolve_plugin import resolve_plugin
+from tests.unit.create_preflight_plugins import create_preflight_plugins
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
-NO_PLUGIN_SOURCES = None
 NIGHTLY = (
     "schema_version = 1\n"
     'name = "nightly"\n'
@@ -57,6 +55,15 @@ class RunPreflightTest(unittest.TestCase):
         place_executable(self.collector)
         place_executable(self.check)
         self.paths = create_test_paths(root)
+        self.resolved = []
+
+    def record_and_resolve_collector(self, name: str, project: Path):
+        self.resolved.append(("collector", name, project))
+        return create_preflight_plugins(self.paths).resolve_collector(name, project)
+
+    def record_and_resolve_check(self, name: str, project: Path):
+        self.resolved.append(("check", name, project))
+        return create_preflight_plugins(self.paths).resolve_check(name, project)
 
     def run_nightly(self, name: str, coverage: dict) -> tuple[RecordingProcessRunner, object]:
         runner = RecordingProcessRunner(
@@ -65,9 +72,7 @@ class RunPreflightTest(unittest.TestCase):
                 (str(self.check),): ProcessAnswer(stdout=json.dumps(coverage)),
             }
         )
-        runtime = create_test_runtime(
-            self.paths, run_process=runner, resolve_plugin=functools.partial(resolve_plugin, sources=NO_PLUGIN_SOURCES)
-        )
+        runtime = create_test_runtime(self.paths, run_process=runner)
         run = PreflightRun(
             name=name,
             project=self.project,
@@ -79,6 +84,9 @@ class RunPreflightTest(unittest.TestCase):
                 resolve_client=refuse_to_resolve_a_client,
             ),
             preflights=self.preflights,
+            plugins=PreflightPlugins(
+                resolve_collector=self.record_and_resolve_collector, resolve_check=self.record_and_resolve_check
+            ),
         )
         return runner, run_preflight(run, runtime)
 
@@ -133,6 +141,13 @@ class RunPreflightTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(json.loads(runner.requests[0].environment["BRIGADE_PARAMS"]), {"depth": "1", "pr": "42"})
+
+    def test_should_reach_each_collector_and_each_check_through_the_resolvers_it_is_handed(self):
+        # Act
+        self.run_nightly("nightly", PASSED_COVERAGE)
+
+        # Assert
+        self.assertEqual(self.resolved, [("collector", "notes", self.project), ("check", "coverage", self.project)])
 
     def test_should_refuse_a_name_no_preflight_carries(self):
         # Act

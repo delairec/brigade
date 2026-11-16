@@ -4,6 +4,7 @@ from pathlib import Path
 from brigade.command import Argument, Command
 from brigade.commands._accept_parameter import accept_parameter
 from brigade.commands._equip_collector import equip_collector
+from brigade.commands._equip_preflight import equip_preflight
 from brigade.commands._read_parameters import read_parameters
 from brigade.git.locate_main_checkout import locate_main_checkout
 from brigade.git.locate_worktree_root import locate_worktree_root
@@ -35,6 +36,7 @@ def preflight(request: argparse.Namespace, runtime: Runtime) -> dict:
         parameters=parameters,
         equipment=equip_collector(project, runtime),
         preflights=BUILT_IN_PREFLIGHTS,
+        plugins=equip_preflight(runtime),
     )
     outcome = run_preflight(run, runtime)
     return {

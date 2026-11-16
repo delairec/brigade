@@ -9,6 +9,7 @@ from brigade.corpus.read_entities import Entity, EntityField
 from brigade.errors import BrigadeError
 from brigade.system.parse_configuration import Configuration
 from brigade.verify.preflight_pull_request import PreflightDemand, preflight_pull_request
+from tests.unit.create_preflight_plugins import create_preflight_plugins
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
@@ -84,6 +85,7 @@ class PreflightPullRequestOfAnAreaTest(unittest.TestCase):
                 forge_name="github",
                 resolve_client=NO_CLIENT_RESOLVER,
             ),
+            plugins=create_preflight_plugins(self.paths),
         )
         return preflight_pull_request(
             create_test_runtime(self.paths, run_process=RecordingProcessRunner(answers)), demand
@@ -171,6 +173,7 @@ class PreflightPullRequestTest(unittest.TestCase):
                 forge_name="github",
                 resolve_client=NO_CLIENT_RESOLVER,
             ),
+            plugins=create_preflight_plugins(self.paths),
         )
 
         # Act
@@ -218,6 +221,7 @@ class PreflightPullRequestTest(unittest.TestCase):
                 forge_name="gitlab",
                 resolve_client=NO_CLIENT_RESOLVER,
             ),
+            plugins=create_preflight_plugins(self.paths),
         )
 
         # Act

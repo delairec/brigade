@@ -4,7 +4,7 @@ from pathlib import Path
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.corpus.read_entities import Entity
 from brigade.git.count_changed_lines import ChangedFile
-from brigade.preflights.run_preflight import BUILT_IN_PREFLIGHTS, PreflightRun, run_preflight
+from brigade.preflights.run_preflight import BUILT_IN_PREFLIGHTS, PreflightPlugins, PreflightRun, run_preflight
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.verify.measure_size import measure_size
@@ -22,6 +22,7 @@ class PreflightDemand:
     base_branch: str
     pr: int
     equipment: CollectorEquipment
+    plugins: PreflightPlugins
 
 
 def preflight_pull_request(runtime: Runtime, demand: PreflightDemand) -> dict:
@@ -31,6 +32,7 @@ def preflight_pull_request(runtime: Runtime, demand: PreflightDemand) -> dict:
         parameters={"pr": str(demand.pr), "task": demand.task, "base": demand.base_branch},
         equipment=demand.equipment,
         preflights=BUILT_IN_PREFLIGHTS,
+        plugins=demand.plugins,
     )
     outcome = run_preflight(run, runtime)
     facts = outcome.collected[PULL_REQUEST_COLLECTOR]["summary"]
