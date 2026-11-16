@@ -2,15 +2,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from brigade.corpus.format_files import format_files
-from brigade.corpus.lint_corpus import lint_corpus
-from brigade.errors import CorpusLintFailed
+from brigade.corpus.write_corpus_files import CorpusWrite, write_corpus_files
 from brigade.git.commit_files import CommitRequest, commit_files
-from brigade.git.restore_files import restore_files
-from brigade.system.create_directory import create_directory
 from brigade.system.hold_lock import hold_lock
 from brigade.system.run_process import ProcessRecord, ProcessRequest
-from brigade.system.write_text_file import write_text_file
 
 
 @dataclass(frozen=True)
@@ -29,22 +24,15 @@ def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def _write_text(path: Path, text: str) -> None:
-    create_directory(path.parent)
-    write_text_file(path, text)
-
-
 def _write_checked(
     run_process: Callable[[ProcessRequest], ProcessRecord], change: CorpusChange, texts: tuple[str, ...]
 ) -> None:
-    paths = tuple(change.repository / file_name for file_name in change.file_names)
-    for path, text in zip(paths, texts, strict=True):
-        _write_text(path, text)
-    format_files(run_process, paths)
-    report = lint_corpus(run_process, change.repository / change.workspace)
-    if not report.clean:
-        restore_files(run_process, change.repository, change.file_names)
-        raise CorpusLintFailed(f"awawa lint --strict refused the change; the corpus is restored\n{report.output}")
+    write_corpus_files(
+        run_process,
+        CorpusWrite(
+            repository=change.repository, workspace=change.workspace, file_names=change.file_names, texts=texts
+        ),
+    )
     commit_files(
         run_process,
         CommitRequest(repository=change.repository, files=change.file_names, message=change.describe_message()),

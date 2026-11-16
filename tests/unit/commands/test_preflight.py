@@ -16,6 +16,7 @@ from tests.unit.registry_answers import create_registry_answers
 
 NO_PLUGIN_SOURCES = None
 PARAMETERS = ["pr=42", "task=B1", "base=integration/w1"]
+NOT_DEFINED = ProcessAnswer(exit_code=1, stderr="awawa show: the preflight is not defined in the workspace\n")
 
 
 def place_executable(path: Path) -> None:
@@ -84,6 +85,8 @@ class PreflightCommandTest(unittest.TestCase):
                 ),
                 (str(collector),): ProcessAnswer(stdout=json.dumps(pull_request)),
                 ("awawa", "show", "@TASK.B1", "--json", str(head_tree)): ProcessAnswer(stdout=json.dumps(task)),
+                ("awawa", "show", "@PREFLIGHT.verify_pull_request", "--json", str(project)): NOT_DEFINED,
+                ("awawa", "show", "@PREFLIGHT.nightly", "--json", str(project)): NOT_DEFINED,
                 ("awawa", "diff", str(base_tree), str(head_tree), "--json"): ProcessAnswer(
                     stdout=json.dumps({"added": [], "changed": [], "removed": []})
                 ),
@@ -129,7 +132,10 @@ class PreflightCommandTest(unittest.TestCase):
             preflight(request, self.runtime)
 
         # Assert
-        self.assertRegex(str(refusal.exception), "^no preflight nightly: no nightly.toml in ")
+        self.assertEqual(
+            str(refusal.exception),
+            "no preflight nightly in the project, in the machine's preflights directory or among the built-ins",
+        )
 
 
 class PreflightCommandRenderingTest(unittest.TestCase):

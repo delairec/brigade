@@ -26,7 +26,7 @@ decide whether to read on. The pages are written in `wiki/` of the repository an
 - [Waves](Waves.md) — how a request is planned and how a wave of ratified tasks is started, followed, cancelled and
   resumed.
 - [Tasks](Tasks.md) — what a build run does from the worktree of its task: context, checks, pull request, promotion.
-- [Preflight](Preflight.md) — which deterministic checks run on the pull request of a task before any judgment.
+- [Preflight](Preflight.md) — where a preflight resolves from, how a project adds a custom one with `brigade preflight add`, and which deterministic checks run on the pull request of a task before any judgment.
 - [Runs](Runs.md) — how a procedure runs as a slot, what a run keeps, and how it is held on the clock, stopped and
   pruned.
 - [Verification](Verification.md) — how a review run judges the pull request of a task and records its verdict.
