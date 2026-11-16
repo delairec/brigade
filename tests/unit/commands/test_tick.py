@@ -8,6 +8,7 @@ import signal
 import tempfile
 import unittest
 from argparse import Namespace
+from contextlib import redirect_stderr
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import ANY
@@ -3375,6 +3376,61 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
                 "task_digests": {"T7": DIGEST_OF_T7_TO_DELIVER},
             },
         )
+
+    def test_should_pause_before_any_run_the_wave_a_forge_login_of_which_prints_no_token(self):
+        # Arrange
+        self._miss_the_branch("integration/tidepool_w1")
+        self._miss_the_branch("integration/tides")
+        (self.root / "config" / "config.toml").write_text(
+            f'{CLIENT_AND_DOCUMENT_CONFIGURATION}\n[forge_accounts]\nreview = "prudence-bot"\n', encoding="utf-8"
+        )
+        corpus = {
+            "STUDY": PAUSED_BUILT_IN_STUDIES,
+            "PROJECT": {"tidepool": (("PATH", str(self.root / "tidepool")), ("MAIN", "main"), ("FORGE", "github"))},
+            "TASK": {"T7": TASK_TO_DELIVER},
+            "MILESTONE": {"M4": MILESTONE_M4},
+        }
+        answers = {
+            **self.machine.answers,
+            ("git", "ls-remote"): ProcessAnswer(exit_code=2),
+            ("git", "push", "--quiet", "origin"): ProcessAnswer(),
+        }
+        machine = ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus))
+        forge = ForgeDouble(
+            {
+                "read_login_environment": lambda request: {"schema_version": 1, "environment": None},
+                "describe_account": lambda request: {"schema_version": 1, "login": "octo-cli"},
+                "list_pull_requests": lambda request: {"schema_version": 1, "pull_requests": []},
+                "find_pull_request": lambda request: {"schema_version": 1, "pull_request": None},
+                "list_check_runs": lambda request: {"schema_version": 1, "check_runs": []},
+            }
+        )
+        spawner = SpawnRecorderDouble()
+        runtime = dataclasses.replace(
+            self.runtime,
+            run_process=machine.run,
+            spawn_process=spawner.spawn,
+            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+        )
+
+        # Act
+        with redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(mode="once"), runtime)
+
+        # Assert
+        ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        self.assertIn(
+            {
+                "schema_version": 1,
+                "ts": ANY,
+                "event": "wave.paused",
+                "wave": "tidepool_w1",
+                "reason": "forge_account",
+                "resume_at": None,
+            },
+            [json.loads(line) for line in ledger],
+        )
+        self.assertEqual(spawner.argvs, [])
 
     def test_should_cut_the_branch_of_the_milestone_a_todo_task_names_before_its_wave_starts(self):
         # Arrange
