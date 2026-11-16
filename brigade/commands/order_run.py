@@ -88,9 +88,9 @@ def _find_parked_run(runtime: Runtime, order: Order) -> str | None:
     return last_event.run if isinstance(last_event, OrderParked) else NO_PARKED_RUN
 
 
-def _start_new_run(runtime: Runtime, order: Order) -> str:
+def _start_new_run(runtime: Runtime, order: Order, recipe: dict) -> str:
     run_id = create_run_id(runtime.now)
-    start_order_run(runtime, order, run_id)
+    start_order_run(runtime, order, recipe, run_id)
     return run_id
 
 
@@ -146,7 +146,7 @@ def order_run(request: argparse.Namespace, runtime: Runtime) -> dict:
     project_entity = _find_order_project(order, runtime)
     project = _locate_project(project_entity, runtime)
     recipe = resolve_recipe(order.recipe, locate_recipe_places(project, runtime), runtime.run_process).document
-    run_id = _find_parked_run(runtime, order) or _start_new_run(runtime, order)
+    run_id = _find_parked_run(runtime, order) or _start_new_run(runtime, order, recipe)
     run = OrderRun(
         order=order.name,
         project=order.project,
