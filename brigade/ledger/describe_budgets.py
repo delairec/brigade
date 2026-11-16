@@ -8,7 +8,7 @@ EVERY_CLIENT = None
 
 
 def _summarize_procedure(runs: list[FinishedRun]) -> dict:
-    steps = summarize_measure(runs, "main_steps")
+    steps = summarize_measure(runs, "main_turns")
     return {**steps, "estimate": steps["runs"]["measured"] < MEASURED_RUNS_FOR_A_MEASUREMENT}
 
 

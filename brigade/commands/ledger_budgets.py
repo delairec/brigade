@@ -15,7 +15,7 @@ LAST_RUNS_BY_DEFAULT = 20
 ESTIMATE_MARK = "  estimate"
 STEPS_INDENT = "    "
 ABSENT = "-"
-ROLES_HEADING = "step cap of each role at its latest digests:"
+ROLES_HEADING = "turn cap of each role at its latest digests:"
 
 
 def _show_tokens(tokens: float | None) -> str:
@@ -33,7 +33,7 @@ def _render_role(role: str, budget: dict) -> str:
 
 def _render_text(document: dict) -> str:
     procedures = document["procedures"]
-    lines = [f"steps over the last {document['last']} runs finished of each procedure:"]
+    lines = [f"turns over the last {document['last']} runs finished of each procedure:"]
     for name, summary in procedures.items():
         lines.append(f"  {name}" + (ESTIMATE_MARK if summary["estimate"] else ""))
         lines.extend(format_steps_lines(STEPS_INDENT, summary))
@@ -54,7 +54,7 @@ def ledger_budgets(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("ledger", "budgets"),
-    help="p50 and p90 steps per procedure over its last runs, and the step cap of each role",
+    help="p50 and p90 turns per procedure over its last runs, and the turn cap of each role",
     arguments=(
         Argument(
             ("--last",),

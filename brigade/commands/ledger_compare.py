@@ -13,14 +13,14 @@ from brigade.system.read_day_range import read_day_range
 
 DOCUMENT_SCHEMA_VERSION = 1
 MEASURE_LABELS = {
-    "steps": "steps",
-    "steps_to_first_edit": "steps to first edit",
-    "oversized_output_steps": "oversized output steps",
+    "turns": "turns",
+    "turns_to_first_edit": "turns to first edit",
+    "oversized_output_turns": "oversized output turns",
 }
 FIGURE_LABELS = {
-    "steps_to_first_edit_p50": "steps to first edit p50",
-    "task_run_steps_p50": "steps per task run p50",
-    "oversized_output_steps_per_launch": "oversized output steps per launch",
+    "turns_to_first_edit_p50": "turns to first edit p50",
+    "task_run_turns_p50": "turns per task run p50",
+    "oversized_output_turns_per_launch": "oversized output turns per launch",
 }
 STEPS_INDENT = "    "
 NOT_REPORTED = "not reported"

@@ -4,7 +4,7 @@ from brigade.dashboard.render_html_table import render_html_table
 from brigade.runs.format_duration import format_duration
 
 SUMMARY_FIELDS = ("procedure", "slot", "role", "project", "wave", "task", "worktree", "state", "outcome", "message")
-SEGMENT_HEADER = ("segment", "outcome", "steps", "duration")
+SEGMENT_HEADER = ("segment", "outcome", "turns", "duration")
 ABSENT = "-"
 NO_SEGMENT = "no segment"
 
@@ -18,7 +18,7 @@ def _render_segment(segment: dict) -> tuple[str, ...]:
     return (
         _show(segment["segment"]),
         _show(segment["outcome"]),
-        _show(segment["steps"]),
+        _show(segment["turns"]),
         ABSENT if duration_ms is None else format_duration(duration_ms),
     )
 

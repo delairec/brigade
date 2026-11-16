@@ -15,8 +15,8 @@ RUNNING_RUN = {
     "task": "B94",
     "message": None,
 }
-FIRST_SEGMENT_HANDED_OVER = {"segment": 1, "outcome": "handed_over", "steps": 75, "duration_ms": 754000}
-SECOND_SEGMENT_RUNNING = {"segment": 2, "outcome": None, "steps": None, "duration_ms": None}
+FIRST_SEGMENT_HANDED_OVER = {"segment": 1, "outcome": "handed_over", "turns": 75, "duration_ms": 754000}
+SECOND_SEGMENT_RUNNING = {"segment": 2, "outcome": None, "turns": None, "duration_ms": None}
 
 
 class RenderRunFragmentTest(unittest.TestCase):
@@ -41,7 +41,7 @@ class RenderRunFragmentTest(unittest.TestCase):
             "<dt>project</dt><dd>oak</dd><dt>wave</dt><dd>oak_w4</dd><dt>task</dt><dd>B94</dd>"
             "<dt>worktree</dt><dd>/srv/oak/B94</dd><dt>state</dt><dd>running</dd><dt>outcome</dt><dd>-</dd>"
             "<dt>message</dt><dd>-</dd></dl>"
-            "<h3>Segments</h3><table><thead><tr><th>segment</th><th>outcome</th><th>steps</th><th>duration</th>"
+            "<h3>Segments</h3><table><thead><tr><th>segment</th><th>outcome</th><th>turns</th><th>duration</th>"
             "</tr></thead><tbody><tr><td>1</td><td>handed_over</td><td>75</td><td>12m34s</td></tr>"
             "<tr><td>2</td><td>-</td><td>-</td><td>-</td></tr></tbody></table>"
             "<h3>Progress</h3><pre>STEP s1\n\tDONE &quot;read the package&quot;\n</pre>",

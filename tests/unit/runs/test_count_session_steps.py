@@ -56,7 +56,7 @@ class CountSessionStepsTest(unittest.TestCase):
         steps = count_session_steps(transcripts)
 
         # Assert
-        self.assertEqual(steps, SessionSteps(main_steps=6, total_steps=6))
+        self.assertEqual(steps, SessionSteps(main_turns=6, total_turns=6))
 
     def test_should_add_the_steps_of_each_sub_agent_counted_the_same_way(self):
         # Arrange
@@ -109,7 +109,7 @@ class CountSessionStepsTest(unittest.TestCase):
         steps = count_session_steps(transcripts)
 
         # Assert
-        self.assertEqual(steps, SessionSteps(main_steps=2, total_steps=8))
+        self.assertEqual(steps, SessionSteps(main_turns=2, total_turns=8))
 
 
 class CountSessionStepsOfRecordedSessionsTest(unittest.TestCase):
@@ -150,9 +150,9 @@ class CountSessionStepsOfRecordedSessionsTest(unittest.TestCase):
         steps = count_session_steps(transcripts)
 
         # Assert
-        self.assertEqual(steps, SessionSteps(main_steps=42, total_steps=54))
+        self.assertEqual(steps, SessionSteps(main_turns=42, total_turns=54))
 
-    def test_should_count_as_many_main_steps_as_the_turns_the_client_reported_for_a_session_ending_on_no_notification(
+    def test_should_count_as_many_main_turns_as_the_turns_the_client_reported_for_a_session_ending_on_no_notification(
         self,
     ):
         # Arrange
@@ -162,7 +162,7 @@ class CountSessionStepsOfRecordedSessionsTest(unittest.TestCase):
         steps = count_session_steps(transcripts)
 
         # Assert
-        self.assertEqual(steps, SessionSteps(main_steps=52, total_steps=52))
+        self.assertEqual(steps, SessionSteps(main_turns=52, total_turns=52))
 
     def test_should_count_the_steps_of_a_session_cut_at_the_wall_time_limit(self):
         # Arrange
@@ -172,4 +172,4 @@ class CountSessionStepsOfRecordedSessionsTest(unittest.TestCase):
         steps = count_session_steps(transcripts)
 
         # Assert
-        self.assertEqual(steps, SessionSteps(main_steps=106, total_steps=106))
+        self.assertEqual(steps, SessionSteps(main_turns=106, total_turns=106))

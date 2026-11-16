@@ -13,12 +13,12 @@ def _describe_segment(segment_directory: Path) -> dict:
     number = _read_segment_number(segment_directory)
     result_path = segment_directory / RESULT_FILE
     if not result_path.exists():
-        return {"segment": number, "outcome": None, "steps": None, "duration_ms": None}
+        return {"segment": number, "outcome": None, "turns": None, "duration_ms": None}
     finished = read_run_finished(result_path, "segment result")
     return {
         "segment": number,
         "outcome": finished.outcome,
-        "steps": finished.main_steps,
+        "turns": finished.main_turns,
         "duration_ms": finished.duration_ms,
     }
 

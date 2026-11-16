@@ -15,7 +15,7 @@ def _render_task(task: dict, wave: str, ledger: dict) -> str:
     name = task["task"]
     line = (
         f"{escape(name)}, pull request {_show(task['pull_request'])}, run {_show(task['run'])},"
-        f" {ledger['rounds_by_task'].get(name, 0)} rounds, {_show(ledger['steps_by_task'].get(name))} steps"
+        f" {ledger['rounds_by_task'].get(name, 0)} rounds, {_show(ledger['turns_by_task'].get(name))} steps"
     )
     if task["reason"] is not None:
         line = f"{line}, {escape(task['reason'])}"

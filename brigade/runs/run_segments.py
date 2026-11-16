@@ -55,7 +55,7 @@ def _describe_signal(plan: RunPlan, record: SegmentRecord) -> SignalRecorded:
     )
 
 
-def _describe_budget_exceeded(plan: RunPlan, record: SegmentRecord, steps: int) -> SignalRecorded:
+def _describe_budget_exceeded(plan: RunPlan, record: SegmentRecord, turns: int) -> SignalRecorded:
     return SignalRecorded(
         signal=BUDGET_EXCEEDED,
         project=plan.project,
@@ -63,7 +63,7 @@ def _describe_budget_exceeded(plan: RunPlan, record: SegmentRecord, steps: int) 
         run=plan.run_id,
         segment=record.number,
         budget=plan.budget.applied,
-        steps=steps,
+        turns=turns,
     )
 
 
@@ -84,8 +84,8 @@ def _run_with_handovers(plan: RunPlan, runtime: Runtime, stop: StopSignalReceive
         write_json_atomically(
             _locate_segment_result(plan, record.number), append_event(runtime.paths, instant, finished)
         )
-        if finished.main_steps is not None and finished.main_steps > plan.budget.applied:
-            append_event(runtime.paths, instant, _describe_budget_exceeded(plan, record, finished.main_steps))
+        if finished.main_turns is not None and finished.main_turns > plan.budget.applied:
+            append_event(runtime.paths, instant, _describe_budget_exceeded(plan, record, finished.main_turns))
         if record.outcome not in RELAUNCH_SIGNALS:
             return records
         append_event(runtime.paths, instant, _describe_signal(plan, record))

@@ -7,7 +7,7 @@ from brigade.ledger.read_ledger import LedgerReading
 from brigade.ledger.summarize_measure import summarize_measure
 from brigade.system.read_day_range import DayRange
 
-REPORTED_MEASURES = ("steps_to_first_edit", "oversized_output_steps")
+REPORTED_MEASURES = ("turns_to_first_edit", "oversized_output_turns")
 PER_LAUNCH_DECIMALS = 2
 FOLLOWING_DAY = timedelta(days=1)
 
@@ -21,10 +21,10 @@ def _summarize_reported(runs: list[FinishedRun], measure: str) -> dict | None:
 
 def _average_per_launch(runs: list[FinishedRun]) -> float | None:
     reported = [
-        segment.oversized_output_steps
+        segment.oversized_output_turns
         for run in runs
         for segment in run.segments
-        if segment.oversized_output_steps is not None
+        if segment.oversized_output_turns is not None
     ]
     if not reported:
         return None
@@ -34,9 +34,9 @@ def _average_per_launch(runs: list[FinishedRun]) -> float | None:
 def _measure_figures(runs: list[FinishedRun]) -> dict:
     task_runs = [run for run in runs if run.last.task is not None]
     return {
-        "steps_to_first_edit_p50": summarize_measure(runs, "steps_to_first_edit")["runs"]["p50"],
-        "task_run_steps_p50": summarize_measure(task_runs, "main_steps")["runs"]["p50"],
-        "oversized_output_steps_per_launch": _average_per_launch(runs),
+        "turns_to_first_edit_p50": summarize_measure(runs, "turns_to_first_edit")["runs"]["p50"],
+        "task_run_turns_p50": summarize_measure(task_runs, "main_turns")["runs"]["p50"],
+        "oversized_output_turns_per_launch": _average_per_launch(runs),
     }
 
 
@@ -56,7 +56,7 @@ def _describe_range(runs: list[FinishedRun], day_range: DayRange) -> dict:
         "end": day_range.end.isoformat(),
         "runs": len(selected),
         "segments": sum(len(run.segments) for run in selected),
-        "steps": summarize_measure(selected, "main_steps"),
+        "turns": summarize_measure(selected, "main_turns"),
         **{measure: _summarize_reported(selected, measure) for measure in REPORTED_MEASURES},
         "figures": _measure_figures(selected),
     }

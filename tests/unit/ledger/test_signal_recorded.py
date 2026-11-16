@@ -51,9 +51,9 @@ class SignalRecordedTest(unittest.TestCase):
             },
         )
 
-    def test_should_write_back_the_steps_of_a_segment_over_its_budget(self):
+    def test_should_write_back_the_turns_of_a_segment_over_its_budget(self):
         # Arrange
-        document = {**SIGNAL_OF_A_PROJECT_RUN, "signal": "budget_exceeded", "steps": 57}
+        document = {**SIGNAL_OF_A_PROJECT_RUN, "signal": "budget_exceeded", "turns": 57}
 
         # Act
         written = SignalRecorded.from_document(document).to_document()
@@ -68,7 +68,7 @@ class SignalRecordedTest(unittest.TestCase):
                 "run": "20261008T090000Z-b74a01",
                 "segment": 1,
                 "budget": 40,
-                "steps": 57,
+                "turns": 57,
             },
         )
 

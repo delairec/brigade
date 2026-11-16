@@ -19,21 +19,21 @@ NOT_FOR_A_TASK = "not launched for a task"
 WALL_LIMIT_CUT = "cut at the wall-time limit"
 NO_EDIT_TOOL = "the client names no edit tool"
 NO_EDIT = "the segment made no edit outside the progress file"
-FIRST_EDIT_FIELDS = ("steps_to_first_edit", "tokens_to_first_edit")
+FIRST_EDIT_FIELDS = ("turns_to_first_edit", "tokens_to_first_edit")
 NO_NULLS_EXPLAINED = {}
 ENDING_REASONS = {WALL_LIMIT_OUTCOME: WALL_LIMIT_CUT, STOPPED_OUTCOME: STOPPED_BY_A_SIGNAL}
 
 
-def _explain_missing_main_steps(plan: RunPlan, record: SegmentRecord) -> str:
-    client_reason = "the client reported no step count" if plan.counts_steps else "the client counts no steps"
+def _explain_missing_main_turns(plan: RunPlan, record: SegmentRecord) -> str:
+    client_reason = "the client reported no turn count" if plan.counts_steps else "the client counts no turns"
     return f"{client_reason} and {record.uncounted}"
 
 
 def _explain_client_nulls(plan: RunPlan, record: SegmentRecord, finished: RunFinished) -> dict:
     reasons = {
         "session": "the client reported no session",
-        "main_steps": _explain_missing_main_steps(plan, record),
-        "total_steps": record.uncounted,
+        "main_turns": _explain_missing_main_turns(plan, record),
+        "total_turns": record.uncounted,
         "usage": "the client reported no usage",
         "error_class": NO_FAILURE if finished.outcome == DONE_OUTCOME else NO_ERROR_CLASS,
     }
@@ -43,8 +43,8 @@ def _explain_client_nulls(plan: RunPlan, record: SegmentRecord, finished: RunFin
 def _explain_ending_nulls(record: SegmentRecord, finished: RunFinished, ending_reason: str) -> dict:
     reasons = {
         "session": NO_SESSION_AT_LAUNCH,
-        "main_steps": record.uncounted,
-        "total_steps": record.uncounted,
+        "main_turns": record.uncounted,
+        "total_turns": record.uncounted,
         "usage": record.uncounted,
         "error_class": ending_reason,
         "exit": ending_reason,
@@ -86,9 +86,9 @@ def _explain_nulls(plan: RunPlan, record: SegmentRecord, finished: RunFinished) 
     return {**nulls, **_explain_ending_nulls(record, finished, ending_reason)}
 
 
-def _choose_main_steps(plan: RunPlan, record: SegmentRecord) -> int | None:
+def _choose_main_turns(plan: RunPlan, record: SegmentRecord) -> int | None:
     if record.counted_steps is not None:
-        return record.counted_steps.main_steps
+        return record.counted_steps.main_turns
     return record.client_steps if plan.counts_steps else None
 
 
@@ -102,8 +102,8 @@ def describe_finished(plan: RunPlan, record: SegmentRecord) -> RunFinished:
         client=plan.client,
         project=plan.project,
         session=record.session_id,
-        main_steps=_choose_main_steps(plan, record),
-        total_steps=None if record.counted_steps is None else record.counted_steps.total_steps,
+        main_turns=_choose_main_turns(plan, record),
+        total_turns=None if record.counted_steps is None else record.counted_steps.total_turns,
         duration_ms=record.measured_ms,
         usage=record.usage,
         outcome=record.outcome,
@@ -115,7 +115,7 @@ def describe_finished(plan: RunPlan, record: SegmentRecord) -> RunFinished:
         cost_usd=record.cost_usd,
         message=record.message,
         reset=record.reset,
-        steps_to_first_edit=None if record.first_edit is None else record.first_edit.steps,
+        turns_to_first_edit=None if record.first_edit is None else record.first_edit.steps,
         tokens_to_first_edit=None if record.first_edit is None else record.first_edit.tokens,
         role_digest=digest_text(plan.role.body),
         procedure_digest=digest_text(plan.procedure.body),

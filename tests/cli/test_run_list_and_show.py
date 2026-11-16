@@ -97,7 +97,7 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
                     "task": None,
                     "message": None,
                 },
-                "segments": [{"segment": 1, "outcome": "done", "steps": 12, "duration_ms": ANY}],
+                "segments": [{"segment": 1, "outcome": "done", "turns": 12, "duration_ms": ANY}],
                 "journal": None,
                 "progress": None,
             },
@@ -126,7 +126,7 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
                 "outcome    done",
                 "message    -",
                 "",
-                "segment  outcome  steps  duration",
+                "segment  outcome  turns  duration",
             ],
         )
 
@@ -171,7 +171,7 @@ class BrigadeRunsShowFollowOfAnEndedRunTest(RunsTestCase):
             rf"^run        {run_id}\n"
             r"procedure  deliver\nslot       build\nrole       builder\nproject    -\n"
             r"state      finished\noutcome    done\nmessage    -\n\n"
-            r"segment  outcome  steps  duration\n1        done     12     \d+m\d\ds\n\n"
+            r"segment  outcome  turns  duration\n1        done     12     \d+m\d\ds\n\n"
             r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  text  Reading the task\n"
             r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  text  Writing the test\n"
             r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z  1  result  done\n"
@@ -255,7 +255,7 @@ class BrigadeRunsOfARunWhoseResultIsOfAnOlderShapeTest(RunsTestCase):
         self.assertEqual(
             completed.stderr,
             f"brigade run list: skipped run {self.run_id}: {self.run_result} is not a run result:"
-            " schema_version is 1, not one of 2\n",
+            " schema_version is 1, not one of 3\n",
         )
 
 

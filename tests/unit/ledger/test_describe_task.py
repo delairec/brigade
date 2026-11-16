@@ -27,17 +27,17 @@ class DescribeTaskTest(unittest.TestCase):
                 create_run_finished(
                     "r1",
                     segment=1,
-                    main_steps=10,
+                    main_turns=10,
                     outcome="budget_reached",
                     task="TP1",
                     duration_ms=60000,
                     cost_usd=3.5,
                 ),
             ),
-            LedgerEntry(at_minute(2), create_run_finished("r9", main_steps=99, task="TP2", cost_usd=9.0)),
+            LedgerEntry(at_minute(2), create_run_finished("r9", main_turns=99, task="TP2", cost_usd=9.0)),
             LedgerEntry(
                 at_minute(3),
-                create_run_finished("r1", segment=2, main_steps=5, task="TP1", duration_ms=30000, cost_usd=1.25),
+                create_run_finished("r1", segment=2, main_turns=5, task="TP1", duration_ms=30000, cost_usd=1.25),
             ),
             LedgerEntry(
                 at_minute(4),
@@ -60,7 +60,7 @@ class DescribeTaskTest(unittest.TestCase):
                         "finished_at": "2026-10-10T09:03:00Z",
                         "slot": "build",
                         "outcome": "succeeded",
-                        "steps": 15,
+                        "turns": 15,
                         "partial": False,
                         "duration_ms": 90000,
                         "cost_usd": 4.75,
@@ -70,7 +70,7 @@ class DescribeTaskTest(unittest.TestCase):
                         "finished_at": "2026-10-10T09:04:00Z",
                         "slot": "review",
                         "outcome": "failed",
-                        "steps": None,
+                        "turns": None,
                         "partial": False,
                         "duration_ms": None,
                         "cost_usd": None,
@@ -82,7 +82,7 @@ class DescribeTaskTest(unittest.TestCase):
     def test_should_mark_partial_a_run_one_of_whose_segments_is_not_measured(self):
         # Arrange
         reading = create_reading(
-            LedgerEntry(at_minute(1), create_run_finished("r1", segment=1, main_steps=10, task="TP1")),
+            LedgerEntry(at_minute(1), create_run_finished("r1", segment=1, main_turns=10, task="TP1")),
             LedgerEntry(at_minute(2), create_run_finished("r1", segment=2, task="TP1")),
         )
 

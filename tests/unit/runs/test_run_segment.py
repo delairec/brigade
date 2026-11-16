@@ -529,7 +529,7 @@ class RunSegmentStepsTest(unittest.TestCase):
         record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
 
         # Assert
-        self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
+        self.assertEqual(record.counted_steps, SessionSteps(main_turns=3, total_turns=5))
 
     def test_should_locate_the_first_edit_of_the_session_among_the_edit_tools_of_the_client(self):
         # Arrange
@@ -689,7 +689,7 @@ class RunSegmentCutAtTheWallTimeLimitTest(unittest.TestCase):
             record.usage,
             TokenUsage(input_tokens=3, output_tokens=30, cache_creation_input_tokens=300, cache_read_input_tokens=3000),
         )
-        self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
+        self.assertEqual(record.counted_steps, SessionSteps(main_turns=3, total_turns=5))
         self.assertIsNone(record.uncounted)
         self.assertIsNone(record.cost_usd)
 
@@ -1073,7 +1073,7 @@ class RunSegmentStoppedWhileItsClientRunsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(record.session_id, plan.client_adapter.requests["launch-argv"]["session_id"])
-        self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
+        self.assertEqual(record.counted_steps, SessionSteps(main_turns=3, total_turns=5))
 
 
 class RunSegmentStoppedWhileItsJournalIsWrittenTest(unittest.TestCase):
@@ -1204,7 +1204,7 @@ class RunSegmentOfAnAdapterAnsweringOutsideItsContractTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(record.session_id, plan.client_adapter.requests["launch-argv"]["session_id"])
-        self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
+        self.assertEqual(record.counted_steps, SessionSteps(main_turns=3, total_turns=5))
 
     def test_should_keep_the_time_measured_until_the_client_exited(self):
         # Arrange

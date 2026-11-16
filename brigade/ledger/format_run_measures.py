@@ -4,7 +4,7 @@ ABSENT = "-"
 
 
 def _show_steps(run: dict) -> str:
-    steps = ABSENT if run["steps"] is None else str(run["steps"])
+    steps = ABSENT if run["turns"] is None else str(run["turns"])
     return f"{steps} partial" if run["partial"] else steps
 
 
@@ -18,5 +18,5 @@ def _show_cost(cost_usd: float | None) -> str:
 
 def format_run_measures(run: dict) -> str:
     return (
-        f"steps {_show_steps(run)}  duration {_show_duration(run['duration_ms'])}  cost {_show_cost(run['cost_usd'])}"
+        f"turns {_show_steps(run)}  duration {_show_duration(run['duration_ms'])}  cost {_show_cost(run['cost_usd'])}"
     )

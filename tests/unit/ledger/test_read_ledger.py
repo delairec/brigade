@@ -36,6 +36,13 @@ RUN_FINISHED_OF_SCHEMA_2 = (
     ' "usage": null, "outcome": "done", "error_class": null, "exit": 0, "wave": null, "task": null,'
     ' "nulls": {"usage": "the client reported no usage"}, "cost_usd": 3.63}\n'
 )
+RUN_FINISHED_OF_SCHEMA_3 = (
+    '{"schema_version": 3, "ts": "2026-10-09T10:33:00Z", "event": "run.finished", "run": "20261009T101817Z-2ee96f",'
+    ' "segment": 1, "procedure": "awawa-task", "slot": "build", "role": "ada", "client": "claude-code",'
+    ' "project": "brigade", "session": "857d4221", "main_turns": 42, "total_turns": 54, "duration_ms": 900000,'
+    ' "usage": null, "outcome": "done", "error_class": null, "exit": 0, "wave": null, "task": null,'
+    ' "nulls": {"usage": "the client reported no usage"}, "cost_usd": 3.63}\n'
+)
 UNDECLARED_EVENT = '{"schema_version": 1, "ts": "2026-10-01T00:20:00Z", "event": "study.done", "study": "health"}\n'
 
 
@@ -190,8 +197,8 @@ class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
             ),
             (b'{"schema_version": 1, "ts": "2026-10-01T00:41:00Z", "event": "wave.paused"}\n', "lacks the key wave"),
             (
-                b'{"schema_version": 3, "ts": "2026-10-01T00:41:00Z", "event": "run.finished", "run": "r1"}\n',
-                "schema_version is 3, not one of 2",
+                b'{"schema_version": 4, "ts": "2026-10-01T00:41:00Z", "event": "run.finished", "run": "r1"}\n',
+                "schema_version is 4, not one of 3",
             ),
             (
                 (
@@ -236,8 +243,12 @@ class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
 
 
 class ReadLedgerOfRunsFinishedTest(ReadLedgerTestCase):
-    def test_should_skip_a_line_of_schema_1_naming_its_version(self):
-        for line in [RUN_FINISHED_OF_SCHEMA_1, RUN_FINISHED_OF_SCHEMA_1_COUNTING_NO_STEPS]:
+    def test_should_skip_a_line_of_an_older_schema_naming_its_version(self):
+        for line, expected_reason in [
+            (RUN_FINISHED_OF_SCHEMA_1, "schema_version is 1, not one of 3"),
+            (RUN_FINISHED_OF_SCHEMA_1_COUNTING_NO_STEPS, "schema_version is 1, not one of 3"),
+            (RUN_FINISHED_OF_SCHEMA_2, "schema_version is 2, not one of 3"),
+        ]:
             with self.subTest(line=line):
                 # Arrange
                 october = self.write_ledger("2026-10.jsonl", line.encode())
@@ -251,21 +262,21 @@ class ReadLedgerOfRunsFinishedTest(ReadLedgerTestCase):
                     LedgerReading(
                         entries=(),
                         files=(str(october),),
-                        skipped=(SkippedLine(file=str(october), line=1, reason="schema_version is 1, not one of 2"),),
+                        skipped=(SkippedLine(file=str(october), line=1, reason=expected_reason),),
                     ),
                 )
 
-    def test_should_read_a_line_of_schema_2_with_its_cost(self):
+    def test_should_read_a_line_of_schema_3_with_its_cost(self):
         # Arrange
-        self.write_ledger("2026-10.jsonl", RUN_FINISHED_OF_SCHEMA_2.encode())
+        self.write_ledger("2026-10.jsonl", RUN_FINISHED_OF_SCHEMA_3.encode())
 
         # Act
         reading = read_ledger(self.state_root)
 
         # Assert
         [entry] = reading.entries
-        self.assertEqual(entry.event.main_steps, 42)
-        self.assertEqual(entry.event.total_steps, 54)
+        self.assertEqual(entry.event.main_turns, 42)
+        self.assertEqual(entry.event.total_turns, 54)
         self.assertEqual(entry.event.cost_usd, 3.63)
 
 

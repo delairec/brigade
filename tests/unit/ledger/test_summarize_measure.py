@@ -15,8 +15,8 @@ SEGMENT = RunFinished(
     client="claude-code",
     project="tidepool",
     session=None,
-    main_steps=None,
-    total_steps=None,
+    main_turns=None,
+    total_turns=None,
     duration_ms=1000,
     usage=None,
     outcome="done",
@@ -35,17 +35,17 @@ class SummarizeMeasureTest(unittest.TestCase):
         partial_run = FinishedRun(
             run="20261010T090000Z-b86a01",
             finished_at=FINISHED_AT,
-            segments=(SEGMENT, replace(SEGMENT, segment=2, main_steps=30)),
+            segments=(SEGMENT, replace(SEGMENT, segment=2, main_turns=30)),
         )
         measured_run = FinishedRun(
             run="20261010T090000Z-b86a02",
             finished_at=FINISHED_AT,
-            segments=(replace(SEGMENT, main_steps=50), replace(SEGMENT, segment=2, main_steps=25)),
+            segments=(replace(SEGMENT, main_turns=50), replace(SEGMENT, segment=2, main_turns=25)),
         )
         unmeasured_run = FinishedRun(run="20261010T090000Z-b86a03", finished_at=FINISHED_AT, segments=(SEGMENT,))
 
         # Act
-        summary = summarize_measure([partial_run, measured_run, unmeasured_run], "main_steps")
+        summary = summarize_measure([partial_run, measured_run, unmeasured_run], "main_turns")
 
         # Assert
         self.assertEqual(

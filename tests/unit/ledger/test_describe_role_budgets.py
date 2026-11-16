@@ -14,7 +14,7 @@ USAGE = TokenUsage(input_tokens=0, output_tokens=0, cache_creation_input_tokens=
 
 def _create_entry(minute: int, run: str, role: str, shipped_budget: int | None) -> LedgerEntry:
     segment = dataclasses.replace(
-        create_run_finished(run, main_steps=12, usage=USAGE),
+        create_run_finished(run, main_turns=12, usage=USAGE),
         role=role,
         role_digest="3f1a",
         procedure_digest="7b2e",

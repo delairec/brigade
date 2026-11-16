@@ -45,7 +45,7 @@ from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
 
 LEDGER_SCHEMA_VERSION = 1
-RUN_FINISHED_SCHEMA_VERSION = 2
+RUN_FINISHED_SCHEMA_VERSION = 3
 WAVE_STARTED_SCHEMA_VERSION = 2
 WRITTEN_SCHEMA_VERSIONS = {
     RunFinished.name: RUN_FINISHED_SCHEMA_VERSION,

@@ -31,7 +31,7 @@ def _list_tasks(events: list) -> list[str]:
 def _summarize_by(runs: list[FinishedRun], attribute: str) -> dict:
     names = sorted({getattr(run.last, attribute) for run in runs}, key=str)
     return {
-        name: summarize_measure([run for run in runs if getattr(run.last, attribute) == name], "main_steps")
+        name: summarize_measure([run for run in runs if getattr(run.last, attribute) == name], "main_turns")
         for name in names
     }
 
@@ -78,21 +78,21 @@ def _list_runs(events: list) -> tuple[dict, ...]:
     )
 
 
-def _sum_steps_by_task(events: list) -> dict:
+def _sum_turns_by_task(events: list) -> dict:
     steps = {}
     for event in events:
-        if isinstance(event, RunFinished) and event.task is not None and event.main_steps is not None:
-            steps[event.task] = steps.get(event.task, 0) + event.main_steps
+        if isinstance(event, RunFinished) and event.task is not None and event.main_turns is not None:
+            steps[event.task] = steps.get(event.task, 0) + event.main_turns
     return steps
 
 
 def _cost_task(task: str, runs: list[FinishedRun]) -> dict:
     task_runs = [run for run in runs if run.last.task == task]
     segments = [segment for run in task_runs for segment in run.segments]
-    steps = [run.main_steps for run in task_runs]
+    steps = [run.main_turns for run in task_runs]
     return {
         "task": task,
-        "steps": sum_reported(measure.value for measure in steps),
+        "turns": sum_reported(measure.value for measure in steps),
         "partial": any(measure.partial for measure in steps),
         "duration_ms": sum_reported(segment.duration_ms for segment in segments),
         "cost_usd": sum_reported(segment.cost_usd for segment in segments),
@@ -139,12 +139,12 @@ def describe_wave(reading: LedgerReading, wave: str) -> dict:
         "tasks": tasks,
         **_cost_wave(events, runs, tasks),
         "pull_requests": _list_merged_pull_requests(events),
-        "steps": {"by_slot": _summarize_by(runs, "slot"), "by_role": _summarize_by(runs, "role")},
+        "turns": {"by_slot": _summarize_by(runs, "slot"), "by_role": _summarize_by(runs, "role")},
         "pauses": pauses,
         "paused_ms": sum(pause["duration_ms"] for pause in pauses if pause["duration_ms"] is not None),
         "handovers": _list_handovers(events),
         "parked": [event.task for event in events if isinstance(event, TaskParked)],
         "rounds_by_task": count_repair_rounds(tuple(entries), _list_runs(events), wave),
-        "steps_by_task": _sum_steps_by_task(events),
+        "turns_by_task": _sum_turns_by_task(events),
         "events": _list_events(entries),
     }

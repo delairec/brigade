@@ -22,7 +22,7 @@ ABSENT = "-"
 SUMMARY_FIELDS = ("run", "procedure", "slot", "role", "project", "state", "outcome", "message")
 SUMMARY_WIDTH = max(len(field) for field in SUMMARY_FIELDS)
 ENDING_FIELDS = ("state", "outcome")
-SEGMENT_COLUMNS = ("segment", "outcome", "steps", "duration")
+SEGMENT_COLUMNS = ("segment", "outcome", "turns", "duration")
 RECORD_SEPARATOR = "  "
 LINE_END = "\n"
 RUNNING = "running"
@@ -41,7 +41,7 @@ def _render_field(run: dict, field: str) -> str:
 
 
 def _render_segment(segment: dict) -> tuple[str, ...]:
-    steps = segment["steps"]
+    steps = segment["turns"]
     duration_ms = segment["duration_ms"]
     return (
         str(segment["segment"]),
