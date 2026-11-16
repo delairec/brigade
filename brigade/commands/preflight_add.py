@@ -104,13 +104,25 @@ def _render_toml(preflight: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _restore_file(file: Path, previous: str | None) -> None:
+    if previous is None:
+        file.unlink()
+    else:
+        write_text_file(file, previous)
+
+
 def _add_to_file(addition: PreflightAddition) -> Path:
     directory = addition.project / PROJECT_PREFLIGHTS_DIRECTORY
     preflight = read_preflight_file(directory, addition.name) or _create_preflight(addition.name)
     file = directory / f"{addition.name}{PREFLIGHT_SUFFIX}"
+    previous = _read_text(file) if file.is_file() else None
     create_directory(directory)
     write_text_file(file, _render_toml(_add_step(preflight, addition.kind, addition.step)))
-    read_preflight_file(directory, addition.name)
+    try:
+        read_preflight_file(directory, addition.name)
+    except BrigadeError:
+        _restore_file(file, previous)
+        raise
     return file
 
 
