@@ -1,8 +1,10 @@
+import functools
 import tempfile
 import unittest
 from pathlib import Path
 
 from brigade.collecting.collector_equipment import CollectorEquipment
+from brigade.preflights.read_preflight_file import read_preflight_file
 from brigade.preflights.run_preflight import BUILT_IN_PREFLIGHTS, PreflightRun, run_preflight
 from brigade.system.parse_configuration import Configuration
 from tests.unit.collectors.draft_processes import SHOP, script_draft_processes
@@ -31,7 +33,7 @@ class BuiltInPreflightsTest(unittest.TestCase):
             project=SHOP,
             parameters=parameters,
             equipment=equipment,
-            preflights=BUILT_IN_PREFLIGHTS,
+            preflights=(functools.partial(read_preflight_file, BUILT_IN_PREFLIGHTS),),
             plugins=create_preflight_plugins(self.paths),
         )
         return run_preflight(run, runtime).checks
