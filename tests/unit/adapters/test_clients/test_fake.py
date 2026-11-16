@@ -216,7 +216,7 @@ class FakeLaunchOfASlowClientWritingProgressTest(unittest.TestCase):
                 "argv": [
                     sys.executable,
                     "-m",
-                    "brigade.adapters.test_clients.replay_recording",
+                    "brigade.adapters.test_clients.launch_replay",
                     "/srv/hold",
                     "step 1 done",
                     "/state/brigade/runs/r1/progress.md",
@@ -249,7 +249,7 @@ class FakeLaunchOfAClientStoppingAtItsSoftLimitTest(unittest.TestCase):
             [
                 sys.executable,
                 "-m",
-                "brigade.adapters.test_clients.replay_recording",
+                "brigade.adapters.test_clients.launch_replay",
                 "",
                 "",
                 "/state/brigade/runs/r1/progress.md",
@@ -384,7 +384,7 @@ class FakeLaunchOfAClientWritingItsLinesAtIntervalsTest(unittest.TestCase):
             [
                 sys.executable,
                 "-m",
-                "brigade.adapters.test_clients.replay_recording",
+                "brigade.adapters.test_clients.launch_replay",
                 "",
                 "",
                 "/state/brigade/runs/r1/progress.md",

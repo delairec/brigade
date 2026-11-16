@@ -1,5 +1,3 @@
-import sys
-import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,7 +27,3 @@ def replay_recording(arguments: list[str], clock: ReplayClock, output: TextIO) -
         output.write(f"{line}\n")
         output.flush()
         clock.sleep(float(interval))
-
-
-if __name__ == "__main__":
-    replay_recording(sys.argv[1:], ReplayClock(read_epoch=time.time, sleep=time.sleep), sys.stdout)
