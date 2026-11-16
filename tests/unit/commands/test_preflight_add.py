@@ -221,8 +221,7 @@ class PreflightAddTest(unittest.TestCase):
         # Assert
         self.assertEqual((self.project / ".brigade" / "preflights" / "nightly.toml").read_text(), 'name = "nightly"\n')
 
-    def test_should_refuse_a_toml_file_its_lint_refuses_once_written(self):
-        # Arrange
+    def refuse_unreadable_parameter(self) -> BrigadeError:
         request = argparse.Namespace(name="nightly", step="coverage", extra_arguments=["note=a\x7fb"])
         runner = RecordingProcessRunner(
             {
@@ -235,16 +234,30 @@ class PreflightAddTest(unittest.TestCase):
                 ),
             }
         )
-
-        # Act
         with self.assertRaises(BrigadeError) as refusal:
             preflight_add(request, create_test_runtime(self.paths, run_process=runner))
+        return refusal.exception
+
+    def test_should_refuse_a_toml_file_its_lint_refuses_once_written_and_remove_it(self):
+        # Act
+        refusal = self.refuse_unreadable_parameter()
 
         # Assert
-        self.assertRegex(
-            str(refusal.exception),
-            f"^the preflight file {self.project / '.brigade' / 'preflights' / 'nightly.toml'} is no TOML document: ",
-        )
+        file = self.project / ".brigade" / "preflights" / "nightly.toml"
+        self.assertRegex(str(refusal), f"^the preflight file {file} is no TOML document: ")
+        self.assertFalse(file.exists())
+
+    def test_should_restore_the_toml_file_the_project_held_when_its_lint_refuses_the_file_written(self):
+        # Arrange
+        file = self.project / ".brigade" / "preflights" / "nightly.toml"
+        file.parent.mkdir(parents=True)
+        file.write_text(NIGHTLY_FILE)
+
+        # Act
+        self.refuse_unreadable_parameter()
+
+        # Assert
+        self.assertEqual(file.read_text(), NIGHTLY_FILE)
 
 
 class PreflightAddRenderingTest(unittest.TestCase):
