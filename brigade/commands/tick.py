@@ -20,6 +20,7 @@ from brigade.commands._read_cli_login import read_cli_login
 from brigade.commands._read_forge_environment import FORGE_KIND, ForgeSlot, read_forge_environment
 from brigade.commands._remember_forge_logins import remember_forge_logins
 from brigade.commands._repair_red_head import repair_red_head
+from brigade.commands.order_run import resolve_order
 from brigade.commands.run import run
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity
@@ -46,6 +47,7 @@ from brigade.ledger.tick_action_failed import TickActionFailed
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_paused import WavePaused
 from brigade.ledger.wave_resumed import WaveResumed
+from brigade.orders.start_order_run import start_order_run
 from brigade.preflights.read_preflight_file import read_preflight_file
 from brigade.preflights.run_preflight import BUILT_IN_PREFLIGHTS, PreflightOutcome, PreflightRun, run_preflight
 from brigade.registry.find_project import find_project
@@ -55,6 +57,7 @@ from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_project_forge import NO_FORGE, read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.runs.create_run_id import create_run_id
+from brigade.runs.detach_brigade_command import DetachedCommand, detach_brigade_command
 from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
 from brigade.runs.is_run_live_on import is_run_live_on
 from brigade.runs.read_run_document import read_run_document
@@ -93,6 +96,7 @@ from brigade.tick.actions import (
     DescribeMilestonePullRequest,
     KeepBranch,
     LaunchCheckRepair,
+    LaunchOrder,
     LaunchRemediation,
     LaunchStudy,
     LaunchTask,
@@ -433,6 +437,18 @@ def _launch_study(runtime: Runtime, action: LaunchStudy) -> None:
     run_id = create_run_id(runtime.now)
     start_study_run(runtime, study, run_id)
     detach_study_run(runtime, study.name, run_id, record_run_pid)
+
+
+def _launch_order(runtime: Runtime, action: LaunchOrder) -> None:
+    run_id = create_run_id(runtime.now)
+    resolved = resolve_order(runtime, action.order)
+    start_order_run(runtime, resolved.order, resolved.recipe, run_id)
+    detached = DetachedCommand(
+        command=("order", "run", action.order, "--run-id", run_id),
+        cwd=str(runtime.paths.config_root),
+        run_directory=runtime.paths.state_root / RUNS_DIRECTORY / run_id,
+    )
+    detach_brigade_command(runtime, detached, record_run_pid)
 
 
 def _report_milestone(runtime: Runtime, configuration: Configuration, action: ReportMilestone) -> None:
@@ -831,6 +847,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         OpenMergeWorktree: lambda action: _open_merge_worktree(runtime, action),
         **_list_task_run_executors(runtime, configuration),
         LaunchStudy: lambda action: _launch_study(runtime, action),
+        LaunchOrder: lambda action: _launch_order(runtime, action),
         PauseWave: lambda action: _pause_wave(runtime, action),
         ResumeWave: lambda action: append_event(
             runtime.paths, runtime.now, WaveResumed(wave=action.wave, reason=action.reason)
