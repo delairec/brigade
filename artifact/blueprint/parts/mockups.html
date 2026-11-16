@@ -249,7 +249,7 @@ instructions = "&lt;rootDir&gt;"
 
 <span class="p">$</span> <span class="c">brigade adapter launch-argv r-0193</span>
 <span class="tagc">cli</span>  client claude · built-in adapter · probe 2.1.289: launch, result, resume, transcripts, tool grants: full
-<span class="tagc">cli</span>  slot build → bastien (instructions corpus) · reasoning standard · budget 75, step cap 94
+<span class="tagc">cli</span>  slot build → bastien (instructions corpus) · reasoning standard · budget 75, turn cap 94
 cwd  &lt;worktrees&gt;/tp-16-tp146
 claude -p "@runs/r-0193/brief.md" --output-format stream-json \
   --model opus --effort high \
@@ -259,7 +259,7 @@ claude -p "@runs/r-0193/brief.md" --output-format stream-json \
 
 <span class="p">$</span> <span class="c">brigade runs logs r-0193 --tail 3</span>
 09:07:12  run r-0193 · build (bastien) · tp/16 TP146 · started · pid 48211
-09:38:40  result · outcome pr_open · steps 31 · 31 m 28 s · pr 291
+09:38:40  result · outcome pr_open · turns 31 · 31 m 28 s · pr 291
 09:38:40  ledger run.finished · segment 1 · exit 0</pre>
     <figcaption>The machine's bindings live in one file; the scheduler is one command any of three schedulers runs; the core spawns the client itself, with the argv its adapter translated, and reads the log the same way whatever the client.</figcaption>
   </figure>

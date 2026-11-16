@@ -21,9 +21,9 @@ brigade run prune [--keep <n>] [--before <YYYY-MM-DD>] [--resumable] [--dry-run]
 
 - **The procedure** is a Markdown file whose front matter declares `capabilities` (`read`, `write`, `shell`, `net`,
   comma-separated); the body is what the agent is asked to do.
-- **The step cap** of a segment is its role's: the `budget` the role package ships, until the ledger holds 5 measured
+- **The turn cap** of a segment is its role's: the `budget` the role package ships, until the ledger holds 5 measured
   segments and 3 measured restarts of the role at its current digests; then √(2R/g) rounded, held within half and
-  double the shipped budget, g the tokens a step adds to the context of the next, R the tokens a restarted segment
+  double the shipped budget, g the tokens a turn adds to the context of the next, R the tokens a restarted segment
   spends up to its first edit. A change of the applied cap is appended as `budget.applied`, and the brief states the
   cap in its Budget section.
 - **The slot** resolves to its role as [`brigade roles`](Roles.md) shows, unless the project of `--project` binds it
@@ -47,7 +47,7 @@ exits 0, the run going on in the background.
 | 3 | `undeclared` |
 | 10 | `blocked` |
 | 11 | `wall_limit` |
-| 12 | `turn_limit` (the last segment reached the client's step cap) |
+| 12 | `turn_limit` (the last segment reached the client's turn cap) |
 | 13 | `soft_limit` |
 | 20 | `handed_over` |
 | 21 | `stopped` |
@@ -77,10 +77,10 @@ The progress of a run is one file, in the form the key `document` of `config.tom
 
 | `document` | File |
 |---|---|
-| `awawa`, the default | `progress.awawa`, an awawa corpus holding the STEP and HANDOVER schema brigade ships, then one `STEP` per step completed and one `HANDOVER` per handover, named `s1`, `s2`, `h1` in order of writing |
+| `awawa`, the default | `progress.awawa`, an awawa corpus holding the ENTRY and HANDOVER schema brigade ships, then one `ENTRY` per step of the procedure completed and one `HANDOVER` per handover, named `e1`, `e2`, `h1` in order of writing |
 | `markdown` | `progress.md`, created empty |
 
-A segment ended on the client's step cap, on the clock, on `soft_limit`, on `handed_over` or on `undeclared` is
+A segment ended on the client's turn cap, on the clock, on `soft_limit`, on `handed_over` or on `undeclared` is
 launched again while its progress holds an entry, up to the `HANDOVERS` of the project's `POLICY`, 2 without one.
 
 > **Watch out:** a segment ending on `blocked` is never launched again, and neither is a stopped run, whatever the
@@ -130,12 +130,12 @@ each append.
 <details><summary>Between two segments</summary>
 
 - Between two segments brigade formats then lints `progress.awawa`, naming the file, and the next brief opens on
-  `awawa status STEP`, `awawa status HANDOVER` and `awawa show` of the last entity.
+  `awawa status ENTRY`, `awawa status HANDOVER` and `awawa show` of the last entity.
 - When the lint fails, it opens on the lint output, the instruction to rewrite the file and the file whole, and the run
   goes on with the same count of relaunches.
 - In the markdown form the next brief opens on the file as it is.
 - A relaunched segment's brief opens on what the document plugin reads of the progress. A `progress.awawa` holding no
-  entity, as that of a run the quota stopped before its first step was written, reads as the empty inventory of each
+  entity, as that of a run the quota stopped before its first entry was written, reads as the empty inventory of each
   type of its schema.
 
 </details>
@@ -202,8 +202,8 @@ and the ledger as the foreground command does.
   defaulting to 120, none when the limit is not above it. The `launch-argv` and `resume-argv` requests carry it as
   `stop_at`, the UTC instant to the second computed at launch, null without one, and as `stop_hook`, the argv of
   `brigade run stop-hook --at <epoch>` that prints the stop document once that instant has passed, null without one.
-- A client whose probe declares `graceful_stop` ends its session between two steps once `stop_at` has passed and
-  answers the outcome `soft_limit`. brigade records that segment as one ended `done`, its session, steps, usage and
+- A client whose probe declares `graceful_stop` ends its session between two turns once `stop_at` has passed and
+  answers the outcome `soft_limit`. brigade records that segment as one ended `done`, its session, turns, usage and
   `cost_usd` included, and the run goes on as after a cut on the clock.
 - The Claude Code adapter passes a `PostToolUse` hook in `--settings`, the argv of `stop_hook` and no shell test, that
   stops the main session and its sub-agents after the tool call that passes `stop_at`. A client declaring no `graceful_stop` keeps the hard cut.
@@ -214,15 +214,15 @@ and the ledger as the foreground command does.
 
 | Segment | `signal.recorded` | Naming |
 |---|---|---|
-| ended on the client's step cap | `budget_reached` | the procedure, the run and the cap applied |
+| ended on the client's turn cap | `budget_reached` | the procedure, the run and the cap applied |
 | cut on the clock, or ended on `soft_limit` | `wall_limit_reached` | the same, and `wall_limit_s`, the limit in seconds it was held to |
 | ended on `handed_over` or `undeclared` | that name | the procedure, the run and the segment |
-| whose main steps, as `run.finished` counts them, exceed the cap of its role | `budget_exceeded` | the procedure, the run, the segment, the cap applied and `steps`, the steps it took |
+| whose main turns, as `run.finished` counts them, exceed the cap of its role | `budget_exceeded` | the procedure, the run, the segment, the cap applied and `turns`, the turns it took |
 
 - In each of the first three cases, when the document plugin answers that its progress holds an entry, the segment is
   launched again as a fresh segment, up to the `HANDOVERS`.
-- `budget_exceeded` is recorded whatever the outcome, beside `budget_reached` when the segment also reached the step
-  cap. A segment whose steps are null records none, and the signal launches nothing again.
+- `budget_exceeded` is recorded whatever the outcome, beside `budget_reached` when the segment also reached the turn
+  cap. A segment whose turns are null records none, and the signal launches nothing again.
 
 </details>
 
@@ -242,11 +242,11 @@ and the ledger as the foreground command does.
 
 </details>
 
-<details><summary>Fallbacks of a client that counts no steps or grants no tools</summary>
+<details><summary>Fallbacks of a client that counts no turns or grants no tools</summary>
 
 Two fallbacks follow the probe of the adapter:
 
-- A client that counts no steps records null steps, the clock is the run's only bound, and `brigade run` and
+- A client that counts no turns records null turns, the clock is the run's only bound, and `brigade run` and
   `brigade doctor` warn that the budget is held on the clock.
 - A client that grants no tool one by one runs in its unattended mode, and a slot whose capabilities lack `write` then
   runs in a disposable git worktree of the directory's `HEAD`, `runs/<run id>/worktree`, removed after the run.

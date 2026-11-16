@@ -118,7 +118,7 @@ COMMAND = Command(
     arguments=(
         ExclusiveArguments(
             (
-                Argument(("--task",), {"help": "the runs of a task, their outcome, steps, duration and cost"}),
+                Argument(("--task",), {"help": "the runs of a task, their outcome, turns, duration and cost"}),
                 Argument(
                     ("--project",),
                     {"help": "the waves, orders, pull requests, signals, patterns and constraints of a project"},

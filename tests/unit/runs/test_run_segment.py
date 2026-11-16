@@ -1278,7 +1278,7 @@ class RunSegmentFilesTest(unittest.TestCase):
             " entry holds\n"
             "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
             "# Budget\n\n"
-            "132 steps, the cap of your role for this segment.\n\n"
+            "132 turns, the cap of your role for this segment.\n\n"
             "# End of segment\n\n"
             "End your final message on one of these lines: brigade-end: done once the work is delivered,"
             " brigade-end: handed_over when a next segment resumes it from the progress file,"

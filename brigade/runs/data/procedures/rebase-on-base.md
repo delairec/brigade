@@ -17,7 +17,7 @@ alone, they name a milestone branch red at that head, repaired in place in its w
 main branch of the project, they name that main branch red at that head, repaired on the branch `branch` cut from it,
 section 5.
 
-**Budget**: the steps the Budget section names, the cap of your role. On reaching it, stop and
+**Budget**: the turns the Budget section names, the cap of your role. On reaching it, stop and
 summarise what is done, what is not, and what the next run picks up.
 
 **Progress**: the file the Progress file section names. Read it first: holding an entry, it is an interrupted run to
