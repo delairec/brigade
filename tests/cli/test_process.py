@@ -77,7 +77,7 @@ CRONTAB_NOT_FOUND = (
 )
 
 
-class ProcessesTestCase(unittest.TestCase):
+class ProcessTestCase(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.machine = TemporaryMachine(Path(self.root.name).resolve())
@@ -98,10 +98,10 @@ class ProcessesTestCase(unittest.TestCase):
         path.write_text(lines)
 
     def run_brigade(self, *arguments: str):
-        return self.machine.run_brigade(CLONE_ENTRY_POINT, "processes", *arguments)
+        return self.machine.run_brigade(CLONE_ENTRY_POINT, "process", *arguments)
 
 
-class BrigadeProcessesListTest(ProcessesTestCase):
+class BrigadeProcessListTest(ProcessTestCase):
     def test_should_print_the_invocations_as_a_table_under_its_header(self):
         # Act
         completed = self.run_brigade("list")
@@ -118,7 +118,7 @@ class BrigadeProcessesListTest(ProcessesTestCase):
         self.assertEqual(completed.stderr, "")
 
 
-class BrigadeProcessesShowTest(ProcessesTestCase):
+class BrigadeProcessShowTest(ProcessTestCase):
     def test_should_print_the_outcome_the_exit_code_and_the_argv_of_each_record_that_exited(self):
         # Act
         completed = self.run_brigade("show", RUN_ID, "--failed")

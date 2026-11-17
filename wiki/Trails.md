@@ -1,13 +1,13 @@
-Where the record of every subprocess brigade starts is kept, how long, and how to read it with `brigade processes` or
+Where the record of every subprocess brigade starts is kept, how long, and how to read it with `brigade process` or
 `--verbose`.
 
 ## Reading the trails
 
-The trails are read through `brigade processes`, never searched by hand:
+The trails are read through `brigade process`, never searched by hand:
 
 ```
-brigade processes list [--json]                  # every run, tick and command: kind, id, instant, processes, failed
-brigade processes show <id> [--failed] [--json]  # the records of one run, tick or command, as written
+brigade process list [--json]                  # every run, tick and command: kind, id, instant, processes, failed
+brigade process show <id> [--failed] [--json]  # the records of one run, tick or command, as written
 ```
 
 `show` prints one line per record, `<outcome>  <exit code, else duration, else ->  <argv>`, and under a failed process

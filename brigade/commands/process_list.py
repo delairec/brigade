@@ -15,14 +15,14 @@ def _render_text(document: dict) -> str:
     )
 
 
-def processes_list(request: argparse.Namespace, runtime: Runtime) -> dict:
+def process_list(request: argparse.Namespace, runtime: Runtime) -> dict:
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "invocations": list_invocations(runtime.paths.state_root)}
 
 
 COMMAND = Command(
-    path=("processes", "list"),
+    path=("process", "list"),
     help="list every run, tick and command that left processes, newest first, with its count of failed ones",
     group_help="list the subprocesses brigade started and show those of one run, tick or command",
-    run=processes_list,
+    run=process_list,
     render_text=_render_text,
 )
