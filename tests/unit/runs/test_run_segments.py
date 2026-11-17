@@ -184,7 +184,7 @@ class RunSegmentsOfARunDoneInOneSegmentTest(RunSegmentsTestCase):
 
 
 class RunSegmentsOfARunHandedOverTest(RunSegmentsTestCase):
-    def test_should_record_the_hand_over_and_stop_without_progress_to_resume_from(self):
+    def test_should_record_the_handover_and_stop_without_progress_to_resume_from(self):
         # Arrange
         plan = self.create_plan(["handed_over"], handovers=1)
 
@@ -265,7 +265,7 @@ class RunSegmentsOfARunHandedOverTest(RunSegmentsTestCase):
             ],
         )
 
-    def test_should_stop_once_the_hand_overs_are_spent(self):
+    def test_should_stop_once_the_handovers_are_spent(self):
         # Arrange
         plan = self.create_plan(["handed_over"], progress="- the test is written\n", handovers=0)
 
@@ -686,7 +686,7 @@ class RunSegmentsCutOnTheClockTest(RunSegmentsTestCase):
             ],
         )
 
-    def test_should_relaunch_a_segment_cut_on_the_clock_with_progress_up_to_the_last_hand_over(self):
+    def test_should_relaunch_a_segment_cut_on_the_clock_with_progress_up_to_the_last_handover(self):
         # Arrange
         plan = self.create_plan(
             ["done"], progress="- the test is written\n", handovers=2, wall_limit_s=LIMIT_ALREADY_REACHED_S
@@ -1387,7 +1387,7 @@ class RunSegmentsOfARunReportingItsStepsAndUsageTest(RunSegmentsTestCase):
 
 
 class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
-    def test_should_relaunch_a_segment_ended_on_the_step_cap_with_progress_up_to_the_last_hand_over(self):
+    def test_should_relaunch_a_segment_ended_on_the_turn_cap_with_progress_up_to_the_last_handover(self):
         # Arrange
         plan = self.create_plan(
             ["turn_limit", "turn_limit", "turn_limit"],
@@ -1762,7 +1762,7 @@ class RunSegmentsOfARunEndedOnTheStepCapTest(RunSegmentsTestCase):
 
 
 class RunSegmentsOfARunHandedOverAtEverySegmentTest(RunSegmentsTestCase):
-    def test_should_stop_on_the_hand_over_of_the_last_segment(self):
+    def test_should_stop_on_the_handover_of_the_last_segment(self):
         # Arrange
         plan = self.create_plan(
             ["handed_over", "handed_over", "handed_over"], progress=PROGRESS_OF_THE_FIRST_SEGMENT, handovers=2
@@ -1862,7 +1862,7 @@ class RunSegmentsOfARunHandedOverAtEverySegmentTest(RunSegmentsTestCase):
 
 
 class RunSegmentsOfASegmentEndedWithoutDeclarationTest(RunSegmentsTestCase):
-    def test_should_relaunch_an_undeclared_segment_with_progress_up_to_the_last_hand_over(self):
+    def test_should_relaunch_an_undeclared_segment_with_progress_up_to_the_last_handover(self):
         # Arrange
         plan = self.create_plan(
             ["undeclared", "undeclared", "undeclared"], progress=PROGRESS_OF_THE_FIRST_SEGMENT, handovers=2
