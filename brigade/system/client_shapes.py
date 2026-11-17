@@ -93,7 +93,7 @@ CLIENT_ANSWER_SHAPES = {
         ),
         "features": Field(
             kinds=(list,),
-            items=Field(kinds=(str,), values=("step_count", "tool_grants", "reset_hour", "graceful_stop")),
+            items=Field(kinds=(str,), values=("turn_count", "tool_grants", "reset_hour", "graceful_stop")),
         ),
         "models": Field(kinds=(dict,)),
         "attribution": Field(kinds=(list,), items=TEXT, optional=True),
@@ -104,7 +104,7 @@ CLIENT_ANSWER_SHAPES = {
     "parse-result": {
         "schema_version": SCHEMA_VERSION,
         "outcome": Field(kinds=(str,), values=("done", "failed", "handed_over", "blocked", "undeclared", "soft_limit")),
-        "steps": OPTIONAL_COUNT,
+        "turns": OPTIONAL_COUNT,
         "usage": USAGE,
         "session_id": OPTIONAL_TEXT,
         "duration_ms": OPTIONAL_COUNT,

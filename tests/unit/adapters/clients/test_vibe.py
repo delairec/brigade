@@ -88,7 +88,7 @@ class VibeProbeTest(unittest.TestCase):
                 "client": "vibe",
                 "version_argv": ["vibe", "--version"],
                 "operations": ["probe", "launch", "result", "transcripts"],
-                "features": ["step_count", "tool_grants"],
+                "features": ["turn_count", "tool_grants"],
                 "models": {
                     "deepest": "mistral-medium-3.5",
                     "deep": "mistral-medium-3.5",
@@ -317,7 +317,7 @@ class VibeResultTest(VibeHomeTestCase):
             {
                 "schema_version": 1,
                 "outcome": "done",
-                "steps": 1,
+                "turns": 1,
                 "usage": {
                     "input_tokens": 8181,
                     "output_tokens": 180,
@@ -380,7 +380,7 @@ class VibeResultTest(VibeHomeTestCase):
             {
                 "schema_version": 1,
                 "outcome": "failed",
-                "steps": 0,
+                "turns": 0,
                 "usage": None,
                 "session_id": "50627de2-dcf5-d0d0-0d79-a612bb6f5ae8",
                 "duration_ms": 2661,
@@ -412,7 +412,7 @@ class VibeResultTest(VibeHomeTestCase):
                     {
                         "schema_version": 1,
                         "outcome": "failed",
-                        "steps": None,
+                        "turns": None,
                         "usage": None,
                         "session_id": None,
                         "duration_ms": None,
@@ -522,7 +522,7 @@ class VibeEndDeclarationTest(VibeHomeTestCase):
 
         # Assert
         self.assertEqual(result["outcome"], "undeclared")
-        self.assertEqual(result["steps"], 1)
+        self.assertEqual(result["turns"], 1)
 
 
 class VibeTranscriptsTest(VibeHomeTestCase):

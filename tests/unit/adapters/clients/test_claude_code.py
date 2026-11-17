@@ -59,7 +59,7 @@ class ClaudeCodeProbeTest(unittest.TestCase):
                 "client": "claude-code",
                 "version_argv": ["claude", "--version"],
                 "operations": ["probe", "launch", "result", "resume", "transcripts", "actions"],
-                "features": ["step_count", "tool_grants", "reset_hour", "graceful_stop"],
+                "features": ["turn_count", "tool_grants", "reset_hour", "graceful_stop"],
                 "models": {"deepest": "fable", "deep": "fable", "standard": "opus", "light": "sonnet"},
                 "edit_tools": ["Edit", "Write", "NotebookEdit"],
             },
@@ -267,7 +267,7 @@ class ClaudeCodeGracefulStopTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "soft_limit",
-                "steps": 7,
+                "turns": 7,
                 "usage": {
                     "input_tokens": 9,
                     "output_tokens": 55,
@@ -359,7 +359,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "done",
-                "steps": 1,
+                "turns": 1,
                 "usage": {
                     "input_tokens": 9,
                     "output_tokens": 55,
@@ -392,7 +392,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "failed",
-                "steps": 94,
+                "turns": 94,
                 "usage": {
                     "input_tokens": 1,
                     "output_tokens": 4,
@@ -425,7 +425,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "failed",
-                "steps": 3,
+                "turns": 3,
                 "usage": {
                     "input_tokens": 1,
                     "output_tokens": 0,
@@ -533,7 +533,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "failed",
-                "steps": 2,
+                "turns": 2,
                 "usage": {
                     "input_tokens": 1,
                     "output_tokens": 0,
@@ -562,7 +562,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "failed",
-                "steps": None,
+                "turns": None,
                 "usage": None,
                 "session_id": None,
                 "duration_ms": None,
@@ -586,7 +586,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "failed",
-                "steps": None,
+                "turns": None,
                 "usage": None,
                 "session_id": None,
                 "duration_ms": None,
@@ -617,7 +617,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "done",
-                "steps": 3,
+                "turns": 3,
                 "usage": {
                     "input_tokens": 9,
                     "output_tokens": 55,
@@ -646,7 +646,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(result["outcome"], "done")
-        self.assertEqual(result["steps"], 5)
+        self.assertEqual(result["turns"], 5)
 
     def test_should_report_a_stream_that_holds_no_result_event(self):
         # Arrange
@@ -664,7 +664,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "failed",
-                "steps": None,
+                "turns": None,
                 "usage": None,
                 "session_id": None,
                 "duration_ms": None,
@@ -713,7 +713,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "undeclared",
-                "steps": None,
+                "turns": None,
                 "usage": {
                     "input_tokens": 108,
                     "output_tokens": 42255,
@@ -755,7 +755,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "done",
-                "steps": None,
+                "turns": None,
                 "usage": {
                     "input_tokens": 30,
                     "output_tokens": 4604,
@@ -810,7 +810,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
         result = parse_claude_output(stdout)
 
         # Assert
-        self.assertIsNone(result["steps"])
+        self.assertIsNone(result["turns"])
 
     def test_should_count_the_turns_of_a_result_that_answers_the_brief(self):
         # Arrange
@@ -823,7 +823,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
         result = parse_claude_output(stdout)
 
         # Assert
-        self.assertEqual(result["steps"], 52)
+        self.assertEqual(result["turns"], 52)
 
     def test_should_report_no_usage_when_the_result_object_carries_none(self):
         # Arrange
@@ -841,7 +841,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "done",
-                "steps": 3,
+                "turns": 3,
                 "usage": None,
                 "session_id": "s-42",
                 "duration_ms": 9000,

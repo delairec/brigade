@@ -59,7 +59,7 @@ AWAWA_WEB_FALLBACK = "the dashboard's corpus view only"
 INSTRUCTIONS_FALLBACK = "built-in roles and no instructions package"
 NO_INSTRUCTIONS = "none configured"
 TURNS_FALLBACK = "the wall-time limit of each run"
-STEP_COUNT_FEATURE = "step_count"
+TURN_COUNT_FEATURE = "turn_count"
 CHECKOUT_FALLBACK = "git pull in the checkout"
 SCHEMA_FALLBACK = "throw the registry away, then run brigade init"
 POLICY_TYPE = "POLICY"
@@ -331,7 +331,7 @@ def _inspect_turns(reading: Configuration | BrigadeError, runtime: Runtime) -> l
         name, probe = _probe_configured_client(reading, runtime)
     except BrigadeError:
         return []
-    if STEP_COUNT_FEATURE in probe.features:
+    if TURN_COUNT_FEATURE in probe.features:
         return []
     detail = f"{name} counts no turns: the budget is held on the clock and the run cut at its limit"
     return [_create_optional("turns", "warning", detail, TURNS_FALLBACK)]

@@ -65,7 +65,7 @@ class ClientAnsweringOutcomesDouble:
         return {
             "schema_version": 1,
             "outcome": self.outcomes.pop(0),
-            "steps": 12,
+            "turns": 12,
             "usage": None,
             "session_id": "session-b73",
             "duration_ms": 4200,

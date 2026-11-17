@@ -52,7 +52,7 @@ TRANSCRIPTS_QUESTION = ClientQuestion("vibe", TranscriptsRequest(session_id="ses
 RESULT_WITHOUT_COST = {
     "schema_version": 1,
     "outcome": "done",
-    "steps": 12,
+    "turns": 12,
     "usage": None,
     "session_id": "session-b83",
     "duration_ms": 60000,
@@ -95,7 +95,7 @@ class ReadClientAnswerTest(unittest.TestCase):
         answer = {
             "schema_version": 1,
             "outcome": "failed",
-            "steps": 1,
+            "turns": 1,
             "usage": None,
             "session_id": "session-b248",
             "duration_ms": 101,

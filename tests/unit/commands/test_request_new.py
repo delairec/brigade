@@ -14,7 +14,7 @@ from tests.unit.commands.command_runtime import (
 )
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
-    STEP_COUNTING_PROBE,
+    TURN_COUNTING_PROBE,
     create_plugin_resolution,
     spawn_as_this_process,
 )
@@ -50,7 +50,7 @@ class RequestNewTest(unittest.TestCase):
 
     def test_should_record_the_request_and_launch_its_planner_detached(self):
         # Arrange
-        runtime = self._create_runtime((("PATH", str(self.repository)),), STEP_COUNTING_PROBE)
+        runtime = self._create_runtime((("PATH", str(self.repository)),), TURN_COUNTING_PROBE)
 
         # Act
         document = COMMAND.run(Namespace(project="shop", text="empty the cart"), runtime)
@@ -60,7 +60,7 @@ class RequestNewTest(unittest.TestCase):
 
     def test_should_refuse_a_paused_project(self):
         # Arrange
-        runtime = self._create_runtime((("PATH", str(self.repository)), ("STATUS", "paused")), STEP_COUNTING_PROBE)
+        runtime = self._create_runtime((("PATH", str(self.repository)), ("STATUS", "paused")), TURN_COUNTING_PROBE)
 
         # Act
         with self.assertRaises(BrigadeError) as raised:

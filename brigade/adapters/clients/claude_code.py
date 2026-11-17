@@ -66,7 +66,7 @@ def _probe(request: dict) -> dict:
         "client": CLIENT_NAME,
         "version_argv": [EXECUTABLE, "--version"],
         "operations": ["probe", "launch", "result", "resume", "transcripts", "actions"],
-        "features": ["step_count", "tool_grants", "reset_hour", "graceful_stop"],
+        "features": ["turn_count", "tool_grants", "reset_hour", "graceful_stop"],
         "models": _bind_models(request),
         "edit_tools": list(CAPABILITY_TOOLS[WRITE_CAPABILITY]),
     }
@@ -216,7 +216,7 @@ def _parse_result(request: dict) -> dict:
     return {
         "schema_version": SCHEMA_VERSION,
         "outcome": outcome,
-        "steps": _read_steps(result),
+        "turns": _read_steps(result),
         "usage": _read_usage(result),
         "session_id": result.get("session_id"),
         "duration_ms": _sum_durations(result_events),

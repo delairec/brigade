@@ -12,7 +12,7 @@ PROCEDURE = "---\ncapabilities: read, write, shell\n---\nDeliver the task the br
 DONE_RESULT = {
     "schema_version": 1,
     "outcome": "done",
-    "steps": 12,
+    "turns": 12,
     "usage": {
         "input_tokens": 120,
         "output_tokens": 3400,
@@ -26,7 +26,7 @@ DONE_RESULT = {
     "reset": None,
     "message": None,
 }
-COUNTING_CLIENT = 'features = "step_count,tool_grants"\n'
+COUNTING_CLIENT = 'features = "turn_count,tool_grants"\n'
 FILE_WAIT_S = 20.0
 FILE_POLL_S = 0.05
 NO_SIGNAL = 0

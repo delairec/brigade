@@ -24,7 +24,7 @@ from tests.unit.commands.command_runtime import create_machine_double, write_ope
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
     CLOCK_PROBE,
-    STEP_COUNTING_PROBE,
+    TURN_COUNTING_PROBE,
     create_plugin_resolution,
     spawn_as_this_process,
 )
@@ -215,7 +215,7 @@ class RunDetachedTest(unittest.TestCase):
         runtime = create_test_runtime(
             create_test_paths(self.root),
             spawn_process=spawn_as_this_process,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
+            resolve_plugin=create_plugin_resolution(TURN_COUNTING_PROBE),
         )
 
         # Act
@@ -235,7 +235,7 @@ class RunDetachedTest(unittest.TestCase):
         runtime = create_test_runtime(
             create_test_paths(self.root),
             spawn_process=spawn_as_this_process,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
+            resolve_plugin=create_plugin_resolution(TURN_COUNTING_PROBE),
         )
 
         # Act
@@ -296,7 +296,7 @@ class RunDetachedTest(unittest.TestCase):
 class ClientDeliveringTheTaskDouble:
     def answer(self, operation: str, request: dict) -> dict:
         if operation == "probe":
-            return STEP_COUNTING_PROBE
+            return TURN_COUNTING_PROBE
         if operation == "launch-argv":
             return {
                 "schema_version": 1,
@@ -308,7 +308,7 @@ class ClientDeliveringTheTaskDouble:
         return {
             "schema_version": 1,
             "outcome": "done",
-            "steps": 12,
+            "turns": 12,
             "usage": None,
             "session_id": "session-b74",
             "duration_ms": 4200,
@@ -640,7 +640,7 @@ class RunOfAProjectWithoutAForgeTest(unittest.TestCase):
             create_test_paths(root),
             run_process=create_machine_double({"PROJECT": {"tidepool": local_project}}, {}),
             spawn_process=spawn_as_this_process,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, forge),
+            resolve_plugin=create_plugin_resolution(TURN_COUNTING_PROBE, forge),
         )
         request = Namespace(
             procedure="build-task",

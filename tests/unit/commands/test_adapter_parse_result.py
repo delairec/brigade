@@ -14,7 +14,7 @@ PARSE_RESULT_REQUEST = '{"schema_version": 1, "exit_code": 0, "stdout": "done", 
 PARSE_RESULT_ANSWER = {
     "schema_version": 1,
     "outcome": "done",
-    "steps": 12,
+    "turns": 12,
     "usage": None,
     "session_id": "s1",
     "duration_ms": 1000,

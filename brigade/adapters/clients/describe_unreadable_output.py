@@ -1,7 +1,7 @@
 UNREADABLE_RESULT = {
     "schema_version": 1,
     "outcome": "failed",
-    "steps": None,
+    "turns": None,
     "usage": None,
     "session_id": None,
     "duration_ms": None,

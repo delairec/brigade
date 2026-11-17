@@ -6,11 +6,11 @@ from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, RunTestCase
 ACTIONS_RECORDING = (
     "Reading the task\n"
     "Writing the test\n"
-    '{"schema_version": 1, "outcome": "done", "steps": 12, "usage": null, "session_id": "fake-session",'
+    '{"schema_version": 1, "outcome": "done", "turns": 12, "usage": null, "session_id": "fake-session",'
     ' "duration_ms": 61000, "cost_usd": null, "error_class": null, "reset": null, "message": null}\n'
 )
 RESULT_OF_SCHEMA_1 = (
-    '{"schema_version": 1, "outcome": "done", "steps": null, "usage": null, "session_id": "fake-session",'
+    '{"schema_version": 1, "outcome": "done", "turns": null, "usage": null, "session_id": "fake-session",'
     ' "duration_ms": 700183, "error_class": null, "reset": null, "message": "the client finished the task"}'
 )
 
