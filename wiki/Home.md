@@ -39,7 +39,7 @@ decide whether to read on. The pages are written in `wiki/` of the repository an
 
 ## Observing
 
-- [Inbox](Inbox.md) — what signals the inbox holds and how they are listed and dismissed.
+- [Inbox](Inbox.md) — what signals the inbox holds, how they are listed and dismissed, and how a pattern is ratified.
 - [Ledger](Ledger.md) — where every event is recorded and how `brigade ledger` summarises them.
 - [Trails](Trails.md) — where the record of every subprocess is kept and how to read it.
 - [Dashboard](Dashboard.md) — how `brigade serve` serves the local dashboard and which command each route runs.

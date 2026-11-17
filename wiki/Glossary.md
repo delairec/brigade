@@ -10,7 +10,7 @@ row names a word the code or the corpus carries.
 <!-- glossary: begin -->
 | Word | Kind | What it is | Page | Milestone | Task |
 |---|---|---|---|---|---|
-| registry | concept | the git repository `brigade init` creates in `$XDG_CONFIG_HOME/brigade/`, holding `_schema.awawa` and the entities brigade records: projects, requests, studies, orders | [Install](Install.md) | M8 | B255 |
+| registry | concept | the git repository `brigade init` creates in `$XDG_CONFIG_HOME/brigade/`, holding `_schema.awawa` and the entities brigade records, one file per type: projects, requests, studies and their answers, reports, patterns, constraints, orders and their results | [Install](Install.md) | M8 | B255 |
 | config.toml | concept | the machine configuration, beside the registry and never committed | [Install](Install.md) | M0 | B03 |
 | project | concept | a git repository brigade works on, recorded as a `PROJECT` entity of the registry | [Projects](Projects.md) | M0 | B04 |
 | forge | concept | where a project's pull requests live: `github` for a remote on github.com, or `none` | [Projects](Projects.md) | M7 | B46 |

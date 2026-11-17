@@ -12,6 +12,10 @@ brigade recipe lint pr-usage-report                  # its schema, its names and
 brigade order new pr-usage-report pr=42              # record an order of it and run it once
 ```
 
+Besides `pr-usage-report`, brigade ships the recipe `study`: a `collect` step for each `COLLECTOR` line of a study, its
+judge step and its output. The tick runs every due study, the built-in reports included, as an order of it; see
+[Studies](Studies.md).
+
 ## Where a recipe lives
 
 A recipe resolves by name, the first place holding it winning; `brigade recipe list` prints them in that order:
@@ -59,6 +63,12 @@ steps = [
 | `judge`   | `slot`, `procedure`, `answer`        | runs the procedure as the slot, which writes an answer of the type named     |
 | `output`  | `output`                             | publishes the answer of the judge step                                       |
 | `command` | `argv`                               | runs a command; never the binary of the configured client                    |
+| `order`   | `recipe`, `parameters`               | names another recipe and its parameters                                      |
+| `corpus`  | `entity`                             | names an entity of the corpus                                                |
+| `op`      | `op`: `worktree`, `commit`, `pull-request` or `merge` | names an operation of git or of the forge                   |
+
+`brigade recipe lint` accepts the eight kinds; `brigade order run` performs the first five alone, and has no performer
+yet for an `order`, a `corpus` or an `op` step.
 
 Only the judge step runs an agent: in the example, the three collectors and the gate leave no run in the ledger, and
 the run of the judge step is the only `run.finished`.

@@ -63,6 +63,7 @@ is 1; a missing optional item is a warning, reported with its fallback.
 
 ```
 brigade init
+brigade init --remote <url>
 brigade init --json
 ```
 
@@ -70,6 +71,10 @@ It creates the registry in `$XDG_CONFIG_HOME/brigade/`, `~/.config/brigade/` by 
 
 - a git repository holding `_schema.awawa` and a `.gitignore`, committed with your git identity;
 - `config.toml`, the machine configuration, every key commented out and never committed.
+
+With `--remote <url>`, the url is set as the remote `origin` of the registry repository. Run again with the same url,
+it leaves it as it is; a registry whose `origin` is another url exits 1, naming the `git remote set-url` that changes
+it.
 
 > **Watch out:** `brigade init` needs `user.name` and `user.email` set in git.
 
