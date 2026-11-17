@@ -3,7 +3,7 @@
 **Getting started**
 
 - [Install](Install.md)
-- [Concepts](Concepts.md)
+- [Glossary](Glossary.md)
 
 **Configuring**
 
@@ -18,7 +18,7 @@
 - [Tasks](Tasks.md)
 - [Preflight](Preflight.md)
 - [Runs](Runs.md)
-- [Verification](Review.md)
+- [Review](Review.md)
 - [Review answers](Review-answers.md)
 - [Rebase on the base](Rebase-on-the-base.md)
 - [Studies](Studies.md)

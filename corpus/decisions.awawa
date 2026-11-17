@@ -7879,3 +7879,20 @@ DECISION AWaveStoppedByBrigadeIsParkedOrBlockedAndNeverPaused
 	RATIONALE "no command pauses a wave: every wave.paused was brigade's, so paused, the suspension"
 		+ "by the user, departed from its sense"
 		REF @DECISION.AWordOfBrigadeCarriesOneSenseAndBorrowedSensesKeepTheirs
+
+DECISION AGlossaryRowNamesACommandByItsLineAFieldAfterItsEntityAndCitesTheTaskOfItsSense
+	TITLE "a row of wiki/Glossary.md names a command as brigade <group> <subcommand>, a field of"
+		+ "the registry's schema as ENTITY.FIELD, a sub-field as ENTITY.FIELD.SUB, and cites the"
+		+ "task that delivers the word in its sense"
+	STATUS active
+	DESC "DESC and RATIONALE, legal on every entity of the registry, are named bare"
+	DESC "the task of a command or a field is the task of the commit that added its module or its"
+		+ "line; a word whose sense @TASK.B255 ruled or whose name it gave cites @TASK.B255"
+		REF @TASK.B255
+	DESC "verify, the word that left brigade on 2026-11-14, has no row"
+	DESC "binds @TASK.B257"
+		REF @TASK.B257
+	REJECTED "a field named bare, STATUS or PROJECT: one word with several senses, PROJECT both an"
+		+ "entity and a field"
+	SOURCE "the build run of @TASK.B257 on 2026-11-17"
+		REF @TASK.B257
