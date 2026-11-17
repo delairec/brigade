@@ -2,7 +2,7 @@ from pathlib import Path
 
 from brigade.system.name_toml_type import name_toml_type
 
-JOURNAL_POLL_KEY = "journal_poll_s"
+JOURNAL_POLL_KEY = "log_poll_s"
 JOURNAL_POLL_BY_DEFAULT_S = 2
 
 

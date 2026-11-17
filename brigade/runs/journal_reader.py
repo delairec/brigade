@@ -19,11 +19,11 @@ class JournalReader:
         try:
             document = json.loads(line)
         except ValueError:
-            raise BrigadeError(f"{location} is not a journal record: not a JSON document") from None
+            raise BrigadeError(f"{location} is not a log record: not a JSON document") from None
         try:
             validate_document(document, JOURNAL_RECORD_SHAPE)
         except DocumentInvalid as problem:
-            raise BrigadeError(f"{location} is not a journal record: {problem}") from None
+            raise BrigadeError(f"{location} is not a log record: {problem}") from None
         return JournalRecord.from_document(document).to_document()
 
     def read_whole_records(self) -> list[dict]:

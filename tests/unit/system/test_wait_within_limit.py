@@ -98,7 +98,7 @@ class PollFailureDouble(Exception):
 
 
 def _fail_to_poll() -> None:
-    raise PollFailureDouble("the journal could not be read")
+    raise PollFailureDouble("the log could not be read")
 
 
 class WaitWithinLimitOfAProcessWhosePollFailsTest(WaitWithinLimitTestCase):

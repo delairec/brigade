@@ -126,7 +126,7 @@ class BrigadeZipappTest(unittest.TestCase):
             "Fallbacks:\n"
             "\n"
             "- no resume: a fresh launch from the progress file\n"
-            "- no transcripts: brigade's journal of the run\n"
+            "- no transcripts: brigade's log of the run\n"
             "- no actions: one raw record per line of the client's output\n"
             "- no step count: steps null and the run held on the clock alone\n"
             "- no tool grants: the client's unattended mode and a disposable worktree for a reading slot\n"

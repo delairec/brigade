@@ -59,7 +59,7 @@ class RunTestCase(FileWaitingTestCase):
         self.hold = root / "hold"
 
     def configure_fake(self, settings: str = "", keys: str = "", document: str | None = "markdown") -> None:
-        document_key = "" if document is None else f'document = "{document}"\n'
+        document_key = "" if document is None else f'progress_form = "{document}"\n'
         self.machine.write_configuration(
             f'client = "fake"\n{document_key}{keys}[clients.fake]\nrecordings = "{self.recordings}"\n{settings}'
         )

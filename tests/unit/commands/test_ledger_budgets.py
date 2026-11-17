@@ -84,7 +84,7 @@ class LedgerBudgetsRequestTest(unittest.TestCase):
 
 
 class LedgerBudgetsExitCodeTest(unittest.TestCase):
-    def test_should_exit_0_once_the_journal_is_read(self):
+    def test_should_exit_0_once_the_ledger_is_read(self):
         # Arrange
         document = {"last": 20, "procedures": {}}
 

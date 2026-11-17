@@ -98,7 +98,7 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
                     "message": None,
                 },
                 "segments": [{"segment": 1, "outcome": "done", "turns": 12, "duration_ms": ANY}],
-                "journal": None,
+                "log": None,
                 "progress": None,
             },
         )
@@ -130,7 +130,7 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
             ],
         )
 
-    def test_should_exit_1_naming_the_line_of_the_journal_that_is_no_record_with_log(self):
+    def test_should_exit_1_naming_the_line_of_the_log_that_is_no_record_with_log(self):
         # Arrange
         rows = [
             ("a line of no JSON", "Reading the task\n", "not a JSON document"),
@@ -140,7 +140,7 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
             with self.subTest(case=case):
                 # Arrange
                 run_id = self.run_deliver_to_its_end()
-                journal_path = self.runs / run_id / "journal.jsonl"
+                journal_path = self.runs / run_id / "log.jsonl"
                 with journal_path.open("a", encoding="utf-8") as journal:
                     journal.write(line)
 
@@ -150,12 +150,12 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
                 # Assert
                 self.assertEqual(completed.returncode, 1)
                 self.assertEqual(
-                    completed.stderr, f"brigade run show: line 4 of {journal_path} is not a journal record: {reason}\n"
+                    completed.stderr, f"brigade run show: line 4 of {journal_path} is not a log record: {reason}\n"
                 )
 
 
 class BrigadeRunsShowFollowOfAnEndedRunTest(RunsTestCase):
-    def test_should_print_the_journal_as_log_does_then_the_state_and_outcome_of_the_run(self):
+    def test_should_print_the_log_as_log_does_then_the_state_and_outcome_of_the_run(self):
         # Arrange
         self.configure_fake(COUNTING_CLIENT + 'operations = "actions"\n')
         self.record_lines("builder", ACTIONS_RECORDING)

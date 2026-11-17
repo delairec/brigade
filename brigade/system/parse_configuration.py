@@ -65,7 +65,7 @@ class Configuration:
     study_runs: int = STUDY_RUNS_BY_DEFAULT
     stall_after: int = STALL_AFTER_BY_DEFAULT_MIN
     tick_stale_after: int = TICK_STALE_AFTER_BY_DEFAULT_MIN
-    journal_poll_s: int | float = JOURNAL_POLL_BY_DEFAULT_S
+    log_poll_s: int | float = JOURNAL_POLL_BY_DEFAULT_S
     findings: tuple[str, ...] = ()
     forge_accounts: dict = field(default_factory=dict)
     forge_attempts: int = FORGE_ATTEMPTS_BY_DEFAULT
@@ -230,7 +230,7 @@ def _read_strings(document: dict, path: Path) -> dict:
 def parse_configuration(path: Path) -> Configuration:
     document = _read_known_keys(path)
     strings = _read_strings(document, path)
-    journal_poll_s, findings = read_journal_poll(document, path)
+    log_poll_s, findings = read_journal_poll(document, path)
     return Configuration(
         **strings,
         refs_cache_mb=_read_refs_cache_mb(document, path),
@@ -248,7 +248,7 @@ def parse_configuration(path: Path) -> Configuration:
         study_runs=read_study_runs(document, path),
         stall_after=read_stall_after(document, path),
         tick_stale_after=read_tick_stale_after(document, path),
-        journal_poll_s=journal_poll_s,
+        log_poll_s=log_poll_s,
         findings=findings,
         forge_accounts=_read_forge_accounts(document.get(FORGE_ACCOUNTS_KEY, {}), path),
         forge_attempts=_read_forge_attempts(document, path),

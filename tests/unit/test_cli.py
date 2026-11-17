@@ -27,7 +27,7 @@ ADAPTER_MATRIX = (
     "Fallbacks:\n"
     "\n"
     "- no resume: a fresh launch from the progress file\n"
-    "- no transcripts: brigade's journal of the run\n"
+    "- no transcripts: brigade's log of the run\n"
     "- no actions: one raw record per line of the client's output\n"
     "- no step count: steps null and the run held on the clock alone\n"
     "- no tool grants: the client's unattended mode and a disposable worktree for a reading slot\n"
@@ -106,7 +106,7 @@ class MainGroupHelpTest(MainTestCase):
             ("role", "list", "list the role, the source and the model of each slot"),
             ("role", "show", "print the role file a slot resolves to"),
             ("run", "list", "list every run with its state and outcome"),
-            ("run", "show", "print the summary of a run, its segments and its progress, and with --log its journal"),
+            ("run", "show", "print the summary of a run, its segments and its progress, and with --log its log"),
             ("scheduler", "install", "install the scheduler config.toml names, or the default"),
             (
                 "scheduler",

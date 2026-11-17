@@ -65,7 +65,7 @@ class CommandReferenceGuardTest(unittest.TestCase):
     def test_should_accept_the_forms_of_naming_a_subcommand(self):
         for form, page, path in [
             ("alternatives", "| `brigade wave start\\|requeue` | start the waves |\n", ("wave", "requeue")),
-            ("optional", "| `brigade ledger [budgets\\|compare]` | read the journal |\n", ("ledger", "compare")),
+            ("optional", "| `brigade ledger [budgets\\|compare]` | read the ledger |\n", ("ledger", "compare")),
             (
                 "listed",
                 "| `brigade adapter <operation>` | one operation: `probe`, `actions` |\n",

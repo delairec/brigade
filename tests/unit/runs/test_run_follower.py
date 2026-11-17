@@ -11,7 +11,7 @@ LAST_RECORD_LINE = (
 
 
 def describe_a_run_ending_as_it_is_read(run_directory: Path) -> dict:
-    with (run_directory / "journal.jsonl").open("a", encoding="utf-8") as journal:
+    with (run_directory / "log.jsonl").open("a", encoding="utf-8") as journal:
         journal.write(LAST_RECORD_LINE)
     return {"run": "20261009T140000Z-abcdef", "state": "finished", "outcome": "done"}
 

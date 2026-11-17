@@ -302,9 +302,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 1)
-        self.assertEqual(
-            completed.stderr, "brigade study run: @STUDY.absent is not defined in the registry\n"
-        )
+        self.assertEqual(completed.stderr, "brigade study run: @STUDY.absent is not defined in the registry\n")
 
 
 class BrigadeRunsPruneOfStudyRunsTest(StudyRunTestCase):

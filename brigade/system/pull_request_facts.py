@@ -26,7 +26,9 @@ class PullRequestFacts:
         return cls(
             number=document["number"],
             state=document["state"],
-            checks=tuple(CheckConclusion(name=check["name"], conclusion=check["conclusion"]) for check in document["checks"]),
+            checks=tuple(
+                CheckConclusion(name=check["name"], conclusion=check["conclusion"]) for check in document["checks"]
+            ),
             review=document["review"],
             behind=document["behind"],
             head=document["head"],

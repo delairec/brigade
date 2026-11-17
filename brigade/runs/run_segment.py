@@ -247,7 +247,7 @@ def _follow_client(context: SegmentContext, request: SpawnRequest, stop: StopSig
     process = runtime.spawn_process(request)
     journal = SegmentJournalWriter(plan, context.number, runtime, context.directory / STDOUT_FILE)
     limit = WallLimit(
-        limit_s=plan.wall_limit_s, grace_before_kill_s=GRACE_BEFORE_KILL_S, poll_s=plan.configuration.journal_poll_s
+        limit_s=plan.wall_limit_s, grace_before_kill_s=GRACE_BEFORE_KILL_S, poll_s=plan.configuration.log_poll_s
     )
     exit_code, outcome = _wait_for_client(process, limit, journal.write_complete_lines, stop)
     measured_ms = round((runtime.read_monotonic() - started) * 1000)

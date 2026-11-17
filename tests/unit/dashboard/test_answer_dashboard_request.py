@@ -741,7 +741,7 @@ NO_RUN = '{"schema_version": 1, "runs": [], "skipped": []}\n'
 RUN_R1_SHOWN = (
     '{"schema_version": 1, "run": {"run": "r1", "procedure": "build-task", "slot": "build", "role": "ada",'
     ' "project": "oak", "worktree": "/srv/oak/B94", "state": "running", "outcome": null, "wave": null,'
-    ' "task": null, "message": null}, "segments": [], "journal": null,'
+    ' "task": null, "message": null}, "segments": [], "log": null,'
     ' "progress": {"text": "STEP s1 <read>\\n", "entities": null}}\n'
 )
 

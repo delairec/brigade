@@ -26,7 +26,7 @@ class RenderRunFragmentTest(unittest.TestCase):
             "schema_version": 1,
             "run": RUNNING_RUN,
             "segments": [FIRST_SEGMENT_HANDED_OVER, SECOND_SEGMENT_RUNNING],
-            "journal": None,
+            "log": None,
             "progress": {"text": 'STEP s1\n\tDONE "read the package"\n', "entities": None},
         }
 
@@ -50,7 +50,7 @@ class RenderRunFragmentTest(unittest.TestCase):
     def test_should_show_no_progress_section_for_a_run_that_wrote_none(self):
         # Arrange
         no_segment = []
-        document = {"schema_version": 1, "run": RUNNING_RUN, "segments": no_segment, "journal": None, "progress": None}
+        document = {"schema_version": 1, "run": RUNNING_RUN, "segments": no_segment, "log": None, "progress": None}
 
         # Act
         fragment = render_run_fragment(document)
@@ -66,7 +66,7 @@ class RenderRunFragmentTest(unittest.TestCase):
             "schema_version": 1,
             "run": {**RUNNING_RUN, "run": markup, "procedure": markup, "message": markup, "outcome": markup},
             "segments": [{**FIRST_SEGMENT_HANDED_OVER, "outcome": markup}],
-            "journal": None,
+            "log": None,
             "progress": {"text": markup, "entities": None},
         }
 

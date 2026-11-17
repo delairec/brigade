@@ -63,8 +63,8 @@ def _render_text(document: dict) -> str:
     lines = [*summary, "", segments]
     if document["progress"] is not None:
         lines += ["", document["progress"]["text"].rstrip(LINE_END)]
-    if document["journal"] is not None:
-        lines += ["", *(_render_record(record) for record in document["journal"])]
+    if document["log"] is not None:
+        lines += ["", *(_render_record(record) for record in document["log"])]
     return "\n".join(lines)
 
 
@@ -95,7 +95,7 @@ class _FollowPrinter:
     def poll(self) -> bool:
         if not self.opened:
             opening = show_run(self.state_root, self.run_id, with_journal=False)
-            _print(_render_text({**opening, "progress": NO_PROGRESS, "journal": NO_JOURNAL_YET}) + LINE_END)
+            _print(_render_text({**opening, "progress": NO_PROGRESS, "log": NO_JOURNAL_YET}) + LINE_END)
             self.opened = True
         _print("".join(_render_record(record) + LINE_END for record in self.follower.read_records()))
         return self.follower.run["state"] != RUNNING
@@ -103,7 +103,7 @@ class _FollowPrinter:
 
 def _follow_run(run_id: str, runtime: Runtime) -> dict:
     printer = _FollowPrinter(runtime.paths.state_root, run_id)
-    interval_s = read_configuration(runtime, CONFIGURATION_OPTIONAL).journal_poll_s
+    interval_s = read_configuration(runtime, CONFIGURATION_OPTIONAL).log_poll_s
     interrupted = runtime.poll_until_signalled(printer.poll, interval_s)
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "run": printer.follower.run, "interrupted": interrupted}
 
@@ -125,14 +125,12 @@ def run_show(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("run", "show"),
-    help="print the summary of a run, its segments and its progress, and with --log its journal",
+    help="print the summary of a run, its segments and its progress, and with --log its log",
     group_help="start a procedure as a slot through the client adapter, list the runs, show one, stop one and prune them",
     arguments=(
         Argument(("run",)),
-        Argument(("--log",), {"action": "store_true", "help": "add the journal of the run, one line per record"}),
-        Argument(
-            ("--follow",), {"action": "store_true", "help": "print the journal as it is written, until the run ends"}
-        ),
+        Argument(("--log",), {"action": "store_true", "help": "add the log of the run, one line per record"}),
+        Argument(("--follow",), {"action": "store_true", "help": "print the log as it is written, until the run ends"}),
     ),
     run=run_show,
     read_request=_read_request,
