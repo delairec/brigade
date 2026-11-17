@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from brigade.corpus.read_entity import Entity, EntityField
-from brigade.errors import CommandFailed, PullRequestCompareFailed
+from brigade.errors import BrigadeError, CommandFailed, PullRequestCompareFailed
 from brigade.ledger.append_event import append_event
 from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
@@ -26,11 +26,14 @@ from brigade.ledger.task_reported import TaskReported
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.tick_action_failed import TickActionFailed
+from brigade.ledger.wave_blocked import WaveBlocked
 from brigade.ledger.wave_cancelled import WaveCancelled
 from brigade.ledger.wave_closed import WaveClosed
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
+from brigade.orders.is_order_due import OrderFacts
+from brigade.orders.live_order_run import LiveOrderRun
 from brigade.runs.record_run_pid import record_run_pid
 from brigade.system.parse_configuration import Configuration, parse_configuration
 from brigade.system.pull_request_facts import PullRequestFacts
@@ -52,7 +55,7 @@ from brigade.tick.build_snapshot import (
     WaveFacts,
     build_snapshot,
 )
-from brigade.tick.plan import plan
+from brigade.tick.decide import decide
 from brigade.tick.read_integration_branches import IntegrationBranchFacts
 from brigade.tick.read_leftovers import LeftoverFacts
 from brigade.waves.list_candidate_waves import CandidateWave
@@ -214,7 +217,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
                             {"name": "PROJECT", "atoms": ["@PROJECT.shop"]},
                             {"name": "REVIEW", "atoms": ["approval"]},
                             {"name": "AUTO_MERGE", "atoms": ["none"]},
-                            {"name": "VERIFY_ROUNDS", "atoms": ["3"]},
+                            {"name": "REPAIR_ROUNDS", "atoms": ["3"]},
                         ]
                     },
                 ),
@@ -260,6 +263,7 @@ class BuildSnapshotTestCase(unittest.TestCase):
                 ("git", "worktree", "list", "--porcelain", "-z"): ProcessAnswer(
                     stdout=f"worktree {self.repository}\0HEAD {MAIN_SHA}\0branch refs/heads/main\0\0"
                 ),
+                **AWAWA_ANSWERS.answer_entities(config_root, "ORDER", {}),
                 **self.remote_answers,
             }
         )
@@ -286,6 +290,20 @@ class BuildSnapshotWithoutCorpusTest(BuildSnapshotTestCase):
 
         # Assert
         self.assertEqual(snapshot, Snapshot(now=FIXED_NOW))
+
+
+class BuildSnapshotOfARetiredSchemaTest(BuildSnapshotTestCase):
+    def test_should_refuse_a_schema_declaring_a_retired_field(self):
+        # Arrange
+        self.paths.config_root.mkdir(parents=True)
+        self.paths.schema_file.write_text("SCHEMA POLICY\n\tFIELD VERIFY_ROUNDS uint\n")
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            self.build()
+
+        # Assert
+        self.assertIn("POLICY.VERIFY_ROUNDS, now named POLICY.REPAIR_ROUNDS", str(refusal.exception))
 
 
 class BuildSnapshotOfTheIntegrationBranchesTest(BuildSnapshotTestCase):
@@ -416,7 +434,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         self.write_operational_corpus()
         self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B1", "B2", "B3", "B4")))
         self.record(50, TaskState(wave="w1", task="B1", state="running"))
-        self.record(50, TaskState(wave="w1", task="B2", state="paused:quota"))
+        self.record(50, TaskState(wave="w1", task="B2", state="blocked:quota"))
         self.record(50, TaskState(wave="w1", task="B3", state="merged"))
         self.record(50, TaskState(wave="w1", task="B4", state="running"))
         self.record(2, create_run_finished("r1", wave="w1", task="B1", outcome="failed", error_class="rate_limit"))
@@ -464,7 +482,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
 
     def test_should_note_no_quota_stop_on_a_task_whose_run_was_resumed_since_it_hit_the_limit(self):
         # Arrange
-        self.record(1, TaskState(wave="w1", task="B1", state="paused:quota"))
+        self.record(1, TaskState(wave="w1", task="B1", state="blocked:quota"))
         self.record(1, TaskState(wave="w1", task="B1", state="running", reason="resumed after the quota reset"))
 
         # Act
@@ -486,7 +504,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
 
     def test_should_keep_the_quota_stop_of_a_task_whose_resume_the_ledger_does_not_record(self):
         # Arrange
-        self.record(1, TaskState(wave="w1", task="B1", state="paused:quota"))
+        self.record(1, TaskState(wave="w1", task="B1", state="blocked:quota"))
         self.record(1, TaskState(wave="w1", task="B1", state="running"))
 
         # Act
@@ -508,7 +526,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
 
     def test_should_note_the_quota_stop_of_a_resumed_run_that_hit_the_limit_again(self):
         # Arrange
-        self.record(1, TaskState(wave="w1", task="B1", state="paused:quota"))
+        self.record(1, TaskState(wave="w1", task="B1", state="blocked:quota"))
         self.record(1, TaskState(wave="w1", task="B1", state="running", reason="resumed after the quota reset"))
         self.record(0, create_run_finished("r1", wave="w1", task="B1", outcome="failed", error_class="rate_limit"))
 
@@ -810,7 +828,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                             last_run=None,
                         ),
                     ),
-                    states={"B1": "running", "B2": "paused:quota", "B3": "merged", "B4": "running"},
+                    states={"B1": "running", "B2": "blocked:quota", "B3": "merged", "B4": "running"},
                     implemented=("B0",),
                     pause=None,
                     forge_account_unavailable=True,
@@ -837,7 +855,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 merge="squash",
                 review="approval",
                 auto_merge="none",
-                verify_rounds=3,
+                repair_rounds=3,
                 on_github=True,
             ),
         )
@@ -880,7 +898,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     merge="squash",
                     review="approval",
                     auto_merge="none",
-                    verify_rounds=3,
+                    repair_rounds=3,
                     on_github=True,
                 ),
             ),
@@ -1090,7 +1108,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                             last_run=None,
                         ),
                     ),
-                    states={"B1": "running", "B2": "paused:quota", "B3": "merged", "B4": "running"},
+                    states={"B1": "running", "B2": "blocked:quota", "B3": "merged", "B4": "running"},
                     implemented=("B0",),
                     pause=None,
                     forge_account_unavailable=True,
@@ -1219,7 +1237,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                             last_run=None,
                         ),
                     ),
-                    states={"B1": "running", "B2": "paused:quota", "B3": "merged", "B4": "running"},
+                    states={"B1": "running", "B2": "blocked:quota", "B3": "merged", "B4": "running"},
                     implemented=("B0",),
                     pause=None,
                     forge_account_unavailable=False,
@@ -1273,7 +1291,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     merge="rebase",
                     review="verdict",
                     auto_merge="integration",
-                    verify_rounds=2,
+                    repair_rounds=2,
                     on_github=False,
                 ),
                 ProjectFacts(
@@ -1286,7 +1304,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     merge="squash",
                     review="approval",
                     auto_merge="none",
-                    verify_rounds=3,
+                    repair_rounds=3,
                     on_github=True,
                 ),
             ),
@@ -1675,7 +1693,7 @@ class PlanOfAnOpenWaveOfAMilestoneWhoseAfterIsNotReachedTest(BuildSnapshotTestCa
         snapshot, _ = self.build()
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertIn(
@@ -1714,7 +1732,7 @@ class BuildSnapshotOfAWaveWhoseTaskCarriesNoTypeTest(BuildSnapshotTestCase):
 
 def create_review_run_finished(run: str, task: str, error_class: str | None = None) -> RunFinished:
     return dataclasses.replace(
-        create_run_finished(run, procedure="verify-pr", wave="w1", task=task, error_class=error_class), slot="review"
+        create_run_finished(run, procedure="review-pr", wave="w1", task=task, error_class=error_class), slot="review"
     )
 
 
@@ -1802,7 +1820,7 @@ class PlanOfAWaveWaitingOnATaskImplementedOnTheForgeTest(BuildSnapshotTestCase):
         snapshot, _ = self.build()
 
         # Act
-        actions = plan(snapshot)
+        actions = decide(snapshot)
 
         # Assert
         self.assertIn(
@@ -1985,7 +2003,7 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
         self.record(30, create_run_finished("r4", wave="w1", task="B4"))
         self.record(
             29,
-            dataclasses.replace(create_run_finished("r5", procedure="verify-pr", wave="w4", task="B4"), slot="review"),
+            dataclasses.replace(create_run_finished("r5", procedure="review-pr", wave="w4", task="B4"), slot="review"),
         )
 
     def test_should_carry_the_last_verdict_of_each_task_and_the_head_its_verification_ended_on(self):
@@ -2200,10 +2218,10 @@ class BuildSnapshotOfTasksInVerifyingTest(BuildSnapshotTestCase):
 
 REQUEUE_REASON = "brigade wave requeue"
 REBUILD_REASON = "the entity of the task amended on integration/w1"
-FAILING_CHECKS = {"name": "checks", "verdict": "fail", "findings": ["tests: failure"]}
-FAILING_BODY = {"name": "body", "verdict": "fail", "findings": ["the body names no task"]}
-PASSING_PRIVACY = {"name": "privacy", "verdict": "pass", "findings": []}
-MEASURED_SIZE = {"name": "size", "verdict": "info", "findings": ["3 files"]}
+FAILING_CHECKS = {"name": "checks", "result": "fail", "findings": ["tests: failure"]}
+FAILING_BODY = {"name": "body", "result": "fail", "findings": ["the body names no task"]}
+PASSING_PRIVACY = {"name": "privacy", "result": "ok", "findings": []}
+MEASURED_SIZE = {"name": "size", "result": "info", "findings": ["3 files"]}
 
 
 class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
@@ -2405,7 +2423,7 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
                 "20261019T082100Z-a00002", wave="w1", task="B1", outcome="failed", error_class="rate_limit"
             ),
         )
-        self.record(29, TaskState(wave="w1", task="B1", state="paused:quota"))
+        self.record(29, TaskState(wave="w1", task="B1", state="blocked:quota"))
         self.record(20, TaskState(wave="w1", task="B1", state="fixing"))
         self.record(10, create_run_finished("20261019T082100Z-a00002", wave="w1", task="B1", outcome="done"))
 
@@ -2438,7 +2456,7 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
                 "20261019T085500Z-a00003", wave="w1", task="B1", outcome="failed", error_class="rate_limit"
             ),
         )
-        self.record(4, TaskState(wave="w1", task="B1", state="paused:quota"))
+        self.record(4, TaskState(wave="w1", task="B1", state="blocked:quota"))
 
         # Act
         snapshot, _ = self.build()
@@ -2562,8 +2580,8 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
 
 BLOCKED_REBASE_MESSAGE = "Keep the guard of plan.py or drop it?\nbrigade-end: blocked"
 WAVE_BRANCH_RUN = None
-PAUSE_ON_THE_BLOCKED_REBASE_RUN = WavePaused(
-    wave="w1", reason="run 20261019T083000Z-4eba5e blocked: Keep the guard of plan.py or drop it?", resume_at=None
+PAUSE_ON_THE_BLOCKED_REBASE_RUN = WaveParked(
+    wave="w1", reason="run 20261019T083000Z-4eba5e blocked: Keep the guard of plan.py or drop it?"
 )
 
 
@@ -2620,7 +2638,7 @@ class BuildSnapshotOfARebaseRunOfAWaveBranchTest(BuildSnapshotTestCase):
         # Assert
         self.assertIsNone(snapshot.waves[0].blocked_rebase)
 
-    def test_should_carry_no_blocked_rebase_run_once_the_wave_paused_on_it_is_resumed(self):
+    def test_should_carry_no_blocked_rebase_run_once_the_wave_parked_on_it_is_resumed(self):
         # Arrange
         self.record_rebase_run(WAVE_BRANCH_RUN, "blocked")
         self.record(4, PAUSE_ON_THE_BLOCKED_REBASE_RUN)
@@ -2635,7 +2653,7 @@ class BuildSnapshotOfARebaseRunOfAWaveBranchTest(BuildSnapshotTestCase):
     def test_should_carry_the_blocked_rebase_run_past_a_quota_pause_of_the_wave_and_its_resume(self):
         # Arrange
         self.record_rebase_run(WAVE_BRANCH_RUN, "blocked")
-        self.record(4, WavePaused(wave="w1", reason="quota", resume_at="2026-10-19T10:00:00Z"))
+        self.record(4, WaveBlocked(wave="w1", reason="quota", resume_at="2026-10-19T10:00:00Z"))
         self.record(3, WaveResumed(wave="w1", reason="quota"))
 
         # Act
@@ -2649,7 +2667,7 @@ class BuildSnapshotOfARebaseRunOfAWaveBranchTest(BuildSnapshotTestCase):
 
     def test_should_carry_no_blocked_rebase_run_ended_while_the_wave_was_paused_once_the_user_resumes_it(self):
         # Arrange
-        self.record(6, WavePaused(wave="w1", reason="forge_account", resume_at=None))
+        self.record(6, WaveParked(wave="w1", reason="forge_account"))
         self.record_rebase_run(WAVE_BRANCH_RUN, "blocked")
         self.record(3, WaveResumed(wave="w1", reason="forge_account"))
 
@@ -2675,7 +2693,7 @@ class BuildSnapshotOfARebaseRunOfAWaveBranchTest(BuildSnapshotTestCase):
 
     def test_should_carry_the_blocked_rebase_run_ended_after_the_user_resumed_the_wave(self):
         # Arrange
-        self.record(7, WavePaused(wave="w1", reason="forge_account", resume_at=None))
+        self.record(7, WaveParked(wave="w1", reason="forge_account"))
         self.record(6, WaveResumed(wave="w1", reason="forge_account"))
         self.record_rebase_run(WAVE_BRANCH_RUN, "blocked")
 
@@ -2722,7 +2740,7 @@ class BuildSnapshotOfARebaseRunOfAWaveBranchTest(BuildSnapshotTestCase):
     def test_should_carry_the_blocked_rebase_run_when_another_wave_is_paused_after_it(self):
         # Arrange
         self.record_rebase_run(WAVE_BRANCH_RUN, "blocked")
-        self.record(4, WavePaused(wave="w0", reason="user", resume_at=None))
+        self.record(4, WaveParked(wave="w0", reason="user"))
 
         # Act
         snapshot, _ = self.build()
@@ -3033,3 +3051,76 @@ class BuildSnapshotOfTheDelayOfAStallTest(BuildSnapshotTestCase):
 
         # Assert
         self.assertEqual(snapshot.stall_after, 90)
+
+
+class BuildSnapshotOfTheOrdersTest(BuildSnapshotTestCase):
+    def test_should_carry_the_orders_by_their_last_run_and_their_live_runs(self):
+        # Arrange
+        self.write_operational_corpus()
+        self.record(30, OrderStarted(project="shop", kind="usage-report", order="nightly", run=FIRST_RUN))
+        self.record(
+            25,
+            OrderParked(
+                project="shop", kind="usage-report", order="nightly", run=FIRST_RUN, step="1-gate", reason="red"
+            ),
+        )
+        self.record(10, OrderStarted(project="shop", kind="usage-report", order="hourly", run=SECOND_RUN))
+        live_run = self.paths.state_root / "runs" / SECOND_RUN
+        live_run.mkdir(parents=True)
+        (live_run / "order.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "order": {"name": "hourly", "project": "shop"},
+                    "recipe": {"name": "usage-report", "max_wall": 30, "steps": []},
+                }
+            ),
+            encoding="utf-8",
+        )
+        os.utime(live_run / "order.json", ((FIXED_NOW - timedelta(minutes=10)).timestamp(),) * 2)
+        record_run_pid(live_run, os.getpid())
+        order_fields = [
+            {"name": "RECIPE", "atoms": ['"usage-report"']},
+            {"name": "PROJECT", "atoms": ['"@PROJECT.shop"']},
+            {"name": "EVERY", "atoms": ['"1h"']},
+            {"name": "STATUS", "atoms": ['"active"']},
+        ]
+        self.remote_answers = AWAWA_ANSWERS.answer_entities(
+            self.paths.config_root, "ORDER", {"hourly": order_fields, "nightly": order_fields}
+        )
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(
+            snapshot.orders,
+            (
+                OrderFacts(
+                    name="hourly",
+                    every="1h",
+                    status="active",
+                    last_started=FIXED_NOW - timedelta(minutes=10),
+                    parked=False,
+                ),
+                OrderFacts(
+                    name="nightly",
+                    every="1h",
+                    status="active",
+                    last_started=FIXED_NOW - timedelta(minutes=30),
+                    parked=True,
+                ),
+            ),
+        )
+        self.assertEqual(
+            snapshot.live_order_runs,
+            (
+                LiveOrderRun(
+                    order="hourly",
+                    recipe="usage-report",
+                    run=SECOND_RUN,
+                    started=FIXED_NOW - timedelta(minutes=10),
+                    max_wall=30,
+                ),
+            ),
+        )

@@ -11,7 +11,7 @@ UNPROVEN = "unproven"
 @dataclass(frozen=True)
 class ForgeCheck:
     name: str
-    verdict: str
+    conclusion: str
 
 
 @dataclass(frozen=True)
@@ -30,7 +30,7 @@ class TaskCheck:
 class HeadEvidence:
     commit: str
     forge_checks: tuple[ForgeCheck, ...]
-    task_check: TaskCheck | None
+    build_check: TaskCheck | None
     commit_checks: CommitChecks | None
 
 

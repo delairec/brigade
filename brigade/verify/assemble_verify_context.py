@@ -21,6 +21,6 @@ def assemble_verify_context(runtime: Runtime, demand: PreflightDemand) -> dict:
         base_head=base_head,
         repository=repository,
         preflight=preflight["checks"],
-        configuration=demand.configuration,
+        configuration=demand.equipment.configuration,
     )
     return describe_judged_task(runtime, judged)

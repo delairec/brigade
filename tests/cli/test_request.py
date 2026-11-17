@@ -88,7 +88,7 @@ class RequestTestCase(FileWaitingTestCase):
         recordings.mkdir()
         (recordings / "planner.json").write_text(json.dumps(DONE_RESULT))
         self.machine.write_configuration(
-            f'client = "fake"\ndocument = "markdown"\n[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}'
+            f'client = "fake"\nprogress_form = "markdown"\n[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}'
         )
 
 
@@ -107,7 +107,7 @@ class BrigadeRequestNewTest(RequestTestCase):
         self.assertRegex(document["run"], RUN_ID_PATTERN)
         self.assertEqual(document, {"schema_version": 1, "request": "shop_r1", "run": ANY})
         run_record = json.loads((self.runs / document["run"] / "run.json").read_text())
-        self.assertEqual(run_record["procedure"], "wave-plan")
+        self.assertEqual(run_record["procedure"], "request-plan")
         self.assertEqual(run_record["slot"], "plan")
         self.assertEqual(run_record["project"], "shop")
         self.assertEqual(run_record["arguments"], {"request": "shop_r1"})

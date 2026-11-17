@@ -1,11 +1,10 @@
-How a git repository becomes a project brigade works on with `brigade project add`, what it discovers and guesses,
-and how a project is listed, shown, paused and resumed.
+How a git repository becomes a project brigade works on with `brigade project add`, what it discovers, where the
+project declares its commands, and how a project is listed, shown, paused and resumed.
 
 ## Commands
 
 ```
-brigade project add <path> [--name N] [--acceptance CMD]... [--heavy CMD]... [--setup CMD]... [--force]
-                           [--init-corpus] [--corpus-mode control|area] [--corpus FOLDER]
+brigade project add <path> [--name N] [--force] [--init-corpus] [--corpus-mode control|area] [--corpus FOLDER]
 brigade project list
 brigade project show <name>
 brigade project pause <name>     # pause and resume set the status of a project
@@ -16,7 +15,7 @@ Every command prints text or, with `--json`, a JSON document.
 
 ## What `project add` discovers
 
-A project is a `PROJECT` entity of `projects.awawa` in the operational corpus, the registry. `project add` registers
+A project is a `PROJECT` entity of `projects.awawa` in the registry, the registry. `project add` registers
 a git repository under the basename of its path, every character outside letters, digits and `_` turned into `_`, or
 under `--name`.
 
@@ -27,11 +26,35 @@ under `--name`.
 | the main branch | `origin/HEAD`, else the branch checked out |
 | the corpus folder | the folder holding the tracked `.awawa` files |
 | the forge | `github` for a remote on github.com |
-| the acceptance commands and the per-worktree setup commands not given by flags | guessed from a `package.json`, a Python project or a `Cargo.toml` at the root, and marked as guessed |
 
-The heavy suites left to continuous integration (`--heavy`) are never guessed.
+`project add` records no command of the project: its commands are its recipes, below.
 
-> **Watch out:** every command exits 1 naming `brigade init` until the operational corpus exists, and needs awawa on
+## The commands of a project
+
+A project declares its commands as three recipes of its own, each a list of `command` steps whose `ARGV` lines
+are one argv, run without a shell:
+
+| Recipe | What brigade does with its steps |
+|---|---|
+| `setup` | runs them in each new task worktree, stopping at the first that fails |
+| `acceptance` | `brigade build check`, the preflight and the tick's commit checks run each, whatever the others returned |
+| `heavy` | never runs them: `brigade build context` prints each as its argv joined, left to continuous integration |
+
+A recipe is a `RECIPE` entity of the project's corpus, or a TOML file of `.brigade/recipes/` for a project without
+corpus; brigade reads it in the worktree it checks or sets up, so a branch that changes a recipe is checked under
+it. A project without one of the three recipes has no command of it.
+
+```
+RECIPE acceptance
+	SCHEMA_VERSION 1
+	MAX_WALL 10
+	STEP command
+		ARGV "python3"
+		ARGV "-m"
+		ARGV "unittest"
+```
+
+> **Watch out:** every command exits 1 naming `brigade init` until the registry exists, and needs awawa on
 > `PATH`.
 
 > **Watch out:** a path or a name already registered is refused unless `--force` replaces it.

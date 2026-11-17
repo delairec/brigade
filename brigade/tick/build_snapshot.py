@@ -31,14 +31,20 @@ from brigade.ledger.task_reported import TaskReported
 from brigade.ledger.task_state import QUOTA_RESUME_REASON, TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_closed import WaveClosed
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
+from brigade.orders.convert_order import convert_order
+from brigade.orders.is_order_due import OrderFacts
+from brigade.orders.live_order_run import LiveOrderRun
+from brigade.orders.read_live_order_runs import read_live_order_runs
+from brigade.orders.read_order_facts import read_order_facts
 from brigade.registry.find_project import find_project
 from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_policy_field import read_policy_field
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
+from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
 from brigade.runs.list_runs import list_runs
 from brigade.runs.read_run_question import read_run_question
@@ -90,6 +96,7 @@ from brigade.waves.summarize_waves import summarize_waves
 
 DOCUMENT_SCHEMA_VERSION = 1
 TASK_TYPE = "TASK"
+ORDER_ENTITY_TYPE = "ORDER"
 LIVE_RUN_STATE = "running"
 SLOTS_FIELD = "SLOTS"
 CHECK_RUNS_FIELD = "CHECK_RUNS"
@@ -108,7 +115,7 @@ PATH_FIELD = "PATH"
 MAIN_FIELD = "MAIN"
 DESCENDING = 0
 RUNNING_STATE = "running"
-PAUSED_ON_QUOTA_STATE = "paused:quota"
+BLOCKED_ON_QUOTA_STATE = "blocked:quota"
 RATE_LIMIT = "rate_limit"
 AUTHENTICATION = "authentication"
 CLIENT_STOP_ERROR_CLASSES = (RATE_LIMIT, AUTHENTICATION)
@@ -128,8 +135,8 @@ REVIEW_FIELD = "REVIEW"
 VERDICT_REVIEW = "verdict"
 AUTO_MERGE_FIELD = "AUTO_MERGE"
 MERGE_INTO_INTEGRATION = "integration"
-VERIFY_ROUNDS_BY_DEFAULT = 2
-VERIFY_ROUNDS_FIELD = "VERIFY_ROUNDS"
+REPAIR_ROUNDS_BY_DEFAULT = 2
+REPAIR_ROUNDS_FIELD = "REPAIR_ROUNDS"
 FIXING_STATE = "fixing"
 QUOTA_PAUSED_STATES = (RUNNING_STATE, FIXING_STATE)
 FAILED_PREFLIGHT_CHECK = "fail"
@@ -258,7 +265,7 @@ class WaveFacts:
             "tasks": [task.to_document() for task in self.tasks],
             "states": dict(self.states),
             "implemented": list(self.implemented),
-            "pause": None if self.pause is None else self.pause.to_document(),
+            "halt": None if self.pause is None else self.pause.to_document(),
             "forge_account_unavailable": self.forge_account_unavailable,
             "milestone_branch": self.milestone_branch,
             "blocked_rebase": (
@@ -297,7 +304,7 @@ class ProjectFacts:
     merge: str = REBASE_MERGE
     review: str = VERDICT_REVIEW
     auto_merge: str = MERGE_INTO_INTEGRATION
-    verify_rounds: int = VERIFY_ROUNDS_BY_DEFAULT
+    repair_rounds: int = REPAIR_ROUNDS_BY_DEFAULT
     on_github: bool = False
     uncut_milestones: tuple[UncutMilestone, ...] = ()
 
@@ -311,7 +318,7 @@ class ProjectFacts:
             "merge": self.merge,
             "review": self.review,
             "auto_merge": self.auto_merge,
-            "verify_rounds": self.verify_rounds,
+            "repair_rounds": self.repair_rounds,
             "awaits_check_runs": self.awaits_check_runs,
             "on_github": self.on_github,
             "uncut_milestones": [
@@ -375,6 +382,8 @@ class Snapshot:
     projects: tuple[ProjectFacts, ...] = ()
     studies: tuple[StudyFacts, ...] = ()
     live_study_runs: tuple[LiveStudyRun, ...] = ()
+    orders: tuple[OrderFacts, ...] = ()
+    live_order_runs: tuple[LiveOrderRun, ...] = ()
     study_runs: int = STUDY_RUNS_BY_DEFAULT
     stall_after: int = STALL_AFTER_BY_DEFAULT_MIN
     rate_limits: tuple[RateLimit, ...] = ()
@@ -391,6 +400,8 @@ class Snapshot:
             "projects": [project.to_document() for project in self.projects],
             "studies": [study.to_document() for study in self.studies],
             "live_study_runs": [live.to_document() for live in self.live_study_runs],
+            "orders": [order.to_document() for order in self.orders],
+            "live_order_runs": [live.to_document() for live in self.live_order_runs],
             "study_runs": self.study_runs,
             "rate_limits": [rate_limit.to_document() for rate_limit in self.rate_limits],
             "milestones": [milestone.to_document() for milestone in self.milestones],
@@ -463,7 +474,7 @@ def _list_preflight_failures(preflighted: TaskPreflighted) -> tuple[PreflightFai
     return tuple(
         PreflightFailure(name=check["name"], findings=tuple(check["findings"]))
         for check in preflighted.checks
-        if check["verdict"] == FAILED_PREFLIGHT_CHECK
+        if check["result"] == FAILED_PREFLIGHT_CHECK
     )
 
 
@@ -591,13 +602,13 @@ def _read_state_before_pause(reading: WaveReading, wave: str, task: str) -> str 
         if isinstance(event, TaskState)
         and event.wave == wave
         and event.task == task
-        and event.state != PAUSED_ON_QUOTA_STATE
+        and event.state != BLOCKED_ON_QUOTA_STATE
     ]
     return held[-1] if held else None
 
 
 def _note_quota(task: TaskFacts, reading: WaveReading, wave: str, states: dict) -> TaskFacts:
-    if states.get(task.name) == PAUSED_ON_QUOTA_STATE:
+    if states.get(task.name) == BLOCKED_ON_QUOTA_STATE:
         return dataclasses.replace(
             task,
             stopped_run=_list_task_runs(reading, wave, task.name)[-1].run,
@@ -618,7 +629,7 @@ def _read_blocked_run(reading: WaveReading, run: str) -> BlockedRun | None:
 def _is_blocked_run_answered(event, wave: str, run: str) -> bool:
     if isinstance(event, WaveResumed):
         return event.wave == wave and event.reason != QUOTA_REASON
-    return isinstance(event, WavePaused) and event.wave == wave and event.reason.startswith(f"run {run} blocked")
+    return isinstance(event, WaveParked) and event.wave == wave and event.reason.startswith(f"run {run} blocked")
 
 
 def _read_blocked_rebase(reading: WaveReading, wave: str) -> BlockedRun | None:
@@ -956,8 +967,8 @@ def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity,
         merge=read_project_field(project, MERGE_FIELD) or REBASE_MERGE,
         review=read_policy_field(policies, project.name, REVIEW_FIELD, VERDICT_REVIEW),
         auto_merge=read_policy_field(policies, project.name, AUTO_MERGE_FIELD, MERGE_INTO_INTEGRATION),
-        verify_rounds=int(
-            read_policy_field(policies, project.name, VERIFY_ROUNDS_FIELD, str(VERIFY_ROUNDS_BY_DEFAULT))
+        repair_rounds=int(
+            read_policy_field(policies, project.name, REPAIR_ROUNDS_FIELD, str(REPAIR_ROUNDS_BY_DEFAULT))
         ),
         on_github=is_on_a_forge(project),
         uncut_milestones=wave_making.uncut_milestones,
@@ -1255,9 +1266,20 @@ def _read_kept_branches(reading: WaveReading) -> frozenset[BranchKept]:
     return frozenset(event for event in reading.events if isinstance(event, BranchKept))
 
 
+def _read_orders(runtime: Runtime, reading: WaveReading) -> tuple[OrderFacts, ...]:
+    return read_order_facts(
+        tuple(
+            convert_order(entity)
+            for entity in read_entities(runtime.run_process, runtime.paths.config_root, ORDER_ENTITY_TYPE)
+        ),
+        reading.entries,
+    )
+
+
 def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeReaders) -> Snapshot:
     if not runtime.paths.schema_file.exists():
         return Snapshot(now=runtime.now)
+    require_operational_corpus(runtime.paths)
     runtime = dataclasses.replace(runtime, run_process=remember_process_records(runtime.run_process))
     reading = _assemble_reading(runtime, configuration, forge)
     last_orders = read_last_study_orders(reading.entries)
@@ -1272,6 +1294,8 @@ def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeR
             describe_study_facts(study, last_orders.get(study.name), quota_resumes) for study in read_studies(runtime)
         ),
         live_study_runs=read_live_study_runs(runtime.paths.state_root, is_recorded_process_alive),
+        orders=_read_orders(runtime, reading),
+        live_order_runs=read_live_order_runs(runtime.paths.state_root, is_recorded_process_alive),
         study_runs=configuration.study_runs,
         stall_after=configuration.stall_after,
         rate_limits=_read_rate_limits(reading, runtime.now),

@@ -1829,9 +1829,10 @@ DECISION APreflightIsANamedSetOfCollectorsAndChecks
 	DESC "brigade preflight <name> runs the preflight named and returns its findings as one"
 		+ "document; built-in preflights ship with brigade, refinement the first, and a user adds"
 		+ "custom ones"
-	DESC "the eight deterministic checks of a pull request of @TASK.B15 become the built-in"
-		+ "preflight verify-pull-request once brigade preflight exists; B15 is delivered as written"
-		+ "until then"
+	DESC "the deterministic checks of a pull request of @TASK.B15, seven checks and the size"
+		+ "measured beside them, become the built-in preflight verify-pull-request once brigade"
+		+ "preflight exists; it does not name the check acceptance, which the preflight of the task"
+		+ "branch of a project of FORGE none runs; B15 is delivered as written until then"
 		REF @TASK.B15
 	DESC "a gate step of a recipe of @DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder calls a named"
 		+ "preflight, so that a set of collectors and checks is declared in one place; a scan of"
@@ -1865,6 +1866,10 @@ DECISION APreflightIsANamedSetOfCollectorsAndChecks
 		+ "Écrit et lint, sans commit », the history of the project being the user's"
 	REJECTED "the check of the forge logins run only by the preflight refinement: a broken login"
 		+ "would be found by hand, after the tick had started a wave on it"
+	REJECTED "verify-pull-request naming the check acceptance too: on a project with a forge the"
+		+ "ACCEPTANCE commands ran before the push, brigade task push taking only a HEAD that"
+		+ "passed brigade task check, and the check checks requires the check runs of the CI; a"
+		+ "project of FORGE none has no CI, so the preflight of its task branch runs them"
 	RATIONALE "the refinement of @TASK.B73 did by hand mechanical checks a command could run, and"
 		+ "the user wants them useful beyond the refinement"
 		REF @TASK.B73
@@ -1880,6 +1885,11 @@ DECISION APreflightIsANamedSetOfCollectorsAndChecks
 		+ "Écrit et lint, sans commit »; on the check of the forge logins, « Built-in `wave`, lancé"
 		+ "par le tick »"
 		REF @TASK.B98
+	SOURCE "DESC 3 reworded and the REJECTED on acceptance written on the user's ruling of"
+		+ "2026-11-15 on SPEC 7 of @TASK.B98, « ok pour A alors. »: the eight checks DESC 3 counted"
+		+ "are the eight entries of @TASK.B15, the size among them and acceptance not"
+		REF @TASK.B98
+		REF @TASK.B15
 
 DECISION APullRequestTouchingOnlyTheCorpusOrDocumentationRunsNoCodeJob
 	TITLE "a pull request touching only corpus/, docs/, artifact/ or Markdown at the root starts no"
@@ -3664,7 +3674,7 @@ DECISION ARepairRoundIsOneFixingStateOfTheTask
 		+ "the rebase slot on a task in changes_requested, with a failing check or whose git rebase"
 		+ "conflicted; the rounds of a task are the count of those events of the task in its wave"
 	DESC "a task left fixing whose pull request head is still the head of its last preflight, with"
-		+ "no run holding its worktree, is launched again, one more round; past the VERIFY_ROUNDS"
+		+ "no run holding its worktree, is launched again, one more round; past the REPAIR_ROUNDS"
 		+ "of the project's POLICY it is parked"
 	DESC "binds @TASK.B18 and @TASK.B143, whose rebase run counts one round the same way"
 		REF @TASK.B18
@@ -3710,8 +3720,8 @@ DECISION TheWaveReportIsAStudyBuiltFromWaveStartedAndPublishedOnTheIntegrationBr
 		REF @TASK.B232
 	DESC "the study has no STUDY entity: slot report, output entity:REPORT, collectors ledger"
 		+ "wave=<wave>, pr-list state=all, corpus ref=<branch> entities=<the tasks of the wave>,"
-		+ "git-diff-stat to=<branch>; study.json records the wave and every command given the run"
-		+ "rebuilds the study from that wave.started"
+		+ "git-diff-stat to=<branch>; the order record of its run, order.json, holds the task in"
+		+ "its PARAM task, and every command given the run rebuilds the study from it"
 	DESC "each field the CLI fills is one string brigade formats: TASK_ROW \"B17 merged #178\","
 		+ "STATISTIC \"<name> <value>\", GRAPH \"B20 after B17\", MANUAL_TEST \"B17: <spec line>\","
 		+ "INSTRUCTIONS_CHANGE \"<path> +<insertions> -<deletions>\" for each file under"
@@ -3746,8 +3756,8 @@ DECISION AFailedActionIsNotAppliedAgainInTheTickThatSawItFail
 	TITLE "an action of the tick that fails with a BrigadeError is recorded once and not applied"
 		+ "again in a later round of the same tick; any other exception ends the tick"
 	STATUS active
-	DESC "run_rounds leaves out of every later round of a tick the actions that failed in an"
-		+ "earlier one; the next tick plans them again from the facts"
+	DESC "run_cycles leaves out of every later cycle of a tick the actions that failed in an"
+		+ "earlier one; the next tick decides them again from the facts"
 	DESC "a failed action is one whose executor raised a BrigadeError; any other exception is a"
 		+ "defect of brigade and ends the tick as before"
 	DESC "a heartbeat that holds no actions_failed, written before failed actions were counted,"
@@ -4026,13 +4036,13 @@ DECISION AVerificationAfterTheFirstVerdictJudgesThePreviousFindingsAndTheRepairD
 	DESC "the previous verdict is the last task.verdict of the task at the pull request, naming the"
 		+ "head its run judged as"
 		+ "@DECISION.AVerificationRunEndedWithoutAVerdictIsNotRelaunchedAtTheSameHead asks; the"
-		+ "repair rounds of @DECISION.ARepairRoundIsOneFixingStateOfTheTask and the VERIFY_ROUNDS"
+		+ "repair rounds of @DECISION.ARepairRoundIsOneFixingStateOfTheTask and the REPAIR_ROUNDS"
 		+ "bounding them are unchanged"
 		REF @DECISION.AVerificationRunEndedWithoutAVerdictIsNotRelaunchedAtTheSameHead
 		REF @DECISION.ARepairRoundIsOneFixingStateOfTheTask
 	DESC "binds @TASK.B209"
 		REF @TASK.B209
-	REJECTED "VERIFY_ROUNDS raised in the POLICY of brigade, 4 for instance, and B22 requeued at"
+	REJECTED "REPAIR_ROUNDS raised in the POLICY of brigade, 4 for instance, and B22 requeued at"
 		+ "once: the non-convergence remains for the other tasks of M2"
 	REJECTED "a verdict with no medium or high finding passing with remarks: a finding of the"
 		+ "previous verdict of grade low still blocks until it is fixed or soundly challenged"
@@ -4089,8 +4099,8 @@ DECISION ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsN
 	DESC "the rounds of a task are the count of the runs of the remediate slot and of the build"
 		+ "slot the tick launched on it in its wave since its last task.verdict or its last"
 		+ "requeue, whichever is later, each recorded as task.state fixing after its launch; past"
-		+ "the VERIFY_ROUNDS of the project's POLICY the task is parked with the reason of the"
-		+ "rounds spent: VERIFY_ROUNDS bounds the repair of one verdict, and a verdict or a requeue"
+		+ "the REPAIR_ROUNDS of the project's POLICY the task is parked with the reason of the"
+		+ "rounds spent: REPAIR_ROUNDS bounds the repair of one verdict, and a verdict or a requeue"
 		+ "restarts the count"
 	DESC "a run of the remediate or the build slot cut by a rate limit spends no round: its"
 		+ "task.state fixing is not counted, and the run is launched again after the reset, as"
@@ -4148,7 +4158,7 @@ DECISION ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsN
 		+ "were spent by check repairs and privacy repairs before the first verdict, the runs that"
 		+ "debit the budget without receiving the findings of a verdict, so the first verdict"
 		+ "asking for changes parked each task at once and no remediation of a verdict ever ran on"
-		+ "either; a count restarted by each verdict bounds what VERIFY_ROUNDS was meant to bound,"
+		+ "either; a count restarted by each verdict bounds what REPAIR_ROUNDS was meant to bound,"
 		+ "the repair of one verdict"
 		REF @TASK.B210
 		REF @TASK.B28
@@ -4702,7 +4712,7 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 		+ "branches in brigade/waves/start_project_wave.py, after a StartWave was planned from"
 		+ "candidates the snapshot had read on the branch before the rebase, so a task ratified on"
 		+ "main after the cut was never a candidate; the run held that an action of the plan makes"
-		+ "the candidates arrive one tick later, but brigade/tick/run_rounds.py rebuilds the"
+		+ "the candidates arrive one tick later, but brigade/tick/run_cycles.py rebuilds the"
 		+ "snapshot at each round, so a rebase applied in one round is read in the next round of"
 		+ "the same tick"
 		REF @TASK.B214
@@ -4768,7 +4778,7 @@ DECISION AMilestoneIntegratesItsWavesOnOneBranchTheUserMergesIntoMainOnce
 	SOURCE "the user's ruling of 2026-10-30 on the question of the run 20261030T005500Z-2f5135 of"
 		+ "@TASK.B214, pull request #260, DESC 14: « Une action du plan (Recommended) », the option"
 		+ "« Dès que la branche du milestone ne descend plus de main, le plan produit une action de"
-		+ "rebase. Le tick relit l'état à chaque tour (brigade/tick/run_rounds.py), donc les"
+		+ "rebase. Le tick relit l'état à chaque tour (brigade/tick/run_cycles.py), donc les"
 		+ "candidats sont relus après le rebase dans le même tick. Cela respecte"
 		+ "TheTickIsAPurePlannerAndAnExecutorThatRecordsEveryAction », against « Une étape avant la"
 		+ "lecture »"
@@ -5059,15 +5069,20 @@ DECISION TheInboxViewRendersTheFamiliesAndPatternsOfInboxListAndPostsItsActionsU
 		REF @TASK.B29
 
 DECISION BrigadeReportsListsTheWaveReportsAndStudyAnswersTheOperationalCorpusKeeps
-	TITLE "brigade reports reads the REPORT and ANSWER entities of the operational corpus through"
-		+ "the awawa document plugin; the outputs of an order join it with the engine that writes"
-		+ "them"
+	TITLE "brigade reports reads the REPORT entities of the operational corpus through the awawa"
+		+ "document plugin, and the RESULT entities the engine writes for an order; brigade inbox"
+		+ "reads its ANSWER entities"
 	STATUS active
 	DESC "a report is a REPORT entity of reports.awawa, its kind milestone-report, task-report or,"
 		+ "written before @TASK.B232, wave-report by the field it carries, MILESTONE, TASK or WAVE,"
-		+ "its project its PROJECT field; a study answer is an ANSWER entity of answers.awawa, kind"
-		+ "study-answer, its project that of the STUDY it answers; the id is the name of the entity"
+		+ "its project its PROJECT field; the id is the name of the entity"
 		REF @TASK.B232
+	DESC "a study answer is an ANSWER entity of answers.awawa, its project that of the STUDY it"
+		+ "answers; brigade inbox list lists it after the signals and the patterns, brigade inbox"
+		+ "show <id> shows it when its name is the id, before any signal the id starts, and the"
+		+ "Inbox view of the dashboard links it to that show"
+	DESC "the RESULT of an order stays with brigade reports: the answer of a judge step of an order"
+		+ "is a report of the recipe it runs, not a study answer"
 	DESC "an answer a study hands to a file, an issue, the inbox or an output on PATH is read where"
 		+ "it was handed: brigade reports lists what the operational corpus keeps"
 	DESC "no order output exists when @TASK.B31 is delivered: the engine of @TASK.B51 is a draft,"
@@ -5091,6 +5106,10 @@ DECISION BrigadeReportsListsTheWaveReportsAndStudyAnswersTheOperationalCorpusKee
 	SOURCE "the user's ruling of 2026-11-02 carried by @TASK.B232: DESC 1 and DESC 4 read the"
 		+ "milestone report and the task report where they read the wave report"
 		REF @TASK.B232
+	SOURCE "the user's ruling of 2026-11-14 carried by @TASK.B256, the study answers out of brigade"
+		+ "reports, being signals of the inbox; the build run of @TASK.B256 keeps the RESULT of an"
+		+ "order with the reports"
+		REF @TASK.B256
 
 DECISION TheCorpusViewReadsBrigadeCorpusAndItsBoardReadsEachEntity
 	TITLE "the Corpus view reads brigade corpus --type, --field and --entity through"
@@ -5168,7 +5187,11 @@ DECISION TheWaveViewRunsItsShowAndItsLedgerAsOneViewUnderTheStatusOfItsShow
 	TITLE "the Wave view is a view of route_view with two commands, brigade wave show and brigade"
 		+ "ledger --wave, run together; it answers the status of brigade wave show, and renders the"
 		+ "error of the ledger when the show succeeded and the ledger failed"
-	STATUS active
+	STATUS archived
+	DESC "archived by @TASK.B256, which removes brigade ledger --wave: the Wave view runs brigade"
+		+ "wave show --events alone, @DECISION.WaveShowEventsCarriesTheLedgerViewOfItsWave"
+		REF @TASK.B256
+		REF @DECISION.WaveShowEventsCarriesTheLedgerViewOfItsWave
 	REJECTED "the ledger run only once the show succeeded, under the status of the ledger: a second"
 		+ "path beside the view registry every other view of several commands goes through"
 	RATIONALE "@TASK.B31 merged the view registry, whose status is that of the first command and"
@@ -5574,8 +5597,8 @@ DECISION AMilestoneReportIsBuiltOnceItsTasksAreMergedOrParkedAndIsTheBodyOfItsPu
 	DESC "the study has no STUDY entity: slot report, output entity:REPORT, its collectors the"
 		+ "union of the waves of the milestone and of its branch, ledger for each wave, pr-list"
 		+ "state=all, corpus ref=<the branch> entities=<the tasks of the milestone>, git-diff-stat"
-		+ "to=<the branch>; study.json records the milestone and every command given the run"
-		+ "rebuilds the study from it"
+		+ "to=<the branch>; the order record of its run, order.json, holds the milestone in its"
+		+ "PARAM milestone, and every command given the run rebuilds the study from it"
 	DESC "the tick runs it once every task of the milestone at its branch is merged or parked and"
 		+ "no wave of the milestone is open, and appends milestone.reported with the run; the pull"
 		+ "request of the milestone opens once the report is committed on the branch, so the report"
@@ -7026,14 +7049,14 @@ DECISION ARunWhoseClientFailsToAuthenticatePausesItsWaveUntilWaveResumeAndSpends
 DECISION AReviewRunEndedWithoutAVerdictIsLaunchedAgainUpToVerifyRoundsThenParksItsTask
 	TITLE "a review run that ends on the model without recording a verdict leaves its head"
 		+ "unjudged: the tick launches the review again on the same head while the review runs"
-		+ "without a verdict on it number at most VERIFY_ROUNDS, then parks the task naming them"
+		+ "without a verdict on it number at most REPAIR_ROUNDS, then parks the task naming them"
 	STATUS active
 	DESC "the review runs of a task are those of the slot review that ended neither on rate_limit"
 		+ "nor on authentication, since its last preflight and its last requeue; a verdict recorded"
 		+ "at the head decides the task whatever those runs"
 	DESC "with no verdict at the head, the tick launches the review while the task counts at most"
-		+ "VERIFY_ROUNDS of the POLICY of its project review runs, 2 by default: one review and"
-		+ "VERIFY_ROUNDS reviews again"
+		+ "REPAIR_ROUNDS of the POLICY of its project review runs, 2 by default: one review and"
+		+ "REPAIR_ROUNDS reviews again"
 	DESC "past it, the tick parks the task with the reason « <n> review runs without a verdict:"
 		+ "<run>, … », for a pull request and for a head delivered without a forge alike"
 	DESC "a review launched again records no task.state and counts no repair round"
@@ -7041,7 +7064,7 @@ DECISION AReviewRunEndedWithoutAVerdictIsLaunchedAgainUpToVerifyRoundsThenParksI
 		+ "verdict left TASK B248 verifying with nothing planned for 24 hours"
 	REJECTED "a review launched again with no bound: a review that fails for a lasting cause would"
 		+ "be launched at every tick"
-	REJECTED "a bound of its own for the review runs: VERIFY_ROUNDS already bounds what the tick"
+	REJECTED "a bound of its own for the review runs: REPAIR_ROUNDS already bounds what the tick"
 		+ "retries on a task before the user looks at it"
 	REJECTED "only the runs ended failed counted: a review run that ends done without calling"
 		+ "brigade verify record leaves the same head unjudged"
@@ -7159,7 +7182,7 @@ DECISION TheStallOfATaskIsReadFromItsLastLedgerEventAndRaisedOnceTheRoundsOfTheT
 		+ "stall folded ten times in one tick and recorded for a task launched in the next round"
 		REF @TASK.B244
 	SOURCE "the build run of @TASK.B244 of 2026-11-14, on the declared events of"
-		+ "brigade/ledger/declared_events.py and the rounds of brigade/tick/run_rounds.py"
+		+ "brigade/ledger/declared_events.py and the rounds of brigade/tick/run_cycles.py"
 		REF @TASK.B244
 
 DECISION TheTickKeepsALeftoverHoldingUncommittedChangesOrTheMainCheckoutAndReachesAGoneBaseThroughMain
@@ -7369,3 +7392,507 @@ DECISION ASignalIsClosedOnceItsDefectIsCorrectedAndReopensWhenItComesBack
 		+ "fingerprint recorded again: « Une fois que a à d sont implémentées, ça devrait rouvrir"
 		+ "les signaux fermés qui ne sont pas corrigés lorsqu'ils se reproduisent, c'est bien ça?"
 		+ "Si oui, alors pas besoin de revenir sur les fermetures, on laisse. »"
+
+DECISION APreflightHandsItsChecksTheDocumentsOfItsCollectors
+	TITLE "a preflight runs its collectors first, then hands each check one subject holding the"
+		+ "parameters and the documents of the collectors by name; a built-in check is a module of"
+		+ "brigade/checks/ named as its module, and the facts of a pull request are the document of"
+		+ "the built-in collector pull-request"
+	STATUS active
+	DESC "a check receives the subject schema_version, project, parameters and collected, the"
+		+ "document of each collector of the preflight under its name, on its standard input when"
+		+ "it is an executable, and answers the check document schema_version, name, verdict pass"
+		+ "or fail and findings, validated on entry for a built-in as for an executable"
+	DESC "a built-in check is the module brigade/checks/<name>.py whose entry point check wraps a"
+		+ "check of brigade/verify/; its name is its module name, underscores kept, so that"
+		+ "check_runs, corpus_at_head and untouched_files are the names of SPEC 3 of @TASK.B98"
+		REF @TASK.B98
+	DESC "the facts the checks of a pull request read, its head, its base, their trees, the files"
+		+ "and lines it changes, its check runs and its body, are collected once by the built-in"
+		+ "collector pull-request, parameters pr, task and base, which verify-pull-request names"
+	DESC "the key=value pairs of brigade preflight are the parameters of every collector and every"
+		+ "check of the preflight, over the parameters the preflight declares for each"
+	DESC "preflight_pull_request measures the size of the diff itself, beside the checks of"
+		+ "verify-pull-request, from the changed files of the document of pull-request"
+	REJECTED "each built-in check gathering the facts of the pull request it reads: the pull"
+		+ "request read from the forge and its trees prepared seven times, and an action the"
+		+ "decision APreflightIsANamedSetOfCollectorsAndChecks delivers as a collector"
+	REJECTED "the brigade/verify/check_*.py modules moved into brigade/checks/: the preflight of"
+		+ "the task branch of a project of FORGE none calls them, and no module outside a plugin"
+		+ "package imports a plugin"
+	REJECTED "check names hyphenated as collector names are: SPEC 3 of the task B98 names"
+		+ "check_runs, corpus_at_head and untouched_files"
+	SOURCE "pull request #417 of the brigade repository, delivering @TASK.B98, whose SPEC leaves"
+		+ "the subject of a check, the source of the facts of a pull request and the names of the"
+		+ "built-in checks open"
+		REF @TASK.B98
+
+DECISION TheRefinementPreflightReportsTheFactsOfADraftAndJudgesNone
+	TITLE "each check of the built-in preflight refinement fails as soon as it reports a fact; the"
+		+ "files and the entities of a task are read from its TITLE and its SPEC, the citations of"
+		+ "the draft from every field, at the most recent commit of its SOURCE lines"
+	STATUS active
+	DESC "a check of the preflight refinement fails as soon as it reports one fact: the facts are"
+		+ "the refinement's to weigh, and the preflight judges none of them"
+	DESC "the files and the entities a task touches are those its TITLE and its SPEC lines cite;"
+		+ "the file:line citations whose lines moved are read from every field of the draft, its"
+		+ "RATIONALE and its SOURCE included"
+	DESC "the commit a citation is compared at is the most recent commit git blame names, at HEAD,"
+		+ "for the SOURCE lines of the draft; a draft holding no SOURCE is refused"
+	DESC "the tasks compared with the draft are the live ones, neither implemented nor archived"
+	DESC "binds @TASK.B253"
+		REF @TASK.B253
+	REJECTED "a check passing with its facts as warnings: a check answers pass or fail, and a fact"
+		+ "behind a pass would not reach the refinement"
+	REJECTED "the files and the entities read from every field: a RATIONALE cites the code a task"
+		+ "was reasoned from, and two tasks would overlap on files neither delivers"
+	REJECTED "the citations compared at the commit that wrote the task: a SOURCE reworded at a"
+		+ "later ruling dates the citations the ruling rests on"
+	REJECTED "the implemented tasks compared too: a delivered task needs no AFTER and shares no"
+		+ "deliverable still to come"
+	SOURCE "pull request #420 of the brigade repository, delivering @TASK.B253, whose SPEC leaves"
+		+ "open when a check fails, the fields the files, entities and citations are read from, and"
+		+ "the commit of the SOURCE"
+		REF @TASK.B253
+
+DECISION AFailedPreflightWavePausesTheWaveOnTheForgeAccount
+	TITLE "a wave whose built-in preflight wave fails is paused with the reason forge_account"
+		+ "before any run, until brigade wave resume"
+	STATUS active
+	DESC "the tick runs the preflight wave before it starts a wave; when it fails, the wave is"
+		+ "started then paused at once, the ledger event wave.paused carrying the reason"
+		+ "forge_account and no resume_at, and stderr names each finding"
+	DESC "binds @TASK.B253"
+		REF @TASK.B253
+	REJECTED "a new pause reason for a failed preflight: the preflight wave checks the forge logins"
+		+ "alone, and a login failing in the course of a run already pauses the wave on"
+		+ "forge_account"
+	REJECTED "the wave left unstarted while its preflight fails: the user ruled a broken login"
+		+ "parking the wave, and wave resume, which the user runs once the login is repaired, takes"
+		+ "a wave the ledger holds"
+	SOURCE "pull request #420 of the brigade repository, delivering @TASK.B253, whose SPEC asks a"
+		+ "failed login to pause the wave before any run and leaves the reason open"
+		REF @TASK.B253
+
+DECISION APreflightEntityIsNamedWithUnderscoresAndPreflightAddResolvesItsStepAsACollectorFirst
+	TITLE "a PREFLIGHT entity is named after its preflight, its hyphens as underscores; brigade"
+		+ "preflight add resolves its step as a collector first, appends it, and writes the entity"
+		+ "in preflights.awawa without a commit"
+	STATUS active
+	DESC "a PREFLIGHT entity is named after its preflight, its hyphens as underscores, an awawa"
+		+ "entity name being an identifier; brigade preflight <name> reads that entity, its TITLE"
+		+ "the description, each COLLECTOR and CHECK a step, each PARAMETER a key=value pair of the"
+		+ "step above it"
+	DESC "a project keeps its custom preflights in its corpus when it is registered in MODE control"
+		+ "or area; a project in MODE none, or not registered, keeps them in .brigade/preflights/"
+	DESC "brigade preflight add resolves its step as a collector first, then as a check, and"
+		+ "appends it, a step of that name already in the preflight staying; a preflight it creates"
+		+ "is described as the custom preflight <name>"
+	DESC "on a project with a corpus it writes the entity in preflights.awawa at the root of the"
+		+ "corpus through brigade/corpus/write_corpus_files, the write, format, lint and restore of"
+		+ "change_corpus_file without its commit; on a project without one the lint of the TOML"
+		+ "file is its read back as a preflight"
+	DESC "binds @TASK.B252"
+		REF @TASK.B252
+	REJECTED "a field holding the hyphenated name beside an identifier name: two names for one"
+		+ "preflight, where the command modules already map a hyphen to an underscore"
+	REJECTED "a name that resolves as a collector and as a check refused: such a check could never"
+		+ "be added, and the built-in collectors are hyphenated where the built-in checks are not"
+	SOURCE "the run of @TASK.B252 in the wave brigade_w56, whose SPEC leaves the name of the"
+		+ "entity, the file it lives in, the order of the two kinds and the description of a"
+		+ "created preflight open"
+		REF @TASK.B252
+
+DECISION ARecipeStepHoldsTheKeysOfItsKindAndARecipeEntityWritesThemAsSubFieldsOfItsStep
+	TITLE "a step of a recipe holds the keys its kind declares, and a RECIPE entity writes the"
+		+ "recipe's keys as its fields and each step's keys as the sub-fields of its STEP"
+	STATUS active
+	DESC "a collect step holds collector and parameters, a command step argv, a gate step"
+		+ "preflight, a judge step slot, procedure and answer, the entity type of its answer, an"
+		+ "output step output, an order step recipe and parameters, a corpus step entity, an op"
+		+ "step op; every step may hold on_fail; the lint refuses any other key, of a step or of"
+		+ "the recipe, and a parameter whose value is not a text"
+	DESC "max_wall is a whole number of minutes, as stall_after and tick_stale_after of config.toml"
+		+ "count"
+	DESC "a RECIPE entity is named after its recipe, its DESC the description, SCHEMA_VERSION,"
+		+ "PARAM and MAX_WALL the other keys; a STEP holds its kind as value and each key in upper"
+		+ "case beneath it, ARGV once per argument and PARAMETER once per key=value pair"
+	DESC "a value substitutes {project}, the name of the project, beside the params of the recipe"
+	DESC "brigade recipe list, show and lint read the project whose main checkout holds the"
+		+ "worktree of the current directory, as brigade preflight reads it, so a worktree or a"
+		+ "subdirectory of a project reads its RECIPE entities; the group is brigade recipe,"
+		+ "singular, as @DECISION.ACommandGroupIsNamedInTheSingularAfterItsEntityOrItsSlot rules"
+		+ "for the brigade recipes show SPEC 6 of @TASK.B50 writes"
+		REF @DECISION.ACommandGroupIsNamedInTheSingularAfterItsEntityOrItsSlot
+		REF @TASK.B50
+	REJECTED "a step written as one string in the entity and parsed: a command line in a string,"
+		+ "which the decision ProjectCommandsRunAsAnArgvWithoutAShell refuses"
+	REJECTED "max_wall_ms: the key is named max_wall by the task B50, and a recipe's wall is set in"
+		+ "minutes, not to the millisecond"
+	SOURCE "the pull request of @TASK.B50, whose SPEC names the kinds of step and max_wall and"
+		+ "leaves the keys of each kind, the unit of max_wall and the form of the entity open"
+		REF @TASK.B50
+
+DECISION TheEngineNamesEachStepByItsRankAndKindAndAStoppedOrderEndsDoneWithoutParking
+	TITLE "the engine names the result of each step of a recipe steps/<rank>-<kind>.json, rank from"
+		+ "1, and a failed step the recipe stops at ends its order done, not parked"
+	STATUS active
+	DESC "a step of a recipe holds no name: its file and the step of its ledger events are its rank"
+		+ "in the recipe and its kind, 1-collect, 2-judge"
+	DESC "on_fail skip writes the file of the step with the reason it was skipped, so a resumed run"
+		+ "does not run it again, and records step.failed and no step.done"
+	DESC "on_fail stop records step.failed then order.done, and the run answers the state stopped:"
+		+ "the order stays due by its schedule"
+	DESC "on_fail retry:N runs the step again up to N times, a step.failed recorded at each"
+		+ "failure, and parks the order once the retries are spent"
+	DESC "max_wall is the minutes from the start of the process running the run to the clock read"
+		+ "before each step; a run past it parks its order on the step it would have run, with the"
+		+ "reason the run passed the max_wall of N minutes of the recipe R"
+	DESC "the field kind of the order and step events holds the name of the recipe, study for a"
+		+ "study, so an event recorded before @TASK.B51 is read unchanged"
+		REF @TASK.B51
+	DESC "a collect step collects into collectors/<rank> of the run directory, its parameters"
+		+ "taking the values of the order, and its file keeps the collector, its summary and the"
+		+ "path of its document"
+	DESC "a judge step launches its procedure on its slot for the project of the order with the"
+		+ "arguments order=<name> and run=<id>, and fails unless the run directory then holds"
+		+ "answer.awawa, the one answer of a run"
+	REJECTED "a name key on each step: a step holds the keys of its kind alone, and the lint"
+		+ "refuses any other"
+	REJECTED "stop parking the order: a parked order waits for the user, while stop is the recipe"
+		+ "saying the run ends there"
+	REJECTED "a field recipe beside kind in the events: two fields carrying one fact for every"
+		+ "order, the study included"
+	SOURCE "the pull request of @TASK.B51, whose SPEC 4, 5 and 8 leave the name of a step file, the"
+		+ "outcome of stop and the start of max_wall open"
+		REF @TASK.B51
+
+DECISION OrderNewNamesTheOrderAfterItsRecipeAndInstantAndTakesADeclaredKeyAsAParamAndAnyOtherWordAsTheText
+	TITLE "brigade order new names its order after its recipe, hyphens as underscores, and the"
+		+ "instant, and takes a word key=value whose key the recipe declares as a PARAM and any"
+		+ "other word as the TEXT, one at most"
+	STATUS active
+	DESC "the name of the order is <recipe with hyphens as underscores>_<YYYYMMDDTHHMMSSZ>, the"
+		+ "instant of the command"
+	DESC "a word key=value is a PARAM only when the recipe declares the key in its params; any"
+		+ "other word is the TEXT, and a second such word is refused"
+	DESC "brigade order run resumes the parked run of an order, read from the last order event"
+		+ "carrying the name of the order and of its recipe, or starts a new one"
+	REJECTED "a name given by the user: an order is an instance, recorded and run in one command"
+	REJECTED "every word holding = taken as a PARAM: a text may hold an =, and a key the recipe"
+		+ "does not declare reaches no step"
+	SOURCE "the pull request of @TASK.B51, whose SPEC 1 leaves the name of the order and the"
+		+ "reading of its words open"
+		REF @TASK.B51
+
+DECISION TheAnswerOfAnOrderIsAResultEntityTheOutputStepKeepsInTheOperationalCorpus
+	TITLE "the answer of an order is a RESULT entity of the operational corpus, which its judge"
+		+ "step writes and its output step keeps in results.awawa before handing it to the output"
+		+ "the order or its recipe names; brigade reports lists it, its kind the name of its recipe"
+	STATUS active
+	DESC "the operational schema declares RESULT: ORDER, RUN and COLLECTED with its SUMMARY and"
+		+ "DOCUMENT, filled by the CLI, NARRATIVE and FINDING, filled by the judging slot"
+	DESC "the output step reads answer.awawa of the run directory, rendered by the CLI when no"
+		+ "judge step wrote it, appends it to the file of its type in the operational corpus"
+		+ "through fmt, lint and a commit, then hands it to the OUTPUT of the order, or else to the"
+		+ "output of the step"
+	DESC "brigade reports lists a RESULT with the recipe of its order as its kind and the project"
+		+ "of its order as its project, so the outputs of milestone-report and task-report keep"
+		+ "their kind once @TASK.B251 moves them onto the engine"
+		REF @TASK.B251
+	REJECTED "the ANSWER of a study for the answer of an order: its STUDY field is required and"
+		+ "names no order"
+	REJECTED "a kind order-output for every order: two recipes would share one kind, and a report"
+		+ "would change kind on its move onto the engine"
+	SOURCE "the pull request of @TASK.B51, to which DESC 3 of"
+		+ "@DECISION.BrigadeReportsListsTheWaveReportsAndStudyAnswersTheOperationalCorpusKeeps"
+		+ "leaves where the answer of a judge step is kept"
+		REF @TASK.B51
+		REF @DECISION.BrigadeReportsListsTheWaveReportsAndStudyAnswersTheOperationalCorpusKeeps
+
+DECISION AnOrderAnswerIsLintedAgainstTheTypeOfTheFirstUndoneJudgeStepAndKeptAsTheAnswerOfItsRun
+	TITLE "brigade order answer lints the answer against the type the first judge step of the run"
+		+ "not yet done names, refuses it when it changed ORDER, RUN or COLLECTED, and keeps it as"
+		+ "answer.awawa of the run directory, which the output step reads through the awawa"
+		+ "document plugin"
+	STATUS active
+	DESC "the run directory records the recipe beside the order in order.json, so brigade order"
+		+ "context and brigade order answer read the recipe the run was started with, not the"
+		+ "recipe as it stands"
+	DESC "brigade order context prints the collected documents of the run, the RESULT skeleton the"
+		+ "CLI fills and the schema of the type the judge step names"
+	REJECTED "a store operation added to the plugin kind document: the output step already reads"
+		+ "answer.awawa through the awawa document plugin, and a second way to keep the answer"
+		+ "would be a second path"
+	REJECTED "the recipe resolved again from the project at each order context: a recipe changed"
+		+ "while a run waits would name another schema than the one its judge step was launched for"
+	SOURCE "the pull request of @TASK.B51"
+		REF @TASK.B51
+
+DECISION EveryReportNamesThePatternItsOrderComesFromAndNoneOutsideTheResultOfAnOrderPlacedByAPattern
+	TITLE "brigade reports show gives every report a pattern, the name of the PATTERN the ORDER of"
+		+ "a RESULT comes from by its FROM, and none for any other report; its text lists it first"
+		+ "as PATTERN"
+	STATUS active
+	DESC "binds @TASK.B53"
+		REF @TASK.B53
+	REJECTED "the pattern carried by Order and its to_document: the record of every order run would"
+		+ "change shape, which no reader asks for"
+	REJECTED "the key present only on a result whose order names a pattern: a reader of --json"
+		+ "would test the presence of a key by kind of report"
+	SOURCE "the pull request of @TASK.B53"
+		REF @TASK.B53
+
+DECISION AGateStepHandsItsPreflightTheParametersItNamesFilledFromTheOrder
+	TITLE "a gate step of a recipe takes parameters, as a collect step does, each placeholder"
+		+ "filled from the params of the order, and hands them to its preflight as the key=value"
+		+ "pairs of brigade preflight"
+	STATUS active
+	REJECTED "every param of the order handed to the preflight: a param of the recipe named like a"
+		+ "parameter of a check would reach it unasked"
+	SOURCE "the pull request of @TASK.B52, whose gate pr-reviewed needs the pull request the order"
+		+ "names"
+		REF @TASK.B52
+
+DECISION ThePrFileOutputCommitsTheAnswerOnTheHeadBranchOfItsPullRequest
+	TITLE "the output pr-file:<n>:<path> writes the answer at <path> in a detached worktree of the"
+		+ "head branch of the pull request <n>, commits it and pushes that branch; it needs a"
+		+ "project with a forge, and the placeholders of an output step are filled from the params"
+		+ "of the order"
+	STATUS active
+	REJECTED "a commit in the checkout of the project: it would change the branch and the files the"
+		+ "user works on"
+	REJECTED "a pull request of the report into the head branch: the report would wait for a merge"
+		+ "of its own before the merge it reports on"
+	SOURCE "the pull request of @TASK.B52"
+		REF @TASK.B52
+
+DECISION TheCheckReviewedReadsTheReviewCountOfThePullRequestListing
+	TITLE "the check reviewed fails on the pull request its parameter pr names when the listing of"
+		+ "the forge carries no review submitted on it, or does not list it; the listing carries"
+		+ "the count of the reviews submitted"
+	STATUS active
+	REJECTED "the review decision of the pull request: it stays empty on a repository that requires"
+		+ "no review, however many reviews were submitted"
+	SOURCE "the pull request of @TASK.B52"
+		REF @TASK.B52
+
+DECISION TheRecipePrUsageReportCollectsTheReviewThreadsWholeAndItsJudgeReadsItsPullRequest
+	TITLE "the recipe pr-usage-report collects pr-threads with no filter, and its judge step reads"
+		+ "the entry of the pull request its order names"
+	STATUS active
+	REJECTED "a pr parameter added to the collector pr-threads: a second way to read the same"
+		+ "threads, for a document the judge already reads by the number of its pull request"
+	SOURCE "the pull request of @TASK.B52"
+		REF @TASK.B52
+
+DECISION TheStopHookOfAClientIsAnArgvOfBrigadeRunsStopHookThatBrigadeComposes
+	TITLE "the hook that stops a client session past its soft limit is brigade runs stop-hook --at"
+		+ "<epoch>, an argv brigade composes and hands to the adapter as stop_hook beside stop_at"
+	STATUS active
+	DESC "the launch-argv and resume-argv requests carry stop_hook, the argv of the interpreter,"
+		+ "the entry point of brigade, runs stop-hook and --at with the epoch of stop_at, null when"
+		+ "stop_at is null; the adapter of Claude Code hands it as the command of its PostToolUse"
+		+ "hook, each argument quoted, and composes nothing"
+	DESC "brigade runs stop-hook prints the stop document once its instant has passed and nothing"
+		+ "before it, and exits 0 either way"
+	REJECTED "brigade run stop-hook, the name the task gives for instance: brigade run is a command"
+		+ "taking a procedure as its first word, which a subcommand would shadow; runs is the group"
+		+ "of the commands on runs"
+	REJECTED "the adapter composing the call of brigade from its own name: an adapter does not know"
+		+ "the entry point and the interpreter brigade runs under, which brigade detaches its own"
+		+ "commands with"
+	SOURCE "the pull request of @TASK.B163"
+		REF @TASK.B163
+
+DECISION TheCrontabLineCallsEnvAndTheTickWritesItsOwnLogFile
+	TITLE "the crontab line is env, the variables of the install, brigade tick --once --log-file"
+		+ "<file>, one argv; with --log-file the tick creates the directory of the file, appends"
+		+ "its stderr to it and discards its stdout"
+	STATUS active
+	DESC "the redirection is of the file descriptors of the process, so a subprocess the tick runs"
+		+ "writes to the log as it did under the shell redirection"
+	DESC "env carries the variables of the install, where a NAME=value prefix of the line was a"
+		+ "shell assignment"
+	REJECTED "the variables as NAME=value lines at the head of the crontab: they would apply to"
+		+ "every other line of the user's crontab"
+	REJECTED "the log written by the trail of the tick alone: a traceback, a refusal of argparse"
+		+ "past the parse and the stderr of a subprocess would be lost where the line kept them"
+	SOURCE "the pull request of @TASK.B163"
+		REF @TASK.B163
+
+DECISION TheCommandsOfAProjectAreItsRecipesSetupAcceptanceAndHeavyRunOutsideAnOrder
+	TITLE "a project declares its commands as recipes of its own named setup, acceptance and heavy,"
+		+ "each of command steps, whose argvs brigade runs outside any order"
+	STATUS active
+	DESC "the recipes setup, acceptance and heavy are a RECIPE entity of the project's corpus or a"
+		+ "TOML file of its .brigade/recipes/, where"
+		+ "@DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder places a recipe of a project; they"
+		+ "resolve among the project's recipes alone, never among the machine's nor the built-in"
+		+ "ones, and a project without one of them has no command of it"
+		REF @DECISION.AKindOfWorkIsARecipeAnInstanceAnOrder
+	DESC "they are read from the worktree checked or set up, so a branch that changes one of them"
+		+ "is checked under it"
+	DESC "the argv of each command step runs through the runner as the command step of the engine"
+		+ "runs it, outside any order: no ORDER entity, no run directory and no order event in the"
+		+ "ledger"
+	DESC "each step of acceptance runs whatever the others returned and each of setup stops the"
+		+ "setup at its failure, as @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell rules for the"
+		+ "lines they replace; a step of heavy is never run, and is printed as its argv joined"
+		REF @DECISION.ProjectCommandsRunAsAnArgvWithoutAShell
+	REJECTED "a check run as an order of the engine: an order is one instance of a kind of work,"
+		+ "recorded in the corpus and the ledger and parked at its first failed command, while a"
+		+ "check reports the verdict of every command and records nothing"
+	REJECTED "a step kind or a key of its own for the commands of a project: the command step"
+		+ "already holds an argv"
+	SOURCE "the pull request of @TASK.B163"
+		REF @TASK.B163
+
+DECISION WaveShowEventsCarriesTheLedgerViewOfItsWave
+	TITLE "brigade wave show --events adds to its document the view brigade ledger --wave printed,"
+		+ "under the key ledger, its events in the order the ledger recorded them; the Wave view"
+		+ "and the wave section of the Ledger view of the dashboard run that one command"
+	STATUS active
+	REJECTED "the events alone under --events: the cost, the tokens, the steps by slot and by role,"
+		+ "the pauses and the parked tasks of a wave would leave brigade with the command that"
+		+ "printed them"
+	REJECTED "the events sorted by their instant, as the timeline of the ledger view was: the SPEC"
+		+ "asks for the order recorded"
+	SOURCE "the build run of @TASK.B256, SPEC 1"
+		REF @TASK.B256
+
+DECISION TaskCheckRunsTheBuiltInPreflightTask
+	TITLE "brigade task check runs the built-in preflight task, the collector task-worktree and the"
+		+ "checks acceptance and corpus_at_head, and builds its document from the commands entries"
+		+ "of those checks, each naming its command, exit code, duration and output; the privacy"
+		+ "check of the lines the branch adds stays in brigade task check"
+	STATUS active
+	REJECTED "the tail alone in the commands entries, to keep the output of the acceptance commands"
+		+ "out of the ledger: the log of each command in the run directory would lose the output of"
+		+ "a long or passing command"
+	REJECTED "a check reading a collector named by a step parameter: the checks acceptance and"
+		+ "corpus_at_head read the summary of pull-request or task-worktree, whichever the"
+		+ "preflight collected"
+	SOURCE "the build run of @TASK.B256, SPEC 3"
+		REF @TASK.B256
+
+DECISION PreflightVerifyPullRequestReadsItsTaskFromThePullRequest
+	TITLE "brigade preflight verify-pull-request takes pr alone: it reads the task from the"
+		+ "task.pr_opened naming the pull request and the base from the milestone of the task, and"
+		+ "prints the document of preflight_pull_request, which names the preflight and its verdict"
+		+ "beside the project, the pull request, the task, the head and the checks, the size"
+		+ "included; the built-in verify-pull-request is the one this name runs"
+	STATUS active
+	REJECTED "the parameters task and base kept on the command line: the user names the pull"
+		+ "request alone, as brigade verify preflight took it, and the tick passes the task and the"
+		+ "base it already holds to preflight_pull_request"
+	REJECTED "the size as a check of the preflight: CHECK_DOCUMENT_SHAPE allows the verdicts pass"
+		+ "and fail alone, and the size judges nothing"
+	SOURCE "the build run of @TASK.B256, SPEC 4"
+		REF @TASK.B256
+
+DECISION TheRecipeStudyCollectsEachCollectorLineInAStepOfItsOwnAndParksWithoutAnInboxSignal
+	TITLE "the built-in recipe study runs a collect step for each COLLECTOR line of its STUDY, a"
+		+ "run past a max_wall of 1440 minutes parks, and a parked study records no signal in the"
+		+ "inbox"
+	STATUS active
+	DESC "the collect step of brigade/recipes/data/study.toml is a template the run of a study"
+		+ "repeats for each COLLECTOR line, in their order, each step keeping {collected: [one"
+		+ "entry]} so that brigade/studies/read_collected.py reads the evidence of every"
+		+ "<rank>-collect.json in the order of its rank"
+	DESC "max_wall is 1440 minutes: before @TASK.B251 a study had no bound on its wall time, and a"
+		+ "day bounds a judging run without stopping one that ran as before"
+		REF @TASK.B251
+	DESC "run_order takes the parking of its caller: an order of an ORDER entity parks through"
+		+ "park_order, which records a signal in the inbox that brigade order resume answers; a"
+		+ "study records order.parked alone, as before @TASK.B251, brigade order resume running no"
+		+ "study"
+		REF @TASK.B251
+	REJECTED "the inbox signal of park_order for a parked study: a signal whose action, brigade"
+		+ "order resume, cannot resume a study"
+	REJECTED "the steps of a study passed as a recipe file per STUDY: the COLLECTOR lines are the"
+		+ "facts of the STUDY entity, read where they are"
+	SOURCE "the pull request of @TASK.B251"
+		REF @TASK.B251
+
+DECISION AStudyRunsAsAnOrderOfTheRecipeStudyAndAReportCarriesItsArgumentsInAParam
+	TITLE "a run of a study, of the milestone report or of the task report is an order of the"
+		+ "recipe study, recorded in order.json alone, a report carrying its arguments in one PARAM"
+		+ "holding JSON"
+	STATUS active
+	DESC "the order of a study is named after the study, its RECIPE study, its PARAM milestone=<the"
+		+ "milestone report order as JSON> or task=<the task report order as JSON> for a report and"
+		+ "none for a STUDY entity; brigade study context, answer and run --run-id rebuild the"
+		+ "study from that record"
+	DESC "brigade order run resolves a name no ORDER entity defines as a study: from the record of"
+		+ "the run its --run-id names, else as a STUDY entity or a built-in study"
+	DESC "a live run of the recipe study counts as a live study run, never as a live order run: the"
+		+ "cap of the tick counts it once, and the tick never stops it through park_order, whose"
+		+ "inbox signal a study does not record; the engine parks it past its max_wall between two"
+		+ "steps"
+	REJECTED "one PARAM per field of a report order: the waves and the tasks are lists, which a"
+		+ "key=value line would encode by a separator of its own"
+	REJECTED "study.json kept beside order.json: two records of one run, which the readers of a"
+		+ "study run would have to choose between"
+	SOURCE "the pull request of @TASK.B251"
+		REF @TASK.B251
+
+DECISION SignalRecordedKeepsItsSchemaVersionWithItsOptionalFieldTurns
+	TITLE "the event signal.recorded stays at schema_version 1, its optional field steps being"
+		+ "turns: a line written before the rename reads with no turn count"
+	STATUS active
+	REJECTED "signal.recorded at schema_version 2 with older lines skipped: the field is optional,"
+		+ "and skipping the older lines would drop the signals they record"
+	SOURCE "the build run of @TASK.B255, SPEC 2"
+		REF @TASK.B255
+
+DECISION TheTaskStatesVerifyingAndVerifiedAndThePackageBrigadeVerifyKeepTheirNames
+	TITLE "the task states verifying and verified and the package brigade/verify keep their names:"
+		+ "the word verify leaves the command groups, the subcommands, the procedure, the wiki"
+		+ "page, the policy and the preflight review-pull-request, the list SPEC 1 gives"
+	STATUS active
+	REJECTED "verifying and verified renamed reviewing and reviewed: SPEC 1 does not list the"
+		+ "states, which the ledger, the dashboard and every recorded task.* event carry"
+	REJECTED "brigade/verify renamed brigade/review: a package is no word of the public vocabulary,"
+		+ "which alone is renamed"
+	SOURCE "the build run of @TASK.B255, SPEC 1"
+		REF @TASK.B255
+	RATIONALE "the public vocabulary alone is renamed, the names of the code keeping theirs"
+		REF @DECISION.AWordOfBrigadeCarriesOneSenseAndBorrowedSensesKeepTheirs
+
+DECISION AWaveStoppedByBrigadeIsParkedOrBlockedAndNeverPaused
+	TITLE "the event wave.paused is split: the tick records wave.blocked, with its resume_at, when"
+		+ "a wave waits on the quota reset, and wave.parked, with no resume_at, when it awaits the"
+		+ "user (the forge account, the client login, a blocked run, the preflight findings); the"
+		+ "public keys that held both name them halts: halt and halted_waves, halts, halted_at and"
+		+ "halted_ms, blocked_waves for the waves blocked on the quota"
+	STATUS active
+	REJECTED "one event wave.halted carrying a state field: two kinds of event say the one sense of"
+		+ "each word in the ledger itself, as task.parked does"
+	REJECTED "a wave.paused already recorded read as a parked or blocked wave: no old name is read"
+		+ "as an alias, a wave.paused is an undeclared event and the next tick halts the wave again"
+		+ "if its cause still holds"
+	REJECTED "the tick action PauseWave and the snapshot field pause renamed: names of the code,"
+		+ "not of the public vocabulary"
+	SOURCE "the build run of @TASK.B255, SPEC 6"
+		REF @TASK.B255
+	RATIONALE "no command pauses a wave: every wave.paused was brigade's, so paused, the suspension"
+		+ "by the user, departed from its sense"
+		REF @DECISION.AWordOfBrigadeCarriesOneSenseAndBorrowedSensesKeepTheirs
+
+DECISION AGlossaryRowNamesACommandByItsLineAFieldAfterItsEntityAndCitesTheTaskOfItsSense
+	TITLE "a row of wiki/Glossary.md names a command as brigade <group> <subcommand>, a field of"
+		+ "the registry's schema as ENTITY.FIELD, a sub-field as ENTITY.FIELD.SUB, and cites the"
+		+ "task that delivers the word in its sense"
+	STATUS active
+	DESC "DESC and RATIONALE, legal on every entity of the registry, are named bare"
+	DESC "the task of a command or a field is the task of the commit that added its module or its"
+		+ "line; a word whose sense @TASK.B255 ruled or whose name it gave cites @TASK.B255"
+		REF @TASK.B255
+	DESC "verify, the word that left brigade on 2026-11-14, has no row"
+	DESC "binds @TASK.B257"
+		REF @TASK.B257
+	REJECTED "a field named bare, STATUS or PROJECT: one word with several senses, PROJECT both an"
+		+ "entity and a field"
+	SOURCE "the build run of @TASK.B257 on 2026-11-17"
+		REF @TASK.B257

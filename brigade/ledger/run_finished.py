@@ -13,8 +13,8 @@ REQUIRED_FIELDS = (
     "client",
     "project",
     "session",
-    "main_steps",
-    "total_steps",
+    "main_turns",
+    "total_turns",
     "duration_ms",
     "outcome",
     "error_class",
@@ -25,8 +25,8 @@ REQUIRED_FIELDS = (
 )
 REQUIRED_BEFORE_USAGE = REQUIRED_FIELDS.index("outcome")
 OPTIONAL_FIELDS = (
-    "steps_to_first_edit",
-    "oversized_output_steps",
+    "turns_to_first_edit",
+    "oversized_output_turns",
     "cost_usd",
     "message",
     "tokens_to_first_edit",
@@ -47,8 +47,8 @@ class RunFinished:
     client: str
     project: str | None
     session: str | None
-    main_steps: int | None
-    total_steps: int | None
+    main_turns: int | None
+    total_turns: int | None
     duration_ms: int | None
     usage: TokenUsage | None
     outcome: str
@@ -57,8 +57,8 @@ class RunFinished:
     wave: str | None
     task: str | None
     nulls: dict
-    steps_to_first_edit: int | None = None
-    oversized_output_steps: int | None = None
+    turns_to_first_edit: int | None = None
+    oversized_output_turns: int | None = None
     cost_usd: float | None = None
     message: str | None = None
     reset: ResetHour | None = None

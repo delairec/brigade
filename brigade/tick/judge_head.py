@@ -8,13 +8,13 @@ PASSED_EXIT_CODE = 0
 def _list_forge_failures(evidence: HeadEvidence) -> tuple[str, ...] | None:
     if not evidence.forge_checks:
         return None
-    return tuple(check.name for check in evidence.forge_checks if check.verdict != SUCCESSFUL_CHECK)
+    return tuple(check.name for check in evidence.forge_checks if check.conclusion != SUCCESSFUL_CHECK)
 
 
 def _list_task_check_failures(evidence: HeadEvidence) -> tuple[str, ...] | None:
-    if evidence.task_check is None or evidence.task_check.head != evidence.commit:
+    if evidence.build_check is None or evidence.build_check.head != evidence.commit:
         return None
-    return evidence.task_check.failed_commands
+    return evidence.build_check.failed_commands
 
 
 def _list_commit_check_failures(evidence: HeadEvidence) -> tuple[str, ...] | None:
@@ -24,7 +24,7 @@ def _list_commit_check_failures(evidence: HeadEvidence) -> tuple[str, ...] | Non
 
 
 def _is_forge_pending(evidence: HeadEvidence) -> bool:
-    return any(check.verdict == PENDING_CHECK for check in evidence.forge_checks)
+    return any(check.conclusion == PENDING_CHECK for check in evidence.forge_checks)
 
 
 def judge_head(evidence: HeadEvidence) -> HeadProof:

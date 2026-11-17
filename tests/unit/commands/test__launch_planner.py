@@ -8,7 +8,7 @@ from tests.unit.commands.command_runtime import create_corpus_double, write_oper
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
     CLOCK_PROBE,
-    STEP_COUNTING_PROBE,
+    TURN_COUNTING_PROBE,
     create_plugin_resolution,
     spawn_as_this_process,
 )
@@ -35,14 +35,14 @@ class LaunchPlannerTest(unittest.TestCase):
 
     def test_should_start_the_planner_of_the_request_detached(self):
         # Arrange
-        runtime = self._create_runtime(STEP_COUNTING_PROBE)
+        runtime = self._create_runtime(TURN_COUNTING_PROBE)
 
         # Act
         launched = launch_planner(runtime, "shop", "shop_r2")
 
         # Assert
         record = json.loads((self.root / "state" / "runs" / launched["run"] / "run.json").read_text(encoding="utf-8"))
-        self.assertEqual(record["procedure"], "wave-plan")
+        self.assertEqual(record["procedure"], "request-plan")
         self.assertEqual(record["slot"], "plan")
         self.assertEqual(record["project"], "shop")
         self.assertEqual(record["arguments"], {"request": "shop_r2"})
@@ -58,7 +58,7 @@ class LaunchPlannerTest(unittest.TestCase):
         self.assertEqual(
             launched["warnings"],
             [
-                "double counts no steps: the budget of 50 steps is held on the clock and the run cut at its limit of 1890 s"
+                "double counts no turns: the budget of 50 turns is held on the clock and the run cut at its limit of 1890 s"
             ],
         )
 

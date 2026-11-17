@@ -11,13 +11,17 @@ from brigade.collecting.collector_environment import CollectorInputs
 from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.collecting.read_stale_branches import read_stale_branches
 from brigade.command import Argument, Command, ExclusiveArguments
+from brigade.commands._equip_collector import equip_collector
+from brigade.commands._equip_preflight import equip_preflight
+from brigade.commands._equip_registered_collector import equip_registered_collector
 from brigade.commands._launch_branch_rebase import launch_branch_rebase
 from brigade.commands._list_branch_check_runs import list_branch_check_runs
 from brigade.commands._read_cli_login import read_cli_login
 from brigade.commands._read_forge_environment import FORGE_KIND, ForgeSlot, read_forge_environment
 from brigade.commands._remember_forge_logins import remember_forge_logins
 from brigade.commands._repair_red_head import repair_red_head
-from brigade.commands.run import run
+from brigade.commands.order_run import resolve_order
+from brigade.commands.run_start import run
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_entities import Entity
 from brigade.corpus.read_entity import read_entity
@@ -40,9 +44,16 @@ from brigade.ledger.task_reported import TaskReported
 from brigade.ledger.task_state import QUOTA_RESUME_REASON, TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.tick_action_failed import TickActionFailed
+from brigade.ledger.wave_blocked import WaveBlocked
 from brigade.ledger.wave_closed import WaveClosed
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_resumed import WaveResumed
+from brigade.orders.convert_order import Order
+from brigade.orders.detach_order_run import detach_order_run
+from brigade.orders.start_order_run import start_order_run
+from brigade.orders.stop_order_run import stop_order_run
+from brigade.preflights.read_preflight_file import read_preflight_file
+from brigade.preflights.run_preflight import BUILT_IN_PREFLIGHTS, PreflightOutcome, PreflightRun, run_preflight
 from brigade.registry.find_project import find_project
 from brigade.registry.find_project_at import find_project_at
 from brigade.registry.is_on_a_forge import is_on_a_forge
@@ -53,15 +64,14 @@ from brigade.runs.create_run_id import create_run_id
 from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
 from brigade.runs.is_run_live_on import is_run_live_on
 from brigade.runs.read_run_document import read_run_document
-from brigade.runs.record_run_pid import record_run_pid
 from brigade.runs.run_locations import RUN_RECORD_FILE, RUNS_DIRECTORY
 from brigade.runs.run_record import RUN_RECORD_SHAPE, RunRecord
 from brigade.runtime import Runtime
 from brigade.studies.describe_milestone_report import describe_milestone_report
+from brigade.studies.describe_study_order import describe_study_order
 from brigade.studies.describe_task_report import describe_task_report
-from brigade.studies.detach_study_run import detach_study_run
-from brigade.studies.read_study import read_study
-from brigade.studies.start_study_run import start_study_run
+from brigade.studies.read_study import Study, read_study
+from brigade.studies.read_study_recipe import read_study_recipe
 from brigade.system.ask_check_logs import CheckLogsQuery, ask_check_logs
 from brigade.system.ask_forge_account import ask_forge_account
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
@@ -88,6 +98,7 @@ from brigade.tick.actions import (
     DescribeMilestonePullRequest,
     KeepBranch,
     LaunchCheckRepair,
+    LaunchOrder,
     LaunchRemediation,
     LaunchStudy,
     LaunchTask,
@@ -113,15 +124,16 @@ from brigade.tick.actions import (
     RunPreflight,
     SignalStall,
     StartWave,
+    StopOrderRun,
 )
 from brigade.tick.apply_actions import apply_actions
 from brigade.tick.build_snapshot import CLIENT_LOGIN_REASON, ForgeReaders, Snapshot, build_snapshot
+from brigade.tick.decide import decide
 from brigade.tick.describe_holding_head import describe_holding_head
 from brigade.tick.find_holding_head import find_holding_head
 from brigade.tick.head_proof import HoldingHead
 from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.ledger_reading_keeper import LedgerReadingKeeper
-from brigade.tick.plan import plan
 from brigade.tick.plan_connectors import plan_connectors
 from brigade.tick.prepare_task_worktree import prepare_task_worktree
 from brigade.tick.read_ruled_task import read_ruled_task
@@ -129,10 +141,11 @@ from brigade.tick.rebase_task import rebase_task
 from brigade.tick.record_kept_branch import record_kept_branch
 from brigade.tick.record_review_threads import record_review_threads
 from brigade.tick.record_stall import record_stall
+from brigade.tick.redirect_tick_output import redirect_tick_output
 from brigade.tick.remove_integration_branch import remove_integration_branch
 from brigade.tick.remove_leftover import remove_leftover
 from brigade.tick.remove_task_worktree import remove_task_worktree
-from brigade.tick.run_rounds import Rounds, RoundsOutcome, run_rounds
+from brigade.tick.run_cycles import Cycles, CyclesOutcome, run_cycles
 from brigade.tick.tick_forge import TickForge
 from brigade.tick.write_build_brief import write_build_brief
 from brigade.tick.write_rebuild_brief import write_rebuild_brief
@@ -148,6 +161,7 @@ from brigade.waves.locate_forge_branch import locate_forge_branch
 from brigade.waves.locate_project_main import locate_project_main
 from brigade.waves.pull_request_titles import PullRequestTitles
 from brigade.waves.rebase_milestone_branches import MilestoneBranchesRebase, rebase_milestone_branches
+from brigade.waves.start_preflighted_wave import PreflightedWaveStart, start_preflighted_wave
 from brigade.waves.start_project_wave import WaveStart, start_project_wave
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -155,7 +169,7 @@ BUILD_PROCEDURE = "build-task"
 BUILD_SLOT = "build"
 TASK_TYPE = "TASK"
 MILESTONE_TYPE = "MILESTONE"
-VERIFY_PROCEDURE = "verify-pr"
+REVIEW_PROCEDURE = "review-pr"
 REMEDIATE_PROCEDURE = "remediate-pr"
 REMEDIATE_SLOT = "remediate"
 REBASE_PROCEDURE = "rebase-on-base"
@@ -167,11 +181,13 @@ RUNNING_STATE = "running"
 VERIFYING_STATE = "verifying"
 MERGED_STATE = "merged"
 PATH_FIELD = "PATH"
+WAVE_PREFLIGHT = "wave"
+NO_PREFLIGHT_PARAMETERS = {}
 NO_LOGIN = None
 NO_PULL_REQUEST_OFF_A_FORGE = None
-FAILED_VERDICT = "fail"
+FAILED_RESULT = "fail"
 TICK_INTERVAL_S = 300
-ROUND_CAP = 10
+CYCLE_CAP = 10
 LOCK_NAME = "tick.lock"
 COMMAND_NAME = "tick"
 CLI_KEY = "cli"
@@ -259,7 +275,7 @@ def _name_verified(action: LaunchVerification) -> tuple[str, ...]:
 
 def _launch_verification(runtime: Runtime, configuration: Configuration, action: LaunchVerification) -> None:
     verifying = argparse.Namespace(
-        procedure=configuration.procedures.get(REVIEW_SLOT, VERIFY_PROCEDURE),
+        procedure=configuration.procedures.get(REVIEW_SLOT, REVIEW_PROCEDURE),
         slot=REVIEW_SLOT,
         project=action.project,
         cwd=action.worktree,
@@ -420,20 +436,30 @@ def _resume_task_run(runtime: Runtime, action: ResumeTaskRun) -> None:
     run(resuming, runtime)
 
 
-def _launch_study(runtime: Runtime, action: LaunchStudy) -> None:
-    study = read_study(runtime, action.study)
+def _launch_order_run(runtime: Runtime, order: Order, recipe: dict) -> str:
     run_id = create_run_id(runtime.now)
-    start_study_run(runtime, study, run_id)
-    detach_study_run(runtime, study.name, run_id, record_run_pid)
+    start_order_run(runtime, order, recipe, run_id)
+    detach_order_run(runtime, order.name, run_id)
+    return run_id
+
+
+def _launch_study_run(runtime: Runtime, study: Study) -> str:
+    return _launch_order_run(runtime, describe_study_order(study), read_study_recipe(study))
+
+
+def _launch_study(runtime: Runtime, action: LaunchStudy) -> None:
+    _launch_study_run(runtime, read_study(runtime, action.study))
+
+
+def _launch_order(runtime: Runtime, action: LaunchOrder) -> None:
+    resolved = resolve_order(runtime, action.order)
+    _launch_order_run(runtime, resolved.order, resolved.recipe)
 
 
 def _report_milestone(runtime: Runtime, configuration: Configuration, action: ReportMilestone) -> None:
     project = find_project(read_projects(runtime), action.order.project)
     order = dataclasses.replace(action.order, reads_pull_requests=is_on_a_forge(project))
-    study = describe_milestone_report(order)
-    run_id = create_run_id(runtime.now)
-    start_study_run(runtime, study, run_id)
-    detach_study_run(runtime, study.name, run_id, record_run_pid)
+    run_id = _launch_study_run(runtime, describe_milestone_report(order))
     login = read_cli_login(configuration, read_project_forge(project), runtime) if is_on_a_forge(project) else NO_LOGIN
     append_event(
         runtime.paths,
@@ -444,10 +470,7 @@ def _report_milestone(runtime: Runtime, configuration: Configuration, action: Re
 
 def _report_task(runtime: Runtime, configuration: Configuration, action: ReportTask) -> None:
     order = action.order
-    study = describe_task_report(order)
-    run_id = create_run_id(runtime.now)
-    start_study_run(runtime, study, run_id)
-    detach_study_run(runtime, study.name, run_id, record_run_pid)
+    run_id = _launch_study_run(runtime, describe_task_report(order))
     project = find_project(read_projects(runtime), order.project)
     login = read_cli_login(configuration, read_project_forge(project), runtime) if is_on_a_forge(project) else NO_LOGIN
     append_event(
@@ -491,11 +514,17 @@ def _preflight(runtime: Runtime, configuration: Configuration, action: RunPrefli
             task=action.task,
             base_branch=action.branch,
             pr=action.pr,
-            forge=runtime.resolve_plugin("forge", read_project_forge(project)),
-            environment=read_forge_environment(configuration, ForgeSlot(read_project_forge(project), CLI_KEY), runtime),
-            configuration=configuration,
+            equipment=equip_registered_collector(project, configuration, runtime),
+            plugins=equip_preflight(runtime),
         ),
     )
+
+
+def _describe_recorded_check(check: dict) -> dict:
+    if "commands" not in check:
+        return check
+    commands = [{"command": command["command"], "exit_code": command["exit_code"]} for command in check["commands"]]
+    return {**check, "commands": commands}
 
 
 def _run_preflight(runtime: Runtime, configuration: Configuration, action: RunPreflight) -> None:
@@ -509,10 +538,10 @@ def _run_preflight(runtime: Runtime, configuration: Configuration, action: RunPr
             task=action.task,
             pr=action.pr,
             head=findings["head"],
-            checks=tuple(findings["checks"]),
+            checks=tuple(map(_describe_recorded_check, findings["checks"])),
         ),
     )
-    if all(check["verdict"] != FAILED_VERDICT for check in findings["checks"]):
+    if all(check["result"] != FAILED_RESULT for check in findings["checks"]):
         _record_task_state(
             runtime, RecordTaskState(wave=action.wave, task=action.task, state=VERIFYING_STATE, reason=None)
         )
@@ -655,6 +684,19 @@ def _cache_forge_environment(runtime: Runtime, configuration: Configuration, for
     return functools.cache(lambda key: read_forge_environment(configuration, ForgeSlot(forge_name, key), runtime))
 
 
+def _preflight_wave(runtime: Runtime, project: Entity) -> PreflightOutcome:
+    path = Path(read_project_field(project, PATH_FIELD))
+    run = PreflightRun(
+        name=WAVE_PREFLIGHT,
+        project=path,
+        parameters=NO_PREFLIGHT_PARAMETERS,
+        equipment=equip_collector(path, runtime),
+        preflights=(functools.partial(read_preflight_file, BUILT_IN_PREFLIGHTS),),
+        plugins=equip_preflight(runtime),
+    )
+    return run_preflight(run, runtime)
+
+
 def _start_wave(runtime: Runtime, configuration: Configuration, action: StartWave) -> None:
     forge_name = _read_forge_of(runtime, action.project)
     start = WaveStart(
@@ -664,7 +706,14 @@ def _start_wave(runtime: Runtime, configuration: Configuration, action: StartWav
         read_environment=_cache_forge_environment(runtime, configuration, forge_name),
         read_login=functools.cache(lambda: read_cli_login(configuration, forge_name, runtime)),
     )
-    start_project_wave(runtime, start, action.milestone)
+    project = find_project(read_projects(runtime), action.project)
+    start_preflighted_wave(
+        runtime,
+        PreflightedWaveStart(
+            preflight=lambda: _preflight_wave(runtime, project),
+            start=lambda: start_project_wave(runtime, start, action.milestone),
+        ),
+    )
 
 
 def _hold_milestone_rebase(
@@ -718,13 +767,17 @@ def _park_task(runtime: Runtime, action: ParkTask) -> None:
     )
 
 
+def _halt_wave(action: PauseWave) -> WaveParked | WaveBlocked:
+    if action.resume_at is None:
+        return WaveParked(wave=action.wave, reason=action.reason)
+    return WaveBlocked(wave=action.wave, reason=action.reason, resume_at=action.resume_at)
+
+
 def _pause_wave(runtime: Runtime, action: PauseWave) -> None:
-    append_event(
-        runtime.paths, runtime.now, WavePaused(wave=action.wave, reason=action.reason, resume_at=action.resume_at)
-    )
+    append_event(runtime.paths, runtime.now, _halt_wave(action))
     if action.reason == CLIENT_LOGIN_REASON:
         sys.stderr.write(
-            f"brigade tick: the wave {action.wave} paused: the login of its AI client is lost;"
+            f"brigade tick: the wave {action.wave} parked: the login of its AI client is lost;"
             f" sign in to the client again, then run brigade wave resume {action.wave}\n"
         )
 
@@ -792,6 +845,14 @@ def _list_cleanup_executors(runtime: Runtime) -> dict:
     }
 
 
+def _list_recipe_executors(runtime: Runtime) -> dict:
+    return {
+        LaunchStudy: lambda action: _launch_study(runtime, action),
+        LaunchOrder: lambda action: _launch_order(runtime, action),
+        StopOrderRun: lambda action: stop_order_run(runtime, action, runtime.signal_process),
+    }
+
+
 def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
     return {
         RecordTaskState: lambda action: _record_task_state(runtime, action),
@@ -803,7 +864,7 @@ def _list_executors(runtime: Runtime, configuration: Configuration) -> dict:
         MergeTaskBranch: lambda action: _merge_task_branch(runtime, configuration, action),
         OpenMergeWorktree: lambda action: _open_merge_worktree(runtime, action),
         **_list_task_run_executors(runtime, configuration),
-        LaunchStudy: lambda action: _launch_study(runtime, action),
+        **_list_recipe_executors(runtime),
         PauseWave: lambda action: _pause_wave(runtime, action),
         ResumeWave: lambda action: append_event(
             runtime.paths, runtime.now, WaveResumed(wave=action.wave, reason=action.reason)
@@ -907,7 +968,7 @@ def _name_the_merge_commands(named: set[str], actions: tuple) -> tuple:
     return tuple(action for action in actions if action not in commands)
 
 
-def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuration) -> RoundsOutcome:
+def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuration) -> CyclesOutcome:
     forge = _read_the_forge(runtime, configuration)
     merge_commands: set[str] = set()
     stalls: list[SignalStall] = []
@@ -916,20 +977,20 @@ def _apply_the_actions_of_the_tick(runtime: Runtime, configuration: Configuratio
         executors=_list_executors(runtime, configuration),
         record_failure=lambda event: _record_failure(runtime, event),
     )
-    outcome = run_rounds(
-        Rounds(
+    outcome = run_cycles(
+        Cycles(
             build_snapshot=lambda: _name_the_blocked_milestone_rebases(build_snapshot(runtime, configuration, forge)),
-            plan=lambda snapshot: _hold_the_stall_signals(
+            decide=lambda snapshot: _hold_the_stall_signals(
                 stalls,
-                _name_the_merge_commands(merge_commands, plan(snapshot)),
+                _name_the_merge_commands(merge_commands, decide(snapshot)),
             ),
             apply=apply,
-            cap=ROUND_CAP,
+            cap=CYCLE_CAP,
         )
     )
     signals = apply(tuple(stalls))
     connectors = apply(_plan_registered_connectors(runtime))
-    return RoundsOutcome(
+    return CyclesOutcome(
         actions_applied=outcome.actions_applied + signals.applied + connectors.applied,
         actions_failed=outcome.actions_failed + len(signals.failed) + len(connectors.failed),
         merge_commands=tuple(sorted(merge_commands)),
@@ -998,20 +1059,20 @@ def _tick_once(runtime: Runtime) -> dict:
     }
 
 
-HELD_REBASES = (LaunchTask, RebaseTask, RebaseMilestone)
+DEFERRED_REBASES = (LaunchTask, RebaseTask, RebaseMilestone)
 
 
-def _describe_planned_action(
+def _describe_decided_action(
     runtime: Runtime, list_check_runs_of: Callable[[str], Callable[[str, str], list[dict]]], action
 ) -> dict:
-    planned = dataclasses.asdict(action)
-    if not isinstance(action, HELD_REBASES):
-        return planned
+    decided = dataclasses.asdict(action)
+    if not isinstance(action, DEFERRED_REBASES):
+        return decided
     project = find_project(read_projects(runtime), action.project)
     held_by = find_holding_head(runtime, project, action, list_check_runs_of(read_project_forge(project)))
     if held_by is None:
-        return planned
-    return {**planned, "waits": describe_holding_head(held_by)}
+        return decided
+    return {**decided, "waits": describe_holding_head(held_by)}
 
 
 def _plan_dry(runtime: Runtime) -> dict:
@@ -1022,9 +1083,9 @@ def _plan_dry(runtime: Runtime) -> dict:
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "mode": "dry-run",
         "snapshot": snapshot.to_document(),
-        "plan": [
-            _describe_planned_action(runtime, list_check_runs_of, action)
-            for action in (*plan(snapshot), *_plan_registered_connectors(runtime))
+        "decisions": [
+            _describe_decided_action(runtime, list_check_runs_of, action)
+            for action in (*decide(snapshot), *_plan_registered_connectors(runtime))
         ],
     }
 
@@ -1063,8 +1124,8 @@ def _render_once(document: dict) -> list[str]:
 
 def _render_dry_run(document: dict) -> list[str]:
     snapshot_lines = [f"  {key}  {value}" for key, value in document["snapshot"].items() if key != "schema_version"]
-    plan_lines = [f"  {action}" for action in document["plan"]] or ["  no action"]
-    return ["snapshot", *snapshot_lines, "plan", *plan_lines]
+    decision_lines = [f"  {action}" for action in document["decisions"]] or ["  no action"]
+    return ["snapshot", *snapshot_lines, "decisions", *decision_lines]
 
 
 def _render_loop(document: dict) -> list[str]:
@@ -1079,6 +1140,8 @@ def _render_text(document: dict) -> str:
 
 
 def tick(request: argparse.Namespace, runtime: Runtime) -> dict:
+    if request.log_file is not None:
+        redirect_tick_output(Path(request.log_file))
     if request.mode == "once":
         return _tick_once(runtime)
     if request.mode == "dry-run":
@@ -1090,7 +1153,7 @@ def tick(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("tick",),
-    help="plan and apply what the facts call for, once or in a loop",
+    help="decide and apply what the facts call for, once or in a loop",
     arguments=(
         ExclusiveArguments(
             (
@@ -1103,7 +1166,7 @@ COMMAND = Command(
                         "dest": "mode",
                         "action": "store_const",
                         "const": "dry-run",
-                        "help": "print the snapshot and the plan",
+                        "help": "print the snapshot and the decisions",
                     },
                 ),
                 Argument(
@@ -1117,6 +1180,10 @@ COMMAND = Command(
                 ),
             ),
             required=True,
+        ),
+        Argument(
+            ("--log-file",),
+            {"help": "append what the tick writes on stderr to this file, creating its directory, and print nothing"},
         ),
     ),
     run=tick,

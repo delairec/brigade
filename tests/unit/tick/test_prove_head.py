@@ -15,10 +15,7 @@ from tests.unit.scripted_processes import ScriptedProcesses
 
 PROJECT = Entity(
     name="oak",
-    fields=(
-        EntityField(name="PATH", value="/srv/oak"),
-        EntityField(name="ACCEPTANCE", value="npm test"),
-    ),
+    fields=(EntityField(name="PATH", value="/srv/oak"),),
 )
 REPOSITORY = Path("/srv/oak")
 NO_FORGE_CHECK = ()
@@ -39,6 +36,7 @@ class ProveHeadTest(unittest.TestCase):
         self.processes = ScriptedProcesses()
         self.runtime = create_test_runtime(self.paths, run_process=self.processes)
         self.checkout = self.paths.state_root / "head-checks" / "oak" / "c0ffee"
+        self.processes.answer_recipes(self.checkout, {"acceptance": (("npm", "test"),)})
 
     def write_record(self, relative: str, document: dict) -> None:
         record = self.paths.state_root / relative
@@ -86,10 +84,10 @@ class ProveHeadTest(unittest.TestCase):
 
     def test_should_prove_red_a_commit_the_task_check_holds_with_a_failed_command(self):
         # Arrange
-        task_check = TaskCheck(head="c0ffee", failed_commands=("npm test",))
+        build_check = TaskCheck(head="c0ffee", failed_commands=("npm test",))
 
         # Act
-        proof = prove_head(self.runtime, HeadQuery(PROJECT, REPOSITORY, "c0ffee", task_check, NO_FORGE_CHECK))
+        proof = prove_head(self.runtime, HeadQuery(PROJECT, REPOSITORY, "c0ffee", build_check, NO_FORGE_CHECK))
 
         # Assert
         self.assertEqual(proof, HeadProof(commit="c0ffee", state="red", failed_commands=("npm test",)))

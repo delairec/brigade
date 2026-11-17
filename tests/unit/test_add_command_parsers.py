@@ -109,8 +109,8 @@ class AddCommandParsersWhenAGroupHasACommandOfItsOwnTest(unittest.TestCase):
     def test_should_refuse_a_line_declaring_another_help_for_that_group(self):
         # Arrange
         commands = (
-            _create_command(("ledger",), "read the event journal"),
-            _create_command(("ledger", "budgets"), "the steps per procedure", group_help="the journal"),
+            _create_command(("ledger",), "read the event ledger"),
+            _create_command(("ledger", "budgets"), "the steps per procedure", group_help="the ledger"),
         )
 
         # Act
@@ -122,7 +122,7 @@ class AddCommandParsersWhenAGroupHasACommandOfItsOwnTest(unittest.TestCase):
 
     def test_should_parse_the_group_alone_as_its_own_command(self):
         # Arrange
-        ledger = _create_command(("ledger",), "read the event journal")
+        ledger = _create_command(("ledger",), "read the event ledger")
         budgets = _create_command(("ledger", "budgets"), "the steps per procedure")
         parser = argparse.ArgumentParser(prog="brigade")
         add_command_parsers(parser, (ledger, budgets), _create_common_options())
@@ -135,7 +135,7 @@ class AddCommandParsersWhenAGroupHasACommandOfItsOwnTest(unittest.TestCase):
 
     def test_should_parse_a_line_of_the_group_as_that_line(self):
         # Arrange
-        ledger = _create_command(("ledger",), "read the event journal")
+        ledger = _create_command(("ledger",), "read the event ledger")
         budgets = _create_command(("ledger", "budgets"), "the steps per procedure")
         parser = argparse.ArgumentParser(prog="brigade")
         add_command_parsers(parser, (ledger, budgets), _create_common_options())
@@ -252,7 +252,7 @@ class AddCommandParsersWithExclusiveArgumentsTest(unittest.TestCase):
     def test_should_refuse_two_arguments_of_an_exclusive_group_together(self):
         # Arrange
         command = Command(
-            path=("runs", "show"),
+            path=("run", "show"),
             help="show a run",
             run=print,
             read_request=vars,
@@ -272,7 +272,7 @@ class AddCommandParsersWithExclusiveArgumentsTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as exit_:
-            parser.parse_args(["runs", "show", "--all", "--last"])
+            parser.parse_args(["run", "show", "--all", "--last"])
 
         # Assert
         self.assertEqual(exit_.exception.code, 2)

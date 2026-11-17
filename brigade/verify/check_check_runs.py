@@ -6,5 +6,5 @@ SUCCESSFUL = "success"
 
 def check_check_runs(check_runs: list[dict]) -> dict:
     return judge_findings(
-        NAME, [f"{run['name']}: {run['verdict']}" for run in check_runs if run["verdict"] != SUCCESSFUL]
+        NAME, [f"{run['name']}: {run['conclusion']}" for run in check_runs if run["conclusion"] != SUCCESSFUL]
     )

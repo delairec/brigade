@@ -109,8 +109,8 @@ class CollectEvidenceTest(unittest.TestCase):
                     {
                         "collector": "weather",
                         "summary": {"days": 1},
-                        "document": str(
-                            self.run_directory / "collectors" / "1" / "collect" / "weather" / "document.json"
+                        "collection": str(
+                            self.run_directory / "collectors" / "1" / "collect" / "weather" / "collection.json"
                         ),
                     }
                 ]

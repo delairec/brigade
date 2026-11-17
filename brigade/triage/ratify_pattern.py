@@ -31,6 +31,7 @@ ORDER_TYPE = "ORDER"
 PROPOSED_STATUS = "proposed"
 ACTIVE_STATUS = "active"
 EVIDENCE_SEPARATOR = "; "
+EVIDENCE_PARAM_KEY = "evidence"
 
 
 @dataclass(frozen=True)
@@ -90,11 +91,18 @@ def _render_constraint(pattern: Entity, kind: str) -> str:
 
 
 def _render_order(pattern: Entity, project: str) -> str:
+    params = "".join(
+        f"\tPARAM {quote_awawa_string(f'{EVIDENCE_PARAM_KEY}={field.value}')}\n"
+        for field in pattern.fields
+        if field.name == EVIDENCE_FIELD
+    )
     return (
         f"{ORDER_TYPE} {pattern.name}\n"
         f"\tRECIPE {quote_awawa_string(read_project_field(pattern, 'RECIPE'))}\n"
         f"\tPROJECT @PROJECT.{project}\n"
+        f"{params}"
         f"\tSTATUS {ACTIVE_STATUS}\n"
+        f"\tFROM @{PATTERN_TYPE}.{pattern.name}\n"
     )
 
 

@@ -13,7 +13,7 @@ TASK_STATES = (
     "changes_requested",
     "fixing",
     "parked",
-    "paused:quota",
+    "blocked:quota",
 )
 REQUEUE_REASON = "brigade wave requeue"
 REBUILD_REASON = "the entity of the task amended on"

@@ -28,20 +28,20 @@ class FinishedRun:
         return self.segments[-1]
 
     @property
-    def main_steps(self) -> RunMeasure:
-        return _measure_sum([segment.main_steps for segment in self.segments])
+    def main_turns(self) -> RunMeasure:
+        return _measure_sum([segment.main_turns for segment in self.segments])
 
     @property
-    def oversized_output_steps(self) -> RunMeasure:
-        return _measure_sum([segment.oversized_output_steps for segment in self.segments])
+    def oversized_output_turns(self) -> RunMeasure:
+        return _measure_sum([segment.oversized_output_turns for segment in self.segments])
 
     @property
-    def steps_to_first_edit(self) -> RunMeasure:
-        reported = [segment.steps_to_first_edit for segment in self.segments]
+    def turns_to_first_edit(self) -> RunMeasure:
+        reported = [segment.turns_to_first_edit for segment in self.segments]
         editing = next((index for index, value in enumerate(reported) if value is not None), None)
         if editing is None:
             return RunMeasure(value=None, partial=False)
-        steps_before = [segment.main_steps for segment in self.segments[:editing]]
+        steps_before = [segment.main_turns for segment in self.segments[:editing]]
         measured_before = [steps for steps in steps_before if steps is not None]
         return RunMeasure(
             value=sum(measured_before) + reported[editing], partial=len(measured_before) < len(steps_before)

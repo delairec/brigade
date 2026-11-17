@@ -25,10 +25,26 @@ class RequireOperationalCorpusTest(unittest.TestCase):
         # Assert
         self.assertIsNone(outcome)
 
+    def test_should_refuse_a_schema_declaring_a_retired_field_naming_its_new_name(self):
+        # Arrange
+        self.paths.config_root.mkdir(parents=True)
+        self.paths.schema_file.write_text("SCHEMA POLICY\n\tFIELD VERIFY_ROUNDS uint\n")
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            require_operational_corpus(self.paths)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            f"{self.paths.schema_file} declares POLICY.VERIFY_ROUNDS, now named POLICY.REPAIR_ROUNDS;"
+            " rename it in the schema and in its entities",
+        )
+
     def test_should_refuse_before_brigade_init(self):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
             require_operational_corpus(self.paths)
 
         # Assert
-        self.assertEqual(str(refusal.exception), "the operational corpus is missing; run brigade init first")
+        self.assertEqual(str(refusal.exception), "the registry is missing; run brigade init first")

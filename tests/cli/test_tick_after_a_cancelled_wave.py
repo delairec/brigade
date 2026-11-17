@@ -6,7 +6,7 @@ from tests.value_matchers import PatternMatcher
 
 SHA256_DIGEST = PatternMatcher("^[0-9a-f]{64}$")
 NO_EDIT_TOOL_NAMED = {
-    "steps_to_first_edit": "the client names no edit tool",
+    "turns_to_first_edit": "the client names no edit tool",
     "tokens_to_first_edit": "the client names no edit tool",
 }
 
@@ -27,7 +27,7 @@ S3_IN_THE_NEW_WAVE = (
     f' "project": "shop", "branch": "{MILESTONE_BRANCH}", "tasks": ["S3"]}}\n'
 )
 BUILD_RUN_OF_THE_NEW_WAVE = {
-    "schema_version": 2,
+    "schema_version": 3,
     "ts": ANY,
     "event": "run.finished",
     "run": PatternMatcher(RUN_ID_PATTERN),
@@ -38,8 +38,8 @@ BUILD_RUN_OF_THE_NEW_WAVE = {
     "client": "fake",
     "project": "shop",
     "session": "fake-session",
-    "main_steps": 12,
-    "total_steps": None,
+    "main_turns": 12,
+    "total_turns": None,
     "duration_ms": ANY,
     "usage": ANY,
     "outcome": "done",

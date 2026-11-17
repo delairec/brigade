@@ -76,13 +76,13 @@ class CheckPatternsTest(unittest.TestCase):
         self.hold_patterns(no_held_patterns)
         families = root / "families.json"
         families.write_text(json.dumps(FAMILIES), encoding="utf-8")
-        self.collected = [{"collector": "inbox-families", "summary": FAMILIES["summary"], "document": str(families)}]
+        self.collected = [{"collector": "inbox-families", "summary": FAMILIES["summary"], "collection": str(families)}]
         self.other_collection = root / "ledger.json"
         self.other_collection.write_text(json.dumps(OTHER_COLLECTION), encoding="utf-8")
         findings = root / "findings.json"
         findings.write_text(json.dumps(FINDINGS), encoding="utf-8")
         self.collected_findings = [
-            {"collector": "transcript-findings", "summary": FINDINGS["summary"], "document": str(findings)}
+            {"collector": "transcript-findings", "summary": FINDINGS["summary"], "collection": str(findings)}
         ]
 
     def answer_patterns(self, patterns: dict) -> None:
@@ -195,7 +195,7 @@ class CheckPatternsTest(unittest.TestCase):
         )
         collected_by_two_collectors = [
             *self.collected,
-            {"collector": "ledger", "summary": OTHER_COLLECTION["summary"], "document": str(self.other_collection)},
+            {"collector": "ledger", "summary": OTHER_COLLECTION["summary"], "collection": str(self.other_collection)},
         ]
 
         # Act
@@ -291,8 +291,7 @@ class CheckPatternsTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             str(refusal.exception),
-            "@PATTERN.cli_is_hard_to_read is held by the operational corpus: an answer adds EVIDENCE to it, STATUS"
-            " given",
+            "@PATTERN.cli_is_hard_to_read is held by the registry: an answer adds EVIDENCE to it, STATUS given",
         )
 
     def test_should_refuse_a_held_pattern_the_answer_adds_no_evidence_to(self):

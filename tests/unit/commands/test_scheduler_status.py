@@ -18,7 +18,7 @@ CRON_INSTALLED = {
     "next_activation": None,
 }
 
-NOTHING_PAUSED = []
+NOTHING_HALTED = []
 NOTHING_PARKED = []
 
 
@@ -48,7 +48,7 @@ class SchedulerStatusTextTest(unittest.TestCase):
                     "last_tick": None,
                     "tick_stale_after": 15,
                     "stale": False,
-                    "paused_waves": NOTHING_PAUSED,
+                    "halted_waves": NOTHING_HALTED,
                     "parked_tasks": NOTHING_PARKED,
                 },
                 "scheduler  systemd\nunit       /u/brigade.timer\nnext       2026-10-19T09:05:00Z\nlast tick  never",
@@ -63,7 +63,7 @@ class SchedulerStatusTextTest(unittest.TestCase):
                     "last_tick": {"ts": "2026-10-19T09:00:00Z", "duration_ms": 120, "actions_applied": 2},
                     "tick_stale_after": 15,
                     "stale": False,
-                    "paused_waves": NOTHING_PAUSED,
+                    "halted_waves": NOTHING_HALTED,
                     "parked_tasks": NOTHING_PARKED,
                 },
                 (
@@ -113,7 +113,7 @@ class SchedulerStatusTextTest(unittest.TestCase):
                     "last_tick": last_tick,
                     "tick_stale_after": 15,
                     "stale": True,
-                    "paused_waves": NOTHING_PAUSED,
+                    "halted_waves": NOTHING_HALTED,
                     "parked_tasks": NOTHING_PARKED,
                 }
 
@@ -123,7 +123,7 @@ class SchedulerStatusTextTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(text, expected_text)
 
-    def test_should_print_the_paused_waves_and_the_parked_tasks(self):
+    def test_should_print_the_parked_and_blocked_waves_and_the_parked_tasks(self):
         # Arrange
         document = {
             "schema_version": 1,
@@ -134,7 +134,7 @@ class SchedulerStatusTextTest(unittest.TestCase):
             "last_tick": None,
             "tick_stale_after": 15,
             "stale": False,
-            "paused_waves": [
+            "halted_waves": [
                 {"wave": "brigade_w1", "reason": "quota", "resume_at": "2026-10-19T10:00:00Z"},
                 {"wave": "brigade_w2", "reason": "forge_account", "resume_at": None},
             ],
@@ -152,8 +152,8 @@ class SchedulerStatusTextTest(unittest.TestCase):
             text,
             (
                 "scheduler  none\nlast tick  never\n"
-                "paused     brigade_w1, quota, resumes at 2026-10-19T10:00:00Z\n"
-                "paused     brigade_w2, forge_account, resumes on brigade wave resume\n"
+                "blocked    brigade_w1, quota, resumes at 2026-10-19T10:00:00Z\n"
+                "parked     brigade_w2, forge_account, resumes on brigade wave resume\n"
                 "parked     B12 of brigade_w1, blocked\n"
                 "parked     B15 of brigade_w2"
             ),
@@ -228,7 +228,7 @@ class SchedulerStatusOfTheMachineTest(unittest.TestCase):
                 "last_tick": {"ts": "2026-10-19T08:55:00Z", "duration_ms": 120, "actions_applied": 2},
                 "tick_stale_after": 15,
                 "stale": False,
-                "paused_waves": [],
+                "halted_waves": [],
                 "parked_tasks": [],
             },
         )
@@ -252,7 +252,7 @@ class SchedulerStatusOfTheMachineTest(unittest.TestCase):
                 "last_tick": None,
                 "tick_stale_after": 15,
                 "stale": False,
-                "paused_waves": [],
+                "halted_waves": [],
                 "parked_tasks": [],
             },
         )
@@ -297,7 +297,7 @@ class SchedulerStatusOfTheMachineTest(unittest.TestCase):
                 "last_tick": {"ts": "2026-10-19T08:54:00Z", "duration_ms": 120, "actions_applied": 2},
                 "tick_stale_after": 5,
                 "stale": True,
-                "paused_waves": [],
+                "halted_waves": [],
                 "parked_tasks": [],
             },
         )
@@ -312,7 +312,7 @@ class SchedulerStatusOfTheMachineTest(unittest.TestCase):
         # Assert
         self.assertEqual(document["stale"], True)
 
-    def test_should_summarise_the_paused_waves_and_the_parked_tasks_of_the_open_waves(self):
+    def test_should_summarise_the_parked_and_blocked_waves_and_the_parked_tasks_of_the_open_waves(self):
         # Arrange
         self.write_heartbeat("2026-10-19T08:55:00Z")
         write_ledger(
@@ -417,7 +417,7 @@ class SchedulerStatusOfTheMachineTest(unittest.TestCase):
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T08:00:00Z",
-                    "event": "wave.paused",
+                    "event": "wave.blocked",
                     "wave": "brigade_w1",
                     "reason": "quota",
                     "resume_at": "2026-10-19T10:00:00Z",
@@ -425,15 +425,14 @@ class SchedulerStatusOfTheMachineTest(unittest.TestCase):
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T08:01:00Z",
-                    "event": "wave.paused",
+                    "event": "wave.parked",
                     "wave": "brigade_w2",
                     "reason": "forge_account",
-                    "resume_at": None,
                 },
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T08:02:00Z",
-                    "event": "wave.paused",
+                    "event": "wave.blocked",
                     "wave": "brigade_w3",
                     "reason": "quota",
                     "resume_at": "2026-10-19T08:30:00Z",
@@ -464,7 +463,7 @@ class SchedulerStatusOfTheMachineTest(unittest.TestCase):
                 "last_tick": {"ts": "2026-10-19T08:55:00Z", "duration_ms": 120, "actions_applied": 2},
                 "tick_stale_after": 15,
                 "stale": False,
-                "paused_waves": [
+                "halted_waves": [
                     {"wave": "brigade_w1", "reason": "quota", "resume_at": "2026-10-19T10:00:00Z"},
                     {"wave": "brigade_w2", "reason": "forge_account", "resume_at": None},
                 ],

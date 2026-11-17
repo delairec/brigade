@@ -1,12 +1,12 @@
-What a slot and a role are, where a slot finds its role, and how `brigade roles` lists, shows and lints them.
+What a slot and a role are, where a slot finds its role, and how `brigade role` lists, shows and lints them.
 
 ## Commands
 
 ```
-brigade roles list [--json]                  # the slot, the role, its source and the model of each slot
-brigade roles show <slot> [--json]           # the role file the slot resolves to
-brigade roles show <slot> --short [--json]   # its front matter and the size of its body, in lines and bytes
-brigade roles lint [--json]                  # the built-in and the machine role files; exit 1 on a finding
+brigade role list [--json]                  # the slot, the role, its source and the model of each slot
+brigade role show <slot> [--json]           # the role file the slot resolves to
+brigade role show <slot> --short [--json]   # its front matter and the size of its body, in lines and bytes
+brigade role lint [--json]                  # the built-in and the machine role files; exit 1 on a finding
 ```
 
 ## Slots
@@ -33,7 +33,7 @@ A role is a Markdown file: a front matter between two `---` lines, then the syst
 | `name`, `slot`, `work` | |
 | `reasoning` | `deepest`, `deep`, `standard`, `light` |
 | `capabilities` | `read`, `write`, `shell`, `net`, comma-separated |
-| `budget` | the steps a segment of the role is capped at until the ledger measures enough of them, see [Runs](Runs.md) |
+| `budget` | the turns a segment of the role is capped at until the ledger measures enough of them, see [Runs](Runs.md) |
 | `returns` | |
 
 A role never names a model: the client adapter binds one to its reasoning level.

@@ -1,4 +1,5 @@
 import argparse
+import shlex
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -7,11 +8,12 @@ from brigade.corpus.collect_anchors import collect_anchors
 from brigade.corpus.decode_atom import decode_atom
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_awawa_document import read_awawa_document
-from brigade.corpus.read_entity import Entity
 from brigade.corpus.run_awawa import run_awawa
 from brigade.errors import CommandFailed
 from brigade.git.check_ancestor import check_ancestor
 from brigade.planning.count_next_task_number import count_next_task_number
+from brigade.recipes.locate_recipes import locate_recipes
+from brigade.recipes.read_project_commands import read_project_commands
 from brigade.runtime import Runtime
 from brigade.system.create_directory import create_directory
 from brigade.system.locate_setup_log import locate_setup_log
@@ -25,13 +27,15 @@ from brigade.tasks.reserve_task_number import reserve_task_number
 from brigade.waves.locate_forge_branch import locate_forge_branch
 
 HEAD = "HEAD"
+ACCEPTANCE_RECIPE = "acceptance"
+HEAVY_RECIPE = "heavy"
 SPEC_FIELD = "SPEC"
 ANCHOR_SEPARATOR = "::"
 TRAILING_PUNCTUATION = ",."
 AGENTS_FILE = "AGENTS.md"
 TEMPORARY_DIRECTORY = "tmp"
 WORKTREE_ROOT = "."
-WHEN_DONE = ["brigade task check", "brigade task push", "brigade task pr", "brigade task promote"]
+WHEN_DONE = ["brigade build check", "brigade build push", "brigade build pr", "brigade build promote"]
 NEIGHBOURS = ("--depth", "1", "--skip", "reasoning", "--with-schema")
 
 
@@ -87,8 +91,9 @@ def _read_agents(worktree: TaskWorktree) -> str | None:
     return agents.read_text(encoding="utf-8")
 
 
-def _read_commands(project: Entity, field_name: str) -> list[str]:
-    return [field.value for field in project.fields if field.name == field_name]
+def _read_commands(runtime: Runtime, worktree: TaskWorktree, recipe: str) -> list[str]:
+    places = locate_recipes(worktree.path, worktree.project, runtime.paths)
+    return [shlex.join(argv) for argv in read_project_commands(places, recipe, runtime.run_process)]
 
 
 def _count_next_wave_number(runtime: Runtime, demand: TaskContextDemand) -> int:
@@ -124,8 +129,8 @@ def assemble_task_context(runtime: Runtime, demand: TaskContextDemand) -> dict:
         "rules": _list_rules(runtime, demand.configuration, worktree),
         "project": _read_agents(worktree),
         "acceptance": {
-            "acceptance": _read_commands(worktree.project, "ACCEPTANCE"),
-            "heavy": _read_commands(worktree.project, "HEAVY"),
+            "acceptance": _read_commands(runtime, worktree, ACCEPTANCE_RECIPE),
+            "heavy": _read_commands(runtime, worktree, HEAVY_RECIPE),
         },
         "reserved": {
             "task_number": reserve_task_number(

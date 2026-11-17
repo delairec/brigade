@@ -87,7 +87,7 @@ class WriteAnswerTest(unittest.TestCase):
         self.config_root = self.runtime.paths.config_root
         self.run_directory = self.root / "state" / "runs" / RUN_ID
         (self.run_directory / "steps").mkdir(parents=True)
-        (self.run_directory / "steps" / "collect.json").write_text('{"collected": []}', encoding="utf-8")
+        (self.run_directory / "steps" / "1-collect.json").write_text('{"collected": []}', encoding="utf-8")
 
     def create_context(
         self, output: str, study: Study | None = None, configuration: Configuration | None = None
@@ -134,8 +134,8 @@ class WriteAnswerTest(unittest.TestCase):
         # Arrange
         document = self.root / "collected.json"
         document.write_text(json.dumps({"items": [{"fingerprint": "spike"}]}), encoding="utf-8")
-        (self.run_directory / "steps" / "collect.json").write_text(
-            json.dumps({"collected": [{"collector": "stale-branches", "summary": {}, "document": str(document)}]}),
+        (self.run_directory / "steps" / "1-collect.json").write_text(
+            json.dumps({"collected": [{"collector": "stale-branches", "summary": {}, "collection": str(document)}]}),
             encoding="utf-8",
         )
 

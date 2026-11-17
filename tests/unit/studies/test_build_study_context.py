@@ -15,20 +15,20 @@ STUDY_FIELDS = (
     ("ANSWER", "FINDING"),
     ("STATUS", "active"),
 )
-COLLECTED = '{"collected": [{"collector": "weather", "summary": {"days": 1}, "document": "/srv/document.json"}]}'
+COLLECTED = '{"collected": [{"collector": "weather", "summary": {"days": 1}, "collection": "/srv/collection.json"}]}'
 PACKAGE = {
     "schema_version": 1,
     "study": "trees",
     "run": RUN_ID,
     "question": "how many trees?",
-    "collected": [{"collector": "weather", "summary": {"days": 1}, "document": "/srv/document.json"}],
+    "collected": [{"collector": "weather", "summary": {"days": 1}, "collection": "/srv/collection.json"}],
     "answer": (
         "FINDING trees_20261019T090000Z_aaaaaa\n"
         '\tSTUDY "trees"\n'
         '\tRUN "20261019T090000Z-aaaaaa"\n'
         '\tCOLLECTED "weather"\n'
         '\t\tSUMMARY "{\\"days\\": 1}"\n'
-        '\t\tDOCUMENT "/srv/document.json"\n'
+        '\t\tCOLLECTION "/srv/collection.json"\n'
     ),
     "prose_fields": ["VERDICT"],
     "schema": "SCHEMA FINDING\n",
@@ -69,8 +69,8 @@ class BuildStudyContextTest(unittest.TestCase):
 
     def script_study_run(self) -> None:
         config_root = self.runtime.paths.config_root
-        (self.run_directory / "study.json").write_text('{"study": "trees"}', encoding="utf-8")
-        (self.run_directory / "steps" / "collect.json").write_text(COLLECTED, encoding="utf-8")
+        (self.run_directory / "order.json").write_text('{"order": {"name": "trees", "params": []}}', encoding="utf-8")
+        (self.run_directory / "steps" / "1-collect.json").write_text(COLLECTED, encoding="utf-8")
         self.processes.answer_entity(config_root, "STUDY", "trees", STUDY_FIELDS)
         self.processes.answer_json(
             ("awawa", "show", "FINDING", "--json", str(config_root)),
@@ -104,6 +104,27 @@ class BuildStudyContextTest(unittest.TestCase):
         # Assert
         self.assertEqual(json.loads((self.run_directory / "context.json").read_text(encoding="utf-8")), PACKAGE)
 
+    def test_should_package_no_evidence_for_a_study_with_no_collector(self):
+        # Arrange
+        self.script_study_run()
+        (self.run_directory / "steps" / "1-collect.json").unlink()
+        (self.run_directory / "order.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "order": {"name": "trees", "params": []},
+                    "recipe": {"steps": [{"kind": "judge", "slot": "review"}, {"kind": "output"}]},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        # Act
+        package = build_study_context(self.runtime, RUN_ID)
+
+        # Assert
+        self.assertEqual(package["collected"], [])
+
     def test_should_refuse_a_run_that_is_not_a_run_of_a_study(self):
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -114,7 +135,7 @@ class BuildStudyContextTest(unittest.TestCase):
 
     def test_should_refuse_a_run_that_collected_no_evidence_yet(self):
         # Arrange
-        (self.run_directory / "study.json").write_text('{"study": "trees"}', encoding="utf-8")
+        (self.run_directory / "order.json").write_text('{"order": {"name": "trees", "params": []}}', encoding="utf-8")
         self.processes.answer_entity(self.runtime.paths.config_root, "STUDY", "trees", STUDY_FIELDS)
 
         # Act
@@ -127,13 +148,14 @@ class BuildStudyContextTest(unittest.TestCase):
     def write_document(self, collector: str, items: list) -> dict:
         path = self.run_directory / f"{collector}.json"
         path.write_text(json.dumps({"collector": collector, "items": items}), encoding="utf-8")
-        return {"collector": collector, "summary": {}, "document": str(path)}
+        return {"collector": collector, "summary": {}, "collection": str(path)}
 
     def script_milestone_report_run(self) -> list[dict]:
         config_root = self.runtime.paths.config_root
-        (self.run_directory / "study.json").write_text(
-            '{"study": "milestone-report", "project": "oak", "milestone": {"project": "oak", "milestone": "M6",'
-            ' "branch": "integration/hardening", "waves": ["oak_w2"], "tasks": ["B17"]}}',
+        (self.run_directory / "order.json").write_text(
+            '{"order": {"name": "milestone-report", "params": ["milestone={\\"project\\": \\"oak\\",'
+            ' \\"milestone\\": \\"M6\\", \\"branch\\": \\"integration/hardening\\", \\"waves\\":'
+            ' [\\"oak_w2\\"], \\"tasks\\": [\\"B17\\"]}"]}}',
             encoding="utf-8",
         )
         collected = [
@@ -142,7 +164,7 @@ class BuildStudyContextTest(unittest.TestCase):
             self.write_document("corpus", []),
             self.write_document("git-diff-stat", []),
         ]
-        (self.run_directory / "steps" / "collect.json").write_text(
+        (self.run_directory / "steps" / "1-collect.json").write_text(
             json.dumps({"collected": collected}), encoding="utf-8"
         )
         self.processes.answer_entities(config_root, "PROJECT", {"oak": (("PATH", "/srv/oak"), ("CORPUS", "corpus"))})

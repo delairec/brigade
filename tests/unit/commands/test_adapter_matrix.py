@@ -61,7 +61,7 @@ class AdapterMatrixOfAnAdapterAnsweringOnlyTheProbeTest(unittest.TestCase):
                     "resume": "fallback",
                     "transcripts": "fallback",
                     "actions": "fallback",
-                    "step_count": "fallback",
+                    "turn_count": "fallback",
                     "tool_grants": "fallback",
                     "reset_hour": "fallback",
                     "graceful_stop": "fallback",
@@ -167,7 +167,7 @@ class AdapterMatrixOfAnAdapterWithSettingsInTheConfigurationTest(unittest.TestCa
         search_directory.mkdir()
         paths = create_test_paths(root, executable_search_path=str(search_directory))
         paths.configuration_file.parent.mkdir(parents=True)
-        paths.configuration_file.write_text('[clients.fake]\nfeatures = "step_count"\n')
+        paths.configuration_file.write_text('[clients.fake]\nfeatures = "turn_count"\n')
         sources = PluginSources(executable_search_path=str(search_directory), run_process=_answer_the_bare_probe)
         self.runtime = create_test_runtime(
             paths, run_process=_answer_the_bare_probe, resolve_plugin=functools.partial(resolve_plugin, sources=sources)
@@ -192,7 +192,7 @@ class AdapterMatrixOfAnAdapterWithSettingsInTheConfigurationTest(unittest.TestCa
                     "resume": "fallback",
                     "transcripts": "fallback",
                     "actions": "fallback",
-                    "step_count": "full",
+                    "turn_count": "full",
                     "tool_grants": "fallback",
                     "reset_hour": "fallback",
                     "graceful_stop": "fallback",
@@ -214,7 +214,7 @@ MATRIX = {
                 "resume": "full",
                 "transcripts": "full",
                 "actions": "full",
-                "step_count": "full",
+                "turn_count": "full",
                 "tool_grants": "full",
                 "reset_hour": "full",
                 "graceful_stop": "fallback",
@@ -238,7 +238,7 @@ class AdapterMatrixTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             text,
-            "adapter      audience          launch  result  resume  transcripts  actions  step count  tool grants"
+            "adapter      audience          launch  result  resume  transcripts  actions  turn count  tool grants"
             "  reset hour  graceful stop\n"
             "claude-code  supported client  full    full    full    full         full     full        full       "
             "  full        fallback\n"
@@ -258,12 +258,12 @@ class AdapterMatrixMarkdownTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             markdown,
-            "| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants"
+            "| Supported client | Launch | Result | Resume | Transcripts | Actions | Turn count | Tool grants"
             " | Reset hour | Graceful stop |\n"
             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
             "| claude-code | full | full | full | full | full | full | full | full | fallback |\n"
             "\n"
-            "| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants"
+            "| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Turn count | Tool grants"
             " | Reset hour | Graceful stop |\n"
             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
             "| broken | error: no JSON \\| answer |  |  |  |  |  |  |  |  |\n"

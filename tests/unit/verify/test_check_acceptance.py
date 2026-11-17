@@ -11,7 +11,7 @@ HEAD_TREE = Path("/cache/shop/2222222")
 class CheckAcceptanceTest(unittest.TestCase):
     def test_should_pass_naming_each_command_with_its_exit_code(self):
         # Arrange
-        facts = AcceptanceFacts(head_tree=HEAD_TREE, commands=("python3 -m unittest", "ruff check ."))
+        facts = AcceptanceFacts(head_tree=HEAD_TREE, commands=(("python3", "-m", "unittest"), ("ruff", "check", ".")))
 
         # Act
         check = check_acceptance(RecordingProcessRunner(), facts)
@@ -21,11 +21,11 @@ class CheckAcceptanceTest(unittest.TestCase):
             check,
             {
                 "name": "acceptance",
-                "verdict": "pass",
+                "result": "ok",
                 "findings": [],
                 "commands": [
-                    {"command": "python3 -m unittest", "exit_code": 0},
-                    {"command": "ruff check .", "exit_code": 0},
+                    {"command": "python3 -m unittest", "exit_code": 0, "duration_ms": 0, "output": ""},
+                    {"command": "ruff check .", "exit_code": 0, "duration_ms": 0, "output": ""},
                 ],
             },
         )
@@ -35,7 +35,7 @@ class CheckAcceptanceTest(unittest.TestCase):
         runner = RecordingProcessRunner(
             {("ruff", "check", "."): ProcessAnswer(exit_code=1, stdout="brigade/cli.py:3:1: F401\n")}
         )
-        facts = AcceptanceFacts(head_tree=HEAD_TREE, commands=("python3 -m unittest", "ruff check ."))
+        facts = AcceptanceFacts(head_tree=HEAD_TREE, commands=(("python3", "-m", "unittest"), ("ruff", "check", ".")))
 
         # Act
         check = check_acceptance(runner, facts)
@@ -45,11 +45,16 @@ class CheckAcceptanceTest(unittest.TestCase):
             check,
             {
                 "name": "acceptance",
-                "verdict": "fail",
+                "result": "fail",
                 "findings": ["ruff check . exited 1", "brigade/cli.py:3:1: F401"],
                 "commands": [
-                    {"command": "python3 -m unittest", "exit_code": 0},
-                    {"command": "ruff check .", "exit_code": 1},
+                    {"command": "python3 -m unittest", "exit_code": 0, "duration_ms": 0, "output": ""},
+                    {
+                        "command": "ruff check .",
+                        "exit_code": 1,
+                        "duration_ms": 0,
+                        "output": "brigade/cli.py:3:1: F401\n",
+                    },
                 ],
             },
         )
@@ -57,7 +62,7 @@ class CheckAcceptanceTest(unittest.TestCase):
     def test_should_run_each_command_in_the_tree_of_the_head(self):
         # Arrange
         runner = RecordingProcessRunner()
-        facts = AcceptanceFacts(head_tree=HEAD_TREE, commands=("python3 -m unittest",))
+        facts = AcceptanceFacts(head_tree=HEAD_TREE, commands=(("python3", "-m", "unittest"),))
 
         # Act
         check_acceptance(runner, facts)
@@ -73,4 +78,16 @@ class CheckAcceptanceTest(unittest.TestCase):
                     acceptable_exit_codes=EVERY_EXIT_CODE,
                 )
             ],
+        )
+
+    def test_should_name_a_command_quoting_an_argument_that_holds_a_space(self):
+        # Arrange
+        facts = AcceptanceFacts(head_tree=HEAD_TREE, commands=(("pytest", "-k", "not slow"),))
+
+        # Act
+        check = check_acceptance(RecordingProcessRunner(), facts)
+
+        # Assert
+        self.assertEqual(
+            check["commands"], [{"command": "pytest -k 'not slow'", "exit_code": 0, "duration_ms": 0, "output": ""}]
         )

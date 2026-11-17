@@ -9,14 +9,14 @@
     <li><a href="#m-status">brigade status</a></li>
     <li><a href="#m-wave-new">brigade wave new</a></li>
     <li><a href="#m-tick">brigade tick</a></li>
-    <li><a href="#m-task-context">brigade task context (what an agent gets)</a></li>
-    <li><a href="#m-verify">brigade verify preflight</a></li>
+    <li><a href="#m-task-context">brigade build context (what an agent gets)</a></li>
+    <li><a href="#m-preflight">brigade preflight review-pull-request</a></li>
     <li><a href="#m-wave-show">brigade wave show</a></li>
     <li><a href="#m-inbox">brigade inbox, triage</a></li>
     <li><a href="#m-ledger">brigade ledger</a></li>
     <li><a href="#m-corpus">brigade corpus at a ref</a></li>
     <li><a href="#m-units">The scheduler, the adapter and a run</a></li>
-    <li><a href="#m-roles">brigade roles list</a></li>
+    <li><a href="#m-roles">brigade role list</a></li>
     <li><a href="#m-doctor">brigade doctor</a></li>
     <li><a href="#m-study">brigade study run</a></li>
     <li><a href="#m-order">brigade order new</a></li>
@@ -51,7 +51,7 @@ INBOX    7 signals in 3 families · oldest 2d · 1 pattern proposed (P12, 5 sign
     <div class="shot-bar"><span></span><span></span><span></span><em>brigade wave new</em></div>
 <pre class="term" id="t-wave-new"><span class="p">$</span> <span class="c">brigade wave new tidepool "Finish the station page: phone width, keyboard, buoy icons, the forecast list"</span>
 <span class="tagc">cli</span>  request R-021 recorded · plan context: 433 entities, 4 todo, 21 draft, next task number 196, 38 IMPL files indexed
-<span class="taga">ada</span>  run r-0191 · slot plan · wave-plan.md · 1 segment · 19 steps · 6 m 40 s
+<span class="taga">ada</span>  run r-0191 · slot plan · request-plan.md · 1 segment · 19 steps · 6 m 40 s
 <span class="tagc">cli</span>  plan.json valid · 5 tasks · 1 overlap ruled · awawa fmt + lint --strict: 0 errors
 <span class="tagc">cli</span>  branch integration/station-page from main · WAVE 16 + 5 TASK written · pushed
 
@@ -75,7 +75,7 @@ WAVE tp/16  integration/station-page  POLICY plan_review=auto → starting at ne
     <div class="shot-bar"><span></span><span></span><span></span><em>the tick log, last lines</em></div>
 <pre class="term" id="t-tick">09:10:00 <span class="tagc">cli</span>  tick #4418 · lock ok · 1 active wave · fetch tidepool (0.8 s)
 09:10:01 <span class="tagc">cli</span>  tp/16 TP146 pr 291 · checks 7/7 <span class="ok">green</span> · preflight <span class="ok">ok</span> (ancestry, fmt, lint, promotion, privacy, body)
-09:10:01 <span class="tagc">cli</span>  tp/16 TP146 → verifying · launch <span class="taga">prudence</span> r-0196 slot verify · verify-pr.md (budget 25)
+09:10:01 <span class="tagc">cli</span>  tp/16 TP146 → verifying · launch <span class="taga">prudence</span> r-0196 slot verify · review-pr.md (budget 25)
 09:10:02 <span class="tagc">cli</span>  tp/16 TP151 pr 292 · checks 6/7 · <span class="err">test (coverage) failed</span> · 1st failure → launch <span class="taga">bastien</span> r-0197 "fix a failing check" (round 1/2)
 09:10:02 <span class="tagc">cli</span>  tp/16 TP189 queued · AFTER TP151 not merged · waiting
 09:10:02 <span class="tagc">cli</span>  tp/16 TP195 queued · AFTER TP151 not merged · waiting
@@ -86,7 +86,7 @@ WAVE tp/16  integration/station-page  POLICY plan_review=auto → starting at ne
 09:15:00 <span class="tagc">cli</span>  tick #4419
 09:15:01 <span class="tagc">cli</span>  r-0196 finished · 14 steps · 4 m 02 s · verdict <span class="ok">approve</span> · 0 findings critical, 1 low (naming)
 09:15:02 <span class="tagc">cli</span>  tp/16 TP146 pr 291 → merge (squash) into integration/station-page <span class="ok">merged</span> · task merged
-09:15:02 <span class="tagc">cli</span>  r-0197 <span class="warn">rate limit</span> in result (resets 14:00) → wave tp/16 <span class="warn">paused:quota</span> · resume_at 14:00 · 1 run suspended
+09:15:02 <span class="tagc">cli</span>  r-0197 <span class="warn">rate limit</span> in result (resets 14:00) → wave tp/16 <span class="warn">blocked:quota</span> · resume_at 14:00 · 1 run suspended
 09:15:02 <span class="tagc">cli</span>  ledger +3 events · tick done in 2.4 s
 
 14:00:00 <span class="tagc">cli</span>  tick #4476 · tp/16 resume_at reached → resume r-0197 (adapter resume, session 7f3c…) · wave running</pre>
@@ -97,8 +97,8 @@ WAVE tp/16  integration/station-page  POLICY plan_review=auto → starting at ne
 <section id="m-task-context">
   <h2>What a build run receives, instead of twenty-three steps of discovery</h2>
   <figure class="shot">
-    <div class="shot-bar"><span></span><span></span><span></span><em>brigade task context TP146 (abridged)</em></div>
-<pre class="term" id="t-task-context"><span class="p">$</span> <span class="c">brigade task context TP146</span>
+    <div class="shot-bar"><span></span><span></span><span></span><em>brigade build context TP146 (abridged)</em></div>
+<pre class="term" id="t-task-context"><span class="p">$</span> <span class="c">brigade build context TP146</span>
 <span class="hl">## worktree</span>  .worktrees/tp-16-tp146 · branch feat/tp146-phone-and-keyboard
   git merge-base --is-ancestor origin/integration/station-page HEAD → <span class="ok">yes</span>
   setup done: bun install --frozen-lockfile (12 s) · data → symlink · .private → symlink
@@ -113,17 +113,17 @@ WAVE tp/16  integration/station-page  POLICY plan_review=auto → starting at ne
 <span class="hl">## project files that bind you</span>  AGENTS.md, agents/worktree.md, agents/pull-request.md
 <span class="hl">## acceptance</span>  bun test · bun run lint:types · bun run guards · bun run test:coverage   (heavy, CI only: bun run test:ui)
 <span class="hl">## reserved</span>  task number 196 · temp dir runs/r-0193/tmp · attribution lines attached
-<span class="hl">## when done</span>  brigade task check TP146 → brigade task pr TP146 → brigade task promote TP146 --pr N
+<span class="hl">## when done</span>  brigade build check TP146 → brigade build pr TP146 → brigade build promote TP146 --pr N
 <span class="dim">full package written to runs/r-0193/context.md (14 200 chars)</span></pre>
     <figcaption>The measured median was 23 steps and 134 000 tokens before the first edit; the package replaces the discovery with one read.</figcaption>
   </figure>
 </section>
 
-<section id="m-verify">
+<section id="m-preflight">
   <h2>The pass, deterministic half</h2>
   <figure class="shot">
-    <div class="shot-bar"><span></span><span></span><span></span><em>brigade verify preflight 292</em></div>
-<pre class="term" id="t-verify"><span class="p">$</span> <span class="c">brigade verify preflight tidepool 292</span>
+    <div class="shot-bar"><span></span><span></span><span></span><em>brigade preflight review-pull-request pr=292</em></div>
+<pre class="term" id="t-preflight"><span class="p">$</span> <span class="c">brigade preflight review-pull-request pr=292</span>
 pr 292  feat/tp151-station-page → integration/station-page  task TP151  head 4c1e9d2
 <span class="ok">ok</span>    ancestry        descends from integration head (0 behind)
 <span class="ok">ok</span>    checks          7/7 green: test, test (coverage), lint:types, guards, fallow, ui (chromium, firefox, webkit), audit
@@ -157,7 +157,7 @@ TP195     queued              —     —       —      —        —        A
 TP196     queued              —     —       —      —        —        AFTER TP151
 
 integration → main  pr 290 <span class="dim">draft</span>  body: report pending · 1 of 5 tasks landed
-ledger: 4 runs · 89 steps · 1 pause (quota, 4 h 45) · 0 hand-overs · 0 parked</pre>
+ledger: 4 runs · 89 steps · 1 pause (quota, 4 h 45) · 0 handovers · 0 parked</pre>
     <figcaption>States are the tick's; nothing here was typed by a person or asked of a model.</figcaption>
   </figure>
 </section>
@@ -190,8 +190,8 @@ PATTERN  P12  <span class="hl">new</span>  "presenters build user sentences" · 
 <section id="m-ledger">
   <h2>Statistics from the client's result data, not from spend</h2>
   <figure class="shot">
-    <div class="shot-bar"><span></span><span></span><span></span><em>brigade ledger --wave tp/16</em></div>
-<pre class="term" id="t-ledger"><span class="p">$</span> <span class="c">brigade ledger --wave tp/16</span>
+    <div class="shot-bar"><span></span><span></span><span></span><em>brigade wave show tp/16 --events</em></div>
+<pre class="term" id="t-ledger"><span class="p">$</span> <span class="c">brigade wave show tp/16 --events</span>
 wave tp/16 · 5 tasks · 5 PRs · 4 merged, 1 parked · wall 2 d 03 h (incl. 1 quota pause of 4 h 45)
 
 SLOT      ROLE       RUNS  STEPS p50  p90  WALL p50   HANDOVERS  OUTCOME
@@ -234,7 +234,7 @@ TASK TP151
 <section id="m-units">
   <h2>The scheduler, the adapter and a run</h2>
   <figure class="shot">
-    <div class="shot-bar"><span></span><span></span><span></span><em>config.toml · brigade scheduler install · brigade adapter launch-argv · brigade runs logs</em></div>
+    <div class="shot-bar"><span></span><span></span><span></span><em>config.toml · brigade scheduler install · brigade adapter launch-argv · brigade run show --log</em></div>
 <pre class="term" id="t-units"><span class="dim"># $XDG_CONFIG_HOME/brigade/config.toml (excerpt): the machine's bindings</span>
 schema = 1
 client = "claude"
@@ -249,7 +249,7 @@ instructions = "&lt;rootDir&gt;"
 
 <span class="p">$</span> <span class="c">brigade adapter launch-argv r-0193</span>
 <span class="tagc">cli</span>  client claude · built-in adapter · probe 2.1.289: launch, result, resume, transcripts, tool grants: full
-<span class="tagc">cli</span>  slot build → bastien (instructions corpus) · reasoning standard · budget 75, step cap 94
+<span class="tagc">cli</span>  slot build → bastien (instructions corpus) · reasoning standard · budget 75, turn cap 94
 cwd  &lt;worktrees&gt;/tp-16-tp146
 claude -p "@runs/r-0193/brief.md" --output-format stream-json \
   --model opus --effort high \
@@ -257,9 +257,9 @@ claude -p "@runs/r-0193/brief.md" --output-format stream-json \
   --allowedTools "Read,Glob,Grep,Write,Edit,Bash" --add-dir "$XDG_STATE_HOME/brigade" \
   --append-system-prompt-file runs/r-0193/role-package.md --max-turns 94
 
-<span class="p">$</span> <span class="c">brigade runs logs r-0193 --tail 3</span>
+<span class="p">$</span> <span class="c">brigade run show r-0193 --log</span>
 09:07:12  run r-0193 · build (bastien) · tp/16 TP146 · started · pid 48211
-09:38:40  result · outcome pr_open · steps 31 · 31 m 28 s · pr 291
+09:38:40  result · outcome pr_open · turns 31 · 31 m 28 s · pr 291
 09:38:40  ledger run.finished · segment 1 · exit 0</pre>
     <figcaption>The machine's bindings live in one file; the scheduler is one command any of three schedulers runs; the core spawns the client itself, with the argv its adapter translated, and reads the log the same way whatever the client.</figcaption>
   </figure>
@@ -268,8 +268,8 @@ claude -p "@runs/r-0193/brief.md" --output-format stream-json \
 <section id="m-roles">
   <h2>Slots and the roles that fill them</h2>
   <figure class="shot">
-    <div class="shot-bar"><span></span><span></span><span></span><em>brigade roles list</em></div>
-<pre class="term" id="t-roles"><span class="p">$</span> <span class="c">brigade roles list</span>
+    <div class="shot-bar"><span></span><span></span><span></span><em>brigade role list</em></div>
+<pre class="term" id="t-roles"><span class="p">$</span> <span class="c">brigade role list</span>
 <span class="tagc">cli</span>  resolution: PROJECT.ROLE → machine roles/ → instructions corpus (&lt;rootDir&gt;) → built-in
 SLOT      ROLE       SOURCE                 REASONING  MODEL (claude adapter)
 plan      ada        built-in               deep       fable · high
@@ -351,7 +351,7 @@ doctor: 4 of 4 prerequisites · 1 optional item on its fallback · exit 0</pre>
       <div class="scards">
         <div class="scard"><div class="sl">Projects</div><div class="sv">3</div><div class="sd">1 wave running · 1 paused</div></div>
         <div class="scard"><div class="sl">Inbox</div><div class="sv">7</div><div class="sd">3 families · 1 pattern to ratify</div></div>
-        <div class="scard"><div class="sl">Runs today</div><div class="sv">9</div><div class="sd">p50 21 steps · 0 hand-overs</div></div>
+        <div class="scard"><div class="sl">Runs today</div><div class="sv">9</div><div class="sd">p50 21 steps · 0 handovers</div></div>
         <div class="scard warn"><div class="sl">Scans</div><div class="sv">1</div><div class="sd">lint drift · lantern</div></div>
         <div class="scard"><div class="sl">Parked orders</div><div class="sv">0</div><div class="sd">1 study due at 10:00</div></div>
       </div>

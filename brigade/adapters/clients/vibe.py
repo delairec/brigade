@@ -44,7 +44,7 @@ def _probe(request: dict) -> dict:
         "client": CLIENT_NAME,
         "version_argv": [EXECUTABLE, "--version"],
         "operations": ["probe", "launch", "result", "transcripts"],
-        "features": ["step_count", "tool_grants"],
+        "features": ["turn_count", "tool_grants"],
         "models": {level: _bind_model(request, level) for level in REASONING_LEVELS},
     }
 
@@ -102,7 +102,7 @@ def _read_text(content: list[dict]) -> str:
 def _describe_session(entries: list[dict]) -> dict:
     return {
         "schema_version": SCHEMA_VERSION,
-        "steps": sum(1 for entry in entries if _is_final_message(entry)),
+        "turns": sum(1 for entry in entries if _is_final_message(entry)),
         "session_id": entries[0]["sessionId"],
         "duration_ms": entries[-1]["updatedAt"] - entries[0]["createdAt"],
         "cost_usd": None,

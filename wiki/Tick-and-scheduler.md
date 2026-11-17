@@ -1,4 +1,4 @@
-What a tick does with the facts it reads, from launching the tasks of a wave to verifying, repairing and rebasing their
+What a tick does with the facts it reads, from launching the tasks of a wave to reviewing, repairing and rebasing their
 pull requests, starting waves and pausing them on the quota, and how `brigade scheduler` fires the tick every five
 minutes.
 
@@ -6,10 +6,11 @@ minutes.
 
 ```
 brigade tick --once         # one tick, under the lock $XDG_STATE_HOME/brigade/locks/tick.lock
-brigade tick --dry-run      # the snapshot and the plan, applied to nothing
+brigade tick --once --log-file <file>   # the same, its stderr appended to <file>, its directory created, nothing printed
+brigade tick --dry-run      # the snapshot and the decisions, applied to nothing
 brigade tick --loop         # a tick at once, then one every five minutes, until SIGTERM or SIGINT
 brigade scheduler install   # install what fires brigade tick --once every five minutes
-brigade scheduler status    # the scheduler, the last tick, the paused waves and the parked tasks
+brigade scheduler status    # the scheduler, the last tick, the parked and blocked waves and the parked tasks
 ```
 
 Every mode prints text or, with `--json`, a JSON document.
@@ -22,8 +23,8 @@ plan is empty or ten rounds have passed. Among those actions, it:
 - runs the due studies, as [Studies](Studies.md) says;
 - starts a wave for each project whose `POLICY` sets `WAVE_START` to `auto`;
 - carries each task of an open wave from its launch to its merge, as below;
-- pauses every running wave on the quota or on the forge account, and the wave of a run whose AI client lost its
-  login, and resumes it;
+- blocks every running wave on the quota and parks it on the forge account, parks the wave of a run whose AI
+  client lost its login, and resumes it;
 - removes the local branch of an integration branch the ledger records, and its worktree with it when one stands,
   once the branch has nothing left to do: the branch of a milestone once the ledger holds its `milestone.closed`, the
   branch of a wave once it holds its `wave.closed` or its `wave.cancelled`;
@@ -63,8 +64,8 @@ closed, as below, and a parked task of a closed wave keeps its worktree and its 
 |---|---|---|
 | launch | cuts a worktree for each startable task of an open wave and launches a detached build run of `build-task` | `running` |
 | pull request | follows the pull request of the task | `pr_open` when it opens |
-| preflight | once every check run completed, runs `brigade verify preflight`; no failing check moves the task on | `verifying` |
-| review | starts a detached run of the slot `review`, of `verify-pr`; its `task.verdict` decides | `verified` on `pass`, `changes_requested` on `changes` |
+| preflight | once every check run completed, runs the preflight `review-pull-request` on the pull request; no failing check moves the task on | `verifying` |
+| review | starts a detached run of the slot `review`, of `review-pr`; its `task.verdict` decides | `verified` on `pass`, `changes_requested` on `changes` |
 | repair | starts a detached run of the slot `remediate`, of `remediate-pr`, or of the slot `build` for a failing check | `fixing`, back to `pr_open` on a push |
 | rebase | rebases a pull request behind its base once its check runs all passed and the heads of its branch and of its base are green; a conflict starts a run of the slot `rebase`; a red head launches one run of that slot repairing it, a red main branch on `fix/repair-<main>-<commit>` with its pull request, a red milestone branch in place | back to `pr_open`, or `fixing` |
 | merge | merges a verified pull request into the branch of its milestone, never into the main branch, then removes the task's worktree once its pull request is merged or closed | `merged` |
@@ -79,14 +80,14 @@ The procedure of each run is the one brigade ships, or the one the key of its sl
 | `pull request closed` | its pull request closes unmerged |
 | `setup failed` | the setup of its worktree fails; the worktree and the branch stay in place |
 | `run dead: <run>`, or `run not started` | it is `running`, has no pull request, and no live run names it |
-| the rounds | it passes the `VERIFY_ROUNDS` of the project's `POLICY`, 2 by default |
+| the rounds | it passes the `REPAIR_ROUNDS` of the project's `POLICY`, 2 by default |
 | the run and its question | a run of the slot `remediate`, `build` or `rebase` ended on `brigade-end: blocked` |
 | `blocked by` and the citing entity | it is queued in an open wave and a live blocker cites it |
 
 > **Watch out:** the tick never queues a parked task again by itself: `brigade wave requeue`, as [Waves](Waves.md)
 > says.
 
-## Quota, forge-account and client-login pauses
+## Quota blocks, forge-account and client-login parks
 
 | Cause | Reason | Resumed |
 |---|---|---|
@@ -94,14 +95,14 @@ The procedure of each run is the one brigade ships, or the one the key of its sl
 | a `forge_account.unavailable` in the ledger | `forge_account` | by `brigade wave resume` alone |
 | a run of the wave finished on the `error_class` `authentication`: its AI client could not sign in | `client_login` | by `brigade wave resume <wave>` alone |
 
-The tick launches no run of a paused wave.
+The tick launches no run of a parked or blocked wave.
 
-> **Watch out:** a wave paused on the forge account stays paused, waves started after the event included, until you
+> **Watch out:** a wave parked on the forge account stays parked, waves started after the event included, until you
 > run `brigade wave resume`.
 
-> **Watch out:** a wave paused on the client login stays paused until you sign in to the client again (`claude auth
+> **Watch out:** a wave parked on the client login stays parked until you sign in to the client again (`claude auth
 > login`, or `claude setup-token` and `CLAUDE_CODE_OAUTH_TOKEN` for unattended jobs) and run `brigade wave resume
-> <wave>`. The tick records the pause once and names on stderr the wave and the command to run.
+> <wave>`. The tick records the park once and names on stderr the wave and the command to run.
 
 ## The scheduler
 
@@ -110,7 +111,7 @@ The tick launches no run of a paused wave.
 | Scheduler | Chosen by the probe when | Installs |
 |---|---|---|
 | `systemd` | `systemctl --user is-system-running` answers `running` or `degraded` | `brigade.service` and `brigade.timer` in `$XDG_CONFIG_HOME/systemd/user/`, the timer enabled now |
-| `cron` | otherwise | the crontab line marked `# brigade scheduler install`; each tick's stderr goes to `$XDG_STATE_HOME/brigade/tick.log` |
+| `cron` | otherwise | the crontab line marked `# brigade scheduler install`, one argv with no shell operator: `env <variables> brigade tick --once --log-file $XDG_STATE_HOME/brigade/tick.log`, the tick creating the directory of its log, appending its stderr to it and printing nothing |
 | `loop` | never | nothing: it names the `brigade tick --loop` command to keep running |
 
 `brigade scheduler status` reports the scheduler and the last tick, and exits 1 when the last tick is older than
@@ -141,14 +142,15 @@ The tick launches no run of a paused wave.
   `base` and no `pr`, the task staying `running`. Once that run ends done, the next tick launches the build run; a run
   that ends blocked parks the task on its question.
 - A head is green once one of its proofs passed whole: the check runs of the forge on its commit, the record of
-  `brigade task check` of the task at that commit, or the record the tick kept for that commit. A check run of the
+  `brigade build check` of the task at that commit, or the record the tick kept for that commit. A check run of the
   forge pending on the commit is waited for. A head with none of them is checked by the tick on a checkout of its
-  commit: the `SETUP` lines, the `ACCEPTANCE` lines and the checks of the corpus, as `brigade task check` runs them,
+  commit: the steps of the recipes `setup` and `acceptance` of the project and the checks of the corpus, as
+  `brigade build check` runs them,
   written to `<state root>/commit-checks/<project>/<commit>.json`, each command with its exit code; a later tick reads
   that record and runs nothing again on that commit.
 - A red base holds the launch: the task is not launched while the head of its base is red, the tick names on stderr
   at each tick the base, its commit and the command that failed (`@TASK.T7 waits: integration/M4 is red at 8885daa,
-  `make test` failed`), and `brigade tick --dry-run` names it in its plan. The red head launches one detached run of the
+  `make test` failed`), and `brigade tick --dry-run` names it in its decisions. The red head launches one detached run of the
   slot `rebase` that repairs it, one per red head whatever the tasks waiting on it, launched again neither while it
   lives nor once it ended blocked, its question named on stderr at each tick. The launches resume at the tick that
   reads the head of the base green.
@@ -180,12 +182,12 @@ dies before it records a `run.finished` does.
 - The verdict counts once a `task.verdict` is recorded at the head of the pull request.
 - A review run that ends with no verdict at that head leaves the head unjudged: the tick launches the review again on
   the same head, with no `task.state` and no repair round, while the review runs of the task since its last preflight
-  number at most `VERIFY_ROUNDS` of the `POLICY` of its project, 2 by default. Past them, it parks the task with the
+  number at most `REPAIR_ROUNDS` of the `POLICY` of its project, 2 by default. Past them, it parks the task with the
   reason `<n> review runs without a verdict: <run>, …`. A review run that ends on `rate_limit` or `authentication`
-  counts as none: its wave is paused, and the review is launched again once the wave is resumed. The same holds for a
+  counts as none: its wave is parked or blocked, and the review is launched again once the wave is resumed. The same holds for a
   head delivered without a forge.
 - A task in `verifying` whose pull request head is no longer the head of its last `task.preflighted` moves back to
-  `pr_open`, where the preflight of the new head opens the next verification.
+  `pr_open`, where the preflight of the new head opens the next review.
 - A task in `pr_open` whose preflight failed on a finding other than `ancestry` and `checks` moves to
   `changes_requested`, those findings as its reason.
 
@@ -196,7 +198,7 @@ dies before it records a `run.finished` does.
 - A repair run starts on an open pull request whose head the last preflight judged, and when no run holds the task's
   worktree.
 - A task in `changes_requested` starts a run of the slot `remediate`, which answers through
-  `brigade review context|reply`.
+  `brigade remediate context|reply`.
 - A task whose preflight found a failing check starts a run of the slot `build` whose brief carries the build brief of
   the task and the last 200 lines of the log of each failing check.
 - Each launch records the task `fixing` and counts one round. A run that ends without a push leaves the task `fixing`,
@@ -241,9 +243,9 @@ dies before it records a `run.finished` does.
   the branch holds past the head of its base it was last cut from or rebased onto, read from the reflog of that base.
   When the reflog no longer holds that head, git falls back to the merge base.
 - A conflict is aborted and handed to a detached run of the slot `rebase`.
-- A milestone branch git rebased cleanly is checked before it is pushed: in its worktree the tick runs the `SETUP`
-  lines of the project, then its `ACCEPTANCE` lines and `awawa fmt --check .` and `awawa lint --strict .`, as
-  `brigade task check` does, and writes the result to the record of that commit. A failing one pushes nothing: the
+- A milestone branch git rebased cleanly is checked before it is pushed: in its worktree the tick runs the steps of
+  the recipe `setup` of the project, then those of its recipe `acceptance` and `awawa fmt --check .` and `awawa lint --strict .`, as
+  `brigade build check` does, and writes the result to the record of that commit. A failing one pushes nothing: the
   rebased head stays in the worktree and a detached run of the slot `rebase` repairs it there, then pushes it once its
   tests pass.
 - Each launch of that run is recorded as `milestone.rebase_launched`, with the run and the commits the main branch
@@ -257,10 +259,10 @@ dies before it records a `run.finished` does.
   same rebase, check before the push and hold, replaying the commit of the report and the commit `STATUS reached`
   with the rest of the branch. The body of the pull request stays the report; the next tick retitles it from the
   head pushed. Once that pull request is merged or closed, the tick no longer reads the branch to rebase it.
-- No rebase is planned for a wave that is paused, or whose rebase run lives or ended blocked; a blocked rebase run
-  pauses its wave on its question.
+- No rebase is planned for a wave that is parked or blocked, or whose rebase run lives or ended blocked; a blocked rebase run
+  parks its wave on its question.
 - `brigade wave resume` answers every rebase run of the wave that ended blocked before it, one that ended while the
-  wave was paused on another question included: only a rebase run that ends blocked after the resume pauses the wave
+  wave was parked on another question included: only a rebase run that ends blocked after the resume parks the wave
   again. The resume the tick records after a quota reset answers none.
 
 </details>
@@ -310,34 +312,34 @@ dies before it records a `run.finished` does.
 
 </details>
 
-<details><summary>Quota pauses in detail</summary>
+<details><summary>Quota blocks in detail</summary>
 
-- A quota pause records `wave.paused` with the reason `quota` and `resume_at`: the first instant after the tick's clock
+- A quota block records `wave.blocked` with the reason `quota` and `resume_at`: the first instant after the tick's clock
   at the hour and in the timezone of the result's `reset`, or that clock plus 30 minutes when `reset` is null. The task
-  of a build run moves to `paused:quota`.
-- A wave started during a quota pause is paused until the same `resume_at`.
-- The forge-account pause and the client-login pause carry no `resume_at`.
-- The first tick past `resume_at` records `wave.resumed` for the wave and resumes the run of each `paused:quota` task as
+  of a build run moves to `blocked:quota`.
+- A wave started during a quota block is blocked until the same `resume_at`.
+- The forge-account park and the client-login park record `wave.parked`, which carries no `resume_at`.
+- The first tick past `resume_at` records `wave.resumed` for the wave and resumes the run of each `blocked:quota` task as
   its next segment, through `resume-argv` with the session of its last segment, or as a fresh launch from its progress
   file when the client adapter declares no resume. Only a segment that wrote its `result.json` counts: a segment
   directory left without one, by a segment that failed before or while it ran, is run again under its number. It moves the task back to `running` with the reason `resumed after
-  the quota reset`: that resume ends the stop, and only a later `run.finished` on `rate_limit` pauses the task again.
+  the quota reset`: that resume ends the stop, and only a later `run.finished` on `rate_limit` blocks the task again.
 
 </details>
 
-<details><summary>Client-login pauses in detail</summary>
+<details><summary>Client-login parks in detail</summary>
 
 - The `claude-code` client adapter classifies `authentication` an error result whose message names `Failed to
   authenticate` or `auth login`, as when its login reached its time limit and cannot be renewed. The `vibe` adapter
   recognises no login failure and reports it as `execution`.
 - A run that ends on `authentication` spends no repair round, is no dead run to park, and ends no review of the head
   it was launched on.
-- The tick records `wave.paused` with the reason `client_login` and no `resume_at` for the wave of such a run, once,
-  and writes on stderr `brigade tick: the wave <wave> paused: the login of its AI client is lost; sign in to the
+- The tick records `wave.parked` with the reason `client_login` for the wave of such a run, once,
+  and writes on stderr `brigade tick: the wave <wave> parked: the login of its AI client is lost; sign in to the
   client again, then run brigade wave resume <wave>`. Until then it plans no action on the task of that run.
 - Once `brigade wave resume <wave>` records `wave.resumed` with the reason `client_login`, the next tick launches the
   task again from the state it holds: a build run anew for a task `running`, a repair for a task `fixing`, a review for
-  a task `verifying`. A run that fails to authenticate after the resume pauses the wave again.
+  a task `verifying`. A run that fails to authenticate after the resume parks the wave again.
 
 </details>
 
@@ -369,7 +371,7 @@ dies before it records a `run.finished` does.
 <details><summary><code>brigade scheduler status</code> in detail</summary>
 
 It reports the scheduler installed or `none`, its unit files or cron line, the next activation of the timer, the last
-tick read from the heartbeat, the paused waves with their reason and their `resume_at`, and the parked tasks of the
+tick read from the heartbeat, the parked and blocked waves with their reason and their `resume_at`, and the parked tasks of the
 open waves with their wave and their reason; it resumes no wave. It exits 1 when the last tick is older than
 `tick_stale_after`, or when no tick ever ran while a scheduler is installed, and 0 otherwise.
 

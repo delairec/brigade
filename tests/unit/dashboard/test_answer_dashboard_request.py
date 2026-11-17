@@ -106,6 +106,7 @@ class AnswerDashboardRequestOfAnApiRouteTest(unittest.TestCase):
         rows = [
             ("/api/waves", ("wave", "list", "--json")),
             ("/api/waves/w4", ("wave", "show", "--json", "w4")),
+            ("/api/inbox/disk_r2", ("inbox", "show", "--json", "disk_r2")),
             ("/api/inbox", ("inbox", "list", "--json")),
             ("/api/ledger", ("ledger", "--json")),
             ("/api/status", ("status", "--json")),
@@ -117,10 +118,10 @@ class AnswerDashboardRequestOfAnApiRouteTest(unittest.TestCase):
                 ("corpus", "--ref=main", "--type=TASK", "--field=STATUS", "--entity=@TASK.B30", "--json", "oak"),
             ),
             ("/api/corpus", ("project", "list", "--json")),
-            ("/api/reports", ("reports", "list", "--json")),
-            ("/api/reports/oak_w3", ("reports", "show", "--json", "oak_w3")),
-            ("/api/runs", ("runs", "list", "--json")),
-            ("/api/runs/20261031T135554Z-513a4f", ("runs", "show", "--json", "20261031T135554Z-513a4f")),
+            ("/api/reports", ("report", "list", "--json")),
+            ("/api/reports/oak_w3", ("report", "show", "--json", "oak_w3")),
+            ("/api/runs", ("run", "list", "--json")),
+            ("/api/runs/20261031T135554Z-513a4f", ("run", "show", "--json", "20261031T135554Z-513a4f")),
         ]
         for target, arguments in rows:
             with self.subTest(target=target):
@@ -313,7 +314,7 @@ class AnswerDashboardRequestOfTheInboxViewTest(unittest.TestCase):
         runner = ScriptedProcessRunner(
             {
                 (PYTHON, ENTRY_POINT, "inbox", "list", "--json"): ProcessAnswer(
-                    stdout='{"schema_version": 1, "signals": [], "families": [], "patterns": []}\n'
+                    stdout='{"schema_version": 1, "signals": [], "families": [], "patterns": [], "answers": []}\n'
                 )
             }
         )
@@ -356,16 +357,14 @@ INBOX_HOLDING_A_NOTE_AND_A_PATTERN = (
 HOME = (
     '{"schema_version": 1, "projects": [{"name": "oak", "paused": false}], "waves": [], "inbox": {"new_signals": 0, "scans": []},'
     ' "quota": {"window_hours": 5, "usage": {"input_tokens": 0, "output_tokens": 0, "cache_creation_input_tokens": 0,'
-    ' "cache_read_input_tokens": 0}, "runs_without_usage": 0, "paused_waves": []}, "last_tick": null, "studies": []}\n'
+    ' "cache_read_input_tokens": 0}, "runs_without_usage": 0, "blocked_waves": []}, "last_tick": null, "studies": [], "orders": []}\n'
 )
 WAVE_W4_SHOWN = (
     '{"schema_version": 1, "wave": "w4", "project": "oak", "branch": "integration/w4", "started_at":'
     ' "2026-10-19T07:00:00Z", "last_event": "task.parked", "pull_request": null, "tasks": [{"task": "B28",'
-    ' "state": "parked", "pull_request": null, "run": "r28", "reason": "blocked"}]}\n'
-)
-WAVE_W4_LEDGER = (
-    '{"view": "wave", "wave": "w4", "rounds_by_task": {}, "steps_by_task": {"B28": 12}, "timeline":'
-    ' [{"at": "2026-10-19T07:00:00Z", "event": "wave.started", "fields": {"wave": "w4"}}]}\n'
+    ' "state": "parked", "pull_request": null, "run": "r28", "reason": "blocked"}], "ledger": {"view": "wave",'
+    ' "wave": "w4", "rounds_by_task": {}, "turns_by_task": {"B28": 12}, "events":'
+    ' [{"at": "2026-10-19T07:00:00Z", "event": "wave.started", "fields": {"wave": "w4"}}]}}\n'
 )
 
 
@@ -501,8 +500,8 @@ class AnswerDashboardRequestOfAReportNoListingNamesTest(unittest.TestCase):
         # Arrange
         runner = ScriptedProcessRunner(
             {
-                (PYTHON, ENTRY_POINT, "reports", "show"): ProcessAnswer(exit_code=1, stderr="no report oak_w9\n"),
-                (PYTHON, ENTRY_POINT, "reports", "list"): ProcessAnswer(stdout='{"schema_version": 1, "reports": []}'),
+                (PYTHON, ENTRY_POINT, "report", "show"): ProcessAnswer(exit_code=1, stderr="no report oak_w9\n"),
+                (PYTHON, ENTRY_POINT, "report", "list"): ProcessAnswer(stdout='{"schema_version": 1, "reports": []}'),
             }
         )
 
@@ -518,7 +517,7 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
         # Arrange
         listed = '{"schema_version": 1, "reports": []}'
         runner = ScriptedProcessRunner(
-            {(PYTHON, ENTRY_POINT, "reports", "list", "--json"): ProcessAnswer(stdout=listed)}
+            {(PYTHON, ENTRY_POINT, "report", "list", "--json"): ProcessAnswer(stdout=listed)}
         )
 
         # Act
@@ -536,7 +535,7 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
             ' "type": "REPORT", "fields": [{"name": "WAVE", "value": "oak_w3"}]}}'
         )
         runner = ScriptedProcessRunner(
-            {(PYTHON, ENTRY_POINT, "reports", "show", "--json", "oak_w3"): ProcessAnswer(stdout=shown)}
+            {(PYTHON, ENTRY_POINT, "report", "show", "--json", "oak_w3"): ProcessAnswer(stdout=shown)}
         )
 
         # Act
@@ -571,7 +570,7 @@ class AnswerDashboardRequestOfTheLedgerViewTest(unittest.TestCase):
                 [
                     (PYTHON, ENTRY_POINT, "ledger", "--json"),
                     (PYTHON, ENTRY_POINT, "ledger", "budgets", "--json"),
-                    (PYTHON, ENTRY_POINT, "ledger", "--wave=w4", "--json"),
+                    (PYTHON, ENTRY_POINT, "wave", "show", "--json", "--events", "w4"),
                     (
                         PYTHON,
                         ENTRY_POINT,
@@ -591,7 +590,7 @@ class AnswerDashboardRequestOfTheLedgerViewTest(unittest.TestCase):
                 [
                     (PYTHON, ENTRY_POINT, "ledger", "--json"),
                     (PYTHON, ENTRY_POINT, "ledger", "budgets", "--json"),
-                    (PYTHON, ENTRY_POINT, "ledger", "--wave=w4", "--json"),
+                    (PYTHON, ENTRY_POINT, "wave", "show", "--json", "--events", "w4"),
                     (
                         PYTHON,
                         ENTRY_POINT,
@@ -610,7 +609,7 @@ class AnswerDashboardRequestOfTheLedgerViewTest(unittest.TestCase):
                     {
                         (PYTHON, ENTRY_POINT, "ledger", "--json"): overview,
                         (PYTHON, ENTRY_POINT, "ledger", "budgets", "--json"): budgets,
-                        (PYTHON, ENTRY_POINT, "ledger", "--wave=w4"): refused,
+                        (PYTHON, ENTRY_POINT, "wave", "show", "--json", "--events", "w4"): refused,
                         (PYTHON, ENTRY_POINT, "ledger", "compare"): refused,
                     }
                 )
@@ -707,13 +706,10 @@ class AnswerDashboardRequestOfTheHomeViewTest(unittest.TestCase):
 
 
 class AnswerDashboardRequestOfTheWaveViewTest(unittest.TestCase):
-    def test_should_render_the_wave_from_its_show_and_its_ledger(self):
+    def test_should_render_the_wave_from_its_show_and_its_events(self):
         # Arrange
         runner = ScriptedProcessRunner(
-            {
-                (PYTHON, ENTRY_POINT, "wave", "show", "--json", "w4"): ProcessAnswer(stdout=WAVE_W4_SHOWN),
-                (PYTHON, ENTRY_POINT, "ledger", "--json", "--wave=w4"): ProcessAnswer(stdout=WAVE_W4_LEDGER),
-            }
+            {(PYTHON, ENTRY_POINT, "wave", "show", "--json", "--events", "w4"): ProcessAnswer(stdout=WAVE_W4_SHOWN)}
         )
 
         # Act
@@ -721,32 +717,8 @@ class AnswerDashboardRequestOfTheWaveViewTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(response.status, 200)
-        self.assertIn(b"<li>B28, pull request -, run r28, 0 rounds, 12 steps, blocked", response.body)
+        self.assertIn(b"<li>B28, pull request -, run r28, 0 rounds, 12 turns, blocked", response.body)
         self.assertIn(b"<li>2026-10-19T07:00:00Z wave.started</li>", response.body)
-
-    def test_should_render_the_error_of_its_ledger_under_the_status_of_its_show(self):
-        # Arrange
-        runner = ScriptedProcessRunner(
-            {
-                (PYTHON, ENTRY_POINT, "wave", "show", "--json", "w4"): ProcessAnswer(stdout=WAVE_W4_SHOWN),
-                (PYTHON, ENTRY_POINT, "ledger", "--json", "--wave=w4"): ProcessAnswer(
-                    exit_code=1, stderr="the ledger is unreadable\n"
-                ),
-            }
-        )
-
-        # Act
-        response = answer_get("/views/waves/w4", create_test_runtime(run_process=runner.run))
-
-        # Assert
-        self.assertEqual(
-            response,
-            DashboardResponse(
-                status=200,
-                content_type="text/html; charset=utf-8",
-                body=b"<dl><dt>error</dt><dd>the ledger is unreadable\n</dd></dl>",
-            ),
-        )
 
 
 class AnswerDashboardRequestOfAMethodNeitherReadingNorChangingStateTest(unittest.TestCase):
@@ -764,13 +736,13 @@ class AnswerDashboardRequestOfAMethodNeitherReadingNorChangingStateTest(unittest
         )
 
 
-RUN_LIST = (PYTHON, ENTRY_POINT, "runs", "list", "--json")
+RUN_LIST = (PYTHON, ENTRY_POINT, "run", "list", "--json")
 NO_RUN = '{"schema_version": 1, "runs": [], "skipped": []}\n'
 RUN_R1_SHOWN = (
     '{"schema_version": 1, "run": {"run": "r1", "procedure": "build-task", "slot": "build", "role": "ada",'
     ' "project": "oak", "worktree": "/srv/oak/B94", "state": "running", "outcome": null, "wave": null,'
-    ' "task": null, "message": null}, "segments": [], "journal": null,'
-    ' "progress": {"text": "STEP s1 <read>\\n", "entities": null}}\n'
+    ' "task": null, "message": null}, "segments": [], "log": null,'
+    ' "progress": {"text": "ENTRY e1 <read>\\n", "entities": null}}\n'
 )
 
 
@@ -779,8 +751,8 @@ class AnswerDashboardRequestOfARunNoListingNamesTest(unittest.TestCase):
         # Arrange
         runner = ScriptedProcessRunner(
             {
-                (PYTHON, ENTRY_POINT, "runs", "show"): ProcessAnswer(
-                    exit_code=1, stderr="brigade runs show: no run r9\n"
+                (PYTHON, ENTRY_POINT, "run", "show"): ProcessAnswer(
+                    exit_code=1, stderr="brigade run show: no run r9\n"
                 ),
                 RUN_LIST: ProcessAnswer(stdout=NO_RUN),
             }
@@ -809,7 +781,7 @@ class AnswerDashboardRequestOfTheRunsViewsTest(unittest.TestCase):
     def test_should_render_the_run_asked_with_its_progress(self):
         # Arrange
         runner = ScriptedProcessRunner(
-            {(PYTHON, ENTRY_POINT, "runs", "show", "--json", "r1"): ProcessAnswer(stdout=RUN_R1_SHOWN)}
+            {(PYTHON, ENTRY_POINT, "run", "show", "--json", "r1"): ProcessAnswer(stdout=RUN_R1_SHOWN)}
         )
 
         # Act
@@ -817,14 +789,14 @@ class AnswerDashboardRequestOfTheRunsViewsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(response.status, 200)
-        self.assertIn(b"<h3>Progress</h3><pre>STEP s1 &lt;read&gt;\n</pre>", response.body)
+        self.assertIn(b"<h3>Progress</h3><pre>ENTRY e1 &lt;read&gt;\n</pre>", response.body)
 
     def test_should_render_the_error_of_a_run_no_listing_names(self):
         # Arrange
         runner = ScriptedProcessRunner(
             {
-                (PYTHON, ENTRY_POINT, "runs", "show"): ProcessAnswer(
-                    exit_code=1, stderr="brigade runs show: no run r9\n"
+                (PYTHON, ENTRY_POINT, "run", "show"): ProcessAnswer(
+                    exit_code=1, stderr="brigade run show: no run r9\n"
                 ),
                 RUN_LIST: ProcessAnswer(stdout=NO_RUN),
             }
@@ -835,4 +807,73 @@ class AnswerDashboardRequestOfTheRunsViewsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(response.status, 404)
-        self.assertEqual(response.body, b"<dl><dt>error</dt><dd>brigade runs show: no run r9\n</dd></dl>")
+        self.assertEqual(response.body, b"<dl><dt>error</dt><dd>brigade run show: no run r9\n</dd></dl>")
+
+
+INBOX_HOLDING_A_NOTE_AND_A_STUDY_ANSWER = (
+    '{"schema_version": 1, "signals": [{"id": "a4a5f464", "fingerprint": "note:474fa40ae4db", "kind": "note",'
+    ' "project": "oak", "count": 1, "age_s": 60, "status": "new"}], "families": [], "patterns": [],'
+    ' "answers": [{"id": "disk_r2", "study": "disk", "project": "oak"}]}\n'
+)
+STUDY_ANSWER_DISK_R2_SHOWN = (
+    '{"schema_version": 1, "answer": {"id": "disk_r2", "study": "disk", "project": "oak", "type": "ANSWER",'
+    ' "fields": [{"name": "STUDY", "value": "disk"}, {"name": "SUMMARY", "value": "the disk <fills>"}]}}\n'
+)
+
+
+class AnswerDashboardRequestOfAnInboxItemTest(unittest.TestCase):
+    def test_should_render_a_study_answer_under_its_title_with_its_fields(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {
+                (PYTHON, ENTRY_POINT, "inbox", "show", "--json", "disk_r2"): ProcessAnswer(
+                    stdout=STUDY_ANSWER_DISK_R2_SHOWN
+                )
+            }
+        )
+
+        # Act
+        response = answer_get("/views/inbox/disk_r2", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(
+            response,
+            DashboardResponse(
+                status=200,
+                content_type="text/html; charset=utf-8",
+                body=b"<h2>study-answer disk_r2</h2>"
+                b"<dl><dt>STUDY</dt><dd>disk</dd><dt>SUMMARY</dt><dd>the disk &lt;fills&gt;</dd></dl>",
+            ),
+        )
+
+    def test_should_answer_not_found_for_an_id_the_inbox_lists_neither_as_a_signal_nor_as_a_study_answer(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {
+                (PYTHON, ENTRY_POINT, "inbox", "show"): ProcessAnswer(exit_code=1, stderr="no signal zz99\n"),
+                INBOX_LIST: ProcessAnswer(stdout=INBOX_HOLDING_A_NOTE_AND_A_STUDY_ANSWER),
+            }
+        )
+
+        # Act
+        response = answer_get("/api/inbox/zz99", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(response.status, 404)
+
+    def test_should_answer_a_server_error_for_a_signal_or_a_study_answer_the_inbox_lists(self):
+        # Arrange
+        for item in ("a4a5f464", "disk_r2"):
+            with self.subTest(item=item):
+                runner = ScriptedProcessRunner(
+                    {
+                        (PYTHON, ENTRY_POINT, "inbox", "show"): ProcessAnswer(exit_code=1, stderr="unreadable\n"),
+                        INBOX_LIST: ProcessAnswer(stdout=INBOX_HOLDING_A_NOTE_AND_A_STUDY_ANSWER),
+                    }
+                )
+
+                # Act
+                response = answer_get(f"/api/inbox/{item}", create_test_runtime(run_process=runner.run))
+
+                # Assert
+                self.assertEqual(response.status, 500)

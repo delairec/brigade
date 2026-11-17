@@ -6,10 +6,12 @@ from brigade.commands._read_forge_environment import ForgeSlot, read_forge_envir
 from brigade.corpus.prepare_tree import Tree
 from brigade.corpus.read_entities import Entity, read_entities
 from brigade.git.describe_merge_command import describe_merge_command
+from brigade.ledger.describe_wave import describe_wave
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.milestone_reported import MilestoneReported
-from brigade.ledger.read_ledger import read_ledger
+from brigade.ledger.read_ledger import LedgerReading, read_ledger
+from brigade.ledger.render_wave_lines import render_wave_lines
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_pr_opened import TaskPrOpened
@@ -49,6 +51,7 @@ AUTO_MERGE_FIELD = "AUTO_MERGE"
 NO_AUTO_MERGE = "none"
 NO_POLICY = None
 VERIFIED_STATE = "verified"
+EVENTS_KEY = "ledger"
 
 
 def _show(value) -> str:
@@ -64,7 +67,8 @@ def _render_text(document: dict) -> str:
     )
     commands = (*document["task_merge_commands"], document["merge_command"])
     merges = [f"to merge: {command}" for command in commands if command is not None]
-    return "\n".join([heading, render_table(TASK_HEADER, rows), *merges])
+    ledger = render_wave_lines(document["ledger"]) if EVENTS_KEY in document else []
+    return "\n".join([heading, render_table(TASK_HEADER, rows), *merges, *ledger])
 
 
 def _is_explained(event) -> bool:
@@ -138,8 +142,13 @@ def _read_task_merge_commands(
     return [describe_merge_command(target, name_branch_of_task(of_wave[task])) for task in verified]
 
 
+def _describe_events(reading: LedgerReading, request: argparse.Namespace) -> dict:
+    return {EVENTS_KEY: describe_wave(reading, request.wave)} if request.events else {}
+
+
 def wave_show(request: argparse.Namespace, runtime: Runtime) -> dict:
-    entries = read_ledger(runtime.paths.state_root).entries
+    reading = read_ledger(runtime.paths.state_root)
+    entries = reading.entries
     summary = require_wave_summary(entries, request.wave)
     events = tuple(entry.event for entry in entries)
     started = summary.started
@@ -155,13 +164,23 @@ def wave_show(request: argparse.Namespace, runtime: Runtime) -> dict:
         "tasks": [_describe_task(events, states, started.wave, task) for task in started.tasks],
         "merge_command": _read_merge_command(runtime, entries, started),
         "task_merge_commands": _read_task_merge_commands(runtime, entries, started, states),
+        **_describe_events(reading, request),
     }
 
 
 COMMAND = Command(
     path=("wave", "show"),
     help="print a wave and each of its tasks with its state, its pull request and its run",
-    arguments=(Argument(("wave",), {"help": "the name of a wave of the ledger"}),),
+    arguments=(
+        Argument(("wave",), {"help": "the name of a wave of the ledger"}),
+        Argument(
+            ("--events",),
+            {
+                "action": "store_true",
+                "help": "add its cost, tokens, turns, halts, handovers, parked tasks and events in the order recorded",
+            },
+        ),
+    ),
     run=wave_show,
     render_text=_render_text,
 )

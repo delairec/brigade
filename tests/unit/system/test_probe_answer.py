@@ -7,7 +7,7 @@ PROBE_OF_A_CLIENT_EXECUTABLE = {
     "client": "claude-code",
     "version_argv": ["claude", "--version"],
     "operations": ["probe", "launch", "result"],
-    "features": ["step_count", "tool_grants"],
+    "features": ["turn_count", "tool_grants"],
     "models": {"standard": "opus"},
 }
 PROBE_OF_NO_CLIENT_EXECUTABLE = {
@@ -52,7 +52,7 @@ class ProbeAnswerTest(unittest.TestCase):
                 "client": "claude-code",
                 "version_argv": ["claude", "--version"],
                 "operations": ["probe", "launch", "result"],
-                "features": ["step_count", "tool_grants"],
+                "features": ["turn_count", "tool_grants"],
                 "models": {"standard": "opus"},
             },
         )

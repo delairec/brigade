@@ -14,7 +14,7 @@ from tests.value_matchers import PatternMatcher
 
 SHA256_DIGEST = PatternMatcher("^[0-9a-f]{64}$")
 NO_EDIT_TOOL_NAMED = {
-    "steps_to_first_edit": "the client names no edit tool",
+    "turns_to_first_edit": "the client names no edit tool",
     "tokens_to_first_edit": "the client names no edit tool",
 }
 
@@ -22,7 +22,7 @@ SUCCESSFUL_CHECK_RUN = {"__typename": "CheckRun", "name": "tests", "status": "CO
 FIVE_HOUR_LIMIT_RESULT = {
     **DONE_RESULT,
     "outcome": "failed",
-    "steps": 7,
+    "turns": 7,
     "error_class": "rate_limit",
     "message": "You've hit your 5-hour limit",
 }
@@ -35,7 +35,7 @@ S3_IN_CHANGES_REQUESTED = (
     ' "task": "S3", "wave": "shop_w1", "branch": "{task_branch}", "pr": 12, "login": "octo-bot"}}\n'
     '{{"schema_version": 1, "ts": "2026-10-13T09:15:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
     ' "state": "pr_open"}}\n'
-    '{{"schema_version": 1, "ts": "2026-10-13T09:20:00Z", "event": "task.preflighted", "project": "shop",'
+    '{{"schema_version": 2, "ts": "2026-10-13T09:20:00Z", "event": "task.preflighted", "project": "shop",'
     ' "wave": "shop_w1", "task": "S3", "pr": 12, "head": "{head}", "checks": []}}\n'
     '{{"schema_version": 1, "ts": "2026-10-13T09:20:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
     ' "state": "verifying"}}\n'
@@ -108,7 +108,7 @@ class BrigadeTickOfARemediationCutByARateLimitTest(LaunchingTickTestCase):
                     "event": "task.state",
                     "wave": "shop_w1",
                     "task": "S3",
-                    "state": "paused:quota",
+                    "state": "blocked:quota",
                 },
                 {"schema_version": 1, "ts": ANY, "event": "wave.resumed", "wave": "shop_w1", "reason": "quota"},
                 {
@@ -121,7 +121,7 @@ class BrigadeTickOfARemediationCutByARateLimitTest(LaunchingTickTestCase):
                     "reason": "resumed after the quota reset",
                 },
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": ANY,
                     "event": "run.finished",
                     "run": ANY,
@@ -132,8 +132,8 @@ class BrigadeTickOfARemediationCutByARateLimitTest(LaunchingTickTestCase):
                     "client": "fake",
                     "project": "shop",
                     "session": "fake-session",
-                    "main_steps": 12,
-                    "total_steps": None,
+                    "main_turns": 12,
+                    "total_turns": None,
                     "duration_ms": ANY,
                     "usage": ANY,
                     "outcome": "done",

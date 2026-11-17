@@ -6,10 +6,10 @@ capabilities: read, shell
 Answer the question of one study from the evidence its collectors gathered, and nothing else: the collectors already
 collected, and a fact they did not gather is a gap the answer names, not a search you run.
 
-Arguments, which the Arguments section names: `study`, the STUDY entity of the operational corpus, and `run`, the
+Arguments, which the Arguments section names: `study`, the STUDY entity of the registry, and `run`, the
 run of that study you judge.
 
-**Budget**: the steps the Budget section names, the cap of your role. On reaching it, stop and
+**Budget**: the turns the Budget section names, the cap of your role. On reaching it, stop and
 summarise what is done, what is not, and what the next run picks up.
 
 **Progress**: the file the Progress file section names. Read it first: holding an entry, it is an interrupted run to
@@ -19,7 +19,7 @@ resume at the step it names. Append one entry after each step below.
 
 `brigade study context <run> --json` prints the question, each collector's summary with the path of its full
 document, the answer entity with the fields brigade filled, the prose fields left to you, and the schema of its type.
-Read a full document only where its summary does not settle a point of the answer.
+Read a collection only where its summary does not settle a point of the answer.
 
 ## 2. Write the answer
 

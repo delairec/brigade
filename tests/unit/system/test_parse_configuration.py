@@ -3,7 +3,8 @@ import unittest
 from pathlib import Path
 
 from brigade.errors import BrigadeError
-from brigade.system.parse_configuration import Configuration, ConfigurationMissing, ReasoningRow, parse_configuration
+from brigade.system.parse_configuration import Configuration, ReasoningRow, parse_configuration
+from brigade.system.read_configuration_document import ConfigurationMissing
 
 
 class ReadConfigurationTestCase(unittest.TestCase):
@@ -30,7 +31,7 @@ class ReadConfigurationWhenEveryKeyIsCommentedOutTest(ReadConfigurationTestCase)
                 client=None,
                 scheduler=None,
                 instructions=None,
-                document="awawa",
+                progress_form="awawa",
                 refs_cache_mb=1024,
                 reasoning={},
                 clients={},
@@ -49,7 +50,7 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
             'client = "claude-code"\n'
             'scheduler = "cron"\n'
             'instructions = "/srv/instructions"\n'
-            'document = "markdown"\n'
+            'progress_form = "markdown"\n'
             'ide_link = "idea://open?file={path}&line={line}"\n'
             "refs_cache_mb = 2048\n"
             "forge_attempts = 5\n"
@@ -81,7 +82,7 @@ class ReadConfigurationWhenEveryKeyIsSetTest(ReadConfigurationTestCase):
                 client="claude-code",
                 scheduler="cron",
                 instructions="/srv/instructions",
-                document="markdown",
+                progress_form="markdown",
                 ide_link="idea://open?file={path}&line={line}",
                 refs_cache_mb=2048,
                 reasoning={"deep": ReasoningRow(model="opus", effort="max")},
@@ -113,6 +114,11 @@ class ReadConfigurationWhenAKeyIsWrongTest(ReadConfigurationTestCase):
         rows = [
             ("an unknown key", "frobnicate = 1\n", "unknown key frobnicate"),
             (
+                "the seconds per step the key seconds_per_turn replaced",
+                "seconds_per_step = 30\n",
+                "the key seconds_per_step is now named seconds_per_turn",
+            ),
+            (
                 "an unknown reasoning level",
                 '[reasoning.ultra]\nmodel = "opus"\neffort = "max"\n',
                 "unknown key reasoning.ultra",
@@ -123,7 +129,11 @@ class ReadConfigurationWhenAKeyIsWrongTest(ReadConfigurationTestCase):
                 "unknown key reasoning.deep.temperature",
             ),
             ("a client of the wrong type", "client = 1\n", "client is an integer, not a string,"),
-            ("a document of the wrong type", "document = true\n", "document is a boolean, not a string,"),
+            (
+                "a progress form of the wrong type",
+                "progress_form = true\n",
+                "progress_form is a boolean, not a string,",
+            ),
             (
                 "the forge account the table forge_accounts replaced",
                 'forge_account = "octo-bot"\n',
@@ -238,7 +248,7 @@ class ReadConfigurationWhenAKeyIsWrongTest(ReadConfigurationTestCase):
         self.assertIn(f"{self.path} is not valid TOML: ", str(raised.exception))
 
 
-class ReadConfigurationOfTheSecondsPerStepTest(ReadConfigurationTestCase):
+class ReadConfigurationOfTheSecondsPerTurnTest(ReadConfigurationTestCase):
     def test_should_answer_30_when_the_key_is_absent(self):
         # Arrange
         self.path.write_text('client = "fake"\n')
@@ -247,24 +257,24 @@ class ReadConfigurationOfTheSecondsPerStepTest(ReadConfigurationTestCase):
         configuration = parse_configuration(self.path)
 
         # Assert
-        self.assertEqual(configuration.seconds_per_step, 30)
+        self.assertEqual(configuration.seconds_per_turn, 30)
 
     def test_should_answer_the_number_the_key_sets(self):
         # Arrange
-        self.path.write_text("seconds_per_step = 0.5\n")
+        self.path.write_text("seconds_per_turn = 0.5\n")
 
         # Act
         configuration = parse_configuration(self.path)
 
         # Assert
-        self.assertEqual(configuration.seconds_per_step, 0.5)
+        self.assertEqual(configuration.seconds_per_turn, 0.5)
 
     def test_should_refuse_a_value_that_is_no_positive_number_naming_the_key_and_the_file(self):
         # Arrange
         rows = [
-            ("a string", 'seconds_per_step = "30"\n', "seconds_per_step is a string, not a number,"),
-            ("zero", "seconds_per_step = 0\n", "seconds_per_step is 0, not a positive number,"),
-            ("a boolean", "seconds_per_step = true\n", "seconds_per_step is a boolean, not a number,"),
+            ("a string", 'seconds_per_turn = "30"\n', "seconds_per_turn is a string, not a number,"),
+            ("zero", "seconds_per_turn = 0\n", "seconds_per_turn is 0, not a positive number,"),
+            ("a boolean", "seconds_per_turn = true\n", "seconds_per_turn is a boolean, not a number,"),
         ]
         for case, content, expected_problem in rows:
             with self.subTest(case=case):
@@ -327,7 +337,7 @@ class ReadConfigurationOfTheTickStaleAfterTest(ReadConfigurationTestCase):
         self.assertEqual(configuration.tick_stale_after, 30)
 
 
-class ReadConfigurationOfTheJournalPollTest(ReadConfigurationTestCase):
+class ReadConfigurationOfTheLogPollTest(ReadConfigurationTestCase):
     def test_should_answer_2_and_no_finding_when_the_key_is_absent(self):
         # Arrange
         self.path.write_text('client = "fake"\n')
@@ -336,25 +346,25 @@ class ReadConfigurationOfTheJournalPollTest(ReadConfigurationTestCase):
         configuration = parse_configuration(self.path)
 
         # Assert
-        self.assertEqual(configuration.journal_poll_s, 2)
+        self.assertEqual(configuration.log_poll_s, 2)
         self.assertEqual(configuration.findings, ())
 
     def test_should_answer_the_seconds_the_key_sets(self):
         # Arrange
-        self.path.write_text("journal_poll_s = 0.5\n")
+        self.path.write_text("log_poll_s = 0.5\n")
 
         # Act
         configuration = parse_configuration(self.path)
 
         # Assert
-        self.assertEqual(configuration.journal_poll_s, 0.5)
+        self.assertEqual(configuration.log_poll_s, 0.5)
 
     def test_should_keep_the_default_and_record_a_finding_naming_the_key_and_the_file(self):
         # Arrange
         rows = [
-            ("a string", 'journal_poll_s = "2"\n', "journal_poll_s is a string, not a positive number,"),
-            ("zero", "journal_poll_s = 0\n", "journal_poll_s is 0, not a positive number,"),
-            ("a boolean", "journal_poll_s = true\n", "journal_poll_s is a boolean, not a positive number,"),
+            ("a string", 'log_poll_s = "2"\n', "log_poll_s is a string, not a positive number,"),
+            ("zero", "log_poll_s = 0\n", "log_poll_s is 0, not a positive number,"),
+            ("a boolean", "log_poll_s = true\n", "log_poll_s is a boolean, not a positive number,"),
         ]
         for case, content, expected_problem in rows:
             with self.subTest(case=case):
@@ -365,7 +375,7 @@ class ReadConfigurationOfTheJournalPollTest(ReadConfigurationTestCase):
                 configuration = parse_configuration(self.path)
 
                 # Assert
-                self.assertEqual(configuration.journal_poll_s, 2)
+                self.assertEqual(configuration.log_poll_s, 2)
                 self.assertEqual(
                     configuration.findings, (f"{expected_problem} in {self.path}; the default of 2 s holds",)
                 )

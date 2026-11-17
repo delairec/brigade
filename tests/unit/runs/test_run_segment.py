@@ -108,7 +108,7 @@ class ClientDouble:
         return {
             "schema_version": 1,
             "outcome": "done",
-            "steps": 12,
+            "turns": 12,
             "usage": None,
             "session_id": "session-b73",
             "duration_ms": 4200,
@@ -188,7 +188,7 @@ class ClientAnsweringParseResultWithoutOutcomeDouble(ClientDouble):
         if operation == "parse-result":
             return {
                 "schema_version": 1,
-                "steps": 12,
+                "turns": 12,
                 "usage": None,
                 "session_id": "session-b73",
                 "duration_ms": 4200,
@@ -283,7 +283,7 @@ class ProcessReadingTheJournalAfterAPollDouble:
 
     def __init__(self, journal: Path):
         self._journal = journal
-        self._answers = [self._keep_running, self._read_the_journal]
+        self._answers = [self._keep_running, self._read_the_log]
         self.journal_while_running = None
 
     def wait(self, timeout: float) -> int:
@@ -292,7 +292,7 @@ class ProcessReadingTheJournalAfterAPollDouble:
     def _keep_running(self, timeout: float) -> int:
         raise subprocess.TimeoutExpired("double-client", timeout)
 
-    def _read_the_journal(self, _timeout: float) -> int:
+    def _read_the_log(self, _timeout: float) -> int:
         self.journal_while_running = _read_journal_records(self._journal)
         return 0
 
@@ -494,7 +494,9 @@ class RunSegmentTest(unittest.TestCase):
             run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
 
         # Assert
-        self.assertEqual(str(refusal.exception), "document plugin awawa answered describe_document: lacks the key text")
+        self.assertEqual(
+            str(refusal.exception), "progress_form plugin awawa answered describe_document: lacks the key text"
+        )
 
     def test_should_return_the_result_the_client_parses_from_what_the_process_wrote(self):
         # Arrange
@@ -529,7 +531,7 @@ class RunSegmentStepsTest(unittest.TestCase):
         record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
 
         # Assert
-        self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
+        self.assertEqual(record.counted_steps, SessionSteps(main_turns=3, total_turns=5))
 
     def test_should_locate_the_first_edit_of_the_session_among_the_edit_tools_of_the_client(self):
         # Arrange
@@ -689,7 +691,7 @@ class RunSegmentCutAtTheWallTimeLimitTest(unittest.TestCase):
             record.usage,
             TokenUsage(input_tokens=3, output_tokens=30, cache_creation_input_tokens=300, cache_read_input_tokens=3000),
         )
-        self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
+        self.assertEqual(record.counted_steps, SessionSteps(main_turns=3, total_turns=5))
         self.assertIsNone(record.uncounted)
         self.assertIsNone(record.cost_usd)
 
@@ -765,7 +767,7 @@ class RunSegmentJournalTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        self.journal = self.root / "state" / "runs" / "20261007T090000Z-b73a01" / "journal.jsonl"
+        self.journal = self.root / "state" / "runs" / "20261007T090000Z-b73a01" / "log.jsonl"
 
     def test_should_journal_one_raw_record_per_line_of_a_client_that_reads_no_actions(self):
         # Arrange
@@ -892,7 +894,7 @@ class RunSegmentJournalTest(unittest.TestCase):
             ],
         )
 
-    def test_should_name_the_journal_it_cannot_write(self):
+    def test_should_name_the_log_it_cannot_write(self):
         # Arrange
         plan = _create_plan(self.root, reads_actions=False)
         self.journal.mkdir(parents=True)
@@ -1073,7 +1075,7 @@ class RunSegmentStoppedWhileItsClientRunsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(record.session_id, plan.client_adapter.requests["launch-argv"]["session_id"])
-        self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
+        self.assertEqual(record.counted_steps, SessionSteps(main_turns=3, total_turns=5))
 
 
 class RunSegmentStoppedWhileItsJournalIsWrittenTest(unittest.TestCase):
@@ -1081,9 +1083,9 @@ class RunSegmentStoppedWhileItsJournalIsWrittenTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        self.journal = self.root / "state" / "runs" / "20261007T090000Z-b73a01" / "journal.jsonl"
+        self.journal = self.root / "state" / "runs" / "20261007T090000Z-b73a01" / "log.jsonl"
 
-    def test_should_keep_in_the_journal_the_lines_the_stop_arrived_on(self):
+    def test_should_keep_in_the_log_the_lines_the_stop_arrived_on(self):
         # Arrange
         plan = _create_plan(self.root, reads_actions=True, client_type=ClientStoppedWhileReadingActionsDouble)
 
@@ -1204,7 +1206,7 @@ class RunSegmentOfAnAdapterAnsweringOutsideItsContractTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(record.session_id, plan.client_adapter.requests["launch-argv"]["session_id"])
-        self.assertEqual(record.counted_steps, SessionSteps(main_steps=3, total_steps=5))
+        self.assertEqual(record.counted_steps, SessionSteps(main_turns=3, total_turns=5))
 
     def test_should_keep_the_time_measured_until_the_client_exited(self):
         # Arrange
@@ -1278,7 +1280,7 @@ class RunSegmentFilesTest(unittest.TestCase):
             " entry holds\n"
             "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
             "# Budget\n\n"
-            "132 steps, the cap of your role for this segment.\n\n"
+            "132 turns, the cap of your role for this segment.\n\n"
             "# End of segment\n\n"
             "End your final message on one of these lines: brigade-end: done once the work is delivered,"
             " brigade-end: handed_over when a next segment resumes it from the progress file,"

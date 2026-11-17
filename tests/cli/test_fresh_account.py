@@ -71,10 +71,10 @@ class BrigadeOnAFreshAccountFromTheBuiltArchiveTest(unittest.TestCase):
                     "fallback": "built-in roles and no instructions package",
                 },
                 {
-                    "name": "steps",
+                    "name": "turns",
                     "kind": "optional",
                     "state": "warning",
-                    "detail": "fake counts no steps: the budget is held on the clock and the run cut at its limit",
+                    "detail": "fake counts no turns: the budget is held on the clock and the run cut at its limit",
                     "fallback": "the wall-time limit of each run",
                 },
             ],

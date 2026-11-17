@@ -8,13 +8,13 @@ from unittest.mock import ANY
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
-from tests.cli.test_collect import install_executable
+from tests.cli.test_collector_run import install_executable
 from tests.list_entry_names import list_entry_names
 from tests.value_matchers import PatternMatcher
 
 SHA256_DIGEST = PatternMatcher("^[0-9a-f]{64}$")
 NO_EDIT_TOOL_NAMED = {
-    "steps_to_first_edit": "the client names no edit tool",
+    "turns_to_first_edit": "the client names no edit tool",
     "tokens_to_first_edit": "the client names no edit tool",
 }
 
@@ -140,7 +140,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         steps = self.runs / json.loads(completed.stdout)["run"] / "steps"
-        self.assertEqual(list_entry_names(steps), ["collect.json", "judge.json", "output.json"])
+        self.assertEqual(list_entry_names(steps), ["1-collect.json", "2-judge.json", "3-output.json"])
 
     def test_should_print_the_step_a_study_parked_at(self):
         # Arrange
@@ -151,7 +151,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 1)
-        self.assertRegex(completed.stdout, r"^@STUDY\.trees run \d{8}T\d{6}Z-[0-9a-f]{6} parked at collect: ")
+        self.assertRegex(completed.stdout, r"^@STUDY\.trees run \d{8}T\d{6}Z-[0-9a-f]{6} parked at 1-collect: ")
 
     def test_should_print_the_run_of_a_study_recorded_with_no_schedule(self):
         # Act
@@ -178,7 +178,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
         recordings.mkdir()
         (recordings / "reporter.json").write_text(json.dumps(DONE_RESULT))
         self.machine.write_configuration(
-            f'client = "fake"\ndocument = "markdown"\n[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}'
+            f'client = "fake"\nprogress_form = "markdown"\n[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}'
         )
         self.run_study(
             "new",
@@ -211,7 +211,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
                 "study": "weekly",
                 "run": study_run,
                 "state": "parked",
-                "step": "judge",
+                "step": "2-judge",
                 "reason": reason,
             },
         )
@@ -233,10 +233,10 @@ class BrigadeStudyRunTest(StudyRunTestCase):
                     "event": "step.done",
                     "kind": "study",
                     "run": study_run,
-                    "step": "collect",
+                    "step": "1-collect",
                 },
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": ANY,
                     "event": "run.finished",
                     "run": judging["run"],
@@ -247,8 +247,8 @@ class BrigadeStudyRunTest(StudyRunTestCase):
                     "client": "fake",
                     "project": "shop",
                     "session": "fake-session",
-                    "main_steps": 12,
-                    "total_steps": None,
+                    "main_turns": 12,
+                    "total_turns": None,
                     "duration_ms": ANY,
                     "usage": {
                         "input_tokens": 120,
@@ -268,7 +268,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
                         **NO_EDIT_TOOL_NAMED,
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
-                        "total_steps": "the client reads no transcript",
+                        "total_turns": "the client reads no transcript",
                         "error_class": "the run did not fail",
                     },
                     "cost_usd": 0.42,
@@ -279,7 +279,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
                     "event": "step.failed",
                     "kind": "study",
                     "run": study_run,
-                    "step": "judge",
+                    "step": "2-judge",
                     "reason": reason,
                 },
                 {
@@ -290,7 +290,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
                     "kind": "study",
                     "order": "weekly",
                     "run": study_run,
-                    "step": "judge",
+                    "step": "2-judge",
                     "reason": reason,
                 },
             ],
@@ -302,9 +302,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
 
         # Assert
         self.assertEqual(completed.returncode, 1)
-        self.assertEqual(
-            completed.stderr, "brigade study run: @STUDY.absent is not defined in the operational corpus\n"
-        )
+        self.assertEqual(completed.stderr, "brigade study run: @STUDY.absent is not defined in the registry\n")
 
 
 class BrigadeRunsPruneOfStudyRunsTest(StudyRunTestCase):
@@ -314,7 +312,7 @@ class BrigadeRunsPruneOfStudyRunsTest(StudyRunTestCase):
         done = json.loads(self.run_study("run", "trees", "--json").stdout)["run"]
 
         # Act
-        completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "runs", "prune", "--before", "2099-01-01")
+        completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "run", "prune", "--before", "2099-01-01")
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -343,7 +341,7 @@ class BrigadeStudyContextTest(StudyRunTestCase):
             "entity:ANSWER",
         )
         self.run_id = json.loads(self.run_study("run", "trees", "--json").stdout)["run"]
-        self.document = self.runs / self.run_id / "collectors" / "1" / "collect" / "shell" / "document.json"
+        self.document = self.runs / self.run_id / "collectors" / "1" / "collect" / "shell" / "collection.json"
 
     def test_should_present_the_schema_of_the_answer_type(self):
         # Act
@@ -366,10 +364,10 @@ class BrigadeStudyContextTest(StudyRunTestCase):
             '\t\tDESC "one per collector, its name, filled by the CLI"\n'
             "\t\tFIELD SUMMARY string\n"
             "\t\t\tREQUIRED\n"
-            '\t\t\tDESC "the summary of its document, as JSON"\n'
-            "\t\tFIELD DOCUMENT string\n"
+            '\t\t\tDESC "the summary of its collection, as JSON"\n'
+            "\t\tFIELD COLLECTION string\n"
             "\t\t\tREQUIRED\n"
-            '\t\t\tDESC "the path of its full document"\n'
+            '\t\t\tDESC "the path of its collection"\n'
             "\tFIELD NARRATIVE string\n"
             "\t\tREPEATABLE\n"
             '\t\tDESC "filled by the judging slot"\n'
@@ -409,7 +407,7 @@ class BrigadeStudyAnswerTest(StudyRunTestCase):
         recordings.mkdir()
         (recordings / "reporter.json").write_text(json.dumps(DONE_RESULT))
         self.machine.write_configuration(
-            f'client = "fake"\ndocument = "markdown"\n[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}'
+            f'client = "fake"\nprogress_form = "markdown"\n[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}'
         )
         self.run_study(
             "new",
@@ -426,7 +424,7 @@ class BrigadeStudyAnswerTest(StudyRunTestCase):
             "entity:ANSWER",
         )
         self.run_id = json.loads(self.run_study("run", "weekly", "--json").stdout)["run"]
-        self.document = self.runs / self.run_id / "collectors" / "1" / "collect" / "shell" / "document.json"
+        self.document = self.runs / self.run_id / "collectors" / "1" / "collect" / "shell" / "collection.json"
         self.answer_file = Path(self.root.name) / "answer.awawa"
 
     def write_answer(self, summary: str, prose: str) -> None:
@@ -436,7 +434,7 @@ class BrigadeStudyAnswerTest(StudyRunTestCase):
             f'\tRUN "{self.run_id}"\n'
             '\tCOLLECTED "shell"\n'
             f"\t\tSUMMARY {summary}\n"
-            f'\t\tDOCUMENT "{self.document}"\n'
+            f'\t\tCOLLECTION "{self.document}"\n'
             f"{prose}"
         )
 

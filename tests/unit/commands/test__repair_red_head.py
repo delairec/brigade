@@ -11,7 +11,7 @@ from brigade.tick.head_proof import HeadProof, HoldingHead
 from tests.unit.commands.command_runtime import create_corpus_double, write_operational_corpus
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
-    STEP_COUNTING_PROBE,
+    TURN_COUNTING_PROBE,
     create_plugin_resolution,
     spawn_as_this_process,
 )
@@ -52,7 +52,7 @@ class RepairRedHeadTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=run_process,
             spawn_process=spawn_as_this_process,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
+            resolve_plugin=create_plugin_resolution(TURN_COUNTING_PROBE),
         )
 
     def _list_runs(self) -> list:

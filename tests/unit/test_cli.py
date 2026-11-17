@@ -13,13 +13,13 @@ from brigade.commands.tick import LOCK_NAME
 from brigade.system.hold_lock import hold_lock
 
 ADAPTER_MATRIX = (
-    "| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour"
+    "| Supported client | Launch | Result | Resume | Transcripts | Actions | Turn count | Tool grants | Reset hour"
     " | Graceful stop |\n"
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
     "| claude-code | full | full | full | full | full | full | full | full | full |\n"
     "| vibe | full | full | fallback | full | fallback | full | full | fallback | fallback |\n"
     "\n"
-    "| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour"
+    "| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Turn count | Tool grants | Reset hour"
     " | Graceful stop |\n"
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
     "| fake | full | full | fallback | fallback | fallback | fallback | fallback | fallback | fallback |\n"
@@ -27,9 +27,9 @@ ADAPTER_MATRIX = (
     "Fallbacks:\n"
     "\n"
     "- no resume: a fresh launch from the progress file\n"
-    "- no transcripts: brigade's journal of the run\n"
+    "- no transcripts: brigade's log of the run\n"
     "- no actions: one raw record per line of the client's output\n"
-    "- no step count: steps null and the run held on the clock alone\n"
+    "- no turn count: turns null and the run held on the clock alone\n"
     "- no tool grants: the client's unattended mode and a disposable worktree for a reading slot\n"
     "- no reset hour: now plus thirty minutes\n"
     "- no graceful stop: the hard cut at the wall-time limit\n"
@@ -78,7 +78,7 @@ class MainHelpTest(MainTestCase):
 
         # Assert
         self.assertEqual(exit_code, 0)
-        self.assertRegex(page, r"\n    ledger +read the event journal")
+        self.assertRegex(page, r"\n    ledger +read the event ledger")
 
 
 class MainGroupHelpTest(MainTestCase):
@@ -95,23 +95,23 @@ class MainGroupHelpTest(MainTestCase):
             ("adapter", "probe", "answer probe, the request read on stdin"),
             ("adapter", "resume-argv", "answer resume-argv, the request read on stdin"),
             ("adapter", "transcripts", "answer transcripts, the request read on stdin"),
-            ("ledger", "budgets", "p50 and p90 steps per procedure over its last runs, and the step cap of each role"),
+            ("ledger", "budgets", "p50 and p90 turns per procedure over its last runs, and the turn cap of each role"),
             ("ledger", "compare", "two ranges of days against each other, or one range against reference figures"),
-            ("project", "add", "register a git repository in the operational corpus"),
+            ("project", "add", "register a git repository in the registry"),
             ("project", "list", "list every registered project"),
             ("project", "pause", "pause a project"),
             ("project", "resume", "resume a paused project"),
             ("project", "show", "print the fields of a project"),
-            ("roles", "lint", "check the built-in and the machine role files"),
-            ("roles", "list", "list the role, the source and the model of each slot"),
-            ("roles", "show", "print the role file a slot resolves to"),
-            ("runs", "list", "list every run with its state and outcome"),
-            ("runs", "show", "print the summary of a run, its segments and its progress, and with --log its journal"),
+            ("role", "lint", "check the built-in and the machine role files"),
+            ("role", "list", "list the role, the source and the model of each slot"),
+            ("role", "show", "print the role file a slot resolves to"),
+            ("run", "list", "list every run with its state and outcome"),
+            ("run", "show", "print the summary of a run, its segments and its progress, and with --log its log"),
             ("scheduler", "install", "install the scheduler config.toml names, or the default"),
             (
                 "scheduler",
                 "status",
-                "report the scheduler installed, whether its tick is stale, the paused waves and the parked tasks",
+                "report the scheduler installed, whether its tick is stale, the parked and blocked waves and the parked tasks",
             ),
         ]
         for group, action, expected_help in rows:
@@ -145,7 +145,7 @@ class MainVersionTest(MainTestCase):
 class MainOfACommandTest(MainTestCase):
     def test_should_print_the_document_of_the_command_as_json_when_asked(self):
         # Act
-        exit_code, stdout, _ = self.run_main(["processes", "list", "--json"])
+        exit_code, stdout, _ = self.run_main(["process", "list", "--json"])
 
         # Assert
         self.assertEqual(exit_code, 0)
@@ -153,18 +153,18 @@ class MainOfACommandTest(MainTestCase):
 
     def test_should_print_the_text_of_the_command(self):
         # Act
-        outcome = self.run_main(["processes", "list"])
+        outcome = self.run_main(["process", "list"])
 
         # Assert
         self.assertEqual(outcome, (0, "kind  id  instant  processes  failed\n", ""))
 
     def test_should_report_a_refusal_of_the_command_on_its_exit_code(self):
         # Act
-        exit_code, _, stderr = self.run_main(["runs", "show", "20261019T090000Z-c0ffee"])
+        exit_code, _, stderr = self.run_main(["run", "show", "20261019T090000Z-c0ffee"])
 
         # Assert
         self.assertEqual(exit_code, 1)
-        self.assertEqual(stderr, "brigade runs show: no run 20261019T090000Z-c0ffee\n")
+        self.assertEqual(stderr, "brigade run show: no run 20261019T090000Z-c0ffee\n")
 
 
 class MainOfACommandWithDiagnosticsTest(MainTestCase):
@@ -201,7 +201,7 @@ class MainOfACommandFailingUnexpectedlyTest(MainTestCase):
         (ticks / f"{tick_too_recent_to_expire}.jsonl").write_bytes(b"\xff\n")
 
         # Act
-        exit_code, _, stderr = self.run_main(["processes", "show", tick_too_recent_to_expire])
+        exit_code, _, stderr = self.run_main(["process", "show", tick_too_recent_to_expire])
 
         # Assert
         self.assertEqual(exit_code, 70)
@@ -246,21 +246,25 @@ class MainRefusalTest(MainTestCase):
             (["--version", "--frobnicate"], r"unrecognized arguments: --frobnicate\n$"),
             (["--json"], r"\nbrigade: error: no option given\n$"),
             (
-                ["runs"],
+                ["run"],
                 (
-                    r"^usage: brigade runs \[-h\] \[--json\] \[--verbose\] action \.\.\.\n"
-                    r"brigade runs: error: the following arguments are required: action\n$"
+                    r"^usage: brigade run \[-h\] \[--json\] \[--verbose\] action \.\.\.\n"
+                    r"brigade run: error: the following arguments are required: action\n$"
                 ),
             ),
             (
-                ["runs", "frobnicate"],
-                r"invalid choice: 'frobnicate' \(choose from '?list'?, '?prune'?, '?show'?, '?stop'?\)\n$",
+                ["run", "frobnicate"],
+                r"invalid choice: 'frobnicate' \(choose from '?list'?, '?prune'?, '?show'?, '?start'?, '?stop'?, '?stop-hook'?\)\n$",
             ),
             (["frobnicate"], r"invalid choice: 'frobnicate' \(choose from '?adapter'?, .+, '?wave'?\)\n$"),
-            (["runs", "show"], r"\nbrigade runs show: error: the following arguments are required: run\n$"),
+            (["run", "show"], r"\nbrigade run show: error: the following arguments are required: run\n$"),
             (
-                ["ledger", "--wave", "tidepool_w16", "--project", "tidepool"],
-                r"\nbrigade ledger: error: argument --project: not allowed with argument --wave\n$",
+                ["ledger", "--task", "TP146", "--project", "tidepool"],
+                r"\nbrigade ledger: error: argument --project: not allowed with argument --task\n$",
+            ),
+            (
+                ["ledger", "--wave=tidepool_w16"],
+                r"\nbrigade: error: unrecognized arguments: --wave=tidepool_w16\n$",
             ),
             (
                 ["ledger", "--project", "tidepool", "--since", "yesterday"],
@@ -285,7 +289,7 @@ class MainRefusalTest(MainTestCase):
                 ["ledger", "compare", "--range", "2026-10-01..2026-10-02", "--reference", "steps=1"],
                 (
                     r"\nbrigade ledger compare: error: argument --reference: 'steps' is not a reference measure:"
-                    r" steps_to_first_edit_p50, task_run_steps_p50, oversized_output_steps_per_launch\n$"
+                    r" turns_to_first_edit_p50, task_run_turns_p50, oversized_output_turns_per_launch\n$"
                 ),
             ),
         ]
@@ -307,7 +311,7 @@ class MainTrailTest(MainTestCase):
         empty_search_path.mkdir()
         self.environment["PATH"] = str(empty_search_path)
         self.ticks = self.root / "state" / "brigade" / "ticks"
-        self.commands = self.root / "state" / "brigade" / "commands"
+        self.commands = self.root / "state" / "brigade" / "processes"
 
     def write_trails(self, *paths: Path) -> None:
         for path in paths:

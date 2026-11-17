@@ -12,9 +12,9 @@ FIRST_DAY = "01"
 STEPS_HEADER = ("runs", "p50", "p90")
 ROLE_BUDGET_HEADER = ("role", "shipped", "computed", "applied", "segments", "restarts", "g", "R")
 COMPARED_MEASURES = {
-    "steps": "steps",
-    "steps_to_first_edit": "steps to first edit",
-    "oversized_output_steps": "oversized output steps",
+    "turns": "turns",
+    "turns_to_first_edit": "turns to first edit",
+    "oversized_output_turns": "oversized output turns",
 }
 DAY_LENGTH = len("YYYY-MM-DD")
 PREVIOUS_DAY = timedelta(days=1)
@@ -55,7 +55,7 @@ def _render_budgets(document: dict) -> str:
     roles = [_render_role_budget(role, budget) for role, budget in document["roles"].items()]
     return (
         render_html_table(("procedure", *STEPS_HEADER, "estimate"), rows, "no run finished")
-        + "<h3>Step cap by role</h3>"
+        + "<h3>Turn cap by role</h3>"
         + render_html_table(ROLE_BUDGET_HEADER, roles, "no role measured")
     )
 
@@ -82,20 +82,21 @@ def _render_months(document: dict) -> str:
     return render_html_table(("month", "waves", "started", "baseline"), rows, "no wave started")
 
 
-def _render_pause(pause: dict) -> tuple[str, ...]:
+def _render_halt(pause: dict) -> tuple[str, ...]:
     if pause["resumed_at"] is None:
-        return (escape(pause["paused_at"]), "still paused", ABSENT)
+        return (escape(pause["halted_at"]), "still halted", ABSENT)
     minutes = pause["duration_ms"] // MILLISECONDS_PER_MINUTE
-    return (escape(pause["paused_at"]), escape(pause["resumed_at"]), str(minutes))
+    return (escape(pause["halted_at"]), escape(pause["resumed_at"]), str(minutes))
 
 
 def _render_wave(document: dict) -> str:
-    roles = [_render_steps(role, summary["runs"]) for role, summary in document["steps"]["by_role"].items()]
-    pauses = [_render_pause(pause) for pause in document["pauses"]]
+    ledger = document["ledger"]
+    roles = [_render_steps(role, summary["runs"]) for role, summary in ledger["turns"]["by_role"].items()]
+    halts = [_render_halt(halt) for halt in ledger["halts"]]
     return (
         f"<p>wave {escape(document['wave'])}</p>"
         f"{render_html_table(('role', *STEPS_HEADER), roles, 'no run finished')}"
-        f"{render_html_table(('paused at', 'resumed at', 'minutes'), pauses, 'no pause')}"
+        f"{render_html_table(('halted at', 'resumed at', 'minutes'), halts, 'no halt')}"
     )
 
 
@@ -124,9 +125,9 @@ def _render_comparison(document: dict) -> str:
 
 
 SECTIONS = (
-    ("budgets", "Steps by procedure and step cap by role", _render_budgets),
+    ("budgets", "Turns by procedure and turn cap by role", _render_budgets),
     ("overview", "Waves started by month", _render_months),
-    ("wave", "Steps by role and pauses of the wave", _render_wave),
+    ("wave", "Turns by role and halts of the wave", _render_wave),
     ("comparison", "Baseline comparison", _render_comparison),
 )
 

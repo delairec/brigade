@@ -9,7 +9,7 @@ from brigade.waves.is_requeue import is_requeue
 
 REBASE_SLOT = "rebase"
 FIXING_STATE = "fixing"
-PAUSED_ON_QUOTA_STATE = "paused:quota"
+BLOCKED_ON_QUOTA_STATE = "blocked:quota"
 CLIENT_STOP_ERROR_CLASSES = ("rate_limit", "authentication")
 
 
@@ -46,7 +46,7 @@ def _is_spending_round(
     entry: LedgerEntry, entries: tuple[LedgerEntry, ...], runs: tuple[dict, ...], previous_state: str | None
 ) -> bool:
     return (
-        previous_state != PAUSED_ON_QUOTA_STATE
+        previous_state != BLOCKED_ON_QUOTA_STATE
         and not _is_rebuild(entry.event)
         and not _is_rebase_launch(entry, runs)
         and not _is_launch_stopped_by_its_client(entry, entries)

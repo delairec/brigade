@@ -10,13 +10,12 @@ from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessR
 LIST_CRONTAB = ("crontab", "-l")
 REQUEST = {
     "brigade": "/opt/brigade/bin/brigade",
-    "log_file": "/home/ada/.local/state/brigade/tick.log",
+    "log_file": "/srv/brigade/state/brigade/tick.log",
     "environment": {"PATH": "/usr/bin:/bin", "BRIGADE_NOTE": "100%"},
 }
 CRON_LINE = (
-    "*/5 * * * * mkdir -p /home/ada/.local/state/brigade && PATH=/usr/bin:/bin BRIGADE_NOTE=100\\%"
-    " /opt/brigade/bin/brigade tick --once >/dev/null 2>>/home/ada/.local/state/brigade/tick.log"
-    " # brigade scheduler install"
+    "*/5 * * * * env PATH=/usr/bin:/bin BRIGADE_NOTE=100\\% /opt/brigade/bin/brigade tick --once"
+    " --log-file /srv/brigade/state/brigade/tick.log # brigade scheduler install"
 )
 
 
@@ -61,9 +60,8 @@ class InstallCronTest(unittest.TestCase):
                     timeout_s=30.0,
                     acceptable_exit_codes=(0,),
                     stdin="0 3 * * * backup\n"
-                    "*/5 * * * * mkdir -p /home/ada/.local/state/brigade && PATH=/usr/bin:/bin "
-                    "BRIGADE_NOTE=100\\% /opt/brigade/bin/brigade tick --once >/dev/null "
-                    "2>>/home/ada/.local/state/brigade/tick.log # brigade scheduler install\n",
+                    "*/5 * * * * env PATH=/usr/bin:/bin BRIGADE_NOTE=100\\% /opt/brigade/bin/brigade "
+                    "tick --once --log-file /srv/brigade/state/brigade/tick.log # brigade scheduler install\n",
                 ),
             ],
         )
@@ -87,9 +85,8 @@ class InstallCronTest(unittest.TestCase):
                     cwd="/",
                     timeout_s=30.0,
                     acceptable_exit_codes=(0,),
-                    stdin="*/5 * * * * mkdir -p /home/ada/.local/state/brigade && PATH=/usr/bin:/bin "
-                    "BRIGADE_NOTE=100\\% /opt/brigade/bin/brigade tick --once >/dev/null "
-                    "2>>/home/ada/.local/state/brigade/tick.log # brigade scheduler install\n",
+                    stdin="*/5 * * * * env PATH=/usr/bin:/bin BRIGADE_NOTE=100\\% /opt/brigade/bin/brigade "
+                    "tick --once --log-file /srv/brigade/state/brigade/tick.log # brigade scheduler install\n",
                 ),
             ],
         )
@@ -120,9 +117,8 @@ class InstallCronTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             installation["cron_line"],
-            "*/5 * * * * mkdir -p '/srv/a 100\\% b/state/brigade' && XDG_STATE_HOME='/srv/a 100\\% b/state'"
-            " '/srv/a 100\\% b/bin/brigade' tick --once >/dev/null 2>>'/srv/a 100\\% b/state/brigade/tick.log'"
-            " # brigade scheduler install",
+            "*/5 * * * * env XDG_STATE_HOME='/srv/a 100\\% b/state' '/srv/a 100\\% b/bin/brigade' tick --once"
+            " --log-file '/srv/a 100\\% b/state/brigade/tick.log' # brigade scheduler install",
         )
 
 

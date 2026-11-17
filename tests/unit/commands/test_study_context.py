@@ -16,7 +16,7 @@ class StudyContextTextTest(unittest.TestCase):
         # Arrange
         document = {
             "question": "is the machine healthy?",
-            "collected": [{"collector": "runs-list", "summary": {"runs": 2}, "document": "/runs/1/runs-list.json"}],
+            "collected": [{"collector": "runs-list", "summary": {"runs": 2}, "collection": "/runs/1/runs-list.json"}],
             "prose_fields": ["VERDICT", "REASON"],
             "answer": "ANSWER health_1\n",
             "schema": "SCHEMA ANSWER\n",

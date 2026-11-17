@@ -4,14 +4,15 @@ how it is held on the clock, stopped and pruned, and how `brigade runs` lists, s
 ## Commands
 
 ```
-brigade run <procedure> --slot <slot> [--project <name>] [--cwd <dir>] [--brief <file>] [--wave <wave>] [--task <task>]
+brigade run start <procedure> --slot <slot> [--project <name>] [--cwd <dir>] [--brief <file>] [--wave <wave>] [--task <task>]
             [--detach] [key=value ...]
-brigade runs list [--wave <wave>] [--task <task>] [--state running|finished|dead] [--json]
+brigade run list [--wave <wave>] [--task <task>] [--state running|finished|dead] [--json]
                                                  # every run: id, procedure, slot, role, project, wave, task, state, outcome
-brigade runs show <id> [--log] [--json]          # the summary of a run, its segments and its progress; --log adds its journal
-brigade runs show <id> --follow                  # the same with --log, then each record as it is written
-brigade runs stop <id>                           # stop a running run; exit 0 once it finished on stopped
-brigade runs prune [--keep <n>] [--before <YYYY-MM-DD>] [--resumable] [--dry-run] [--json]
+brigade run show <id> [--log] [--json]          # the summary of a run, its segments and its progress; --log adds its log
+brigade run show <id> --follow                  # the same with --log, then each record as it is written
+brigade run stop <id>                           # stop a running run; exit 0 once it finished on stopped
+brigade run stop-hook --at <epoch>              # the stop document a client hook prints once the soft limit has passed
+brigade run prune [--keep <n>] [--before <YYYY-MM-DD>] [--resumable] [--dry-run] [--json]
 ```
 
 ## What a run is
@@ -20,12 +21,12 @@ brigade runs prune [--keep <n>] [--before <YYYY-MM-DD>] [--resumable] [--dry-run
 
 - **The procedure** is a Markdown file whose front matter declares `capabilities` (`read`, `write`, `shell`, `net`,
   comma-separated); the body is what the agent is asked to do.
-- **The step cap** of a segment is its role's: the `budget` the role package ships, until the ledger holds 5 measured
+- **The turn cap** of a segment is its role's: the `budget` the role package ships, until the ledger holds 5 measured
   segments and 3 measured restarts of the role at its current digests; then √(2R/g) rounded, held within half and
-  double the shipped budget, g the tokens a step adds to the context of the next, R the tokens a restarted segment
+  double the shipped budget, g the tokens a turn adds to the context of the next, R the tokens a restarted segment
   spends up to its first edit. A change of the applied cap is appended as `budget.applied`, and the brief states the
   cap in its Budget section.
-- **The slot** resolves to its role as [`brigade roles`](Roles.md) shows, unless the project of `--project` binds it
+- **The slot** resolves to its role as [`brigade role show`](Roles.md) shows, unless the project of `--project` binds it
   otherwise.
 - **The client** is the one `[slot_clients]` binds to the slot, else the project's `CLIENT`, else the `client` key of
   `config.toml`.
@@ -46,7 +47,7 @@ exits 0, the run going on in the background.
 | 3 | `undeclared` |
 | 10 | `blocked` |
 | 11 | `wall_limit` |
-| 12 | `turn_limit` (the last segment reached the client's step cap) |
+| 12 | `turn_limit` (the last segment reached the client's turn cap) |
 | 13 | `soft_limit` |
 | 20 | `handed_over` |
 | 21 | `stopped` |
@@ -66,20 +67,20 @@ Each run keeps its directory, `$XDG_STATE_HOME/brigade/runs/<run id>/`:
 | `progress.awawa` or `progress.md` | the progress of the run |
 | `processes.jsonl` | its trail |
 | `segments/<n>/` | `brief.md`, `stdout.log`, `stderr.log`, `result.json` (the normalised result of the segment) |
-| `journal.jsonl` | one record per action of the client |
+| `log.jsonl` | one record per action of the client |
 | `result.json` | written last: the normalised result of the last segment |
 
 ## Segments and the progress file
 
 A segment is one launch of the client; a run cut on the clock goes on as a fresh segment, from its progress file.
-The progress of a run is one file, in the form the key `document` of `config.toml` chooses for what brigade creates:
+The progress of a run is one file, in the form the key `progress_form` of `config.toml` chooses for what brigade creates:
 
-| `document` | File |
+| `progress_form` | File |
 |---|---|
-| `awawa`, the default | `progress.awawa`, an awawa corpus holding the STEP and HANDOVER schema brigade ships, then one `STEP` per step completed and one `HANDOVER` per hand-over, named `s1`, `s2`, `h1` in order of writing |
+| `awawa`, the default | `progress.awawa`, an awawa corpus holding the ENTRY and HANDOVER schema brigade ships, then one `ENTRY` per step of the procedure completed and one `HANDOVER` per handover, named `e1`, `e2`, `h1` in order of writing |
 | `markdown` | `progress.md`, created empty |
 
-A segment ended on the client's step cap, on the clock, on `soft_limit`, on `handed_over` or on `undeclared` is
+A segment ended on the client's turn cap, on the clock, on `soft_limit`, on `handed_over` or on `undeclared` is
 launched again while its progress holds an entry, up to the `HANDOVERS` of the project's `POLICY`, 2 without one.
 
 > **Watch out:** a segment ending on `blocked` is never launched again, and neither is a stopped run, whatever the
@@ -129,20 +130,20 @@ each append.
 <details><summary>Between two segments</summary>
 
 - Between two segments brigade formats then lints `progress.awawa`, naming the file, and the next brief opens on
-  `awawa status STEP`, `awawa status HANDOVER` and `awawa show` of the last entity.
+  `awawa status ENTRY`, `awawa status HANDOVER` and `awawa show` of the last entity.
 - When the lint fails, it opens on the lint output, the instruction to rewrite the file and the file whole, and the run
   goes on with the same count of relaunches.
 - In the markdown form the next brief opens on the file as it is.
-- A relaunched segment's brief opens on what the document plugin reads of the progress. A `progress.awawa` holding no
-  entity, as that of a run the quota stopped before its first step was written, reads as the empty inventory of each
+- A relaunched segment's brief opens on what the progress_form plugin reads of the progress. A `progress.awawa` holding no
+  entity, as that of a run the quota stopped before its first entry was written, reads as the empty inventory of each
   type of its schema.
 
 </details>
 
-<details><summary>The document plugin</summary>
+<details><summary>The progress_form plugin</summary>
 
 The extension of a file brigade reads back routes it to its plugin, `.md` to markdown and `.awawa` to awawa. Every
-request to the document plugin carries `schema_version` 1, and brigade checks every answer it reads against the shape
+request to the progress_form plugin carries `schema_version` 1, and brigade checks every answer it reads against the shape
 of its operation, naming the plugin and the operation when one breaks it.
 
 </details>
@@ -169,12 +170,12 @@ and the ledger as the foreground command does.
 
 </details>
 
-<details><summary>The journal and <code>runs show</code></summary>
+<details><summary>The log and <code>run show</code></summary>
 
-- During each segment brigade reads the new complete lines of `stdout.log` every `journal_poll_s` seconds of
-  `config.toml`, 2 by default, and the rest once the segment ends. A `journal_poll_s` that is no positive number keeps
+- During each segment brigade reads the new complete lines of `stdout.log` every `log_poll_s` seconds of
+  `config.toml`, 2 by default, and the rest once the segment ends. A `log_poll_s` that is no positive number keeps
   2 s, and `brigade doctor` names it.
-- It appends to `journal.jsonl` one JSON record per action of the client: `schema_version`, `at` (the UTC instant
+- It appends to `log.jsonl` one JSON record per action of the client: `schema_version`, `at` (the UTC instant
   brigade read it), `segment`, `kind` and `summary`, cut to 200 characters with `cut` true.
 - The adapter's `actions` operation turns the output into actions: `tool` (the tool and the path, command or pattern
   it acts on), `text` (its first line) and `result` (the outcome of the segment). A client whose probe declares no
@@ -186,7 +187,7 @@ and the ledger as the foreground command does.
   progress absent or holding no entry is `null` and prints nothing. A `progress.awawa` that `awawa lint --strict`
   refuses, a file caught in the middle of a write, is printed as its raw text with `entities` `null`.
 - `--follow` prints the summary and the segments, then each record once its line is whole, read every
-  `journal_poll_s` seconds, until the run is `finished` or `dead`. It then prints the state and the outcome of the run
+  `log_poll_s` seconds, until the run is `finished` or `dead`. It then prints the state and the outcome of the run
   and exits with the code `brigade run` gives that outcome, 1 for a dead run. SIGINT or SIGTERM ends the follow alone,
   exit 0, the run going on; `--follow` with `--json` exits 2.
 
@@ -194,17 +195,18 @@ and the ledger as the foreground command does.
 
 <details><summary>The clock: wall-time limit and soft limit</summary>
 
-- Every run is held on the clock: at `ceil(cap × 1.25) × seconds_per_step` seconds, `seconds_per_step` a key of
+- Every run is held on the clock: at `ceil(cap × 1.25) × seconds_per_turn` seconds, `seconds_per_turn` a key of
   `config.toml` defaulting to 30, brigade sends SIGTERM to the client's process group, SIGKILL 30 s later, and the
   segment ends with the outcome `wall_limit`, whether its soft limit has passed or not.
 - The soft limit of a segment is its wall-time limit minus `soft_limit_margin_s` of `config.toml`, a positive number
   defaulting to 120, none when the limit is not above it. The `launch-argv` and `resume-argv` requests carry it as
-  `stop_at`, the UTC instant to the second computed at launch, null without one.
-- A client whose probe declares `graceful_stop` ends its session between two steps once `stop_at` has passed and
-  answers the outcome `soft_limit`. brigade records that segment as one ended `done`, its session, steps, usage and
+  `stop_at`, the UTC instant to the second computed at launch, null without one, and as `stop_hook`, the argv of
+  `brigade run stop-hook --at <epoch>` that prints the stop document once that instant has passed, null without one.
+- A client whose probe declares `graceful_stop` ends its session between two turns once `stop_at` has passed and
+  answers the outcome `soft_limit`. brigade records that segment as one ended `done`, its session, turns, usage and
   `cost_usd` included, and the run goes on as after a cut on the clock.
-- The Claude Code adapter passes a `PostToolUse` hook in `--settings` that stops the main session and its sub-agents
-  after the tool call that passes `stop_at`. A client declaring no `graceful_stop` keeps the hard cut.
+- The Claude Code adapter passes a `PostToolUse` hook in `--settings`, the argv of `stop_hook` and no shell test, that
+  stops the main session and its sub-agents after the tool call that passes `stop_at`. A client declaring no `graceful_stop` keeps the hard cut.
 
 </details>
 
@@ -212,15 +214,15 @@ and the ledger as the foreground command does.
 
 | Segment | `signal.recorded` | Naming |
 |---|---|---|
-| ended on the client's step cap | `budget_reached` | the procedure, the run and the cap applied |
+| ended on the client's turn cap | `budget_reached` | the procedure, the run and the cap applied |
 | cut on the clock, or ended on `soft_limit` | `wall_limit_reached` | the same, and `wall_limit_s`, the limit in seconds it was held to |
 | ended on `handed_over` or `undeclared` | that name | the procedure, the run and the segment |
-| whose main steps, as `run.finished` counts them, exceed the cap of its role | `budget_exceeded` | the procedure, the run, the segment, the cap applied and `steps`, the steps it took |
+| whose main turns, as `run.finished` counts them, exceed the cap of its role | `budget_exceeded` | the procedure, the run, the segment, the cap applied and `turns`, the turns it took |
 
-- In each of the first three cases, when the document plugin answers that its progress holds an entry, the segment is
+- In each of the first three cases, when the progress_form plugin answers that its progress holds an entry, the segment is
   launched again as a fresh segment, up to the `HANDOVERS`.
-- `budget_exceeded` is recorded whatever the outcome, beside `budget_reached` when the segment also reached the step
-  cap. A segment whose steps are null records none, and the signal launches nothing again.
+- `budget_exceeded` is recorded whatever the outcome, beside `budget_reached` when the segment also reached the turn
+  cap. A segment whose turns are null records none, and the signal launches nothing again.
 
 </details>
 
@@ -234,17 +236,17 @@ and the ledger as the foreground command does.
   `processes.jsonl` on `stopped`, and no segment is launched again. A signal received before the client starts or
   between two segments ends the run the same way.
 - `brigade run` exits 21, and `runs list` shows the run `finished` on `stopped`.
-- `brigade runs stop <id>` sends that SIGTERM and exits 0 once the run has finished on `stopped`. A run already
+- `brigade run stop <id>` sends that SIGTERM and exits 0 once the run has finished on `stopped`. A run already
   finished, holding no pid file, unknown, or whose pid no process holds, and a run the signal leaves on any other end
   than `stopped`, exit 1 naming the run and why.
 
 </details>
 
-<details><summary>Fallbacks of a client that counts no steps or grants no tools</summary>
+<details><summary>Fallbacks of a client that counts no turns or grants no tools</summary>
 
 Two fallbacks follow the probe of the adapter:
 
-- A client that counts no steps records null steps, the clock is the run's only bound, and `brigade run` and
+- A client that counts no turns records null turns, the clock is the run's only bound, and `brigade run` and
   `brigade doctor` warn that the budget is held on the clock.
 - A client that grants no tool one by one runs in its unattended mode, and a slot whose capabilities lack `write` then
   runs in a disposable git worktree of the directory's `HEAD`, `runs/<run id>/worktree`, removed after the run.
@@ -256,7 +258,7 @@ Two fallbacks follow the probe of the adapter:
 - After `brigade run` writes its result, the finished and dead runs beyond `runs_kept` of `config.toml`, 100 by
   default, are removed, oldest first. A running run and a run the resume after a rate limit takes up are neither
   removed nor counted. A `runs_kept` that is no integer of 1 or more exits 1 naming the key and the file.
-- `brigade runs prune` runs the same removal on demand and prints each run removed: `--keep` replaces `runs_kept` for
+- `brigade run prune` runs the same removal on demand and prints each run removed: `--keep` replaces `runs_kept` for
   the call, `--before` removes as well every run settled before that day in UTC, `--resumable` removes the runs to
   resume too, and `--dry-run` prints what would go and removes nothing.
 - A removal holds `locks/runs.lock`, first empties `runs-removed/` of what an interrupted removal left there, and

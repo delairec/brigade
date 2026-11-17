@@ -7,10 +7,10 @@ decide whether to read on. The pages are written in `wiki/` of the repository an
 
 ## Getting started
 
-- [Install](Install.md) — how to install brigade, check the machine with `brigade doctor` and create the operational
-  corpus with `brigade init`.
-- [Concepts](Concepts.md) — what each word of brigade means: project, request, wave, task, run, slot, role, tick,
-  ledger, inbox, study and the others, each with the page that holds it.
+- [Install](Install.md) — how to install brigade, check the machine with `brigade doctor` and create the registry with
+  `brigade init`.
+- [Glossary](Glossary.md) — the page to read when a word is unknown: what each word of brigade means, every command,
+  entity and field among them, each with the page that holds it and the task that delivers it.
 
 ## Configuring
 
@@ -26,14 +26,16 @@ decide whether to read on. The pages are written in `wiki/` of the repository an
 - [Waves](Waves.md) — how a request is planned and how a wave of ratified tasks is started, followed, cancelled and
   resumed.
 - [Tasks](Tasks.md) — what a build run does from the worktree of its task: context, checks, pull request, promotion.
-- [Preflight](Preflight.md) — which deterministic checks run on the pull request of a task before any judgment.
+- [Preflight](Preflight.md) — where a preflight resolves from, how a project adds a custom one with `brigade preflight add`, and which deterministic checks run on the pull request of a task before any judgment.
 - [Runs](Runs.md) — how a procedure runs as a slot, what a run keeps, and how it is held on the clock, stopped and
   pruned.
-- [Verification](Verification.md) — how a review run judges the pull request of a task and records its verdict.
+- [Review](Review.md) — how a review run judges the pull request of a task and records its verdict.
 - [Review answers](Review-answers.md) — how a remediation run answers the findings of a review.
 - [Rebase on the base](Rebase-on-the-base.md) — how a rebase run puts the branch of a task back on its base after a
   conflict.
 - [Studies](Studies.md) — how a study collects, judges and outputs an answer, once or on a schedule.
+- [Recipes](Recipes.md) — how to write a recipe from the example `pr-usage-report`: its params, its steps, its gate,
+  its judge and its output.
 
 ## Observing
 

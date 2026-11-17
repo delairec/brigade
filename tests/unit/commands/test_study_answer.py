@@ -65,9 +65,11 @@ class StudyAnswerOfAJudgingRunTest(unittest.TestCase):
         write_operational_corpus(self.root)
         self.run_directory = self.root / "state" / "runs" / RUN_ID
         self.run_directory.mkdir(parents=True)
-        (self.run_directory / "study.json").write_text(json.dumps({"study": "health"}), encoding="utf-8")
+        (self.run_directory / "order.json").write_text(
+            json.dumps({"order": {"name": "health", "params": []}}), encoding="utf-8"
+        )
         (self.run_directory / "steps").mkdir()
-        (self.run_directory / "steps" / "collect.json").write_text(json.dumps({"collected": []}), encoding="utf-8")
+        (self.run_directory / "steps" / "1-collect.json").write_text(json.dumps({"collected": []}), encoding="utf-8")
         outputs = {("awawa", "lint"): "", ("awawa", "show", "@ANSWER.health_20261019T090000Z_e10d04"): NO_FILLED_FIELD}
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
@@ -107,7 +109,9 @@ class StudyAnswerTheSchemaRejectsTest(unittest.TestCase):
         write_operational_corpus(root)
         run_directory = root / "state" / "runs" / RUN_ID
         run_directory.mkdir(parents=True)
-        (run_directory / "study.json").write_text(json.dumps({"study": "health"}), encoding="utf-8")
+        (run_directory / "order.json").write_text(
+            json.dumps({"order": {"name": "health", "params": []}}), encoding="utf-8"
+        )
         answer_file = root / "answer.awawa"
         answer_file.write_text(ANSWER_TEXT, encoding="utf-8")
         rejecting_lint = {("awawa", "lint"): ProcessAnswer(stdout="E003 unknown field VERDICT\n", exit_code=1)}

@@ -47,10 +47,10 @@ class ShowRunTestCase(unittest.TestCase):
 class ShowRunOfAFinishedRunTest(ShowRunTestCase):
     def setUp(self):
         super().setUp()
-        write_run_result(self.run_directory / "segments" / "1" / "result.json", "handed_over", main_steps=30)
-        write_run_result(self.run_directory / "segments" / "2" / "result.json", "done", main_steps=12)
+        write_run_result(self.run_directory / "segments" / "1" / "result.json", "handed_over", main_turns=30)
+        write_run_result(self.run_directory / "segments" / "2" / "result.json", "done", main_turns=12)
         write_run_result(self.run_directory / "result.json", "done", message="delivered #160")
-        (self.run_directory / "journal.jsonl").write_text(JOURNAL_LINE)
+        (self.run_directory / "log.jsonl").write_text(JOURNAL_LINE)
 
     def test_should_show_the_run_its_message_and_each_segment(self):
         # Act
@@ -75,20 +75,20 @@ class ShowRunOfAFinishedRunTest(ShowRunTestCase):
                     "message": "delivered #160",
                 },
                 "segments": [
-                    {"segment": 1, "outcome": "handed_over", "steps": 30, "duration_ms": 1000},
-                    {"segment": 2, "outcome": "done", "steps": 12, "duration_ms": 1000},
+                    {"segment": 1, "outcome": "handed_over", "turns": 30, "duration_ms": 1000},
+                    {"segment": 2, "outcome": "done", "turns": 12, "duration_ms": 1000},
                 ],
-                "journal": None,
+                "log": None,
             },
         )
 
-    def test_should_add_the_journal_when_asked(self):
+    def test_should_add_the_log_when_asked(self):
         # Act
         document = show_run(self.state_root, RUN_ID, with_journal=True)
 
         # Assert
         self.assertEqual(
-            document["journal"],
+            document["log"],
             [
                 {
                     "schema_version": 1,
@@ -112,7 +112,7 @@ class ShowRunOfARunStillInItsFirstSegmentTest(ShowRunTestCase):
 
         # Assert
         self.assertEqual(document["run"]["message"], None)
-        self.assertEqual(document["segments"], [{"segment": 1, "outcome": None, "steps": None, "duration_ms": None}])
+        self.assertEqual(document["segments"], [{"segment": 1, "outcome": None, "turns": None, "duration_ms": None}])
 
     def test_should_show_no_segment_before_the_first_starts(self):
         # Act
@@ -121,12 +121,12 @@ class ShowRunOfARunStillInItsFirstSegmentTest(ShowRunTestCase):
         # Assert
         self.assertEqual(document["segments"], [])
 
-    def test_should_show_an_empty_journal_before_the_first_record(self):
+    def test_should_show_an_empty_log_before_the_first_record(self):
         # Act
         document = show_run(self.state_root, RUN_ID, with_journal=True)
 
         # Assert
-        self.assertEqual(document["journal"], [])
+        self.assertEqual(document["log"], [])
 
 
 class ShowRunOfARunWrittenInAnotherShapeTest(ShowRunTestCase):
@@ -142,7 +142,7 @@ class ShowRunOfARunWrittenInAnotherShapeTest(ShowRunTestCase):
 
         # Assert
         self.assertEqual(
-            str(refusal.exception), f"{segment_result} is not a segment result: schema_version is 1, not one of 2"
+            str(refusal.exception), f"{segment_result} is not a segment result: schema_version is 1, not one of 3"
         )
 
     def test_should_refuse_a_run_record_lacking_its_wave_naming_the_file_and_the_key(self):

@@ -14,13 +14,13 @@ class TaskStateTest(unittest.TestCase):
 
     def test_should_write_the_wave_the_task_and_its_state(self):
         # Arrange
-        event = TaskState(wave="M1", task="S3", state="paused:quota")
+        event = TaskState(wave="M1", task="S3", state="blocked:quota")
 
         # Act
         document = event.to_document()
 
         # Assert
-        self.assertEqual(document, {"wave": "M1", "task": "S3", "state": "paused:quota"})
+        self.assertEqual(document, {"wave": "M1", "task": "S3", "state": "blocked:quota"})
 
     def test_should_read_the_reason_a_task_is_parked_for(self):
         # Act
@@ -52,5 +52,5 @@ class TaskStateTest(unittest.TestCase):
         self.assertEqual(
             str(refusal.exception),
             "the task state abandoned is none of queued, running, pr_open, verifying, verified, merged,"
-            " changes_requested, fixing, parked, paused:quota",
+            " changes_requested, fixing, parked, blocked:quota",
         )

@@ -12,7 +12,8 @@ from brigade.ledger.sum_reported import sum_reported
 from brigade.ledger.sum_token_usage import sum_token_usage
 from brigade.ledger.summarize_measure import summarize_measure
 from brigade.ledger.task_parked import TaskParked
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_blocked import WaveBlocked
+from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.waves.count_repair_rounds import count_repair_rounds
 
@@ -31,29 +32,29 @@ def _list_tasks(events: list) -> list[str]:
 def _summarize_by(runs: list[FinishedRun], attribute: str) -> dict:
     names = sorted({getattr(run.last, attribute) for run in runs}, key=str)
     return {
-        name: summarize_measure([run for run in runs if getattr(run.last, attribute) == name], "main_steps")
+        name: summarize_measure([run for run in runs if getattr(run.last, attribute) == name], "main_turns")
         for name in names
     }
 
 
-def _pair_pauses(entries: list[LedgerEntry]) -> list[dict]:
-    pauses = []
-    paused_at = None
+def _pair_halts(entries: list[LedgerEntry]) -> list[dict]:
+    halts = []
+    halted_at = None
     for entry in entries:
-        if isinstance(entry.event, WavePaused) and paused_at is None:
-            paused_at = entry.instant
-        elif isinstance(entry.event, WaveResumed) and paused_at is not None:
-            pauses.append(
+        if isinstance(entry.event, (WaveParked, WaveBlocked)) and halted_at is None:
+            halted_at = entry.instant
+        elif isinstance(entry.event, WaveResumed) and halted_at is not None:
+            halts.append(
                 {
-                    "paused_at": format_instant(paused_at),
+                    "halted_at": format_instant(halted_at),
                     "resumed_at": format_instant(entry.instant),
-                    "duration_ms": _measure_ms(paused_at, entry.instant),
+                    "duration_ms": _measure_ms(halted_at, entry.instant),
                 }
             )
-            paused_at = None
-    if paused_at is not None:
-        pauses.append({"paused_at": format_instant(paused_at), "resumed_at": None, "duration_ms": None})
-    return pauses
+            halted_at = None
+    if halted_at is not None:
+        halts.append({"halted_at": format_instant(halted_at), "resumed_at": None, "duration_ms": None})
+    return halts
 
 
 def _list_merged_pull_requests(events: list) -> list[dict]:
@@ -62,7 +63,7 @@ def _list_merged_pull_requests(events: list) -> list[dict]:
     ]
 
 
-def _list_hand_overs(events: list) -> list[dict]:
+def _list_handovers(events: list) -> list[dict]:
     return [
         {"task": event.task, "role": event.role, "slot": event.slot, "segment": event.segment}
         for event in events
@@ -78,21 +79,21 @@ def _list_runs(events: list) -> tuple[dict, ...]:
     )
 
 
-def _sum_steps_by_task(events: list) -> dict:
+def _sum_turns_by_task(events: list) -> dict:
     steps = {}
     for event in events:
-        if isinstance(event, RunFinished) and event.task is not None and event.main_steps is not None:
-            steps[event.task] = steps.get(event.task, 0) + event.main_steps
+        if isinstance(event, RunFinished) and event.task is not None and event.main_turns is not None:
+            steps[event.task] = steps.get(event.task, 0) + event.main_turns
     return steps
 
 
 def _cost_task(task: str, runs: list[FinishedRun]) -> dict:
     task_runs = [run for run in runs if run.last.task == task]
     segments = [segment for run in task_runs for segment in run.segments]
-    steps = [run.main_steps for run in task_runs]
+    steps = [run.main_turns for run in task_runs]
     return {
         "task": task,
-        "steps": sum_reported(measure.value for measure in steps),
+        "turns": sum_reported(measure.value for measure in steps),
         "partial": any(measure.partial for measure in steps),
         "duration_ms": sum_reported(segment.duration_ms for segment in segments),
         "cost_usd": sum_reported(segment.cost_usd for segment in segments),
@@ -113,10 +114,10 @@ def _cost_wave(events: list, runs: list[FinishedRun], tasks: list[str]) -> dict:
     }
 
 
-def _date_entries(entries: list[LedgerEntry]) -> list[dict]:
+def _list_events(entries: list[LedgerEntry]) -> list[dict]:
     return [
         {"at": format_instant(entry.instant), "event": entry.event.name, "fields": entry.event.to_document()}
-        for entry in sorted(entries, key=lambda entry: entry.instant)
+        for entry in entries
     ]
 
 
@@ -128,7 +129,7 @@ def describe_wave(reading: LedgerReading, wave: str) -> dict:
     first = min(entry.instant for entry in entries)
     last = max(entry.instant for entry in entries)
     runs = group_runs(entries)
-    pauses = _pair_pauses(entries)
+    halts = _pair_halts(entries)
     tasks = _list_tasks(events)
     return {
         "view": "wave",
@@ -139,12 +140,12 @@ def describe_wave(reading: LedgerReading, wave: str) -> dict:
         "tasks": tasks,
         **_cost_wave(events, runs, tasks),
         "pull_requests": _list_merged_pull_requests(events),
-        "steps": {"by_slot": _summarize_by(runs, "slot"), "by_role": _summarize_by(runs, "role")},
-        "pauses": pauses,
-        "paused_ms": sum(pause["duration_ms"] for pause in pauses if pause["duration_ms"] is not None),
-        "hand_overs": _list_hand_overs(events),
+        "turns": {"by_slot": _summarize_by(runs, "slot"), "by_role": _summarize_by(runs, "role")},
+        "halts": halts,
+        "halted_ms": sum(halt["duration_ms"] for halt in halts if halt["duration_ms"] is not None),
+        "handovers": _list_handovers(events),
         "parked": [event.task for event in events if isinstance(event, TaskParked)],
         "rounds_by_task": count_repair_rounds(tuple(entries), _list_runs(events), wave),
-        "steps_by_task": _sum_steps_by_task(events),
-        "timeline": _date_entries(entries),
+        "turns_by_task": _sum_turns_by_task(events),
+        "events": _list_events(entries),
     }

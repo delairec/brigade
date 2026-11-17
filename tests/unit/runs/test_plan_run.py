@@ -121,7 +121,7 @@ class PlanRunTestCase(unittest.TestCase):
         )
 
     def plan(self, request: RunRequest, settings: dict, project: Entity | None = None, run_process=None):
-        configuration = Configuration(client="fake", clients={"fake": settings}, seconds_per_step=20)
+        configuration = Configuration(client="fake", clients={"fake": settings}, seconds_per_turn=20)
         runtime = create_test_runtime(self.paths, **({} if run_process is None else {"run_process": run_process}))
         return plan_run(
             request,
@@ -139,7 +139,7 @@ class PlanRunOfAWritingProcedureTest(PlanRunTestCase):
         )
 
         # Act
-        plan = self.plan(request, {"features": "step_count"})
+        plan = self.plan(request, {"features": "turn_count"})
 
         # Assert
         self.assertEqual(plan.run_directory, self.paths.state_root / "runs" / RUN_ID)
@@ -165,7 +165,7 @@ class PlanRunOfAWritingProcedureTest(PlanRunTestCase):
         for slot, role, capabilities in rows:
             with self.subTest(slot=slot):
                 # Act
-                plan = self.plan(self.create_request(slot=slot), {"features": "step_count"})
+                plan = self.plan(self.create_request(slot=slot), {"features": "turn_count"})
 
                 # Assert
                 self.assertEqual(plan.role.role, role)
@@ -173,14 +173,14 @@ class PlanRunOfAWritingProcedureTest(PlanRunTestCase):
 
     def test_should_hold_the_edit_tools_the_probe_names(self):
         # Act
-        plan = self.plan(self.create_request(), {"features": "step_count", "edit_tools": "Edit, Write"})
+        plan = self.plan(self.create_request(), {"features": "turn_count", "edit_tools": "Edit, Write"})
 
         # Assert
         self.assertEqual(plan.edit_tools, ("Edit", "Write"))
 
     def test_should_name_a_new_run_by_its_instant(self):
         # Act
-        plan = self.plan(self.create_request(), {"features": "step_count"})
+        plan = self.plan(self.create_request(), {"features": "turn_count"})
 
         # Assert
         self.assertRegex(plan.run_id, r"^20261019T090000Z-[0-9a-f]{6}$")
@@ -192,7 +192,7 @@ class PlanRunOfAProcedureOnTheSlotOfARoleHoldingFewerCapabilitiesTest(PlanRunTes
         request = self.create_request(procedure="build-task", slot="review")
 
         # Act
-        plan = self.plan(request, {"features": "step_count"})
+        plan = self.plan(request, {"features": "turn_count"})
 
         # Assert
         self.assertEqual(plan.capabilities, ("read", "shell"))
@@ -202,7 +202,7 @@ class PlanRunOfASlotTheSlotClientsTableBindsTest(PlanRunTestCase):
     def test_should_name_the_client_of_the_slot_over_the_client_key(self):
         # Arrange
         configuration = Configuration(
-            client="claude-code", clients={"codex": {"features": "step_count"}}, slot_clients={"build": "codex"}
+            client="claude-code", clients={"codex": {"features": "turn_count"}}, slot_clients={"build": "codex"}
         )
         no_project = None
         setting = RunSetting(configuration, no_project, "codex")
@@ -236,7 +236,7 @@ class PlanRunOfAReadingProcedureTest(PlanRunTestCase):
             plan.warnings,
             (
                 (
-                    "fake counts no steps: the budget of 75 steps is held on the clock"
+                    "fake counts no turns: the budget of 75 turns is held on the clock"
                     " and the run cut at its limit of 1880 s"
                 ),
             ),
@@ -246,7 +246,7 @@ class PlanRunOfAReadingProcedureTest(PlanRunTestCase):
 class PlanRunOfARoleWithNoMeasuredSegmentTest(PlanRunTestCase):
     def test_should_apply_the_budget_the_role_ships_and_hold_the_wall_limit_to_it(self):
         # Act
-        plan = self.plan(self.create_request(), {"features": "step_count"})
+        plan = self.plan(self.create_request(), {"features": "turn_count"})
 
         # Assert
         self.assertEqual(
@@ -257,7 +257,7 @@ class PlanRunOfARoleWithNoMeasuredSegmentTest(PlanRunTestCase):
 
     def test_should_record_no_change_of_the_applied_cap(self):
         # Act
-        plan = self.plan(self.create_request(), {"features": "step_count"})
+        plan = self.plan(self.create_request(), {"features": "turn_count"})
 
         # Assert
         self.assertIsNone(plan.budget_applied)
@@ -278,7 +278,7 @@ class PlanRunOfARoleMeasuredAtTheDigestsOfTheLaunchTestCase(PlanRunTestCase):
 class PlanRunOfARoleMeasuredAtTheDigestsOfTheLaunchTest(PlanRunOfARoleMeasuredAtTheDigestsOfTheLaunchTestCase):
     def test_should_apply_the_cap_computed_from_the_segments_of_the_role(self):
         # Act
-        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "step_count"})
+        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "turn_count"})
 
         # Assert
         self.assertEqual(
@@ -294,14 +294,14 @@ class PlanRunOfARoleMeasuredAtTheDigestsOfTheLaunchTest(PlanRunOfARoleMeasuredAt
         self.survey.write_text("---\ncapabilities: read\n---\nSurvey the code and the tests.\n")
 
         # Act
-        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "step_count"})
+        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "turn_count"})
 
         # Assert
         self.assertEqual(plan.budget.applied, 40)
 
     def test_should_record_the_change_from_the_shipped_budget_to_the_computed_cap(self):
         # Act
-        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "step_count"})
+        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "turn_count"})
 
         # Assert
         self.assertEqual(
@@ -318,7 +318,7 @@ class PlanRunOfARoleSharingItsPackageWithAMeasuredRoleTest(PlanRunOfARoleMeasure
         (self.paths.config_root / "roles" / "stonemason.md").write_text(STONEMASON_ROLE)
 
         # Act
-        plan = self.plan(self.create_request(procedure=str(self.survey), slot="plan"), {"features": "step_count"})
+        plan = self.plan(self.create_request(procedure=str(self.survey), slot="plan"), {"features": "turn_count"})
 
         # Assert
         self.assertEqual(plan.budget.segments, 0)
@@ -330,7 +330,7 @@ class PlanRunOfARoleWhoseCapWasAppliedBeforeTest(PlanRunOfARoleMeasuredAtTheDige
         self.ledger.write_text(MASON_SEGMENTS + MASON_BUDGET_APPLIED)
 
         # Act
-        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "step_count"})
+        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "turn_count"})
 
         # Assert
         self.assertIsNone(plan.budget_applied)
@@ -340,7 +340,7 @@ class PlanRunOfARoleWhoseCapWasAppliedBeforeTest(PlanRunOfARoleMeasuredAtTheDige
         self.ledger.write_text(EARLIER_MASON_BUDGET_APPLIED + MASON_SEGMENTS + MASON_BUDGET_APPLIED)
 
         # Act
-        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "step_count"})
+        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "turn_count"})
 
         # Assert
         self.assertIsNone(plan.budget_applied)
@@ -350,7 +350,7 @@ class PlanRunOfARoleWhoseCapWasAppliedBeforeTest(PlanRunOfARoleMeasuredAtTheDige
         self.ledger.write_text(MASON_SEGMENTS + STONEMASON_BUDGET_APPLIED)
 
         # Act
-        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "step_count"})
+        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "turn_count"})
 
         # Assert
         self.assertEqual(plan.budget_applied.before, 40)
@@ -361,7 +361,7 @@ class PlanRunOfARoleWhoseCapWasAppliedBeforeTest(PlanRunOfARoleMeasuredAtTheDige
         self.survey.write_text("---\ncapabilities: read\n---\nSurvey the code and the tests.\n")
 
         # Act
-        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "step_count"})
+        plan = self.plan(self.create_request(procedure=str(self.survey)), {"features": "turn_count"})
 
         # Assert
         self.assertEqual(

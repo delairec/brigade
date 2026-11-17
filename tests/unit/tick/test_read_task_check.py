@@ -31,14 +31,14 @@ class ReadTaskCheckTest(unittest.TestCase):
         )
 
         # Act
-        task_check = read_task_check(self.state_root, "oak", "B7")
+        build_check = read_task_check(self.state_root, "oak", "B7")
 
         # Assert
-        self.assertEqual(task_check, TaskCheck(head="c0ffee", failed_commands=("npm test",)))
+        self.assertEqual(build_check, TaskCheck(head="c0ffee", failed_commands=("npm test",)))
 
     def test_should_find_no_check_of_a_task_never_checked(self):
         # Act
-        task_check = read_task_check(self.state_root, "oak", "B7")
+        build_check = read_task_check(self.state_root, "oak", "B7")
 
         # Assert
-        self.assertIsNone(task_check)
+        self.assertIsNone(build_check)

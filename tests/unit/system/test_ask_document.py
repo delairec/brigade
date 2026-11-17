@@ -12,7 +12,7 @@ NO_RUNTIME_NEEDED = None
 PROGRESS_REQUEST = DocumentRequest(
     document="progress",
     path="/state/runs/r1/progress.md",
-    schema='SCHEMA STEP\n\tDESC "a step the run completed"\n',
+    schema='SCHEMA ENTRY\n\tDESC "a step the run completed"\n',
     frame=("a fact is what the next segment needs and no command gives back",),
     role_has_shell=True,
 )
@@ -38,8 +38,8 @@ class DocumentPluginDouble:
     def render_document(self, request: dict, runtime) -> dict:
         return {
             "schema_version": 1,
-            "text": "STEP s1\n  DONE: read the task\n",
-            "entities": [{"type": "STEP", "name": "s1", "fields": [{"name": "DONE", "value": "read the task"}]}],
+            "text": "ENTRY e1\n  DONE: read the task\n",
+            "entities": [{"type": "ENTRY", "name": "e1", "fields": [{"name": "DONE", "value": "read the task"}]}],
         }
 
 
@@ -50,12 +50,12 @@ class EntryDetectorAnsweringATextDouble:
 
 class RendererAnsweringTextEntitiesDouble:
     def render_document(self, request: dict, runtime) -> dict:
-        return {"schema_version": 1, "text": "STEP s1\n", "entities": "STEP s1"}
+        return {"schema_version": 1, "text": "ENTRY e1\n", "entities": "ENTRY e1"}
 
 
 class RendererAnsweringATextEntityDouble:
     def render_document(self, request: dict, runtime) -> dict:
-        return {"schema_version": 1, "text": "STEP s1\n", "entities": ["STEP s1"]}
+        return {"schema_version": 1, "text": "ENTRY e1\n", "entities": ["ENTRY e1"]}
 
 
 class CreatorAnsweringNothingDouble:
@@ -80,7 +80,7 @@ class AskDocumentTest(unittest.TestCase):
                     "schema_version": 1,
                     "document": "progress",
                     "path": "/state/runs/r1/progress.md",
-                    "schema": 'SCHEMA STEP\n\tDESC "a step the run completed"\n',
+                    "schema": 'SCHEMA ENTRY\n\tDESC "a step the run completed"\n',
                     "frame": ["a fact is what the next segment needs and no command gives back"],
                     "shell": True,
                 }
@@ -100,8 +100,8 @@ class AskDocumentTest(unittest.TestCase):
             (
                 "render_document",
                 DocumentRendering(
-                    text="STEP s1\n  DONE: read the task\n",
-                    entities=[{"type": "STEP", "name": "s1", "fields": [{"name": "DONE", "value": "read the task"}]}],
+                    text="ENTRY e1\n  DONE: read the task\n",
+                    entities=[{"type": "ENTRY", "name": "e1", "fields": [{"name": "DONE", "value": "read the task"}]}],
                 ),
             ),
         ]
@@ -127,7 +127,7 @@ class AskDocumentTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             str(refusal.exception),
-            "document plugin awawa answered detect_entry: holds_entry is a string, not a boolean",
+            "progress_form plugin awawa answered detect_entry: holds_entry is a string, not a boolean",
         )
 
     def test_should_refuse_a_rendering_whose_entities_are_no_list(self):
@@ -141,7 +141,7 @@ class AskDocumentTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             str(refusal.exception),
-            "document plugin awawa answered render_document: entities is a string, not a list",
+            "progress_form plugin awawa answered render_document: entities is a string, not a list",
         )
 
     def test_should_refuse_a_rendering_whose_entities_hold_an_item_that_is_no_object(self):
@@ -155,7 +155,7 @@ class AskDocumentTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             str(refusal.exception),
-            "document plugin awawa answered render_document: entities[0] is a string, not an object",
+            "progress_form plugin awawa answered render_document: entities[0] is a string, not an object",
         )
 
     def test_should_refuse_a_creation_answering_no_document(self):
@@ -169,5 +169,5 @@ class AskDocumentTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             str(refusal.exception),
-            "document plugin markdown answered create_document: the document is null, not an object",
+            "progress_form plugin markdown answered create_document: the document is null, not an object",
         )

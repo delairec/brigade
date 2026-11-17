@@ -160,7 +160,7 @@ class FindHoldingHeadTest(unittest.TestCase):
         self._record_checks(1)
         pending_launch = dataclasses.replace(
             LAUNCH,
-            pull_request_checks=HeadChecks(head=TASK_HEAD, checks=(ForgeCheck(name="unit", verdict="pending"),)),
+            pull_request_checks=HeadChecks(head=TASK_HEAD, checks=(ForgeCheck(name="unit", conclusion="pending"),)),
         )
 
         # Act

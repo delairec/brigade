@@ -7,14 +7,14 @@ from brigade.ledger.forge_account_unavailable import ForgeAccountUnavailable
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.read_ledger import LedgerReading, SkippedLine, read_ledger
 from brigade.ledger.undeclared_event import UndeclaredEvent
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_started import WaveStarted
 
 WAVE_STARTED = (
     '{"schema_version": 2, "ts": "2026-09-30T22:00:00Z", "event": "wave.started", "wave": "tidepool_w16",'
     ' "project": "tidepool", "branch": "integration/M4-tides", "tasks": ["T7"]}\n'
 )
-WAVE_PAUSED = '{"schema_version": 1, "ts": "2026-10-01T00:15:00Z", "event": "wave.paused", "wave": "tidepool_w16", "reason": "quota", "resume_at": null}\n'
+WAVE_PAUSED = '{"schema_version": 1, "ts": "2026-10-01T00:15:00Z", "event": "wave.parked", "wave": "tidepool_w16", "reason": "quota"}\n'
 RUN_FINISHED_OF_SCHEMA_1 = (
     '{"schema_version": 1, "ts": "2026-10-07T10:33:00Z", "event": "run.finished", "run": "20261007T101817Z-2ee96f",'
     ' "segment": 1, "procedure": "awawa-task", "slot": "build", "role": "ada", "client": "claude-code",'
@@ -33,6 +33,13 @@ RUN_FINISHED_OF_SCHEMA_2 = (
     '{"schema_version": 2, "ts": "2026-10-09T10:33:00Z", "event": "run.finished", "run": "20261009T101817Z-2ee96f",'
     ' "segment": 1, "procedure": "awawa-task", "slot": "build", "role": "ada", "client": "claude-code",'
     ' "project": "brigade", "session": "857d4221", "main_steps": 42, "total_steps": 54, "duration_ms": 900000,'
+    ' "usage": null, "outcome": "done", "error_class": null, "exit": 0, "wave": null, "task": null,'
+    ' "nulls": {"usage": "the client reported no usage"}, "cost_usd": 3.63}\n'
+)
+RUN_FINISHED_OF_SCHEMA_3 = (
+    '{"schema_version": 3, "ts": "2026-10-09T10:33:00Z", "event": "run.finished", "run": "20261009T101817Z-2ee96f",'
+    ' "segment": 1, "procedure": "awawa-task", "slot": "build", "role": "ada", "client": "claude-code",'
+    ' "project": "brigade", "session": "857d4221", "main_turns": 42, "total_turns": 54, "duration_ms": 900000,'
     ' "usage": null, "outcome": "done", "error_class": null, "exit": 0, "wave": null, "task": null,'
     ' "nulls": {"usage": "the client reported no usage"}, "cost_usd": 3.63}\n'
 )
@@ -87,7 +94,7 @@ class ReadLedgerWhenEveryLineIsWholeTest(ReadLedgerTestCase):
                     ),
                     LedgerEntry(
                         instant=datetime(2026, 10, 1, 0, 15, tzinfo=UTC),
-                        event=WavePaused(wave="tidepool_w16", reason="quota", resume_at=None),
+                        event=WaveParked(wave="tidepool_w16", reason="quota"),
                     ),
                     LedgerEntry(
                         instant=datetime(2026, 10, 1, 0, 20, tzinfo=UTC),
@@ -146,7 +153,7 @@ class ReadLedgerWhenTheLastLineWasNotEndedTest(ReadLedgerTestCase):
                     ),
                     LedgerEntry(
                         instant=datetime(2026, 10, 1, 0, 15, tzinfo=UTC),
-                        event=WavePaused(wave="tidepool_w16", reason="quota", resume_at=None),
+                        event=WaveParked(wave="tidepool_w16", reason="quota"),
                     ),
                 ),
                 files=(str(october),),
@@ -164,34 +171,38 @@ class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
             (b"\n", "not JSON"),
             (b"[1, 2]\n", "the document is a list, not an object"),
             (
-                b'{"ts": "2026-10-01T00:41:00Z", "event": "wave.paused", "wave": "tidepool_w16", "reason": "quota", "resume_at": null}\n',
+                b'{"ts": "2026-10-01T00:41:00Z", "event": "wave.parked", "wave": "tidepool_w16", "reason": "quota"}\n',
                 "lacks the key schema_version",
             ),
             (
-                b'{"schema_version": 1, "event": "wave.paused", "wave": "tidepool_w16", "reason": "quota", "resume_at": null}\n',
+                b'{"schema_version": 1, "event": "wave.parked", "wave": "tidepool_w16", "reason": "quota"}\n',
                 "lacks the key ts",
             ),
             (b'{"schema_version": 1, "ts": "2026-10-01T00:41:00Z", "wave": "tidepool_w16"}\n', "lacks the key event"),
             (
-                b'{"schema_version": 2, "ts": "2026-10-01T00:41:00Z", "event": "wave.paused", "wave": "tidepool_w16", "reason": "quota", "resume_at": null}\n',
+                b'{"schema_version": 2, "ts": "2026-10-01T00:41:00Z", "event": "wave.parked", "wave": "tidepool_w16", "reason": "quota"}\n',
                 "schema_version is 2, not one of 1",
             ),
             (
-                b'{"schema_version": 1, "ts": "yesterday", "event": "wave.paused", "wave": "tidepool_w16", "reason": "quota", "resume_at": null}\n',
+                b'{"schema_version": 1, "ts": "yesterday", "event": "wave.parked", "wave": "tidepool_w16", "reason": "quota"}\n',
                 "ts 'yesterday' is not an ISO 8601 UTC instant",
             ),
             (
-                b'{"schema_version": 1, "ts": "2026-10-01T02:41:00+02:00", "event": "wave.paused", "wave": "tidepool_w16", "reason": "quota", "resume_at": null}\n',
+                b'{"schema_version": 1, "ts": "2026-10-01T02:41:00+02:00", "event": "wave.parked", "wave": "tidepool_w16", "reason": "quota"}\n',
                 "ts '2026-10-01T02:41:00+02:00' is not an ISO 8601 UTC instant",
             ),
             (
-                b'{"schema_version": 1, "ts": "2026-13-01T00:41:00Z", "event": "wave.paused", "wave": "tidepool_w16", "reason": "quota", "resume_at": null}\n',
+                b'{"schema_version": 1, "ts": "2026-13-01T00:41:00Z", "event": "wave.parked", "wave": "tidepool_w16", "reason": "quota"}\n',
                 "ts '2026-13-01T00:41:00Z' is not an ISO 8601 UTC instant",
             ),
-            (b'{"schema_version": 1, "ts": "2026-10-01T00:41:00Z", "event": "wave.paused"}\n', "lacks the key wave"),
+            (b'{"schema_version": 1, "ts": "2026-10-01T00:41:00Z", "event": "wave.parked"}\n', "lacks the key wave"),
             (
-                b'{"schema_version": 3, "ts": "2026-10-01T00:41:00Z", "event": "run.finished", "run": "r1"}\n',
-                "schema_version is 3, not one of 2",
+                b'{"schema_version": 4, "ts": "2026-10-01T00:41:00Z", "event": "run.finished", "run": "r1"}\n',
+                "schema_version is 4, not one of 3",
+            ),
+            (
+                b'{"schema_version": 1, "ts": "2026-10-01T00:41:00Z", "event": "task.preflighted", "task": "T7"}\n',
+                "schema_version is 1, not one of 2",
             ),
             (
                 (
@@ -207,7 +218,7 @@ class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
                 ),
                 (
                     "the task state abandoned is none of queued, running, pr_open, verifying, verified, merged,"
-                    " changes_requested, fixing, parked, paused:quota"
+                    " changes_requested, fixing, parked, blocked:quota"
                 ),
             ),
         ]
@@ -226,7 +237,7 @@ class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
                         entries=(
                             LedgerEntry(
                                 instant=datetime(2026, 10, 1, 0, 15, tzinfo=UTC),
-                                event=WavePaused(wave="tidepool_w16", reason="quota", resume_at=None),
+                                event=WaveParked(wave="tidepool_w16", reason="quota"),
                             ),
                         ),
                         files=(str(october),),
@@ -236,8 +247,12 @@ class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
 
 
 class ReadLedgerOfRunsFinishedTest(ReadLedgerTestCase):
-    def test_should_skip_a_line_of_schema_1_naming_its_version(self):
-        for line in [RUN_FINISHED_OF_SCHEMA_1, RUN_FINISHED_OF_SCHEMA_1_COUNTING_NO_STEPS]:
+    def test_should_skip_a_line_of_an_older_schema_naming_its_version(self):
+        for line, expected_reason in [
+            (RUN_FINISHED_OF_SCHEMA_1, "schema_version is 1, not one of 3"),
+            (RUN_FINISHED_OF_SCHEMA_1_COUNTING_NO_STEPS, "schema_version is 1, not one of 3"),
+            (RUN_FINISHED_OF_SCHEMA_2, "schema_version is 2, not one of 3"),
+        ]:
             with self.subTest(line=line):
                 # Arrange
                 october = self.write_ledger("2026-10.jsonl", line.encode())
@@ -251,21 +266,21 @@ class ReadLedgerOfRunsFinishedTest(ReadLedgerTestCase):
                     LedgerReading(
                         entries=(),
                         files=(str(october),),
-                        skipped=(SkippedLine(file=str(october), line=1, reason="schema_version is 1, not one of 2"),),
+                        skipped=(SkippedLine(file=str(october), line=1, reason=expected_reason),),
                     ),
                 )
 
-    def test_should_read_a_line_of_schema_2_with_its_cost(self):
+    def test_should_read_a_line_of_schema_3_with_its_cost(self):
         # Arrange
-        self.write_ledger("2026-10.jsonl", RUN_FINISHED_OF_SCHEMA_2.encode())
+        self.write_ledger("2026-10.jsonl", RUN_FINISHED_OF_SCHEMA_3.encode())
 
         # Act
         reading = read_ledger(self.state_root)
 
         # Assert
         [entry] = reading.entries
-        self.assertEqual(entry.event.main_steps, 42)
-        self.assertEqual(entry.event.total_steps, 54)
+        self.assertEqual(entry.event.main_turns, 42)
+        self.assertEqual(entry.event.total_turns, 54)
         self.assertEqual(entry.event.cost_usd, 3.63)
 
 
@@ -291,7 +306,7 @@ class ReadLedgerSinceAnEarlierReadingTest(ReadLedgerTestCase):
                 ),
                 LedgerEntry(
                     instant=datetime(2026, 10, 1, 0, 15, tzinfo=UTC),
-                    event=WavePaused(wave="tidepool_w16", reason="quota", resume_at=None),
+                    event=WaveParked(wave="tidepool_w16", reason="quota"),
                 ),
             ),
         )
@@ -330,7 +345,7 @@ class ReadLedgerSinceAnEarlierReadingTest(ReadLedgerTestCase):
                     ),
                     LedgerEntry(
                         instant=datetime(2026, 10, 1, 0, 15, tzinfo=UTC),
-                        event=WavePaused(wave="tidepool_w16", reason="quota", resume_at=None),
+                        event=WaveParked(wave="tidepool_w16", reason="quota"),
                     ),
                 ),
                 files=(str(october),),
@@ -354,7 +369,7 @@ class ReadLedgerSinceAnEarlierReadingTest(ReadLedgerTestCase):
                 entries=(
                     LedgerEntry(
                         instant=datetime(2026, 10, 1, 0, 15, tzinfo=UTC),
-                        event=WavePaused(wave="tidepool_w16", reason="quota", resume_at=None),
+                        event=WaveParked(wave="tidepool_w16", reason="quota"),
                     ),
                 ),
                 files=(str(october),),
@@ -386,7 +401,7 @@ class ReadLedgerSinceAnEarlierReadingTest(ReadLedgerTestCase):
                     ),
                     LedgerEntry(
                         instant=datetime(2026, 10, 1, 0, 15, tzinfo=UTC),
-                        event=WavePaused(wave="tidepool_w16", reason="quota", resume_at=None),
+                        event=WaveParked(wave="tidepool_w16", reason="quota"),
                     ),
                 ),
                 files=(str(october),),
@@ -415,14 +430,14 @@ class ReadLedgerSinceAnEarlierReadingTest(ReadLedgerTestCase):
                 ),
                 LedgerEntry(
                     instant=datetime(2026, 10, 1, 0, 15, tzinfo=UTC),
-                    event=WavePaused(wave="tidepool_w16", reason="quota", resume_at=None),
+                    event=WaveParked(wave="tidepool_w16", reason="quota"),
                 ),
             ),
         )
 
 
 TASK_PREFLIGHTED_WITHOUT_A_PULL_REQUEST = (
-    '{"schema_version": 1, "ts": "2026-10-19T09:00:00Z", "event": "task.preflighted", "project": "tidepool",'
+    '{"schema_version": 2, "ts": "2026-10-19T09:00:00Z", "event": "task.preflighted", "project": "tidepool",'
     ' "wave": "tidepool_w16", "task": "T7", "head": "8885daa", "checks": []}\n'
 )
 TASK_VERDICT_WITHOUT_A_PULL_REQUEST = (

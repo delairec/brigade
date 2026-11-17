@@ -8,7 +8,8 @@ import signal
 import tempfile
 import unittest
 from argparse import Namespace
-from datetime import UTC, datetime
+from contextlib import redirect_stderr
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import ANY
 
@@ -16,6 +17,10 @@ from brigade.collectors import pr_threads
 from brigade.commands.tick import COMMAND
 from brigade.errors import BrigadeError, CommandFailed, StandingDown, UsageError
 from brigade.inbox.read_inbox import Signal, read_inbox
+from brigade.ledger.ledger_entry import LedgerEntry
+from brigade.ledger.order_parked import OrderParked
+from brigade.ledger.order_started import OrderStarted
+from brigade.ledger.read_ledger import read_ledger
 from brigade.runs.record_run_pid import record_run_pid
 from brigade.runtime import Runtime
 from brigade.system.collector_places import locate_collectors
@@ -35,9 +40,11 @@ from tests.unit.commands.create_plugin_resolver import create_plugin_resolver
 from tests.unit.commands.run_directories import FIRST_RUN, create_run_record, create_run_result, write_run
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
-    STEP_COUNTING_PROBE,
+    TURN_COUNTING_PROBE,
     create_plugin_resolution,
 )
+from tests.unit.create_preflight_plugins import resolve_preflight_kinds_or
+from tests.unit.create_recipe_outputs import create_recipe_outputs
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
 from tests.unit.forge_double import ForgeDouble
@@ -57,6 +64,8 @@ STAGED_CHANGES_FOUND = 1
 GIT_REBASE = ("git", "rebase")
 
 LOOP_MODE = "loop"
+STDOUT = 1
+STDERR = 2
 WAKE_THE_LOOP = signal.SIGUSR1
 
 
@@ -97,6 +106,7 @@ class TickLoopTest(unittest.TestCase):
         first_round = _create_runtime(self.root, datetime(2026, 10, 7, 9, 0, 0, tzinfo=UTC))
         second_round = _create_runtime(self.root, datetime(2026, 10, 7, 9, 5, 0, tzinfo=UTC))
         request = Namespace(
+            log_file=None,
             mode=LOOP_MODE,
             create_runtime=_create_round_factory([(first_round, WAKE_THE_LOOP), (second_round, signal.SIGTERM)]),
         )
@@ -128,7 +138,7 @@ class TickWithoutAKnownModeTest(unittest.TestCase):
                 # Arrange
                 directory = self.enterContext(tempfile.TemporaryDirectory())
                 runtime = _create_runtime(Path(directory), datetime(2026, 10, 7, 9, 0, 0, tzinfo=UTC))
-                request = Namespace(mode=mode, create_runtime=_stop_the_loop_it_entered)
+                request = Namespace(log_file=None, mode=mode, create_runtime=_stop_the_loop_it_entered)
 
                 # Act
                 with self.assertRaises(UsageError) as raised, contextlib.redirect_stderr(io.StringIO()):
@@ -156,6 +166,32 @@ def _create_single_round_factory(runtime: Runtime):
     return create_runtime
 
 
+class TickWithALogFileTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.saved_stdout = os.dup(STDOUT)
+        self.saved_stderr = os.dup(STDERR)
+
+    def tearDown(self):
+        os.dup2(self.saved_stdout, STDOUT)
+        os.dup2(self.saved_stderr, STDERR)
+        os.close(self.saved_stdout)
+        os.close(self.saved_stderr)
+
+    def test_should_keep_its_log_in_the_log_file_it_is_given(self):
+        # Arrange
+        log_file = self.root / "state" / "logs" / "tick.log"
+        request = Namespace(log_file=str(log_file), mode="once")
+
+        # Act
+        COMMAND.run(request, _create_quiet_runtime(self.root))
+
+        # Assert
+        self.assertEqual(log_file.read_text(encoding="utf-8"), "")
+
+
 class TickOnAnEmptyMachineTest(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
@@ -165,7 +201,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
 
     def test_should_apply_no_action_and_write_the_heartbeat(self):
         # Arrange
-        request = Namespace(mode="once")
+        request = Namespace(log_file=None, mode="once")
 
         runtime = dataclasses.replace(_create_quiet_runtime(self.root), read_monotonic=iter([100.0, 100.25]).__next__)
 
@@ -199,7 +235,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
 
     def test_should_stand_down_while_another_tick_holds_the_lock(self):
         # Arrange
-        request = Namespace(mode="once")
+        request = Namespace(log_file=None, mode="once")
         self.lock.parent.mkdir(parents=True)
 
         # Act
@@ -210,9 +246,9 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
         # Assert
         self.assertEqual(str(raised.exception), f"another tick holds {self.lock}")
 
-    def test_should_plan_nothing_on_a_dry_run(self):
+    def test_should_decide_nothing_on_a_dry_run(self):
         # Arrange
-        request = Namespace(mode="dry-run")
+        request = Namespace(log_file=None, mode="dry-run")
 
         # Act
         document = COMMAND.run(request, _create_quiet_runtime(self.root))
@@ -230,6 +266,8 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
                     "projects": [],
                     "studies": [],
                     "live_study_runs": [],
+                    "orders": [],
+                    "live_order_runs": [],
                     "study_runs": 2,
                     "rate_limits": [],
                     "milestones": [],
@@ -237,13 +275,13 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
                     "leftovers": [],
                     "kept_branches": [],
                 },
-                "plan": [],
+                "decisions": [],
             },
         )
 
     def test_should_write_no_tick_trail_on_a_dry_run(self):
         # Arrange
-        request = Namespace(mode="dry-run")
+        request = Namespace(log_file=None, mode="dry-run")
 
         # Act
         COMMAND.run(request, _create_quiet_runtime(self.root))
@@ -256,7 +294,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
         create_round = _create_single_round_factory(
             dataclasses.replace(_create_quiet_runtime(self.root), read_monotonic=iter([100.0, 100.25]).__next__)
         )
-        request = Namespace(mode=LOOP_MODE, create_runtime=create_round)
+        request = Namespace(log_file=None, mode=LOOP_MODE, create_runtime=create_round)
         reported = io.StringIO()
 
         # Act
@@ -274,7 +312,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
         create_round = _create_single_round_factory(
             dataclasses.replace(_create_quiet_runtime(self.root), read_monotonic=iter([100.0, 100.25]).__next__)
         )
-        request = Namespace(mode=LOOP_MODE, create_runtime=create_round)
+        request = Namespace(log_file=None, mode=LOOP_MODE, create_runtime=create_round)
         self.lock.parent.mkdir(parents=True)
         reported = io.StringIO()
 
@@ -288,7 +326,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
 
     def test_should_leave_the_lock_the_heartbeat_and_the_trail_alone_in_the_state_directory(self):
         # Arrange
-        request = Namespace(mode="once")
+        request = Namespace(log_file=None, mode="once")
         state = self.root / "state"
 
         # Act
@@ -301,7 +339,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
 
     def test_should_write_nothing_but_the_lock_while_another_tick_holds_it(self):
         # Arrange
-        request = Namespace(mode="once")
+        request = Namespace(log_file=None, mode="once")
         self.lock.parent.mkdir(parents=True)
 
         # Act
@@ -314,7 +352,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
 
     def test_should_write_no_heartbeat_when_the_trail_directory_cannot_be_created(self):
         # Arrange
-        request = Namespace(mode="once")
+        request = Namespace(log_file=None, mode="once")
         trails = self.root / "state" / "ticks"
         trails.parent.mkdir()
         trails.write_text("", encoding="utf-8")
@@ -329,7 +367,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
 
     def test_should_take_no_lock_and_write_no_heartbeat_on_a_dry_run(self):
         # Arrange
-        request = Namespace(mode="dry-run")
+        request = Namespace(log_file=None, mode="dry-run")
 
         # Act
         COMMAND.run(request, _create_quiet_runtime(self.root))
@@ -338,9 +376,9 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
         self.assertEqual((self.root / "state" / "locks").exists(), False)
         self.assertEqual((self.root / "state" / "tick.json").exists(), False)
 
-    def test_should_plan_while_another_tick_holds_the_lock(self):
+    def test_should_decide_while_another_tick_holds_the_lock(self):
         # Arrange
-        request = Namespace(mode="dry-run")
+        request = Namespace(log_file=None, mode="dry-run")
         self.lock.parent.mkdir(parents=True)
 
         # Act
@@ -349,12 +387,12 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
             document = COMMAND.run(request, _create_quiet_runtime(self.root))
 
         # Assert
-        self.assertEqual(document["plan"], [])
+        self.assertEqual(document["decisions"], [])
 
     def test_should_count_a_round_of_the_loop_another_tick_holds_and_write_no_heartbeat(self):
         # Arrange
         create_round = _create_single_round_factory(_create_quiet_runtime(self.root))
-        request = Namespace(mode=LOOP_MODE, create_runtime=create_round)
+        request = Namespace(log_file=None, mode=LOOP_MODE, create_runtime=create_round)
         self.lock.parent.mkdir(parents=True)
 
         # Act
@@ -370,7 +408,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
         # Arrange
         (self.root / "state").write_text("", encoding="utf-8")
         create_round = _create_single_round_factory(_create_quiet_runtime(self.root))
-        request = Namespace(mode=LOOP_MODE, create_runtime=create_round)
+        request = Namespace(log_file=None, mode=LOOP_MODE, create_runtime=create_round)
         reported = io.StringIO()
 
         # Act
@@ -418,8 +456,8 @@ class TickTextTest(unittest.TestCase):
             ("a loop", {"mode": "loop", "ticks_attempted": 3}, "tick --loop: 3 ticks attempted"),
             (
                 "a dry run planning nothing",
-                {"mode": "dry-run", "snapshot": {"schema_version": 1, "now": "2026-10-07T09:00:00Z"}, "plan": []},
-                "snapshot\n  now  2026-10-07T09:00:00Z\nplan\n  no action",
+                {"mode": "dry-run", "snapshot": {"schema_version": 1, "now": "2026-10-07T09:00:00Z"}, "decisions": []},
+                "snapshot\n  now  2026-10-07T09:00:00Z\ndecisions\n  no action",
             ),
             (
                 "a dry run of an empty machine",
@@ -436,18 +474,18 @@ class TickTextTest(unittest.TestCase):
                         "rate_limits": [],
                         "milestones": [],
                     },
-                    "plan": [],
+                    "decisions": [],
                 },
                 (
                     "snapshot\n  now  2026-10-07T09:00:00Z\n  waves  []\n  projects  []\n  studies  []"
                     "\n  live_study_runs  []\n  study_runs  2\n  rate_limits  []"
-                    "\n  milestones  []\nplan\n  no action"
+                    "\n  milestones  []\ndecisions\n  no action"
                 ),
             ),
             (
                 "a dry run planning an action",
-                {"mode": "dry-run", "snapshot": {}, "plan": [{"wave": "tidepool_w16"}]},
-                "snapshot\nplan\n  {'wave': 'tidepool_w16'}",
+                {"mode": "dry-run", "snapshot": {}, "decisions": [{"wave": "tidepool_w16"}]},
+                "snapshot\ndecisions\n  {'wave': 'tidepool_w16'}",
             ),
         ]
         for case, document, expected_text in rows:
@@ -471,7 +509,7 @@ class TickExitCodeTest(unittest.TestCase):
 class TickRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = Namespace(mode="once")
+        options = Namespace(log_file=None, mode="once")
 
         # Act
         request = COMMAND.read_request(options)
@@ -590,7 +628,7 @@ NO_PULL_REQUEST = None
 OPEN_PULL_REQUEST = {
     "number": 42,
     "state": "open",
-    "checks": [{"name": "ci", "verdict": "pass"}],
+    "checks": [{"name": "ci", "conclusion": "pass"}],
     "review": None,
     "behind": False,
     "head": "8885daa",
@@ -599,7 +637,7 @@ OPEN_PULL_REQUEST = {
 }
 MERGED_PULL_REQUEST = {**OPEN_PULL_REQUEST, "state": "merged"}
 TASK_PREFLIGHTED_AT_THE_HEAD = {
-    "schema_version": 1,
+    "schema_version": 2,
     "ts": "2026-10-18T11:30:00Z",
     "event": "task.preflighted",
     "project": "tidepool",
@@ -612,29 +650,29 @@ TASK_PREFLIGHTED_AT_THE_HEAD = {
 NO_DETAILS_ASKED = None
 PULL_REQUEST_FAILING_TWO_CHECKS = {
     **OPEN_PULL_REQUEST,
-    "checks": [{"name": "ci", "verdict": "failure"}, {"name": "coverage", "verdict": "failure"}],
+    "checks": [{"name": "ci", "conclusion": "failure"}, {"name": "coverage", "conclusion": "failure"}],
 }
 TASK_PREFLIGHTED_ON_FAILING_CHECKS = {
     **TASK_PREFLIGHTED_AT_THE_HEAD,
-    "checks": [{"name": "checks", "verdict": "fail", "findings": ["ci: failure", "coverage: failure"]}],
+    "checks": [{"name": "checks", "result": "fail", "findings": ["ci: failure", "coverage: failure"]}],
 }
 TASK_PREFLIGHTED_ON_FAILING_CHECKS_AND_PRIVACY = {
     **TASK_PREFLIGHTED_AT_THE_HEAD,
     "checks": [
-        {"name": "checks", "verdict": "fail", "findings": ["ci: failure", "coverage: failure"]},
-        {"name": "privacy", "verdict": "fail", "findings": ["src/cart.py:12: an e-mail address"]},
+        {"name": "checks", "result": "fail", "findings": ["ci: failure", "coverage: failure"]},
+        {"name": "privacy", "result": "fail", "findings": ["src/cart.py:12: an e-mail address"]},
     ],
 }
 PULL_REQUEST_DETAILS = {
     "head": "feature/T7-tide-table",
     "head_sha": "8885daa",
-    "checks": [{"name": "ci", "verdict": "success"}],
+    "checks": [{"name": "ci", "conclusion": "success"}],
     "body": "Delivers @TASK.T7.",
 }
 PAUSED_ON_THE_QUOTA_UNTIL_08 = {
     "schema_version": 1,
     "ts": "2026-10-19T07:30:00Z",
-    "event": "wave.paused",
+    "event": "wave.blocked",
     "wave": "tidepool_w16",
     "reason": "quota",
     "resume_at": "2026-10-19T08:00:00Z",
@@ -649,10 +687,9 @@ FORGE_ACCOUNT_UNAVAILABLE = {
 PAUSED_ON_THE_FORGE_ACCOUNT = {
     "schema_version": 1,
     "ts": "2026-10-19T08:10:00Z",
-    "event": "wave.paused",
+    "event": "wave.parked",
     "wave": "tidepool_w16",
     "reason": "forge_account",
-    "resume_at": None,
 }
 RESUMED_FROM_THE_FORGE_ACCOUNT = {
     "schema_version": 1,
@@ -671,10 +708,9 @@ RUN_FINISHED_ON_THE_CLIENT_LOGIN = {
 PAUSED_ON_THE_CLIENT_LOGIN = {
     "schema_version": 1,
     "ts": "2026-10-19T08:55:00Z",
-    "event": "wave.paused",
+    "event": "wave.parked",
     "wave": "tidepool_w16",
     "reason": "client_login",
-    "resume_at": None,
 }
 RESUMED_FROM_THE_CLIENT_LOGIN = {
     "schema_version": 1,
@@ -685,7 +721,7 @@ RESUMED_FROM_THE_CLIENT_LOGIN = {
 }
 REVIEW_RUN_FAILED_WITHOUT_A_VERDICT = {
     **create_run_result(FIRST_RUN, "failed", "2026-10-18T11:40:00Z"),
-    "procedure": "verify-pr",
+    "procedure": "review-pr",
     "slot": "review",
     "role": "reviewer",
     "wave": "tidepool_w16",
@@ -772,9 +808,11 @@ class SpawnReadingTheLedgerDouble:
 class SpawnRecorderDouble:
     def __init__(self):
         self.argvs = []
+        self.cwds = []
 
     def spawn(self, request):
         self.argvs.append(request.argv[2:])
+        self.cwds.append(request.cwd)
         return SpawnedProcessDouble(pid=os.getpid())
 
 
@@ -788,19 +826,26 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         self.worktree = self.repository / ".brigade" / "worktrees" / "T7"
         self.spawn = SpawnRecorderDouble()
 
-    def _create_runtime(self, task: tuple, forge: ForgeDouble, setup: tuple = (), requests: tuple = ()) -> Runtime:
+    def _create_runtime(
+        self,
+        task: tuple,
+        forge: ForgeDouble,
+        recipes: dict | None = None,
+        failures: dict | None = None,
+        requests: tuple = (),
+    ) -> Runtime:
         corpus = {
             "STUDY": PAUSED_BUILT_IN_STUDIES,
-            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"), *setup)},
+            "PROJECT": {"tidepool": (("PATH", str(self.repository)), ("MAIN", "main"), ("FORGE", "github"))},
             "TASK": {"T7": task},
             "REQUEST": dict(requests),
         }
         return create_test_runtime(
             create_test_paths(self.root),
-            run_process=create_machine_double(corpus, MACHINE_OUTPUTS),
+            run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **(recipes or {})}, failures),
             spawn_process=self.spawn.spawn,
             resolve_plugin=_resolve_the_collectors_beside(
-                create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
+                create_plugin_resolution(TURN_COUNTING_PROBE, forge), self.root
             ),
         )
 
@@ -816,7 +861,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        document = COMMAND.run(Namespace(mode="once"), runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(document["actions_applied"], 3)
@@ -825,6 +870,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "build-task",
                     "task=@TASK.T7",
                     "base=integration/M4",
@@ -854,7 +900,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -874,11 +920,15 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
     def test_should_record_a_failed_setup_as_a_failed_action_and_count_it_in_the_heartbeat(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED])
-        broken_setup = (("SETUP", 'make "deps'),)
-        runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED), broken_setup)
+        worktree = self.repository / ".brigade" / "worktrees" / "T7"
+        setup_recipe = create_recipe_outputs(worktree, {"setup": (("make", "deps"),)})
+        failing_make = {("make", "deps"): CommandFailed(("make", "deps"), 2, "No rule to make target 'deps'.")}
+        runtime = self._create_runtime(
+            TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED), setup_recipe, failing_make
+        )
 
         # Act
-        document = COMMAND.run(Namespace(mode="once"), runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(document["actions_failed"], 1)
@@ -914,7 +964,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "project": "tidepool",
                     "wave": "tidepool_w16",
                     "task": "T7",
-                    "error": 'the setup of @TASK.T7 failed: the line make "deps splits into no argv: No closing quotation',
+                    "error": "the setup of @TASK.T7 failed: make deps exited 2: No rule to make target 'deps'.",
                 },
                 {
                     "schema_version": 1,
@@ -937,12 +987,12 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         write_run(self.root / "state", stopped_run, create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"))
         finished = {**create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"), "wave": WAVE, "task": "T7"}
         write_ledger(
-            self.root, [WAVE_STARTED, _record_task_state("running"), finished, _record_task_state("paused:quota")]
+            self.root, [WAVE_STARTED, _record_task_state("running"), finished, _record_task_state("blocked:quota")]
         )
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -950,6 +1000,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "build-task",
                     "--slot",
                     "build",
@@ -980,13 +1031,13 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         write_run(self.root / "state", stopped_run, create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"))
         finished = {**create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"), "wave": WAVE, "task": "T7"}
         write_ledger(
-            self.root, [WAVE_STARTED, _record_task_state("running"), finished, _record_task_state("paused:quota")]
+            self.root, [WAVE_STARTED, _record_task_state("running"), finished, _record_task_state("blocked:quota")]
         )
         self.spawn = SpawnReadingTheLedgerDouble(self.root / "state" / "ledger" / "2026-10.jsonl")
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -1010,7 +1061,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, create_forge(MERGED_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -1063,13 +1114,13 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **WAVE_TREE_HOLDING_T7_IMPLEMENTED_OUTPUTS}),
             spawn_process=self.spawn.spawn,
             resolve_plugin=_resolve_the_collectors_beside(
-                create_plugin_resolution(STEP_COUNTING_PROBE, create_forge(MERGED_PULL_REQUEST, NO_DETAILS_ASKED)),
+                create_plugin_resolution(TURN_COUNTING_PROBE, create_forge(MERGED_PULL_REQUEST, NO_DETAILS_ASKED)),
                 self.root,
             ),
         )
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -1115,7 +1166,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, PULL_REQUEST_DETAILS))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -1150,7 +1201,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -1161,42 +1212,46 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "checks": [
                         {
                             "name": "ancestry",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "checks",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "corpus",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
+                            "commands": [
+                                {"command": "awawa fmt --check .", "exit_code": 0},
+                                {"command": "awawa lint --strict .", "exit_code": 0},
+                            ],
                         },
                         {
                             "name": "promotion",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "untouched_files",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "privacy",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "body",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "size",
-                            "verdict": "info",
+                            "result": "info",
                             "findings": ["0 files", "0 lines", "0 packages", "0 layers"],
                         },
                     ],
@@ -1218,7 +1273,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, PULL_REQUEST_DETAILS))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -1242,7 +1297,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, PULL_REQUEST_DETAILS))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(self._read_events()[4]["event"], "task.preflighted")
@@ -1260,7 +1315,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, PULL_REQUEST_DETAILS))
 
                 # Act
-                COMMAND.run(Namespace(mode="once"), runtime)
+                COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
                 # Assert
                 self.assertEqual(self._read_events(), ledger)
@@ -1274,7 +1329,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, PULL_REQUEST_DETAILS))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(self._read_events()[4]["event"], "task.preflighted")
@@ -1285,7 +1340,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, PULL_REQUEST_DETAILS))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -1320,7 +1375,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -1331,42 +1386,46 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "checks": [
                         {
                             "name": "ancestry",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "checks",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "corpus",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
+                            "commands": [
+                                {"command": "awawa fmt --check .", "exit_code": 0},
+                                {"command": "awawa lint --strict .", "exit_code": 0},
+                            ],
                         },
                         {
                             "name": "promotion",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "untouched_files",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "privacy",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "body",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "size",
-                            "verdict": "info",
+                            "result": "info",
                             "findings": ["0 files", "0 lines", "0 packages", "0 layers"],
                         },
                     ],
@@ -1394,7 +1453,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -1402,6 +1461,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     f"{self.root}/deliver.md",
                     "task=@TASK.T7",
                     "base=integration/M4",
@@ -1432,7 +1492,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -1440,7 +1500,8 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             [
                 (
                     "run",
-                    "verify-pr",
+                    "start",
+                    "review-pr",
                     "pr=42",
                     "task=@TASK.T7",
                     "--slot",
@@ -1475,7 +1536,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -1483,7 +1544,8 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             [
                 (
                     "run",
-                    "verify-pr",
+                    "start",
+                    "review-pr",
                     "pr=42",
                     "task=@TASK.T7",
                     "--slot",
@@ -1512,7 +1574,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -1520,6 +1582,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "remediate-pr",
                     "pr=42",
                     "task=@TASK.T7",
@@ -1562,7 +1625,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-18T11:30:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -1602,7 +1665,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, forge)
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -1638,7 +1701,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         )
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         brief = self.root / "state" / "briefs" / "tidepool_w16-T7-checks.md"
@@ -1647,6 +1710,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "build-task",
                     "task=@TASK.T7",
                     "base=integration/M4",
@@ -1722,7 +1786,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-18T11:30:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -1733,12 +1797,12 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "checks": [
                         {
                             "name": "checks",
-                            "verdict": "fail",
+                            "result": "fail",
                             "findings": ["ci: failure", "coverage: failure"],
                         },
                         {
                             "name": "privacy",
-                            "verdict": "fail",
+                            "result": "fail",
                             "findings": ["src/cart.py:12: an e-mail address"],
                         },
                     ],
@@ -1784,7 +1848,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -1811,7 +1875,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-18T11:30:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -1866,13 +1930,13 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **BLOCKING_QUESTION_OUTPUTS}),
             spawn_process=self.spawn.spawn,
             resolve_plugin=_resolve_the_collectors_beside(
-                create_plugin_resolution(STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)),
+                create_plugin_resolution(TURN_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)),
                 self.root,
             ),
         )
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -1925,7 +1989,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -1949,7 +2013,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "state": "running",
                 },
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": "2026-10-19T08:50:00Z",
                     "event": "run.finished",
                     "run": ANY,
@@ -1960,8 +2024,8 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "client": "fake",
                     "project": None,
                     "session": "session-b74",
-                    "main_steps": 12,
-                    "total_steps": 12,
+                    "main_turns": 12,
+                    "total_turns": 12,
                     "duration_ms": 4200,
                     "usage": None,
                     "outcome": "failed",
@@ -1975,7 +2039,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T09:00:00Z",
-                    "event": "wave.paused",
+                    "event": "wave.blocked",
                     "wave": "tidepool_w16",
                     "reason": "quota",
                     "resume_at": "2026-10-19T09:30:00Z",
@@ -1986,7 +2050,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "event": "task.state",
                     "wave": "tidepool_w16",
                     "task": "T7",
-                    "state": "paused:quota",
+                    "state": "blocked:quota",
                 },
             ],
         )
@@ -2004,7 +2068,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -2028,7 +2092,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "state": "running",
                 },
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": "2026-10-19T08:50:00Z",
                     "event": "run.finished",
                     "run": ANY,
@@ -2039,8 +2103,8 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "client": "fake",
                     "project": None,
                     "session": "session-b74",
-                    "main_steps": 12,
-                    "total_steps": 12,
+                    "main_turns": 12,
+                    "total_turns": 12,
                     "duration_ms": 4200,
                     "usage": None,
                     "outcome": "failed",
@@ -2058,7 +2122,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T09:00:00Z",
-                    "event": "wave.paused",
+                    "event": "wave.blocked",
                     "wave": "tidepool_w16",
                     "reason": "quota",
                     "resume_at": "2026-10-19T15:00:00Z",
@@ -2069,7 +2133,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "event": "task.state",
                     "wave": "tidepool_w16",
                     "task": "T7",
-                    "state": "paused:quota",
+                    "state": "blocked:quota",
                 },
             ],
         )
@@ -2086,7 +2150,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -2110,7 +2174,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "state": "running",
                 },
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": "2026-10-19T08:50:00Z",
                     "event": "run.finished",
                     "run": ANY,
@@ -2121,8 +2185,8 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "client": "fake",
                     "project": None,
                     "session": "session-b74",
-                    "main_steps": 12,
-                    "total_steps": 12,
+                    "main_turns": 12,
+                    "total_turns": 12,
                     "duration_ms": 4200,
                     "usage": None,
                     "outcome": "failed",
@@ -2136,7 +2200,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T09:00:00Z",
-                    "event": "wave.paused",
+                    "event": "wave.blocked",
                     "wave": "tidepool_w16",
                     "reason": "quota",
                     "resume_at": "2026-10-19T09:30:00Z",
@@ -2147,7 +2211,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "event": "task.state",
                     "wave": "tidepool_w16",
                     "task": "T7",
-                    "state": "paused:quota",
+                    "state": "blocked:quota",
                 },
             ],
         )
@@ -2170,13 +2234,13 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 _record_task_state("running"),
                 finished,
                 PAUSED_ON_THE_QUOTA_UNTIL_08,
-                _record_task_state("paused:quota"),
+                _record_task_state("blocked:quota"),
             ],
         )
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -2200,7 +2264,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "state": "running",
                 },
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": "2026-10-18T10:00:00Z",
                     "event": "run.finished",
                     "run": ANY,
@@ -2211,8 +2275,8 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "client": "fake",
                     "project": None,
                     "session": "session-b74",
-                    "main_steps": 12,
-                    "total_steps": 12,
+                    "main_turns": 12,
+                    "total_turns": 12,
                     "duration_ms": 4200,
                     "usage": None,
                     "outcome": "failed",
@@ -2226,7 +2290,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T07:30:00Z",
-                    "event": "wave.paused",
+                    "event": "wave.blocked",
                     "wave": "tidepool_w16",
                     "reason": "quota",
                     "resume_at": "2026-10-19T08:00:00Z",
@@ -2237,7 +2301,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "event": "task.state",
                     "wave": "tidepool_w16",
                     "task": "T7",
-                    "state": "paused:quota",
+                    "state": "blocked:quota",
                 },
                 {
                     "schema_version": 1,
@@ -2266,7 +2330,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         no_launch = []
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -2291,10 +2355,9 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T09:00:00Z",
-                    "event": "wave.paused",
+                    "event": "wave.parked",
                     "wave": "tidepool_w16",
                     "reason": "forge_account",
-                    "resume_at": None,
                 },
             ],
         )
@@ -2316,7 +2379,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -2324,6 +2387,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "build-task",
                     "task=@TASK.T7",
                     "base=integration/M4",
@@ -2354,7 +2418,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(io.StringIO()):
-            COMMAND.run(Namespace(mode="once"), runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -2378,7 +2442,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "state": "running",
                 },
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": "2026-10-19T08:50:00Z",
                     "event": "run.finished",
                     "run": FIRST_RUN,
@@ -2389,8 +2453,8 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "client": "fake",
                     "project": None,
                     "session": "session-b74",
-                    "main_steps": 12,
-                    "total_steps": 12,
+                    "main_turns": 12,
+                    "total_turns": 12,
                     "duration_ms": 4200,
                     "usage": None,
                     "outcome": "failed",
@@ -2404,10 +2468,9 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T09:00:00Z",
-                    "event": "wave.paused",
+                    "event": "wave.parked",
                     "wave": "tidepool_w16",
                     "reason": "client_login",
-                    "resume_at": None,
                 },
             ],
         )
@@ -2422,11 +2485,11 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(errors):
-            COMMAND.run(Namespace(mode="once"), runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertIn(
-            "brigade tick: the wave tidepool_w16 paused: the login of its AI client is lost;"
+            "brigade tick: the wave tidepool_w16 parked: the login of its AI client is lost;"
             " sign in to the client again, then run brigade wave resume tidepool_w16\n",
             errors.getvalue(),
         )
@@ -2448,7 +2511,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -2456,6 +2519,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "build-task",
                     "task=@TASK.T7",
                     "base=integration/M4",
@@ -2480,11 +2544,11 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
     def test_should_leave_open_a_pull_request_failing_its_preflight(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("pr_open"), TASK_PR_OPENED])
-        failing_checks = {**PULL_REQUEST_DETAILS, "checks": [{"name": "ci", "verdict": "failure"}]}
+        failing_checks = {**PULL_REQUEST_DETAILS, "checks": [{"name": "ci", "conclusion": "failure"}]}
         runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, failing_checks))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -2519,7 +2583,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -2530,42 +2594,46 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "checks": [
                         {
                             "name": "ancestry",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "checks",
-                            "verdict": "fail",
+                            "result": "fail",
                             "findings": ["ci: failure"],
                         },
                         {
                             "name": "corpus",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
+                            "commands": [
+                                {"command": "awawa fmt --check .", "exit_code": 0},
+                                {"command": "awawa lint --strict .", "exit_code": 0},
+                            ],
                         },
                         {
                             "name": "promotion",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "untouched_files",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "privacy",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "body",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                         },
                         {
                             "name": "size",
-                            "verdict": "info",
+                            "result": "info",
                             "findings": ["0 files", "0 lines", "0 packages", "0 layers"],
                         },
                     ],
@@ -2579,7 +2647,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -2627,7 +2695,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         )
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -2641,7 +2709,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, create_forge(MERGED_PULL_REQUEST, NO_DETAILS_ASKED))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -2689,7 +2757,7 @@ TASK_AFTER_T7 = (
     ("STATUS", "todo"),
     ("AFTER", "@TASK.T7"),
 )
-GREEN_PULL_REQUEST = {**OPEN_PULL_REQUEST, "checks": [{"name": "ci", "verdict": "success"}]}
+GREEN_PULL_REQUEST = {**OPEN_PULL_REQUEST, "checks": [{"name": "ci", "conclusion": "success"}]}
 TASK_PASSED_AT_THE_HEAD = {
     "schema_version": 1,
     "ts": "2026-10-18T11:45:00Z",
@@ -2784,7 +2852,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
             run_process=create_machine_double(corpus, MACHINE_OUTPUTS),
             spawn_process=self.spawn.spawn,
             resolve_plugin=_resolve_the_collectors_beside(
-                create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
+                create_plugin_resolution(TURN_COUNTING_PROBE, forge), self.root
             ),
         )
 
@@ -2795,7 +2863,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
 
     def test_should_merge_the_pull_request_by_the_method_of_the_project(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -2818,7 +2886,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         )
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+        COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(forge))
 
         # Assert
         self.assertEqual(
@@ -2845,7 +2913,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         )
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+        COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(forge))
 
         # Assert
         self.assertEqual(
@@ -2870,7 +2938,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         no_signal = ()
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(read_inbox(self.root / "state", FIXED_NOW), no_signal)
@@ -2883,7 +2951,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         )
 
         # Act
-        document = COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+        document = COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(forge))
 
         # Assert
         self.assertEqual(document["actions_applied"], 3)
@@ -2897,7 +2965,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         )
 
         # Act
-        document = COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+        document = COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(forge))
 
         # Assert
         self.assertEqual(document["actions_failed"], 2)
@@ -2907,21 +2975,21 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
 
         # Act
-        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), self.runtime)
 
         # Assert
         self.assertIn(
             {"project": "tidepool", "wave": "tidepool_w16", "task": "T8", "last_action": "2026-10-18T09:00:00Z"},
-            json.loads(json.dumps(document["plan"])),
+            json.loads(json.dumps(document["decisions"])),
         )
 
     def test_should_print_the_merge_with_the_head_it_names_on_a_dry_run(self):
         # Act
-        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), self.runtime)
 
         # Assert
         self.assertEqual(
-            document["plan"],
+            document["decisions"],
             [
                 {
                     "project": "tidepool",
@@ -2942,14 +3010,14 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         runtime = self._create_runtime(forge)
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(forge.merges, [])
 
     def test_should_record_the_merge_with_the_login_it_ran_as_and_the_task_merged(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -2977,7 +3045,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-18T11:30:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -3043,7 +3111,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
         write_ledger(self.root, [*LEDGER_OF_A_VERIFIED_TASK, OTHER_TASK_PASSED, SAME_TASK_PASSED_IN_ANOTHER_WAVE])
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -3071,7 +3139,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-18T11:30:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -3160,7 +3228,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
 
     def test_should_start_the_dependent_of_the_merged_task_in_the_same_tick(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -3168,6 +3236,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "build-task",
                     "task=@TASK.T8",
                     "base=integration/M4",
@@ -3238,7 +3307,7 @@ def _resolve_the_collectors_beside(resolve_plugin, root: Path):
             return check_runs
         if (kind, name) == ("collector", "pr-threads"):
             return pr_threads
-        return resolve_plugin(kind, name, **options)
+        return resolve_preflight_kinds_or(resolve_plugin)(kind, name, **options)
 
     return resolve
 
@@ -3266,7 +3335,7 @@ class TickCuttingTheBranchOfAMilestoneTest(unittest.TestCase):
             run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, ("git", "ls-remote"): ""}),
             spawn_process=SpawnRecorderDouble().spawn,
             resolve_plugin=_resolve_the_collectors_beside(
-                create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
+                create_plugin_resolution(TURN_COUNTING_PROBE, forge), self.root
             ),
         )
 
@@ -3300,12 +3369,12 @@ class TickCuttingTheBranchOfAMilestoneTest(unittest.TestCase):
             run_process=ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus)).run,
             spawn_process=SpawnRecorderDouble().spawn,
             resolve_plugin=_resolve_the_collectors_beside(
-                create_plugin_resolution(STEP_COUNTING_PROBE, self.forge), self.root
+                create_plugin_resolution(TURN_COUNTING_PROBE, self.forge), self.root
             ),
         )
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertIn({**CUT_OF_M4, "ts": ANY}, self._read_events())
@@ -3344,7 +3413,7 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
             run_process=self.machine.run,
             spawn_process=SpawnRecorderDouble().spawn,
             resolve_plugin=create_plugin_resolution(
-                STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
+                TURN_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
             ),
         )
 
@@ -3358,7 +3427,7 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
         self._miss_the_branch("integration/tides")
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
@@ -3375,12 +3444,66 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
             },
         )
 
+    def test_should_pause_before_any_run_the_wave_a_forge_login_of_which_prints_no_token(self):
+        # Arrange
+        self._miss_the_branch("integration/tidepool_w1")
+        self._miss_the_branch("integration/tides")
+        (self.root / "config" / "config.toml").write_text(
+            f'{CLIENT_AND_DOCUMENT_CONFIGURATION}\n[forge_accounts]\nreview = "prudence-bot"\n', encoding="utf-8"
+        )
+        corpus = {
+            "STUDY": PAUSED_BUILT_IN_STUDIES,
+            "PROJECT": {"tidepool": (("PATH", str(self.root / "tidepool")), ("MAIN", "main"), ("FORGE", "github"))},
+            "TASK": {"T7": TASK_TO_DELIVER},
+            "MILESTONE": {"M4": MILESTONE_M4},
+        }
+        answers = {
+            **self.machine.answers,
+            ("git", "ls-remote"): ProcessAnswer(exit_code=2),
+            ("git", "push", "--quiet", "origin"): ProcessAnswer(),
+        }
+        machine = ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus))
+        forge = ForgeDouble(
+            {
+                "read_login_environment": lambda request: {"schema_version": 1, "environment": None},
+                "describe_account": lambda request: {"schema_version": 1, "login": "octo-cli"},
+                "list_pull_requests": lambda request: {"schema_version": 1, "pull_requests": []},
+                "find_pull_request": lambda request: {"schema_version": 1, "pull_request": None},
+                "list_check_runs": lambda request: {"schema_version": 1, "check_runs": []},
+            }
+        )
+        spawner = SpawnRecorderDouble()
+        runtime = dataclasses.replace(
+            self.runtime,
+            run_process=machine.run,
+            spawn_process=spawner.spawn,
+            resolve_plugin=create_plugin_resolution(TURN_COUNTING_PROBE, forge),
+        )
+
+        # Act
+        with redirect_stderr(io.StringIO()):
+            COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
+
+        # Assert
+        ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(
+            json.loads(ledger[-1]),
+            {
+                "schema_version": 1,
+                "ts": ANY,
+                "event": "wave.parked",
+                "wave": "tidepool_w1",
+                "reason": "forge_account",
+            },
+        )
+        self.assertEqual(spawner.argvs, [])
+
     def test_should_cut_the_branch_of_the_milestone_a_todo_task_names_before_its_wave_starts(self):
         # Arrange
         self._miss_the_branch("integration/tides")
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
@@ -3400,10 +3523,12 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
 
     def test_should_print_the_cut_of_the_milestone_branch_on_a_dry_run(self):
         # Act
-        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), self.runtime)
 
         # Assert
-        self.assertEqual(document["plan"], [{"project": "tidepool", "milestone": "M4", "branch": "integration/tides"}])
+        self.assertEqual(
+            document["decisions"], [{"project": "tidepool", "milestone": "M4", "branch": "integration/tides"}]
+        )
 
     def test_should_name_on_stderr_the_milestone_whose_unrecorded_branch_it_refuses_to_cut(self):
         # Arrange
@@ -3411,7 +3536,7 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(errors):
-            COMMAND.run(Namespace(mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertIn(
@@ -3448,7 +3573,7 @@ class TickServingATaskWhoseRunEndedBlockedOnAQuestionTest(unittest.TestCase):
             run_process=machine.run,
             spawn_process=SpawnRecorderDouble().spawn,
             resolve_plugin=create_plugin_resolution(
-                STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
+                TURN_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
             ),
         )
         blocked_run = {**create_run_record(FIRST_RUN, "tidepool_w16", "T7"), "project": "tidepool"}
@@ -3468,15 +3593,15 @@ class TickServingATaskWhoseRunEndedBlockedOnAQuestionTest(unittest.TestCase):
 
     def test_should_start_no_second_wave_for_the_same_blocked_task_over_two_ticks(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(self._read_ledger_text().count('"event": "wave.started"'), 1)
 
     def test_should_park_the_task_on_the_question_and_close_its_wave(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertIn("blocked: Which forge does the check run against?", self._read_ledger_text())
@@ -3583,7 +3708,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
             resolve_plugin=_serve_the_forge_double_as(
                 forge_name,
                 _resolve_the_collectors_beside(
-                    create_plugin_resolution(STEP_COUNTING_PROBE, RedBranchForgeDouble(forge_double, red_branch)),
+                    create_plugin_resolution(TURN_COUNTING_PROBE, RedBranchForgeDouble(forge_double, red_branch)),
                     self.root,
                 ),
             ),
@@ -3627,7 +3752,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(errors):
-            COMMAND.run(Namespace(mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertIn(
@@ -3647,7 +3772,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(errors):
-            COMMAND.run(Namespace(mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertIn(
@@ -3662,7 +3787,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(io.StringIO()):
-            COMMAND.run(Namespace(mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -3674,6 +3799,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "rebase-on-base",
                     f"branch=fix/repair-main-{WAVE_HEAD}",
                     f"head={WAVE_HEAD}",
@@ -3692,7 +3818,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
 
     def test_should_rebase_the_milestone_branch_onto_main_before_the_wave_of_its_candidates_starts_on_it(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
@@ -3715,7 +3841,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         self.machine.head_after_rebase = "9b41d08"
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
@@ -3749,7 +3875,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         self.machine.head_after_rebase = "9b41d08"
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
@@ -3771,7 +3897,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
 
     def test_should_record_no_rebase_of_the_milestone_branch_whose_head_the_rebase_left_where_it_was(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8")
@@ -3782,7 +3908,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         self.machine.answers[("awawa", "status", "MILESTONE")] = NO_ACTIVE_MILESTONE
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertNotIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
@@ -3793,7 +3919,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         self._open_the_pull_request_of_the_milestone()
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertIn(FORGE_REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
@@ -3804,12 +3930,12 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         self._open_the_pull_request_of_the_milestone()
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertNotIn(FORGE_REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
 
-    def test_should_plan_no_rebase_of_the_milestone_branch_whose_pull_request_is_open_while_its_rebase_run_lives(
+    def test_should_decide_no_rebase_of_the_milestone_branch_whose_pull_request_is_open_while_its_rebase_run_lives(
         self,
     ):
         # Arrange
@@ -3824,23 +3950,26 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         record_run_pid(write_run(self.root / "state", live_run, None), os.getpid())
 
         # Act
-        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), self.runtime)
 
         # Assert
-        self.assertNotIn({"project": "tidepool", "milestone": "M4", "branch": "integration/tides"}, document["plan"])
+        self.assertNotIn(
+            {"project": "tidepool", "milestone": "M4", "branch": "integration/tides"}, document["decisions"]
+        )
 
     def test_should_launch_a_rebase_run_on_the_worktree_of_the_milestone_branch_stopped_on_a_conflict(self):
         # Arrange
         self._stop_the_rebase_on_a_conflict()
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
             self.spawn.argvs[0],
             (
                 "run",
+                "start",
                 "rebase-on-base",
                 "base=main",
                 "--slot",
@@ -3857,10 +3986,10 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
     def test_should_launch_no_second_rebase_run_while_the_first_lives(self):
         # Arrange
         self._stop_the_rebase_on_a_conflict()
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(self.machine.argvs.count(REBASE_OF_THE_MILESTONE_BRANCH), 1)
@@ -3879,7 +4008,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         record_run_pid(write_run(self.root / "state", live_run, None), os.getpid())
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
@@ -3890,7 +4019,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         self._stop_the_rebase_on_a_conflict()
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         ledger = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
@@ -3914,7 +4043,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         self._block_the_last_rebase_run()
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertNotIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
@@ -3924,7 +4053,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         self._block_the_last_rebase_run((LAUNCH_OF_THE_BLOCKED_REBASE_RUN_BEFORE_MAIN_MOVED,))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
@@ -3934,7 +4063,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         self._block_the_last_rebase_run(NO_LAUNCH_RECORDED)
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertIn(REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
@@ -3946,7 +4075,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(errors):
-            COMMAND.run(Namespace(mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertIn(
@@ -3962,7 +4091,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(errors):
-            COMMAND.run(Namespace(mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertNotIn("brigade tick: the rebase of integration/tides is blocked", errors.getvalue())
@@ -4071,7 +4200,7 @@ class TickLaunchingATaskWhoseChecksPassedAndWhoseBranchConflictsWithTheWaveBranc
             spawn_process=self.spawn.spawn,
             resolve_plugin=_serve_the_forge_double_as(
                 forge_name,
-                _resolve_the_collectors_beside(create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root),
+                _resolve_the_collectors_beside(create_plugin_resolution(TURN_COUNTING_PROBE, forge), self.root),
             ),
         )
 
@@ -4083,7 +4212,7 @@ class TickLaunchingATaskWhoseChecksPassedAndWhoseBranchConflictsWithTheWaveBranc
 
         # Act
         with contextlib.redirect_stderr(errors):
-            COMMAND.run(Namespace(mode="once"), runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertIn(
@@ -4093,7 +4222,7 @@ class TickLaunchingATaskWhoseChecksPassedAndWhoseBranchConflictsWithTheWaveBranc
 
     def test_should_launch_the_rebase_slot_on_the_worktree_of_the_task_instead_of_its_build(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -4101,6 +4230,7 @@ class TickLaunchingATaskWhoseChecksPassedAndWhoseBranchConflictsWithTheWaveBranc
             [
                 (
                     "run",
+                    "start",
                     "rebase-on-base",
                     "task=@TASK.T7",
                     "base=integration/M4",
@@ -4122,7 +4252,7 @@ class TickLaunchingATaskWhoseChecksPassedAndWhoseBranchConflictsWithTheWaveBranc
 
     def test_should_record_the_task_running(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         last_event = json.loads(
@@ -4166,12 +4296,12 @@ class TickLaunchingATaskWithoutAPullRequestWhoseBranchConflictsWithTheWaveBranch
             create_test_paths(self.root),
             run_process=self.machine.run,
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([None])),
+            resolve_plugin=create_plugin_resolution(TURN_COUNTING_PROBE, RebasingForgeDouble([None])),
         )
 
     def test_should_rebase_the_branch_onto_the_wave_branch(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -4181,7 +4311,7 @@ class TickLaunchingATaskWithoutAPullRequestWhoseBranchConflictsWithTheWaveBranch
 
     def test_should_launch_the_rebase_slot_with_the_task_and_its_base_and_no_pull_request(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -4189,6 +4319,7 @@ class TickLaunchingATaskWithoutAPullRequestWhoseBranchConflictsWithTheWaveBranch
             [
                 (
                     "run",
+                    "start",
                     "rebase-on-base",
                     "task=@TASK.T7",
                     "base=integration/M4",
@@ -4242,13 +4373,13 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=create_the_worktree_at_its_addition(self.machine.run),
             spawn_process=self.spawn.spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([None])),
+            resolve_plugin=create_plugin_resolution(TURN_COUNTING_PROBE, RebasingForgeDouble([None])),
         )
 
     def test_should_launch_one_run_repairing_the_red_wave_branch_in_its_worktree_and_no_build(self):
         # Act
         with contextlib.redirect_stderr(io.StringIO()):
-            COMMAND.run(Namespace(mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -4256,6 +4387,7 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "rebase-on-base",
                     "branch=integration/M4",
                     f"head={WAVE_HEAD}",
@@ -4285,7 +4417,7 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(io.StringIO()):
-            COMMAND.run(Namespace(mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(self.spawn.argvs, [])
@@ -4309,7 +4441,7 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(errors):
-            COMMAND.run(Namespace(mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(self.spawn.argvs, [])
@@ -4324,7 +4456,7 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(errors):
-            COMMAND.run(Namespace(mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertIn(
@@ -4334,7 +4466,7 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
     def test_should_record_no_state_for_the_task(self):
         # Act
         with contextlib.redirect_stderr(io.StringIO()):
-            COMMAND.run(Namespace(mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         events = (self.root / "state" / "ledger" / "2026-10.jsonl").read_text(encoding="utf-8").splitlines()
@@ -4343,18 +4475,19 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
     def test_should_launch_the_held_task_at_the_tick_that_reads_its_base_green(self):
         # Arrange
         with contextlib.redirect_stderr(io.StringIO()):
-            COMMAND.run(Namespace(mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
         write_commit_checks(self.root, WAVE_HEAD, PASSED)
 
         # Act
         with contextlib.redirect_stderr(io.StringIO()):
-            COMMAND.run(Namespace(mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
             self.spawn.argvs[-1],
             (
                 "run",
+                "start",
                 "rebase-on-base",
                 "task=@TASK.T7",
                 "base=integration/M4",
@@ -4379,11 +4512,11 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
         checkout = str(self.root / "state" / "head-checks" / "tidepool" / WAVE_HEAD)
         self.machine.answers[("awawa", "lint", "--strict", ".")] = ProcessAnswer(exit_code=1)
         with contextlib.redirect_stderr(io.StringIO()):
-            COMMAND.run(Namespace(mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Act
         with contextlib.redirect_stderr(io.StringIO()):
-            COMMAND.run(Namespace(mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -4404,9 +4537,9 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
             1,
         )
 
-    def test_should_name_the_red_wave_branch_holding_the_launch_in_the_plan_of_a_dry_run(self):
+    def test_should_name_the_red_wave_branch_holding_the_launch_in_the_decisions_of_a_dry_run(self):
         # Act
-        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), self.runtime)
 
         # Assert
         self.assertIn(
@@ -4419,7 +4552,7 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
                 "pull_request_checks": None,
                 "waits": "integration/M4 is red at 8885daa, `make test` failed",
             },
-            document["plan"],
+            document["decisions"],
         )
 
     def test_should_run_no_command_of_the_project_on_a_dry_run(self):
@@ -4427,7 +4560,7 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
         (self.root / "state" / "commit-checks" / "tidepool" / f"{WAVE_HEAD}.json").unlink()
 
         # Act
-        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), self.runtime)
 
         # Assert
         self.assertIn(
@@ -4439,7 +4572,7 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
                 "task_branch": "feature/T7-tide-table",
                 "pull_request_checks": None,
             },
-            document["plan"],
+            document["decisions"],
         )
 
 
@@ -4485,7 +4618,7 @@ class TickBriefingATaskOnTheTaskAsItReadsOnTheWaveBranchTest(unittest.TestCase):
             create_test_paths(root),
             run_process=ScriptedProcessRunner(answers, fallback=create_corpus_double(corpus)).run,
             spawn_process=SpawnRecorderDouble().spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([None])),
+            resolve_plugin=create_plugin_resolution(TURN_COUNTING_PROBE, RebasingForgeDouble([None])),
         )
 
     def test_should_give_the_build_of_a_red_branch_off_the_wave_branch_the_task_as_it_reads_on_the_wave_branch(self):
@@ -4494,7 +4627,7 @@ class TickBriefingATaskOnTheTaskAsItReadsOnTheWaveBranchTest(unittest.TestCase):
         runtime = self._create_runtime(root, BRANCH_OFF_THE_WAVE_BRANCH, T7_RULED_ON_THE_WAVE_BRANCH)
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -4525,7 +4658,7 @@ class TickBriefingATaskOnTheTaskAsItReadsOnTheWaveBranchTest(unittest.TestCase):
         runtime = self._create_runtime(root, BRANCH_OFF_THE_WAVE_BRANCH, T7_AS_IN_THE_WORKTREE)
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -4544,7 +4677,7 @@ class TickBriefingATaskOnTheTaskAsItReadsOnTheWaveBranchTest(unittest.TestCase):
         runtime = self._create_runtime(root, BRANCH_DESCENDING_FROM_THE_WAVE_BRANCH, T7_RULED_ON_THE_WAVE_BRANCH)
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -4569,14 +4702,102 @@ class TickLaunchingAStudyTest(unittest.TestCase):
                 {"STUDY": {"health": HEALTH_STUDY, **PAUSED_BUILT_IN_STUDIES}}, MACHINE_OUTPUTS
             ),
             spawn_process=spawn.spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
+            resolve_plugin=create_plugin_resolution(TURN_COUNTING_PROBE),
         )
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
-        self.assertEqual(spawn.argvs, [("study", "run", "health", "--run-id", ANY)])
+        self.assertEqual(spawn.argvs, [("order", "run", "health", "--run-id", ANY)])
+
+    def test_should_launch_an_order_whose_schedule_is_due_in_a_run_directory_of_its_own(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(root)
+        spawn = SpawnRecorderDouble()
+        hourly = (("RECIPE", "usage-report"), ("PROJECT", "@PROJECT.oak"), ("EVERY", "1h"), ("STATUS", "active"))
+        oak = (("PATH", str(root / "oak")), ("MAIN", "main"), ("FORGE", "none"), ("STATUS", "paused"))
+        (root / "config" / "recipes").mkdir()
+        (root / "config" / "recipes" / "usage-report.toml").write_text(
+            'schema_version = 1\nname = "usage-report"\ndescription = "the usage report"\nparams = []\n'
+            'max_wall = 30\n[[steps]]\nkind = "command"\nargv = ["make", "report"]\n',
+            encoding="utf-8",
+        )
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_machine_double(
+                {"PROJECT": {"oak": oak}, "STUDY": PAUSED_BUILT_IN_STUDIES, "ORDER": {"hourly": hourly}},
+                MACHINE_OUTPUTS,
+            ),
+            spawn_process=spawn.spawn,
+            resolve_plugin=create_plugin_resolution(TURN_COUNTING_PROBE),
+        )
+
+        # Act
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(spawn.argvs, [("order", "run", "hourly", "--run-id", ANY)])
+        self.assertEqual(spawn.cwds, [str(root / "config")])
+        run_id = spawn.argvs[0][4]
+        self.assertEqual(
+            read_ledger(root / "state").entries,
+            (
+                LedgerEntry(
+                    instant=FIXED_NOW,
+                    event=OrderStarted(project="oak", kind="usage-report", order="hourly", run=run_id),
+                ),
+            ),
+        )
+
+    def test_should_stop_a_live_order_run_past_the_max_wall_of_its_recipe_and_park_its_order(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(root)
+        signals = []
+        hourly = (("RECIPE", "usage-report"), ("PROJECT", "@PROJECT.oak"), ("EVERY", "1h"), ("STATUS", "active"))
+        oak = (("PATH", str(root / "oak")), ("MAIN", "main"), ("FORGE", "none"), ("STATUS", "paused"))
+        live_run = root / "state" / "runs" / "20261019T082800Z-aaaaaa"
+        live_run.mkdir(parents=True)
+        (live_run / "order.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "order": {"name": "hourly", "project": "oak"},
+                    "recipe": {"name": "usage-report", "max_wall": 30, "steps": [{"kind": "command"}]},
+                }
+            ),
+            encoding="utf-8",
+        )
+        os.utime(live_run / "order.json", ((FIXED_NOW - timedelta(minutes=31)).timestamp(),) * 2)
+        record_run_pid(live_run, os.getpid())
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_machine_double(
+                {"PROJECT": {"oak": oak}, "STUDY": PAUSED_BUILT_IN_STUDIES, "ORDER": {"hourly": hourly}},
+                MACHINE_OUTPUTS,
+            ),
+            resolve_plugin=create_plugin_resolution(TURN_COUNTING_PROBE),
+            signal_process=lambda pid, sent: signals.append((pid, sent)),
+        )
+
+        # Act
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(signals, [(os.getpid(), signal.SIGTERM)])
+        self.assertEqual(
+            read_ledger(root / "state").entries[-2].event,
+            OrderParked(
+                project="oak",
+                kind="usage-report",
+                order="hourly",
+                run="20261019T082800Z-aaaaaa",
+                step="1-command",
+                reason="the run passed the max_wall of 30 minutes of the recipe usage-report",
+            ),
+        )
 
     def test_should_launch_the_built_in_studies_on_a_machine_that_never_ran_them(self):
         # Arrange
@@ -4588,16 +4809,16 @@ class TickLaunchingAStudyTest(unittest.TestCase):
             create_test_paths(root),
             run_process=create_machine_double(no_recorded_study, MACHINE_OUTPUTS),
             spawn_process=spawn.spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
+            resolve_plugin=create_plugin_resolution(TURN_COUNTING_PROBE),
         )
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
             spawn.argvs,
-            [("study", "run", "mine_transcripts", "--run-id", ANY), ("study", "run", "triage", "--run-id", ANY)],
+            [("order", "run", "mine_transcripts", "--run-id", ANY), ("order", "run", "triage", "--run-id", ANY)],
         )
 
     def test_should_launch_the_built_in_scans_of_a_registered_project_on_a_machine_that_never_ran_them(self):
@@ -4613,27 +4834,27 @@ class TickLaunchingAStudyTest(unittest.TestCase):
                 MACHINE_OUTPUTS,
             ),
             spawn_process=spawn.spawn,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
+            resolve_plugin=create_plugin_resolution(TURN_COUNTING_PROBE),
         )
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
             spawn.argvs,
             [
-                ("study", "run", "corpus_fmt_oak", "--run-id", ANY),
-                ("study", "run", "corpus_lint_oak", "--run-id", ANY),
-                ("study", "run", "stale_branches_oak", "--run-id", ANY),
-                ("study", "run", "worktrees_oak", "--run-id", ANY),
+                ("order", "run", "corpus_fmt_oak", "--run-id", ANY),
+                ("order", "run", "corpus_lint_oak", "--run-id", ANY),
+                ("order", "run", "stale_branches_oak", "--run-id", ANY),
+                ("order", "run", "worktrees_oak", "--run-id", ANY),
             ],
         )
 
 
 BEHIND_PULL_REQUEST = {**GREEN_PULL_REQUEST, "behind": True}
 REBASED_HEAD = "9a9a9a9"
-REBASED_PULL_REQUEST = {**OPEN_PULL_REQUEST, "head": REBASED_HEAD, "checks": [{"name": "ci", "verdict": "pending"}]}
+REBASED_PULL_REQUEST = {**OPEN_PULL_REQUEST, "head": REBASED_HEAD, "checks": [{"name": "ci", "conclusion": "pending"}]}
 REBASE_ONTO_THE_WAVE_BRANCH = ("git", "rebase", "--fork-point", "origin/integration/M4")
 FETCH_OF_THE_WAVE_BRANCH = ("git", "fetch", "--quiet", "origin", "integration/M4")
 CLI_BOUND_TO_A_FORGE_ACCOUNT = '[forge_accounts]\ncli = "tidepool-cli"\n'
@@ -4760,7 +4981,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
             resolve_plugin=_serve_the_forge_double_as(
                 forge_name,
                 _resolve_the_collectors_beside(
-                    create_plugin_resolution(STEP_COUNTING_PROBE, RedBranchForgeDouble(forge, red_branch)), self.root
+                    create_plugin_resolution(TURN_COUNTING_PROBE, RedBranchForgeDouble(forge, red_branch)), self.root
                 ),
             ),
         )
@@ -4796,7 +5017,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(io.StringIO()):
-            COMMAND.run(Namespace(mode="once"), runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(select_argvs_opening_on(self.machine.argvs, GIT_REBASE, GIT_PUSH), [])
@@ -4810,7 +5031,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(errors):
-            COMMAND.run(Namespace(mode="once"), runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertIn(
@@ -4829,7 +5050,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(errors):
-            COMMAND.run(Namespace(mode="once"), runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertIn(
@@ -4846,7 +5067,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         )
 
         # Act
-        document = COMMAND.run(Namespace(mode="dry-run"), runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), runtime)
 
         # Assert
         self.assertIn(
@@ -4862,7 +5083,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
                 "holds_uncommitted_changes": False,
                 "waits": f"integration/M4 is red at {WAVE_HEAD}, `ci / tests` failed",
             },
-            document["plan"],
+            document["decisions"],
         )
 
     def test_should_launch_one_run_repairing_the_red_wave_branch_holding_the_catch_up(self):
@@ -4873,7 +5094,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(io.StringIO()):
-            COMMAND.run(Namespace(mode="once"), runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -4881,6 +5102,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "rebase-on-base",
                     "branch=integration/M4",
                     f"head={WAVE_HEAD}",
@@ -4918,7 +5140,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(errors):
-            COMMAND.run(Namespace(mode="once"), runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -4926,6 +5148,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "rebase-on-base",
                     "branch=integration/M4",
                     f"head={WAVE_HEAD}",
@@ -4951,7 +5174,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST, REBASED_PULL_REQUEST])
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -4975,7 +5198,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST, REBASED_PULL_REQUEST])
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -4991,7 +5214,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST, REBASED_PULL_REQUEST])
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -5019,7 +5242,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-18T11:30:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -5064,7 +5287,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST, REBASED_PULL_REQUEST])
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(self.lock_free_at_the_rebase, [False])
@@ -5078,7 +5301,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         runtime = self._create_runtime(REBASE_OUTPUTS, [BEHIND_PULL_REQUEST, REBASED_PULL_REQUEST])
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -5092,7 +5315,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         runtime = self._create_runtime(OUTPUTS_OF_A_REBASE_STOPPED_ON_A_CONFLICT, [BEHIND_PULL_REQUEST])
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -5104,6 +5327,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "rebase-on-base",
                     "pr=42",
                     "task=@TASK.T7",
@@ -5147,7 +5371,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
                     "login": "tidepool-bot",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-18T11:30:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -5182,7 +5406,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         runtime = self._create_runtime(OUTPUTS_OF_A_REBASE_STOPPED_ON_A_CONFLICT, [BEHIND_PULL_REQUEST])
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -5190,6 +5414,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "rebase-on-base",
                     "pr=42",
                     "task=@TASK.T7",
@@ -5217,7 +5442,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         )
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -5281,7 +5506,7 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=create_machine_double(corpus, MACHINE_OUTPUTS),
             resolve_plugin=_resolve_the_collectors_beside(
-                create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
+                create_plugin_resolution(TURN_COUNTING_PROBE, forge), self.root
             ),
         )
 
@@ -5292,7 +5517,7 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
         runtime = self._create_runtime(CLI_BOUND_TO_A_FORGE_ACCOUNT, forge, "github")
 
         # Act
-        COMMAND.run(Namespace(mode="dry-run"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="dry-run"), runtime)
 
         # Assert
         self.assertEqual(
@@ -5320,7 +5545,7 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
         runtime = self._create_runtime(CLI_BOUND_TO_A_FORGE_ACCOUNT, forge, "github")
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -5335,25 +5560,25 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(Namespace(mode="dry-run"), runtime)
+            COMMAND.run(Namespace(log_file=None, mode="dry-run"), runtime)
 
         # Assert
         self.assertEqual(
             str(raised.exception), "gh printed no token for the login tidepool-tokenless, bound to cli, after 1 attempt"
         )
 
-    def test_should_plan_the_wave_of_a_project_without_a_forge_with_no_token_for_the_login_of_the_key_cli(self):
+    def test_should_decide_the_wave_of_a_project_without_a_forge_with_no_token_for_the_login_of_the_key_cli(self):
         # Arrange
         write_ledger(self.root, [CUT_OF_M4_ON_THE_WAVE_BRANCH, WAVE_STARTED])
         forge = create_forge_of_the_cli(NO_PULL_REQUEST, NO_TOKEN)
         runtime = self._create_runtime(CLI_BOUND_TO_A_TOKENLESS_ACCOUNT, forge, "none")
 
         # Act
-        document = COMMAND.run(Namespace(mode="dry-run"), runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), runtime)
 
         # Assert
         self.assertEqual(
-            document["plan"],
+            document["decisions"],
             [
                 {
                     "project": "tidepool",
@@ -5426,7 +5651,7 @@ class TickRecordingTheFailingCheckRunsTest(unittest.TestCase):
 
     def test_should_record_the_failing_check_runs_of_an_active_project_in_the_inbox(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -5454,7 +5679,7 @@ class TickRecordingTheFailingCheckRunsTest(unittest.TestCase):
 
     def test_should_record_the_forge_error_of_a_project_in_the_outcome_of_the_tick_and_serve_the_others(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -5483,7 +5708,7 @@ class TickRecordingTheFailingCheckRunsTest(unittest.TestCase):
 
     def test_should_count_the_collection_of_each_project_among_the_actions_of_the_tick(self):
         # Act
-        document = COMMAND.run(Namespace(mode="once"), self.runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -5549,7 +5774,7 @@ class TickRunningTheConnectorsTest(unittest.TestCase):
 
     def _create_runtime(self, projects: dict, forge: ForgeDouble) -> Runtime:
         paths = create_test_paths(self.root)
-        resolve_plugin = create_plugin_resolution(STEP_COUNTING_PROBE, forge)
+        resolve_plugin = create_plugin_resolution(TURN_COUNTING_PROBE, forge)
         collectors = {
             "pr-threads": PR_THREADS,
             "check-runs": resolve_collector("check-runs", locate_collectors(self.root, paths)),
@@ -5574,7 +5799,7 @@ class TickRunningTheConnectorsTest(unittest.TestCase):
         runtime = self._create_runtime(projects, create_connector_forge(_list_the_open_pull_request))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -5593,7 +5818,7 @@ class TickRunningTheConnectorsTest(unittest.TestCase):
         runtime = self._create_runtime(projects, create_connector_forge(_refuse_the_listing))
 
         # Act
-        document = COMMAND.run(Namespace(mode="once"), runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -5610,22 +5835,22 @@ class TickRunningTheConnectorsTest(unittest.TestCase):
         runtime = self._create_runtime(projects, create_connector_forge(_list_the_open_pull_request))
 
         # Act
-        document = COMMAND.run(Namespace(mode="once"), runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(document["actions_applied"], 4)
 
-    def test_should_plan_the_connector_actions_on_a_dry_run_and_apply_none(self):
+    def test_should_decide_the_connector_actions_on_a_dry_run_and_apply_none(self):
         # Arrange
         projects = {"elm": self._describe_project("elm"), "oak": self._describe_project("oak")}
         runtime = self._create_runtime(projects, create_connector_forge(_list_the_open_pull_request))
 
         # Act
-        document = COMMAND.run(Namespace(mode="dry-run"), runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), runtime)
 
         # Assert
         self.assertEqual(
-            document["plan"], [{"project": "elm"}, {"project": "elm"}, {"project": "oak"}, {"project": "oak"}]
+            document["decisions"], [{"project": "elm"}, {"project": "elm"}, {"project": "oak"}, {"project": "oak"}]
         )
         self.assertFalse(self.root.joinpath("state", "inbox", "signals.jsonl").exists())
 
@@ -5635,7 +5860,7 @@ class TickRunningTheConnectorsTest(unittest.TestCase):
         runtime = self._create_runtime(projects, create_connector_forge(_refuse_the_listing))
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -5755,7 +5980,7 @@ class TickReportingAMilestoneTest(unittest.TestCase):
             ).run,
             spawn_process=self.spawn.spawn,
             resolve_plugin=_resolve_the_collectors_beside(
-                create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
+                create_plugin_resolution(TURN_COUNTING_PROBE, forge), self.root
             ),
         )
 
@@ -5769,18 +5994,18 @@ class TickReportingAMilestoneTest(unittest.TestCase):
 
     def test_should_report_the_milestone_once_its_last_wave_is_closed(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
+        COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
 
         # Assert
         self.assertEqual(self._read_reported_milestones(), [MILESTONE_M4_REPORTED])
 
     def test_should_record_the_report_with_the_run_it_detaches_and_the_login_of_the_cli(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
+        COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
 
         # Assert
         [[*_, reported_run]] = self.spawn.argvs
-        self.assertEqual(self.spawn.argvs, [("study", "run", "milestone-report", "--run-id", reported_run)])
+        self.assertEqual(self.spawn.argvs, [("order", "run", "milestone-report", "--run-id", reported_run)])
         self.assertEqual(
             self._read_milestone_events(),
             [
@@ -5799,21 +6024,19 @@ class TickReportingAMilestoneTest(unittest.TestCase):
 
     def test_should_hand_the_report_run_the_branch_the_waves_and_the_tasks_of_the_milestone(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
+        COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
 
         # Assert
         [[*_, reported_run]] = self.spawn.argvs
-        record = json.loads((self.root / "state" / "runs" / reported_run / "study.json").read_text(encoding="utf-8"))
+        record = json.loads((self.root / "state" / "runs" / reported_run / "order.json").read_text(encoding="utf-8"))
         self.assertEqual(
-            record["milestone"],
-            {
-                "project": "tidepool",
-                "milestone": "M4",
-                "branch": "integration/tides",
-                "waves": ["tidepool_w16"],
-                "tasks": ["T7"],
-                "reads_pull_requests": True,
-            },
+            record["order"]["params"],
+            [
+                (
+                    'milestone={"project": "tidepool", "milestone": "M4", "branch": "integration/tides",'
+                    ' "waves": ["tidepool_w16"], "tasks": ["T7"], "reads_pull_requests": true}'
+                )
+            ],
         )
 
     def test_should_record_the_report_of_a_project_without_a_forge_with_no_login(self):
@@ -5821,14 +6044,14 @@ class TickReportingAMilestoneTest(unittest.TestCase):
         runtime = self._create_runtime(self.forge, {"T7": TASK_DELIVERED}, forge_name="none")
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(self._read_reported_milestones(), [{**MILESTONE_M4_REPORTED, "login": None}])
 
     def test_should_open_no_pull_request_of_the_milestone_before_its_report(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
+        COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
 
         # Assert
         self.assertEqual(self.forge.opened, [])
@@ -5836,10 +6059,10 @@ class TickReportingAMilestoneTest(unittest.TestCase):
     def test_should_report_it_once_whatever_the_ticks_after_it(self):
         # Arrange
         runtime = self._create_runtime(self.forge, {"T7": TASK_DELIVERED})
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(self._read_reported_milestones(), [MILESTONE_M4_REPORTED])
@@ -5866,7 +6089,7 @@ class TickReportingAMilestoneTest(unittest.TestCase):
                 forge = OpeningForgeDouble(NO_PULL_REQUEST_FROM_ANY_BRANCH)
 
                 # Act
-                COMMAND.run(Namespace(mode="once"), self._create_runtime(forge, {"T7": TASK_DELIVERED}))
+                COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(forge, {"T7": TASK_DELIVERED}))
 
                 # Assert
                 self.assertEqual(self._read_reported_milestones(), [MILESTONE_M4_REPORTED])
@@ -5895,7 +6118,9 @@ class TickReportingAMilestoneTest(unittest.TestCase):
                 )
 
                 # Act
-                COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
+                COMMAND.run(
+                    Namespace(log_file=None, mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED})
+                )
 
                 # Assert
                 self.assertEqual(self._read_reported_milestones(), [reported_elsewhere, MILESTONE_M4_REPORTED])
@@ -5905,7 +6130,7 @@ class TickReportingAMilestoneTest(unittest.TestCase):
         write_ledger(self.root, [CUT_OF_M4, WAVE_OF_ANOTHER_PROJECT_STARTED, WAVE_OF_ANOTHER_PROJECT_CLOSED])
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
+        COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
 
         # Assert
         self.assertEqual(self._read_reported_milestones(), [])
@@ -5958,7 +6183,7 @@ class TickReportingAMilestoneTest(unittest.TestCase):
 
                 # Act
                 with contextlib.redirect_stderr(io.StringIO()):
-                    COMMAND.run(Namespace(mode="once"), runtime)
+                    COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
                 # Assert
                 self.assertEqual(self._read_reported_milestones(), [MILESTONE_M4_REPORTED])
@@ -5975,7 +6200,7 @@ class TickReportingAMilestoneTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(reported):
-            COMMAND.run(Namespace(mode="once"), runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertIn(
@@ -6000,7 +6225,7 @@ class TickReportingAMilestoneTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(io.StringIO()):
-            COMMAND.run(Namespace(mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
+            COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(self.forge, {"T7": TASK_DELIVERED}))
 
         # Assert
         self.assertEqual(self._read_reported_milestones(), [MILESTONE_M4_REPORTED])
@@ -6010,7 +6235,7 @@ class TickReportingAMilestoneTest(unittest.TestCase):
         runtime = self._create_runtime(self.forge, {"T7": TASK_DELIVERED, "T8": TASK_OF_M4_TO_DELIVER})
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(self._read_reported_milestones(), [])
@@ -6021,7 +6246,7 @@ class TickReportingAMilestoneTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(io.StringIO()):
-            COMMAND.run(Namespace(mode="once"), runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(self._read_reported_milestones(), [])
@@ -6034,7 +6259,7 @@ class TickReportingAMilestoneTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(io.StringIO()):
-            document = COMMAND.run(Namespace(mode="dry-run"), runtime)
+            document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), runtime)
 
         # Assert
         self.assertEqual(document["snapshot"]["milestones"][0]["open_tasks"], ["T8", "T9"])
@@ -6044,7 +6269,7 @@ class TickReportingAMilestoneTest(unittest.TestCase):
         runtime = self._create_runtime(self.forge, {"T7": TASK_OF_M5_DELIVERED})
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(self._read_reported_milestones(), [])
@@ -6066,7 +6291,7 @@ class TickReportingAMilestoneTest(unittest.TestCase):
         forge = OpeningForgeDouble({MILESTONE_BRANCH: MILESTONE_PULL_REQUEST_MERGED})
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge, {"T7": TASK_DELIVERED}))
+        COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(forge, {"T7": TASK_DELIVERED}))
 
         # Assert
         self.assertEqual(
@@ -6110,7 +6335,7 @@ class TickReportingAMilestoneTest(unittest.TestCase):
 
         # Act
         COMMAND.run(
-            Namespace(mode="once"),
+            Namespace(log_file=None, mode="once"),
             self._create_runtime(forge, {"T7": TASK_DELIVERED}, requests=request_from_the_pattern),
         )
 
@@ -6137,10 +6362,10 @@ class TickReportingAMilestoneTest(unittest.TestCase):
         runtime = self._create_runtime(
             OpeningForgeDouble({MILESTONE_BRANCH: MILESTONE_PULL_REQUEST_MERGED}), {"T7": TASK_DELIVERED}
         )
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
@@ -6183,7 +6408,7 @@ class TickReportingAMilestoneTest(unittest.TestCase):
         )
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertIn(
@@ -6240,13 +6465,13 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
             run_process=self.machine.run,
             spawn_process=self.spawn.spawn,
             resolve_plugin=_resolve_the_collectors_beside(
-                create_plugin_resolution(STEP_COUNTING_PROBE, RebasingForgeDouble([BEHIND_PULL_REQUEST])), self.root
+                create_plugin_resolution(TURN_COUNTING_PROBE, RebasingForgeDouble([BEHIND_PULL_REQUEST])), self.root
             ),
         )
 
     def test_should_launch_the_build_slot_on_the_worktree_of_the_task_and_rebase_nothing(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(select_argvs_opening_on(self.machine.argvs, GIT_REBASE, GIT_PUSH), [])
@@ -6255,6 +6480,7 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
             [
                 (
                     "run",
+                    "start",
                     "build-task",
                     "task=@TASK.T7",
                     "base=integration/M4",
@@ -6278,7 +6504,7 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
 
     def test_should_record_the_task_in_fixing_for_the_amendment_of_its_entity(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -6296,11 +6522,11 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
 
     def test_should_print_the_rebuild_with_its_task_its_pull_request_and_its_base_on_a_dry_run(self):
         # Act
-        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), self.runtime)
 
         # Assert
         self.assertEqual(
-            document["plan"],
+            document["decisions"],
             [
                 {
                     "project": "tidepool",
@@ -6368,7 +6594,7 @@ class TickBoundingItsReadsTest(unittest.TestCase):
             run_process=self.processes.run,
             spawn_process=SpawnRecorderDouble().spawn,
             resolve_plugin=_resolve_the_collectors_beside(
-                create_plugin_resolution(STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)),
+                create_plugin_resolution(TURN_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)),
                 self.root,
             ),
             read_ledger=self.readings.read,
@@ -6379,7 +6605,7 @@ class TickBoundingItsReadsTest(unittest.TestCase):
         runtime = self._create_runtime()
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(self.readings.state_roots, [self.root / "state"])
@@ -6389,7 +6615,7 @@ class TickBoundingItsReadsTest(unittest.TestCase):
         runtime = self._create_runtime()
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         wave_tree = str(self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD)
@@ -6441,11 +6667,11 @@ class TickReadingTheReferencesOfAWaveItMovedTest(unittest.TestCase):
             create_test_paths(root),
             run_process=WaveBranchMovedByTheMergeDouble(forge, processes).run,
             spawn_process=SpawnRecorderDouble().spawn,
-            resolve_plugin=_resolve_the_collectors_beside(create_plugin_resolution(STEP_COUNTING_PROBE, forge), root),
+            resolve_plugin=_resolve_the_collectors_beside(create_plugin_resolution(TURN_COUNTING_PROBE, forge), root),
         )
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         wave_tree = str(root / "cache" / "refs" / "tidepool" / WAVE_HEAD)
@@ -6501,7 +6727,7 @@ class TickReportingATaskNamingNoMilestoneTest(unittest.TestCase):
             ).run,
             spawn_process=self.spawn.spawn,
             resolve_plugin=_resolve_the_collectors_beside(
-                create_plugin_resolution(STEP_COUNTING_PROBE, self.forge), self.root
+                create_plugin_resolution(TURN_COUNTING_PROBE, self.forge), self.root
             ),
         )
 
@@ -6512,11 +6738,11 @@ class TickReportingATaskNamingNoMilestoneTest(unittest.TestCase):
 
     def test_should_record_the_report_of_a_parked_task_with_the_run_it_detaches_and_the_login_of_the_cli(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime())
+        COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime())
 
         # Assert
         reported_run = self.spawn.argvs[0][-1]
-        self.assertEqual(self.spawn.argvs[0], ("study", "run", "task-report", "--run-id", reported_run))
+        self.assertEqual(self.spawn.argvs[0], ("order", "run", "task-report", "--run-id", reported_run))
         self.assertEqual(
             self._read_reported_tasks(),
             [
@@ -6534,7 +6760,7 @@ class TickReportingATaskNamingNoMilestoneTest(unittest.TestCase):
 
     def test_should_record_the_report_of_a_project_without_a_forge_with_no_login(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge_name="none"))
+        COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(forge_name="none"))
 
         # Assert
         reported_run = self.spawn.argvs[0][-1]
@@ -6610,13 +6836,13 @@ class TickRemovingTheBranchOfAClosedMilestoneTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=self.machine.run,
             resolve_plugin=create_plugin_resolution(
-                STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
+                TURN_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
             ),
         )
 
     def test_should_remove_the_worktree_then_the_local_branch_of_the_closed_milestone(self):
         # Act
-        COMMAND.run(Namespace(mode="once"), self.runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -6631,7 +6857,7 @@ class TickRemovingTheBranchOfAClosedMilestoneTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(errors):
-            COMMAND.run(Namespace(mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertIn(
@@ -6650,7 +6876,7 @@ class TickRemovingTheBranchOfAClosedMilestoneTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(errors):
-            COMMAND.run(Namespace(mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(errors.getvalue().count("the branch integration/tides of tidepool kept"), 1)
@@ -6662,8 +6888,8 @@ class TickRemovingTheBranchOfAClosedMilestoneTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(errors):
-            COMMAND.run(Namespace(mode="once"), self.runtime)
-            COMMAND.run(Namespace(mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertEqual(errors.getvalue().count("the branch integration/tides of tidepool kept"), 1)
@@ -6674,7 +6900,7 @@ class TickRemovingTheBranchOfAClosedMilestoneTest(unittest.TestCase):
 
         # Act
         with contextlib.redirect_stderr(io.StringIO()):
-            COMMAND.run(Namespace(mode="once"), self.runtime)
+            COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
         self.assertNotIn(DELETION_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
@@ -6684,11 +6910,11 @@ class TickRemovingTheBranchOfAClosedMilestoneTest(unittest.TestCase):
         self.machine.answers[MILESTONE_BRANCH_WITHIN_MAIN] = ProcessAnswer(exit_code=1)
 
         # Act
-        document = COMMAND.run(Namespace(mode="dry-run"), self.runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), self.runtime)
 
         # Assert
         self.assertEqual(
-            document["plan"],
+            document["decisions"],
             [
                 {
                     "project": "tidepool",
@@ -6788,7 +7014,7 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
             run_process=run_process or self._create_machine(),
             spawn_process=SpawnRecorderDouble().spawn,
             resolve_plugin=_resolve_the_collectors_beside(
-                create_plugin_resolution(STEP_COUNTING_PROBE, forge), self.root
+                create_plugin_resolution(TURN_COUNTING_PROBE, forge), self.root
             ),
         )
 
@@ -6802,7 +7028,7 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
         forge = DescribingForgeDouble({77: "chore(milestone): merge the milestone M4 into main"})
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+        COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(forge))
 
         # Assert
         self.assertEqual(
@@ -6826,7 +7052,7 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
         )
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge, repository.run))
+        COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(forge, repository.run))
 
         # Assert
         self.assertEqual(
@@ -6847,7 +7073,7 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
         forge = DescribingForgeDouble({77: TITLE_OF_WHAT_THE_MILESTONE_DELIVERS})
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+        COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(forge))
 
         # Assert
         self.assertEqual(forge.edited, [])
@@ -6869,7 +7095,7 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
         forge = DescribingForgeDouble({77: "chore: an older title"})
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(forge))
+        COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(forge))
 
         # Assert
         self.assertEqual(forge.edited, [])
@@ -6880,16 +7106,13 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
         forge = DescribingForgeDouble({77: "chore: an older title"})
 
         # Act
-        document = COMMAND.run(Namespace(mode="dry-run"), self._create_runtime(forge))
+        document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), self._create_runtime(forge))
 
         # Assert
         self.assertIn(
             {"project": "tidepool", "milestone": "M4", "branch": "integration/tides", "pr": 77, "head": "8885daa"},
-            document["plan"],
+            document["decisions"],
         )
-
-
-ACCEPTANCE_COMMAND = "python3 -m unittest"
 
 
 class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
@@ -6912,15 +7135,17 @@ class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
             ("PATH", str(self.repository)),
             ("MAIN", "main"),
             ("FORGE", "none"),
-            ("ACCEPTANCE", ACCEPTANCE_COMMAND),
         )
         corpus = {"STUDY": PAUSED_BUILT_IN_STUDIES, "PROJECT": {"tidepool": project}, "TASK": {"T7": TASK_DELIVERED}}
+        recipes = create_recipe_outputs(
+            self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD, {"acceptance": (("python3", "-m", "unittest"),)}
+        )
         return create_test_runtime(
             create_test_paths(self.root),
-            run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **acceptance_outputs}),
+            run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **recipes, **acceptance_outputs}),
             spawn_process=self.spawn.spawn,
             resolve_plugin=_resolve_the_collectors_beside(
-                create_plugin_resolution(STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)),
+                create_plugin_resolution(TURN_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)),
                 self.root,
             ),
         )
@@ -6931,18 +7156,18 @@ class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
 
     def test_should_hold_for_verification_the_head_its_build_run_delivered_once_its_acceptance_passes(self):
         # Arrange
-        passing_acceptance = {("python3", "-m", "unittest"): ""}
+        passing_acceptance = {("python3", "-m", "unittest"): "Ran 412 tests in 9.1s\n\nOK\n"}
         runtime = self._create_runtime(passing_acceptance)
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(
             self._read_events_of_the_tick(),
             [
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": "2026-10-19T09:00:00Z",
                     "event": "task.preflighted",
                     "project": "tidepool",
@@ -6950,20 +7175,28 @@ class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
                     "task": "T7",
                     "head": "8885daa",
                     "checks": [
-                        {"name": "ancestry", "verdict": "pass", "findings": []},
+                        {"name": "ancestry", "result": "ok", "findings": []},
                         {
                             "name": "acceptance",
-                            "verdict": "pass",
+                            "result": "ok",
                             "findings": [],
                             "commands": [{"command": "python3 -m unittest", "exit_code": 0}],
                         },
-                        {"name": "corpus", "verdict": "pass", "findings": []},
-                        {"name": "promotion", "verdict": "pass", "findings": []},
-                        {"name": "untouched_files", "verdict": "pass", "findings": []},
-                        {"name": "privacy", "verdict": "pass", "findings": []},
+                        {
+                            "name": "corpus",
+                            "result": "ok",
+                            "findings": [],
+                            "commands": [
+                                {"command": "awawa fmt --check .", "exit_code": 0},
+                                {"command": "awawa lint --strict .", "exit_code": 0},
+                            ],
+                        },
+                        {"name": "promotion", "result": "ok", "findings": []},
+                        {"name": "untouched_files", "result": "ok", "findings": []},
+                        {"name": "privacy", "result": "ok", "findings": []},
                         {
                             "name": "size",
-                            "verdict": "info",
+                            "result": "info",
                             "findings": ["0 files", "0 lines", "0 packages", "0 layers"],
                         },
                     ],
@@ -6990,7 +7223,7 @@ class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
         no_acceptance_run = {}
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(no_acceptance_run))
+        COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(no_acceptance_run))
 
         # Assert
         self.assertEqual(
@@ -6998,7 +7231,8 @@ class TickPreflightingATaskDeliveredWithoutAForgeTest(unittest.TestCase):
             [
                 (
                     "run",
-                    "verify-pr",
+                    "start",
+                    "review-pr",
                     "task=@TASK.T7",
                     "--slot",
                     "review",
@@ -7098,7 +7332,7 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
             run_process=machine,
             spawn_process=SpawnRecorderDouble().spawn,
             resolve_plugin=_resolve_the_collectors_beside(
-                create_plugin_resolution(STEP_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)),
+                create_plugin_resolution(TURN_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)),
                 self.root,
             ),
         )
@@ -7117,7 +7351,7 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
         no_other_answer = {}
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(TASK_DELIVERED, no_other_answer))
+        COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(TASK_DELIVERED, no_other_answer))
 
         # Assert
         self.assertEqual(
@@ -7151,7 +7385,7 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, {})
 
         # Act
-        COMMAND.run(Namespace(mode="once"), runtime)
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertIn(
@@ -7165,7 +7399,7 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
         conflict = {("git", "merge", "--quiet"): ProcessAnswer(exit_code=1)}
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(TASK_DELIVERED, conflict))
+        COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(TASK_DELIVERED, conflict))
 
         # Assert
         parked = self._read_events_since(written)[0]
@@ -7188,7 +7422,7 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, TO_MAIN_NOT_MERGED, policies=POLICY_OF_NO_AUTO_MERGE)
 
         # Act
-        document = COMMAND.run(Namespace(mode="once"), runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         worktree = f"{self.repository}/.brigade/worktrees/integration-tides"
@@ -7209,7 +7443,7 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, answers, policies=POLICY_OF_NO_AUTO_MERGE)
 
         # Act
-        document = COMMAND.run(Namespace(mode="once"), runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(document["merge_commands"], ["git -C /srv/elsewhere merge feature/T7-tide-table"])
@@ -7232,7 +7466,7 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, in_the_milestone_branch, policies=POLICY_OF_NO_AUTO_MERGE)
 
         # Act
-        document = COMMAND.run(Namespace(mode="once"), runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(self._read_events_since(written)[0]["state"], "merged")
@@ -7248,7 +7482,7 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
         runtime = self._create_runtime(NO_MILESTONE_TASK, TO_MAIN_NOT_MERGED)
 
         # Act
-        document = COMMAND.run(Namespace(mode="once"), runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(document["merge_commands"], [f"git -C {self.repository} merge feature/T7-tide-table"])
@@ -7258,7 +7492,9 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
         # Arrange
         self._write_events(self.verified_events)
         runtime = self._create_runtime(NO_MILESTONE_TASK, TO_MAIN_NOT_MERGED)
-        request = Namespace(mode=LOOP_MODE, create_runtime=_create_round_factory([(runtime, signal.SIGTERM)]))
+        request = Namespace(
+            log_file=None, mode=LOOP_MODE, create_runtime=_create_round_factory([(runtime, signal.SIGTERM)])
+        )
         stderr = io.StringIO()
 
         # Act
@@ -7276,7 +7512,9 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
         merged_into_main = {("git", "merge-base", "--is-ancestor"): ProcessAnswer()}
 
         # Act
-        document = COMMAND.run(Namespace(mode="once"), self._create_runtime(NO_MILESTONE_TASK, merged_into_main))
+        document = COMMAND.run(
+            Namespace(log_file=None, mode="once"), self._create_runtime(NO_MILESTONE_TASK, merged_into_main)
+        )
 
         # Assert
         self.assertEqual(self._read_events_since(written)[0]["state"], "merged")
@@ -7288,7 +7526,7 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
         runtime = self._create_runtime(TASK_DELIVERED, TO_MAIN_NOT_MERGED)
 
         # Act
-        document = COMMAND.run(Namespace(mode="once"), runtime)
+        document = COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
         self.assertEqual(document["merge_commands"], [f"git -C {self.repository} merge integration/tides"])
@@ -7299,7 +7537,7 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
         branch_in_main = {("git", "merge-base", "--is-ancestor"): ProcessAnswer()}
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(TASK_DELIVERED, branch_in_main))
+        COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(TASK_DELIVERED, branch_in_main))
 
         # Assert
         self.assertEqual(
@@ -7320,8 +7558,16 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
         self._write_events([CUT_OF_M4, *self.verified_events])
 
         # Act
-        COMMAND.run(Namespace(mode="once"), self._create_runtime(TASK_DELIVERED, {}))
+        COMMAND.run(Namespace(log_file=None, mode="once"), self._create_runtime(TASK_DELIVERED, {}))
 
         # Assert
-        report_run = next((self.root / "state" / "runs").glob("*/study.json"))
-        self.assertFalse(json.loads(report_run.read_text())["milestone"]["reads_pull_requests"])
+        report_run = next((self.root / "state" / "runs").glob("*/order.json"))
+        self.assertEqual(
+            json.loads(report_run.read_text())["order"]["params"],
+            [
+                (
+                    'milestone={"project": "tidepool", "milestone": "M4", "branch": "integration/tides",'
+                    ' "waves": ["tidepool_w16"], "tasks": ["T7"], "reads_pull_requests": false}'
+                )
+            ],
+        )

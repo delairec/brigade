@@ -8,6 +8,7 @@ from brigade.corpus.read_entities import Entity, EntityField
 from brigade.system.parse_configuration import Configuration
 from brigade.verify.assemble_local_verify_context import assemble_local_verify_context
 from brigade.verify.preflight_task_branch import BranchPreflightDemand
+from tests.unit.create_recipe_answers import create_recipe_answers
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
@@ -39,6 +40,7 @@ class AssembleLocalVerifyContextTest(unittest.TestCase):
         self.runner = RecordingProcessRunner(
             {
                 **create_registry_answers(self.paths.config_root, {"shop": {"PATH": "/srv/shop"}}),
+                **create_recipe_answers(head_tree, {}),
                 _resolve(TASK_BRANCH): ProcessAnswer(stdout=f"{HEAD}\n"),
                 _resolve(MILESTONE_BRANCH): ProcessAnswer(stdout=f"{MILESTONE_HEAD}\n"),
                 ("git", "merge-base", "--end-of-options", MILESTONE_HEAD, HEAD): ProcessAnswer(stdout=f"{BASE}\n"),
@@ -92,4 +94,4 @@ class AssembleLocalVerifyContextTest(unittest.TestCase):
         document = self.assemble()
 
         # Assert
-        self.assertEqual(document["preflight"][0], {"name": "ancestry", "verdict": "pass", "findings": []})
+        self.assertEqual(document["preflight"][0], {"name": "ancestry", "result": "ok", "findings": []})

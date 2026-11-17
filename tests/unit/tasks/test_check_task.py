@@ -4,23 +4,23 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.corpus.read_entity import Entity, EntityField
 from brigade.errors import BrigadeError
-from brigade.tasks.check_task import check_task
+from brigade.system.parse_configuration import Configuration
+from brigade.tasks.check_task import TaskCheckDemand, check_task
 from brigade.tasks.locate_task_worktree import TaskWorktree
 from tests.unit.commands.command_runtime import write_operational_corpus
+from tests.unit.create_preflight_plugins import create_preflight_plugins
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
 PROJECT = Entity(
     name="oak",
-    fields=(
-        EntityField(name="PATH", value="/srv/oak"),
-        EntityField(name="ACCEPTANCE", value="python3 -m unittest"),
-        EntityField(name="ACCEPTANCE", value="ruff check ."),
-    ),
+    fields=(EntityField(name="PATH", value="/srv/oak"),),
 )
+ACCEPTANCE_RECIPE = {"acceptance": (("python3", "-m", "unittest"), ("ruff", "check", "."))}
 WORKTREE = TaskWorktree(
     path=Path("/srv/oak-b12"), task="B12", project=PROJECT, wave="oak_w1", base="integration/harvest"
 )
@@ -54,6 +54,16 @@ CHECK = {
     ],
 }
 
+NO_FORGE_EQUIPMENT = CollectorEquipment(
+    configuration=Configuration(), forge=None, forge_name="none", resolve_client=None
+)
+
+
+def demand_check(worktree: TaskWorktree, root: Path) -> TaskCheckDemand:
+    return TaskCheckDemand(
+        worktree=worktree, equipment=NO_FORGE_EQUIPMENT, plugins=create_preflight_plugins(create_test_paths(root))
+    )
+
 
 class CheckTaskTest(unittest.TestCase):
     def setUp(self):
@@ -61,9 +71,11 @@ class CheckTaskTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         self.processes = ScriptedProcesses()
+        self.processes.answer_entities(self.root / "config", "PROJECT", {"oak": (("PATH", "/srv/oak"),)})
 
     def script_checks(self) -> None:
         self.processes.answer(STATUS_ARGV)
+        self.processes.answer_recipes(WORKTREE.path, ACCEPTANCE_RECIPE)
         self.processes.answer(
             ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "HEAD^{commit}"), stdout="c0ffee\n"
         )
@@ -79,7 +91,10 @@ class CheckTaskTest(unittest.TestCase):
         self.script_checks()
 
         # Act
-        document = check_task(create_test_runtime(create_test_paths(self.root), run_process=self.processes), WORKTREE)
+        document = check_task(
+            create_test_runtime(create_test_paths(self.root), run_process=self.processes),
+            demand_check(WORKTREE, self.root),
+        )
 
         # Assert
         self.assertEqual(document, CHECK)
@@ -89,7 +104,10 @@ class CheckTaskTest(unittest.TestCase):
         self.script_checks()
 
         # Act
-        check_task(create_test_runtime(create_test_paths(self.root), run_process=self.processes), WORKTREE)
+        check_task(
+            create_test_runtime(create_test_paths(self.root), run_process=self.processes),
+            demand_check(WORKTREE, self.root),
+        )
 
         # Assert
         record = self.root / "state" / "checks" / "oak" / "B12.json"
@@ -104,11 +122,33 @@ class CheckTaskTest(unittest.TestCase):
         )
 
         # Act
-        check_task(runtime, WORKTREE)
+        check_task(runtime, demand_check(WORKTREE, self.root))
 
         # Assert
         self.assertEqual(
             (self.root / "run" / "check" / "2.log").read_text(encoding="utf-8"), "F401 unused import\n1 error\n"
+        )
+
+    def test_should_keep_the_facts_the_preflight_task_collected_in_the_run_directory_of_a_run(self):
+        # Arrange
+        self.script_checks()
+        write_operational_corpus(self.root)
+        runtime = create_test_runtime(
+            create_test_paths(self.root, run_directory=self.root / "run"), run_process=self.processes
+        )
+
+        # Act
+        check_task(runtime, demand_check(WORKTREE, self.root))
+
+        # Assert
+        collected = json.loads((self.root / "run" / "collect" / "task-worktree" / "collection.json").read_text())
+        self.assertEqual(
+            collected["summary"],
+            {
+                "checkout": "/srv/oak-b12",
+                "head_tree": "/srv/oak-b12",
+                "acceptance": [["python3", "-m", "unittest"], ["ruff", "check", "."]],
+            },
         )
 
     def test_should_refuse_a_worktree_holding_changes_head_does_not(self):
@@ -117,13 +157,16 @@ class CheckTaskTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            check_task(create_test_runtime(create_test_paths(self.root), run_process=self.processes), WORKTREE)
+            check_task(
+                create_test_runtime(create_test_paths(self.root), run_process=self.processes),
+                demand_check(WORKTREE, self.root),
+            )
 
         # Assert
         self.assertEqual(
             str(refusal.exception),
             "the worktree of @TASK.B12 holds changes HEAD does not: src/parse.py, notes.md;"
-            " commit them, then run brigade task check",
+            " commit them, then run brigade build check",
         )
 
 
@@ -133,10 +176,12 @@ class CheckTaskOfAFailingCommandWithALongOutputTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         self.processes = ScriptedProcesses()
+        self.processes.answer_entities(self.root / "config", "PROJECT", {"oak": (("PATH", "/srv/oak"),)})
 
     def test_should_keep_the_last_twenty_lines_of_its_output(self):
         # Arrange
         self.processes.answer(STATUS_ARGV)
+        self.processes.answer_recipes(WORKTREE.path, ACCEPTANCE_RECIPE)
         self.processes.answer(
             ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "HEAD^{commit}"), stdout="c0ffee\n"
         )
@@ -154,7 +199,10 @@ class CheckTaskOfAFailingCommandWithALongOutputTest(unittest.TestCase):
         self.processes.answer(DIFF_ARGV)
 
         # Act
-        document = check_task(create_test_runtime(create_test_paths(self.root), run_process=self.processes), WORKTREE)
+        document = check_task(
+            create_test_runtime(create_test_paths(self.root), run_process=self.processes),
+            demand_check(WORKTREE, self.root),
+        )
 
         # Assert
         self.assertEqual(
@@ -186,6 +234,7 @@ class CheckTaskOfAFailingCommandWithALongOutputTest(unittest.TestCase):
 
 def script_passing_commands(processes: ScriptedProcesses, merge_base_argv: tuple[str, ...], diff: str) -> None:
     processes.answer(STATUS_ARGV)
+    processes.answer_recipes(WORKTREE.path, {"acceptance": (("python3", "-m", "unittest"),)})
     processes.answer(HEAD_ARGV, stdout="c0ffee\n")
     processes.answer(("python3", "-m", "unittest"))
     processes.answer(("awawa", "fmt", "--check", "."))
@@ -199,7 +248,6 @@ def create_worktree(*fields: EntityField) -> TaskWorktree:
         name="oak",
         fields=(
             EntityField(name="PATH", value="/srv/oak"),
-            EntityField(name="ACCEPTANCE", value="python3 -m unittest"),
             *fields,
         ),
     )
@@ -214,6 +262,7 @@ class CheckTaskOfLinesTheTaskAddsHoldingPrivateDataTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         self.processes = ScriptedProcesses()
+        self.processes.answer_entities(self.root / "config", "PROJECT", {"oak": (("PATH", "/srv/oak"),)})
 
     def test_should_fail_the_privacy_check_naming_each_finding_at_its_file_and_line(self):
         # Arrange
@@ -225,7 +274,10 @@ class CheckTaskOfLinesTheTaskAddsHoldingPrivateDataTest(unittest.TestCase):
         worktree = create_worktree(EntityField(name="PRIVATE", value="oak-internal"))
 
         # Act
-        document = check_task(create_test_runtime(create_test_paths(self.root), run_process=self.processes), worktree)
+        document = check_task(
+            create_test_runtime(create_test_paths(self.root), run_process=self.processes),
+            demand_check(worktree, self.root),
+        )
 
         # Assert
         self.assertEqual(
@@ -246,7 +298,10 @@ class CheckTaskOfLinesTheTaskAddsHoldingPrivateDataTest(unittest.TestCase):
         worktree = create_worktree(EntityField(name="PUBLIC", value="/home/alice"))
 
         # Act
-        document = check_task(create_test_runtime(create_test_paths(self.root), run_process=self.processes), worktree)
+        document = check_task(
+            create_test_runtime(create_test_paths(self.root), run_process=self.processes),
+            demand_check(worktree, self.root),
+        )
 
         # Assert
         self.assertEqual(document["checks"][-1], {"command": "privacy", "passed": True, "duration_ms": 0, "tail": []})
@@ -260,7 +315,7 @@ class CheckTaskOfLinesTheTaskAddsHoldingPrivateDataTest(unittest.TestCase):
         )
 
         # Act
-        document = check_task(runtime, create_worktree())
+        document = check_task(runtime, demand_check(create_worktree(), self.root))
 
         # Assert
         self.assertEqual(document["checks"][-1]["duration_ms"], 250)
@@ -272,6 +327,7 @@ class CheckTaskOfAProjectOnGithubTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         self.processes = ScriptedProcesses()
+        self.processes.answer_entities(self.root / "config", "PROJECT", {"oak": (("PATH", "/srv/oak"),)})
 
     def test_should_read_the_lines_added_since_the_integration_branch_of_the_forge(self):
         # Arrange
@@ -283,40 +339,10 @@ class CheckTaskOfAProjectOnGithubTest(unittest.TestCase):
         worktree = create_worktree(EntityField(name="FORGE", value="github"))
 
         # Act
-        document = check_task(create_test_runtime(create_test_paths(self.root), run_process=self.processes), worktree)
+        document = check_task(
+            create_test_runtime(create_test_paths(self.root), run_process=self.processes),
+            demand_check(worktree, self.root),
+        )
 
         # Assert
         self.assertEqual(document["checks"][-1]["tail"], ["src/parse.py:1: a home path"])
-
-
-class CheckTaskOfALineThatCannotBeSplitTest(unittest.TestCase):
-    def setUp(self):
-        directory = tempfile.TemporaryDirectory()
-        self.addCleanup(directory.cleanup)
-        self.root = Path(directory.name)
-        self.processes = ScriptedProcesses()
-        project = Entity(
-            name="oak",
-            fields=(
-                EntityField(name="PATH", value="/srv/oak"),
-                EntityField(name="ACCEPTANCE", value="python3 -m unittest"),
-                EntityField(name="ACCEPTANCE", value="printf 'oak"),
-            ),
-        )
-        self.worktree = TaskWorktree(
-            path=Path("/srv/oak-b12"), task="B12", project=project, wave="oak_w1", base="integration/harvest"
-        )
-
-    def test_should_refuse_the_line_by_name_before_any_command_runs(self):
-        # Arrange
-        self.processes.answer(STATUS_ARGV)
-
-        # Act
-        with self.assertRaises(BrigadeError) as refusal:
-            check_task(create_test_runtime(create_test_paths(self.root), run_process=self.processes), self.worktree)
-
-        # Assert
-        self.assertEqual(
-            str(refusal.exception), "the command printf 'oak cannot be split into an argv: No closing quotation"
-        )
-        self.assertEqual(self.processes.list_argvs(), [STATUS_ARGV])

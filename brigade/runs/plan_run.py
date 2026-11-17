@@ -34,7 +34,7 @@ from brigade.system.probe_answer import ProbeAnswer
 from brigade.system.probe_request import ProbeRequest
 
 SHIPPED_PROCEDURES = files("brigade.runs") / "data" / "procedures"
-STEP_COUNT_FEATURE = "step_count"
+TURN_COUNT_FEATURE = "turn_count"
 TOOL_GRANTS_FEATURE = "tool_grants"
 ACTIONS_OPERATION = "actions"
 TRANSCRIPTS_OPERATION = "transcripts"
@@ -165,7 +165,7 @@ def _read_role_capabilities(role: ResolvedRole) -> set[str]:
 
 def _describe_clock_warning(client: str, budget: int, wall_limit_s: float) -> str:
     return (
-        f"{client} counts no steps: the budget of {budget} steps is held on the clock"
+        f"{client} counts no turns: the budget of {budget} turns is held on the clock"
         f" and the run cut at its limit of {wall_limit_s:g} s"
     )
 
@@ -222,7 +222,7 @@ def _plan_work(request: RunRequest, setting: RunSetting, runtime: Runtime) -> di
         "procedure": procedure,
         "role": role,
         "capabilities": tuple(capability for capability in procedure.capabilities if capability in role_capabilities),
-        "wall_limit_s": math.ceil(budget["budget"].applied * CAP_MARGIN) * configuration.seconds_per_step,
+        "wall_limit_s": math.ceil(budget["budget"].applied * CAP_MARGIN) * configuration.seconds_per_turn,
     }
 
 
@@ -230,7 +230,7 @@ def _plan_identity(request: RunRequest, setting: RunSetting, plugins: RunPlugins
     brief_path, brief = _read_brief(request.brief)
     run_id = _choose_run_id(request.run_id, runtime)
     run_directory = runtime.paths.state_root / RUNS_DIRECTORY / run_id
-    extension = EXTENSIONS_BY_DOCUMENT_PLUGIN[setting.configuration.document]
+    extension = EXTENSIONS_BY_DOCUMENT_PLUGIN[setting.configuration.progress_form]
     return {
         "run_id": run_id,
         "run_directory": run_directory,
@@ -253,7 +253,7 @@ def _plan_identity(request: RunRequest, setting: RunSetting, plugins: RunPlugins
 def _plan_resumption(request: RunRequest, probe: ProbeAnswer, run_directory: Path) -> dict:
     last_finished_segment = _find_last_finished_segment(run_directory) if request.resume else None
     return {
-        "counts_steps": STEP_COUNT_FEATURE in probe.features,
+        "counts_steps": TURN_COUNT_FEATURE in probe.features,
         "reads_actions": ACTIONS_OPERATION in probe.operations,
         "reads_transcripts": TRANSCRIPTS_OPERATION in probe.operations,
         "resumed": request.resume,
@@ -281,6 +281,6 @@ def plan_run(request: RunRequest, setting: RunSetting, plugins: RunPlugins, runt
         cwd=cwd,
         worktree=identity["run_directory"] / DISPOSABLE_WORKTREE_DIRECTORY if disposable_worktree else cwd,
         disposable_worktree=disposable_worktree,
-        warnings=() if STEP_COUNT_FEATURE in probe.features else clock_warnings,
+        warnings=() if TURN_COUNT_FEATURE in probe.features else clock_warnings,
         edit_tools=probe.edit_tools,
     )

@@ -48,11 +48,11 @@ BUDGETS = {
     },
 }
 STEPS_SECTION = (
-    "<section><h2>Steps by procedure and step cap by role</h2>"
+    "<section><h2>Turns by procedure and turn cap by role</h2>"
     "<table><thead><tr><th>procedure</th><th>runs</th><th>p50</th><th>p90</th><th>estimate</th></tr></thead>"
     "<tbody><tr><td>build-task</td><td>3</td><td>40</td><td>70</td><td>yes</td></tr>"
     "<tr><td>&lt;i&gt;review&lt;/i&gt;</td><td>0</td><td>-</td><td>-</td><td>no</td></tr></tbody></table>"
-    "<h3>Step cap by role</h3>"
+    "<h3>Turn cap by role</h3>"
     "<table><thead><tr><th>role</th><th>shipped</th><th>computed</th><th>applied</th><th>segments</th>"
     "<th>restarts</th><th>g</th><th>R</th></tr></thead>"
     "<tbody><tr><td>&lt;i&gt;ada&lt;/i&gt;</td><td>75</td><td>132</td><td>132</td><td>6</td><td>3</td>"
@@ -75,7 +75,7 @@ def answer_with(document: dict) -> CommandAnswer:
 
 
 class RenderLedgerFragmentTest(unittest.TestCase):
-    def test_should_render_the_steps_by_procedure_and_the_waves_started_by_month(self):
+    def test_should_render_the_turns_by_procedure_and_the_waves_started_by_month(self):
         # Arrange
         answers = {"overview": answer_with(OVERVIEW), "budgets": answer_with(BUDGETS)}
 
@@ -85,26 +85,27 @@ class RenderLedgerFragmentTest(unittest.TestCase):
         # Assert
         self.assertEqual(fragment, STEPS_SECTION + MONTHS_SECTION)
 
-    def test_should_render_the_steps_by_role_and_the_pauses_of_the_wave_asked(self):
+    def test_should_render_the_turns_by_role_and_the_halts_of_the_wave_asked(self):
         # Arrange
         wave = {
             "schema_version": 1,
-            "view": "wave",
             "wave": "<b>w2</b>",
-            "steps": {
-                "by_slot": {},
-                "by_role": {
-                    "<i>ada</i>": {"runs": {"measured": 2, "unmeasured": 1, "p50": 30, "p90": 50, "partial": 0}}
+            "ledger": {
+                "turns": {
+                    "by_slot": {},
+                    "by_role": {
+                        "<i>ada</i>": {"runs": {"measured": 2, "unmeasured": 1, "p50": 30, "p90": 50, "partial": 0}}
+                    },
                 },
+                "halts": [
+                    {
+                        "halted_at": "<i>2026-10-02T10:00:00Z</i>",
+                        "resumed_at": "<i>2026-10-02T11:05:00Z</i>",
+                        "duration_ms": 3900000,
+                    },
+                    {"halted_at": "<i>2026-10-03T10:00:00Z</i>", "resumed_at": None, "duration_ms": None},
+                ],
             },
-            "pauses": [
-                {
-                    "paused_at": "<i>2026-10-02T10:00:00Z</i>",
-                    "resumed_at": "<i>2026-10-02T11:05:00Z</i>",
-                    "duration_ms": 3900000,
-                },
-                {"paused_at": "<i>2026-10-03T10:00:00Z</i>", "resumed_at": None, "duration_ms": None},
-            ],
         }
         answers = {"overview": answer_with(OVERVIEW), "budgets": answer_with(BUDGETS), "wave": answer_with(wave)}
 
@@ -116,13 +117,13 @@ class RenderLedgerFragmentTest(unittest.TestCase):
             fragment,
             STEPS_SECTION
             + MONTHS_SECTION
-            + "<section><h2>Steps by role and pauses of the wave</h2><p>wave &lt;b&gt;w2&lt;/b&gt;</p>"
+            + "<section><h2>Turns by role and halts of the wave</h2><p>wave &lt;b&gt;w2&lt;/b&gt;</p>"
             "<table><thead><tr><th>role</th><th>runs</th><th>p50</th><th>p90</th></tr></thead>"
             "<tbody><tr><td>&lt;i&gt;ada&lt;/i&gt;</td><td>2</td><td>30</td><td>50</td></tr></tbody></table>"
-            "<table><thead><tr><th>paused at</th><th>resumed at</th><th>minutes</th></tr></thead>"
+            "<table><thead><tr><th>halted at</th><th>resumed at</th><th>minutes</th></tr></thead>"
             "<tbody><tr><td>&lt;i&gt;2026-10-02T10:00:00Z&lt;/i&gt;</td><td>&lt;i&gt;2026-10-02T11:05:00Z&lt;/i&gt;</td>"
             "<td>65</td></tr>"
-            "<tr><td>&lt;i&gt;2026-10-03T10:00:00Z&lt;/i&gt;</td><td>still paused</td><td>-</td></tr></tbody></table></section>",
+            "<tr><td>&lt;i&gt;2026-10-03T10:00:00Z&lt;/i&gt;</td><td>still halted</td><td>-</td></tr></tbody></table></section>",
         )
 
     def test_should_render_the_comparison_of_the_two_ranges_asked(self):
@@ -135,18 +136,18 @@ class RenderLedgerFragmentTest(unittest.TestCase):
                     "end": "2026-09-30",
                     "runs": 4,
                     "segments": 5,
-                    "steps": {"runs": {"p50": 40, "p90": 80}},
-                    "steps_to_first_edit": {"runs": {"p50": 6, "p90": 9}},
-                    "oversized_output_steps": None,
+                    "turns": {"runs": {"p50": 40, "p90": 80}},
+                    "turns_to_first_edit": {"runs": {"p50": 6, "p90": 9}},
+                    "oversized_output_turns": None,
                 },
                 {
                     "start": "2026-10-01",
                     "end": "2026-10-31",
                     "runs": 2,
                     "segments": 2,
-                    "steps": {"runs": {"p50": 30, "p90": 45}},
-                    "steps_to_first_edit": None,
-                    "oversized_output_steps": None,
+                    "turns": {"runs": {"p50": 30, "p90": 45}},
+                    "turns_to_first_edit": None,
+                    "oversized_output_turns": None,
                 },
             ],
             "reference": {},
@@ -168,9 +169,9 @@ class RenderLedgerFragmentTest(unittest.TestCase):
             "<table><thead><tr><th>measure</th>"
             "<th>p50 &lt;i&gt;2026-09-01&lt;/i&gt; to 2026-09-30</th><th>p90 &lt;i&gt;2026-09-01&lt;/i&gt; to 2026-09-30</th>"
             "<th>p50 2026-10-01 to 2026-10-31</th><th>p90 2026-10-01 to 2026-10-31</th></tr></thead><tbody>"
-            "<tr><td>steps</td><td>40</td><td>80</td><td>30</td><td>45</td></tr>"
-            "<tr><td>steps to first edit</td><td>6</td><td>9</td><td>-</td><td>-</td></tr>"
-            "<tr><td>oversized output steps</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>"
+            "<tr><td>turns</td><td>40</td><td>80</td><td>30</td><td>45</td></tr>"
+            "<tr><td>turns to first edit</td><td>6</td><td>9</td><td>-</td><td>-</td></tr>"
+            "<tr><td>oversized output turns</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>"
             "</tbody></table></section>",
         )
 

@@ -10,7 +10,7 @@ that task and no other.
 Arguments, which the Arguments section names: `task`, the TASK entity to deliver, and `base`, the branch of the wave
 its pull request goes to. The brief names the worktree and its branch.
 
-**Budget**: the steps the Budget section names, the cap of your role. On reaching it, stop and
+**Budget**: the turns the Budget section names, the cap of your role. On reaching it, stop and
 summarise what is done, what is not, and what the next run picks up.
 
 **Progress**: the file the Progress file section names. Read it first: holding an entry, it is an interrupted run to
@@ -19,7 +19,7 @@ step needs and no command gives back (a ruling, a pull request number), and the 
 
 ## 1. Read the package
 
-`brigade task context`, from the worktree. It prints the ancestry of the worktree and the output of its setup, the
+`brigade build context`, from the worktree. It prints the ancestry of the worktree and the output of its setup, the
 task whole, its `RATIONALE` included, its neighbours at depth 1 without their reasoning, and its closure, the rules of the files it touches, the project's `AGENTS.md`, the acceptance commands, the task
 number reserved for the run and the attribution lines. Its `TITLE` is what you deliver, its `SPEC` lines are your
 acceptance criteria, its `RATIONALE` the design already settled. A live `BLOCKED_BY` question means the task is not
@@ -51,7 +51,7 @@ branch back as it was.
 ## 5. Commit, then check until it passes
 
 Commit the work with a Conventional Commits subject, the attribution lines of the package closing the message.
-`brigade task check` refuses a worktree whose files differ from `HEAD`, so every change is committed before it runs.
+`brigade build check` refuses a worktree whose files differ from `HEAD`, so every change is committed before it runs.
 It runs the acceptance commands of the project, then `awawa fmt --check` and `awawa lint --strict` on the corpus, then
 the privacy check on the lines the branch adds since its base, each finding as `file:line`: a failure is corrected in
 a new commit and the check run again, until it passes. A failure is investigated, never masked. Every acceptance
@@ -60,19 +60,19 @@ blocker with its output.
 
 ## 6. Push, then open the pull request
 
-`brigade task push`: it pushes the branch with a lease, and refuses, pushing nothing, a `HEAD` on which no
-`brigade task check` passed. Then `brigade task pr --subject <subject>`, the subject in the imperative and in English. It refuses a check that is not of
+`brigade build push`: it pushes the branch with a lease, and refuses, pushing nothing, a `HEAD` on which no
+`brigade build check` passed. Then `brigade build pr --subject <subject>`, the subject in the imperative and in English. It refuses a check that is not of
 `HEAD` or that failed: run the check again rather than work around it. It prints the number of the pull request.
 
 ## 7. Promote
 
-`brigade task promote`. It sets the task `implemented`, delivered by the pull request just opened, then formats,
+`brigade build promote`. It sets the task `implemented`, delivered by the pull request just opened, then formats,
 lints, commits and pushes the corpus. Never promote before the pull request exists.
 
 ## 8. Report
 
-The verdict first, in one line: the task delivered, or what stopped it. Then one fact per line: the pull request by
-its number, the branch, the verdict of each acceptance command, the evidence of each failing test seen before its
+The conclusion first, in one line: the task delivered, or what stopped it. Then one fact per line: the pull request by
+its number, the branch, the result of each acceptance command, the evidence of each failing test seen before its
 code, the test each added branch failed on its removal, the entities written in the corpus by name, and the question
 left to a ruling, verbatim, if there is one.
 

@@ -39,7 +39,7 @@ def _read_citable(collected: list[dict]) -> Citable:
     fingerprints = []
     for entry in cited:
         _, read_fingerprints = CITED_ITEMS_BY_COLLECTOR[entry["collector"]]
-        items = json.loads(Path(entry["document"]).read_text(encoding="utf-8"))["items"]
+        items = json.loads(Path(entry["collection"]).read_text(encoding="utf-8"))["items"]
         fingerprints.extend(read_fingerprints(items))
     described = " or ".join(
         f"{CITED_ITEMS_BY_COLLECTOR[entry['collector']][0]} {entry['collector']}" for entry in cited
@@ -73,9 +73,7 @@ def _check_new_pattern(target: str, pattern: Entity) -> None:
 def _check_evidence_added(target: str, pattern: Entity) -> None:
     for field in pattern.fields:
         if field.name != EVIDENCE_FIELD:
-            raise BrigadeError(
-                f"{target} is held by the operational corpus: an answer adds EVIDENCE to it, {field.name} given"
-            )
+            raise BrigadeError(f"{target} is held by the registry: an answer adds EVIDENCE to it, {field.name} given")
 
 
 def _check_pattern(pattern: Entity, citable: Citable, held_names: frozenset[str]) -> None:

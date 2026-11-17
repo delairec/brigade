@@ -52,21 +52,21 @@ declares it, `fallback` when brigade replaces it, `absent` for a launch or a res
 each fallback. For the built-in adapters, `brigade adapter matrix --markdown` prints:
 
 <!-- adapter matrix: begin -->
-| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour | Graceful stop |
+| Supported client | Launch | Result | Resume | Transcripts | Actions | Turn count | Tool grants | Reset hour | Graceful stop |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | claude-code | full | full | full | full | full | full | full | full | full |
 | vibe | full | full | fallback | full | fallback | full | full | fallback | fallback |
 
-| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour | Graceful stop |
+| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Turn count | Tool grants | Reset hour | Graceful stop |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | fake | full | full | fallback | fallback | fallback | fallback | fallback | fallback | fallback |
 
 Fallbacks:
 
 - no resume: a fresh launch from the progress file
-- no transcripts: brigade's journal of the run
+- no transcripts: brigade's log of the run
 - no actions: one raw record per line of the client's output
-- no step count: steps null and the run held on the clock alone
+- no turn count: turns null and the run held on the clock alone
 - no tool grants: the client's unattended mode and a disposable worktree for a reading slot
 - no reset hour: now plus thirty minutes
 - no graceful stop: the hard cut at the wall-time limit
@@ -103,12 +103,12 @@ The `outcome` of a `parse-result` answer is `done`, `handed_over`, `blocked`, `u
 
 <details><summary>How the commands report a slot bound to another client</summary>
 
-- `brigade roles list`, `brigade doctor` and `brigade adapter <operation>` answer for the `client` key, and name every
+- `brigade role list`, `brigade doctor` and `brigade adapter <operation>` answer for the `client` key, and name every
   slot the table binds to another client: `slot <slot> runs on <client>`.
-- `brigade roles list` and `brigade adapter` state that key as `answers for <client>`; `brigade adapter` writes it on
+- `brigade role list` and `brigade adapter` state that key as `answers for <client>`; `brigade adapter` writes it on
   stderr, its stdout holding the adapter's answer alone.
 - `brigade doctor` names it on its `client` line.
-- `brigade roles list` probes the client of each such slot too, its model column showing the model that client binds,
+- `brigade role list` probes the client of each such slot too, its model column showing the model that client binds,
   and exits 1 naming an adapter it finds nowhere.
 
 </details>
@@ -132,8 +132,8 @@ The fake reads these keys of `[clients.fake]`:
 | Key | What it does |
 |---|---|
 | `recordings` | the directory whose `<role>.json` it replays, or `<role>.resumed.json` when that file exists and its brief opens on the `Progress so far` section |
-| `features` | the comma-separated features its probe declares: `step_count`, `tool_grants`, `reset_hour`, `graceful_stop`; none by default |
-| `hold` | for tests of the clock and of the hand-over: a file whose presence it waits out before answering |
+| `features` | the comma-separated features its probe declares: `turn_count`, `tool_grants`, `reset_hour`, `graceful_stop`; none by default |
+| `hold` | for tests of the clock and of the handover: a file whose presence it waits out before answering |
 | `progress` | for those tests: a text it appends as it is to the progress file of the run, in either form |
 | `interval` | for those tests: the seconds it waits after each line of its recording |
 | `operations` | comma-separated, adds operations to its probe: with `actions`, a line of its recording that is a result document is a result and any other line a text; with `transcripts`, it answers the document `<session_id>.transcripts.json` of `recordings` |

@@ -9,7 +9,7 @@ PROSE_FIELD_SEPARATOR = ", "
 
 
 def _render_collected(entry: dict) -> str:
-    return f"{entry['collector']}: {render_inline_json(entry['summary'])}, {entry['document']}"
+    return f"{entry['collector']}: {render_inline_json(entry['summary'])}, {entry['collection']}"
 
 
 def _render_text(document: dict) -> str:
@@ -27,7 +27,7 @@ def study_context(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("study", "context"),
-    help="print the package a judging run answers from, and write it to the run directory",
+    help="print the context a judging run answers from, and write it to the run directory",
     arguments=(Argument(("run",), {"help": "the run of the study"}),),
     run=study_context,
     render_text=_render_text,

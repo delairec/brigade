@@ -11,7 +11,6 @@ from brigade.studies.read_collector_line import read_collector_line
 from brigade.studies.study_run_context import COLLECTORS_DIRECTORY, StudyRunContext
 
 BEGINNING = date(1970, 1, 1)
-FIRST_COLLECTOR = 1
 
 
 def _locate_project(context: StudyRunContext) -> Path:
@@ -26,7 +25,7 @@ def collect_evidence(context: StudyRunContext) -> dict:
     project = _locate_project(context)
     collected = []
     declared_collectors = [read_collector_line(line) for line in context.study.collectors]
-    for index, (name, parameters) in enumerate(declared_collectors, start=FIRST_COLLECTOR):
+    for index, (name, parameters) in enumerate(declared_collectors, start=context.first_collector_rank):
         collector = context.equipment.resolve_collector(name, project)
         place = context.run_directory / COLLECTORS_DIRECTORY / str(index)
         collection = collect_document(
@@ -42,7 +41,7 @@ def collect_evidence(context: StudyRunContext) -> dict:
             {
                 "collector": collector.name,
                 "summary": collection.document["summary"],
-                "document": str(collection.document_path),
+                "collection": str(collection.document_path),
             }
         )
     return {"collected": collected}

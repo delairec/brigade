@@ -7,7 +7,7 @@ from pathlib import Path
 
 from tests.cli.forgeless_wave_rehearser import ForgelessWaveRehearser
 from tests.cli.temporary_machine import REPOSITORY_ROOT, TemporaryMachine
-from tests.cli.test_collect import install_executable
+from tests.cli.test_collector_run import install_executable
 from tests.cli.wave_rehearser import ClassCleanupRegistrar
 from tests.process_launcher import ProcessLauncher
 

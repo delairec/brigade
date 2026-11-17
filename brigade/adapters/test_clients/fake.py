@@ -1,4 +1,5 @@
 import json
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -11,11 +12,8 @@ SCHEMA_VERSION = 1
 CLIENT_NAME = "fake"
 SETTING_SEPARATOR = ","
 REPLAYED_OPERATIONS = ["probe", "launch", "result"]
-SLOW_CLIENT_SCRIPT = (
-    'while [ -n "$1" ] && [ -e "$1" ]; do sleep 0.05; done; until [ "$(date -u +%s)" -ge "$5" ]; do sleep 0.1; done;'
-    ' if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
-    ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"'
-)
+REPLAY_MODULE = "brigade.adapters.test_clients.launch_replay"
+PACKAGE_PARENT = Path(__file__).parents[3]
 NO_HOLD = ""
 NO_PROGRESS = ""
 NO_INTERVAL = "0"
@@ -67,20 +65,23 @@ def _read_soft_limit(request: dict):
     return str(round(datetime.strptime(request["stop_at"], ISO_INSTANT_FORMAT).replace(tzinfo=UTC).timestamp()))
 
 
-def _build_argv(settings: dict, recording: str, soft_limit) -> list[str]:
+def _build_replay(request: dict, recording: str) -> dict:
+    settings = request["settings"]
+    soft_limit = _read_soft_limit(request)
     if soft_limit is None and not any(name in settings for name in SLOW_CLIENT_SETTINGS):
-        return ["cat", "--", recording]
-    return [
-        "sh",
-        "-c",
-        SLOW_CLIENT_SCRIPT,
-        CLIENT_NAME,
+        return {"argv": ["cat", "--", recording], "environment": {}, "stdin": None}
+    argv = [
+        sys.executable,
+        "-m",
+        REPLAY_MODULE,
         settings.get("hold", NO_HOLD),
         settings.get("progress", NO_PROGRESS),
+        request["progress_file"],
         recording,
         settings.get("interval", NO_INTERVAL),
         soft_limit or NO_SOFT_LIMIT,
     ]
+    return {"argv": argv, "environment": {"PYTHONPATH": str(PACKAGE_PARENT)}, "stdin": None}
 
 
 def _choose_recording(recordings: str, request: dict) -> str:
@@ -106,14 +107,12 @@ def _build_launch(request: dict) -> dict:
     recording = _choose_recording(recordings, request)
     play = _find_play(request)
     if play is not None:
-        argv, stdin = [str(play), recording], request["brief"]
+        command = {"argv": [str(play), recording], "environment": {}, "stdin": request["brief"]}
     else:
-        argv, stdin = _build_argv(request["settings"], recording, _read_soft_limit(request)), None
+        command = _build_replay(request, recording)
     return {
         "schema_version": SCHEMA_VERSION,
-        "argv": argv,
-        "environment": {},
-        "stdin": stdin,
+        **command,
         "session_id": request["session_id"],
     }
 

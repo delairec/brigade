@@ -19,6 +19,7 @@ from brigade.tick.actions import LaunchTask
 from brigade.tick.head_proof import ForgeCheck, HeadChecks, HeadProof, HoldingHead
 from brigade.tick.prepare_task_worktree import PreparedWorktree, prepare_task_worktree
 from brigade.tick.tick_forge import TickForge
+from tests.unit.create_recipe_answers import create_recipe_answers
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.lock_observing_runner import LockObservingRunner
@@ -41,7 +42,7 @@ ACTION_WITH_PASSED_PULL_REQUEST_CHECKS = LaunchTask(
     branch="integration/w1",
     task="B1",
     task_branch="feature/B1-task",
-    pull_request_checks=HeadChecks(head=TASK_HEAD, checks=(ForgeCheck(name="unit", verdict="success"),)),
+    pull_request_checks=HeadChecks(head=TASK_HEAD, checks=(ForgeCheck(name="unit", conclusion="success"),)),
 )
 ACTION_WITH_PENDING_PULL_REQUEST_CHECKS = LaunchTask(
     project="shop",
@@ -49,7 +50,7 @@ ACTION_WITH_PENDING_PULL_REQUEST_CHECKS = LaunchTask(
     branch="integration/w1",
     task="B1",
     task_branch="feature/B1-task",
-    pull_request_checks=HeadChecks(head=TASK_HEAD, checks=(ForgeCheck(name="unit", verdict="pending"),)),
+    pull_request_checks=HeadChecks(head=TASK_HEAD, checks=(ForgeCheck(name="unit", conclusion="pending"),)),
 )
 ACTION_WITH_PULL_REQUEST_CHECKS_OF_AN_OLDER_HEAD = LaunchTask(
     project="shop",
@@ -57,7 +58,7 @@ ACTION_WITH_PULL_REQUEST_CHECKS_OF_AN_OLDER_HEAD = LaunchTask(
     branch="integration/w1",
     task="B1",
     task_branch="feature/B1-task",
-    pull_request_checks=HeadChecks(head="0ld4ead", checks=(ForgeCheck(name="unit", verdict="success"),)),
+    pull_request_checks=HeadChecks(head="0ld4ead", checks=(ForgeCheck(name="unit", conclusion="success"),)),
 )
 WORKTREE = Path("/srv/shop/.brigade/worktrees/B1")
 ADD_TASK_WORKTREE = ("git", "worktree", "add", "--quiet", "-b", "feature/B1-task", str(WORKTREE), "integration/w1")
@@ -66,6 +67,8 @@ HEAD_OFF_THE_WAVE_BRANCH = ProcessAnswer(exit_code=1)
 TASK_BRANCH_DESCENDS = ("git", "merge-base", "--is-ancestor", "integration/w1", "feature/B1-task")
 LIST_WORKTREES = ("git", "worktree", "list", "--porcelain", "-z")
 FIND_TASK_BRANCH = ("git", "rev-parse", "--verify", "--quiet", "refs/heads/feature/B1-task")
+LIST_RECIPES = ("awawa", "status", "--json", str(WORKTREE))
+SHOW_SETUP_RECIPE = ("awawa", "show", "@RECIPE.setup", "--json", str(WORKTREE))
 NO_TASK_BRANCH = ProcessAnswer(exit_code=1)
 TASK_BRANCH_FOUND = ProcessAnswer(stdout="5c1d2e0\n")
 MAIN_CHECKOUT_ALONE = ProcessAnswer(stdout="worktree /srv/shop\0HEAD 8885daa\0branch refs/heads/main\0\0")
@@ -83,14 +86,16 @@ TASK_WORKTREE_LISTED = ProcessAnswer(
 )
 
 
+NO_RECIPE = {}
+
+
 def read_no_environment(key: str) -> dict:
     return {}
 
 
-MAKE_DEPS = {"name": "SETUP", "atoms": ['"make deps"']}
-UNCLOSED_QUOTE = {"name": "SETUP", "atoms": ['"make \\"deps"']}
-FAILING_SETUP = {"name": "SETUP", "atoms": ['"false"']}
-TOUCH_THE_WORKTREE = {"name": "SETUP", "atoms": ['"touch \\"$PWD\\""']}
+MAKE_DEPS = {"setup": (("make", "deps"),)}
+FAILING_SETUP = {"setup": (("false",),)}
+FAILING_SETUP_THEN_MAKE_DEPS = {"setup": (("false",), ("make", "deps"))}
 
 
 def list_no_check_run(repository: str, branch: str) -> list[dict]:
@@ -142,7 +147,9 @@ class PrepareTaskWorktreeTestCase(unittest.TestCase):
 
     def create_runner(
         self,
-        *setup: dict,
+        *fields: dict,
+        setup: dict = MAKE_DEPS,
+        worktree: Path = WORKTREE,
         worktrees: ProcessAnswer = MAIN_CHECKOUT_ALONE,
         branch: ProcessAnswer = NO_TASK_BRANCH,
         ancestry: ProcessAnswer = SILENT_SUCCESS,
@@ -150,13 +157,14 @@ class PrepareTaskWorktreeTestCase(unittest.TestCase):
         answers: dict | None = None,
     ) -> RecordingProcessRunner:
         root = str(self.paths.config_root)
-        fields = [{"name": "PATH", "atoms": ['"/srv/shop"']}, *forge, *setup]
+        project_fields = [{"name": "PATH", "atoms": ['"/srv/shop"']}, *forge, *fields]
         return RecordingProcessRunner(
             {
                 **create_registry_answers(self.paths.config_root, {"shop": {}}),
                 ("awawa", "show", "@PROJECT.shop", "--json", root): ProcessAnswer(
-                    stdout=json.dumps({"fields": fields})
+                    stdout=json.dumps({"fields": project_fields})
                 ),
+                **create_recipe_answers(worktree, setup),
                 ("git", "cat-file", "-p", "integration/w1:.gitignore"): ProcessAnswer(stdout=".brigade/worktrees/\n"),
                 LIST_WORKTREES: worktrees,
                 FIND_TASK_BRANCH: branch,
@@ -171,7 +179,7 @@ class PrepareTaskWorktreeTestCase(unittest.TestCase):
 class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
     def test_should_add_the_task_worktree_and_run_its_setup_logging_each_line(self):
         # Arrange
-        runner = self.create_runner(MAKE_DEPS)
+        runner = self.create_runner()
 
         # Act
         prepared = prepare_task_worktree(
@@ -183,7 +191,7 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
             prepared.worktree, BranchWorktree(path=WORKTREE, branch="feature/B1-task", start="integration/w1")
         )
         self.assertEqual(
-            runner.commands[-6:],
+            runner.commands[-8:],
             [
                 ("/srv/shop", ("git", "cat-file", "-p", "integration/w1:.gitignore")),
                 ("/srv/shop", LIST_WORKTREES),
@@ -192,6 +200,8 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
                     "/srv/shop",
                     ("git", "worktree", "add", "--quiet", "-b", "feature/B1-task", str(WORKTREE), "integration/w1"),
                 ),
+                (str(WORKTREE), LIST_RECIPES),
+                (str(WORKTREE), SHOW_SETUP_RECIPE),
                 (str(WORKTREE), ("make", "deps")),
                 (str(WORKTREE), ("git", "merge-base", "--is-ancestor", "integration/w1", "HEAD")),
             ],
@@ -200,9 +210,19 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
             (self.paths.setup_directory / "shop" / "B1.log").read_text(), "$ make deps\ndeps installed\n1 warning\n"
         )
 
+    def test_should_log_a_setup_step_quoting_an_argument_that_holds_a_space(self):
+        # Arrange
+        runner = self.create_runner(setup={"setup": (("make", "deps", "LEVEL=a b"),)})
+
+        # Act
+        prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE)
+
+        # Assert
+        self.assertEqual((self.paths.setup_directory / "shop" / "B1.log").read_text(), "$ make deps 'LEVEL=a b'\n")
+
     def test_should_leave_the_ignore_file_alone_under_a_configured_worktree_root(self):
         # Arrange
-        runner = self.create_runner(MAKE_DEPS)
+        runner = self.create_runner(worktree=Path("/var/worktrees/B1"))
 
         # Act
         prepare_task_worktree(
@@ -214,7 +234,7 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
 
         # Assert
         self.assertEqual(
-            runner.commands[-6:],
+            runner.commands[-8:],
             [
                 (
                     str(self.paths.config_root),
@@ -235,6 +255,8 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
                         "integration/w1",
                     ),
                 ),
+                ("/var/worktrees/B1", ("awawa", "status", "--json", "/var/worktrees/B1")),
+                ("/var/worktrees/B1", ("awawa", "show", "@RECIPE.setup", "--json", "/var/worktrees/B1")),
                 ("/var/worktrees/B1", ("make", "deps")),
                 ("/var/worktrees/B1", ("git", "merge-base", "--is-ancestor", "integration/w1", "HEAD")),
             ],
@@ -244,6 +266,7 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
         # Arrange
         runner = self.create_runner(
             {"name": "MAIN", "atoms": ['"main"']},
+            setup=NO_RECIPE,
             answers={
                 ("git", "cat-file", "-p", "main:.gitignore"): ProcessAnswer(stdout="*.pyc\n"),
                 ("git", "merge-base", "--is-ancestor", "main", "HEAD"): SILENT_SUCCESS,
@@ -261,7 +284,7 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
         # Assert
         self.assertEqual(prepared.worktree, BranchWorktree(path=WORKTREE, branch="feature/B1-task", start="main"))
         self.assertEqual(
-            runner.commands[-5:],
+            runner.commands[-6:],
             [
                 (
                     str(self.paths.config_root),
@@ -270,6 +293,7 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
                 ("/srv/shop", LIST_WORKTREES),
                 ("/srv/shop", FIND_TASK_BRANCH),
                 ("/srv/shop", ("git", "worktree", "add", "--quiet", "-b", "feature/B1-task", str(WORKTREE), "main")),
+                (str(WORKTREE), LIST_RECIPES),
                 (str(WORKTREE), ("git", "merge-base", "--is-ancestor", "main", "HEAD")),
             ],
         )
@@ -278,7 +302,7 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
 class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
     def test_should_reuse_the_worktree_of_the_task_and_run_its_setup_again(self):
         # Arrange
-        runner = self.create_runner(MAKE_DEPS, worktrees=TASK_WORKTREE_LISTED, branch=TASK_BRANCH_FOUND)
+        runner = self.create_runner(worktrees=TASK_WORKTREE_LISTED, branch=TASK_BRANCH_FOUND)
 
         # Act
         prepared = prepare_task_worktree(
@@ -290,10 +314,12 @@ class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
             prepared.worktree, BranchWorktree(path=WORKTREE, branch="feature/B1-task", start="integration/w1")
         )
         self.assertEqual(
-            runner.commands[-4:],
+            runner.commands[-6:],
             [
                 ("/srv/shop", LIST_WORKTREES),
                 (str(WORKTREE), TASK_BRANCH_DESCENDS),
+                (str(WORKTREE), LIST_RECIPES),
+                (str(WORKTREE), SHOW_SETUP_RECIPE),
                 (str(WORKTREE), ("make", "deps")),
                 (str(WORKTREE), ("git", "merge-base", "--is-ancestor", "integration/w1", "HEAD")),
             ],
@@ -301,14 +327,14 @@ class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
 
     def test_should_add_a_worktree_on_the_existing_branch_of_the_task(self):
         # Arrange
-        runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND)
+        runner = self.create_runner(branch=TASK_BRANCH_FOUND)
 
         # Act
         prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE)
 
         # Assert
         self.assertEqual(
-            runner.commands[-5:-3],
+            runner.commands[-7:-5],
             [
                 ("/srv/shop", FIND_TASK_BRANCH),
                 ("/srv/shop", ("git", "worktree", "add", "--quiet", str(WORKTREE), "feature/B1-task")),
@@ -317,14 +343,14 @@ class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
 
     def test_should_not_take_a_worktree_of_the_branch_outside_the_worktree_root_for_the_task_worktree(self):
         # Arrange
-        runner = self.create_runner(MAKE_DEPS, worktrees=TASK_BRANCH_LISTED_ELSEWHERE, branch=TASK_BRANCH_FOUND)
+        runner = self.create_runner(worktrees=TASK_BRANCH_LISTED_ELSEWHERE, branch=TASK_BRANCH_FOUND)
 
         # Act
         prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE)
 
         # Assert
         self.assertEqual(
-            runner.commands[-4],
+            runner.commands[-6],
             ("/srv/shop", ("git", "worktree", "add", "--quiet", str(WORKTREE), "feature/B1-task")),
         )
 
@@ -332,7 +358,57 @@ class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
 class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
     def test_should_park_the_task_and_refuse(self):
         # Arrange
-        runner = self.create_runner(UNCLOSED_QUOTE)
+        runner = self.create_runner(setup=FAILING_SETUP)
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            prepare_task_worktree(
+                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
+            )
+
+        # Assert
+        self.assertEqual(
+            read_ledger(self.paths.state_root).entries[0].event,
+            TaskState(wave="w1", task="B1", state="parked", reason="setup failed"),
+        )
+
+    def test_should_leave_the_worktree_and_the_branch_of_the_task_in_place(self):
+        # Arrange
+        runner = self.create_runner(setup=FAILING_SETUP)
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            prepare_task_worktree(
+                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
+            )
+
+        # Assert
+        self.assertEqual(runner.commands[-1], (str(WORKTREE), ("false",)))
+
+    def create_runner_with_a_gate_step_in_the_setup(self) -> RecordingProcessRunner:
+        gate_step = {"name": "STEP", "atoms": ["gate"], "fields": [{"name": "PREFLIGHT", "atoms": ['"ancestry"']}]}
+        recipe = {"type": "RECIPE", "name": "setup", "fields": [gate_step]}
+        return self.create_runner(answers={SHOW_SETUP_RECIPE: ProcessAnswer(stdout=json.dumps(recipe))})
+
+    def test_should_park_the_task_on_a_setup_recipe_holding_a_step_that_is_no_command_step(self):
+        # Arrange
+        runner = self.create_runner_with_a_gate_step_in_the_setup()
+
+        # Act
+        with self.assertRaises(BrigadeError):
+            prepare_task_worktree(
+                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
+            )
+
+        # Assert
+        self.assertEqual(
+            read_ledger(self.paths.state_root).entries[0].event,
+            TaskState(wave="w1", task="B1", state="parked", reason="setup failed"),
+        )
+
+    def test_should_name_the_step_of_the_setup_recipe_that_is_no_command_step(self):
+        # Arrange
+        runner = self.create_runner_with_a_gate_step_in_the_setup()
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -343,35 +419,12 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
         # Assert
         self.assertEqual(
             str(refusal.exception),
-            'the setup of @TASK.B1 failed: the line make "deps splits into no argv: No closing quotation',
-        )
-        self.assertEqual(
-            read_ledger(self.paths.state_root).entries[0].event,
-            TaskState(wave="w1", task="B1", state="parked", reason="setup failed"),
-        )
-
-    def test_should_leave_the_worktree_and_the_branch_of_the_task_in_place(self):
-        # Arrange
-        runner = self.create_runner(UNCLOSED_QUOTE)
-
-        # Act
-        with self.assertRaises(BrigadeError):
-            prepare_task_worktree(
-                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
-            )
-
-        # Assert
-        self.assertEqual(
-            runner.commands[-1],
-            (
-                "/srv/shop",
-                ("git", "worktree", "add", "--quiet", "-b", "feature/B1-task", str(WORKTREE), "integration/w1"),
-            ),
+            "the setup of @TASK.B1 failed: the recipe setup of the project: steps[0].kind is 'gate', not one of command",
         )
 
     def test_should_name_the_setup_line_exiting_non_zero(self):
         # Arrange
-        runner = self.create_runner(FAILING_SETUP)
+        runner = self.create_runner(setup=FAILING_SETUP)
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -384,7 +437,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
 
     def test_should_run_no_line_after_the_failing_one(self):
         # Arrange
-        runner = self.create_runner(FAILING_SETUP, MAKE_DEPS)
+        runner = self.create_runner(setup=FAILING_SETUP_THEN_MAKE_DEPS)
 
         # Act
         with self.assertRaises(BrigadeError):
@@ -417,51 +470,15 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
                         "integration/w1",
                     ),
                 ),
+                ("/srv/shop/.brigade/worktrees/B1", LIST_RECIPES),
+                ("/srv/shop/.brigade/worktrees/B1", SHOW_SETUP_RECIPE),
                 ("/srv/shop/.brigade/worktrees/B1", ("false",)),
-            ],
-        )
-
-    def test_should_run_no_line_of_a_setup_holding_a_line_that_splits_into_no_argv(self):
-        # Arrange
-        runner = self.create_runner(MAKE_DEPS, UNCLOSED_QUOTE)
-
-        # Act
-        with self.assertRaises(BrigadeError):
-            prepare_task_worktree(
-                create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
-            )
-
-        # Assert
-        self.assertEqual(
-            runner.commands,
-            [
-                (str(self.paths.config_root), ("awawa", "status", "PROJECT", "--json", str(self.paths.config_root))),
-                (
-                    str(self.paths.config_root),
-                    ("awawa", "show", "@PROJECT.shop", "--json", str(self.paths.config_root)),
-                ),
-                ("/srv/shop", ("git", "cat-file", "-p", "integration/w1:.gitignore")),
-                ("/srv/shop", ("git", "worktree", "list", "--porcelain", "-z")),
-                ("/srv/shop", ("git", "rev-parse", "--verify", "--quiet", "refs/heads/feature/B1-task")),
-                (
-                    "/srv/shop",
-                    (
-                        "git",
-                        "worktree",
-                        "add",
-                        "--quiet",
-                        "-b",
-                        "feature/B1-task",
-                        "/srv/shop/.brigade/worktrees/B1",
-                        "integration/w1",
-                    ),
-                ),
             ],
         )
 
     def test_should_refuse_a_setup_leaving_the_head_off_the_wave_branch(self):
         # Arrange
-        runner = self.create_runner(MAKE_DEPS, ancestry=HEAD_OFF_THE_WAVE_BRANCH)
+        runner = self.create_runner(ancestry=HEAD_OFF_THE_WAVE_BRANCH)
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -476,50 +493,11 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
         )
 
 
-class PrepareTaskWorktreeOfASetupLineInShellSyntaxTest(PrepareTaskWorktreeTestCase):
-    def test_should_run_the_line_as_one_argv_without_a_shell(self):
-        # Arrange
-        runner = self.create_runner(TOUCH_THE_WORKTREE)
-
-        # Act
-        prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE)
-
-        # Assert
-        self.assertEqual(
-            runner.commands,
-            [
-                (str(self.paths.config_root), ("awawa", "status", "PROJECT", "--json", str(self.paths.config_root))),
-                (
-                    str(self.paths.config_root),
-                    ("awawa", "show", "@PROJECT.shop", "--json", str(self.paths.config_root)),
-                ),
-                ("/srv/shop", ("git", "cat-file", "-p", "integration/w1:.gitignore")),
-                ("/srv/shop", ("git", "worktree", "list", "--porcelain", "-z")),
-                ("/srv/shop", ("git", "rev-parse", "--verify", "--quiet", "refs/heads/feature/B1-task")),
-                (
-                    "/srv/shop",
-                    (
-                        "git",
-                        "worktree",
-                        "add",
-                        "--quiet",
-                        "-b",
-                        "feature/B1-task",
-                        "/srv/shop/.brigade/worktrees/B1",
-                        "integration/w1",
-                    ),
-                ),
-                ("/srv/shop/.brigade/worktrees/B1", ("touch", "$PWD")),
-                ("/srv/shop/.brigade/worktrees/B1", ("git", "merge-base", "--is-ancestor", "integration/w1", "HEAD")),
-            ],
-        )
-
-
 class PrepareTaskWorktreeUnderTheLockTest(PrepareTaskWorktreeTestCase):
     def test_should_add_the_worktree_under_the_lock_of_the_worktrees_of_the_project(self):
         # Arrange
         lock = self.paths.lock_directory / "worktrees-shop.lock"
-        runner = LockObservingRunner(self.create_runner(MAKE_DEPS), lock, ADD_TASK_WORKTREE)
+        runner = LockObservingRunner(self.create_runner(), lock, ADD_TASK_WORKTREE)
 
         # Act
         prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE)
@@ -569,7 +547,7 @@ CLI_FORGE = TickForge(read_environment=read_cli_environment, list_check_runs=lis
 class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
     def test_should_cut_the_task_branch_from_the_wave_branch_of_the_forge_and_check_the_setup_against_it(self):
         # Arrange
-        runner = self.create_runner(MAKE_DEPS, forge=ON_GITHUB)
+        runner = self.create_runner(forge=ON_GITHUB)
 
         # Act
         prepared = prepare_task_worktree(
@@ -586,7 +564,7 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
             ),
         )
         self.assertEqual(
-            runner.commands[-4:],
+            runner.commands[-6:],
             [
                 ("/srv/shop", FIND_TASK_BRANCH),
                 (
@@ -602,6 +580,8 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
                         "origin/integration/w1",
                     ),
                 ),
+                (str(WORKTREE), LIST_RECIPES),
+                (str(WORKTREE), SHOW_SETUP_RECIPE),
                 (str(WORKTREE), ("make", "deps")),
                 (str(WORKTREE), ("git", "merge-base", "--is-ancestor", "origin/integration/w1", "HEAD")),
             ],
@@ -609,7 +589,7 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
 
     def test_should_fetch_the_wave_branch_with_the_environment_of_the_cli_slot(self):
         # Arrange
-        runner = self.create_runner(MAKE_DEPS, forge=ON_GITHUB)
+        runner = self.create_runner(forge=ON_GITHUB)
 
         # Act
         prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, CLI_FORGE)
@@ -624,7 +604,6 @@ class PrepareTaskWorktreeOnGithubTest(PrepareTaskWorktreeTestCase):
 
     def create_runner_of_a_branch_off_the_wave_branch_of_the_forge(self) -> RecordingProcessRunner:
         return self.create_runner(
-            MAKE_DEPS,
             forge=ON_GITHUB,
             branch=TASK_BRANCH_FOUND,
             answers={
@@ -698,7 +677,7 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
         # Arrange
         self.record_commit_checks(TASK_HEAD, exit_code=0)
         self.record_commit_checks(WAVE_HEAD, exit_code=0)
-        runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
+        runner = self.create_runner(branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
 
         # Act
         prepared = prepare_task_worktree(
@@ -708,19 +687,21 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
         # Assert
         self.assertFalse(prepared.conflicted)
         self.assertEqual(
-            runner.commands[-3:],
+            runner.commands[-5:],
             [
                 (str(WORKTREE), REBASE_ON_THE_WAVE_BRANCH),
+                (str(WORKTREE), LIST_RECIPES),
+                (str(WORKTREE), SHOW_SETUP_RECIPE),
                 (str(WORKTREE), ("make", "deps")),
                 (str(WORKTREE), REQUIRE_THE_WAVE_BRANCH),
             ],
         )
 
-    def test_should_hand_over_a_rebased_branch_as_put_on_the_head_of_the_wave_branch(self):
+    def test_should_deliver_a_rebased_branch_as_put_on_the_head_of_the_wave_branch(self):
         # Arrange
         self.record_commit_checks(TASK_HEAD, exit_code=0)
         self.record_commit_checks(WAVE_HEAD, exit_code=0)
-        runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
+        runner = self.create_runner(branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
 
         # Act
         prepared = prepare_task_worktree(
@@ -742,7 +723,7 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
     def test_should_prove_the_branch_green_by_the_check_runs_its_pull_request_passed_at_its_head(self):
         # Arrange
         self.record_commit_checks(WAVE_HEAD, exit_code=0)
-        runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
+        runner = self.create_runner(branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
 
         # Act
         prepare_task_worktree(
@@ -758,7 +739,11 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
     def test_should_check_the_branch_on_a_checkout_of_its_head_when_its_pull_request_was_checked_at_another(self):
         # Arrange
         self.record_commit_checks(WAVE_HEAD, exit_code=0)
-        runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
+        checkout = self.paths.state_root / "head-checks" / "shop" / TASK_HEAD
+        runner = self.create_runner(
+            branch=TASK_BRANCH_FOUND,
+            answers={**OFF_THE_WAVE_BRANCH, **create_recipe_answers(checkout, NO_RECIPE)},
+        )
 
         # Act
         prepare_task_worktree(
@@ -784,7 +769,7 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
     def test_should_hold_a_branch_whose_pull_request_checks_are_pending_with_no_rebase_and_no_setup(self):
         # Arrange
         self.record_commit_checks(WAVE_HEAD, exit_code=0)
-        runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
+        runner = self.create_runner(branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
 
         # Act
         prepared = prepare_task_worktree(
@@ -813,7 +798,7 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
         # Arrange
         self.record_commit_checks(TASK_HEAD, exit_code=0)
         self.record_commit_checks(WAVE_HEAD, exit_code=1)
-        runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
+        runner = self.create_runner(branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
 
         # Act
         prepared = prepare_task_worktree(
@@ -838,7 +823,7 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
 
     def test_should_leave_a_branch_descending_from_the_wave_branch_unrebased(self):
         # Arrange
-        runner = self.create_runner(MAKE_DEPS, worktrees=TASK_WORKTREE_LISTED, branch=TASK_BRANCH_FOUND)
+        runner = self.create_runner(worktrees=TASK_WORKTREE_LISTED, branch=TASK_BRANCH_FOUND)
 
         # Act
         prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE)
@@ -850,9 +835,7 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
         # Arrange
         self.record_commit_checks(TASK_HEAD, exit_code=0)
         self.record_commit_checks(WAVE_HEAD, exit_code=0)
-        runner = self.create_runner(
-            MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers={**OFF_THE_WAVE_BRANCH, **STOPPED_ON_A_CONFLICT}
-        )
+        runner = self.create_runner(branch=TASK_BRANCH_FOUND, answers={**OFF_THE_WAVE_BRANCH, **STOPPED_ON_A_CONFLICT})
 
         # Act
         prepared = prepare_task_worktree(
@@ -870,7 +853,6 @@ class PrepareTaskWorktreeOfARedBranchOffTheWaveBranchTest(PrepareTaskWorktreeTes
         self.record_commit_checks(TASK_HEAD, exit_code=1)
         self.record_commit_checks(WAVE_HEAD, exit_code=0)
         runner = self.create_runner(
-            MAKE_DEPS,
             branch=TASK_BRANCH_FOUND,
             answers={**OFF_THE_WAVE_BRANCH, REQUIRE_THE_WAVE_BRANCH: HEAD_OFF_THE_WAVE_BRANCH},
         )
@@ -882,10 +864,10 @@ class PrepareTaskWorktreeOfARedBranchOffTheWaveBranchTest(PrepareTaskWorktreeTes
         self.assertNotIn((str(WORKTREE), REBASE_ON_THE_WAVE_BRANCH), runner.commands)
         self.assertEqual(runner.commands[-1], (str(WORKTREE), ("make", "deps")))
 
-    def test_should_hand_over_the_worktree_off_its_start_with_the_commands_that_failed_at_its_head(self):
+    def test_should_deliver_the_worktree_off_its_start_with_the_commands_that_failed_at_its_head(self):
         # Arrange
         self.record_commit_checks(TASK_HEAD, exit_code=1)
-        runner = self.create_runner(MAKE_DEPS, branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
+        runner = self.create_runner(branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)
 
         # Act
         prepared = prepare_task_worktree(
@@ -914,7 +896,7 @@ class PrepareTaskWorktreeOfATaskLaunchedAgainAfterACancelTest(PrepareTaskWorktre
         # Arrange
         append_event(self.paths, CANCELLATION_INSTANT, WAVE_OF_THE_PREVIOUS_ATTEMPT)
         append_event(self.paths, CANCELLATION_INSTANT, WaveCancelled(wave="w0", reason="user"))
-        runner = self.create_runner(MAKE_DEPS, worktrees=TASK_WORKTREE_LISTED, branch=TASK_BRANCH_FOUND)
+        runner = self.create_runner(worktrees=TASK_WORKTREE_LISTED, branch=TASK_BRANCH_FOUND)
 
         # Act
         prepared = prepare_task_worktree(
@@ -931,10 +913,12 @@ class PrepareTaskWorktreeOfATaskLaunchedAgainAfterACancelTest(PrepareTaskWorktre
             ),
         )
         self.assertEqual(
-            runner.commands[-4:],
+            runner.commands[-6:],
             [
                 ("/srv/shop", LIST_WORKTREES),
                 (str(WORKTREE), TASK_BRANCH_DESCENDS),
+                (str(WORKTREE), LIST_RECIPES),
+                (str(WORKTREE), SHOW_SETUP_RECIPE),
                 (str(WORKTREE), ("make", "deps")),
                 (str(WORKTREE), REQUIRE_THE_WAVE_BRANCH),
             ],
@@ -945,7 +929,6 @@ class PrepareTaskWorktreeOfAMergedTaskBranchTest(PrepareTaskWorktreeTestCase):
     def test_should_fast_forward_a_task_branch_merged_into_the_wave_branch_and_never_rebase_it(self):
         # Arrange
         runner = self.create_runner(
-            MAKE_DEPS,
             branch=TASK_BRANCH_FOUND,
             answers={TASK_BRANCH_DESCENDS: ProcessAnswer(exit_code=1)},
         )

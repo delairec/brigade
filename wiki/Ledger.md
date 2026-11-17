@@ -1,20 +1,20 @@
-Where brigade records its events and how `brigade ledger` summarises them: an overview, a wave, a task, a project, the
-step budgets and a comparison of two ranges of days, or of one range with reference figures.
+Where brigade records its events and how `brigade ledger` summarises them: an overview, a task, a project, the
+turn budgets and a comparison of two ranges of days, or of one range with reference figures.
 
 ## Views
 
 ```
 brigade ledger                                        # events by name, first and last instant, runs and segments by outcome
-brigade ledger --wave <id>                            # cost, tokens, steps, duration and cost per task, pull requests, pauses
-brigade ledger --task <id>                            # the runs of a task: outcome, steps, duration, cost
+brigade ledger --task <id>                            # the runs of a task: outcome, turns, duration, cost
 brigade ledger --project <name>                       # waves, orders, pull requests, signals, patterns, constraints
-brigade ledger budgets [--last N] [--client <name>]   # p50 and p90 steps per procedure, 20 runs by default, every client by default; step cap per role
+brigade ledger budgets [--last N] [--client <name>]   # p50 and p90 turns per procedure, 20 runs by default, every client by default; turn cap per role
 brigade ledger compare --range <start>..<end> --range <start>..<end>
 brigade ledger compare --range <start>..<end> --reference <measure>=<value> ...
 ```
 
-Every view prints text or, with `--json`, a JSON document. `--since <n>d|<YYYY-MM-DD>` narrows the overview, `--wave`,
-`--task` and `--project` to the events from that instant on.
+Every view prints text or, with `--json`, a JSON document. `--since <n>d|<YYYY-MM-DD>` narrows the overview, `--task`
+and `--project` to the events from that instant on. What happened in a wave, its cost, tokens, turns and events, is
+printed by `brigade wave show <wave> --events`, [Waves](Waves.md).
 
 ## Comparing ranges
 
@@ -24,12 +24,12 @@ before the ledger existed:
 
 | Measure                             | What the range gives                                                |
 |-------------------------------------|---------------------------------------------------------------------|
-| `steps_to_first_edit_p50`           | the p50 of the steps to the first edit of its runs                  |
-| `task_run_steps_p50`                | the p50 of the steps of its runs naming a task                      |
-| `oversized_output_steps_per_launch` | the oversized output steps per segment reporting them, two decimals |
+| `turns_to_first_edit_p50`           | the p50 of the turns to the first edit of its runs                  |
+| `task_run_turns_p50`                | the p50 of the turns of its runs naming a task                      |
+| `oversized_output_turns_per_launch` | the oversized output turns per segment reporting them, two decimals |
 
 `--reference` is repeated once per measure, for example
-`--reference steps_to_first_edit_p50=23 --reference task_run_steps_p50=47 --reference oversized_output_steps_per_launch=2.18`.
+`--reference turns_to_first_edit_p50=23 --reference task_run_turns_p50=47 --reference oversized_output_turns_per_launch=2.18`.
 
 ## Where events are recorded
 
@@ -50,13 +50,13 @@ line on stderr and in the document, and the command still exits 0. Lines are app
 
 </details>
 
-<details><summary>How steps are counted</summary>
+<details><summary>How turns are counted</summary>
 
-- Every summary of steps gives the runs and the segments side by side.
+- Every summary of turns gives the runs and the segments side by side.
 - A run is measured by the sum of its measured segments, partial when one of them is not measured, and kept in the
   percentiles; a run with no measured segment is unmeasured.
-- The steps of a task in `--wave` sum those of its runs, partial when one of its runs is.
-- The steps to the first edit of a run add the steps of the segments before the one that edited, and are partial only
+- The turns of a task in `--wave` sum those of its runs, partial when one of its runs is.
+- The turns to the first edit of a run add the turns of the segments before the one that edited, and are partial only
   when one of those is not measured.
 - The cost and the tokens of a wave, and the duration and the cost of a task or a run, sum the `run.finished` events
   that carry them; none is printed when no event does.

@@ -18,7 +18,7 @@ Every command prints text or, with `--json`, a JSON document.
 
 ## What a study does
 
-A study is a `STUDY` entity of `studies.awawa` in the operational corpus, run in three steps:
+A study is a `STUDY` entity of `studies.awawa` in the registry, run in three steps:
 
 1. `collect` — deterministic collectors gather items, without a model;
 2. `judge` — at most one judging run reads `study context <run>` and hands its answer to `study answer`;
@@ -35,7 +35,7 @@ a scan: no judging run, the answer holds the fields brigade filled.
 | every day at an hour, `daily@HH:MM` | `daily@07:30` |
 | a day of the week at an hour, `mon@HH:MM` to `sun@HH:MM` | `mon@09:00` |
 
-Times are in the machine's timezone. Each tick runs every due study through `study run`, detached.
+Times are in the machine's timezone. Each tick runs every due study as an order of the built-in recipe `study`, through `order run`, detached.
 
 ## Collectors
 
@@ -52,13 +52,14 @@ lines the command prints.
 
 | `--output`        | where the answer goes                                                                          |
 |-------------------|------------------------------------------------------------------------------------------------|
-| `entity:<TYPE>`   | appended to the operational corpus through `awawa fmt`, `awawa lint --strict` and a commit     |
+| `entity:<TYPE>`   | appended to the registry through `awawa fmt`, `awawa lint --strict` and a commit     |
 | `file:<pattern>`  | committed on the branch `brigade/study-<study>-<run>` of the project, pushed with a pull request where the project has a forge; `{run}` in the pattern is the run |
 | `inbox`           | recorded in the inbox as a signal of kind `study`, as [Inbox](Inbox.md) says                               |
 | `issue`           | a forge issue of the project                                                                   |
 | any other name    | `brigade-output-<name>` on `PATH`, given `{"schema_version", "study", "run", "markdown"}` on stdin |
 
-Every output but `entity:` hands a person the Markdown rendered from the answer entity.
+Every output but `entity:` hands a person the Markdown rendered from the answer entity. An `ANSWER` entity is listed by
+`brigade inbox list` and shown by `brigade inbox show <id>`, never by `brigade report list`.
 
 > **Watch out:** a failed step parks the study, and a parked study is never due: its next `study run` resumes that run
 > at its first undone step.
@@ -70,7 +71,7 @@ signal of kind `scan` per item they print, so that the same fact found again rai
 dismissal holds. An item without a `fingerprint` key parks the run at its output step, naming the collector.
 
 For each registered project `P`, brigade ships four scans, due once a day and listed by `study list`; a `STUDY` of the
-same name in the operational corpus replaces the built-in one, `STATUS paused` included. They report and remove
+same name in the registry replaces the built-in one, `STATUS paused` included. They report and remove
 nothing.
 
 | Scan | Collector | One item per | Fingerprint of the item |
@@ -92,12 +93,13 @@ judging run completes with its prose. A wave has no report of its own.
 | `milestone-report` | once every task of the milestone at its branch is merged or parked and no wave of it is open; `milestone.reported` | `ledger` for each wave of the milestone, `pr-list state=all`, `corpus ref=<branch>` on its tasks, `git-diff-stat to=<branch>` | `<project>_<milestone>`; its `GRAPH` holds every `AFTER` between two tasks of the milestone | `<CORPUS>/milestones/<milestone>-report.md` | committed on the branch of the milestone, then the body of its pull request into the main branch, opened then; no pull request under `FORGE none` |
 | `task-report` | for a task naming no milestone, once its pull request is ready to merge or the task is parked; `task.reported` | the same, narrowed to the wave of the task, the task and its branch | `<project>_<task>` | `<CORPUS>/tasks/<task>-report.md` | committed on the branch of the task, then the body of its pull request, replaced whole |
 
-The commit is pushed without force as the login of the key `cli` of `[forge_accounts]`. `brigade reports list` names
+The commit is pushed without force as the login of the key `cli` of `[forge_accounts]`. `brigade report list` names
 the kind of each report, `milestone-report`, `task-report` or, for one written before them, `wave-report`.
 
 <details><summary>Steps, ledger events and resumption</summary>
 
-`study run` runs the steps `collect`, `judge` and `output`, each writing its result under `runs/<id>/steps/` and the
+`study run` runs the steps of the recipe `study`, named `<rank>-<kind>`: a `collect` step for each `COLLECTOR` line,
+then `judge` and `output`, each writing its result under `runs/<id>/steps/` and the
 ledger events `order.started`, `step.done`, `step.failed`, `order.parked` and `order.done` with the kind `study`.
 `study new` records the study through `awawa fmt`, `awawa lint --strict` and a commit.
 
@@ -129,7 +131,7 @@ ledger events `order.started`, `step.done`, `step.failed`, `order.parked` and `o
 - Each carries its number, title, head and base branches, state, author, draft state, review decision, the verdict of
   its check runs and the task its head branch `task/<slug>/<task>` names.
 - It reads every one of them, page after page, and is collected afresh on every call.
-- It is absent under `FORGE none`: `brigade collect pr-list` exits 1 naming it, and `brigade collectors list` prints it
+- It is absent under `FORGE none`: `brigade collector run pr-list` exits 1 naming it, and `brigade collector list` prints it
   in its `absent` column.
 
 </details>
@@ -137,7 +139,7 @@ ledger events `order.started`, `step.done`, `step.failed`, `order.parked` and `o
 <details><summary>The answer entity</summary>
 
 - The answer is an entity of the type `--answer` names, `ANSWER` by default.
-- brigade fills `STUDY`, `RUN` and one `COLLECTED` per collector, its summary and the path of its full document; the
+- brigade fills `STUDY`, `RUN` and one `COLLECTED` per collector, its summary and the path of its collection; the
   judging run fills `NARRATIVE` and `FINDING`.
 - `study answer` validates the answer by `awawa lint` against the schema of its type, and refuses one that changed a
   field brigade filled. The output step then writes it.

@@ -10,7 +10,7 @@ brigade request list [--project P]
 brigade request cancel <request>
 brigade plan record <request> --file <plan>
 brigade wave start <project> [--task T ...]
-brigade wave show <wave>
+brigade wave show <wave> [--events]
 brigade wave list [--project P]
 brigade wave cancel <wave>
 brigade wave resume [<wave>]
@@ -21,11 +21,11 @@ Each prints text or, with `--json`, a JSON document.
 
 ## From a request to a plan
 
-A request is a `REQUEST` entity of `requests.awawa` in the operational corpus: what the user wants for one project,
+A request is a `REQUEST` entity of `requests.awawa` in the registry: what the user wants for one project,
 in their words, and the plan it receives.
 
 1. `request new` records the request as `<project>_r<n>` with the status `planning`, launches the planner on it
-   detached, and prints the request, the run and `brigade runs show <run> --log`, the command that follows the planner.
+   detached, and prints the request, the run and `brigade run show <run> --log`, the command that follows the planner.
 2. The planner hands its plan, one `MILESTONE` and its tasks, to `plan record`, which commits it on `plan/<request>`
    and delivers it to the main branch.
 3. The request goes `planned` with its `MILESTONE` and, under `github`, its `PR`.
@@ -64,7 +64,7 @@ reason. `wave list` prints one row per wave, the open waves first.
 
 ## Details and edge cases
 
-<details><summary>Which commands need the operational corpus</summary>
+<details><summary>Which commands need the registry</summary>
 
 Every command but `wave show`, `wave list`, `wave cancel` and `wave resume`, which read the ledger alone, and
 `wave requeue`, which reads the ledger until the task proves parked, exits 1 naming `brigade init` until the corpus
@@ -76,13 +76,13 @@ exists.
 
 - `request new` takes `n` one above the highest its project holds, under the lock of the corpus, with the UTC instant
   of its creation. The planner is launched as
-  `brigade run wave-plan --slot plan --project <project> --detach request=<name>`. A project that is not registered or
+  `brigade run start request-plan --slot plan --project <project> --detach request=<name>`. A project that is not registered or
   is paused exits 1.
 - `request show` prints a request, its status, its milestone, its pull request and the instant of its creation, `-`
   for a field it does not hold yet. `request list` prints one row per request, those of one project with `--project`.
 - `request cancel` moves a `planning` or `planned` request to `cancelled`; a request of another status exits 1 naming
   it.
-- Every write to the operational corpus goes through the lock, `awawa fmt`, `awawa lint --strict` and the commit of
+- Every write to the registry goes through the lock, `awawa fmt`, `awawa lint --strict` and the commit of
   the registry's writes.
 
 </details>
@@ -116,7 +116,9 @@ exists.
 
 - `wave show` prints a wave, its branch, the instant it started and its last wave event, then each task with its last
   `task.state`, its pull request, its last run in the wave and, for a parked task, the reason of its `task.parked`,
-  `-` when none.
+  `-` when none. With `--events`, it adds what `brigade ledger` once printed for a wave: its cost and tokens, the
+  turns, duration and cost of each task, its merged pull requests, its turns by slot and by role, its halts, its
+  handovers, its parked tasks, then every event the ledger holds for the wave, in the order recorded.
 - `wave list` prints one row per wave of the ledger, its project, branch, last wave event and task count, the open
   waves first, those of one project with `--project`.
 
@@ -124,7 +126,7 @@ exists.
 
 <details><summary><code>wave cancel</code> in detail</summary>
 
-`wave cancel` records `wave.cancelled`, stops the live run of each task of the wave as `brigade runs stop` does and
+`wave cancel` records `wave.cancelled`, stops the live run of each task of the wave as `brigade run stop` does and
 lists, per task, the run it stopped, the worktree of its last run, and the branch and the pull request it opened. A wave
 already closed or cancelled exits 1 naming that event.
 
@@ -133,12 +135,12 @@ already closed or cancelled exits 1 naming that event.
 <details><summary><code>wave resume</code> in detail</summary>
 
 `wave resume` records `wave.resumed` for the wave named, whatever the reason of its pause, or, without one, for every
-wave paused on the forge account, the tick resuming by itself a wave paused on the quota. It prints each wave it
+wave parked on the forge account, the tick resuming by itself a wave blocked on the quota. It prints each wave it
 resumed; a wave no `wave.started` names, or one that is not paused, exits 1 naming it.
 
-A wave paused on the client login, the reason `client_login`, is resumed by naming it, once you have signed in to the
+A wave parked on the client login, the reason `client_login`, is resumed by naming it, once you have signed in to the
 AI client again: the next tick launches its task again from the state it holds, as
-[Tick and scheduler](Tick-and-scheduler.md#quota-forge-account-and-client-login-pauses) says.
+[Tick and scheduler](Tick-and-scheduler.md#quota-blocks-forge-account-and-client-login-parks) says.
 
 </details>
 

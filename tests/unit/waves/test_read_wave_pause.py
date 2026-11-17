@@ -1,7 +1,8 @@
 import unittest
 from datetime import UTC, datetime
 
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_blocked import WaveBlocked
+from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.waves.read_wave_pause import WavePause, read_wave_pause
@@ -12,9 +13,9 @@ class ReadWavePauseTest(unittest.TestCase):
         # Arrange
         events = (
             WaveStarted(wave="oak_w1", project="oak", branch="integration/F0-parser", tasks=("B12",)),
-            WavePaused(wave="oak_w1", reason="forge account", resume_at=None),
+            WaveParked(wave="oak_w1", reason="forge account"),
             WaveResumed(wave="oak_w1", reason="forge account"),
-            WavePaused(wave="oak_w1", reason="quota", resume_at="2026-10-19T12:00:00+00:00"),
+            WaveBlocked(wave="oak_w1", reason="quota", resume_at="2026-10-19T12:00:00+00:00"),
             WaveResumed(wave="oak_w2", reason="quota"),
         )
 
@@ -27,7 +28,7 @@ class ReadWavePauseTest(unittest.TestCase):
     def test_should_find_no_pause_once_the_wave_resumed(self):
         # Arrange
         events = (
-            WavePaused(wave="oak_w1", reason="quota", resume_at="2026-10-19T12:00:00+00:00"),
+            WaveBlocked(wave="oak_w1", reason="quota", resume_at="2026-10-19T12:00:00+00:00"),
             WaveResumed(wave="oak_w1", reason="quota"),
         )
 

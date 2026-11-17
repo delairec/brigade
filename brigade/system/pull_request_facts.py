@@ -5,16 +5,16 @@ from brigade.ledger.format_instant import format_instant
 
 
 @dataclass(frozen=True)
-class CheckVerdict:
+class CheckConclusion:
     name: str
-    verdict: str
+    conclusion: str
 
 
 @dataclass(frozen=True)
 class PullRequestFacts:
     number: int
     state: str
-    checks: tuple[CheckVerdict, ...]
+    checks: tuple[CheckConclusion, ...]
     review: str | None
     behind: bool
     head: str
@@ -26,7 +26,9 @@ class PullRequestFacts:
         return cls(
             number=document["number"],
             state=document["state"],
-            checks=tuple(CheckVerdict(name=check["name"], verdict=check["verdict"]) for check in document["checks"]),
+            checks=tuple(
+                CheckConclusion(name=check["name"], conclusion=check["conclusion"]) for check in document["checks"]
+            ),
             review=document["review"],
             behind=document["behind"],
             head=document["head"],
@@ -38,7 +40,7 @@ class PullRequestFacts:
         return {
             "number": self.number,
             "state": self.state,
-            "checks": [{"name": check.name, "verdict": check.verdict} for check in self.checks],
+            "checks": [{"name": check.name, "conclusion": check.conclusion} for check in self.checks],
             "review": self.review,
             "behind": self.behind,
             "head": self.head,

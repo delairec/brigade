@@ -1,1 +1,1 @@
-*/5 * * * * mkdir -p ${state_directory} && ${environment} ${brigade} tick --once >/dev/null 2>>${log_file} ${marker}
+*/5 * * * * env ${environment} ${brigade} tick --once --log-file ${log_file} ${marker}

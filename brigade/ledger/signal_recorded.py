@@ -12,7 +12,7 @@ class SignalRecorded:
     segment: int
     budget: int
     wall_limit_s: float | None = None
-    steps: int | None = None
+    turns: int | None = None
 
     @classmethod
     def from_document(cls, document: dict) -> "SignalRecorded":
@@ -24,12 +24,12 @@ class SignalRecorded:
             segment=document["segment"],
             budget=document["budget"],
             wall_limit_s=document.get("wall_limit_s"),
-            steps=document.get("steps"),
+            turns=document.get("turns"),
         )
 
     def to_document(self) -> dict:
         limit = {} if self.wall_limit_s is None else {"wall_limit_s": self.wall_limit_s}
-        steps = {} if self.steps is None else {"steps": self.steps}
+        turns = {} if self.turns is None else {"turns": self.turns}
         return {
             "signal": self.signal,
             "project": self.project,
@@ -38,5 +38,5 @@ class SignalRecorded:
             "segment": self.segment,
             "budget": self.budget,
             **limit,
-            **steps,
+            **turns,
         }

@@ -5,13 +5,13 @@ from pathlib import Path
 from brigade.runs.run_locations import PROCESSES_FILE, RUNS_DIRECTORY
 from brigade.system.read_trail_instant import read_trail_instant
 from brigade.system.trail_locations import (
-    COMMANDS_DIRECTORY,
+    PROCESSES_DIRECTORY,
     TICKS_DIRECTORY,
     TRAIL_SUFFIX,
 )
 
 RUN_KIND = "run"
-SETTLED_TRAIL_KINDS = (("tick", TICKS_DIRECTORY), ("command", COMMANDS_DIRECTORY))
+SETTLED_TRAIL_KINDS = (("tick", TICKS_DIRECTORY), ("command", PROCESSES_DIRECTORY))
 
 
 @dataclass(frozen=True)

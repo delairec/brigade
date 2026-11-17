@@ -1,12 +1,15 @@
 import json
 import shutil
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.adapters.test_clients import replay_recording
 from brigade.adapters.test_clients.fake import answer
 from brigade.errors import BrigadeError
 
+PACKAGE_PARENT = str(Path(replay_recording.__file__).parents[3])
 LAUNCH_REQUEST = {
     "schema_version": 1,
     "worktree": "/srv/worktrees/b42",
@@ -183,7 +186,7 @@ class FakeLaunchOfARolePlayingItsCommandsTest(unittest.TestCase):
 class FakeProbeOfDeclaredFeaturesTest(unittest.TestCase):
     def test_should_declare_the_features_its_settings_name(self):
         # Arrange
-        settings = {"features": "step_count,tool_grants"}
+        settings = {"features": "turn_count,tool_grants"}
 
         # Act
         probe = answer(
@@ -191,7 +194,7 @@ class FakeProbeOfDeclaredFeaturesTest(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual(probe["features"], ["step_count", "tool_grants"])
+        self.assertEqual(probe["features"], ["turn_count", "tool_grants"])
 
 
 class FakeLaunchOfASlowClientWritingProgressTest(unittest.TestCase):
@@ -211,21 +214,17 @@ class FakeLaunchOfASlowClientWritingProgressTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "argv": [
-                    "sh",
-                    "-c",
-                    (
-                        'while [ -n "$1" ] && [ -e "$1" ]; do sleep 0.05; done; until [ "$(date -u +%s)" -ge "$5" ]; do sleep 0.1; done;'
-                        ' if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
-                        ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"'
-                    ),
-                    "fake",
+                    sys.executable,
+                    "-m",
+                    "brigade.adapters.test_clients.launch_replay",
                     "/srv/hold",
                     "step 1 done",
+                    "/state/brigade/runs/r1/progress.md",
                     "/srv/recordings/builder.json",
                     "0",
                     "0",
                 ],
-                "environment": {},
+                "environment": {"PYTHONPATH": PACKAGE_PARENT},
                 "stdin": None,
                 "session_id": "6f1c2a9e-3b7d-4e21-9a55-0c8d4b7e2f13",
             },
@@ -248,16 +247,12 @@ class FakeLaunchOfAClientStoppingAtItsSoftLimitTest(unittest.TestCase):
         self.assertEqual(
             launch["argv"],
             [
-                "sh",
-                "-c",
-                (
-                    'while [ -n "$1" ] && [ -e "$1" ]; do sleep 0.05; done; until [ "$(date -u +%s)" -ge "$5" ]; do sleep 0.1; done;'
-                    ' if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
-                    ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"'
-                ),
-                "fake",
+                sys.executable,
+                "-m",
+                "brigade.adapters.test_clients.launch_replay",
                 "",
                 "",
+                "/state/brigade/runs/r1/progress.md",
                 "/srv/recordings/builder.json",
                 "0",
                 "1791364980",
@@ -279,7 +274,7 @@ class FakeResultTest(unittest.TestCase):
     def test_should_answer_the_recorded_result_document_as_it_is(self):
         # Arrange
         recording = (
-            '{"schema_version": 1, "outcome": "done", "steps": 12, "usage": null, "session_id": "fake-session",'
+            '{"schema_version": 1, "outcome": "done", "turns": 12, "usage": null, "session_id": "fake-session",'
             ' "duration_ms": 61000, "cost_usd": null, "error_class": null, "reset": null, "message": null}'
         )
 
@@ -303,7 +298,7 @@ class FakeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "done",
-                "steps": 12,
+                "turns": 12,
                 "usage": None,
                 "session_id": "fake-session",
                 "duration_ms": 61000,
@@ -335,7 +330,7 @@ class FakeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "failed",
-                "steps": None,
+                "turns": None,
                 "usage": None,
                 "session_id": None,
                 "duration_ms": None,
@@ -387,16 +382,12 @@ class FakeLaunchOfAClientWritingItsLinesAtIntervalsTest(unittest.TestCase):
         self.assertEqual(
             launch["argv"],
             [
-                "sh",
-                "-c",
-                (
-                    'while [ -n "$1" ] && [ -e "$1" ]; do sleep 0.05; done; until [ "$(date -u +%s)" -ge "$5" ]; do sleep 0.1; done;'
-                    ' if [ -n "$2" ]; then printf "%s\\n" "$2" >> "$BRIGADE_PROGRESS_FILE"; fi;'
-                    ' while IFS= read -r line || [ -n "$line" ]; do printf "%s\\n" "$line"; sleep "$4"; done < "$3"'
-                ),
-                "fake",
+                sys.executable,
+                "-m",
+                "brigade.adapters.test_clients.launch_replay",
                 "",
                 "",
+                "/state/brigade/runs/r1/progress.md",
                 "/srv/recordings/builder.json",
                 "1",
                 "0",
@@ -409,7 +400,7 @@ class FakeResultOfARecordingOfSeveralLinesTest(unittest.TestCase):
         # Arrange
         recording = (
             "Reading the task\n"
-            '{"schema_version": 1, "outcome": "done", "steps": 12, "usage": null, "session_id": "fake-session",'
+            '{"schema_version": 1, "outcome": "done", "turns": 12, "usage": null, "session_id": "fake-session",'
             ' "duration_ms": 61000, "cost_usd": null, "error_class": null, "reset": null, "message": null}\n'
         )
 
@@ -437,7 +428,7 @@ class FakeActionsTest(unittest.TestCase):
         output = (
             "Reading the task\n"
             "\n"
-            '{"schema_version": 1, "outcome": "done", "steps": 12, "usage": null, "session_id": "fake-session",'
+            '{"schema_version": 1, "outcome": "done", "turns": 12, "usage": null, "session_id": "fake-session",'
             ' "duration_ms": 61000, "cost_usd": null, "error_class": null, "reset": null, "message": null}\n'
         )
 

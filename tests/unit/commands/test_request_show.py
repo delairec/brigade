@@ -99,7 +99,7 @@ class RequestShowTest(unittest.TestCase):
             COMMAND.run(Namespace(request="shop_r9"), self.runtime)
 
         # Assert
-        self.assertEqual(str(raised.exception), "@REQUEST.shop_r9 is not defined in the operational corpus")
+        self.assertEqual(str(raised.exception), "@REQUEST.shop_r9 is not defined in the registry")
 
 
 class RequestShowTextTest(unittest.TestCase):

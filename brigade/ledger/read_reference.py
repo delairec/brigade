@@ -1,6 +1,6 @@
 import argparse
 
-REFERENCE_MEASURES = ("steps_to_first_edit_p50", "task_run_steps_p50", "oversized_output_steps_per_launch")
+REFERENCE_MEASURES = ("turns_to_first_edit_p50", "task_run_turns_p50", "oversized_output_turns_per_launch")
 FIGURE_SEPARATOR = "="
 
 

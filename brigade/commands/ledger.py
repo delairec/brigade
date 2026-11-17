@@ -7,25 +7,14 @@ from brigade.ledger.describe_overview import describe_overview
 from brigade.ledger.describe_project import describe_project
 from brigade.ledger.describe_skipped_lines import describe_skipped_lines
 from brigade.ledger.describe_task import describe_task
-from brigade.ledger.describe_wave import describe_wave
 from brigade.ledger.format_instant import format_instant
-from brigade.ledger.format_steps_lines import format_steps_lines
+from brigade.ledger.format_run_measures import format_run_measures
 from brigade.ledger.read_ledger import LedgerReading, read_ledger
 from brigade.runtime import Runtime
 from brigade.system.read_since import read_since
 
 DOCUMENT_SCHEMA_VERSION = 1
 NONE = "none"
-MILLISECONDS_PER_MINUTE = 60000
-MINUTES_PER_HOUR = 60
-STEPS_INDENT = "    "
-ABSENT = "-"
-USAGE_LABELS = {
-    "input_tokens": "input",
-    "output_tokens": "output",
-    "cache_creation_input_tokens": "cache creation",
-    "cache_read_input_tokens": "cache read",
-}
 
 
 def _resolve_since(since: timedelta | date | None, now: datetime) -> datetime | None:
@@ -46,55 +35,6 @@ def _join_finished(counts: dict) -> str:
 
 def _join_counts_or_none(counts: dict) -> str:
     return _join_counts(counts) or NONE
-
-
-def _join_or_none(items: list[str]) -> str:
-    return ", ".join(items) if items else NONE
-
-
-def _format_duration(milliseconds: int) -> str:
-    hours, minutes = divmod(milliseconds // MILLISECONDS_PER_MINUTE, MINUTES_PER_HOUR)
-    return f"{hours}h{minutes:02d}m"
-
-
-def _show_steps(steps: int | None) -> str:
-    return ABSENT if steps is None else str(steps)
-
-
-def _show_run_steps(run: dict) -> str:
-    steps = _show_steps(run["steps"])
-    return f"{steps} partial" if run["partial"] else steps
-
-
-def _show_duration(milliseconds: int | None) -> str:
-    return ABSENT if milliseconds is None else _format_duration(milliseconds)
-
-
-def _show_cost(cost_usd: float | None) -> str:
-    return ABSENT if cost_usd is None else f"{cost_usd:.2f} USD"
-
-
-def _render_cost_line(cost_usd: float | None) -> str:
-    return f"cost: {NONE if cost_usd is None else _show_cost(cost_usd)}"
-
-
-def _render_tokens_line(usage: dict | None) -> str:
-    if usage is None:
-        return f"tokens: {NONE}"
-    return f"tokens: {', '.join(f'{label} {usage[name]}' for name, label in USAGE_LABELS.items())}"
-
-
-def _render_task_rows(rows: list[dict]) -> list[str]:
-    if not rows:
-        return [f"tasks: {NONE}"]
-    return [
-        "tasks:",
-        *(
-            f"  {row['task']}  steps {_show_run_steps(row)}"
-            f"  duration {_show_duration(row['duration_ms'])}  cost {_show_cost(row['cost_usd'])}"
-            for row in rows
-        ),
-    ]
 
 
 def _render_overview(document: dict) -> list[str]:
@@ -118,44 +58,6 @@ def _render_overview(document: dict) -> list[str]:
     return lines
 
 
-def _render_steps(heading: str, summaries: dict) -> list[str]:
-    if not summaries:
-        return [f"{heading}: {NONE}"]
-    lines = [f"{heading}:"]
-    for name, steps in summaries.items():
-        lines.extend([f"  {name}", *format_steps_lines(STEPS_INDENT, steps)])
-    return lines
-
-
-def _render_pause(pause: dict) -> str:
-    if pause["resumed_at"] is None:
-        return f"  {pause['paused_at']}, still paused"
-    return f"  {pause['paused_at']} to {pause['resumed_at']}  {_format_duration(pause['duration_ms'])}"
-
-
-def _render_wave(document: dict) -> list[str]:
-    pull_requests = [f"#{item['pr']} {item['task']} rounds {item['rounds']}" for item in document["pull_requests"]]
-    hand_overs = [
-        f"{item['task']} {item['role']} {item['slot']} segment {item['segment']}" for item in document["hand_overs"]
-    ]
-    return [
-        (
-            f"wave {document['wave']}: {document['first']} to {document['last']},"
-            f" wall time {_format_duration(document['wall_time_ms'])}"
-        ),
-        _render_cost_line(document["cost_usd"]),
-        _render_tokens_line(document["usage"]),
-        *_render_task_rows(document["by_task"]),
-        f"pull requests: {_join_or_none(pull_requests)}",
-        *_render_steps("steps by slot", document["steps"]["by_slot"]),
-        *_render_steps("steps by role", document["steps"]["by_role"]),
-        f"pauses: {len(document['pauses'])}, {_format_duration(document['paused_ms'])} in all",
-        *(_render_pause(pause) for pause in document["pauses"]),
-        f"hand-overs: {_join_or_none(hand_overs)}",
-        f"parked: {_join_or_none(document['parked'])}",
-    ]
-
-
 def _render_project(document: dict) -> list[str]:
     since = "" if document["since"] is None else f" since {document['since']}"
     orders = _join_counts(document["orders_done"]) or "0"
@@ -171,18 +73,14 @@ def _render_project(document: dict) -> list[str]:
 
 
 def _render_run(run: dict) -> str:
-    return (
-        f"  {run['run']}  {run['finished_at']}  {run['slot']}  {run['outcome']}"
-        f"  steps {_show_run_steps(run)}  duration {_show_duration(run['duration_ms'])}"
-        f"  cost {_show_cost(run['cost_usd'])}"
-    )
+    return f"  {run['run']}  {run['finished_at']}  {run['slot']}  {run['outcome']}  {format_run_measures(run)}"
 
 
 def _render_task(document: dict) -> list[str]:
     return [f"task {document['task']}: {len(document['runs'])} runs", *(_render_run(run) for run in document["runs"])]
 
 
-RENDERERS = {"overview": _render_overview, "wave": _render_wave, "task": _render_task, "project": _render_project}
+RENDERERS = {"overview": _render_overview, "task": _render_task, "project": _render_project}
 
 
 def _render_text(document: dict) -> str:
@@ -196,8 +94,6 @@ def _select_since(reading: LedgerReading, since: datetime | None) -> LedgerReadi
 
 
 def _describe_view(reading: LedgerReading, request: argparse.Namespace) -> dict:
-    if request.wave is not None:
-        return describe_wave(reading, request.wave)
     if request.task is not None:
         return describe_task(reading, request.task)
     if request.project is not None:
@@ -218,15 +114,11 @@ def ledger(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("ledger",),
-    help="read the event journal: an overview, a wave, a task or a project",
+    help="read the event ledger: an overview, a task or a project",
     arguments=(
         ExclusiveArguments(
             (
-                Argument(
-                    ("--wave",),
-                    {"help": "the cost, tokens, tasks, steps, pauses, hand-overs and parked tasks of a wave"},
-                ),
-                Argument(("--task",), {"help": "the runs of a task, their outcome, steps, duration and cost"}),
+                Argument(("--task",), {"help": "the runs of a task, their outcome, turns, duration and cost"}),
                 Argument(
                     ("--project",),
                     {"help": "the waves, orders, pull requests, signals, patterns and constraints of a project"},

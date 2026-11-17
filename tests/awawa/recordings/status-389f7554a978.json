@@ -1,0 +1,25 @@
+{
+  "call": {
+    "arguments": [
+      "status",
+      "--json",
+      "<tmp:0>/state/brigade/runs/<run:1>/answer.awawa"
+    ],
+    "cwd": "<tmp:0>/state/brigade/runs/<run:1>",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/state/brigade/runs/<run:1>/answer.awawa": "RESULT pr_usage_report_<compact_instant:2>_<run_name:3>\n\tORDER \"pr_usage_report_<compact_instant:2>\"\n\tRUN \"<run:1>\"\n\tCOLLECTED \"ledger\"\n\t\tSUMMARY \"{\\\"events\\\": {\\\"order.started\\\": 1}, \\\"outcomes\\\": {}}\"\n\t\tCOLLECTION \"<tmp:0>/state/brigade/runs/<run:1>/collectors/1/collect/ledger/collection.json\"\n\tCOLLECTED \"pr-threads\"\n\t\tSUMMARY \"{\\\"1\\\": 0}\"\n\t\tCOLLECTION \"<tmp:0>/state/brigade/runs/<run:1>/collectors/2/collect/pr-threads/collection.json\"\n\tCOLLECTED \"corpus\"\n\t\tSUMMARY \"{\\\"MILESTONE\\\": {\\\"implemented\\\": 0}, \\\"RECIPE\\\": {\\\"implemented\\\": 0}, \\\"SCHEMA\\\": {\\\"implemented\\\": 0}, \\\"TASK\\\": {\\\"implemented\\\": 1}}\"\n\t\tCOLLECTION \"<tmp:0>/state/brigade/runs/<run:1>/collectors/3/collect/corpus/collection.json\"\n\tNARRATIVE \"verdict: the corpus carried the review\"\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"statuses\": [], \"types\": [{\"type\": \"RESULT\", \"counts\": {}, \"unset\": 1, \"total\": 1}], \"ignored\": {\"files\": 0, \"by_pattern\": [], \"not_understood\": []}, \"entities\": [{\"type\": \"RESULT\", \"name\": \"pr_usage_report_<compact_instant:2>_<run_name:3>\", \"target\": \"@RESULT.pr_usage_report_<compact_instant:2>_<run_name:3>\", \"file\": \"<tmp:0>/state/brigade/runs/<run:1>/answer.awawa\", \"line\": 1, \"status\": null, \"incoming\": 0, \"incoming_by\": []}], \"references\": {\"sites\": 0, \"unresolved\": 0, \"by_file\": []}, \"diagnostics\": {\"errors\": 0, \"warnings\": 1, \"by_rule\": [{\"rule\": \"L002\", \"count\": 1}]}, \"summary\": {\"files\": 1, \"entities\": 1}}\n"
+  },
+  "run_order": [
+    "<run:1>",
+    "<run_name:3>"
+  ],
+  "version": "awawa 2.7.0"
+}

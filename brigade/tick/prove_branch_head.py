@@ -32,7 +32,7 @@ def prove_branch_head(runtime: Runtime, head: BranchHead) -> HeadProof:
             project=head.project,
             repository=head.repository,
             commit=commit,
-            task_check=NO_TASK_CHECK,
+            build_check=NO_TASK_CHECK,
             forge_checks=forge_checks,
         ),
     )

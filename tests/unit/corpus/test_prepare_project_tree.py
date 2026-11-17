@@ -257,4 +257,4 @@ class PrepareProjectTreeWithoutTheOperationalCorpusTest(unittest.TestCase):
             prepare_project_tree(request, Configuration(), runtime)
 
         # Assert
-        self.assertEqual(str(raised.exception), "the operational corpus is missing; run brigade init first")
+        self.assertEqual(str(raised.exception), "the registry is missing; run brigade init first")

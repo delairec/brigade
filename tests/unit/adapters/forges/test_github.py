@@ -500,7 +500,7 @@ class FindPullRequestTest(unittest.TestCase):
                 "pull_request": {
                     "number": 42,
                     "state": "open",
-                    "checks": [{"name": "tests", "verdict": "failure"}, {"name": "lint", "verdict": "pending"}],
+                    "checks": [{"name": "tests", "conclusion": "failure"}, {"name": "lint", "conclusion": "pending"}],
                     "review": "changes_requested",
                     "behind": True,
                     "head": "0123abc",
@@ -666,6 +666,7 @@ LISTED_PAGE = {
                         "state": "OPEN",
                         "isDraft": False,
                         "reviewDecision": None,
+                        "reviews": {"totalCount": 0},
                         "author": None,
                         "commits": {"nodes": [{"commit": {"statusCheckRollup": None}}]},
                     },
@@ -678,6 +679,7 @@ LISTED_PAGE = {
                         "state": "OPEN",
                         "isDraft": True,
                         "reviewDecision": "APPROVED",
+                        "reviews": {"totalCount": 2},
                         "author": {"login": "Clauche-bot"},
                         "commits": {
                             "nodes": [
@@ -717,6 +719,7 @@ MERGED_PAGE = {
                         "state": "MERGED",
                         "isDraft": False,
                         "reviewDecision": None,
+                        "reviews": {"totalCount": 0},
                         "author": {"login": "ada"},
                         "commits": {"nodes": [{"commit": {"statusCheckRollup": None}}]},
                     }
@@ -779,6 +782,7 @@ class ListPullRequestsOfEveryStateTest(unittest.TestCase):
                         "author": None,
                         "draft": False,
                         "review": None,
+                        "reviews": 0,
                         "checks": [],
                     },
                     {
@@ -791,7 +795,8 @@ class ListPullRequestsOfEveryStateTest(unittest.TestCase):
                         "author": "Clauche-bot",
                         "draft": True,
                         "review": "approved",
-                        "checks": [{"name": "unit", "verdict": "pending"}],
+                        "reviews": 2,
+                        "checks": [{"name": "unit", "conclusion": "pending"}],
                     },
                     {
                         "number": 5,
@@ -803,6 +808,7 @@ class ListPullRequestsOfEveryStateTest(unittest.TestCase):
                         "author": "ada",
                         "draft": False,
                         "review": None,
+                        "reviews": 0,
                         "checks": [],
                     },
                 ],
@@ -835,6 +841,7 @@ class ListOpenPullRequestsTest(unittest.TestCase):
                         "author": None,
                         "draft": False,
                         "review": None,
+                        "reviews": 0,
                         "checks": [],
                     },
                     {
@@ -847,7 +854,8 @@ class ListOpenPullRequestsTest(unittest.TestCase):
                         "author": "Clauche-bot",
                         "draft": True,
                         "review": "approved",
-                        "checks": [{"name": "unit", "verdict": "pending"}],
+                        "reviews": 2,
+                        "checks": [{"name": "unit", "conclusion": "pending"}],
                     },
                 ],
             },
@@ -910,7 +918,7 @@ class ReadPullRequestTest(unittest.TestCase):
                     "body": "Coverage\n",
                     "head": "test/unit-coverage-rest",
                     "head_sha": "4f2a9c1",
-                    "checks": [{"name": "unit", "verdict": "success"}],
+                    "checks": [{"name": "unit", "conclusion": "success"}],
                 },
             },
         )

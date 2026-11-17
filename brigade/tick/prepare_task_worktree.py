@@ -15,6 +15,8 @@ from brigade.git.rebase_onto import rebase_onto
 from brigade.git.require_ancestor import require_ancestor
 from brigade.ledger.append_event import append_event
 from brigade.ledger.task_state import TaskState
+from brigade.recipes.locate_recipes import locate_recipes
+from brigade.recipes.read_project_commands import read_project_commands
 from brigade.registry.find_project import find_project
 from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_project_field import read_project_field
@@ -25,6 +27,7 @@ from brigade.system.locate_setup_log import locate_setup_log
 from brigade.system.locate_worktrees_lock import locate_worktrees_lock
 from brigade.system.parse_configuration import Configuration
 from brigade.system.run_process import ProcessRequest
+from brigade.system.validate_document import DocumentInvalid
 from brigade.system.write_text_atomically import write_text_atomically
 from brigade.tick.actions import LaunchTask
 from brigade.tick.head_proof import GREEN, RED, HeadProof, HoldingHead
@@ -38,7 +41,7 @@ from brigade.tick.tick_forge import TickForge
 from brigade.waves.locate_forge_branch import locate_forge_branch
 from brigade.waves.read_task_state import PARKED_STATE
 
-SETUP_FIELD = "SETUP"
+SETUP_RECIPE = "setup"
 MAIN_FIELD = "MAIN"
 SETUP_TIMEOUT_S = 1800.0
 SETUP_PROMPT = "$ "
@@ -57,19 +60,13 @@ class PreparedWorktree:
     held_by: HoldingHead | None = None
 
 
-def _split_line(line: str) -> tuple[str, ...]:
-    try:
-        return tuple(shlex.split(line))
-    except ValueError as error:
-        raise ToolFailure(f"the line {line} splits into no argv: {error}") from None
-
-
-def _set_up(runtime: Runtime, setup: tuple[str, ...], prepared: PreparedWorktree, log: Path) -> None:
+def _set_up(runtime: Runtime, project: Entity, prepared: PreparedWorktree, log: Path) -> None:
     worktree = prepared.worktree
+    places = locate_recipes(worktree.path, project, runtime.paths)
     transcript = []
-    for line, argv in tuple((line, _split_line(line)) for line in setup):
+    for argv in read_project_commands(places, SETUP_RECIPE, runtime.run_process):
         record = runtime.run_process(ProcessRequest(argv=argv, cwd=str(worktree.path), timeout_s=SETUP_TIMEOUT_S))
-        transcript.append(f"{SETUP_PROMPT}{line}\n{record.stdout}{record.stderr}")
+        transcript.append(f"{SETUP_PROMPT}{shlex.join(argv)}\n{record.stdout}{record.stderr}")
     write_text_atomically(log, "".join(transcript))
     if prepared.on_start:
         require_ancestor(runtime.run_process, worktree.path, worktree.start)
@@ -105,7 +102,7 @@ def _prove_task_head(runtime: Runtime, launch: _Launch) -> HeadProof:
             project=launch.project,
             repository=launch.repository,
             commit=commit,
-            task_check=read_task_check(runtime.paths.state_root, launch.project.name, launch.action.task),
+            build_check=read_task_check(runtime.paths.state_root, launch.project.name, launch.action.task),
             forge_checks=read_pull_request_checks(launch.action, commit),
         ),
     )
@@ -159,11 +156,11 @@ def _set_up_or_park(runtime: Runtime, project: Entity, action: LaunchTask, prepa
     try:
         _set_up(
             runtime,
-            tuple(field.value for field in project.fields if field.name == SETUP_FIELD),
+            project,
             prepared,
             locate_setup_log(runtime.paths.setup_directory, action.project, action.task),
         )
-    except ToolFailure as failure:
+    except (ToolFailure, DocumentInvalid) as failure:
         append_event(
             runtime.paths,
             runtime.now,

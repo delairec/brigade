@@ -9,7 +9,8 @@ from brigade.ledger.pr_merged import PrMerged
 from brigade.ledger.read_ledger import LedgerReading
 from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_state import TaskState
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_blocked import WaveBlocked
+from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.system.token_usage import TokenUsage
@@ -23,15 +24,15 @@ def at_minute(minute: int) -> datetime:
 WAVE_W1 = LedgerReading(
     entries=(
         LedgerEntry(at_minute(0), WaveStarted(wave="w1", project="tidepool", branch="main", tasks=("TP1", "TP2"))),
-        LedgerEntry(at_minute(1), create_run_finished("r1", segment=1, main_steps=10, wave="w1", task="TP1")),
+        LedgerEntry(at_minute(1), create_run_finished("r1", segment=1, main_turns=10, wave="w1", task="TP1")),
         LedgerEntry(at_minute(2), WaveResumed(wave="w1", reason="stray")),
-        LedgerEntry(at_minute(3), WavePaused(wave="w1", reason="quota", resume_at=None)),
-        LedgerEntry(at_minute(4), WavePaused(wave="w1", reason="quota again", resume_at=None)),
+        LedgerEntry(at_minute(3), WaveParked(wave="w1", reason="quota")),
+        LedgerEntry(at_minute(4), WaveParked(wave="w1", reason="quota again")),
         LedgerEntry(at_minute(5), WaveResumed(wave="w1", reason="quota reset")),
-        LedgerEntry(at_minute(6), create_run_finished("r1", segment=2, main_steps=5, wave="w1", task="TP1")),
+        LedgerEntry(at_minute(6), create_run_finished("r1", segment=2, main_turns=5, wave="w1", task="TP1")),
         LedgerEntry(at_minute(7), PrMerged(project="tidepool", wave="w1", task="TP1", pr=7, rounds=2, login=None)),
         LedgerEntry(at_minute(8), TaskParked(wave="w1", task="TP2", reason="blocked", blockers=("OPEN_QUESTION.Q1",))),
-        LedgerEntry(at_minute(9), WavePaused(wave="w1", reason="forge account", resume_at=None)),
+        LedgerEntry(at_minute(9), WaveParked(wave="w1", reason="forge account")),
         LedgerEntry(at_minute(30), WaveStarted(wave="w2", project="tidepool", branch="main", tasks=("TP3",))),
     ),
     files=(),
@@ -49,19 +50,19 @@ class DescribeWaveTest(unittest.TestCase):
         self.assertEqual(wave["last"], "2026-10-10T09:09:00Z")
         self.assertEqual(wave["wall_time_ms"], 540000)
 
-    def test_should_pair_each_pause_with_the_resumption_ending_it(self):
+    def test_should_pair_each_halt_with_the_resumption_ending_it(self):
         # Act
         wave = describe_wave(WAVE_W1, "w1")
 
         # Assert
         self.assertEqual(
-            wave["pauses"],
+            wave["halts"],
             [
-                {"paused_at": "2026-10-10T09:03:00Z", "resumed_at": "2026-10-10T09:05:00Z", "duration_ms": 120000},
-                {"paused_at": "2026-10-10T09:09:00Z", "resumed_at": None, "duration_ms": None},
+                {"halted_at": "2026-10-10T09:03:00Z", "resumed_at": "2026-10-10T09:05:00Z", "duration_ms": 120000},
+                {"halted_at": "2026-10-10T09:09:00Z", "resumed_at": None, "duration_ms": None},
             ],
         )
-        self.assertEqual(wave["paused_ms"], 120000)
+        self.assertEqual(wave["halted_ms"], 120000)
 
     def test_should_tell_what_became_of_each_task(self):
         # Act
@@ -70,7 +71,7 @@ class DescribeWaveTest(unittest.TestCase):
         # Assert
         self.assertEqual(wave["tasks"], ["TP1", "TP2"])
         self.assertEqual(wave["pull_requests"], [{"task": "TP1", "pr": 7, "rounds": 2}])
-        self.assertEqual(wave["hand_overs"], [{"task": "TP1", "role": "builder", "slot": "build", "segment": 2}])
+        self.assertEqual(wave["handovers"], [{"task": "TP1", "role": "builder", "slot": "build", "segment": 2}])
         self.assertEqual(wave["parked"], ["TP2"])
 
     def test_should_summarize_the_steps_by_slot_and_by_role(self):
@@ -78,10 +79,10 @@ class DescribeWaveTest(unittest.TestCase):
         wave = describe_wave(WAVE_W1, "w1")
 
         # Assert
-        self.assertEqual(list(wave["steps"]["by_slot"]), ["build"])
-        self.assertEqual(list(wave["steps"]["by_role"]), ["builder"])
+        self.assertEqual(list(wave["turns"]["by_slot"]), ["build"])
+        self.assertEqual(list(wave["turns"]["by_role"]), ["builder"])
         self.assertEqual(
-            wave["steps"]["by_slot"]["build"]["runs"],
+            wave["turns"]["by_slot"]["build"]["runs"],
             {"measured": 1, "unmeasured": 0, "p50": 15, "p90": 15, "partial": 0},
         )
 
@@ -89,7 +90,7 @@ class DescribeWaveTest(unittest.TestCase):
         # Arrange
         reading = LedgerReading(
             entries=(
-                LedgerEntry(at_minute(0), create_run_finished("r1", segment=1, main_steps=10, wave="w1", task="TP1")),
+                LedgerEntry(at_minute(0), create_run_finished("r1", segment=1, main_turns=10, wave="w1", task="TP1")),
                 LedgerEntry(at_minute(1), create_run_finished("r1", segment=2, wave="w1", task="TP1")),
             ),
             files=(),
@@ -101,7 +102,7 @@ class DescribeWaveTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            wave["steps"]["by_role"],
+            wave["turns"]["by_role"],
             {
                 "builder": {
                     "runs": {"measured": 1, "unmeasured": 0, "p50": 10, "p90": 10, "partial": 1},
@@ -120,11 +121,11 @@ class DescribeWaveTest(unittest.TestCase):
 
 
 class DescribeWaveResumedTest(unittest.TestCase):
-    def test_should_leave_no_pause_open_once_the_wave_resumed(self):
+    def test_should_leave_no_halt_open_once_the_wave_resumed(self):
         # Arrange
         reading = LedgerReading(
             entries=(
-                LedgerEntry(at_minute(0), WavePaused(wave="w1", reason="quota", resume_at=None)),
+                LedgerEntry(at_minute(0), WaveParked(wave="w1", reason="quota")),
                 LedgerEntry(at_minute(4), WaveResumed(wave="w1", reason="quota reset")),
             ),
             files=(),
@@ -136,23 +137,43 @@ class DescribeWaveResumedTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            wave["pauses"],
-            [{"paused_at": "2026-10-10T09:00:00Z", "resumed_at": "2026-10-10T09:04:00Z", "duration_ms": 240000}],
+            wave["halts"],
+            [{"halted_at": "2026-10-10T09:00:00Z", "resumed_at": "2026-10-10T09:04:00Z", "duration_ms": 240000}],
+        )
+
+    def test_should_count_as_a_halt_a_wave_blocked_until_the_quota_reset(self):
+        # Arrange
+        reading = LedgerReading(
+            entries=(
+                LedgerEntry(at_minute(0), WaveBlocked(wave="w1", reason="quota", resume_at="2026-10-10T09:06:00Z")),
+                LedgerEntry(at_minute(6), WaveResumed(wave="w1", reason="quota reset")),
+            ),
+            files=(),
+            skipped=(),
+        )
+
+        # Act
+        wave = describe_wave(reading, "w1")
+
+        # Assert
+        self.assertEqual(
+            wave["halts"],
+            [{"halted_at": "2026-10-10T09:00:00Z", "resumed_at": "2026-10-10T09:06:00Z", "duration_ms": 360000}],
         )
 
 
 WAVE_W5 = LedgerReading(
     entries=(
         LedgerEntry(at_minute(0), WaveStarted(wave="w5", project="tidepool", branch="main", tasks=("TP5", "TP6"))),
-        LedgerEntry(at_minute(20), create_run_finished("r6", main_steps=7, wave="w5", task="TP6")),
-        LedgerEntry(at_minute(10), create_run_finished("r5", main_steps=30, wave="w5", task="TP5")),
+        LedgerEntry(at_minute(20), create_run_finished("r6", main_turns=7, wave="w5", task="TP6")),
+        LedgerEntry(at_minute(10), create_run_finished("r5", main_turns=30, wave="w5", task="TP5")),
         LedgerEntry(at_minute(11), TaskState(wave="w5", task="TP5", state="fixing")),
-        LedgerEntry(at_minute(12), create_run_finished("r5b", segment=1, main_steps=4, wave="w5", task="TP5")),
+        LedgerEntry(at_minute(12), create_run_finished("r5b", segment=1, main_turns=4, wave="w5", task="TP5")),
         LedgerEntry(at_minute(13), TaskState(wave="w5", task="TP5", state="fixing")),
         LedgerEntry(
             at_minute(14),
             dataclasses.replace(
-                create_run_finished("20261010T091300Z-ab12cd", main_steps=2, wave="w5", task="TP5"), slot="rebase"
+                create_run_finished("20261010T091300Z-ab12cd", main_turns=2, wave="w5", task="TP5"), slot="rebase"
             ),
         ),
     ),
@@ -169,20 +190,20 @@ class DescribeWaveOfEachTaskTest(unittest.TestCase):
         # Assert
         self.assertEqual(wave["rounds_by_task"], {"TP5": 1})
 
-    def test_should_sum_the_main_steps_of_the_runs_of_each_task(self):
+    def test_should_sum_the_main_turns_of_the_runs_of_each_task(self):
         # Act
         wave = describe_wave(WAVE_W5, "w5")
 
         # Assert
-        self.assertEqual(wave["steps_by_task"], {"TP5": 36, "TP6": 7})
+        self.assertEqual(wave["turns_by_task"], {"TP5": 36, "TP6": 7})
 
-    def test_should_leave_out_of_the_steps_by_task_a_run_of_the_wave_without_a_task(self):
+    def test_should_leave_out_of_the_turns_by_task_a_run_of_the_wave_without_a_task(self):
         # Arrange
         reading = LedgerReading(
             entries=(
                 LedgerEntry(at_minute(0), WaveStarted(wave="w6", project="tidepool", branch="main", tasks=("TP7",))),
-                LedgerEntry(at_minute(1), create_run_finished("r7", main_steps=9, wave="w6", task="TP7")),
-                LedgerEntry(at_minute(2), create_run_finished("r8", main_steps=4, wave="w6")),
+                LedgerEntry(at_minute(1), create_run_finished("r7", main_turns=9, wave="w6", task="TP7")),
+                LedgerEntry(at_minute(2), create_run_finished("r8", main_turns=4, wave="w6")),
             ),
             files=(),
             skipped=(),
@@ -192,9 +213,9 @@ class DescribeWaveOfEachTaskTest(unittest.TestCase):
         wave = describe_wave(reading, "w6")
 
         # Assert
-        self.assertEqual(wave["steps_by_task"], {"TP7": 9})
+        self.assertEqual(wave["turns_by_task"], {"TP7": 9})
 
-    def test_should_date_each_entry_of_the_wave_oldest_first(self):
+    def test_should_list_each_event_of_the_wave_in_the_order_recorded(self):
         # Arrange
         reading = LedgerReading(
             entries=(
@@ -210,17 +231,17 @@ class DescribeWaveOfEachTaskTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            wave["timeline"],
+            wave["events"],
             [
-                {
-                    "at": "2026-10-10T09:00:00Z",
-                    "event": "wave.started",
-                    "fields": {"wave": "w7", "project": "tidepool", "branch": "main", "tasks": ["TP7"]},
-                },
                 {
                     "at": "2026-10-10T09:05:00Z",
                     "event": "task.state",
                     "fields": {"wave": "w7", "task": "TP7", "state": "running"},
+                },
+                {
+                    "at": "2026-10-10T09:00:00Z",
+                    "event": "wave.started",
+                    "fields": {"wave": "w7", "project": "tidepool", "branch": "main", "tasks": ["TP7"]},
                 },
             ],
         )
@@ -235,7 +256,7 @@ class DescribeWaveCostTest(unittest.TestCase):
                     at_minute(1),
                     create_run_finished(
                         "r5",
-                        main_steps=30,
+                        main_turns=30,
                         wave="w3",
                         task="TP5",
                         duration_ms=60000,
@@ -252,7 +273,7 @@ class DescribeWaveCostTest(unittest.TestCase):
                     at_minute(3),
                     create_run_finished(
                         "r7",
-                        main_steps=8,
+                        main_turns=8,
                         wave="w3",
                         task="TP6",
                         duration_ms=30000,
@@ -289,8 +310,8 @@ class DescribeWaveCostTest(unittest.TestCase):
         self.assertEqual(
             wave["by_task"],
             [
-                {"task": "TP5", "steps": 30, "partial": False, "duration_ms": 60000, "cost_usd": 4.75},
-                {"task": "TP6", "steps": 8, "partial": False, "duration_ms": 30000, "cost_usd": None},
+                {"task": "TP5", "turns": 30, "partial": False, "duration_ms": 60000, "cost_usd": 4.75},
+                {"task": "TP6", "turns": 8, "partial": False, "duration_ms": 30000, "cost_usd": None},
             ],
         )
 
@@ -298,7 +319,7 @@ class DescribeWaveCostTest(unittest.TestCase):
         # Arrange
         reading = LedgerReading(
             entries=(
-                LedgerEntry(at_minute(0), create_run_finished("r9", segment=1, main_steps=40, wave="w5", task="TP8")),
+                LedgerEntry(at_minute(0), create_run_finished("r9", segment=1, main_turns=40, wave="w5", task="TP8")),
                 LedgerEntry(at_minute(1), create_run_finished("r9", segment=2, wave="w5", task="TP8")),
             ),
             files=(),
@@ -310,7 +331,7 @@ class DescribeWaveCostTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            wave["by_task"], [{"task": "TP8", "steps": 40, "partial": True, "duration_ms": 2000, "cost_usd": None}]
+            wave["by_task"], [{"task": "TP8", "turns": 40, "partial": True, "duration_ms": 2000, "cost_usd": None}]
         )
 
     def test_should_give_no_cost_and_no_tokens_when_no_run_carries_them(self):

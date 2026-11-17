@@ -1,12 +1,98 @@
-Which deterministic checks `brigade verify preflight` runs on the pull request of a task before any judgment, and when
-each fails.
+What a preflight is, where it and its checks come from, how a project adds a custom one, and which deterministic checks `brigade preflight review-pull-request` runs
+on the pull request of a task before any judgment.
+
+A preflight is a named set of collectors and checks, run on demand. It declares no action of its own: each action it
+needs is a collector or a check, resolved by name and reusable elsewhere. A built-in preflight is a TOML file of
+`brigade/preflights/data/` naming its collectors and its checks, each with its parameters.
 
 ```
-brigade verify preflight <pr> [--json]    # exit 1 when a check fails
+brigade preflight <name> [key=value...] [--json]   # exit 1 when a check fails
+brigade preflight add <name> <collector or check> [key=value...]   # adds a step to a custom preflight, commits nothing
+brigade check list [--json]                        # every check found, its name and its source
+brigade preflight review-pull-request pr=<pr> [--json]   # the pull request of a task, and the size
 ```
 
-It runs from a checkout of a registered project. It prints one entry per check, its verdict `pass`, `fail` or `info`
-and its findings, as text or, with `--json`, a JSON document.
+`brigade preflight <name>` runs from a checkout of a registered project. It runs the collectors of the preflight, then
+hands each check the parameters and the collections of the collectors, and prints the result and the findings of each
+check, as text or, with `--json`, a JSON document. The `key=value` pairs are the parameters of every collector and
+every check of the preflight, over the parameters the preflight declares. A name no preflight carries is refused.
+
+## Where a preflight comes from
+
+A preflight resolves by name, the first place holding it winning:
+
+| Place     | Form                                                                                                  |
+|-----------|-------------------------------------------------------------------------------------------------------|
+| project   | a `PREFLIGHT` entity of the project's corpus, or `.brigade/preflights/<name>.toml` where it has none   |
+| machine   | a TOML file `<config_root>/preflights/<name>.toml`                                                    |
+| built-in  | a TOML file of `brigade/preflights/data/`                                                             |
+
+A project has a corpus when it is registered in `MODE` `control` or `area`; a project in `MODE` `none`, or not
+registered, keeps its custom preflights as TOML files. The two forms of a custom preflight run the same collectors and
+checks. The TOML file holds `schema_version` 1, `name`, `description`, and the lists `collectors` and `checks`, each
+step a `name` and its `parameters`:
+
+```toml
+schema_version = 1
+name = "nightly-gate"
+description = "the nightly checks of the shop"
+collectors = [
+    { name = "notes", parameters = { "depth" = "1" } },
+]
+checks = [
+    { name = "coverage", parameters = {} },
+]
+```
+
+The entity is named after the preflight, its hyphens as underscores; its `TITLE` is the description, each `COLLECTOR`
+and `CHECK` a step, each `PARAMETER` a `key=value` pair of the step above it. The schema brigade installs in the corpus
+of a project declares `SCHEMA PREFLIGHT`:
+
+```
+PREFLIGHT nightly_gate
+	TITLE "the nightly checks of the shop"
+	COLLECTOR "notes"
+		PARAMETER "depth=1"
+	CHECK "coverage"
+```
+
+## brigade preflight add
+
+`brigade preflight add <name> <collector or check> [key=value...]` adds that collector or that check, the `key=value`
+pairs its parameters, to the custom preflight `<name>` of the project, which it creates, described as
+`the custom preflight <name>`, when the project holds none of that name. The step resolves as a collector first, then as
+a check; a name that resolves as neither is refused before anything is written.
+
+On a project with a corpus it writes the entity in `preflights.awawa` at the root of the corpus, runs `awawa fmt` on
+that file and `awawa lint --strict` on the corpus, and restores the file from `HEAD` when the lint fails; a corpus that
+declares no `PREFLIGHT` is refused, naming the type. On a project without one it writes
+`.brigade/preflights/<name>.toml`, then reads it back as a preflight. It writes in the main checkout of the project
+and commits nothing: `git status` shows the file, and the commit is the user's.
+
+## Where a check comes from
+
+A check resolves by name in the order of a collector, the first place holding it winning:
+
+| Source     | Place                                                    |
+|------------|----------------------------------------------------------|
+| `project`  | an executable `.brigade/checks/<name>` of the project    |
+| `machine`  | an executable `<config_root>/checks/<name>`              |
+| `PATH`     | an executable `brigade-check-<name>` on `PATH`           |
+| `built-in` | a module of `brigade/checks/`                            |
+
+An executable check runs in the project, the subject on its standard input: `schema_version`, `project`, `parameters`
+and `collected`, the collections of the collectors by name. It answers one JSON document, `schema_version` 1, `name`,
+`result` `ok` or `fail` and `findings`, a list of strings; an answer that is not that document is refused, naming
+the check.
+
+## review-pull-request
+
+`brigade preflight review-pull-request pr=<pr>` runs the built-in preflight `review-pull-request` on the pull request
+of a task: it reads the task from the `task.pr_opened` naming the pull request and the base from the milestone of the
+task, the collector `pull-request` reads the pull request and the trees of its head and of its base, and seven built-in
+checks judge them. The command adds the size beside them, and prints the project, the pull request, the task and the
+head of the document the tick records in `task.preflighted`. The built-in check `acceptance` is not among them: the preflight of the task branch of a project of
+`FORGE none` runs it.
 
 ## The checks
 
@@ -27,3 +113,15 @@ It reads the pull request a task opened as the login of `forge_accounts.cli`, an
 branch.
 
 </details>
+
+## Built-in preflights
+
+| Preflight | Collectors | Checks | What it reports |
+|---|---|---|---|
+| `review-pull-request` | `pull-request` | `ancestry`, `check_runs`, `corpus_at_head`, `promotion`, `untouched_files`, `privacy`, `body` | the deterministic checks of the pull request of a task, before any judgment |
+| `task` | `task-worktree` | `acceptance`, `corpus_at_head` | the acceptance commands of the project and the checks of the corpus at the head of the worktree of a task; `brigade build check` runs it |
+| `refinement` | `draft`, `forge-logins` | `moved_citations`, `tasks_outside_after`, `overlapping_deliverables`, `forge_logins` | on a draft task, `brigade preflight refinement task=<id>`: each `file:line` citation whose lines moved since the commit of its `SOURCE`, with where they stand now; the draft and todo tasks touching a file of its `TITLE` or `SPEC` that its `AFTER` does not name; the draft and todo tasks whose `TITLE` and `SPEC` cite a file or an entity its own cite; and the forge logins |
+| `wave` | `forge-logins` | `forge_logins` | each login of `[forge_accounts]` of `config.toml` gh prints no token for; the tick runs it before it starts a wave, and a failure parks the wave on `forge_account` before any run, until `brigade wave resume` |
+
+A check of `refinement` fails as soon as it reports a fact: the facts are for the refinement to weigh, the preflight
+judges none of them.

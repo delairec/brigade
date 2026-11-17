@@ -7,9 +7,9 @@ class CheckCheckRunsTest(unittest.TestCase):
     def test_should_fail_on_each_check_run_short_of_success(self):
         # Arrange
         check_runs = [
-            {"name": "unit", "verdict": "success"},
-            {"name": "lint", "verdict": "failure"},
-            {"name": "coverage", "verdict": "pending"},
+            {"name": "unit", "conclusion": "success"},
+            {"name": "lint", "conclusion": "failure"},
+            {"name": "coverage", "conclusion": "pending"},
         ]
 
         # Act
@@ -17,5 +17,5 @@ class CheckCheckRunsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            check, {"name": "checks", "verdict": "fail", "findings": ["lint: failure", "coverage: pending"]}
+            check, {"name": "checks", "result": "fail", "findings": ["lint: failure", "coverage: pending"]}
         )

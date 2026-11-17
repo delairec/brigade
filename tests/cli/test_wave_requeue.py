@@ -12,7 +12,7 @@ from tests.value_matchers import DurationUnderMatcher, PatternMatcher
 
 SHA256_DIGEST = PatternMatcher("^[0-9a-f]{64}$")
 NO_EDIT_TOOL_NAMED = {
-    "steps_to_first_edit": "the client names no edit tool",
+    "turns_to_first_edit": "the client names no edit tool",
     "tokens_to_first_edit": "the client names no edit tool",
 }
 
@@ -86,7 +86,7 @@ class BrigadeWaveRequeueOfAParkedTaskTest(LaunchingTickTestCase):
                     "state": "running",
                 },
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": ANY,
                     "event": "run.finished",
                     "run": PatternMatcher(RUN_ID_PATTERN),
@@ -97,8 +97,8 @@ class BrigadeWaveRequeueOfAParkedTaskTest(LaunchingTickTestCase):
                     "client": "fake",
                     "project": "shop",
                     "session": "fake-session",
-                    "main_steps": 12,
-                    "total_steps": None,
+                    "main_turns": 12,
+                    "total_turns": None,
                     "duration_ms": DurationUnderMatcher(10000),
                     "usage": {
                         "input_tokens": 120,
@@ -116,7 +116,7 @@ class BrigadeWaveRequeueOfAParkedTaskTest(LaunchingTickTestCase):
                     "shipped_budget": 75,
                     "nulls": {
                         **NO_EDIT_TOOL_NAMED,
-                        "total_steps": "the client reads no transcript",
+                        "total_turns": "the client reads no transcript",
                         "error_class": "the run did not fail",
                     },
                     "cost_usd": 0.42,
@@ -166,7 +166,7 @@ class BrigadeWaveRequeueOfATaskWhoseWaveBranchMovedSinceItsCutTest(LaunchingTick
         self.assertEqual(
             self.read_events()[-1],
             {
-                "schema_version": 2,
+                "schema_version": 3,
                 "ts": ANY,
                 "event": "run.finished",
                 "run": PatternMatcher(RUN_ID_PATTERN),
@@ -177,8 +177,8 @@ class BrigadeWaveRequeueOfATaskWhoseWaveBranchMovedSinceItsCutTest(LaunchingTick
                 "client": "fake",
                 "project": "shop",
                 "session": "fake-session",
-                "main_steps": 12,
-                "total_steps": None,
+                "main_turns": 12,
+                "total_turns": None,
                 "duration_ms": ANY,
                 "usage": ANY,
                 "outcome": "done",
@@ -304,7 +304,7 @@ S3_PARKED_AFTER_ITS_FIRST_VERDICT = (
     ' "task": "S3", "wave": "shop_w1", "branch": "{task_branch}", "pr": 12, "login": "octo-bot"}}\n'
     '{{"schema_version": 1, "ts": "2026-10-13T09:15:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
     ' "state": "pr_open"}}\n'
-    '{{"schema_version": 1, "ts": "2026-10-13T09:20:00Z", "event": "task.preflighted", "project": "shop",'
+    '{{"schema_version": 2, "ts": "2026-10-13T09:20:00Z", "event": "task.preflighted", "project": "shop",'
     ' "wave": "shop_w1", "task": "S3", "pr": 12, "head": "{head}", "checks": []}}\n'
     '{{"schema_version": 1, "ts": "2026-10-13T09:20:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
     ' "state": "verifying"}}\n'
@@ -379,7 +379,7 @@ class BrigadeWaveRequeueOfATaskParkedAfterItsFirstVerdictTest(LaunchingTickTestC
                     "reason": "brigade wave requeue",
                 },
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "ts": ANY,
                     "event": "task.preflighted",
                     "project": "shop",

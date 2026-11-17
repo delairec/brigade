@@ -7,6 +7,7 @@ from pathlib import Path
 from brigade.corpus.read_entities import Entity, EntityField
 from brigade.system.parse_configuration import Configuration
 from brigade.verify.preflight_task_branch import BranchPreflightDemand, preflight_task_branch
+from tests.unit.create_recipe_answers import create_recipe_answers
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
@@ -50,6 +51,7 @@ class PreflightTaskBranchTest(unittest.TestCase):
         return RecordingProcessRunner(
             {
                 **create_registry_answers(self.paths.config_root, {"shop": {"PATH": "/srv/shop"}}),
+                **create_recipe_answers(self.head_tree, {"acceptance": (("python3", "-m", "unittest"),)}),
                 _resolve(TASK_BRANCH): ProcessAnswer(stdout=f"{HEAD}\n"),
                 _resolve(MILESTONE_BRANCH): ProcessAnswer(stdout=f"{MILESTONE_HEAD}\n"),
                 ("git", "merge-base", "--end-of-options", MILESTONE_HEAD, HEAD): ProcessAnswer(stdout=f"{BASE}\n"),
@@ -73,7 +75,6 @@ class PreflightTaskBranchTest(unittest.TestCase):
                 fields=(
                     EntityField(name="PATH", value="/srv/shop"),
                     EntityField(name="FORGE", value="none"),
-                    EntityField(name="ACCEPTANCE", value="python3 -m unittest"),
                 ),
             ),
             task="B1",
@@ -99,20 +100,30 @@ class PreflightTaskBranchTest(unittest.TestCase):
                 "task": "B1",
                 "head": HEAD,
                 "checks": [
-                    {"name": "ancestry", "verdict": "pass", "findings": []},
+                    {"name": "ancestry", "result": "ok", "findings": []},
                     {
                         "name": "acceptance",
-                        "verdict": "pass",
+                        "result": "ok",
                         "findings": [],
-                        "commands": [{"command": "python3 -m unittest", "exit_code": 0}],
+                        "commands": [
+                            {"command": "python3 -m unittest", "exit_code": 0, "duration_ms": 0, "output": ""}
+                        ],
                     },
-                    {"name": "corpus", "verdict": "pass", "findings": []},
-                    {"name": "promotion", "verdict": "pass", "findings": []},
-                    {"name": "untouched_files", "verdict": "pass", "findings": []},
-                    {"name": "privacy", "verdict": "pass", "findings": []},
+                    {
+                        "name": "corpus",
+                        "result": "ok",
+                        "findings": [],
+                        "commands": [
+                            {"command": "awawa fmt --check .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                            {"command": "awawa lint --strict .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                        ],
+                    },
+                    {"name": "promotion", "result": "ok", "findings": []},
+                    {"name": "untouched_files", "result": "ok", "findings": []},
+                    {"name": "privacy", "result": "ok", "findings": []},
                     {
                         "name": "size",
-                        "verdict": "info",
+                        "result": "info",
                         "findings": ["1 files", "1 lines", "1 packages: brigade", "0 layers"],
                     },
                 ],
@@ -132,9 +143,16 @@ class PreflightTaskBranchTest(unittest.TestCase):
             document["checks"][1],
             {
                 "name": "acceptance",
-                "verdict": "fail",
+                "result": "fail",
                 "findings": ["python3 -m unittest exited 1", "FAILED (failures=1)"],
-                "commands": [{"command": "python3 -m unittest", "exit_code": 1}],
+                "commands": [
+                    {
+                        "command": "python3 -m unittest",
+                        "exit_code": 1,
+                        "duration_ms": 0,
+                        "output": "FAILED (failures=1)\n",
+                    }
+                ],
             },
         )
 
@@ -159,6 +177,7 @@ class PreflightTaskBranchOfAnAreaTest(unittest.TestCase):
         runner = RecordingProcessRunner(
             {
                 **create_registry_answers(self.paths.config_root, {"shop": fields}),
+                **create_recipe_answers(head_area, {"acceptance": (("python3", "-m", "unittest"),)}),
                 _resolve(TASK_BRANCH): ProcessAnswer(stdout=f"{HEAD}\n"),
                 _resolve(MILESTONE_BRANCH): ProcessAnswer(stdout=f"{MILESTONE_HEAD}\n"),
                 ("git", "merge-base", "--end-of-options", MILESTONE_HEAD, HEAD): ProcessAnswer(stdout=f"{BASE}\n"),
@@ -184,7 +203,6 @@ class PreflightTaskBranchOfAnAreaTest(unittest.TestCase):
                     EntityField(name="CORPUS", value="brigade"),
                     EntityField(name="MODE", value="area"),
                     EntityField(name="FORGE", value="none"),
-                    EntityField(name="ACCEPTANCE", value="python3 -m unittest"),
                 ),
             ),
             task="B1",
@@ -215,7 +233,7 @@ class PreflightTaskBranchOfAnAreaTest(unittest.TestCase):
         )
 
         # Assert
-        self.assertIn({"name": "untouched_files", "verdict": "pass", "findings": []}, document["checks"])
+        self.assertIn({"name": "untouched_files", "result": "ok", "findings": []}, document["checks"])
 
     def test_should_resolve_the_anchors_of_the_task_from_the_root_of_the_repository(self):
         # Arrange
@@ -234,4 +252,4 @@ class PreflightTaskBranchOfAnAreaTest(unittest.TestCase):
         _runner, document = self.run_preflight(anchored_outside_the_area)
 
         # Assert
-        self.assertIn({"name": "promotion", "verdict": "pass", "findings": []}, document["checks"])
+        self.assertIn({"name": "promotion", "result": "ok", "findings": []}, document["checks"])

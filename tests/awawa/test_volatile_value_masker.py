@@ -27,6 +27,26 @@ class VolatileValueMaskerTest(unittest.TestCase):
         # Assert
         self.assertEqual(unmasked, 'CREATED_AT "2026-10-15T08:00:00Z"\n')
 
+    def test_should_mask_the_compact_instant_an_order_is_named_after_as_a_volatile_value(self):
+        # Arrange
+        masker = VolatileValueMasker(TEMPORARY_ROOTS)
+
+        # Act
+        masked = masker.mask("ORDER pr_usage_report_20261116T104512Z\n")
+
+        # Assert
+        self.assertEqual(masked, "ORDER pr_usage_report_<compact_instant:0>\n")
+
+    def test_should_mask_the_run_id_a_result_name_appends_to_the_instant_of_its_order(self):
+        # Arrange
+        masker = VolatileValueMasker(TEMPORARY_ROOTS)
+
+        # Act
+        masked = masker.mask("RESULT pr_usage_report_20261116T105054Z_20261116T105055Z_f0978e\n")
+
+        # Assert
+        self.assertEqual(masked, "RESULT pr_usage_report_<compact_instant:0>_<run_name:1>\n")
+
     def test_should_mask_a_commit_name_as_a_volatile_value(self):
         # Arrange
         masker = VolatileValueMasker(TEMPORARY_ROOTS)

@@ -18,7 +18,7 @@ class RemoveExpiredTrailsTestCase(unittest.TestCase):
         self.paths = create_test_paths(root)
         self.configuration = self.paths.config_root / "config.toml"
         self.ticks = self.paths.state_root / "ticks"
-        self.commands = self.paths.state_root / "commands"
+        self.commands = self.paths.state_root / "processes"
 
     def write_trails(self, *paths: Path) -> None:
         for path in paths:

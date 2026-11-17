@@ -187,7 +187,7 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
                     "\n"
                     "## Checks of c0ffee\n"
                     "\n"
-                    "- pass `python3 -m unittest` 1.2 s\n"
+                    "- ok `python3 -m unittest` 1.2 s\n"
                     "\n"
                     "Co-Authored-By: Ada <ada@example.org>\n",
                     "milestone": "Parser",
@@ -333,7 +333,7 @@ class OpenTaskPullRequestWithNoMilestoneTest(OpenTaskPullRequestTestCase):
                     "\n"
                     "## Checks of c0ffee\n"
                     "\n"
-                    "- pass `python3 -m unittest` 1.2 s\n"
+                    "- ok `python3 -m unittest` 1.2 s\n"
                     "\n"
                     "Co-Authored-By: Ada <ada@example.org>\n",
                     "milestone": None,
@@ -399,7 +399,7 @@ class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestTestCase):
             open_task_pull_request(self.runtime, self.create_demand(create_forge(["Parser"])))
 
         # Assert
-        self.assertEqual(str(refusal.exception), "no check of @TASK.B12 is recorded; run brigade task check")
+        self.assertEqual(str(refusal.exception), "no check of @TASK.B12 is recorded; run brigade build check")
 
     def test_should_refuse_a_check_of_another_commit_than_head(self):
         # Arrange
@@ -412,7 +412,7 @@ class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestTestCase):
         # Assert
         self.assertEqual(
             str(refusal.exception),
-            "the last check of @TASK.B12 is of bead, not of HEAD c0ffee; run brigade task check",
+            "the last check of @TASK.B12 is of bead, not of HEAD c0ffee; run brigade build check",
         )
 
     def test_should_refuse_a_failed_check(self):
@@ -425,7 +425,7 @@ class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestTestCase):
 
         # Assert
         self.assertEqual(
-            str(refusal.exception), "the last check of @TASK.B12 failed on ruff check .; run brigade task check"
+            str(refusal.exception), "the last check of @TASK.B12 failed on ruff check .; run brigade build check"
         )
 
     def test_should_refuse_a_task_with_no_type(self):

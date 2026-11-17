@@ -1,8 +1,8 @@
-// Schema of the brigade operational corpus, installed by `brigade init` as _schema.awawa in the
+// Schema of the brigade registry, installed by `brigade init` as _schema.awawa in the
 // config directory from brigade/corpus/data/schema.awawa.tpl, a name that keeps it out of brigade's
 // own corpus (two SCHEMA * in one workspace collide).
 SCHEMA *
-	DESC "fields legal on every entity of the operational corpus"
+	DESC "fields legal on every entity of the registry"
 	FIELD DESC string
 		REPEATABLE
 	FIELD RATIONALE string
@@ -23,21 +23,10 @@ SCHEMA PROJECT
 		DEFAULT control
 		DESC "how brigade uses the corpus of the repository: control, every file of it; area, the"
 			+ "folder CORPUS names alone, read as the awawa workspace; none, not delivered yet"
-	FIELD ACCEPTANCE string
-		REPEATABLE
-		DESC "a light command run by task check"
-	FIELD HEAVY string
-		REPEATABLE
-		DESC "a suite left to continuous integration, read on the pull request"
-	FIELD SETUP string
-		REPEATABLE
-		DESC "a per-worktree command"
 	FIELD SLOTS uint
 		DEFAULT 4
 	FIELD MERGE squash|rebase|merge
 		DEFAULT rebase
-	FIELD GRAPH string
-		DESC "the command that regenerates the dependency graph document"
 	FIELD CLIENT string
 		DESC "the client adapter of this project's runs; config.toml's default when absent"
 	FIELD ROLESET string
@@ -71,16 +60,12 @@ SCHEMA POLICY
 		DEFAULT auto
 	FIELD REVIEW approval|verdict
 		DEFAULT verdict
-	FIELD VERIFY_ROUNDS uint
+	FIELD REPAIR_ROUNDS uint
 		DEFAULT 2
 	FIELD HANDOVERS uint
 		DEFAULT 2
 	FIELD AUTO_MERGE integration|none
 		DEFAULT integration
-	FIELD AUTO_RATIFY uint
-		DEFAULT 0
-	FIELD SAMPLING suggestions|none
-		DEFAULT suggestions
 
 SCHEMA STUDY
 	DESC "a question answered by evidence: collectors, then at most one judging run; with no slot,"
@@ -127,10 +112,10 @@ SCHEMA ANSWER
 		DESC "one per collector, its name, filled by the CLI"
 		FIELD SUMMARY string
 			REQUIRED
-			DESC "the summary of its document, as JSON"
-		FIELD DOCUMENT string
+			DESC "the summary of its collection, as JSON"
+		FIELD COLLECTION string
 			REQUIRED
-			DESC "the path of its full document"
+			DESC "the path of its collection"
 	FIELD NARRATIVE string
 		REPEATABLE
 		DESC "filled by the judging slot"
@@ -204,8 +189,35 @@ SCHEMA ORDER
 		DESC "an override of the recipe's output"
 	FIELD STATUS active|paused|archived
 		REQUIRED
+	FIELD FROM @PATTERN
+		DESC "the pattern whose ratification placed the order"
 	WHEN STATUS archived
 		GATE suppressed
+
+SCHEMA RESULT
+	DESC "the answer of one run of an order: the CLI fills what the collectors gave, the judging"
+		+ "slot the prose"
+	FIELD ORDER string
+		REQUIRED
+		DESC "the name of the ORDER answered"
+	FIELD RUN string
+		REQUIRED
+		DESC "the run of the order"
+	FIELD COLLECTED string
+		REPEATABLE
+		DESC "one per collector, its name, filled by the CLI"
+		FIELD SUMMARY string
+			REQUIRED
+			DESC "the summary of its collection, as JSON"
+		FIELD COLLECTION string
+			REQUIRED
+			DESC "the path of its collection"
+	FIELD NARRATIVE string
+		REPEATABLE
+		DESC "filled by the judging slot"
+	FIELD FINDING string
+		REPEATABLE
+		DESC "one finding with its evidence, filled by the judging slot"
 
 SCHEMA REQUEST
 	DESC "what the user wants for one project, in their words, and the plan it receives"

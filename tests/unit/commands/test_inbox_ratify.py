@@ -17,7 +17,7 @@ from tests.unit.commands.command_runtime import (
 from tests.unit.commands.inbox_lines import NOTE_ON_OAK_RECORDED, THREAD_RECORDED
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
-    STEP_COUNTING_PROBE,
+    TURN_COUNTING_PROBE,
     create_plugin_resolution,
     spawn_as_this_process,
 )
@@ -59,7 +59,7 @@ class InboxRatifyTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=runner.run,
             spawn_process=spawn_as_this_process,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
+            resolve_plugin=create_plugin_resolution(TURN_COUNTING_PROBE),
         )
 
     def _create_wave_runtime(self):
@@ -129,6 +129,27 @@ class InboxRatifyTest(unittest.TestCase):
                 ("TITLE", CART_TIMEOUT_TITLE),
                 ("STATUS", "new"),
                 ("EVIDENCE", NOTE_EVIDENCE),
+                ("ACTION", "order"),
+                ("RECIPE", "flaky-tests"),
+                ("TARGET", "shop"),
+            ),
+        )
+
+    def _create_order_of_two_evidences_runtime(self):
+        return self._create_runtime(
+            "PATTERN CartTimeouts\n"
+            '\tTITLE "the cart tests fail on a timeout"\n'
+            "\tSTATUS new\n"
+            '\tEVIDENCE "note:474fa40ae4db the checkout test timed out"\n'
+            '\tEVIDENCE "rt:PRRT_kwDO the reviewer asked for a rename"\n'
+            "\tACTION order\n"
+            '\tRECIPE "flaky-tests"\n'
+            '\tTARGET "shop"\n',
+            (
+                ("TITLE", CART_TIMEOUT_TITLE),
+                ("STATUS", "new"),
+                ("EVIDENCE", NOTE_EVIDENCE),
+                ("EVIDENCE", THREAD_EVIDENCE),
                 ("ACTION", "order"),
                 ("RECIPE", "flaky-tests"),
                 ("TARGET", "shop"),
@@ -233,9 +254,9 @@ class InboxRatifyTest(unittest.TestCase):
             ),
         )
 
-    def test_should_record_the_order_of_the_recipe_on_the_project_of_the_target(self):
+    def test_should_record_the_order_of_the_recipe_on_the_project_of_the_target_from_its_pattern_and_evidence(self):
         # Arrange
-        runtime = self._create_order_runtime()
+        runtime = self._create_order_of_two_evidences_runtime()
 
         # Act
         document = COMMAND.run(Namespace(pattern="CartTimeouts", kind=None), runtime)
@@ -246,7 +267,13 @@ class InboxRatifyTest(unittest.TestCase):
         )
         self.assertEqual(
             self._read_corpus_file("orders.awawa"),
-            'ORDER CartTimeouts\n\tRECIPE "flaky-tests"\n\tPROJECT @PROJECT.shop\n\tSTATUS active\n',
+            "ORDER CartTimeouts\n"
+            '\tRECIPE "flaky-tests"\n'
+            "\tPROJECT @PROJECT.shop\n"
+            '\tPARAM "evidence=note:474fa40ae4db the checkout test timed out"\n'
+            '\tPARAM "evidence=rt:PRRT_kwDO the reviewer asked for a rename"\n'
+            "\tSTATUS active\n"
+            "\tFROM @PATTERN.CartTimeouts\n",
         )
 
     def test_should_set_the_pattern_ratified(self):
@@ -419,7 +446,7 @@ class InboxRatifyRefusalTest(unittest.TestCase):
         refusal = self._ratify_unknown()
 
         # Assert
-        self.assertEqual(str(refusal), "@PATTERN.Unknown is not defined in the operational corpus")
+        self.assertEqual(str(refusal), "@PATTERN.Unknown is not defined in the registry")
 
     def _ratify_unknown(self) -> BrigadeError:
         runner = ScriptedProcessRunner({}, fallback=create_corpus_double({}))
@@ -436,7 +463,7 @@ class InboxRatifyTextTest(unittest.TestCase):
             (
                 "a wave",
                 {"schema_version": 1, "pattern": "P", "action": "wave", "request": "shop_r1", "run": "R"},
-                "@PATTERN.P ratified: @REQUEST.shop_r1 planning, run R\nbrigade runs show R --log",
+                "@PATTERN.P ratified: @REQUEST.shop_r1 planning, run R\nbrigade run show R --log",
             ),
             (
                 "a constraint",
@@ -450,7 +477,7 @@ class InboxRatifyTextTest(unittest.TestCase):
                 },
                 (
                     "@PATTERN.P ratified: @CONSTRAINT.P proposed, @REQUEST.shop_r1 planning, run R\n"
-                    "brigade runs show R --log"
+                    "brigade run show R --log"
                 ),
             ),
             (

@@ -10,8 +10,9 @@ from brigade.commands.status import COMMAND
 from brigade.ledger.append_event import append_event
 from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.order_started import OrderStarted
+from brigade.ledger.wave_blocked import WaveBlocked
 from brigade.ledger.wave_closed import WaveClosed
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_started import WaveStarted
 from brigade.system.reset_hour import ResetHour
 from brigade.system.token_usage import TokenUsage
@@ -44,6 +45,17 @@ HEALTH_STUDY = (
 )
 CORPUS = {"PROJECT": {"oak": OAK, "elm": ELM}, "STUDY": {"debt": DEBT_STUDY, "health": HEALTH_STUDY}}
 CORPUS_OF_PROJECTS = {"PROJECT": {"oak": OAK, "elm": ELM}}
+NIGHTLY_ORDER = (("RECIPE", "usage-report"), ("PROJECT", "@PROJECT.oak"), ("EVERY", "24h"), ("STATUS", "active"))
+HOURLY_ORDER = (("RECIPE", "usage-report"), ("PROJECT", "@PROJECT.oak"), ("EVERY", "1h"), ("STATUS", "active"))
+CORPUS_OF_ORDERS = {**CORPUS, "ORDER": {"nightly": NIGHTLY_ORDER, "hourly": HOURLY_ORDER}}
+PARKED_NIGHTLY = {
+    "name": "nightly",
+    "recipe": "usage-report",
+    "project": "oak",
+    "run": "20261019T081500Z-n1",
+    "step": "1-gate",
+    "reason": "the gate step failed",
+}
 HOME = {
     "schema_version": 1,
     "projects": [{"name": "elm", "paused": True}, {"name": "oak", "paused": False}],
@@ -52,9 +64,9 @@ HOME = {
             "wave": "oak_w2",
             "project": "oak",
             "branch": "integration/oak_w2",
-            "last_event": "wave.paused",
+            "last_event": "wave.blocked",
             "tasks": 2,
-            "pause": {"reason": "quota", "resume_at": "2026-10-19T10:00:00Z"},
+            "halt": {"reason": "quota", "resume_at": "2026-10-19T10:00:00Z"},
         },
         {
             "wave": "elm_w1",
@@ -62,7 +74,7 @@ HOME = {
             "branch": "integration/elm_w1",
             "last_event": "wave.started",
             "tasks": 1,
-            "pause": None,
+            "halt": None,
         },
     ],
     "inbox": {"new_signals": 1, "scans": []},
@@ -75,7 +87,7 @@ HOME = {
             "cache_read_input_tokens": 40,
         },
         "runs_without_usage": 1,
-        "paused_waves": [{"wave": "oak_w2", "resume_at": "2026-10-19T10:00:00Z"}],
+        "blocked_waves": [{"wave": "oak_w2", "resume_at": "2026-10-19T10:00:00Z"}],
     },
     "last_tick": {"ts": "2026-10-19T08:55:00Z", "duration_ms": 120, "actions_applied": 2},
     "studies": [
@@ -119,6 +131,7 @@ HOME = {
         },
         {"name": "worktrees_oak", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True},
     ],
+    "orders": [],
 }
 
 
@@ -176,7 +189,7 @@ class StatusOfTheMachineTest(unittest.TestCase):
             (at(6, 0), WaveStarted(wave="elm_w1", project="elm", branch="integration/elm_w1", tasks=("E1",))),
             (at(7, 0), dataclasses.replace(create_run_finished("r1"), usage=TokenUsage(10, 20, 30, 40))),
             (at(7, 10), create_run_finished("r2")),
-            (at(7, 20), WavePaused(wave="oak_w2", reason="quota", resume_at="2026-10-19T10:00:00Z")),
+            (at(7, 20), WaveBlocked(wave="oak_w2", reason="quota", resume_at="2026-10-19T10:00:00Z")),
             (at(8, 0), OrderStarted(project=None, kind="study", order="debt", run="20261019T080000Z-d1")),
             (
                 at(8, 10),
@@ -199,17 +212,17 @@ class StatusOfTheMachineTest(unittest.TestCase):
         # Assert
         self.assertEqual(document, HOME)
 
-    def test_should_leave_out_of_the_quota_a_wave_paused_on_another_reason(self):
+    def test_should_leave_out_of_the_quota_a_wave_parked_on_another_reason(self):
         # Arrange
         self.write_machine()
-        append_event(self.paths, at(8, 20), WavePaused(wave="elm_w1", reason="forge_account", resume_at=None))
+        append_event(self.paths, at(8, 20), WaveParked(wave="elm_w1", reason="forge_account"))
         runtime = create_test_runtime(self.paths, run_process=create_corpus_double(CORPUS))
 
         # Act
         document = COMMAND.run(Namespace(), runtime)
 
         # Assert
-        self.assertEqual(document["quota"]["paused_waves"], [{"wave": "oak_w2", "resume_at": "2026-10-19T10:00:00Z"}])
+        self.assertEqual(document["quota"]["blocked_waves"], [{"wave": "oak_w2", "resume_at": "2026-10-19T10:00:00Z"}])
 
     def test_should_list_due_a_study_parked_by_a_rate_limit_whose_reset_has_passed(self):
         # Arrange
@@ -257,6 +270,34 @@ class StatusOfTheMachineTest(unittest.TestCase):
                 "due": True,
             },
         )
+
+    def test_should_list_the_parked_orders_with_the_step_and_the_reason_that_parked_them(self):
+        # Arrange
+        self.write_machine()
+        events = [
+            (at(8, 15), OrderStarted(project="oak", kind="usage-report", order="nightly", run="20261019T081500Z-n1")),
+            (
+                at(8, 16),
+                OrderParked(
+                    project="oak",
+                    kind="usage-report",
+                    order="nightly",
+                    run="20261019T081500Z-n1",
+                    step="1-gate",
+                    reason="the gate step failed",
+                ),
+            ),
+            (at(8, 20), OrderStarted(project="oak", kind="usage-report", order="hourly", run="20261019T082000Z-h1")),
+        ]
+        for instant, event in events:
+            append_event(self.paths, instant, event)
+        runtime = create_test_runtime(self.paths, run_process=create_corpus_double(CORPUS_OF_ORDERS))
+
+        # Act
+        document = COMMAND.run(Namespace(), runtime)
+
+        # Assert
+        self.assertEqual(document["orders"], [PARKED_NIGHTLY])
 
 
 class StatusOfTheInboxTest(unittest.TestCase):
@@ -318,7 +359,7 @@ class StatusTextTest(unittest.TestCase):
             text,
             "project    elm, paused\n"
             "project    oak, active\n"
-            "wave       oak_w2 of oak, wave.paused, paused on quota until 2026-10-19T10:00:00Z\n"
+            "wave       oak_w2 of oak, wave.blocked, blocked on quota until 2026-10-19T10:00:00Z\n"
             "wave       elm_w1 of elm, wave.started\n"
             "inbox      1 new signals\n"
             "quota      over 5 hours: input_tokens 10, output_tokens 20, cache_creation_input_tokens 30,"
@@ -336,6 +377,16 @@ class StatusTextTest(unittest.TestCase):
             "study      stale_branches_oak, due\n"
             "study      worktrees_oak, due",
         )
+
+    def test_should_print_one_line_per_parked_order_after_the_studies(self):
+        # Arrange
+        home = {**HOME, "studies": [], "orders": [PARKED_NIGHTLY]}
+
+        # Act
+        text = COMMAND.render_text(home)
+
+        # Assert
+        self.assertEqual(text.splitlines()[-1], "order      nightly of oak, parked at 1-gate: the gate step failed")
 
     def test_should_print_one_line_per_scan_holding_new_signals_after_the_inbox(self):
         # Arrange
@@ -372,7 +423,7 @@ class StatusTextTest(unittest.TestCase):
         # Assert
         self.assertIn("\nlast tick  never\n", text)
 
-    def test_should_say_that_a_wave_paused_until_further_notice_has_no_resume_time(self):
+    def test_should_say_that_a_wave_parked_until_further_notice_has_no_resume_time(self):
         # Arrange
         document = {
             **HOME,
@@ -381,9 +432,9 @@ class StatusTextTest(unittest.TestCase):
                     "wave": "elm_w1",
                     "project": "elm",
                     "branch": "integration/elm_w1",
-                    "last_event": "wave.paused",
+                    "last_event": "wave.parked",
                     "tasks": 1,
-                    "pause": {"reason": "forge_account", "resume_at": None},
+                    "halt": {"reason": "forge_account", "resume_at": None},
                 }
             ],
         }
@@ -392,4 +443,4 @@ class StatusTextTest(unittest.TestCase):
         text = COMMAND.render_text(document)
 
         # Assert
-        self.assertIn("\nwave       elm_w1 of elm, wave.paused, paused on forge_account\n", text)
+        self.assertIn("\nwave       elm_w1 of elm, wave.parked, parked on forge_account\n", text)

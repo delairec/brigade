@@ -62,7 +62,7 @@ MILESTONE M7
 MILESTONE M8
 	TITLE "Recipes"
 	SUBJECT "deliver recipes, orders and named preflights"
-	STATUS active
+	STATUS reached
 	AFTER @MILESTONE.M12
 	SOURCE "the user's ruling of 2026-11-13 in the refinement of M8, « Active maintenant »: the"
 		+ "milestone is activated by the pull request of its refinement, which the user merges only"

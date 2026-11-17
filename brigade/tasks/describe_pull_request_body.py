@@ -3,7 +3,7 @@ from importlib.resources import files
 from string import Template
 
 BODY_TEMPLATE = files("brigade.tasks") / "data" / "pull-request-body.md.tpl"
-PASSED = "pass"
+OK = "ok"
 FAILED = "fail"
 MS_PER_S = 1000
 
@@ -17,8 +17,8 @@ class PullRequestBodyParts:
 
 
 def _describe_check(check: dict) -> str:
-    verdict = PASSED if check["passed"] else FAILED
-    return f"- {verdict} `{check['command']}` {check['duration_ms'] / MS_PER_S:.1f} s"
+    result = OK if check["passed"] else FAILED
+    return f"- {result} `{check['command']}` {check['duration_ms'] / MS_PER_S:.1f} s"
 
 
 def describe_pull_request_body(parts: PullRequestBodyParts) -> str:

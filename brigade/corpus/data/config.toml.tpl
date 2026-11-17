@@ -12,7 +12,7 @@ $client_line
 # the attempts exhausted, the command stops and no other account is used in its place.
 # forge_attempts = 3
 
-# The form of the progress of a run: awawa, a corpus of STEP and HANDOVER entities, or markdown.
+# The form of the progress of a run: awawa, a corpus of ENTRY and HANDOVER entities, or markdown.
 # document = "awawa"
 
 # The root of an instructions corpus the roles are read from.
@@ -31,14 +31,14 @@ $client_line
 # The bound, in MB, of the cache of the trees brigade corpus extracts; the least recently read are removed past it.
 # refs_cache_mb = 1024
 
-# The seconds a run is given per step of its budget: the wall-time limit of a run is ceil(budget × 1.25) × seconds_per_step.
-# seconds_per_step = 30
+# The seconds a run is given per turn of its budget: the wall-time limit of a run is ceil(budget × 1.25) × seconds_per_turn.
+# seconds_per_turn = 30
 
-# The seconds before the wall-time limit of a segment at which a client that supports it stops between two steps,
+# The seconds before the wall-time limit of a segment at which a client that supports it stops between two turns,
 # a positive number; a wall-time limit not above it gives no such stop.
 # soft_limit_margin_s = 120
 
-# The days a trail of ticks/ and commands/ is kept in $state_root, 1 or more; older trails are removed at each tick and command.
+# The days a trail of ticks/ and processes/ is kept in $state_root, 1 or more; older trails are removed at each tick and command.
 # trail_days = 7
 
 # The finished and dead runs kept in $state_root/runs, 1 or more; past it, each run removes the oldest at its end,
@@ -53,15 +53,15 @@ $client_line
 # tick_stale_after = 15
 
 # The minutes past which the tick records a stall in the inbox for a task of an open wave it has taken no action on,
-# 1 or more: no live run, neither merged nor parked nor paused on the quota.
+# 1 or more: no live run, neither merged nor parked nor blocked on the quota.
 # stall_after = 60
 
 # The hours of the reset window of the client's quota, 1 or more: brigade status sums the usage of the runs finished
 # within it.
 # quota_window_hours = 5
 
-# The seconds between two reads of a running segment's output into the journal of its run, a positive number.
-# journal_poll_s = 2
+# The seconds between two reads of a running segment's output into the log of its run, a positive number.
+# log_poll_s = 2
 
 # The model and effort a reasoning level maps to, replacing that row of the client adapter's table;
 # levels deepest, deep, standard, light.
@@ -80,7 +80,7 @@ $client_line
 # plan = ""
 
 # The procedure the tick launches for a slot in place of the one brigade ships, a name or a path resolved as the
-# argument of brigade run is; key build, in place of build-task.
+# argument of brigade run start is; key build, in place of build-task.
 # [procedures]
 # build = ""
 

@@ -16,21 +16,21 @@ S3_REBUILT_TWICE_THEN_PREFLIGHTED_ON_A_FAILING_CHECK = (
     ' "state": "pr_open"}}\n'
     '{{"schema_version": 1, "ts": "2026-10-13T09:25:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
     ' "state": "fixing", "reason": "the entity of the task amended on {base}"}}\n'
-    '{{"schema_version": 2, "ts": "2026-10-13T09:39:00Z", "event": "run.finished", "wave": "shop_w1", "task": "S3",'
+    '{{"schema_version": 3, "ts": "2026-10-13T09:39:00Z", "event": "run.finished", "wave": "shop_w1", "task": "S3",'
     ' "run": "20261013T092500Z-cd603c", "client": "fake", "project": "shop", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 12, "nulls": {{}},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "turn_limit",'
-    ' "error_class": "turn_limit", "main_steps": 94, "total_steps": null}}\n'
+    ' "error_class": "turn_limit", "main_turns": 94, "total_turns": null}}\n'
     '{{"schema_version": 1, "ts": "2026-10-13T09:40:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
     ' "state": "fixing", "reason": "the entity of the task amended on {base}"}}\n'
-    '{{"schema_version": 2, "ts": "2026-10-13T10:10:00Z", "event": "run.finished", "wave": "shop_w1", "task": "S3",'
+    '{{"schema_version": 3, "ts": "2026-10-13T10:10:00Z", "event": "run.finished", "wave": "shop_w1", "task": "S3",'
     ' "run": "20261013T094000Z-b81a07", "client": "fake", "project": "shop", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {{}},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
-    ' "error_class": null, "main_steps": 40, "total_steps": null}}\n'
-    '{{"schema_version": 1, "ts": "2026-10-13T10:20:00Z", "event": "task.preflighted", "project": "shop",'
+    ' "error_class": null, "main_turns": 40, "total_turns": null}}\n'
+    '{{"schema_version": 2, "ts": "2026-10-13T10:20:00Z", "event": "task.preflighted", "project": "shop",'
     ' "wave": "shop_w1", "task": "S3", "pr": 12, "head": "{head}",'
-    ' "checks": [{{"name": "checks", "verdict": "fail", "findings": ["tests: failure"]}}]}}\n'
+    ' "checks": [{{"name": "checks", "result": "fail", "findings": ["tests: failure"]}}]}}\n'
 )
 
 
@@ -82,7 +82,7 @@ class BrigadeTickOfATaskRebuiltTwiceWhosePreflightFailsACheckTest(LaunchingTickT
                     "state": "fixing",
                 },
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "ts": ANY,
                     "event": "run.finished",
                     "run": ANY,
@@ -93,8 +93,8 @@ class BrigadeTickOfATaskRebuiltTwiceWhosePreflightFailsACheckTest(LaunchingTickT
                     "client": "fake",
                     "project": "shop",
                     "session": "fake-session",
-                    "main_steps": 12,
-                    "total_steps": None,
+                    "main_turns": 12,
+                    "total_turns": None,
                     "duration_ms": ANY,
                     "usage": ANY,
                     "outcome": "done",

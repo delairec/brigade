@@ -68,7 +68,7 @@ A session launches no wave and no task run by hand.
 brigade scheduler install                   # writes the timer; again after every change to the unit templates
 brigade wave show <wave>                    # the tasks of a wave, their state and their runs
 brigade wave requeue <wave> <task>          # a parked task queued again for the next tick
-brigade tick --dry-run                      # the snapshot and the plan the next tick would apply
+brigade tick --dry-run                      # the snapshot and the decisions the next tick would apply
 ```
 
 The tick runs from the main checkout through `bin/brigade`: a fix to brigade reaches the tick once `main` is pulled
@@ -89,8 +89,8 @@ A role launched by hand on a task proves its branch as a run of the tick does, f
 `uv` on PATH and neither ruff nor coverage:
 
 ```
-brigade task check                                  # the ACCEPTANCE commands, the corpus checks and the privacy check
-brigade task push                                   # pushes the branch with a lease, once a check of HEAD passed
+brigade build check                                  # the ACCEPTANCE commands, the corpus checks and the privacy check
+brigade build push                                   # pushes the branch with a lease, once a check of HEAD passed
 uvx --from ruff==0.17.2 ruff check . && uvx --from ruff==0.17.2 ruff format --check .
 uvx --from coverage==7.17.0 coverage run -m unittest discover -s tests/unit -t . && uvx --from coverage==7.17.0 coverage report
 ```

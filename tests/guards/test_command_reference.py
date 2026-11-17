@@ -32,42 +32,40 @@ class CommandReferenceGuardTest(unittest.TestCase):
 
     def test_should_flag_a_subcommand_its_command_line_leaves_out(self):
         # Arrange
-        page_naming_two_runs_subcommands = "| `brigade runs list\\|show` | list the runs and prune them |\n"
+        page_naming_two_runs_subcommands = "| `brigade run list\\|show` | list the runs and prune them |\n"
 
         # Act
-        unreferenced = find_unreferenced_commands(
-            page_naming_two_runs_subcommands, [("runs", "list"), ("runs", "prune")]
-        )
+        unreferenced = find_unreferenced_commands(page_naming_two_runs_subcommands, [("run", "list"), ("run", "prune")])
 
         # Assert
-        self.assertEqual(unreferenced, ["brigade runs prune has no line in wiki/Command-reference.md"])
+        self.assertEqual(unreferenced, ["brigade run prune has no line in wiki/Command-reference.md"])
 
     def test_should_flag_a_subcommand_named_on_the_line_of_another_command(self):
         # Arrange
         page_naming_show_under_wave_alone = (
-            "| `brigade wave show` | print a wave |\n| `brigade runs list` | list the runs |\n"
+            "| `brigade wave show` | print a wave |\n| `brigade run list` | list the runs |\n"
         )
 
         # Act
-        unreferenced = find_unreferenced_commands(page_naming_show_under_wave_alone, [("runs", "show")])
+        unreferenced = find_unreferenced_commands(page_naming_show_under_wave_alone, [("run", "show")])
 
         # Assert
-        self.assertEqual(unreferenced, ["brigade runs show has no line in wiki/Command-reference.md"])
+        self.assertEqual(unreferenced, ["brigade run show has no line in wiki/Command-reference.md"])
 
     def test_should_flag_a_subcommand_named_by_another_command_of_its_line(self):
         # Arrange
-        page_naming_show_under_wave_beside_runs_list = "| `brigade runs list` and `brigade wave show` | read |\n"
+        page_naming_show_under_wave_beside_runs_list = "| `brigade run list` and `brigade wave show` | read |\n"
 
         # Act
-        unreferenced = find_unreferenced_commands(page_naming_show_under_wave_beside_runs_list, [("runs", "show")])
+        unreferenced = find_unreferenced_commands(page_naming_show_under_wave_beside_runs_list, [("run", "show")])
 
         # Assert
-        self.assertEqual(unreferenced, ["brigade runs show has no line in wiki/Command-reference.md"])
+        self.assertEqual(unreferenced, ["brigade run show has no line in wiki/Command-reference.md"])
 
     def test_should_accept_the_forms_of_naming_a_subcommand(self):
         for form, page, path in [
             ("alternatives", "| `brigade wave start\\|requeue` | start the waves |\n", ("wave", "requeue")),
-            ("optional", "| `brigade ledger [budgets\\|compare]` | read the journal |\n", ("ledger", "compare")),
+            ("optional", "| `brigade ledger [budgets\\|compare]` | read the ledger |\n", ("ledger", "compare")),
             (
                 "listed",
                 "| `brigade adapter <operation>` | one operation: `probe`, `actions` |\n",

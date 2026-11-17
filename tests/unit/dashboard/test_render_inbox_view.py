@@ -39,6 +39,7 @@ class RenderInboxViewTest(unittest.TestCase):
                 {"name": "FlakyTests", "action": "constraint", "signals": [NOTE_ID]},
                 {"name": "LongNames", "action": None, "signals": []},
             ],
+            "answers": [],
         }
 
         # Act
@@ -76,7 +77,7 @@ class RenderInboxViewTest(unittest.TestCase):
 
     def test_should_say_the_inbox_holds_no_new_signal_and_no_proposed_pattern(self):
         # Arrange
-        document = {"schema_version": 1, "signals": [], "families": [], "patterns": []}
+        document = {"schema_version": 1, "signals": [], "families": [], "patterns": [], "answers": []}
 
         # Act
         fragment = render_inbox_view(document)
@@ -108,6 +109,7 @@ class RenderInboxViewOfStringsHoldingMarkupTest(unittest.TestCase):
             ],
             "families": [{"by": markup, "key": markup, "signals": [markup]}],
             "patterns": [{"name": markup, "action": markup, "signals": [markup]}],
+            "answers": [{"id": markup, "study": markup, "project": markup}],
         }
 
         # Act
@@ -116,3 +118,27 @@ class RenderInboxViewOfStringsHoldingMarkupTest(unittest.TestCase):
         # Assert
         self.assertNotIn("<img", fragment)
         self.assertNotIn('"alert', fragment)
+
+
+class RenderInboxViewOfStudyAnswersTest(unittest.TestCase):
+    def test_should_link_each_study_answer_to_its_view(self):
+        # Arrange
+        document = {
+            "schema_version": 1,
+            "signals": [],
+            "families": [],
+            "patterns": [],
+            "answers": [{"id": "disk_20261019T090000Z_b2", "study": "disk", "project": None}],
+        }
+
+        # Act
+        fragment = render_inbox_view(document)
+
+        # Assert
+        self.assertEqual(
+            fragment,
+            "<section><h2>Signals</h2><p>no new signal</p></section>"
+            "<section><h2>Patterns</h2><p>no pattern proposed</p></section>"
+            '<section><h2>Study answers</h2><ul><li><a href="#inbox/disk_20261019T090000Z_b2">'
+            "disk_20261019T090000Z_b2</a> disk -</li></ul></section>",
+        )

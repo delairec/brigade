@@ -92,8 +92,8 @@ class ResolveTheReviewAndPlanProceduresBrigadeShipsTest(unittest.TestCase):
     def test_should_resolve_each_with_the_capabilities_of_its_slot(self):
         # Arrange
         rows = [
-            ("wave-plan", ("read", "write", "shell")),
-            ("verify-pr", ("read", "shell")),
+            ("request-plan", ("read", "write", "shell")),
+            ("review-pr", ("read", "shell")),
         ]
         no_instructions_corpus = None
         directories = ProcedureDirectories(shipped=SHIPPED_PROCEDURES, instructions=no_instructions_corpus)

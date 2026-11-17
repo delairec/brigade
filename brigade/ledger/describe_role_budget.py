@@ -52,9 +52,9 @@ def _list_restarts(segments: tuple[RunFinished, ...]) -> list[RunFinished]:
 
 
 def _fit_growth(measured: list[RunFinished]) -> float | None:
-    lengths = [segment.main_steps for segment in measured]
+    lengths = [segment.main_turns for segment in measured]
     tokens_per_step = [
-        Fraction(sum(getattr(segment.usage, counter) for counter in USAGE_COUNTERS), segment.main_steps)
+        Fraction(sum(getattr(segment.usage, counter) for counter in USAGE_COUNTERS), segment.main_turns)
         for segment in measured
     ]
     mean_length = Fraction(sum(lengths), len(lengths))
@@ -84,7 +84,7 @@ def describe_role_budget(segments: tuple[RunFinished, ...], shipped: int, curren
     chosen = _choose_current(segments, current)
     restarted = {id(segment) for segment in _list_restarts(segments)}
     kept = [segment for segment in segments if _is_current(segment, chosen)]
-    measured = [segment for segment in kept if segment.main_steps and segment.usage is not None]
+    measured = [segment for segment in kept if segment.main_turns and segment.usage is not None]
     restarts = [segment for segment in kept if id(segment) in restarted and segment.tokens_to_first_edit is not None]
     growth = _fit_growth(measured) if measured else None
     restart_tokens = sum(segment.tokens_to_first_edit for segment in restarts) / len(restarts) if restarts else None

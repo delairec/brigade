@@ -20,5 +20,5 @@ def render_answer(study: Study, run_id: str, collected: list[dict]) -> str:
     for entry in collected:
         lines.append(f"\tCOLLECTED {quote_awawa_string(entry['collector'])}")
         lines.append(f"\t\tSUMMARY {quote_awawa_string(json.dumps(entry['summary']))}")
-        lines.append(f"\t\tDOCUMENT {quote_awawa_string(entry['document'])}")
+        lines.append(f"\t\tCOLLECTION {quote_awawa_string(entry['collection'])}")
     return "\n".join(lines) + "\n"

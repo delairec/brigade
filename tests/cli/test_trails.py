@@ -18,7 +18,7 @@ def read_trail(path: Path) -> list:
 
 class BrigadeRunTrailTest(RunTestCase):
     def run_in_workspace(self, *options: str):
-        return self.run_brigade("run", str(self.procedure), "--cwd", str(self.workspace), *options)
+        return self.run_brigade("run", "start", str(self.procedure), "--cwd", str(self.workspace), *options)
 
     def test_should_record_the_client_segment_after_its_wait(self):
         # Arrange
@@ -90,6 +90,6 @@ class BrigadeCommandTrailTest(TrailTestCase):
             completed.stdout,
             '{"schema_version": 1, "scheduler": "none", "unit_files": [], "cron_line": null,'
             ' "next_activation": null, "last_tick": null, "tick_stale_after": 15, "stale": false,'
-            ' "paused_waves": [], "parked_tasks": []}\n',
+            ' "halted_waves": [], "parked_tasks": []}\n',
         )
         self.assertEqual(completed.stderr, "brigade scheduler status: ran crontab -l, not on PATH\n")

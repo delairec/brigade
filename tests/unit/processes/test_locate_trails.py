@@ -29,7 +29,7 @@ class LocateTrailsTest(StateWithTrailsTestCase):
                     kind="command",
                     id="20261010T080000Z-ab12",
                     instant=datetime(2026, 10, 10, 8, 0, tzinfo=UTC),
-                    path=self.state_root / "commands/20261010T080000Z-ab12.jsonl",
+                    path=self.state_root / "processes/20261010T080000Z-ab12.jsonl",
                 ),
             ],
         )

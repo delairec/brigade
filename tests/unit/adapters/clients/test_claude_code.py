@@ -1,12 +1,10 @@
 import json
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
 from brigade.adapters.clients.claude_code import answer
 from brigade.errors import BrigadeError
-from tests.process_launcher import ProcessLauncher
 
 FIXTURES = Path(__file__).parent / "fixtures" / "claude-code"
 CLI_FIXTURES = Path(__file__).parents[3] / "cli" / "fixtures" / "claude-code"
@@ -18,6 +16,7 @@ LAUNCH_REQUEST = {
     "progress_file": "/state/brigade/runs/r1/progress.md",
     "session_id": "6f1c2a9e-3b7d-4e21-9a55-0c8d4b7e2f13",
     "stop_at": None,
+    "stop_hook": None,
     "role": {
         "name": "builder",
         "package": "AGENT builder",
@@ -60,7 +59,7 @@ class ClaudeCodeProbeTest(unittest.TestCase):
                 "client": "claude-code",
                 "version_argv": ["claude", "--version"],
                 "operations": ["probe", "launch", "result", "resume", "transcripts", "actions"],
-                "features": ["step_count", "tool_grants", "reset_hour", "graceful_stop"],
+                "features": ["turn_count", "tool_grants", "reset_hour", "graceful_stop"],
                 "models": {"deepest": "fable", "deep": "fable", "standard": "opus", "light": "sonnet"},
                 "edit_tools": ["Edit", "Write", "NotebookEdit"],
             },
@@ -206,23 +205,13 @@ class ClaudeCodeLaunchTest(unittest.TestCase):
                 self.assertEqual(launch["argv"][13:15], ["--max-turns", expected_max_turns])
 
 
-def run_stop_hook(stop_at: str) -> subprocess.CompletedProcess:
-    argv = answer("launch-argv", {**LAUNCH_REQUEST, "stop_at": stop_at})["argv"]
-    settings = json.loads(argv[argv.index("--settings") + 1])
-    command = settings["hooks"]["PostToolUse"][0]["hooks"][0]["command"]
-    return ProcessLauncher.run(
-        ["sh", "-c", command],
-        input="{}",
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+STOP_HOOK = ["/usr/bin/python3", "/srv/brigade/bin/brigade", "run", "stop-hook", "--at", "1791364980"]
 
 
 class ClaudeCodeGracefulStopTest(unittest.TestCase):
-    def test_should_add_a_hook_stopping_the_session_after_the_tool_call_that_passes_its_stop_at(self):
+    def test_should_add_a_hook_calling_the_stop_hook_of_brigade_after_each_tool_call(self):
         # Arrange
-        request = {**LAUNCH_REQUEST, "stop_at": "2026-10-07T09:23:00Z"}
+        request = {**LAUNCH_REQUEST, "stop_at": "2026-10-07T09:23:00Z", "stop_hook": STOP_HOOK}
 
         # Act
         launch = answer("launch-argv", request)
@@ -234,31 +223,24 @@ class ClaudeCodeGracefulStopTest(unittest.TestCase):
                 "--settings",
                 (
                     '{"hooks": {"PostToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": '
-                    '"[ \\"$(date -u +%s)\\" -ge 1791364980 ] && printf \'%s\\\\n\' '
-                    '\'{\\"continue\\": false, \\"stopReason\\": \\"the soft limit 2026-10-07T09:23:00Z has passed\\"}\'; '
-                    'exit 0"}]}]}}'
+                    '"/usr/bin/python3 /srv/brigade/bin/brigade run stop-hook --at 1791364980"}]}]}}'
                 ),
             ],
         )
 
-    def test_should_print_nothing_before_the_stop_at_and_the_stop_once_it_has_passed(self):
+    def test_should_quote_each_argument_of_the_stop_hook(self):
         # Arrange
-        rows = [
-            ("before", "2100-01-01T00:00:00Z", ""),
-            (
-                "after",
-                "2000-01-01T00:00:00Z",
-                '{"continue": false, "stopReason": "the soft limit 2000-01-01T00:00:00Z has passed"}\n',
-            ),
-        ]
-        for case, stop_at, expected_stdout in rows:
-            with self.subTest(case=case):
-                # Act
-                completed = run_stop_hook(stop_at)
+        stop_hook = ["/opt/my tools/python3", "/srv/brigade/bin/brigade", "run", "stop-hook", "--at", "1791364980"]
+        request = {**LAUNCH_REQUEST, "stop_at": "2026-10-07T09:23:00Z", "stop_hook": stop_hook}
 
-                # Assert
-                self.assertEqual(completed.returncode, 0)
-                self.assertEqual(completed.stdout, expected_stdout)
+        # Act
+        launch = answer("launch-argv", request)
+
+        # Assert
+        hook = json.loads(launch["argv"][-1])["hooks"]["PostToolUse"][0]["hooks"][0]
+        self.assertEqual(
+            hook["command"], "'/opt/my tools/python3' /srv/brigade/bin/brigade run stop-hook --at 1791364980"
+        )
 
     def test_should_add_no_settings_without_a_stop_at(self):
         # Act
@@ -285,7 +267,7 @@ class ClaudeCodeGracefulStopTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "soft_limit",
-                "steps": 7,
+                "turns": 7,
                 "usage": {
                     "input_tokens": 9,
                     "output_tokens": 55,
@@ -377,7 +359,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "done",
-                "steps": 1,
+                "turns": 1,
                 "usage": {
                     "input_tokens": 9,
                     "output_tokens": 55,
@@ -410,7 +392,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "failed",
-                "steps": 94,
+                "turns": 94,
                 "usage": {
                     "input_tokens": 1,
                     "output_tokens": 4,
@@ -443,7 +425,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "failed",
-                "steps": 3,
+                "turns": 3,
                 "usage": {
                     "input_tokens": 1,
                     "output_tokens": 0,
@@ -551,7 +533,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "failed",
-                "steps": 2,
+                "turns": 2,
                 "usage": {
                     "input_tokens": 1,
                     "output_tokens": 0,
@@ -580,7 +562,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "failed",
-                "steps": None,
+                "turns": None,
                 "usage": None,
                 "session_id": None,
                 "duration_ms": None,
@@ -604,7 +586,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "failed",
-                "steps": None,
+                "turns": None,
                 "usage": None,
                 "session_id": None,
                 "duration_ms": None,
@@ -635,7 +617,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "done",
-                "steps": 3,
+                "turns": 3,
                 "usage": {
                     "input_tokens": 9,
                     "output_tokens": 55,
@@ -664,7 +646,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(result["outcome"], "done")
-        self.assertEqual(result["steps"], 5)
+        self.assertEqual(result["turns"], 5)
 
     def test_should_report_a_stream_that_holds_no_result_event(self):
         # Arrange
@@ -682,7 +664,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "failed",
-                "steps": None,
+                "turns": None,
                 "usage": None,
                 "session_id": None,
                 "duration_ms": None,
@@ -731,7 +713,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "undeclared",
-                "steps": None,
+                "turns": None,
                 "usage": {
                     "input_tokens": 108,
                     "output_tokens": 42255,
@@ -773,7 +755,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "done",
-                "steps": None,
+                "turns": None,
                 "usage": {
                     "input_tokens": 30,
                     "output_tokens": 4604,
@@ -828,7 +810,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
         result = parse_claude_output(stdout)
 
         # Assert
-        self.assertIsNone(result["steps"])
+        self.assertIsNone(result["turns"])
 
     def test_should_count_the_turns_of_a_result_that_answers_the_brief(self):
         # Arrange
@@ -841,7 +823,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
         result = parse_claude_output(stdout)
 
         # Assert
-        self.assertEqual(result["steps"], 52)
+        self.assertEqual(result["turns"], 52)
 
     def test_should_report_no_usage_when_the_result_object_carries_none(self):
         # Arrange
@@ -859,7 +841,7 @@ class ClaudeCodeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "done",
-                "steps": 3,
+                "turns": 3,
                 "usage": None,
                 "session_id": "s-42",
                 "duration_ms": 9000,

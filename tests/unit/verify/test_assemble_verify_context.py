@@ -4,16 +4,25 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.collecting.collector_equipment import CollectorEquipment
 from brigade.corpus.read_entities import Entity, EntityField
 from brigade.system.parse_configuration import Configuration
 from brigade.verify.assemble_verify_context import assemble_verify_context
 from brigade.verify.preflight_pull_request import PreflightDemand
 from tests.unit.commands.command_runtime import write_ledger
+from tests.unit.create_preflight_plugins import create_preflight_plugins
+from tests.unit.create_recipe_answers import create_recipe_answers
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 from tests.unit.registry_answers import create_registry_answers
-from tests.unit.verify.test_preflight_pull_request import BASE, HEAD, WAVE_HEAD, ForgeDescribingThePullRequestDouble
+from tests.unit.verify.test_preflight_pull_request import (
+    BASE,
+    HEAD,
+    NO_CLIENT_RESOLVER,
+    WAVE_HEAD,
+    ForgeDescribingThePullRequestDouble,
+)
 
 DIFF = "--- a/brigade/cart.py\n+++ b/brigade/cart.py\n@@ -0,0 +1 @@\n+def empty_cart():\n"
 INSTRUCTIONS = "/srv/instructions"
@@ -54,6 +63,7 @@ class AssembleVerifyContextTest(unittest.TestCase):
         (self.paths.cache_root / "refs" / "shop" / BASE).mkdir(parents=True)
         self.answers = {
             **create_registry_answers(self.paths.config_root, {"shop": {"PATH": "/srv/shop"}}),
+            **create_recipe_answers(self.head_tree, {}),
             (
                 "git",
                 "rev-parse",
@@ -92,9 +102,13 @@ class AssembleVerifyContextTest(unittest.TestCase):
             task="B1",
             base_branch="integration/w1",
             pr=160,
-            forge=ForgeDescribingThePullRequestDouble(),
-            environment={},
-            configuration=configuration,
+            equipment=CollectorEquipment(
+                configuration=configuration,
+                forge=ForgeDescribingThePullRequestDouble(),
+                forge_name="github",
+                resolve_client=NO_CLIENT_RESOLVER,
+            ),
+            plugins=create_preflight_plugins(self.paths),
         )
         return assemble_verify_context(create_test_runtime(self.paths, run_process=self.runner), demand)
 
@@ -172,23 +186,31 @@ class AssembleVerifyContextTest(unittest.TestCase):
         self.assertEqual(
             document["preflight"],
             [
-                {"name": "ancestry", "verdict": "pass", "findings": []},
-                {"name": "checks", "verdict": "pass", "findings": []},
-                {"name": "corpus", "verdict": "pass", "findings": []},
+                {"name": "ancestry", "result": "ok", "findings": []},
+                {"name": "checks", "result": "ok", "findings": []},
+                {
+                    "name": "corpus",
+                    "result": "ok",
+                    "findings": [],
+                    "commands": [
+                        {"command": "awawa fmt --check .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                        {"command": "awawa lint --strict .", "exit_code": 0, "duration_ms": 0, "output": ""},
+                    ],
+                },
                 {
                     "name": "promotion",
-                    "verdict": "fail",
+                    "result": "fail",
                     "findings": [
                         "@TASK.B1 is STATUS None, not implemented",
                         "@TASK.B1 is delivered by no pull request, not by #160",
                     ],
                 },
-                {"name": "untouched_files", "verdict": "pass", "findings": []},
-                {"name": "privacy", "verdict": "pass", "findings": []},
-                {"name": "body", "verdict": "pass", "findings": []},
+                {"name": "untouched_files", "result": "ok", "findings": []},
+                {"name": "privacy", "result": "ok", "findings": []},
+                {"name": "body", "result": "ok", "findings": []},
                 {
                     "name": "size",
-                    "verdict": "info",
+                    "result": "info",
                     "findings": ["1 files", "1 lines", "1 packages: brigade", "0 layers"],
                 },
             ],

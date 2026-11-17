@@ -116,7 +116,7 @@ class WaveShowExitCodeTest(unittest.TestCase):
 class WaveShowRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = Namespace(wave="tidepool_w16")
+        options = Namespace(wave="tidepool_w16", events=False)
 
         # Act
         request = COMMAND.read_request(options)
@@ -134,7 +134,9 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T7_RUNNING, T7_PR_OPENED, T7_RUN_FINISHED, T7_PR_OPEN])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16"), create_test_runtime(create_test_paths(self.root)))
+        document = COMMAND.run(
+            Namespace(wave="tidepool_w16", events=False), create_test_runtime(create_test_paths(self.root))
+        )
 
         # Assert
         self.assertEqual(
@@ -167,7 +169,9 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T7_PR_OPEN, WAVE_PR_OPENED])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16"), create_test_runtime(create_test_paths(self.root)))
+        document = COMMAND.run(
+            Namespace(wave="tidepool_w16", events=False), create_test_runtime(create_test_paths(self.root))
+        )
 
         # Assert
         self.assertEqual(document["pull_request"], 77)
@@ -177,7 +181,9 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T8_QUEUED, T8_PARKED])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16"), create_test_runtime(create_test_paths(self.root)))
+        document = COMMAND.run(
+            Namespace(wave="tidepool_w16", events=False), create_test_runtime(create_test_paths(self.root))
+        )
 
         # Assert
         self.assertEqual(
@@ -194,7 +200,9 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T8_QUEUED, T8_PARKED, requeued])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16"), create_test_runtime(create_test_paths(self.root)))
+        document = COMMAND.run(
+            Namespace(wave="tidepool_w16", events=False), create_test_runtime(create_test_paths(self.root))
+        )
 
         # Assert
         self.assertEqual(
@@ -211,7 +219,9 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T7_PR_OPEN, rebuilt])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16"), create_test_runtime(create_test_paths(self.root)))
+        document = COMMAND.run(
+            Namespace(wave="tidepool_w16", events=False), create_test_runtime(create_test_paths(self.root))
+        )
 
         # Assert
         self.assertEqual(
@@ -231,7 +241,9 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T7_PR_OPEN, requeued])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16"), create_test_runtime(create_test_paths(self.root)))
+        document = COMMAND.run(
+            Namespace(wave="tidepool_w16", events=False), create_test_runtime(create_test_paths(self.root))
+        )
 
         # Assert
         self.assertEqual(
@@ -244,7 +256,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(Namespace(wave="tidepool_w17"), create_test_runtime(create_test_paths(self.root)))
+            COMMAND.run(Namespace(wave="tidepool_w17", events=False), create_test_runtime(create_test_paths(self.root)))
 
         # Assert
         self.assertEqual(str(raised.exception), "no wave.started names the wave tidepool_w17")
@@ -346,7 +358,7 @@ class WaveShowOfAProjectWithoutAForgeTest(unittest.TestCase):
 
     def _show(self, events: list[dict]) -> dict:
         write_ledger(self.root, events)
-        return COMMAND.run(Namespace(wave="tidepool_w16"), self.runtime)
+        return COMMAND.run(Namespace(wave="tidepool_w16", events=False), self.runtime)
 
     def test_should_print_the_command_merging_the_milestone_of_the_wave_once_its_report_is_committed(self):
         # Act

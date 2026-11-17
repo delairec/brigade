@@ -35,6 +35,6 @@ def compose_brief(parts: BriefParts) -> str:
     if parts.brief is not None:
         sections.append(("Brief", parts.brief))
     sections.append(("Progress file", parts.progress_description))
-    sections.append(("Budget", f"{parts.budget} steps, the cap of your role for this segment."))
+    sections.append(("Budget", f"{parts.budget} turns, the cap of your role for this segment."))
     sections.append(("End of segment", END_OF_SEGMENT))
     return "\n".join(_render_section(title, text) for title, text in sections)

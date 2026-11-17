@@ -100,6 +100,33 @@ class BrigadeTickOnceWhileAnotherTickHoldsTheLockTest(TickTestCase):
         self.assertEqual(list(self.state.iterdir()), [self.state / "locks"])
 
 
+class BrigadeTickOnceWithItsLogFileTest(TickTestCase):
+    def test_should_create_the_directory_of_its_log_file_and_print_nothing(self):
+        # Arrange
+        log_file = Path(self.root.name) / "absent" / "tick.log"
+
+        # Act
+        completed = self.run_tick("--once", "--log-file", str(log_file))
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(log_file.read_text(), "")
+
+    def test_should_append_what_it_writes_on_stderr_to_its_log_file(self):
+        # Arrange
+        self.hold_tick_lock()
+        log_file = self.state / "tick.log"
+        log_file.write_text("an earlier tick\n")
+
+        # Act
+        completed = self.run_tick("--once", "--log-file", str(log_file))
+
+        # Assert
+        self.assertEqual(completed.stderr, "")
+        self.assertEqual(log_file.read_text(), f"an earlier tick\nbrigade tick: another tick holds {self.lock}\n")
+
+
 class BrigadeTickDryRunTest(TickTestCase):
     def test_should_print_the_snapshot_and_the_empty_plan_in_the_versioned_document(self):
         # Act
@@ -121,6 +148,8 @@ class BrigadeTickDryRunTest(TickTestCase):
                     "projects": [],
                     "studies": [],
                     "live_study_runs": [],
+                    "orders": [],
+                    "live_order_runs": [],
                     "study_runs": 2,
                     "rate_limits": [],
                     "milestones": [],
@@ -128,7 +157,7 @@ class BrigadeTickDryRunTest(TickTestCase):
                     "leftovers": [],
                     "kept_branches": [],
                 },
-                "plan": [],
+                "decisions": [],
             },
         )
 
@@ -149,13 +178,15 @@ class BrigadeTickDryRunTest(TickTestCase):
                 "  projects  []",
                 "  studies  []",
                 "  live_study_runs  []",
+                "  orders  []",
+                "  live_order_runs  []",
                 "  study_runs  2",
                 "  rate_limits  []",
                 "  milestones  []",
                 "  integration_branches  []",
                 "  leftovers  []",
                 "  kept_branches  []",
-                "plan",
+                "decisions",
                 "  no action",
             ],
         )

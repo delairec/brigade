@@ -11,9 +11,9 @@ HOME = {
             "wave": "oak_w2",
             "project": "oak",
             "branch": "integration/oak_w2",
-            "last_event": "wave.paused",
+            "last_event": "wave.blocked",
             "tasks": 2,
-            "pause": {"reason": "quota", "resume_at": "2026-10-19T10:00:00Z"},
+            "halt": {"reason": "quota", "resume_at": "2026-10-19T10:00:00Z"},
         },
         {
             "wave": "elm_w1",
@@ -21,7 +21,7 @@ HOME = {
             "branch": "integration/elm_w1",
             "last_event": "wave.started",
             "tasks": 1,
-            "pause": None,
+            "halt": None,
         },
     ],
     "inbox": {"new_signals": 3, "scans": []},
@@ -34,10 +34,11 @@ HOME = {
             "cache_read_input_tokens": 40,
         },
         "runs_without_usage": 1,
-        "paused_waves": [{"wave": "oak_w2", "resume_at": "2026-10-19T10:00:00Z"}],
+        "blocked_waves": [{"wave": "oak_w2", "resume_at": "2026-10-19T10:00:00Z"}],
     },
     "last_tick": None,
     "studies": [{"name": "triage", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True}],
+    "orders": [],
 }
 
 
@@ -54,8 +55,8 @@ class RenderHomeTest(unittest.TestCase):
             '<li>elm, paused <button type="button" data-post="/api/projects/elm/resume">resume</button></li>'
             "</ul></section>"
             "<section><h2>Waves</h2><ul>"
-            '<li><a href="#waves/oak_w2">oak_w2</a> of oak, wave.paused,'
-            " paused on quota until 2026-10-19T10:00:00Z"
+            '<li><a href="#waves/oak_w2">oak_w2</a> of oak, wave.blocked,'
+            " blocked on quota until 2026-10-19T10:00:00Z"
             ' <button type="button" data-post="/api/waves/oak_w2/resume">resume</button></li>'
             '<li><a href="#waves/elm_w1">elm_w1</a> of elm, wave.started</li>'
             "</ul></section>"
@@ -63,9 +64,10 @@ class RenderHomeTest(unittest.TestCase):
             "<section><h2>Quota</h2><p>over the last 5 hours, 1 runs without usage</p><dl>"
             "<dt>input_tokens</dt><dd>10</dd><dt>output_tokens</dt><dd>20</dd>"
             "<dt>cache_creation_input_tokens</dt><dd>30</dd><dt>cache_read_input_tokens</dt><dd>40</dd>"
-            "</dl><ul><li>oak_w2 paused on quota until 2026-10-19T10:00:00Z</li></ul></section>"
+            "</dl><ul><li>oak_w2 blocked on quota until 2026-10-19T10:00:00Z</li></ul></section>"
             "<section><h2>Last tick</h2><p>never</p></section>"
-            "<section><h2>Studies</h2><ul><li>triage, due</li></ul></section>",
+            "<section><h2>Studies</h2><ul><li>triage, due</li></ul></section>"
+            "<section><h2>Orders</h2><ul></ul></section>",
         )
 
     def test_should_render_the_last_tick_and_a_parked_study(self):
@@ -84,6 +86,32 @@ class RenderHomeTest(unittest.TestCase):
         # Assert
         self.assertIn("<section><h2>Last tick</h2><p>2026-10-19T08:55:00Z, 2 actions applied in 120 ms</p>", fragment)
         self.assertIn("<section><h2>Studies</h2><ul><li>debt, parked</li></ul></section>", fragment)
+
+    def test_should_render_a_parked_order_with_the_step_and_the_reason_that_parked_it(self):
+        # Arrange
+        home = {
+            **HOME,
+            "orders": [
+                {
+                    "name": "nightly",
+                    "recipe": "usage-report",
+                    "project": "oak",
+                    "run": "20261019T081500Z-n1",
+                    "step": "1-gate",
+                    "reason": "the gate <step> failed",
+                }
+            ],
+        }
+
+        # Act
+        fragment = render_home(home)
+
+        # Assert
+        self.assertIn(
+            "<section><h2>Orders</h2><ul><li>nightly of oak, parked at 1-gate: the gate &lt;step&gt; failed</li></ul>"
+            "</section>",
+            fragment,
+        )
 
     def test_should_render_each_scan_holding_new_signals_with_their_count_and_the_age_of_the_oldest(self):
         # Arrange
@@ -110,7 +138,7 @@ class RenderHomeTest(unittest.TestCase):
             fragment,
         )
 
-    def test_should_render_a_wave_paused_until_further_notice_without_a_resume_time(self):
+    def test_should_render_a_wave_parked_until_further_notice_without_a_resume_time(self):
         # Arrange
         document = {
             **HOME,
@@ -119,9 +147,9 @@ class RenderHomeTest(unittest.TestCase):
                     "wave": "elm_w1",
                     "project": "elm",
                     "branch": "integration/elm_w1",
-                    "last_event": "wave.paused",
+                    "last_event": "wave.parked",
                     "tasks": 1,
-                    "pause": {"reason": "forge_account", "resume_at": None},
+                    "halt": {"reason": "forge_account", "resume_at": None},
                 }
             ],
         }
@@ -131,7 +159,7 @@ class RenderHomeTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            '<li><a href="#waves/elm_w1">elm_w1</a> of elm, wave.paused, paused on forge_account'
+            '<li><a href="#waves/elm_w1">elm_w1</a> of elm, wave.parked, parked on forge_account'
             ' <button type="button" data-post="/api/waves/elm_w1/resume">resume</button></li>',
             fragment,
         )
@@ -144,7 +172,7 @@ class RenderHomeTest(unittest.TestCase):
             "projects": [{"name": markup, "paused": False}],
             "waves": [{**HOME["waves"][0], "wave": markup, "project": markup, "last_event": markup}],
             "inbox": {"new_signals": 1, "scans": [{"study": markup, "signals": 1, "oldest_age_s": 60}]},
-            "quota": {**HOME["quota"], "usage": NO_USAGE, "paused_waves": [{"wave": markup, "resume_at": markup}]},
+            "quota": {**HOME["quota"], "usage": NO_USAGE, "blocked_waves": [{"wave": markup, "resume_at": markup}]},
             "studies": [{**HOME["studies"][0], "name": markup}],
         }
 

@@ -193,7 +193,7 @@ class ListCandidateWavesOfATaskParkedOnAQuestionTest(ListCandidateWavesTestCase)
         # Assert
         self.assertEqual(
             stderr,
-            "brigade tick: @TASK.S3 is held since the wave shop_w3: it waits for an answer to: Which forge?\n",
+            "brigade tick: @TASK.S3 is parked since the wave shop_w3: it waits for an answer to: Which forge?\n",
         )
 
     def test_should_admit_again_the_task_once_its_entity_differs_from_the_one_its_run_read(self):

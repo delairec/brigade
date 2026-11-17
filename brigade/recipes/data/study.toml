@@ -1,0 +1,10 @@
+schema_version = 1
+name = "study"
+description = "a study: a collect step for each COLLECTOR line of its STUDY, its judging run, its answer"
+params = ["collector", "slot", "answer", "output"]
+max_wall = 1440
+steps = [
+    { kind = "collect", collector = "{collector}" },
+    { kind = "judge", slot = "{slot}", procedure = "study", answer = "{answer}" },
+    { kind = "output", output = "{output}" },
+]

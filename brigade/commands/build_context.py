@@ -1,0 +1,87 @@
+import argparse
+from pathlib import Path
+
+from brigade.command import Argument, Command
+from brigade.commands._read_attribution import read_attribution
+from brigade.commands._read_forge_environment import ForgeSlot, read_forge_environment
+from brigade.registry.read_project_forge import read_project_forge
+from brigade.runtime import Runtime
+from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
+from brigade.system.write_text_atomically import write_text_atomically
+from brigade.tasks.assemble_task_context import TaskContextDemand, assemble_task_context
+from brigade.tasks.locate_task_worktree import locate_task_worktree
+
+DOCUMENT_SCHEMA_VERSION = 1
+PACKAGE_FILE = "context.md"
+HEAVY_MARK = "  (left to CI)"
+
+
+def _render_lines(lines: list[str]) -> str:
+    return "".join(f"{line}\n" for line in lines)
+
+
+def _render_commands(entries: list[dict]) -> str:
+    return "".join(
+        f"$ {entry['command']}\nexit {entry['exit_code']}\n{entry['stderr']}{entry['output']}" for entry in entries
+    )
+
+
+def _render_worktree(worktree: dict) -> str:
+    ancestry = worktree["ancestry"]
+    setup = worktree["setup"] or ""
+    return f"# worktree\n$ {ancestry['command']}\nexit {ancestry['exit_code']}\n{setup}"
+
+
+def _render_reserved(reserved: dict) -> str:
+    temporary_directory = reserved["temporary_directory"]
+    return _render_lines(
+        [
+            "# reserved",
+            f"task number {reserved['task_number']}",
+            *reserved["attribution"],
+            *([] if temporary_directory is None else [f"temporary directory {temporary_directory}"]),
+        ]
+    )
+
+
+def _render_text(document: dict) -> str:
+    acceptance = document["acceptance"]
+    sections = [
+        _render_worktree(document["worktree"]),
+        f"# task\n{_render_commands(document['task'])}",
+        *([] if document["rules"] is None else [f"# rules\n{_render_commands(document['rules'])}"]),
+        *([] if document["project"] is None else [f"# project\n{document['project']}"]),
+        _render_lines(
+            ["# acceptance", *acceptance["acceptance"], *(f"{command}{HEAVY_MARK}" for command in acceptance["heavy"])]
+        ),
+        _render_reserved(document["reserved"]),
+        _render_lines(["# when done", *document["when_done"]]),
+    ]
+    return "\n".join(sections).removesuffix("\n")
+
+
+def build_context(request: argparse.Namespace, runtime: Runtime) -> dict:
+    configuration = read_configuration(runtime, CONFIGURATION_REQUIRED)
+    worktree = locate_task_worktree(runtime, Path.cwd(), request.task)
+    demand = TaskContextDemand(
+        configuration=configuration,
+        worktree=worktree,
+        attribution=read_attribution(configuration, runtime),
+        read_environment=lambda key: read_forge_environment(
+            configuration, ForgeSlot(read_project_forge(worktree.project), key), runtime
+        ),
+    )
+    document = {"schema_version": DOCUMENT_SCHEMA_VERSION, **assemble_task_context(runtime, demand)}
+    if runtime.paths.run_directory is not None:
+        write_text_atomically(runtime.paths.run_directory / PACKAGE_FILE, f"{_render_text(document)}\n")
+    return document
+
+
+COMMAND = Command(
+    path=("build", "context"),
+    help="print the starting context of a build run in the worktree of its task",
+    group_help="work on a task of a wave from its worktree",
+    arguments=(Argument(("task",), {"nargs": "?"}),),
+    run=build_context,
+    render_text=_render_text,
+)

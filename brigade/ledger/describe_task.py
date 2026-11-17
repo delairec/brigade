@@ -8,13 +8,13 @@ from brigade.ledger.sum_reported import sum_reported
 
 
 def _present_run(run: FinishedRun) -> dict:
-    steps = run.main_steps
+    steps = run.main_turns
     return {
         "run": run.run,
         "finished_at": format_instant(run.finished_at),
         "slot": run.last.slot,
         "outcome": run.last.outcome,
-        "steps": steps.value,
+        "turns": steps.value,
         "partial": steps.partial,
         "duration_ms": sum_reported(segment.duration_ms for segment in run.segments),
         "cost_usd": sum_reported(segment.cost_usd for segment in run.segments),

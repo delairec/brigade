@@ -12,7 +12,7 @@ PROCEDURE = "---\ncapabilities: read, write, shell\n---\nDeliver the task the br
 DONE_RESULT = {
     "schema_version": 1,
     "outcome": "done",
-    "steps": 12,
+    "turns": 12,
     "usage": {
         "input_tokens": 120,
         "output_tokens": 3400,
@@ -26,7 +26,7 @@ DONE_RESULT = {
     "reset": None,
     "message": None,
 }
-COUNTING_CLIENT = 'features = "step_count,tool_grants"\n'
+COUNTING_CLIENT = 'features = "turn_count,tool_grants"\n'
 FILE_WAIT_S = 20.0
 FILE_POLL_S = 0.05
 NO_SIGNAL = 0
@@ -59,7 +59,7 @@ class RunTestCase(FileWaitingTestCase):
         self.hold = root / "hold"
 
     def configure_fake(self, settings: str = "", keys: str = "", document: str | None = "markdown") -> None:
-        document_key = "" if document is None else f'document = "{document}"\n'
+        document_key = "" if document is None else f'progress_form = "{document}"\n'
         self.machine.write_configuration(
             f'client = "fake"\n{document_key}{keys}[clients.fake]\nrecordings = "{self.recordings}"\n{settings}'
         )
@@ -101,7 +101,7 @@ class RunTestCase(FileWaitingTestCase):
         return started
 
     def list_the_runs(self) -> list:
-        return json.loads(self.run_brigade("runs", "list", "--json").stdout)["runs"]
+        return json.loads(self.run_brigade("run", "list", "--json").stdout)["runs"]
 
     def read_run_pid(self, run_id: str) -> int:
         pid, _start_time, _boot_id = (self.runs / run_id / "pid").read_text().split()

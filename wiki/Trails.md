@@ -1,13 +1,13 @@
-Where the record of every subprocess brigade starts is kept, how long, and how to read it with `brigade processes` or
+Where the record of every subprocess brigade starts is kept, how long, and how to read it with `brigade process` or
 `--verbose`.
 
 ## Reading the trails
 
-The trails are read through `brigade processes`, never searched by hand:
+The trails are read through `brigade process`, never searched by hand:
 
 ```
-brigade processes list [--json]                  # every run, tick and command: kind, id, instant, processes, failed
-brigade processes show <id> [--failed] [--json]  # the records of one run, tick or command, as written
+brigade process list [--json]                  # every run, tick and command: kind, id, instant, processes, failed
+brigade process show <id> [--failed] [--json]  # the records of one run, tick or command, as written
 ```
 
 `show` prints one line per record, `<outcome>  <exit code, else duration, else ->  <argv>`, and under a failed process
@@ -24,7 +24,7 @@ writes them, stdout keeping the document alone:
 
 ```
 brigade run: ran claude --print --output-format stream-json --verbose, exit 0 in 41250 ms
-brigade run: ran /usr/bin/python3 /opt/brigade/bin/brigade run deliver --run-id 20261007T120000Z-48201, spawned pid 48213
+brigade run: ran /usr/bin/python3 /opt/brigade/bin/brigade run start deliver --run-id 20261007T120000Z-48201, spawned pid 48213
 brigade scheduler status: ran crontab -l, not on PATH
 ```
 
@@ -37,11 +37,11 @@ exit code.
 |---------------------|-------------------------------------------------------------|
 | `brigade run`       | `$XDG_STATE_HOME/brigade/runs/<run id>/processes.jsonl`     |
 | a tick, each round of `tick --loop` included | `$XDG_STATE_HOME/brigade/ticks/<instant>.jsonl` |
-| any other command   | `$XDG_STATE_HOME/brigade/commands/<instant>-<command>.jsonl` |
+| any other command   | `$XDG_STATE_HOME/brigade/processes/<instant>-<command>.jsonl` |
 
 `<instant>` is the UTC compact form, `20261007T120000Z`, of the instant the command or the tick read.
 
-> **Watch out:** the trails of `ticks/` and `commands/` are removed after `trail_days` of `config.toml`, 7 by default;
+> **Watch out:** the trails of `ticks/` and `processes/` are removed after `trail_days` of `config.toml`, 7 by default;
 > the trail of a run goes with its run, removed beyond `runs_kept` as [Runs](Runs.md) says.
 
 ## Details and edge cases

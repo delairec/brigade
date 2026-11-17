@@ -9,6 +9,7 @@ from brigade.runs.ask_progress import ask_progress
 from brigade.runs.compose_brief import BriefParts, compose_brief
 from brigade.runs.count_session_steps import SessionSteps, count_session_steps
 from brigade.runs.decide_stop_at import decide_stop_at
+from brigade.runs.describe_stop_hook import describe_stop_hook
 from brigade.runs.locate_first_edit import FirstEdit, locate_first_edit
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.run_locations import (
@@ -194,13 +195,15 @@ def _record_ending_before_launch(number: int, ending: Ending, session_id: str | 
 def _describe_launch(plan: RunPlan, number: int, runtime: Runtime, brief: str) -> LaunchArgvRequest | ResumeArgvRequest:
     resumes_session = number == plan.first_segment and plan.resumed_session is not None
     request = ResumeArgvRequest if resumes_session else LaunchArgvRequest
+    stop_at = decide_stop_at(runtime.read_clock(), plan.wall_limit_s, plan.configuration.soft_limit_margin_s)
     return request(
         worktree=str(plan.worktree),
         brief=brief,
         role=_describe_role(plan),
         progress_file=str(plan.progress_file),
         session_id=plan.resumed_session if resumes_session else str(uuid.uuid4()),
-        stop_at=decide_stop_at(runtime.read_clock(), plan.wall_limit_s, plan.configuration.soft_limit_margin_s),
+        stop_at=stop_at,
+        stop_hook=describe_stop_hook(runtime.entry_point, stop_at),
     )
 
 
@@ -244,7 +247,7 @@ def _follow_client(context: SegmentContext, request: SpawnRequest, stop: StopSig
     process = runtime.spawn_process(request)
     journal = SegmentJournalWriter(plan, context.number, runtime, context.directory / STDOUT_FILE)
     limit = WallLimit(
-        limit_s=plan.wall_limit_s, grace_before_kill_s=GRACE_BEFORE_KILL_S, poll_s=plan.configuration.journal_poll_s
+        limit_s=plan.wall_limit_s, grace_before_kill_s=GRACE_BEFORE_KILL_S, poll_s=plan.configuration.log_poll_s
     )
     exit_code, outcome = _wait_for_client(process, limit, journal.write_complete_lines, stop)
     measured_ms = round((runtime.read_monotonic() - started) * 1000)
@@ -300,7 +303,7 @@ def _describe_answer(
         number=context.number,
         outcome=TURN_LIMIT if answer.error_class == TURN_LIMIT else answer.outcome,
         session_id=session_id,
-        client_steps=answer.steps,
+        client_steps=answer.turns,
         usage=answer.usage,
         error_class=answer.error_class,
         reset=answer.reset,

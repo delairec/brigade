@@ -29,9 +29,6 @@ def _create_request(path: Path, **options) -> argparse.Namespace:
     return argparse.Namespace(
         path=str(path),
         name=options.get("name"),
-        acceptance=["python3 -m unittest"],
-        heavy=[],
-        setup=[],
         force=options.get("force", False),
         init_corpus=options.get("init_corpus", False),
         corpus=options.get("corpus"),
@@ -84,16 +81,14 @@ class ProjectAddTest(unittest.TestCase):
                 "project": {
                     "name": "app",
                     "fields": [
-                        {"name": "PATH", "value": str(self.repository), "guessed": False},
-                        {"name": "REMOTE", "value": "acme/app", "guessed": False},
-                        {"name": "MAIN", "value": "main", "guessed": False},
-                        {"name": "CORPUS", "value": "corpus", "guessed": False},
-                        {"name": "ACCEPTANCE", "value": "python3 -m unittest", "guessed": False},
-                        {"name": "FORGE", "value": "github", "guessed": False},
-                        {"name": "STATUS", "value": "active", "guessed": False},
+                        {"name": "PATH", "value": str(self.repository)},
+                        {"name": "REMOTE", "value": "acme/app"},
+                        {"name": "MAIN", "value": "main"},
+                        {"name": "CORPUS", "value": "corpus"},
+                        {"name": "FORGE", "value": "github"},
+                        {"name": "STATUS", "value": "active"},
                     ],
                 },
-                "configurations": [],
                 "installed_corpus": None,
             },
         )
@@ -109,7 +104,7 @@ class ProjectAddTest(unittest.TestCase):
         self.assertEqual(
             self.registry.read_text(),
             f'PROJECT tidepool\n\tPATH "{self.repository}"\n\tREMOTE "acme/app"\n\tMAIN "main"\n\tCORPUS "corpus"\n'
-            '\tACCEPTANCE "python3 -m unittest"\n\tFORGE "github"\n\tSTATUS active\n',
+            '\tFORGE "github"\n\tSTATUS active\n',
         )
 
     def test_should_replace_the_project_of_the_same_name_when_forced(self):
@@ -127,7 +122,7 @@ class ProjectAddTest(unittest.TestCase):
         self.assertEqual(
             self.registry.read_text(),
             f'PROJECT lib\n\tPATH "/srv/lib"\n\tSTATUS active\n\nPROJECT app\n\tPATH "{self.repository}"\n'
-            '\tREMOTE "acme/app"\n\tMAIN "main"\n\tCORPUS "corpus"\n\tACCEPTANCE "python3 -m unittest"\n'
+            '\tREMOTE "acme/app"\n\tMAIN "main"\n\tCORPUS "corpus"\n'
             '\tFORGE "github"\n\tSTATUS active\n',
         )
 
@@ -186,35 +181,25 @@ class ProjectAddTest(unittest.TestCase):
         # Assert
         self.assertEqual(str(refusal.exception), f"{absent} is not a git repository")
 
-    def test_should_guess_the_commands_no_flag_gives_and_take_the_others_as_given(self):
+    def test_should_write_no_command_of_a_project_whose_configuration_names_scripts(self):
         # Arrange
         (self.repository / "package.json").write_text('{"scripts": {"test": "vitest", "lint": "eslint ."}}')
         (self.repository / "package-lock.json").write_text("{}")
-        no_acceptance_given = []
-        request = argparse.Namespace(
-            path=str(self.repository),
-            name=None,
-            acceptance=no_acceptance_given,
-            heavy=["make e2e"],
-            setup=["make deps", "make tools"],
-            force=False,
-            init_corpus=False,
-            corpus=None,
-            corpus_mode="control",
-        )
+        request = _create_request(self.repository, corpus_mode="control")
 
         # Act
         document = project_add(request, self.runtime)
 
         # Assert
         self.assertEqual(
-            document["project"]["fields"][4:9],
+            document["project"]["fields"],
             [
-                {"name": "ACCEPTANCE", "value": "npm run test", "guessed": True},
-                {"name": "ACCEPTANCE", "value": "npm run lint", "guessed": True},
-                {"name": "HEAVY", "value": "make e2e", "guessed": False},
-                {"name": "SETUP", "value": "make deps", "guessed": False},
-                {"name": "SETUP", "value": "make tools", "guessed": False},
+                {"name": "PATH", "value": str(self.repository)},
+                {"name": "REMOTE", "value": "acme/app"},
+                {"name": "MAIN", "value": "main"},
+                {"name": "CORPUS", "value": "corpus"},
+                {"name": "FORGE", "value": "github"},
+                {"name": "STATUS", "value": "active"},
             ],
         )
 
@@ -244,37 +229,14 @@ class ProjectAddExitCodeTest(unittest.TestCase):
 
 
 class ProjectAddTextTest(unittest.TestCase):
-    def test_should_mark_the_guessed_fields_and_say_no_configuration_was_found(self):
-        # Arrange
-        document = {
-            "action": "added",
-            "project": {
-                "name": "app",
-                "fields": [
-                    {"name": "PATH", "value": "/srv/app", "guessed": False},
-                    {"name": "ACCEPTANCE", "value": "make test", "guessed": True},
-                ],
-            },
-            "configurations": [],
-            "installed_corpus": None,
-        }
-
-        # Act
-        text = COMMAND.render_text(document)
-
-        # Assert
-        self.assertEqual(
-            text,
-            "added @PROJECT.app\nPATH        /srv/app\nACCEPTANCE  make test  (guessed)\n"
-            "no supported configuration was found",
-        )
-
-    def test_should_say_nothing_more_when_a_configuration_was_found(self):
+    def test_should_print_the_action_and_the_fields_of_the_project(self):
         # Arrange
         document = {
             "action": "replaced",
-            "project": {"name": "app", "fields": [{"name": "PATH", "value": "/srv/app", "guessed": False}]},
-            "configurations": ["Makefile"],
+            "project": {
+                "name": "app",
+                "fields": [{"name": "PATH", "value": "/srv/app"}, {"name": "MAIN", "value": "main"}],
+            },
             "installed_corpus": None,
         }
 
@@ -282,7 +244,7 @@ class ProjectAddTextTest(unittest.TestCase):
         text = COMMAND.render_text(document)
 
         # Assert
-        self.assertEqual(text, "replaced @PROJECT.app\nPATH        /srv/app")
+        self.assertEqual(text, "replaced @PROJECT.app\nPATH        /srv/app\nMAIN        main")
 
 
 class ProjectAddInstalledCorpusTextTest(unittest.TestCase):
@@ -296,7 +258,6 @@ class ProjectAddInstalledCorpusTextTest(unittest.TestCase):
                 document = {
                     "action": "added",
                     "project": {"name": "app", "fields": []},
-                    "configurations": ["Makefile"],
                     "installed_corpus": {"branch": "corpus", **delivery},
                 }
 
@@ -354,7 +315,7 @@ class ProjectAddInitCorpusTest(unittest.TestCase):
         self.assertEqual(
             self.registry.read_text(),
             f'PROJECT app\n\tPATH "{self.repository}"\n\tREMOTE "acme/app"\n\tMAIN "main"\n\tCORPUS "corpus"\n'
-            '\tACCEPTANCE "python3 -m unittest"\n\tFORGE "none"\n\tSTATUS active\n',
+            '\tFORGE "none"\n\tSTATUS active\n',
         )
 
     def test_should_report_the_branch_and_the_merge_command_on_no_forge(self):
@@ -398,9 +359,7 @@ class ProjectAddInitCorpusTest(unittest.TestCase):
                 document = project_add(request, self.runtime)
 
                 # Assert
-                self.assertEqual(
-                    document["project"]["fields"][3], {"name": "CORPUS", "value": registered, "guessed": False}
-                )
+                self.assertEqual(document["project"]["fields"][3], {"name": "CORPUS", "value": registered})
                 schema = self.paths.cache_root / "corpus-installs" / "app" / registered / "_schema.awawa"
                 self.assertTrue(schema.is_file(), schema)
 
@@ -506,7 +465,7 @@ class ProjectAddOnATrackedCorpusTest(unittest.TestCase):
         return project_add(request, runtime)
 
     def assert_registered_field(self, document: dict, name: str, value: str) -> None:
-        self.assertIn({"name": name, "value": value, "guessed": False}, document["project"]["fields"])
+        self.assertIn({"name": name, "value": value}, document["project"]["fields"])
 
     def test_should_exit_2_naming_the_option_when_no_terminal_can_answer(self):
         # Arrange
@@ -528,7 +487,7 @@ class ProjectAddOnATrackedCorpusTest(unittest.TestCase):
 
         # Assert
         self.assert_registered_field(document, "CORPUS", "specs")
-        self.assertNotIn({"name": "MODE", "value": "control", "guessed": False}, document["project"]["fields"])
+        self.assertNotIn({"name": "MODE", "value": "control"}, document["project"]["fields"])
         self.assertIsNone(document["installed_corpus"])
 
     def test_should_confine_brigade_to_its_own_folder_when_the_option_says_area(self):
@@ -693,12 +652,11 @@ class ProjectAddWithoutATrackedCorpusTest(unittest.TestCase):
         self.assertEqual(
             document["project"]["fields"],
             [
-                {"name": "PATH", "value": str(self.repository), "guessed": False},
-                {"name": "REMOTE", "value": "acme/app", "guessed": False},
-                {"name": "MAIN", "value": "main", "guessed": False},
-                {"name": "ACCEPTANCE", "value": "python3 -m unittest", "guessed": False},
-                {"name": "FORGE", "value": "none", "guessed": False},
-                {"name": "STATUS", "value": "active", "guessed": False},
+                {"name": "PATH", "value": str(self.repository)},
+                {"name": "REMOTE", "value": "acme/app"},
+                {"name": "MAIN", "value": "main"},
+                {"name": "FORGE", "value": "none"},
+                {"name": "STATUS", "value": "active"},
             ],
         )
 
@@ -730,4 +688,4 @@ class ProjectAddBeforeInitTest(unittest.TestCase):
             project_add(request, self.runtime)
 
         # Assert
-        self.assertEqual(str(refusal.exception), "the operational corpus is missing; run brigade init first")
+        self.assertEqual(str(refusal.exception), "the registry is missing; run brigade init first")

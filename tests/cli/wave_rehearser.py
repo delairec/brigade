@@ -7,10 +7,11 @@ import unittest
 from pathlib import Path
 
 from tests.cli.read_ledger_events import read_ledger_events
+from tests.cli.recipe_schema import RECIPE_SCHEMA
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, FILE_POLL_S, FILE_WAIT_S
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, REPOSITORY_ROOT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
-from tests.cli.test_collect import install_executable
+from tests.cli.test_collector_run import install_executable
 
 FORGE = REPOSITORY_ROOT / "tests" / "cli" / "fixtures" / "executables" / "github-over-a-bare-remote"
 REMOTE_URL = "https://github.com/sandbox/shop.git"
@@ -29,7 +30,9 @@ SANDBOX_SCHEMA = (
     '\tDESC "the tasks planned for one request"\n'
     "\tFIELD TITLE string\n\t\tREQUIRED\n"
     "\tFIELD STATUS planned|active|reached\n\t\tREQUIRED\n"
+    f"{RECIPE_SCHEMA}"
 )
+SANDBOX_RECIPES = 'RECIPE acceptance\n\tSCHEMA_VERSION 1\n\tMAX_WALL 10\n\tSTEP command\n\t\tARGV "true"\n'
 SANDBOX_TASKS = 'TASK S0\n\tTITLE "Show the cart"\n\tSTATUS implemented\n\tTYPE feat\n'
 PLAN = (
     'MILESTONE M1\n\tTITLE "Empty cart"\n\tSTATUS active\n\n'
@@ -51,13 +54,13 @@ BUILDER_PLAY = (
     READ_THE_BRIEF + AWAIT_THE_RELEASE + 'task=$(read_argument task | sed "s/^@TASK\\.//")\n'
     'printf \'%s\\n\' "$task" > "delivered-$task.txt"\n'
     'git add -- "delivered-$task.txt" && git commit --quiet -m "feat: deliver $task" >&2\n'
-    'brigade task check >&2 && brigade task pr --subject "deliver $task" >&2 && brigade task promote >&2\n'
+    'brigade build check >&2 && brigade build pr --subject "deliver $task" >&2 && brigade build promote >&2\n'
     'cat -- "$1"\n'
 )
 REVIEWER_PLAY = (
     READ_THE_BRIEF + AWAIT_THE_RELEASE + 'verdict="$BRIGADE_RUN_DIR/verdict.json"\n'
     'printf \'{"head": "%s", "verdict": "pass", "findings": []}\\n\' "$(git rev-parse HEAD)" > "$verdict"\n'
-    'brigade verify verdict "$(read_argument pr)" --file "$verdict" >&2\n'
+    'brigade review verdict "$(read_argument pr)" --file "$verdict" >&2\n'
     'cat -- "$1"\n'
 )
 REPORTER_PLAY = (
@@ -118,6 +121,7 @@ class WaveRehearser:
         self.project.run_git("init", "--quiet", "--bare", "--initial-branch=main", str(self.remote))
         self.project.write("corpus/_schema.awawa", SANDBOX_SCHEMA)
         self.project.write("corpus/tasks.awawa", SANDBOX_TASKS)
+        self.project.write("corpus/recipes.awawa", SANDBOX_RECIPES)
         self.project.track("corpus")
         self.project.run_git("commit", "--quiet", "-m", "the corpus of the sandbox")
         self.project.run_git("config", f"url.{self.remote}.insteadOf", REMOTE_URL)
@@ -139,7 +143,7 @@ class WaveRehearser:
         )
 
     def register_sandbox(self) -> None:
-        self.run_brigade("project", "add", str(self.project.path), "--corpus-mode", "control", "--acceptance", "true")
+        self.run_brigade("project", "add", str(self.project.path), "--corpus-mode", "control")
         projects = self.machine.corpus / "projects.awawa"
         projects.write_text(projects.read_text().replace('\tFORGE "none"\n', '\tFORGE "github"\n\tCHECK_RUNS none\n'))
 

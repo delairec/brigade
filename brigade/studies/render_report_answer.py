@@ -19,7 +19,7 @@ def _read_items(collected: list[dict], collector: str) -> list:
         item
         for entry in collected
         if entry["collector"] == collector
-        for item in json.loads(Path(entry["document"]).read_text(encoding="utf-8"))["items"]
+        for item in json.loads(Path(entry["collection"]).read_text(encoding="utf-8"))["items"]
     ]
 
 

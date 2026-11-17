@@ -14,13 +14,13 @@ FORGELESS_BUILDER_PLAY = (
     'printf \'%s\\n\' "$task" > "delivered-$task.txt"\n'
     "grep -rl 'STATUS todo' corpus | xargs sed -i 's/STATUS todo/STATUS implemented/'\n"
     'git add -- "delivered-$task.txt" corpus && git commit --quiet -m "feat: deliver $task" >&2\n'
-    "brigade task check >&2\n"
+    "brigade build check >&2\n"
     'cat -- "$1"\n'
 )
 FORGELESS_REVIEWER_PLAY = (
     READ_THE_BRIEF + AWAIT_THE_RELEASE + 'verdict="$BRIGADE_RUN_DIR/verdict.json"\n'
     'printf \'{"head": "%s", "verdict": "pass", "findings": []}\\n\' "$(git rev-parse HEAD)" > "$verdict"\n'
-    'brigade verify verdict --file "$verdict" >&2\n'
+    'brigade review verdict --file "$verdict" >&2\n'
     'cat -- "$1"\n'
 )
 
@@ -41,7 +41,7 @@ class ForgelessWaveRehearser(WaveRehearser):
         return (plays / "planner").read_text().split("<<'PLAN'\n", 1)[1].split("PLAN\n", 1)[0]
 
     def register_sandbox(self):
-        self.run_brigade("project", "add", str(self.project.path), "--corpus-mode", "control", "--acceptance", "true")
+        self.run_brigade("project", "add", str(self.project.path), "--corpus-mode", "control")
 
     def is_milestone_reported(self) -> bool:
         events = self.read_events()
