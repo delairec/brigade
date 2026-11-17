@@ -44,8 +44,9 @@ from brigade.ledger.task_reported import TaskReported
 from brigade.ledger.task_state import QUOTA_RESUME_REASON, TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.tick_action_failed import TickActionFailed
+from brigade.ledger.wave_blocked import WaveBlocked
 from brigade.ledger.wave_closed import WaveClosed
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.orders.convert_order import Order
 from brigade.orders.detach_order_run import detach_order_run
@@ -766,13 +767,17 @@ def _park_task(runtime: Runtime, action: ParkTask) -> None:
     )
 
 
+def _halt_wave(action: PauseWave) -> WaveParked | WaveBlocked:
+    if action.resume_at is None:
+        return WaveParked(wave=action.wave, reason=action.reason)
+    return WaveBlocked(wave=action.wave, reason=action.reason, resume_at=action.resume_at)
+
+
 def _pause_wave(runtime: Runtime, action: PauseWave) -> None:
-    append_event(
-        runtime.paths, runtime.now, WavePaused(wave=action.wave, reason=action.reason, resume_at=action.resume_at)
-    )
+    append_event(runtime.paths, runtime.now, _halt_wave(action))
     if action.reason == CLIENT_LOGIN_REASON:
         sys.stderr.write(
-            f"brigade tick: the wave {action.wave} paused: the login of its AI client is lost;"
+            f"brigade tick: the wave {action.wave} parked: the login of its AI client is lost;"
             f" sign in to the client again, then run brigade wave resume {action.wave}\n"
         )
 

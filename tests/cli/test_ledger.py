@@ -12,7 +12,7 @@ WAVE_SEPTEMBER_LINES = (
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "failed",'
     ' "error_class": "rate_limit", "main_turns": 50, "total_turns": null}\n'
-    '{"schema_version": 1, "ts": "2026-09-30T22:15:00Z", "event": "wave.paused", "wave": "tidepool_w16", "reason": "quota", "resume_at": null}\n'
+    '{"schema_version": 1, "ts": "2026-09-30T22:15:00Z", "event": "wave.parked", "wave": "tidepool_w16", "reason": "quota"}\n'
 )
 WAVE_OCTOBER_LINES = (
     '{"schema_version": 1, "ts": "2026-10-01T00:15:00Z", "event": "wave.resumed", "wave": "tidepool_w16", "reason": "quota"}\n'
@@ -179,7 +179,7 @@ class BrigadeLedgerOverviewTest(LedgerTestCase):
                 "  pr.merged     1",
                 "  run.finished  5",
                 "  task.parked   1",
-                "  wave.paused   1",
+                "  wave.parked   1",
                 "  wave.resumed  1",
                 "  wave.started  1",
                 "runs finished: 4, done 4",

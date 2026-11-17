@@ -35,10 +35,11 @@ from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.tick_action_failed import TickActionFailed
 from brigade.ledger.undeclared_event import UndeclaredEvent
+from brigade.ledger.wave_blocked import WaveBlocked
 from brigade.ledger.wave_cancelled import WaveCancelled
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_merged import WaveMerged
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_pr_opened import WavePrOpened
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
@@ -58,7 +59,8 @@ DECLARED_EVENTS = {
     for kind in (
         RunFinished,
         WaveStarted,
-        WavePaused,
+        WaveParked,
+        WaveBlocked,
         WaveResumed,
         WaveReported,
         WavePrOpened,
@@ -105,7 +107,8 @@ DECLARED_EVENTS = {
 LedgerEvent = (
     RunFinished
     | WaveStarted
-    | WavePaused
+    | WaveParked
+    | WaveBlocked
     | WaveResumed
     | WaveReported
     | WavePrOpened

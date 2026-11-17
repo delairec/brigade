@@ -7859,3 +7859,23 @@ DECISION TheTaskStatesVerifyingAndVerifiedAndThePackageBrigadeVerifyKeepTheirNam
 		REF @TASK.B255
 	RATIONALE "the public vocabulary alone is renamed, the names of the code keeping theirs"
 		REF @DECISION.AWordOfBrigadeCarriesOneSenseAndBorrowedSensesKeepTheirs
+
+DECISION AWaveStoppedByBrigadeIsParkedOrBlockedAndNeverPaused
+	TITLE "the event wave.paused is split: the tick records wave.blocked, with its resume_at, when"
+		+ "a wave waits on the quota reset, and wave.parked, with no resume_at, when it awaits the"
+		+ "user (the forge account, the client login, a blocked run, the preflight findings); the"
+		+ "public keys that held both name them halts: halt and halted_waves, halts, halted_at and"
+		+ "halted_ms, blocked_waves for the waves blocked on the quota"
+	STATUS active
+	REJECTED "one event wave.halted carrying a state field: two kinds of event say the one sense of"
+		+ "each word in the ledger itself, as task.parked does"
+	REJECTED "a wave.paused already recorded read as a parked or blocked wave: no old name is read"
+		+ "as an alias, a wave.paused is an undeclared event and the next tick halts the wave again"
+		+ "if its cause still holds"
+	REJECTED "the tick action PauseWave and the snapshot field pause renamed: names of the code,"
+		+ "not of the public vocabulary"
+	SOURCE "the build run of @TASK.B255, SPEC 6"
+		REF @TASK.B255
+	RATIONALE "no command pauses a wave: every wave.paused was brigade's, so paused, the suspension"
+		+ "by the user, departed from its sense"
+		REF @DECISION.AWordOfBrigadeCarriesOneSenseAndBorrowedSensesKeepTheirs

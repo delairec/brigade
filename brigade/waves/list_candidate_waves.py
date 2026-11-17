@@ -31,7 +31,7 @@ def _compose_candidate_wave(
     held = list_held_tasks(reading.entries, reading.project.name, tasks)
     for hold in held:
         sys.stderr.write(
-            f"brigade tick: @TASK.{hold.task} is held since the wave {hold.wave}:"
+            f"brigade tick: @TASK.{hold.task} is parked since the wave {hold.wave}:"
             f" it waits for an answer to: {hold.question}\n"
         )
     unavailable_tasks = {**open_tasks, **{hold.task: hold.wave for hold in held}}

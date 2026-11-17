@@ -357,7 +357,7 @@ INBOX_HOLDING_A_NOTE_AND_A_PATTERN = (
 HOME = (
     '{"schema_version": 1, "projects": [{"name": "oak", "paused": false}], "waves": [], "inbox": {"new_signals": 0, "scans": []},'
     ' "quota": {"window_hours": 5, "usage": {"input_tokens": 0, "output_tokens": 0, "cache_creation_input_tokens": 0,'
-    ' "cache_read_input_tokens": 0}, "runs_without_usage": 0, "paused_waves": []}, "last_tick": null, "studies": [], "orders": []}\n'
+    ' "cache_read_input_tokens": 0}, "runs_without_usage": 0, "blocked_waves": []}, "last_tick": null, "studies": [], "orders": []}\n'
 )
 WAVE_W4_SHOWN = (
     '{"schema_version": 1, "wave": "w4", "project": "oak", "branch": "integration/w4", "started_at":'

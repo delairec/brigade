@@ -4,7 +4,7 @@ from brigade.command import Argument, Command
 from brigade.errors import BrigadeError
 from brigade.ledger.append_event import append_event
 from brigade.ledger.read_ledger import read_ledger
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.runtime import Runtime
 from brigade.waves.read_wave_pause import read_wave_pause
@@ -12,7 +12,7 @@ from brigade.waves.require_wave_summary import require_wave_summary
 
 DOCUMENT_SCHEMA_VERSION = 1
 FORGE_ACCOUNT_REASON = "forge_account"
-NOTHING_RESUMED = "no wave is paused on the forge account"
+NOTHING_RESUMED = "no wave is parked on the forge account"
 
 
 def _render_text(document: dict) -> str:
@@ -20,7 +20,7 @@ def _render_text(document: dict) -> str:
 
 
 def _list_forge_account_pauses(events: tuple) -> list[tuple[str, str]]:
-    waves = dict.fromkeys(event.wave for event in events if isinstance(event, WavePaused))
+    waves = dict.fromkeys(event.wave for event in events if isinstance(event, WaveParked))
     return [
         (wave, FORGE_ACCOUNT_REASON)
         for wave in waves
@@ -32,7 +32,7 @@ def _find_wave_pause(entries: tuple, wave: str) -> list[tuple[str, str]]:
     require_wave_summary(entries, wave)
     pause = read_wave_pause(tuple(entry.event for entry in entries), wave)
     if pause is None:
-        raise BrigadeError(f"the wave {wave} is running, not paused")
+        raise BrigadeError(f"the wave {wave} is running, neither parked nor blocked")
     return [(wave, pause.reason)]
 
 
@@ -52,7 +52,7 @@ def wave_resume(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("wave", "resume"),
-    help="resume the wave named, or every wave paused on the forge account",
+    help="resume the wave named, or every wave parked on the forge account",
     arguments=(Argument(("wave",), {"nargs": "?", "help": "the name of the wave to resume"}),),
     run=wave_resume,
     render_text=_render_text,

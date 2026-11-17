@@ -89,7 +89,7 @@
     <dt>scan</dt><dd>A study with no judging slot: its non-empty output is the answer; the gardening scans of M4 declare <code>OUTPUT inbox</code>.</dd>
     <dt>recipe</dt><dd>A kind of work declared by the user: a TOML file of ordered process-shaped steps, run by the tick's engine.</dd>
     <dt>order</dt><dd>One instance of a recipe (an <code>ORDER</code> entity); a <code>REQUEST</code> is the order of the native recipe <code>wave</code>, a <code>STUDY</code> the order of <code>study</code>.</dd>
-    <dt>ledger</dt><dd>Append-only JSONL events under <code>$XDG_STATE_HOME/brigade/ledger/</code>: runs, steps, durations, states, pauses, merges. Every statistic is derived from it.</dd>
+    <dt>ledger</dt><dd>Append-only JSONL events under <code>$XDG_STATE_HOME/brigade/ledger/</code>: runs, steps, durations, states, halts, merges. Every statistic is derived from it.</dd>
   </dl>
 </section>
 
@@ -437,7 +437,7 @@ on PATH           awawa  git  the configured client  gh (optional)  brigade-clie
       <tr><td>Manual tests: one row per <code>SPEC</code> line: what to do, what to expect, where (page, command, file), proven by (IMPL)</td><td><span class="tag cli">CLI</span> template, <span class="tag ai">bilal</span> orders and words them for a human</td><td>SPEC + IMPL anchors, UI screenshot flow where the project has one</td></tr>
       <tr><td>Changes to <code>&lt;rootDir&gt;</code>: entity, PR, reason</td><td><span class="tag cli">CLI</span> list, <span class="tag ai">bilal</span> reasons from the PR bodies and decisions</td><td><code>awawa diff</code> between base and head of each merged PR touching <code>&lt;rootDir&gt;</code></td></tr>
       <tr><td>Parked questions, verbatim, with the verified alternative the run explored</td><td><span class="tag cli">CLI</span></td><td>run reports</td></tr>
-      <tr><td>Usage: runs, steps p50/p90 per role, pauses on quota, retries, handovers</td><td><span class="tag cli">CLI</span></td><td>ledger (from the adapter's normalised result, not from spend; a figure the client does not report stays null)</td></tr>
+      <tr><td>Usage: runs, steps p50/p90 per role, blocks on quota, retries, handovers</td><td><span class="tag cli">CLI</span></td><td>ledger (from the adapter's normalised result, not from spend; a figure the client does not report stays null)</td></tr>
       <tr><td>Suggestions: three PRs to sample, constraints the wave hints at</td><td><span class="tag ai">bilal</span></td><td>preflight size signals, rounds, findings</td></tr>
     </tbody>
   </table></div>
@@ -709,12 +709,12 @@ branch = "pr"</pre>
   <pre class="term static">{"schema_version":1,"ts":"2026-10-06T09:28:44Z","ev":"run.finished","run":"20261006T090512Z-3fa9c1","wave":"tp/16","task":"TP146","slot":"build","role":"bastien","client":"claude","procedure":"awawa-task","segment":1,
  "session":"7f3c…","steps":31,"duration_ms":1412000,"usage":{"input":812340,"output":15480,"cache_read":690211,"cache_write":104020},
  "outcome":"pr_open","pr":291,"exit":0}
-{"schema_version":1,"ts":"…","ev":"wave.paused","wave":"tp/16","reason":"quota","resume_at":"2026-10-06T14:00:00Z","runs_suspended":["20261006T083001Z-77be02","20261006T083004Z-c10d5e"]}
+{"schema_version":1,"ts":"…","ev":"wave.blocked","wave":"tp/16","reason":"quota","resume_at":"2026-10-06T14:00:00Z","runs_suspended":["20261006T083001Z-77be02","20261006T083004Z-c10d5e"]}
 {"schema_version":1,"ts":"…","ev":"pr.merged","wave":"tp/16","task":"TP146","pr":291,"rounds":1,"preflight":"ok","verdict":"approve","method":"squash"}</pre>
   <div class="tbl"><table>
     <thead><tr><th>Report</th><th>Command</th><th>Answers</th></tr></thead>
     <tbody>
-      <tr><td>Wave</td><td><code>brigade wave show tp/16 --events</code></td><td>tasks, PRs, rounds, steps p50/p90 per slot and role, wall time, pauses, handovers, parked</td></tr>
+      <tr><td>Wave</td><td><code>brigade wave show tp/16 --events</code></td><td>tasks, PRs, rounds, steps p50/p90 per slot and role, wall time, halts, handovers, parked</td></tr>
       <tr><td>Budgets</td><td><code>brigade ledger budgets</code></td><td>p90 steps per procedure over the last N runs: the number <code>@RULE.procedure_step_budget</code> asks for, measured on distinct answers</td></tr>
       <tr><td>Baseline comparison</td><td><code>brigade ledger compare --before 2026-10-03</code></td><td>steps to first edit, steps per task run, steps spent on oversized outputs, against the reference figures of the user's notes (26/09–03/10)</td></tr>
       <tr><td>Project</td><td><code>brigade ledger --project tidepool --since 30d</code></td><td>waves, studies, orders, PRs merged, signals, patterns ratified, constraints delivered</td></tr>
@@ -740,7 +740,7 @@ branch = "pr"</pre>
       <tr><td>Wave</td><td>board of tasks by state, cards with PR, rounds, steps, run id; timeline of the wave; parked questions</td><td>retry a parked task, open the PR, attach to the run's log</td><td><code>/api/waves/&lt;id&gt;</code></td></tr>
       <tr><td>Inbox</td><td>signals grouped, patterns proposed with evidence</td><td>ratify, dismiss, turn into a request</td><td><code>/api/inbox</code>, writes through <code>brigade inbox …</code></td></tr>
       <tr><td>Corpus</td><td>any registered corpus at any local branch, worktree or SHA: tree by type and status, board of one type by a field, dependencies; read-only; link to awawa-web for the checkout; <code>idea://</code> link to the line</td><td>pick project and ref</td><td><code>/api/corpus</code> → refs cache → <code>awawa status/show/context --json</code></td></tr>
-      <tr><td>Ledger</td><td>steps p50/p90 by role and procedure, waves per month, pauses, the baseline comparison</td><td>—</td><td><code>/api/ledger</code></td></tr>
+      <tr><td>Ledger</td><td>steps p50/p90 by role and procedure, waves per month, halts, the baseline comparison</td><td>—</td><td><code>/api/ledger</code></td></tr>
       <tr><td>Reports</td><td>wave reports, study answers and order outputs rendered, manual-test tables with check boxes kept in the browser only</td><td>open the integration PR</td><td><code>/api/reports</code></td></tr>
     </tbody>
   </table></div>
@@ -779,7 +779,7 @@ branch = "pr"</pre>
     <li><b>Runs.</b> The client adapter answers five operations: <b>probe</b> (the client's version command as <code>version_argv</code>, the optional operations and features it supports, and <code>models</code>, the model it binds to each reasoning level once the rows of <code>config.toml</code> are applied, <code>@DECISION.TheProbeAnswersTheModelEachReasoningLevelBinds</code>), <b>launch-argv</b> (the argv, environment and stdin of an unattended run), <b>parse-result</b> (the client's output into the normalised result document, §14), <b>resume-argv</b> and <b>transcripts</b>. The run's log is <code>brigade runs logs &lt;id&gt;</code>, whatever the client. The fake adapter of the test suite lives in <code>brigade/adapters/test_clients</code> and replays the recording named after the role from the directory the setting <code>recordings</code> of <code>[clients.fake]</code> names.</li>
     <li><b>Context injection.</b> The role package is read at each resolution, never cached: a role file's body, or, for an <code>AGENT</code> entity of the instructions corpus bound by the <code>[slots]</code> table, <code>awawa context @AGENT.&lt;name&gt; --depth 2 --skip reasoning &lt;rootDir&gt;</code>, its <code>WORK</code>, <code>REASONING</code>, <code>CAPABILITY</code>, <code>BUDGET</code> and <code>RETURNS</code> filling the front matter (<code>@DECISION.ASlotIsBoundByTheSlotsTableOrByTheSlotItsRoleFileDeclares</code>); the adapter passes it as the run's system prompt. No run depends on its own diligence to load its rules.</li>
     <li><b>Slots and locks.</b> Four runs at once per project by default. Locks are <code>fcntl.flock</code> on files under <code>$XDG_STATE_HOME/brigade/locks/</code>, one per shared resource: the tick, the ledger, each corpus repository brigade writes, each project's worktrees, the refs cache; the PID is written for diagnosis, never used for exclusion, and the kernel releases a lock when its process dies, so there is no stale-lock code; the tick takes its lock non-blocking and stands down when another holds it (<code>@DECISION.StateIsWrittenAtomicallyUnderLocksKeptInTheStateDirectory</code>).</li>
-    <li><b>Quota.</b> A result whose error names the rate limit pauses the wave: runs in flight are left to finish or fail, the wave records <code>resume_at</code> from the hour the message names (else now + 30 min), and the first tick after that time resumes each suspended run through the adapter's resume operation with the prompt "continue from your progress file", else a fresh launch from that file. The pause itself is the probe; no extra call is spent.</li>
+    <li><b>Quota.</b> A result whose error names the rate limit blocks the wave: runs in flight are left to finish or fail, the wave records <code>resume_at</code> from the hour the message names (else now + 30 min), and the first tick after that time resumes each suspended run through the adapter's resume operation with the prompt "continue from your progress file", else a fresh launch from that file. The pause itself is the probe; no extra call is spent.</li>
     <li><b>Forge and accounts.</b> The forge adapter runs <code>gh</code> as the machine account where config names one (the token read from the keyring with <code>gh auth token --user</code>), else as the user's account, every write recorded in the ledger, else local mode without a forge; commits carry the attribution lines the session passes.</li>
   </ul>
   <h3>Each operation and its fallback</h3>

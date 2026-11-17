@@ -85,7 +85,7 @@ class RenderLedgerFragmentTest(unittest.TestCase):
         # Assert
         self.assertEqual(fragment, STEPS_SECTION + MONTHS_SECTION)
 
-    def test_should_render_the_turns_by_role_and_the_pauses_of_the_wave_asked(self):
+    def test_should_render_the_turns_by_role_and_the_halts_of_the_wave_asked(self):
         # Arrange
         wave = {
             "schema_version": 1,
@@ -97,13 +97,13 @@ class RenderLedgerFragmentTest(unittest.TestCase):
                         "<i>ada</i>": {"runs": {"measured": 2, "unmeasured": 1, "p50": 30, "p90": 50, "partial": 0}}
                     },
                 },
-                "pauses": [
+                "halts": [
                     {
-                        "paused_at": "<i>2026-10-02T10:00:00Z</i>",
+                        "halted_at": "<i>2026-10-02T10:00:00Z</i>",
                         "resumed_at": "<i>2026-10-02T11:05:00Z</i>",
                         "duration_ms": 3900000,
                     },
-                    {"paused_at": "<i>2026-10-03T10:00:00Z</i>", "resumed_at": None, "duration_ms": None},
+                    {"halted_at": "<i>2026-10-03T10:00:00Z</i>", "resumed_at": None, "duration_ms": None},
                 ],
             },
         }
@@ -117,13 +117,13 @@ class RenderLedgerFragmentTest(unittest.TestCase):
             fragment,
             STEPS_SECTION
             + MONTHS_SECTION
-            + "<section><h2>Turns by role and pauses of the wave</h2><p>wave &lt;b&gt;w2&lt;/b&gt;</p>"
+            + "<section><h2>Turns by role and halts of the wave</h2><p>wave &lt;b&gt;w2&lt;/b&gt;</p>"
             "<table><thead><tr><th>role</th><th>runs</th><th>p50</th><th>p90</th></tr></thead>"
             "<tbody><tr><td>&lt;i&gt;ada&lt;/i&gt;</td><td>2</td><td>30</td><td>50</td></tr></tbody></table>"
-            "<table><thead><tr><th>paused at</th><th>resumed at</th><th>minutes</th></tr></thead>"
+            "<table><thead><tr><th>halted at</th><th>resumed at</th><th>minutes</th></tr></thead>"
             "<tbody><tr><td>&lt;i&gt;2026-10-02T10:00:00Z&lt;/i&gt;</td><td>&lt;i&gt;2026-10-02T11:05:00Z&lt;/i&gt;</td>"
             "<td>65</td></tr>"
-            "<tr><td>&lt;i&gt;2026-10-03T10:00:00Z&lt;/i&gt;</td><td>still paused</td><td>-</td></tr></tbody></table></section>",
+            "<tr><td>&lt;i&gt;2026-10-03T10:00:00Z&lt;/i&gt;</td><td>still halted</td><td>-</td></tr></tbody></table></section>",
         )
 
     def test_should_render_the_comparison_of_the_two_ranges_asked(self):

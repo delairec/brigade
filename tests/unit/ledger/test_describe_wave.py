@@ -9,7 +9,7 @@ from brigade.ledger.pr_merged import PrMerged
 from brigade.ledger.read_ledger import LedgerReading
 from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_state import TaskState
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.system.token_usage import TokenUsage
@@ -25,13 +25,13 @@ WAVE_W1 = LedgerReading(
         LedgerEntry(at_minute(0), WaveStarted(wave="w1", project="tidepool", branch="main", tasks=("TP1", "TP2"))),
         LedgerEntry(at_minute(1), create_run_finished("r1", segment=1, main_turns=10, wave="w1", task="TP1")),
         LedgerEntry(at_minute(2), WaveResumed(wave="w1", reason="stray")),
-        LedgerEntry(at_minute(3), WavePaused(wave="w1", reason="quota", resume_at=None)),
-        LedgerEntry(at_minute(4), WavePaused(wave="w1", reason="quota again", resume_at=None)),
+        LedgerEntry(at_minute(3), WaveParked(wave="w1", reason="quota")),
+        LedgerEntry(at_minute(4), WaveParked(wave="w1", reason="quota again")),
         LedgerEntry(at_minute(5), WaveResumed(wave="w1", reason="quota reset")),
         LedgerEntry(at_minute(6), create_run_finished("r1", segment=2, main_turns=5, wave="w1", task="TP1")),
         LedgerEntry(at_minute(7), PrMerged(project="tidepool", wave="w1", task="TP1", pr=7, rounds=2, login=None)),
         LedgerEntry(at_minute(8), TaskParked(wave="w1", task="TP2", reason="blocked", blockers=("OPEN_QUESTION.Q1",))),
-        LedgerEntry(at_minute(9), WavePaused(wave="w1", reason="forge account", resume_at=None)),
+        LedgerEntry(at_minute(9), WaveParked(wave="w1", reason="forge account")),
         LedgerEntry(at_minute(30), WaveStarted(wave="w2", project="tidepool", branch="main", tasks=("TP3",))),
     ),
     files=(),
@@ -49,19 +49,19 @@ class DescribeWaveTest(unittest.TestCase):
         self.assertEqual(wave["last"], "2026-10-10T09:09:00Z")
         self.assertEqual(wave["wall_time_ms"], 540000)
 
-    def test_should_pair_each_pause_with_the_resumption_ending_it(self):
+    def test_should_pair_each_halt_with_the_resumption_ending_it(self):
         # Act
         wave = describe_wave(WAVE_W1, "w1")
 
         # Assert
         self.assertEqual(
-            wave["pauses"],
+            wave["halts"],
             [
-                {"paused_at": "2026-10-10T09:03:00Z", "resumed_at": "2026-10-10T09:05:00Z", "duration_ms": 120000},
-                {"paused_at": "2026-10-10T09:09:00Z", "resumed_at": None, "duration_ms": None},
+                {"halted_at": "2026-10-10T09:03:00Z", "resumed_at": "2026-10-10T09:05:00Z", "duration_ms": 120000},
+                {"halted_at": "2026-10-10T09:09:00Z", "resumed_at": None, "duration_ms": None},
             ],
         )
-        self.assertEqual(wave["paused_ms"], 120000)
+        self.assertEqual(wave["halted_ms"], 120000)
 
     def test_should_tell_what_became_of_each_task(self):
         # Act
@@ -120,11 +120,11 @@ class DescribeWaveTest(unittest.TestCase):
 
 
 class DescribeWaveResumedTest(unittest.TestCase):
-    def test_should_leave_no_pause_open_once_the_wave_resumed(self):
+    def test_should_leave_no_halt_open_once_the_wave_resumed(self):
         # Arrange
         reading = LedgerReading(
             entries=(
-                LedgerEntry(at_minute(0), WavePaused(wave="w1", reason="quota", resume_at=None)),
+                LedgerEntry(at_minute(0), WaveParked(wave="w1", reason="quota")),
                 LedgerEntry(at_minute(4), WaveResumed(wave="w1", reason="quota reset")),
             ),
             files=(),
@@ -136,8 +136,8 @@ class DescribeWaveResumedTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            wave["pauses"],
-            [{"paused_at": "2026-10-10T09:00:00Z", "resumed_at": "2026-10-10T09:04:00Z", "duration_ms": 240000}],
+            wave["halts"],
+            [{"halted_at": "2026-10-10T09:00:00Z", "resumed_at": "2026-10-10T09:04:00Z", "duration_ms": 240000}],
         )
 
 

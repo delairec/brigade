@@ -27,10 +27,9 @@ def _pause(wave: str, reason: str) -> dict:
     return {
         "schema_version": 1,
         "ts": "2026-10-01T00:15:00Z",
-        "event": "wave.paused",
+        "event": "wave.parked",
         "wave": wave,
         "reason": reason,
-        "resume_at": None,
     }
 
 
@@ -38,7 +37,7 @@ class WaveResumeTextTest(unittest.TestCase):
     def test_should_name_each_wave_resumed(self):
         # Arrange
         rows = [
-            ("no wave", [], "no wave is paused on the forge account"),
+            ("no wave", [], "no wave is parked on the forge account"),
             (
                 "two waves",
                 [{"wave": "tidepool_w16", "reason": "quota"}, {"wave": "tidepool_w17", "reason": "quota"}],
@@ -82,7 +81,7 @@ class WaveResumeOfThePausedWavesTest(unittest.TestCase):
         self.root = Path(directory.name)
         self.runtime = create_test_runtime(create_test_paths(self.root))
 
-    def test_should_resume_every_wave_paused_on_the_forge_account_only(self):
+    def test_should_resume_every_wave_parked_on_the_forge_account_only(self):
         # Arrange
         write_ledger(
             self.root,
@@ -129,7 +128,7 @@ class WaveResumeOfThePausedWavesTest(unittest.TestCase):
             COMMAND.run(Namespace(wave="tidepool_w16"), self.runtime)
 
         # Assert
-        self.assertEqual(str(raised.exception), "the wave tidepool_w16 is running, not paused")
+        self.assertEqual(str(raised.exception), "the wave tidepool_w16 is running, neither parked nor blocked")
 
     def test_should_refuse_to_resume_a_wave_no_wave_started_names(self):
         # Arrange

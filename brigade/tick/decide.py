@@ -1076,8 +1076,8 @@ def _plan_study_and_order_runs(snapshot: Snapshot) -> tuple:
 
 
 def _is_paused_on_the_quota(wave: WaveFacts, task: TaskFacts) -> bool:
-    is_wave_paused_on_the_quota = wave.pause is not None and wave.pause.reason == QUOTA_REASON
-    return is_wave_paused_on_the_quota or wave.states.get(task.name) == BLOCKED_ON_QUOTA_STATE
+    is_wave_blocked_on_the_quota = wave.pause is not None and wave.pause.reason == QUOTA_REASON
+    return is_wave_blocked_on_the_quota or wave.states.get(task.name) == BLOCKED_ON_QUOTA_STATE
 
 
 def _is_stalled(wave: WaveFacts, task: TaskFacts, snapshot: Snapshot, attended_tasks: frozenset) -> bool:

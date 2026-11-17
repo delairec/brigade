@@ -111,7 +111,7 @@ class MainGroupHelpTest(MainTestCase):
             (
                 "scheduler",
                 "status",
-                "report the scheduler installed, whether its tick is stale, the paused waves and the parked tasks",
+                "report the scheduler installed, whether its tick is stale, the parked and blocked waves and the parked tasks",
             ),
         ]
         for group, action, expected_help in rows:

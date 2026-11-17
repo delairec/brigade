@@ -2,7 +2,8 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from brigade.ledger.format_instant import format_instant
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_blocked import WaveBlocked
+from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_resumed import WaveResumed
 
 
@@ -18,11 +19,10 @@ class WavePause:
 def read_wave_pause(events: tuple, wave: str) -> WavePause | None:
     pause = None
     for event in (event for event in events if getattr(event, "wave", None) == wave):
-        if isinstance(event, WavePaused):
-            pause = WavePause(
-                reason=event.reason,
-                resume_at=None if event.resume_at is None else datetime.fromisoformat(event.resume_at),
-            )
+        if isinstance(event, WaveParked):
+            pause = WavePause(reason=event.reason, resume_at=None)
+        elif isinstance(event, WaveBlocked):
+            pause = WavePause(reason=event.reason, resume_at=datetime.fromisoformat(event.resume_at))
         elif isinstance(event, WaveResumed):
             pause = None
     return pause
