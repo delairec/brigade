@@ -41,7 +41,7 @@ RESULT_OF_AN_ORDER = (
     '\tRUN "20261019T090000Z-a1b2c3"\n'
     '\tCOLLECTED "open-issues"\n'
     '\t\tSUMMARY "{\\"open\\": 2}"\n'
-    '\t\tDOCUMENT "/state/runs/20261019T090000Z-a1b2c3/collected/open-issues.json"\n'
+    '\t\tCOLLECTION "/state/runs/20261019T090000Z-a1b2c3/collected/open-issues.json"\n'
     '\tNARRATIVE "two issues stay open"\n'
     '\tFINDING "the oldest issue waits for a reply"\n'
 )

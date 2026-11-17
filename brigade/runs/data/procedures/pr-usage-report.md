@@ -17,10 +17,10 @@ resume at the step it names. Append one entry after each step below.
 
 ## 1. Read the package
 
-`brigade order context <run> --json` prints each collector's summary with the path of its full document (the ledger
+`brigade order context <run> --json` prints each collector's summary with the path of its collection (the ledger
 of the project, the review threads of the open pull requests, the corpus), the RESULT entity with the fields brigade
 filled, and the schema of its type. The pull request judged is the one the order names in its parameter `pr`. Read a
-full document only where its summary does not settle a point of the report.
+collection only where its summary does not settle a point of the report.
 
 ## 2. Write the report
 

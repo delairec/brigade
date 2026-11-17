@@ -196,7 +196,7 @@ class ValidateAnswerTest(unittest.TestCase):
     def write_document(self, collector: str, items: list) -> dict:
         path = self.root / f"{collector}.json"
         path.write_text(json.dumps({"collector": collector, "items": items}), encoding="utf-8")
-        return {"collector": collector, "summary": {}, "document": str(path)}
+        return {"collector": collector, "summary": {}, "collection": str(path)}
 
     def script_report_answer(self, submitted_fields: dict, filled_fields: dict) -> None:
         collected = [
@@ -316,7 +316,7 @@ class ValidateTriageAnswerTest(unittest.TestCase):
         (self.root / "config" / "patterns.awawa").write_text(RATIFIED_PATTERN, encoding="utf-8")
         families = self.root / "families.json"
         families.write_text(json.dumps(FAMILIES), encoding="utf-8")
-        collected = {"collected": [{"collector": "inbox-families", "summary": {}, "document": str(families)}]}
+        collected = {"collected": [{"collector": "inbox-families", "summary": {}, "collection": str(families)}]}
         (self.run_directory / "steps" / "1-collect.json").write_text(json.dumps(collected), encoding="utf-8")
         linted = []
 

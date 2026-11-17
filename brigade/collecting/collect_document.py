@@ -15,7 +15,7 @@ from brigade.system.write_text_atomically import write_text_atomically
 
 CACHE_DIRECTORY = "collectors"
 RUN_DIRECTORY = "collect"
-DOCUMENT_FILE = "document.json"
+COLLECTION_FILE = "collection.json"
 SIDECAR_FILE = "sidecar.json"
 SIDECAR_SCHEMA_VERSION = 1
 COMPLETE_EXIT_CODE = 0
@@ -54,7 +54,7 @@ def _read_answer(name: str, answer) -> dict:
     try:
         validate_document(document, COLLECTOR_DOCUMENT_SHAPE)
     except DocumentInvalid as error:
-        raise _describe_failure(name, answer, f": its document {error}") from None
+        raise _describe_failure(name, answer, f": its collection {error}") from None
     return document
 
 
@@ -72,7 +72,7 @@ def _collect_afresh(collector, request: CollectionRequest, key: str, runtime: Ru
     inputs = request.inputs
     answer = collector.collect(create_collector_environment(inputs), runtime, request.equipment)
     return {
-        DOCUMENT_FILE: _read_answer(collector.name, answer),
+        COLLECTION_FILE: _read_answer(collector.name, answer),
         SIDECAR_FILE: {
             "schema_version": SIDECAR_SCHEMA_VERSION,
             "collector": collector.name,
@@ -95,7 +95,7 @@ def _place(entry: Path, name: str, run_directory: Path | None) -> Path:
     if run_directory is None:
         return entry
     place = run_directory / RUN_DIRECTORY / name
-    for file_name in (DOCUMENT_FILE, SIDECAR_FILE):
+    for file_name in (COLLECTION_FILE, SIDECAR_FILE):
         write_text_atomically(place / file_name, (entry / file_name).read_text(encoding="utf-8"))
     return place
 
@@ -104,14 +104,14 @@ def collect_document(collector: object, request: CollectionRequest, runtime: Run
     inputs = request.inputs
     key = _compute_cache_key(collector, inputs, read_cache_input(collector.name, inputs.project, runtime))
     entry = runtime.paths.cache_root / CACHE_DIRECTORY / collector.name / key
-    cached = not request.refresh and (entry / DOCUMENT_FILE).is_file()
+    cached = not request.refresh and (entry / COLLECTION_FILE).is_file()
     if not cached:
         files = _collect_afresh(collector, request, key, runtime)
-        if not files[DOCUMENT_FILE].get(CACHE_DECLARATION, NOT_CACHED):
+        if not files[COLLECTION_FILE].get(CACHE_DECLARATION, NOT_CACHED):
             place = (runtime.paths.run_directory or runtime.paths.state_root) / RUN_DIRECTORY / collector.name
             _write_files(place, files)
-            return Collection(document_path=place / DOCUMENT_FILE, document=files[DOCUMENT_FILE], cached=False)
+            return Collection(document_path=place / COLLECTION_FILE, document=files[COLLECTION_FILE], cached=False)
         _write_files(entry, files)
     place = _place(entry, collector.name, runtime.paths.run_directory)
-    document = json.loads((place / DOCUMENT_FILE).read_text(encoding="utf-8"))
-    return Collection(document_path=place / DOCUMENT_FILE, document=document, cached=cached)
+    document = json.loads((place / COLLECTION_FILE).read_text(encoding="utf-8"))
+    return Collection(document_path=place / COLLECTION_FILE, document=document, cached=cached)

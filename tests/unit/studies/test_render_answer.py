@@ -28,7 +28,7 @@ class NameAnswerTest(unittest.TestCase):
 class RenderAnswerTest(unittest.TestCase):
     def test_should_fill_the_study_the_run_and_each_collected_document(self):
         # Arrange
-        collected = [{"collector": "weather", "summary": {"days": 1}, "document": "/srv/document.json"}]
+        collected = [{"collector": "weather", "summary": {"days": 1}, "collection": "/srv/collection.json"}]
 
         # Act
         answer = render_answer(STUDY, "20261019T090000Z-aaaaaa", collected)
@@ -41,5 +41,5 @@ class RenderAnswerTest(unittest.TestCase):
             '\tRUN "20261019T090000Z-aaaaaa"\n'
             '\tCOLLECTED "weather"\n'
             '\t\tSUMMARY "{\\"days\\": 1}"\n'
-            '\t\tDOCUMENT "/srv/document.json"\n',
+            '\t\tCOLLECTION "/srv/collection.json"\n',
         )

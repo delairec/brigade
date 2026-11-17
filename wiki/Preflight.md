@@ -13,7 +13,7 @@ brigade preflight review-pull-request pr=<pr> [--json]   # the pull request of a
 ```
 
 `brigade preflight <name>` runs from a checkout of a registered project. It runs the collectors of the preflight, then
-hands each check the parameters and the documents of the collectors, and prints the verdict and the findings of each
+hands each check the parameters and the collections of the collectors, and prints the result and the findings of each
 check, as text or, with `--json`, a JSON document. The `key=value` pairs are the parameters of every collector and
 every check of the preflight, over the parameters the preflight declares. A name no preflight carries is refused.
 
@@ -81,7 +81,7 @@ A check resolves by name in the order of a collector, the first place holding it
 | `built-in` | a module of `brigade/checks/`                            |
 
 An executable check runs in the project, the subject on its standard input: `schema_version`, `project`, `parameters`
-and `collected`, the documents of the collectors by name. It answers one JSON document, `schema_version` 1, `name`,
+and `collected`, the collections of the collectors by name. It answers one JSON document, `schema_version` 1, `name`,
 `result` `ok` or `fail` and `findings`, a list of strings; an answer that is not that document is refused, naming
 the check.
 

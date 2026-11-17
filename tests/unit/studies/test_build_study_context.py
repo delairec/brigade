@@ -15,20 +15,20 @@ STUDY_FIELDS = (
     ("ANSWER", "FINDING"),
     ("STATUS", "active"),
 )
-COLLECTED = '{"collected": [{"collector": "weather", "summary": {"days": 1}, "document": "/srv/document.json"}]}'
+COLLECTED = '{"collected": [{"collector": "weather", "summary": {"days": 1}, "collection": "/srv/collection.json"}]}'
 PACKAGE = {
     "schema_version": 1,
     "study": "trees",
     "run": RUN_ID,
     "question": "how many trees?",
-    "collected": [{"collector": "weather", "summary": {"days": 1}, "document": "/srv/document.json"}],
+    "collected": [{"collector": "weather", "summary": {"days": 1}, "collection": "/srv/collection.json"}],
     "answer": (
         "FINDING trees_20261019T090000Z_aaaaaa\n"
         '\tSTUDY "trees"\n'
         '\tRUN "20261019T090000Z-aaaaaa"\n'
         '\tCOLLECTED "weather"\n'
         '\t\tSUMMARY "{\\"days\\": 1}"\n'
-        '\t\tDOCUMENT "/srv/document.json"\n'
+        '\t\tCOLLECTION "/srv/collection.json"\n'
     ),
     "prose_fields": ["VERDICT"],
     "schema": "SCHEMA FINDING\n",
@@ -148,7 +148,7 @@ class BuildStudyContextTest(unittest.TestCase):
     def write_document(self, collector: str, items: list) -> dict:
         path = self.run_directory / f"{collector}.json"
         path.write_text(json.dumps({"collector": collector, "items": items}), encoding="utf-8")
-        return {"collector": collector, "summary": {}, "document": str(path)}
+        return {"collector": collector, "summary": {}, "collection": str(path)}
 
     def script_milestone_report_run(self) -> list[dict]:
         config_root = self.runtime.paths.config_root

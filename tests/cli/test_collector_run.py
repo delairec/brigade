@@ -97,7 +97,7 @@ class BrigadeCollectOfAProjectCollectorTest(CollectTestCase):
                 "source": "project",
                 "cached": False,
                 "summary": {"project": str(self.project.path), "since": "2026-10-01", "parameters": {"window": "week"}},
-                "document": mock.ANY,
+                "collection": mock.ANY,
             },
         )
 
@@ -128,7 +128,7 @@ class BrigadeCollectInsideARunTest(CollectTestCase):
                 f"project     {self.project.path}",
                 "since       2026-10-01",
                 'parameters  {"window": "week"}',
-                f"document    {self.run_directory / 'collect' / 'echo' / 'document.json'}",
+                f"collection  {self.run_directory / 'collect' / 'echo' / 'collection.json'}",
             ],
         )
 

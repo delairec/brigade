@@ -74,7 +74,7 @@ and no report is judged.
 
 `procedure` names a procedure file, read from `brigade/runs/data/procedures/<name>.md` and then from `procedures/` of
 the instructions corpus; its front matter declares its `capabilities`. The procedure of the example reads the
-documents of the collectors with `brigade order context <run> --json`, fills the prose fields of the RESULT entity
+collections of the collectors with `brigade order context <run> --json`, fills the prose fields of the RESULT entity
 brigade prepared, and hands it back with `brigade order answer <run> --file <path>`, which validates it against the
 schema of its type. `slot` is one of the slots of [Roles](Roles.md); `report` is the slot of a reporting run.
 

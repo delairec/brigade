@@ -19,7 +19,7 @@ resume at the step it names. Append one entry after each step below.
 
 `brigade study context <run> --json` prints the question, each collector's summary with the path of its full
 document, the answer entity with the fields brigade filled, the prose fields left to you, and the schema of its type.
-Read a full document only where its summary does not settle a point of the answer.
+Read a collection only where its summary does not settle a point of the answer.
 
 ## 2. Write the answer
 

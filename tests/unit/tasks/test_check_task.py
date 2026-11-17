@@ -141,7 +141,7 @@ class CheckTaskTest(unittest.TestCase):
         check_task(runtime, demand_check(WORKTREE, self.root))
 
         # Assert
-        collected = json.loads((self.root / "run" / "collect" / "task-worktree" / "document.json").read_text())
+        collected = json.loads((self.root / "run" / "collect" / "task-worktree" / "collection.json").read_text())
         self.assertEqual(
             collected["summary"],
             {

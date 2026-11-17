@@ -101,7 +101,7 @@ class CollectDocumentTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             collection,
-            Collection(document_path=self.cache_entry / "document.json", document=CACHED_DOCUMENT, cached=False),
+            Collection(document_path=self.cache_entry / "collection.json", document=CACHED_DOCUMENT, cached=False),
         )
 
     def test_should_record_beside_the_cached_document_how_it_was_collected(self):
@@ -151,7 +151,7 @@ class CollectDocumentTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             collection,
-            Collection(document_path=self.cache_entry / "document.json", document=CACHED_DOCUMENT, cached=True),
+            Collection(document_path=self.cache_entry / "collection.json", document=CACHED_DOCUMENT, cached=True),
         )
 
     def test_should_not_run_the_collector_when_the_cache_answers(self):
@@ -177,7 +177,9 @@ class CollectDocumentTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             collection,
-            Collection(document_path=self.cache_entry / "document.json", document=SNOWY_CACHED_DOCUMENT, cached=False),
+            Collection(
+                document_path=self.cache_entry / "collection.json", document=SNOWY_CACHED_DOCUMENT, cached=False
+            ),
         )
 
     def test_should_keep_a_document_fresh_at_each_call_in_the_state_directory(self):
@@ -191,7 +193,7 @@ class CollectDocumentTest(unittest.TestCase):
         self.assertEqual(
             collection,
             Collection(
-                document_path=self.root / "state" / "collect" / "weather" / "document.json",
+                document_path=self.root / "state" / "collect" / "weather" / "collection.json",
                 document=FRESH_DOCUMENT,
                 cached=False,
             ),
@@ -208,7 +210,7 @@ class CollectDocumentTest(unittest.TestCase):
         collection = collect_document(CollectorDouble(0, json.dumps(FRESH_DOCUMENT)), create_request(), runtime)
 
         # Assert
-        self.assertEqual(collection.document_path, self.root / "run" / "collect" / "weather" / "document.json")
+        self.assertEqual(collection.document_path, self.root / "run" / "collect" / "weather" / "collection.json")
 
     def test_should_answer_a_cached_document_from_its_copy_in_the_run_directory_of_a_run(self):
         # Arrange
@@ -225,7 +227,7 @@ class CollectDocumentTest(unittest.TestCase):
         self.assertEqual(
             collection,
             Collection(
-                document_path=self.root / "run" / "collect" / "weather" / "document.json",
+                document_path=self.root / "run" / "collect" / "weather" / "collection.json",
                 document=CACHED_DOCUMENT,
                 cached=True,
             ),
@@ -243,7 +245,7 @@ class CollectDocumentTest(unittest.TestCase):
         collect_document(CollectorDouble(0, json.dumps(CACHED_DOCUMENT)), create_request(), runtime)
 
         # Assert
-        copy = self.root / "run" / "collect" / "weather" / "document.json"
+        copy = self.root / "run" / "collect" / "weather" / "collection.json"
         self.assertEqual(json.loads(copy.read_text(encoding="utf-8")), CACHED_DOCUMENT)
 
     def test_should_copy_the_sidecar_of_a_cached_document_into_the_run_directory_of_a_run(self):
@@ -317,7 +319,7 @@ class CollectDocumentTest(unittest.TestCase):
         self.assertEqual(
             collection,
             Collection(
-                document_path=self.root / "state" / "collect" / "weather" / "document.json",
+                document_path=self.root / "state" / "collect" / "weather" / "collection.json",
                 document=CLOUDY_FRESH_DOCUMENT,
                 cached=False,
             ),
@@ -345,7 +347,7 @@ class CollectDocumentTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             collection,
-            Collection(document_path=self.cache_entry / "document.json", document=CACHED_DOCUMENT, cached=False),
+            Collection(document_path=self.cache_entry / "collection.json", document=CACHED_DOCUMENT, cached=False),
         )
 
 
@@ -395,4 +397,4 @@ class CollectDocumentRefusalTest(unittest.TestCase):
             collect_document(collector, create_request(), self.runtime)
 
         # Assert
-        self.assertRegex(str(refusal.exception), r"^collector weather exited 0: its document .*items")
+        self.assertRegex(str(refusal.exception), r"^collector weather exited 0: its collection .*items")

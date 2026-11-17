@@ -2,9 +2,13 @@ import re
 
 from brigade.system.retired_name import RetiredName
 
-RETIRED_FIELDS = {("POLICY", "VERIFY_ROUNDS"): "REPAIR_ROUNDS"}
+RETIRED_FIELDS = {
+    ("POLICY", "VERIFY_ROUNDS"): "REPAIR_ROUNDS",
+    ("ANSWER", "DOCUMENT"): "COLLECTION",
+    ("RESULT", "DOCUMENT"): "COLLECTION",
+}
 SCHEMA_LINE = re.compile(r"^SCHEMA (\w+)")
-FIELD_LINE = re.compile(r"^\tFIELD (\w+)")
+FIELD_LINE = re.compile(r"^\t+FIELD (\w+)")
 
 
 def find_retired_schema_fields(schema: str) -> list[RetiredName]:

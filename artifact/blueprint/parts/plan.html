@@ -84,7 +84,7 @@
     <dt>client adapter</dt><dd>The only place an AI client is named: one function, <code>answer(operation, request)</code>, or <code>brigade-client-&lt;name&gt; &lt;operation&gt;</code> with the request on stdin, for the operations <code>probe</code>, <code>launch-argv</code>, <code>parse-result</code>, <code>resume-argv</code> and <code>transcripts</code>; each capability the client lacks has a recorded fallback (<code>@DECISION.ClientAdaptersAnswerEveryOperationThroughOneFunction</code>).</dd>
     <dt>scheduler, forge</dt><dd>Adapters for the machine's scheduler (systemd user timer, cron, <code>brigade tick --loop</code>) and the code forge (GitHub through <code>gh</code>, or none).</dd>
     <dt>study</dt><dd>A question answered by evidence: collectors, then at most one judging run (a <code>STUDY</code> entity); the built-in recipe <code>study</code>.</dd>
-    <dt>collector</dt><dd>A deterministic executable or built-in printing one JSON document; never a model.</dd>
+    <dt>collector</dt><dd>A deterministic executable or built-in printing its collection, one JSON document; never a model.</dd>
     <dt>check</dt><dd>A deterministic executable printing <code>{"ok": bool, "reason": str}</code>; the condition of a gate step.</dd>
     <dt>scan</dt><dd>A study with no judging slot: its non-empty output is the answer; the gardening scans of M4 declare <code>OUTPUT inbox</code>.</dd>
     <dt>recipe</dt><dd>A kind of work declared by the user: a TOML file of ordered process-shaped steps, run by the tick's engine.</dd>
@@ -237,7 +237,7 @@ $XDG_STATE_HOME/brigade/
   locks/                      <span class="dim"># fcntl.flock files, one per shared resource: tick, ledger, each corpus repository, each project's worktrees, refs-cache</span>
 $XDG_CACHE_HOME/brigade/
   refs/                       <span class="dim"># git archive cache of corpus trees per SHA, pruned least-recently-read; deletable at any time</span>
-  collectors/                 <span class="dim"># collector documents keyed by the hash of command and inputs</span>
+  collectors/                 <span class="dim"># collections keyed by the hash of command and inputs</span>
 
 <span class="dim"># unchanged, read as they are</span>
 &lt;rootDir&gt;/       optional: the instructions corpus, roles (AGENT), rules, triggers, procedures/awawa-task.md, rebase-on-base.md
@@ -380,7 +380,7 @@ on PATH           awawa  git  the configured client  gh (optional)  brigade-clie
       <tr><td>rebase (manu)</td><td><code>brigade rebase context &lt;task&gt;</code> (only after <code>git rebase</code> reported a conflict)</td><td>the conflicting hunks, both sides' commits with messages, the procedure</td><td><code>brigade rebase done &lt;task&gt;</code> (continues, pushes with lease)</td></tr>
       <tr><td>report (bilal)</td><td><code>brigade study context wave-report</code></td><td>the report template with every mechanical part filled by the collectors: task table (PR, rounds, steps, duration), statistics, graph, manual-test table from SPEC lines, <code>&lt;rootDir&gt;</code> change list from the merged diffs, parked questions</td><td><code>brigade study answer wave-report --file report.md</code> (refuses a changed CLI-filled section, commits on the integration branch, updates the integration PR)</td></tr>
       <tr><td>triage (mina)</td><td><code>brigade study context triage|mine-transcripts</code></td><td>signals grouped by fingerprint family with evidence links, or the scrubbed transcript findings; existing PATTERN and CONSTRAINT entities; the schema</td><td><code>brigade study answer triage --file patterns.json</code> (entities, fmt, lint, commit)</td></tr>
-      <tr><td>explore (dora)</td><td><code>brigade study context &lt;study&gt;</code></td><td>the prep: the question verbatim, each collector's summary with the path of its full document, the expected shape of the answer</td><td><code>brigade study answer &lt;study&gt; --file findings.md</code> (written to the study's output)</td></tr>
+      <tr><td>explore (dora)</td><td><code>brigade study context &lt;study&gt;</code></td><td>the prep: the question verbatim, each collector's summary with the path of its collection, the expected shape of the answer</td><td><code>brigade study answer &lt;study&gt; --file findings.md</code> (written to the study's output)</td></tr>
       <tr><td>any slot, in a recipe</td><td><code>brigade order context &lt;run&gt;</code></td><td>the run directory: the result of every earlier step of the order, the template and the shape of the answer</td><td><code>brigade order answer &lt;run&gt; --file answer.md</code> (validated, the next step runs)</td></tr>
       <tr><td>any</td><td><code>brigade handoff write --file state.md</code></td><td>—</td><td>writes the progress file the next segment starts from</td></tr>
     </tbody>
@@ -499,7 +499,7 @@ on PATH           awawa  git  the configured client  gh (optional)  brigade-clie
     <thead><tr><th>Word</th><th>Meaning</th></tr></thead>
     <tbody>
       <tr><td>study</td><td>a question answered by evidence: collectors, then at most one judging run; a <code>STUDY</code> entity, the order of the built-in recipe <code>study</code></td></tr>
-      <tr><td>collector</td><td>a deterministic executable or built-in printing one JSON document, cached by the hash of its command and inputs; never a model</td></tr>
+      <tr><td>collector</td><td>a deterministic executable or built-in printing its collection, one JSON document, cached by the hash of its command and inputs; never a model</td></tr>
       <tr><td>check</td><td>a deterministic executable printing <code>{"ok": bool, "reason": str}</code>; the condition of a gate step</td></tr>
       <tr><td>output</td><td>where an answer lands: the inbox, a file on a branch, a corpus entity, a forge issue, or <code>brigade-output-&lt;name&gt;</code> on PATH</td></tr>
       <tr><td>scan</td><td>a study with no judging slot: its non-empty output is the answer; the gardening scans are scans with <code>OUTPUT inbox</code></td></tr>

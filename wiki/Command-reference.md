@@ -35,7 +35,7 @@ Every command of brigade, what it does in one line, and the page that documents 
 | `brigade run list\|show\|stop\|prune\|stop-hook` | list the runs, show one, stop one and prune them; the hook a client calls past the soft limit of its run | [Runs](Runs.md) |
 | `brigade tick --once\|--dry-run\|--loop` | decide and apply what the facts call for, once or in a loop | [Tick and scheduler](Tick-and-scheduler.md) |
 | `brigade study new\|run\|context\|answer\|list\|show\|pause\|resume` | record the studies, run them, print their context and take their answers | [Studies](Studies.md) |
-| `brigade collector run <name>` | run a collector and print the summary and the path of its document; `key=value` pairs are its parameters | [Studies](Studies.md) |
+| `brigade collector run <name>` | run a collector and print the summary and the path of its collection; `key=value` pairs are its parameters | [Studies](Studies.md) |
 | `brigade collector list` | list every collector found, its name and its source | [Studies](Studies.md) |
 | `brigade preflight <name>` | run the collectors and the checks of a named preflight; `key=value` pairs are their parameters | [Preflight](Preflight.md) |
 | `brigade preflight review-pull-request pr=<pr>` | run the deterministic checks of the pull request of a task before any judgment, the size included | [Preflight](Preflight.md) |

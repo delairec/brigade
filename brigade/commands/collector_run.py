@@ -16,7 +16,7 @@ from brigade.system.render_inline_json import render_inline_json
 DOCUMENT_SCHEMA_VERSION = 1
 COLLECTOR_KIND = "collector"
 BEGINNING = date(1970, 1, 1)
-DOCUMENT_ROW = "document"
+COLLECTION_ROW = "collection"
 COLUMN_GAP = 2
 
 
@@ -38,7 +38,7 @@ def _render_text(document: dict) -> str:
     origin = "from cache" if document["cached"] else "collected"
     rows = [
         *((key, _render_value(value)) for key, value in document["summary"].items()),
-        (DOCUMENT_ROW, document["document"]),
+        (COLLECTION_ROW, document["collection"]),
     ]
     width = max(len(key) for key, _ in rows) + COLUMN_GAP
     return "\n".join([f"{document['collector']} {origin}", *(f"{key:<{width}}{value}" for key, value in rows)])
@@ -67,13 +67,13 @@ def collect(request: argparse.Namespace, runtime: Runtime) -> dict:
         "source": collector.source,
         "cached": collection.cached,
         "summary": collection.document["summary"],
-        "document": str(collection.document_path),
+        "collection": str(collection.document_path),
     }
 
 
 COMMAND = Command(
     path=("collector", "run"),
-    help="run a collector and print the summary and the path of its document; key=value pairs are its parameters",
+    help="run a collector and print the summary and the path of its collection; key=value pairs are its parameters",
     group_help="run a collector and list the collectors it resolves",
     arguments=(
         Argument(("name",), {"help": "the name of the collector"}),

@@ -41,7 +41,7 @@ def collect_evidence(context: StudyRunContext) -> dict:
             {
                 "collector": collector.name,
                 "summary": collection.document["summary"],
-                "document": str(collection.document_path),
+                "collection": str(collection.document_path),
             }
         )
     return {"collected": collected}

@@ -139,7 +139,7 @@ ledger events `order.started`, `step.done`, `step.failed`, `order.parked` and `o
 <details><summary>The answer entity</summary>
 
 - The answer is an entity of the type `--answer` names, `ANSWER` by default.
-- brigade fills `STUDY`, `RUN` and one `COLLECTED` per collector, its summary and the path of its full document; the
+- brigade fills `STUDY`, `RUN` and one `COLLECTED` per collector, its summary and the path of its collection; the
   judging run fills `NARRATIVE` and `FINDING`.
 - `study answer` validates the answer by `awawa lint` against the schema of its type, and refuses one that changed a
   field brigade filled. The output step then writes it.

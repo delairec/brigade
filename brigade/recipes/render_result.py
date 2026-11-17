@@ -17,5 +17,5 @@ def render_result(run: OrderRun) -> str:
     for collected in read_order_collected(run):
         lines.append(f"\tCOLLECTED {quote_awawa_string(collected['collector'])}")
         lines.append(f"\t\tSUMMARY {quote_awawa_string(json.dumps(collected['summary']))}")
-        lines.append(f"\t\tDOCUMENT {quote_awawa_string(collected['document'])}")
+        lines.append(f"\t\tCOLLECTION {quote_awawa_string(collected['collection'])}")
     return "\n".join(lines) + "\n"

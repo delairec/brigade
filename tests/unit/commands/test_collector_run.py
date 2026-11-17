@@ -91,7 +91,7 @@ class CollectTest(unittest.TestCase):
                 "source": "project",
                 "cached": False,
                 "summary": {"open": 3},
-                "document": str(self.runtime.paths.state_root / "collect" / "notes" / "document.json"),
+                "collection": str(self.runtime.paths.state_root / "collect" / "notes" / "collection.json"),
             },
         )
 
@@ -209,13 +209,13 @@ class CollectExitCodeTest(unittest.TestCase):
 
 
 class CollectTextTest(unittest.TestCase):
-    def test_should_print_the_origin_the_summary_and_the_document(self):
+    def test_should_print_the_origin_the_summary_and_the_collection(self):
         # Arrange
         document = {
             "collector": "notes",
             "cached": True,
             "summary": {"open": 3, "oldest": "2026-10-01"},
-            "document": "/cache/notes/document.json",
+            "collection": "/cache/notes/collection.json",
         }
 
         # Act
@@ -224,15 +224,15 @@ class CollectTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             text,
-            "notes from cache\nopen      3\noldest    2026-10-01\ndocument  /cache/notes/document.json",
+            "notes from cache\nopen        3\noldest      2026-10-01\ncollection  /cache/notes/collection.json",
         )
 
-    def test_should_say_collected_for_a_document_collected_afresh(self):
+    def test_should_say_collected_for_a_collection_collected_afresh(self):
         # Arrange
-        document = {"collector": "notes", "cached": False, "summary": {}, "document": "/state/notes/document.json"}
+        document = {"collector": "notes", "cached": False, "summary": {}, "collection": "/state/notes/collection.json"}
 
         # Act
         text = COMMAND.render_text(document)
 
         # Assert
-        self.assertEqual(text, "notes collected\ndocument  /state/notes/document.json")
+        self.assertEqual(text, "notes collected\ncollection  /state/notes/collection.json")

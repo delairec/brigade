@@ -12,6 +12,15 @@ POLICY_WITH_VERIFY_ROUNDS = """SCHEMA POLICY
 \t\tDEFAULT 2
 """
 
+ANSWER_WITH_COLLECTED_DOCUMENT = """SCHEMA ANSWER
+\tFIELD COLLECTED string
+\t\tREPEATABLE
+\t\tFIELD SUMMARY string
+\t\t\tREQUIRED
+\t\tFIELD DOCUMENT string
+\t\t\tREQUIRED
+"""
+
 PROJECT_WITH_VERIFY_ROUNDS = """SCHEMA PROJECT
 \tFIELD VERIFY_ROUNDS uint
 """
@@ -24,6 +33,13 @@ class FindRetiredSchemaFieldsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(retired, [RetiredName(old="POLICY.VERIFY_ROUNDS", new="POLICY.REPAIR_ROUNDS")])
+
+    def test_should_name_a_retired_field_nested_under_another_with_its_new_name(self):
+        # Act
+        retired = find_retired_schema_fields(ANSWER_WITH_COLLECTED_DOCUMENT)
+
+        # Assert
+        self.assertEqual(retired, [RetiredName(old="ANSWER.DOCUMENT", new="ANSWER.COLLECTION")])
 
     def test_should_find_no_retired_field_in_the_shipped_schema(self):
         # Act
