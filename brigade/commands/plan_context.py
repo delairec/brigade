@@ -103,7 +103,7 @@ def plan_context(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("plan", "context"),
-    help="print the package a planner reads to cut a request into a wave",
+    help="print the context a planner reads to plan a request",
     group_help="plan the requests of the registered projects",
     arguments=(Argument(("request",)),),
     run=plan_context,

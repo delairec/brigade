@@ -109,7 +109,7 @@ class AddCommandParsersWhenAGroupHasACommandOfItsOwnTest(unittest.TestCase):
     def test_should_refuse_a_line_declaring_another_help_for_that_group(self):
         # Arrange
         commands = (
-            _create_command(("ledger",), "read the event journal"),
+            _create_command(("ledger",), "read the event ledger"),
             _create_command(("ledger", "budgets"), "the steps per procedure", group_help="the journal"),
         )
 
@@ -122,7 +122,7 @@ class AddCommandParsersWhenAGroupHasACommandOfItsOwnTest(unittest.TestCase):
 
     def test_should_parse_the_group_alone_as_its_own_command(self):
         # Arrange
-        ledger = _create_command(("ledger",), "read the event journal")
+        ledger = _create_command(("ledger",), "read the event ledger")
         budgets = _create_command(("ledger", "budgets"), "the steps per procedure")
         parser = argparse.ArgumentParser(prog="brigade")
         add_command_parsers(parser, (ledger, budgets), _create_common_options())
@@ -135,7 +135,7 @@ class AddCommandParsersWhenAGroupHasACommandOfItsOwnTest(unittest.TestCase):
 
     def test_should_parse_a_line_of_the_group_as_that_line(self):
         # Arrange
-        ledger = _create_command(("ledger",), "read the event journal")
+        ledger = _create_command(("ledger",), "read the event ledger")
         budgets = _create_command(("ledger", "budgets"), "the steps per procedure")
         parser = argparse.ArgumentParser(prog="brigade")
         add_command_parsers(parser, (ledger, budgets), _create_common_options())

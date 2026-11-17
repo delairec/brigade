@@ -33,7 +33,7 @@ class BrigadeHelpTest(HelpTestCase):
             ),
             ("doctor", "inspect the prerequisites and report the optional items with their fallback"),
             ("init", "create the operational corpus repository, its schema and config.toml"),
-            ("ledger", "read the event journal: an overview, a task or a project"),
+            ("ledger", "read the event ledger: an overview, a task or a project"),
             ("project", "register the projects brigade works on, list and show them"),
             ("role", "list, show and lint the roles each slot resolves to"),
             (
@@ -52,6 +52,24 @@ class BrigadeHelpTest(HelpTestCase):
         for name, expected_help in rows:
             with self.subTest(command=name):
                 self.assert_listed(completed.stdout, name, expected_help)
+
+
+class ContextCommandsHelpTest(HelpTestCase):
+    def test_should_say_context_in_the_help_of_each_context_command(self):
+        # Arrange
+        rows = [
+            ("build", "print the starting context of a build run in the worktree of its task"),
+            ("plan", "print the context a planner reads to plan a request"),
+            ("study", "print the context a judging run answers from, and write it to the run directory"),
+        ]
+        for group, expected_help in rows:
+            with self.subTest(group=group):
+                # Act
+                completed = self.run_help(group)
+
+                # Assert
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                self.assert_listed(completed.stdout, "context", expected_help)
 
 
 class BrigadeCorpusHelpTest(HelpTestCase):

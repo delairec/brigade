@@ -78,7 +78,7 @@ class MainHelpTest(MainTestCase):
 
         # Assert
         self.assertEqual(exit_code, 0)
-        self.assertRegex(page, r"\n    ledger +read the event journal")
+        self.assertRegex(page, r"\n    ledger +read the event ledger")
 
 
 class MainGroupHelpTest(MainTestCase):

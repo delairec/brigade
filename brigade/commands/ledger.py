@@ -114,7 +114,7 @@ def ledger(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("ledger",),
-    help="read the event journal: an overview, a task or a project",
+    help="read the event ledger: an overview, a task or a project",
     arguments=(
         ExclusiveArguments(
             (

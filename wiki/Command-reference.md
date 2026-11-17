@@ -25,7 +25,7 @@ Every command of brigade, what it does in one line, and the page that documents 
 | `brigade request new\|show\|list\|cancel` | record the requests of the projects, list, show and cancel them | [Waves](Waves.md) |
 | `brigade request replan` | relaunch the planner of a planning request whose planner run is no longer live | — |
 | `brigade plan record` | record the plan of a request, one `MILESTONE` and its tasks, on `plan/<request>` and deliver it to the main branch | [Waves](Waves.md) |
-| `brigade plan context` | print the package a planner reads to cut a request into a wave | — |
+| `brigade plan context` | print the context a planner reads to plan a request | — |
 | `brigade wave start\|show\|list\|cancel\|resume\|requeue` | start the waves of the projects, list, show and cancel them | [Waves](Waves.md) |
 | `brigade build context\|check\|push\|pr\|promote` | work on a task of a wave from its worktree | [Tasks](Tasks.md) |
 | `brigade review context\|verdict` | print what the review of the pull request of a task judges, and record its verdict | [Review](Review.md) |
@@ -63,7 +63,7 @@ Every command of brigade, what it does in one line, and the page that documents 
 | `brigade inbox list\|show\|dismiss` | list, show and dismiss the signals of the inbox and show its study answers | [Inbox](Inbox.md) |
 | `brigade inbox ratify` | ratify a pattern by its action | [Dashboard](Dashboard.md) |
 | `brigade report list\|show` | print one row per report, of a milestone, of a task or of a wave, and per order result, or one of them rendered from its entity | — |
-| `brigade ledger [budgets\|compare]` | read the event journal: an overview, a task or a project | [Ledger](Ledger.md) |
+| `brigade ledger [budgets\|compare]` | read the event ledger: an overview, a task or a project | [Ledger](Ledger.md) |
 | `brigade processes list\|show` | list the subprocesses brigade started and show those of one run, tick or command | [Trails](Trails.md) |
 | `brigade corpus <project>` | read a registered project's tree at a branch, a SHA or a worktree; `-- <awawa args>` runs awawa there | [Project tree at a ref](Project-tree-at-a-ref.md) |
 | `brigade serve` | serve the dashboard on the loopback address until SIGINT or SIGTERM | [Dashboard](Dashboard.md) |
