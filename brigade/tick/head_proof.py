@@ -11,7 +11,7 @@ UNPROVEN = "unproven"
 @dataclass(frozen=True)
 class ForgeCheck:
     name: str
-    verdict: str
+    conclusion: str
 
 
 @dataclass(frozen=True)

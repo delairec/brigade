@@ -628,7 +628,7 @@ NO_PULL_REQUEST = None
 OPEN_PULL_REQUEST = {
     "number": 42,
     "state": "open",
-    "checks": [{"name": "ci", "verdict": "pass"}],
+    "checks": [{"name": "ci", "conclusion": "pass"}],
     "review": None,
     "behind": False,
     "head": "8885daa",
@@ -650,7 +650,7 @@ TASK_PREFLIGHTED_AT_THE_HEAD = {
 NO_DETAILS_ASKED = None
 PULL_REQUEST_FAILING_TWO_CHECKS = {
     **OPEN_PULL_REQUEST,
-    "checks": [{"name": "ci", "verdict": "failure"}, {"name": "coverage", "verdict": "failure"}],
+    "checks": [{"name": "ci", "conclusion": "failure"}, {"name": "coverage", "conclusion": "failure"}],
 }
 TASK_PREFLIGHTED_ON_FAILING_CHECKS = {
     **TASK_PREFLIGHTED_AT_THE_HEAD,
@@ -666,7 +666,7 @@ TASK_PREFLIGHTED_ON_FAILING_CHECKS_AND_PRIVACY = {
 PULL_REQUEST_DETAILS = {
     "head": "feature/T7-tide-table",
     "head_sha": "8885daa",
-    "checks": [{"name": "ci", "verdict": "success"}],
+    "checks": [{"name": "ci", "conclusion": "success"}],
     "body": "Delivers @TASK.T7.",
 }
 PAUSED_ON_THE_QUOTA_UNTIL_08 = {
@@ -2548,7 +2548,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
     def test_should_leave_open_a_pull_request_failing_its_preflight(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, _record_task_state("pr_open"), TASK_PR_OPENED])
-        failing_checks = {**PULL_REQUEST_DETAILS, "checks": [{"name": "ci", "verdict": "failure"}]}
+        failing_checks = {**PULL_REQUEST_DETAILS, "checks": [{"name": "ci", "conclusion": "failure"}]}
         runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, failing_checks))
 
         # Act
@@ -2761,7 +2761,7 @@ TASK_AFTER_T7 = (
     ("STATUS", "todo"),
     ("AFTER", "@TASK.T7"),
 )
-GREEN_PULL_REQUEST = {**OPEN_PULL_REQUEST, "checks": [{"name": "ci", "verdict": "success"}]}
+GREEN_PULL_REQUEST = {**OPEN_PULL_REQUEST, "checks": [{"name": "ci", "conclusion": "success"}]}
 TASK_PASSED_AT_THE_HEAD = {
     "schema_version": 1,
     "ts": "2026-10-18T11:45:00Z",
@@ -4859,7 +4859,7 @@ class TickLaunchingAStudyTest(unittest.TestCase):
 
 BEHIND_PULL_REQUEST = {**GREEN_PULL_REQUEST, "behind": True}
 REBASED_HEAD = "9a9a9a9"
-REBASED_PULL_REQUEST = {**OPEN_PULL_REQUEST, "head": REBASED_HEAD, "checks": [{"name": "ci", "verdict": "pending"}]}
+REBASED_PULL_REQUEST = {**OPEN_PULL_REQUEST, "head": REBASED_HEAD, "checks": [{"name": "ci", "conclusion": "pending"}]}
 REBASE_ONTO_THE_WAVE_BRANCH = ("git", "rebase", "--fork-point", "origin/integration/M4")
 FETCH_OF_THE_WAVE_BRANCH = ("git", "fetch", "--quiet", "origin", "integration/M4")
 CLI_BOUND_TO_A_FORGE_ACCOUNT = '[forge_accounts]\ncli = "tidepool-cli"\n'

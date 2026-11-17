@@ -42,7 +42,7 @@ ACTION_WITH_PASSED_PULL_REQUEST_CHECKS = LaunchTask(
     branch="integration/w1",
     task="B1",
     task_branch="feature/B1-task",
-    pull_request_checks=HeadChecks(head=TASK_HEAD, checks=(ForgeCheck(name="unit", verdict="success"),)),
+    pull_request_checks=HeadChecks(head=TASK_HEAD, checks=(ForgeCheck(name="unit", conclusion="success"),)),
 )
 ACTION_WITH_PENDING_PULL_REQUEST_CHECKS = LaunchTask(
     project="shop",
@@ -50,7 +50,7 @@ ACTION_WITH_PENDING_PULL_REQUEST_CHECKS = LaunchTask(
     branch="integration/w1",
     task="B1",
     task_branch="feature/B1-task",
-    pull_request_checks=HeadChecks(head=TASK_HEAD, checks=(ForgeCheck(name="unit", verdict="pending"),)),
+    pull_request_checks=HeadChecks(head=TASK_HEAD, checks=(ForgeCheck(name="unit", conclusion="pending"),)),
 )
 ACTION_WITH_PULL_REQUEST_CHECKS_OF_AN_OLDER_HEAD = LaunchTask(
     project="shop",
@@ -58,7 +58,7 @@ ACTION_WITH_PULL_REQUEST_CHECKS_OF_AN_OLDER_HEAD = LaunchTask(
     branch="integration/w1",
     task="B1",
     task_branch="feature/B1-task",
-    pull_request_checks=HeadChecks(head="0ld4ead", checks=(ForgeCheck(name="unit", verdict="success"),)),
+    pull_request_checks=HeadChecks(head="0ld4ead", checks=(ForgeCheck(name="unit", conclusion="success"),)),
 )
 WORKTREE = Path("/srv/shop/.brigade/worktrees/B1")
 ADD_TASK_WORKTREE = ("git", "worktree", "add", "--quiet", "-b", "feature/B1-task", str(WORKTREE), "integration/w1")

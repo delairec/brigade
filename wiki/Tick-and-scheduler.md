@@ -1,4 +1,4 @@
-What a tick does with the facts it reads, from launching the tasks of a wave to verifying, repairing and rebasing their
+What a tick does with the facts it reads, from launching the tasks of a wave to reviewing, repairing and rebasing their
 pull requests, starting waves and pausing them on the quota, and how `brigade scheduler` fires the tick every five
 minutes.
 
@@ -187,7 +187,7 @@ dies before it records a `run.finished` does.
   counts as none: its wave is paused, and the review is launched again once the wave is resumed. The same holds for a
   head delivered without a forge.
 - A task in `verifying` whose pull request head is no longer the head of its last `task.preflighted` moves back to
-  `pr_open`, where the preflight of the new head opens the next verification.
+  `pr_open`, where the preflight of the new head opens the next review.
 - A task in `pr_open` whose preflight failed on a finding other than `ancestry` and `checks` moves to
   `changes_requested`, those findings as its reason.
 

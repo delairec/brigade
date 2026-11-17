@@ -40,7 +40,7 @@ EVERY_STATE = "all"
 LISTING_TIMEOUT_S = 600.0
 COMPARE_PATH = "repos/{owner}/{repo}/compare"
 CHECK_RUN_TYPE = "CheckRun"
-PENDING_VERDICT = "pending"
+PENDING_CONCLUSION = "pending"
 ACTIONS_JOB_PATH = re.compile(r"/[^/]+/[^/]+/actions/runs/\d+/job/(?P<job>\d+)")
 JOBS_PATH = "repos/{owner}/{repo}/actions/jobs"
 REVIEW_EVENTS = {"approve": "APPROVE", "request_changes": "REQUEST_CHANGES"}
@@ -205,7 +205,7 @@ def merge_pull_request(request: dict, runtime: Runtime) -> dict:
 
 
 def _describe_check_run(check_run: dict) -> dict:
-    return {"name": check_run["name"], "verdict": (check_run["conclusion"] or PENDING_VERDICT).lower()}
+    return {"name": check_run["name"], "conclusion": (check_run["conclusion"] or PENDING_CONCLUSION).lower()}
 
 
 def _describe_check_runs(status_check_rollup: list) -> list[dict]:
@@ -493,7 +493,7 @@ def _describe_head_check_runs(head: _CheckedHead) -> list[dict]:
             "branch": head.branch,
             "head": head.commit["oid"],
             "name": context["name"],
-            "conclusion": (context["conclusion"] or PENDING_VERDICT).lower(),
+            "conclusion": (context["conclusion"] or PENDING_CONCLUSION).lower(),
             "link": context["detailsUrl"],
         }
         for context in contexts

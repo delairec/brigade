@@ -9,7 +9,7 @@ class PullRequestFactsTest(unittest.TestCase):
         document = {
             "number": 160,
             "state": "open",
-            "checks": [{"name": "unit", "verdict": "success"}],
+            "checks": [{"name": "unit", "conclusion": "success"}],
             "review": None,
             "behind": False,
             "head": "4f2a9c1",
@@ -26,7 +26,7 @@ class PullRequestFactsTest(unittest.TestCase):
             {
                 "number": 160,
                 "state": "open",
-                "checks": [{"name": "unit", "verdict": "success"}],
+                "checks": [{"name": "unit", "conclusion": "success"}],
                 "review": None,
                 "behind": False,
                 "head": "4f2a9c1",

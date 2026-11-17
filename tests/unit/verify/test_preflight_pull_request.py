@@ -34,7 +34,7 @@ class ForgeDescribingThePullRequestDouble:
                 "body": "Delivers @TASK.B1.\n",
                 "head": "task/w1/B1",
                 "head_sha": HEAD,
-                "checks": [{"name": "unit", "verdict": "success"}],
+                "checks": [{"name": "unit", "conclusion": "success"}],
             },
         }
 

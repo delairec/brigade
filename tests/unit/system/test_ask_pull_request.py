@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 from brigade.errors import BrigadeError
 from brigade.system.ask_pull_request import PullRequestQuery, ask_pull_request
-from brigade.system.pull_request_facts import CheckVerdict, PullRequestFacts
+from brigade.system.pull_request_facts import CheckConclusion, PullRequestFacts
 from tests.unit.forge_double import ForgeDouble, ForgeRequest
 
 NO_RUNTIME_NEEDED = None
@@ -22,7 +22,7 @@ class AskPullRequestTest(unittest.TestCase):
                     "pull_request": {
                         "number": 42,
                         "state": "open",
-                        "checks": [{"name": "tests", "verdict": "success"}],
+                        "checks": [{"name": "tests", "conclusion": "success"}],
                         "review": "approved",
                         "behind": False,
                         "head": "0123abc",
@@ -56,7 +56,7 @@ class AskPullRequestTest(unittest.TestCase):
             PullRequestFacts(
                 number=42,
                 state="open",
-                checks=(CheckVerdict(name="tests", verdict="success"),),
+                checks=(CheckConclusion(name="tests", conclusion="success"),),
                 review="approved",
                 behind=False,
                 head="0123abc",

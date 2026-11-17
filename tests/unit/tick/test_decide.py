@@ -11,7 +11,7 @@ from brigade.orders.live_order_run import LiveOrderRun
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.read_live_study_runs import LiveStudyRun
 from brigade.studies.task_report_order import TaskReportOrder
-from brigade.system.pull_request_facts import CheckVerdict, PullRequestFacts
+from brigade.system.pull_request_facts import CheckConclusion, PullRequestFacts
 from brigade.system.reset_hour import ResetHour
 from brigade.tick.actions import (
     CarryOpenedPullRequest,
@@ -131,7 +131,7 @@ class PlanStartableTasksTest(unittest.TestCase):
             (
                 "its pull request open",
                 create_pull_request("open", "failure"),
-                HeadChecks(head="0123abc", checks=(ForgeCheck(name="tests", verdict="failure"),)),
+                HeadChecks(head="0123abc", checks=(ForgeCheck(name="tests", conclusion="failure"),)),
             ),
             ("its pull request closed", create_pull_request("closed"), None),
         ]:
@@ -199,7 +199,7 @@ def create_pull_request(state: str, verdict: str = "success", base: str = TASK_B
     return PullRequestFacts(
         number=42,
         state=state,
-        checks=(CheckVerdict(name="tests", verdict=verdict),),
+        checks=(CheckConclusion(name="tests", conclusion=verdict),),
         review=None,
         behind=False,
         head=HEAD,
@@ -1347,7 +1347,7 @@ REVIEW_RUN_OF_S3_IN_THE_MAIN_CHECKOUT = LiveRun(
 FAILED_CHECK_RUN_BESIDE_A_PASSING_ONE = PullRequestFacts(
     number=42,
     state="open",
-    checks=(CheckVerdict(name="lint", verdict="success"), CheckVerdict(name="tests", verdict="failure")),
+    checks=(CheckConclusion(name="lint", conclusion="success"), CheckConclusion(name="tests", conclusion="failure")),
     review=None,
     behind=False,
     head=HEAD,
@@ -2145,7 +2145,7 @@ LAUNCH_S3 = LaunchTask(
     project="shop", wave="shop_w1", branch=TASK_BASE, task="S3", task_branch="feature/S3-task", pull_request_checks=None
 )
 LAUNCH_S3_WITH_PULL_REQUEST_CHECKS = dataclasses.replace(
-    LAUNCH_S3, pull_request_checks=HeadChecks(head="0123abc", checks=(ForgeCheck(name="tests", verdict="success"),))
+    LAUNCH_S3, pull_request_checks=HeadChecks(head="0123abc", checks=(ForgeCheck(name="tests", conclusion="success"),))
 )
 
 
@@ -2465,7 +2465,7 @@ class PlanMilestoneReportTest(unittest.TestCase):
             create_milestone(WAVES_OF_M4_CLOSED, NO_TASK_TODO),
             opened_pull_request=90,
             pull_request=dataclasses.replace(
-                MILESTONE_PULL_REQUEST, checks=(CheckVerdict(name="tests", verdict="success"),), review="approved"
+                MILESTONE_PULL_REQUEST, checks=(CheckConclusion(name="tests", conclusion="success"),), review="approved"
             ),
             described_head="0123abc",
         )
