@@ -130,8 +130,8 @@ row names a word the code or the corpus carries.
 | `brigade request new` | command | record a request and launch its planning | [Waves](Waves.md) | M1 | B187 |
 | `brigade request replan` | command | relaunch the planner of a planning request whose planner run is no longer live | [Waves](Waves.md) | M1 | B169 |
 | `brigade request show` | command | print a request, its status, its plan and its pull request | [Waves](Waves.md) | M1 | B187 |
-| `brigade review context` | command | print in one read what the verification of the pull request of a task judges | [Review](Review.md) | M8 | B255 |
-| `brigade review verdict` | command | validate the verdict of the verification of the pull request of a task and record it | [Review](Review.md) | M8 | B255 |
+| `brigade review context` | command | print in one read what the review of the pull request of a task judges | [Review](Review.md) | M8 | B255 |
+| `brigade review verdict` | command | validate the verdict of the review of the pull request of a task and record it | [Review](Review.md) | M8 | B255 |
 | `brigade role lint` | command | check the built-in and the machine role files | [Roles](Roles.md) | M8 | B255 |
 | `brigade role list` | command | list the role, the source and the model of each slot | [Roles](Roles.md) | M8 | B255 |
 | `brigade role show` | command | print the role file a slot resolves to | [Roles](Roles.md) | M8 | B255 |
