@@ -18,7 +18,7 @@ from brigade.system.check_shapes import FAILED
 from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 from brigade.tasks.find_task_base import find_task_base
 from brigade.verify.find_opened_task import find_opened_task
-from brigade.verify.preflight_pull_request import VERIFY_PULL_REQUEST, PreflightDemand, preflight_pull_request
+from brigade.verify.preflight_pull_request import REVIEW_PULL_REQUEST, PreflightDemand, preflight_pull_request
 
 DOCUMENT_SCHEMA_VERSION = 1
 
@@ -55,7 +55,7 @@ def _preflight_pull_request(pr: int, runtime: Runtime) -> dict:
 
 def preflight(request: argparse.Namespace, runtime: Runtime) -> dict:
     parameters = read_parameters(request.extra_arguments)
-    if request.name == VERIFY_PULL_REQUEST:
+    if request.name == REVIEW_PULL_REQUEST:
         return _preflight_pull_request(int(parameters["pr"]), runtime)
     project = locate_main_checkout(runtime.run_process, locate_worktree_root(runtime.run_process, Path.cwd()))
     run = PreflightRun(

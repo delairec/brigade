@@ -38,7 +38,7 @@ Every command of brigade, what it does in one line, and the page that documents 
 | `brigade collector run <name>` | run a collector and print the summary and the path of its document; `key=value` pairs are its parameters | [Studies](Studies.md) |
 | `brigade collector list` | list every collector found, its name and its source | [Studies](Studies.md) |
 | `brigade preflight <name>` | run the collectors and the checks of a named preflight; `key=value` pairs are their parameters | [Preflight](Preflight.md) |
-| `brigade preflight verify-pull-request pr=<pr>` | run the deterministic checks of the pull request of a task before any judgment, the size included | [Preflight](Preflight.md) |
+| `brigade preflight review-pull-request pr=<pr>` | run the deterministic checks of the pull request of a task before any judgment, the size included | [Preflight](Preflight.md) |
 | `brigade preflight add <name> <step>` | add a collector or a check, `key=value` pairs its parameters, to a custom preflight of the project, committing nothing | [Preflight](Preflight.md) |
 | `brigade check list` | list every check found, its name and its source | [Preflight](Preflight.md) |
 | `brigade recipe list` | list every recipe found, its name and its source — project, machine, built-in, `wave` native — in the order they resolve | [Recipes](Recipes.md) |

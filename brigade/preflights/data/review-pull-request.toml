@@ -1,5 +1,5 @@
 schema_version = 1
-name = "verify-pull-request"
+name = "review-pull-request"
 description = "the deterministic checks of the pull request of a task, before any judgment"
 collectors = [{ name = "pull-request" }]
 checks = [

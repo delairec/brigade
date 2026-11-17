@@ -121,7 +121,7 @@ class BrigadePreflightVerifyPullRequestTest(PullRequestPreflightTestCase):
         completed = self.machine.run_brigade(
             CLONE_ENTRY_POINT,
             "preflight",
-            "verify-pull-request",
+            "review-pull-request",
             "pr=42",
             environment=self.describe_environment(),
             cwd=self.worktree,
@@ -131,7 +131,7 @@ class BrigadePreflightVerifyPullRequestTest(PullRequestPreflightTestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             completed.stdout,
-            "preflight verify-pull-request\nok  ancestry\nok  checks\nok  corpus\nok  promotion\n"
+            "preflight review-pull-request\nok  ancestry\nok  checks\nok  corpus\nok  promotion\n"
             "ok  untouched_files\nok  privacy\nok  body\ninfo  size\n  3 files\n  9 lines\n"
             "  3 packages: corpus, src/billing, src/cart\n  0 layers\n",
         )

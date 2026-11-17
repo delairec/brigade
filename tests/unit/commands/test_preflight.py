@@ -19,7 +19,7 @@ from tests.unit.registry_answers import create_registry_answers
 
 NO_PLUGIN_SOURCES = None
 PARAMETERS = ["pr=42", "task=B1", "base=integration/w1"]
-VERIFY_PULL_REQUEST = "verify-pull-request"
+REVIEW_PULL_REQUEST = "review-pull-request"
 TASK_WORKTREE = {
     ("git", "rev-parse", "--show-toplevel"): "/srv/tidepool-T7\n",
     ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): "/srv/tidepool/.git\n",
@@ -164,7 +164,7 @@ class PreflightCommandTest(unittest.TestCase):
             ),
             (str(collector),): ProcessAnswer(stdout=json.dumps(pull_request)),
             ("awawa", "show", "@TASK.B1", "--json", str(head_tree)): ProcessAnswer(stdout=json.dumps(task)),
-            ("awawa", "show", "@PREFLIGHT.verify_pull_request", "--json", str(project)): NOT_DEFINED,
+            ("awawa", "show", "@PREFLIGHT.review_pull_request", "--json", str(project)): NOT_DEFINED,
             ("awawa", "show", "@PREFLIGHT.nightly", "--json", str(project)): NOT_DEFINED,
             ("awawa", "diff", str(base_tree), str(head_tree), "--json"): ProcessAnswer(
                 stdout=json.dumps({"added": [], "changed": [], "removed": []})
@@ -177,7 +177,7 @@ class PreflightCommandTest(unittest.TestCase):
 
     def test_should_print_the_document_of_the_preflight_of_the_pull_request_of_a_task(self):
         # Arrange
-        request = argparse.Namespace(name=VERIFY_PULL_REQUEST, extra_arguments=["pr=42"])
+        request = argparse.Namespace(name=REVIEW_PULL_REQUEST, extra_arguments=["pr=42"])
 
         # Act
         document = preflight(request, self.runtime)
@@ -187,7 +187,7 @@ class PreflightCommandTest(unittest.TestCase):
             document,
             {
                 "schema_version": 1,
-                "preflight": "verify-pull-request",
+                "preflight": "review-pull-request",
                 "result": "ok",
                 "project": "shop",
                 "pr": 42,
@@ -256,7 +256,7 @@ class PreflightCommandRenderingTest(unittest.TestCase):
         # Arrange
         document = {
             "schema_version": 1,
-            "preflight": "verify-pull-request",
+            "preflight": "review-pull-request",
             "parameters": {"pr": "42"},
             "result": "fail",
             "checks": [
@@ -269,7 +269,7 @@ class PreflightCommandRenderingTest(unittest.TestCase):
         text = COMMAND.render_text(document)
 
         # Assert
-        self.assertEqual(text, "preflight verify-pull-request\nfail  privacy\n  cart.py:1: a home path\nok  body")
+        self.assertEqual(text, "preflight review-pull-request\nfail  privacy\n  cart.py:1: a home path\nok  body")
 
     def test_should_exit_1_on_a_preflight_that_fails_and_0_on_one_that_passes(self):
         # Arrange
@@ -284,7 +284,7 @@ class PreflightCommandRenderingTest(unittest.TestCase):
 
     def test_should_take_a_key_value_pair_as_a_parameter_and_an_option_as_none(self):
         # Arrange
-        rows = [("pr=42", True), ("--json", False), ("--format=json", False), ("verify-pull-request", False)]
+        rows = [("pr=42", True), ("--json", False), ("--format=json", False), ("review-pull-request", False)]
         for argument, expected in rows:
             with self.subTest(argument=argument):
                 # Act
@@ -314,7 +314,7 @@ class PreflightOfAPullRequestTest(unittest.TestCase):
     def test_should_ask_the_forge_about_the_pull_request_of_the_task(self):
         # Act
         with self.assertRaises(BrigadeError):
-            preflight(Namespace(name=VERIFY_PULL_REQUEST, extra_arguments=["pr=42"]), self.runtime)
+            preflight(Namespace(name=REVIEW_PULL_REQUEST, extra_arguments=["pr=42"]), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -330,7 +330,7 @@ class PreflightOfAPullRequestTest(unittest.TestCase):
     def test_should_refuse_a_pull_request_no_task_opened(self):
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            preflight(Namespace(name=VERIFY_PULL_REQUEST, extra_arguments=["pr=41"]), self.runtime)
+            preflight(Namespace(name=REVIEW_PULL_REQUEST, extra_arguments=["pr=41"]), self.runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "no task.pr_opened of @PROJECT.tidepool names the pull request #41")
@@ -356,7 +356,7 @@ class PreflightOfAPullRequestAsTheLoginOfTheCliKeyTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError):
-            preflight(Namespace(name=VERIFY_PULL_REQUEST, extra_arguments=["pr=42"]), runtime)
+            preflight(Namespace(name=REVIEW_PULL_REQUEST, extra_arguments=["pr=42"]), runtime)
 
         # Assert
         self.assertEqual(
@@ -392,7 +392,7 @@ class PreflightOfAPullRequestAsTheLoginOfTheCliKeyTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError):
-            preflight(Namespace(name=VERIFY_PULL_REQUEST, extra_arguments=["pr=42"]), runtime)
+            preflight(Namespace(name=REVIEW_PULL_REQUEST, extra_arguments=["pr=42"]), runtime)
 
         # Assert
         self.assertEqual(

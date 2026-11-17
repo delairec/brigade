@@ -13,7 +13,7 @@ from brigade.verify.measure_size import measure_size
 
 DOCUMENT_SCHEMA_VERSION = 1
 REMOTE_BRANCH_PREFIX = "refs/remotes/origin/"
-VERIFY_PULL_REQUEST = "verify-pull-request"
+REVIEW_PULL_REQUEST = "review-pull-request"
 PULL_REQUEST_COLLECTOR = "pull-request"
 
 
@@ -29,7 +29,7 @@ class PreflightDemand:
 
 def preflight_pull_request(runtime: Runtime, demand: PreflightDemand) -> dict:
     run = PreflightRun(
-        name=VERIFY_PULL_REQUEST,
+        name=REVIEW_PULL_REQUEST,
         project=Path(read_project_field(demand.project, "PATH")),
         parameters={"pr": str(demand.pr), "task": demand.task, "base": demand.base_branch},
         equipment=demand.equipment,
@@ -41,7 +41,7 @@ def preflight_pull_request(runtime: Runtime, demand: PreflightDemand) -> dict:
     changed = tuple(ChangedFile(**changed) for changed in facts["changed"])
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
-        "preflight": VERIFY_PULL_REQUEST,
+        "preflight": REVIEW_PULL_REQUEST,
         "result": outcome.result,
         "project": demand.project.name,
         "pr": demand.pr,
