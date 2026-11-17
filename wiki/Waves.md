@@ -8,8 +8,9 @@ brigade request new <project> <text>     # record a request and launch its plann
 brigade request show <request>
 brigade request list [--project P]
 brigade request cancel <request>
+brigade request replan <request>         # launch the planner again on a planning request whose planner stopped
 brigade plan record <request> --file <plan>
-brigade wave start <project> [--task T ...]
+brigade wave start <project> [--task T ...]   # one wave per milestone served, one for the tasks naming none
 brigade wave show <wave> [--events]
 brigade wave list [--project P]
 brigade wave cancel <wave>
@@ -39,17 +40,22 @@ in their words, and the plan it receives.
 ## Starting and following a wave
 
 A wave is a batch of ratified tasks started together, recorded in the ledger alone, with no branch and no pull
-request of its own. `wave start` composes it without a model and names it `<project>_w<n>`; each of its tasks runs
-on a branch of its own, cut from the branch of its milestone. A wave is open until `wave.closed`, which the tick
-records once every task of the wave is merged or parked, or `wave.cancelled`.
+request of its own. `wave start` composes the waves without a model, one per milestone it serves and one for the
+tasks naming no milestone, and names each `<project>_w<n>`; each task of a wave runs on a branch of its own, cut from
+the branch of its milestone, or from the main branch for a task naming none. A wave is open until `wave.closed`, which
+the tick records once every task of the wave is merged or parked, or `wave.cancelled`.
 
-A task joins the wave when it:
+A task joins the wave of its milestone when it:
 
-- is `todo` in the project corpus at the main branch, and holds a number in its name;
+- is `todo` in the project corpus at the branch of its milestone, the main branch until that branch is cut, or at the
+  main branch for a task naming no milestone, and holds a number in its name;
+- names a milestone that is `active` and whose `AFTER` milestones are all `reached`, or names none: the tasks of a
+  `planned` milestone, or of one whose `AFTER` is not reached, are not taken;
 - belongs to no open wave and has no live blocker;
 - has every task of its `AFTER` implemented or in the wave.
 
-The tasks join in the order of their number; `--task` takes exactly the tasks named instead.
+The tasks join in the order of their number; `--task` takes exactly the tasks named instead, in one wave, which takes
+the tasks of one milestone or tasks naming none.
 
 `wave show` prints each task of a wave with its state, its pull request, its last run and, for a parked task, its
 reason. `wave list` prints one row per wave, the open waves first.
@@ -82,6 +88,9 @@ exists.
   for a field it does not hold yet. `request list` prints one row per request, those of one project with `--project`.
 - `request cancel` moves a `planning` or `planned` request to `cancelled`; a request of another status exits 1 naming
   it.
+- `request replan` launches the planner again on a `planning` request whose planner run is no longer live, as
+  `request new` launches it, and prints the request, the run and `brigade run show <run> --log`. A request of another
+  status, a request whose planner run is live, or a paused project exits 1 naming it.
 - Every write to the registry goes through the lock, `awawa fmt`, `awawa lint --strict` and the commit of
   the registry's writes.
 
@@ -102,25 +111,31 @@ exists.
 
 <details><summary><code>wave start</code> in detail</summary>
 
-- `--task` exits 1 on a task in an open wave, a task with no number in its name, a task the corpus does not define, or
-  one whose `AFTER` is neither implemented nor named. An empty wave exits 1 naming the project.
+- `--task` exits 1 on a task in an open wave, a task with no number in its name, a task the corpus does not define,
+  one whose `AFTER` is neither implemented nor named, and tasks naming two milestones, or a milestone and none, naming
+  the milestone of each. A start with no task to take exits 1 naming the project.
+- Without `--task`, an `active` milestone whose `AFTER` names a milestone not `reached` is named on stderr with that
+  `AFTER`, and its tasks wait.
 - `n` is one above the highest wave number of the project in the ledger. `wave start` records `wave.started` with the
-  wave, the project, the branch and the tasks under the lock of the ledger, then cuts `integration/<project>_w<n>`
-  from the main branch and pushes it under the forge `github`.
-- The missing branch of an open wave is cut again; a branch of the name that no `wave.started` names, local or remote,
-  exits 1.
+  wave, the project, the tasks and the digest of each task entity under the lock of the ledger, and no branch.
+- It then locates the base of the wave. For tasks naming no milestone, it is the main branch. For a milestone, it is
+  its branch `integration/<slug of its TITLE>`: the one a `milestone.branch_cut` records, cut again from the main branch
+  when the forge no longer holds it; otherwise cut from the main branch, pushed under the forge `github` and recorded as
+  `milestone.branch_cut`.
+- A branch of that name that no `milestone.branch_cut` records, local or remote, exits 1, and so does one recorded for
+  another milestone.
 
 </details>
 
 <details><summary><code>wave show</code> and <code>wave list</code> in detail</summary>
 
-- `wave show` prints a wave, its branch, the instant it started and its last wave event, then each task with its last
-  `task.state`, its pull request, its last run in the wave and, for a parked task, the reason of its `task.parked`,
-  `-` when none. With `--events`, it adds what `brigade ledger` once printed for a wave: its cost and tokens, the
+- `wave show` prints a wave, the branch its `wave.started` holds where a wave of an earlier brigade recorded one, the
+  instant it started and its last wave event, then each task with its last `task.state`, its pull request, its last
+  run in the wave and, for a parked task, the reason of its `task.parked`, `-` when none. With `--events`, it adds what `brigade ledger` once printed for a wave: its cost and tokens, the
   turns, duration and cost of each task, its merged pull requests, its turns by slot and by role, its halts, its
   handovers, its parked tasks, then every event the ledger holds for the wave, in the order recorded.
-- `wave list` prints one row per wave of the ledger, its project, branch, last wave event and task count, the open
-  waves first, those of one project with `--project`.
+- `wave list` prints one row per wave of the ledger, its project, the branch recorded as in `wave show`, its last wave
+  event and its task count, the open waves first, those of one project with `--project`.
 
 </details>
 
@@ -149,10 +164,10 @@ AI client again: the next tick launches its task again from the state it holds, 
 - `wave requeue` records `task.state` `queued` for a parked task of the wave named, and prints the task queued.
 - It exits 1 on a task that is not parked, naming its state; on a task outside the wave, naming the wave; on a parked
   task the branch of its milestone, or the main branch, holds implemented, naming the branch; and on a wave no `wave.started` names, naming it.
-- On an open wave, it also exits 1 on a task the main branch ruled since the branch of the wave left it: its entity on
-  the main branch differs from the one on the branch of the wave and from the one at the merge base of the two. It
-  names both branches and `brigade wave cancel`, whose new wave reads the ruling. A task ruled on the branch of the
-  wave alone, by a pull request into that branch, is queued.
+- On an open wave, it also exits 1 on a task the main branch ruled since the branch the wave reads, the branch of its
+  milestone, left it: its entity on the main branch differs from the one on that branch and from the one at the merge
+  base of the two. It names both branches and `brigade wave cancel`, whose new wave reads the ruling. A task ruled on
+  the branch of its milestone alone, by a pull request into that branch, is queued.
 - A queued task that branch holds implemented is followed through its pull request, and recorded merged once it
   is.
 

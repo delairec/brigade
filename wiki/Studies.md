@@ -4,7 +4,7 @@ holds and where its output goes.
 ## Commands
 
 ```
-brigade study new <name> --title T --output O [--question Q] [--project P] [--collector LINE ...] [--slot S] [--every E] [--answer TYPE]
+brigade study new <name> --title T --output O --collector LINE [--collector LINE ...] [--question Q] [--project P] [--slot S] [--every E] [--answer TYPE]
 brigade study run <name>
 brigade study context <run>
 brigade study answer <run> --file <answer.awawa>
@@ -40,7 +40,8 @@ Times are in the machine's timezone. Each tick runs every due study as an order 
 ## Collectors
 
 A collector line is a collector name and its `key=value` parameters, or `shell: <command line>`, whose items are the
-lines the command prints.
+lines the command prints. `study new` takes one `--collector` at least, repeatable. The table is a selection:
+`brigade collector list` prints every collector found, its name and its source.
 
 | Collector | Collects |
 |---|---|
@@ -129,7 +130,7 @@ ledger events `order.started`, `step.done`, `step.failed`, `order.parked` and `o
 
 - It reads the pull requests on the forge as the login of the key `cli` of `[forge_accounts]`.
 - Each carries its number, title, head and base branches, state, author, draft state, review decision, the verdict of
-  its check runs and the task its head branch `task/<slug>/<task>` names.
+  its check runs and the task its head branch `<prefix>/<task>-<slug>` names.
 - It reads every one of them, page after page, and is collected afresh on every call.
 - It is absent under `FORGE none`: `brigade collector run pr-list` exits 1 naming it, and `brigade collector list` prints it
   in its `absent` column.
