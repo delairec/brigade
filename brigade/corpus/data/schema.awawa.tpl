@@ -112,10 +112,10 @@ SCHEMA ANSWER
 		DESC "one per collector, its name, filled by the CLI"
 		FIELD SUMMARY string
 			REQUIRED
-			DESC "the summary of its document, as JSON"
-		FIELD DOCUMENT string
+			DESC "the summary of its collection, as JSON"
+		FIELD COLLECTION string
 			REQUIRED
-			DESC "the path of its full document"
+			DESC "the path of its collection"
 	FIELD NARRATIVE string
 		REPEATABLE
 		DESC "filled by the judging slot"
@@ -208,10 +208,10 @@ SCHEMA RESULT
 		DESC "one per collector, its name, filled by the CLI"
 		FIELD SUMMARY string
 			REQUIRED
-			DESC "the summary of its document, as JSON"
-		FIELD DOCUMENT string
+			DESC "the summary of its collection, as JSON"
+		FIELD COLLECTION string
 			REQUIRED
-			DESC "the path of its full document"
+			DESC "the path of its collection"
 	FIELD NARRATIVE string
 		REPEATABLE
 		DESC "filled by the judging slot"

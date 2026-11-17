@@ -315,8 +315,11 @@ class OrderRunTest(unittest.TestCase):
             {
                 "collector": "open-issues",
                 "summary": {"open": 2},
-                "document": str(
-                    self.paths.state_root / "runs" / document["run"] / "collectors/1/collect/open-issues/document.json"
+                "collection": str(
+                    self.paths.state_root
+                    / "runs"
+                    / document["run"]
+                    / "collectors/1/collect/open-issues/collection.json"
                 ),
             },
         )

@@ -22,10 +22,12 @@ class ReadCollectedTest(unittest.TestCase):
     def test_should_read_the_evidence_of_the_collect_steps_in_the_order_of_their_rank(self):
         # Arrange
         (self.run_directory / "steps" / "10-collect.json").write_text(
-            '{"collected": [{"collector": "corpus", "summary": {}, "document": "/srv/corpus.json"}]}', encoding="utf-8"
+            '{"collected": [{"collector": "corpus", "summary": {}, "collection": "/srv/corpus.json"}]}',
+            encoding="utf-8",
         )
         (self.run_directory / "steps" / "2-collect.json").write_text(
-            '{"collected": [{"collector": "ledger", "summary": {}, "document": "/srv/ledger.json"}]}', encoding="utf-8"
+            '{"collected": [{"collector": "ledger", "summary": {}, "collection": "/srv/ledger.json"}]}',
+            encoding="utf-8",
         )
 
         # Act
@@ -35,8 +37,8 @@ class ReadCollectedTest(unittest.TestCase):
         self.assertEqual(
             collected,
             [
-                {"collector": "ledger", "summary": {}, "document": "/srv/ledger.json"},
-                {"collector": "corpus", "summary": {}, "document": "/srv/corpus.json"},
+                {"collector": "ledger", "summary": {}, "collection": "/srv/ledger.json"},
+                {"collector": "corpus", "summary": {}, "collection": "/srv/corpus.json"},
             ],
         )
 

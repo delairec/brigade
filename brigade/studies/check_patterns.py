@@ -39,7 +39,7 @@ def _read_citable(collected: list[dict]) -> Citable:
     fingerprints = []
     for entry in cited:
         _, read_fingerprints = CITED_ITEMS_BY_COLLECTOR[entry["collector"]]
-        items = json.loads(Path(entry["document"]).read_text(encoding="utf-8"))["items"]
+        items = json.loads(Path(entry["collection"]).read_text(encoding="utf-8"))["items"]
         fingerprints.extend(read_fingerprints(items))
     described = " or ".join(
         f"{CITED_ITEMS_BY_COLLECTOR[entry['collector']][0]} {entry['collector']}" for entry in cited

@@ -12,7 +12,7 @@ NO_PROJECT_NAME = ""
 
 
 def _read_items(entry: dict) -> list[dict]:
-    items = json.loads(Path(entry["document"]).read_text(encoding="utf-8"))["items"]
+    items = json.loads(Path(entry["collection"]).read_text(encoding="utf-8"))["items"]
     if any(FINGERPRINT_KEY not in item for item in items):
         raise BrigadeError(f"the collector {entry['collector']} printed an item without a fingerprint")
     return items

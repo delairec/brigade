@@ -52,10 +52,10 @@ class RecordScanSignalsTest(unittest.TestCase):
     def collect(self, documents: dict) -> None:
         collected = []
         for index, (collector, items) in enumerate(documents.items(), start=1):
-            path = self.run_directory / "collectors" / str(index) / "document.json"
+            path = self.run_directory / "collectors" / str(index) / "collection.json"
             path.parent.mkdir(parents=True)
             path.write_text(json.dumps({"collector": collector, "summary": {}, "items": items}), encoding="utf-8")
-            collected.append({"collector": collector, "summary": {}, "document": str(path)})
+            collected.append({"collector": collector, "summary": {}, "collection": str(path)})
         (self.run_directory / "steps").mkdir(parents=True)
         (self.run_directory / "steps" / "1-collect.json").write_text(
             json.dumps({"collected": collected}), encoding="utf-8"

@@ -34,7 +34,7 @@ class RenderResultTest(unittest.TestCase):
         # Arrange
         run = self.create_run([OPEN_ISSUES_STEP, TRIAGE_JUDGE])
         self.write_step(
-            "1-collect", {"collector": "open-issues", "summary": {"open": 2}, "document": "/srv/open/document.json"}
+            "1-collect", {"collector": "open-issues", "summary": {"open": 2}, "collection": "/srv/open/collection.json"}
         )
 
         # Act
@@ -48,14 +48,14 @@ class RenderResultTest(unittest.TestCase):
             '\tRUN "20261019T090000Z-aaaaaa"\n'
             '\tCOLLECTED "open-issues"\n'
             '\t\tSUMMARY "{\\"open\\": 2}"\n'
-            '\t\tDOCUMENT "/srv/open/document.json"\n',
+            '\t\tCOLLECTION "/srv/open/collection.json"\n',
         )
 
     def test_should_leave_out_a_collect_step_that_was_skipped(self):
         # Arrange
         run = self.create_run([FAILING_TESTS_STEP, OPEN_ISSUES_STEP])
         self.write_step("1-collect", {"skipped": "collector failing-tests exited 1"})
-        self.write_step("2-collect", {"collector": "open-issues", "summary": {}, "document": "/srv/document.json"})
+        self.write_step("2-collect", {"collector": "open-issues", "summary": {}, "collection": "/srv/collection.json"})
 
         # Act
         result = render_result(run)
@@ -68,5 +68,5 @@ class RenderResultTest(unittest.TestCase):
             '\tRUN "20261019T090000Z-aaaaaa"\n'
             '\tCOLLECTED "open-issues"\n'
             '\t\tSUMMARY "{}"\n'
-            '\t\tDOCUMENT "/srv/document.json"\n',
+            '\t\tCOLLECTION "/srv/collection.json"\n',
         )

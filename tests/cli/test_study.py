@@ -341,7 +341,7 @@ class BrigadeStudyContextTest(StudyRunTestCase):
             "entity:ANSWER",
         )
         self.run_id = json.loads(self.run_study("run", "trees", "--json").stdout)["run"]
-        self.document = self.runs / self.run_id / "collectors" / "1" / "collect" / "shell" / "document.json"
+        self.document = self.runs / self.run_id / "collectors" / "1" / "collect" / "shell" / "collection.json"
 
     def test_should_present_the_schema_of_the_answer_type(self):
         # Act
@@ -364,10 +364,10 @@ class BrigadeStudyContextTest(StudyRunTestCase):
             '\t\tDESC "one per collector, its name, filled by the CLI"\n'
             "\t\tFIELD SUMMARY string\n"
             "\t\t\tREQUIRED\n"
-            '\t\t\tDESC "the summary of its document, as JSON"\n'
-            "\t\tFIELD DOCUMENT string\n"
+            '\t\t\tDESC "the summary of its collection, as JSON"\n'
+            "\t\tFIELD COLLECTION string\n"
             "\t\t\tREQUIRED\n"
-            '\t\t\tDESC "the path of its full document"\n'
+            '\t\t\tDESC "the path of its collection"\n'
             "\tFIELD NARRATIVE string\n"
             "\t\tREPEATABLE\n"
             '\t\tDESC "filled by the judging slot"\n'
@@ -424,7 +424,7 @@ class BrigadeStudyAnswerTest(StudyRunTestCase):
             "entity:ANSWER",
         )
         self.run_id = json.loads(self.run_study("run", "weekly", "--json").stdout)["run"]
-        self.document = self.runs / self.run_id / "collectors" / "1" / "collect" / "shell" / "document.json"
+        self.document = self.runs / self.run_id / "collectors" / "1" / "collect" / "shell" / "collection.json"
         self.answer_file = Path(self.root.name) / "answer.awawa"
 
     def write_answer(self, summary: str, prose: str) -> None:
@@ -434,7 +434,7 @@ class BrigadeStudyAnswerTest(StudyRunTestCase):
             f'\tRUN "{self.run_id}"\n'
             '\tCOLLECTED "shell"\n'
             f"\t\tSUMMARY {summary}\n"
-            f'\t\tDOCUMENT "{self.document}"\n'
+            f'\t\tCOLLECTION "{self.document}"\n'
             f"{prose}"
         )
 

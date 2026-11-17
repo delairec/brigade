@@ -13,7 +13,7 @@ DOCUMENT_SCHEMA_VERSION = 1
 
 
 def _render_collected(entry: dict) -> str:
-    return f"{entry['collector']}: {render_inline_json(entry['summary'])}, {entry['document']}"
+    return f"{entry['collector']}: {render_inline_json(entry['summary'])}, {entry['collection']}"
 
 
 def _render_text(document: dict) -> str:

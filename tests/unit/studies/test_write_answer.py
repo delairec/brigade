@@ -135,7 +135,7 @@ class WriteAnswerTest(unittest.TestCase):
         document = self.root / "collected.json"
         document.write_text(json.dumps({"items": [{"fingerprint": "spike"}]}), encoding="utf-8")
         (self.run_directory / "steps" / "1-collect.json").write_text(
-            json.dumps({"collected": [{"collector": "stale-branches", "summary": {}, "document": str(document)}]}),
+            json.dumps({"collected": [{"collector": "stale-branches", "summary": {}, "collection": str(document)}]}),
             encoding="utf-8",
         )
 

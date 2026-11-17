@@ -26,7 +26,7 @@ def create_collect_performer(
         return {
             "collector": step["collector"],
             "summary": collection.document["summary"],
-            "document": str(collection.document_path),
+            "collection": str(collection.document_path),
         }
 
     return perform

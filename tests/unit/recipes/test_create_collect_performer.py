@@ -34,7 +34,7 @@ class CreateCollectPerformerTest(unittest.TestCase):
         # Arrange
         collector = CollectorDouble(
             Collection(
-                document_path=Path("/srv/runs/20261019T090000Z-aaaaaa/collectors/2/document.json"),
+                document_path=Path("/srv/runs/20261019T090000Z-aaaaaa/collectors/2/collection.json"),
                 document={"summary": {"failing": 3}, "items": []},
                 cached=False,
             )
@@ -50,14 +50,14 @@ class CreateCollectPerformerTest(unittest.TestCase):
             {
                 "collector": "failing-tests",
                 "summary": {"failing": 3},
-                "document": "/srv/runs/20261019T090000Z-aaaaaa/collectors/2/document.json",
+                "collection": "/srv/runs/20261019T090000Z-aaaaaa/collectors/2/collection.json",
             },
         )
 
     def test_should_collect_with_the_values_of_the_order_into_the_place_of_the_rank_of_the_step(self):
         # Arrange
         collector = CollectorDouble(
-            Collection(document_path=Path("/srv/document.json"), document={"summary": {}}, cached=False)
+            Collection(document_path=Path("/srv/collection.json"), document={"summary": {}}, cached=False)
         )
         perform = create_collect_performer(collector.collect, {"branch": "main"})
 
@@ -73,7 +73,7 @@ class CreateCollectPerformerTest(unittest.TestCase):
     def test_should_collect_with_no_parameters_for_a_step_that_declares_none(self):
         # Arrange
         collector = CollectorDouble(
-            Collection(document_path=Path("/srv/document.json"), document={"summary": {}}, cached=False)
+            Collection(document_path=Path("/srv/collection.json"), document={"summary": {}}, cached=False)
         )
         perform = create_collect_performer(collector.collect, {"branch": "main"})
 

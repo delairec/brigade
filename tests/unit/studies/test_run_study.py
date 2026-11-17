@@ -385,8 +385,8 @@ class RunStudyOfSeveralCollectorsTest(RunStudyTestCase):
                     {
                         "collector": "weather",
                         "summary": {"days": 1},
-                        "document": str(
-                            self.run_directory / "collectors" / "2" / "collect" / "weather" / "document.json"
+                        "collection": str(
+                            self.run_directory / "collectors" / "2" / "collect" / "weather" / "collection.json"
                         ),
                     }
                 ]
@@ -405,7 +405,7 @@ class RunStudyOfSeveralCollectorsTest(RunStudyTestCase):
             (self.config_root / "findings.awawa").read_text(encoding="utf-8"),
             'FINDING trees_20261019T090000Z_aaaaaa\n\tSTUDY "trees"\n\tRUN "20261019T090000Z-aaaaaa"\n'
             '\tCOLLECTED "weather"\n\t\tSUMMARY "{\\"days\\": 1}"\n'
-            f'\t\tDOCUMENT "{documents}/1/collect/weather/document.json"\n'
+            f'\t\tCOLLECTION "{documents}/1/collect/weather/collection.json"\n'
             '\tCOLLECTED "weather"\n\t\tSUMMARY "{\\"days\\": 1}"\n'
-            f'\t\tDOCUMENT "{documents}/2/collect/weather/document.json"\n',
+            f'\t\tCOLLECTION "{documents}/2/collect/weather/collection.json"\n',
         )

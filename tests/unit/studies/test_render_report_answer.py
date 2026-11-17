@@ -68,7 +68,7 @@ class RenderReportAnswerTest(unittest.TestCase):
     def write_document(self, collector: str, items: list, file_name: str) -> dict:
         path = self.root / file_name
         path.write_text(json.dumps({"collector": collector, "items": items}), encoding="utf-8")
-        return {"collector": collector, "summary": {}, "document": str(path)}
+        return {"collector": collector, "summary": {}, "collection": str(path)}
 
     def test_should_report_the_milestone_from_the_documents_of_the_collectors_of_its_waves(self):
         # Arrange

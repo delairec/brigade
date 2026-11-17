@@ -1,0 +1,26 @@
+{
+  "call": {
+    "arguments": [
+      "show",
+      "@RESULT.pr_usage_report_<compact_instant:2>_<run_name:3>",
+      "--json",
+      "<tmp:0>/state/brigade/runs/<run:1>/answer.awawa"
+    ],
+    "cwd": "<tmp:0>/state/brigade/runs/<run:1>",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/state/brigade/runs/<run:1>/answer.awawa": "RESULT pr_usage_report_<compact_instant:2>_<run_name:3>\n\tORDER \"pr_usage_report_<compact_instant:2>\"\n\tRUN \"<run:1>\"\n\tCOLLECTED \"ledger\"\n\t\tSUMMARY \"{\\\"events\\\": {\\\"order.started\\\": 1}, \\\"outcomes\\\": {}}\"\n\t\tCOLLECTION \"<tmp:0>/state/brigade/runs/<run:1>/collectors/1/collect/ledger/collection.json\"\n\tCOLLECTED \"pr-threads\"\n\t\tSUMMARY \"{\\\"1\\\": 0}\"\n\t\tCOLLECTION \"<tmp:0>/state/brigade/runs/<run:1>/collectors/2/collect/pr-threads/collection.json\"\n\tCOLLECTED \"corpus\"\n\t\tSUMMARY \"{\\\"MILESTONE\\\": {\\\"implemented\\\": 0}, \\\"RECIPE\\\": {\\\"implemented\\\": 0}, \\\"SCHEMA\\\": {\\\"implemented\\\": 0}, \\\"TASK\\\": {\\\"implemented\\\": 1}}\"\n\t\tCOLLECTION \"<tmp:0>/state/brigade/runs/<run:1>/collectors/3/collect/corpus/collection.json\"\n\tNARRATIVE \"verdict: the corpus carried the review\"\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"RESULT\", \"name\": \"pr_usage_report_<compact_instant:2>_<run_name:3>\", \"file\": \"<tmp:0>/state/brigade/runs/<run:1>/answer.awawa\", \"line\": 1, \"status\": null, \"fields\": [{\"name\": \"ORDER\", \"atoms\": [\"\\\"pr_usage_report_<compact_instant:2>\\\"\"], \"fields\": []}, {\"name\": \"RUN\", \"atoms\": [\"\\\"<run:1>\\\"\"], \"fields\": []}, {\"name\": \"COLLECTED\", \"atoms\": [\"\\\"ledger\\\"\"], \"fields\": [{\"name\": \"SUMMARY\", \"atoms\": [\"\\\"{\\\\\\\"events\\\\\\\": {\\\\\\\"order.started\\\\\\\": 1}, \\\\\\\"outcomes\\\\\\\": {}}\\\"\"], \"fields\": []}, {\"name\": \"COLLECTION\", \"atoms\": [\"\\\"<tmp:0>/state/brigade/runs/<run:1>/collectors/1/collect/ledger/collection.json\\\"\"], \"fields\": []}]}, {\"name\": \"COLLECTED\", \"atoms\": [\"\\\"pr-threads\\\"\"], \"fields\": [{\"name\": \"SUMMARY\", \"atoms\": [\"\\\"{\\\\\\\"1\\\\\\\": 0}\\\"\"], \"fields\": []}, {\"name\": \"COLLECTION\", \"atoms\": [\"\\\"<tmp:0>/state/brigade/runs/<run:1>/collectors/2/collect/pr-threads/collection.json\\\"\"], \"fields\": []}]}, {\"name\": \"COLLECTED\", \"atoms\": [\"\\\"corpus\\\"\"], \"fields\": [{\"name\": \"SUMMARY\", \"atoms\": [\"\\\"{\\\\\\\"MILESTONE\\\\\\\": {\\\\\\\"implemented\\\\\\\": 0}, \\\\\\\"RECIPE\\\\\\\": {\\\\\\\"implemented\\\\\\\": 0}, \\\\\\\"SCHEMA\\\\\\\": {\\\\\\\"implemented\\\\\\\": 0}, \\\\\\\"TASK\\\\\\\": {\\\\\\\"implemented\\\\\\\": 1}}\\\"\"], \"fields\": []}, {\"name\": \"COLLECTION\", \"atoms\": [\"\\\"<tmp:0>/state/brigade/runs/<run:1>/collectors/3/collect/corpus/collection.json\\\"\"], \"fields\": []}]}, {\"name\": \"NARRATIVE\", \"atoms\": [\"\\\"verdict: the corpus carried the review\\\"\"], \"fields\": []}], \"duplicates\": []}\n"
+  },
+  "run_order": [
+    "<run:1>",
+    "<run_name:3>"
+  ],
+  "version": "awawa 2.7.0"
+}
