@@ -79,7 +79,7 @@ def build_context(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("build", "context"),
-    help="print the starting package of a build run in the worktree of its task",
+    help="print the starting context of a build run in the worktree of its task",
     group_help="work on a task of a wave from its worktree",
     arguments=(Argument(("task",), {"nargs": "?"}),),
     run=build_context,

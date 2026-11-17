@@ -1,10 +1,10 @@
-What a build run does from the worktree of its task with `brigade task`: read its starting package, run the checks,
+What a build run does from the worktree of its task with `brigade build`: read its starting context, run the checks,
 push the branch, open the pull request and promote the task.
 
 ## Commands
 
 ```
-brigade build context [<task>]                  # the starting package of the run
+brigade build context [<task>]                  # the starting context of the run
 brigade build check [<task>]                    # the acceptance commands and the corpus checks; exit 1 when one fails
 brigade build push [<task>]                     # push the branch with a lease once a check of HEAD passed
 brigade build pr [<task>] --subject <subject>   # push the branch with a lease and open the pull request on its base
@@ -17,7 +17,7 @@ of the task, `feat` becoming `feature`, the slug its `TITLE` lowercased, each ru
 letters and digits made one hyphen, cut at a hyphen within 40 characters (`feature/B46-local-mode`). Its pull request
 goes to that base. Every command runs from that worktree, takes the task of the branch when `<task>` is left out,
 and its wave from the open wave of the ledger that holds the task. Each prints text or, with `--json`, a JSON document.
-`task push`, `task pr` and `task promote` push the branch with `--force-with-lease`, never with `--force`: the lease is the head of
+`build push`, `build pr` and `build promote` push the branch with `--force-with-lease`, never with `--force`: the lease is the head of
 `origin/<branch>` they read, or that the branch is absent from `origin`, so a branch the tick rebased since its last
 push is pushed, and one another push moved is refused.
 
@@ -28,18 +28,18 @@ stderr at each tick.
 
 | Command | Records in the ledger |
 |---|---|
-| `task pr` | `task.pr_opened`, `milestone.created` |
-| `task promote` | `task.promoted` |
+| `build pr` | `task.pr_opened`, `milestone.created` |
+| `build promote` | `task.promoted` |
 
-> **Watch out:** `task push` and `task pr` refuse, pushing nothing, a task whose last check is not of `HEAD` or has a
-> failing command, and `task promote` one whose last check is not of the commit it promotes on: run `task check` again
+> **Watch out:** `build push` and `build pr` refuse, pushing nothing, a task whose last check is not of `HEAD` or has a
+> failing command, and `build promote` one whose last check is not of the commit it promotes on: run `build check` again
 > after every commit.
 
 ## Details and edge cases
 
 <details><summary><code>task context</code></summary>
 
-It prints the starting package of the run: the ancestry of the worktree and the output of its setup, the task whole
+It prints the starting context of the run: the ancestry of the worktree and the output of its setup, the task whole
 with `awawa show`, its `RATIONALE` included, its neighbours at depth 1 without their reasoning with
 `awawa context <task> --depth 1 --skip reasoning --with-schema .`, its closure, the rules of the files it touches, the project's `AGENTS.md`, the acceptance commands, the task number and the
 attribution reserved for it. A run reads a further entity with `awawa show` when it needs it.
