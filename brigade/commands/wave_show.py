@@ -177,7 +177,7 @@ COMMAND = Command(
             ("--events",),
             {
                 "action": "store_true",
-                "help": "add its cost, tokens, steps, pauses, handovers, parked tasks and events in the order recorded",
+                "help": "add its cost, tokens, turns, halts, handovers, parked tasks and events in the order recorded",
             },
         ),
     ),

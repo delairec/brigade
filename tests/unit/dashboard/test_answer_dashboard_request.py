@@ -717,7 +717,7 @@ class AnswerDashboardRequestOfTheWaveViewTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(response.status, 200)
-        self.assertIn(b"<li>B28, pull request -, run r28, 0 rounds, 12 steps, blocked", response.body)
+        self.assertIn(b"<li>B28, pull request -, run r28, 0 rounds, 12 turns, blocked", response.body)
         self.assertIn(b"<li>2026-10-19T07:00:00Z wave.started</li>", response.body)
 
 

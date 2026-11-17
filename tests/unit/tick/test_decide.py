@@ -113,7 +113,7 @@ PARK_BLOCKED_S3 = ParkTask(wave="shop_w1", task="S3", reason="blocked", blockers
 
 
 class PlanTest(unittest.TestCase):
-    def test_should_plan_no_action_without_a_wave_or_a_planned_request(self):
+    def test_should_decide_no_action_without_a_wave_or_a_planned_request(self):
         # Arrange
         snapshot = Snapshot(now=NOW)
 
@@ -275,7 +275,7 @@ class PlanFollowedPullRequestsTest(unittest.TestCase):
         # Assert
         self.assertEqual(actions, (CLOSE_SHOP_W1,))
 
-    def test_should_record_the_merge_and_remove_the_worktree_in_one_plan(self):
+    def test_should_record_the_merge_and_remove_the_worktree_in_one_tick(self):
         # Arrange
         task = TaskFacts(name="S3", branch="feature/S3-task", pull_request=MERGED, worktree=WORKTREE_S3)
         snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
@@ -1897,7 +1897,7 @@ class PlanRebuildOfAnAmendedTaskTest(unittest.TestCase):
         # Assert
         self.assertEqual(actions, (REBUILD_S3,))
 
-    def test_should_plan_nothing_for_an_amended_task_while_a_run_holds_its_worktree_or_works_on_it(self):
+    def test_should_decide_nothing_for_an_amended_task_while_a_run_holds_its_worktree_or_works_on_it(self):
         for case, live_run in [
             ("a run of the task", REMEDIATION_RUN_OF_S3),
             ("a run of no task in its worktree", RUN_OF_NO_TASK_IN_THE_WORKTREE_OF_S3),
@@ -2695,7 +2695,7 @@ class PlanIntegrationBranchRemovalTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(actions, (removal,))
 
-    def test_should_plan_nothing_for_the_branch_of_an_active_milestone_or_of_an_open_wave(self):
+    def test_should_decide_nothing_for_the_branch_of_an_active_milestone_or_of_an_open_wave(self):
         for branch in [
             dataclasses.replace(CLOSED_MILESTONE_BRANCH, ended=False),
             dataclasses.replace(CLOSED_WAVE_BRANCH, ended=False),
@@ -2900,7 +2900,7 @@ class PlanLeftoverRemovalTest(unittest.TestCase):
         # Assert
         self.assertEqual(actions, ())
 
-    def test_should_plan_nothing_for_a_stale_worktree_it_keeps(self):
+    def test_should_decide_nothing_for_a_stale_worktree_it_keeps(self):
         # Arrange
         snapshot = Snapshot(
             now=NOW, projects=(SHOP,), leftovers=(dataclasses.replace(DETACHED_WORKTREE, reached_forge=False),)
@@ -2912,7 +2912,7 @@ class PlanLeftoverRemovalTest(unittest.TestCase):
         # Assert
         self.assertEqual(actions, ())
 
-    def test_should_delete_alone_the_stale_branch_whose_worktree_the_plan_removes_as_the_worktree_of_its_task(self):
+    def test_should_delete_alone_the_stale_branch_whose_worktree_the_decisions_remove_as_the_worktree_of_its_task(self):
         # Arrange
         task = TaskFacts(name="S7", branch="feature/S7-sprout", pull_request=MERGED, worktree=SPROUT_WORKTREE)
         wave = create_wave((task,), {"S7": "merged"})

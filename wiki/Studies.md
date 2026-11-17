@@ -59,7 +59,7 @@ lines the command prints.
 | any other name    | `brigade-output-<name>` on `PATH`, given `{"schema_version", "study", "run", "markdown"}` on stdin |
 
 Every output but `entity:` hands a person the Markdown rendered from the answer entity. An `ANSWER` entity is listed by
-`brigade inbox list` and shown by `brigade inbox show <id>`, never by `brigade reports`.
+`brigade inbox list` and shown by `brigade inbox show <id>`, never by `brigade report list`.
 
 > **Watch out:** a failed step parks the study, and a parked study is never due: its next `study run` resumes that run
 > at its first undone step.

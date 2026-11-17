@@ -25,7 +25,7 @@ class LedgerBudgetsTest(unittest.TestCase):
         self.ledger_file.parent.mkdir(parents=True)
         self.ledger_file.write_text(RUN_FINISHED + "not a document\n")
 
-    def test_should_give_the_steps_of_each_procedure_and_the_lines_skipped(self):
+    def test_should_give_the_turns_of_each_procedure_and_the_lines_skipped(self):
         # Arrange
         request = argparse.Namespace(last=20, client=None)
 

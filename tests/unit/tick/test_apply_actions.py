@@ -31,27 +31,27 @@ class FailingExecutorDouble:
 
 
 class ApplyActionsTest(unittest.TestCase):
-    def test_should_apply_an_empty_plan_as_no_action(self):
+    def test_should_apply_no_decision_as_no_action(self):
         # Arrange
-        empty_plan = ()
+        no_decisions = ()
         no_executors = {}
         failures = []
 
         # Act
-        applied = apply_actions(empty_plan, no_executors, failures.append)
+        applied = apply_actions(no_decisions, no_executors, failures.append)
 
         # Assert
         self.assertEqual(applied, AppliedActions(applied=0, failed=()))
 
     def test_should_refuse_an_action_it_has_no_executor_for(self):
         # Arrange
-        plan = (LaunchStudyDouble(study="health"),)
+        decisions = (LaunchStudyDouble(study="health"),)
         no_executors = {}
         failures = []
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            apply_actions(plan, no_executors, failures.append)
+            apply_actions(decisions, no_executors, failures.append)
 
         # Assert
         self.assertEqual(str(refusal.exception), "the tick has no executor for the action LaunchStudyDouble")
