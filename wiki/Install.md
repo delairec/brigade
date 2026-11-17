@@ -1,4 +1,4 @@
-How to install brigade, check the machine with `brigade doctor`, and create the operational corpus and `config.toml`
+How to install brigade, check the machine with `brigade doctor`, and create the registry and `config.toml`
 with `brigade init`.
 
 brigade needs Python 3.11.4 or later and nothing outside its standard library.
@@ -47,7 +47,7 @@ is 1; a missing optional item is a warning, reported with its fallback.
 | an installed `_schema.awawa` identical to the shipped one | no |
 
 > **Watch out:** an installed `_schema.awawa` that differs from the shipped one is only a warning, yet brigade supports
-> no operational corpus of an older schema: throw it away and run `brigade init` again, then register the projects anew.
+> no registry of an older schema: throw it away and run `brigade init` again, then register the projects anew.
 
 <details><summary>Rarer warnings of <code>brigade doctor</code></summary>
 
@@ -59,14 +59,14 @@ is 1; a missing optional item is a warning, reported with its fallback.
 
 </details>
 
-## Create the operational corpus: `brigade init`
+## Create the registry: `brigade init`
 
 ```
 brigade init
 brigade init --json
 ```
 
-It creates the operational corpus in `$XDG_CONFIG_HOME/brigade/`, `~/.config/brigade/` by default:
+It creates the registry in `$XDG_CONFIG_HOME/brigade/`, `~/.config/brigade/` by default:
 
 - a git repository holding `_schema.awawa` and a `.gitignore`, committed with your git identity;
 - `config.toml`, the machine configuration, every key commented out and never committed.

@@ -14,7 +14,7 @@ DOCUMENT_SCHEMA_VERSION = 1
 PARKED_EXIT_CODE = 1
 CLIENT_KIND = "client"
 COLLECTOR_KIND = "collector"
-DOCUMENT_KIND = "document"
+DOCUMENT_KIND = "progress_form"
 ANSWER_DOCUMENT = "awawa"
 
 

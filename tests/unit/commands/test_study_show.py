@@ -100,4 +100,4 @@ class StudyShowOfAnUndefinedStudyTest(unittest.TestCase):
             COMMAND.run(Namespace(name="ghost"), runtime)
 
         # Assert
-        self.assertEqual(str(refusal.exception), "@STUDY.ghost is not defined in the operational corpus")
+        self.assertEqual(str(refusal.exception), "@STUDY.ghost is not defined in the registry")

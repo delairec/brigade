@@ -15,7 +15,7 @@ Every command prints text or, with `--json`, a JSON document.
 
 ## What `project add` discovers
 
-A project is a `PROJECT` entity of `projects.awawa` in the operational corpus, the registry. `project add` registers
+A project is a `PROJECT` entity of `projects.awawa` in the registry, the registry. `project add` registers
 a git repository under the basename of its path, every character outside letters, digits and `_` turned into `_`, or
 under `--name`.
 
@@ -54,7 +54,7 @@ RECIPE acceptance
 		ARGV "unittest"
 ```
 
-> **Watch out:** every command exits 1 naming `brigade init` until the operational corpus exists, and needs awawa on
+> **Watch out:** every command exits 1 naming `brigade init` until the registry exists, and needs awawa on
 > `PATH`.
 
 > **Watch out:** a path or a name already registered is refused unless `--force` replaces it.

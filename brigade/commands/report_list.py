@@ -6,7 +6,7 @@ from brigade.runtime import Runtime
 from brigade.system.render_table import render_table
 
 DOCUMENT_SCHEMA_VERSION = 1
-DOCUMENT_KIND = "document"
+DOCUMENT_KIND = "progress_form"
 OPERATIONAL_CORPUS_DOCUMENT = "awawa"
 HEADER = ("id", "kind", "project")
 NO_PROJECT = "-"

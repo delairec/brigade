@@ -43,7 +43,7 @@ class ReadWaveRequestTest(unittest.TestCase):
             read_wave_request(self.runtime, "oak_9")
 
         # Assert
-        self.assertEqual(str(refusal.exception), "@REQUEST.oak_9 is not defined in the operational corpus")
+        self.assertEqual(str(refusal.exception), "@REQUEST.oak_9 is not defined in the registry")
 
     def test_should_refuse_to_read_a_request_before_the_operational_corpus_exists(self):
         # Arrange
@@ -54,4 +54,4 @@ class ReadWaveRequestTest(unittest.TestCase):
             read_wave_request(self.runtime, "oak_1")
 
         # Assert
-        self.assertEqual(str(refusal.exception), "the operational corpus is missing; run brigade init first")
+        self.assertEqual(str(refusal.exception), "the registry is missing; run brigade init first")

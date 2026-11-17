@@ -7,7 +7,7 @@ Cut one request of a project into a plan: one MILESTONE entity and the TASK enti
 written against the project's own schema in one plan file, then handed to brigade to record. You plan; you deliver
 nothing, and the plan file is the only file you write.
 
-Argument, which the Arguments section names: `request`, the REQUEST entity of the operational corpus to plan.
+Argument, which the Arguments section names: `request`, the REQUEST entity of the registry to plan.
 
 **Budget**: the turns the Budget section names, the cap of your role. On reaching it, stop and
 summarise what is done, what is not, and what the next run picks up.

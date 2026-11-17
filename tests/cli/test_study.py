@@ -178,7 +178,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
         recordings.mkdir()
         (recordings / "reporter.json").write_text(json.dumps(DONE_RESULT))
         self.machine.write_configuration(
-            f'client = "fake"\ndocument = "markdown"\n[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}'
+            f'client = "fake"\nprogress_form = "markdown"\n[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}'
         )
         self.run_study(
             "new",
@@ -303,7 +303,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
         # Assert
         self.assertEqual(completed.returncode, 1)
         self.assertEqual(
-            completed.stderr, "brigade study run: @STUDY.absent is not defined in the operational corpus\n"
+            completed.stderr, "brigade study run: @STUDY.absent is not defined in the registry\n"
         )
 
 
@@ -409,7 +409,7 @@ class BrigadeStudyAnswerTest(StudyRunTestCase):
         recordings.mkdir()
         (recordings / "reporter.json").write_text(json.dumps(DONE_RESULT))
         self.machine.write_configuration(
-            f'client = "fake"\ndocument = "markdown"\n[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}'
+            f'client = "fake"\nprogress_form = "markdown"\n[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}'
         )
         self.run_study(
             "new",

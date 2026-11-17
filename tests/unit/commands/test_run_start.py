@@ -335,7 +335,7 @@ def _spawn_a_client_that_exits(request):
 def _resolve_the_delivering_client(kind: str, name: str, **places):
     plugins = {
         "client": ClientDeliveringTheTaskDouble(),
-        "document": markdown,
+        "progress_form": markdown,
         "forge": PluginDouble(kind="forge", name="github"),
     }
     return plugins[kind]

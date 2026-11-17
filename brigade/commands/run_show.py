@@ -112,7 +112,7 @@ def _read_progress(run_id: str, runtime: Runtime) -> dict | None:
     progress_file = find_progress_file(runtime.paths.state_root / RUNS_DIRECTORY / run_id)
     if progress_file is None:
         return NO_PROGRESS
-    document = runtime.resolve_plugin("document", name_document_plugin(progress_file))
+    document = runtime.resolve_plugin("progress_form", name_document_plugin(progress_file))
     return render_progress(progress_file, document, runtime)
 
 

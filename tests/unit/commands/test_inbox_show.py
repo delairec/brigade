@@ -99,7 +99,7 @@ class InboxShowOfAStudyAnswerTest(unittest.TestCase):
         self.runtime = create_test_runtime(
             create_test_paths(root),
             run_process=create_corpus_double(no_study),
-            resolve_plugin=create_plugin_resolver({("document", "awawa"): plugin}),
+            resolve_plugin=create_plugin_resolver({("progress_form", "awawa"): plugin}),
         )
 
     def test_should_present_the_study_answer_the_id_names(self):

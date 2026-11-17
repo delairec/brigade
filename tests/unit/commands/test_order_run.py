@@ -467,4 +467,4 @@ class OrderRunOfAStudyTest(unittest.TestCase):
             order_run(request, self.runtime)
 
         # Assert
-        self.assertEqual(str(raised.exception), "@STUDY.health is not defined in the operational corpus")
+        self.assertEqual(str(raised.exception), "@STUDY.health is not defined in the registry")

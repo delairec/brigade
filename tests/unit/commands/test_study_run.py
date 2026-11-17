@@ -128,7 +128,7 @@ class StudyRunOfAStudyTest(unittest.TestCase):
             COMMAND.run(Namespace(name="health", run_id=None), runtime)
 
         # Assert
-        self.assertEqual(str(raised.exception), "@STUDY.health is not defined in the operational corpus")
+        self.assertEqual(str(raised.exception), "@STUDY.health is not defined in the registry")
 
     def test_should_resume_the_run_of_a_milestone_report_from_the_milestone_its_run_records(self):
         # Arrange
@@ -166,7 +166,7 @@ class StudyRunOfMineTranscriptsTest(unittest.TestCase):
         plugins = {
             ("client", "vibe"): TranscriptsClientDouble({"s-built": [SESSION_BRIEF, SESSION_CORRECTION]}),
             ("forge", "github"): PluginDouble(kind="forge", name="github"),
-            ("document", "awawa"): PluginDouble(kind="document", name="awawa"),
+            ("progress_form", "awawa"): PluginDouble(kind="progress_form", name="awawa"),
         }
         runtime = create_test_runtime(
             create_test_paths(root),
@@ -197,8 +197,8 @@ class StudyRunForgeTest(unittest.TestCase):
     def test_should_resolve_the_forge_of_the_project_its_study_names(self):
         # Arrange
         rows = [
-            ("a project of FORGE github", "github", [("forge", "github"), ("document", "awawa")]),
-            ("a project of FORGE none", "none", [("document", "awawa")]),
+            ("a project of FORGE github", "github", [("forge", "github"), ("progress_form", "awawa")]),
+            ("a project of FORGE none", "none", [("progress_form", "awawa")]),
         ]
         for case, forge, expected_resolutions in rows:
             with self.subTest(case=case):
@@ -246,4 +246,4 @@ class StudyRunForgeTest(unittest.TestCase):
         COMMAND.run(Namespace(name="mine_transcripts", run_id=RUN_ID), runtime)
 
         # Assert
-        self.assertEqual(resolver.resolved, [("forge", "github"), ("document", "awawa")])
+        self.assertEqual(resolver.resolved, [("forge", "github"), ("progress_form", "awawa")])

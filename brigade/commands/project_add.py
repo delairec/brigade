@@ -227,7 +227,7 @@ def project_add(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("project", "add"),
-    help="register a git repository in the operational corpus",
+    help="register a git repository in the registry",
     group_help="register the projects brigade works on, list and show them",
     arguments=(
         Argument(("path",)),

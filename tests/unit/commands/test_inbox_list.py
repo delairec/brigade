@@ -325,7 +325,7 @@ class InboxListOfStudyAnswersTest(unittest.TestCase):
         runtime = create_test_runtime(
             create_test_paths(root),
             run_process=create_corpus_double(no_study),
-            resolve_plugin=create_plugin_resolver({("document", "awawa"): plugin}),
+            resolve_plugin=create_plugin_resolver({("progress_form", "awawa"): plugin}),
         )
         request = argparse.Namespace(all=False)
 

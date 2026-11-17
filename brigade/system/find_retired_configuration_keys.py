@@ -1,6 +1,6 @@
 from brigade.system.retired_name import RetiredName
 
-RETIRED_KEYS = {"seconds_per_step": "seconds_per_turn"}
+RETIRED_KEYS = {"seconds_per_step": "seconds_per_turn", "document": "progress_form"}
 
 
 def find_retired_configuration_keys(document: dict) -> list[RetiredName]:

@@ -9,6 +9,6 @@ from brigade.system.entry_detection import EntryDetection
 
 def ask_progress(plan: RunPlan, operation: str, runtime: Runtime) -> DocumentCreation | DocumentText | EntryDetection:
     question = DocumentQuestion(
-        document_name=plan.configuration.document, operation=operation, request=describe_progress(plan)
+        document_name=plan.configuration.progress_form, operation=operation, request=describe_progress(plan)
     )
     return ask_document(plan.document, question, runtime)

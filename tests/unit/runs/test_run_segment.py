@@ -494,7 +494,7 @@ class RunSegmentTest(unittest.TestCase):
             run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
 
         # Assert
-        self.assertEqual(str(refusal.exception), "document plugin awawa answered describe_document: lacks the key text")
+        self.assertEqual(str(refusal.exception), "progress_form plugin awawa answered describe_document: lacks the key text")
 
     def test_should_return_the_result_the_client_parses_from_what_the_process_wrote(self):
         # Arrange

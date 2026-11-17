@@ -7,8 +7,8 @@ decide whether to read on. The pages are written in `wiki/` of the repository an
 
 ## Getting started
 
-- [Install](Install.md) — how to install brigade, check the machine with `brigade doctor` and create the operational
-  corpus with `brigade init`.
+- [Install](Install.md) — how to install brigade, check the machine with `brigade doctor` and create the registry with
+  `brigade init`.
 - [Concepts](Concepts.md) — what each word of brigade means: project, request, wave, task, run, slot, role, tick,
   ledger, inbox, study and the others, each with the page that holds it.
 

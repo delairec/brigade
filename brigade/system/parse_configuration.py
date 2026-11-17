@@ -18,8 +18,8 @@ from brigade.system.read_tick_stale_after import (
 )
 from brigade.system.read_trail_days import TRAIL_DAYS_BY_DEFAULT, TRAIL_DAYS_KEY, read_trail_days
 
-STRING_KEYS = ("client", "scheduler", "instructions", "document", "worktree_root", "ide_link")
-DOCUMENT_BY_DEFAULT = "awawa"
+STRING_KEYS = ("client", "scheduler", "instructions", "progress_form", "worktree_root", "ide_link")
+PROGRESS_FORM_BY_DEFAULT = "awawa"
 REFS_CACHE_MB_KEY = "refs_cache_mb"
 REASONING_LEVELS = ("deepest", "deep", "standard", "light")
 REASONING_ROW_KEYS = ("model", "effort")
@@ -51,7 +51,7 @@ class Configuration:
     client: str | None = None
     scheduler: str | None = None
     instructions: str | None = None
-    document: str = DOCUMENT_BY_DEFAULT
+    progress_form: str = PROGRESS_FORM_BY_DEFAULT
     refs_cache_mb: int = 1024
     reasoning: dict = field(default_factory=dict)
     clients: dict = field(default_factory=dict)

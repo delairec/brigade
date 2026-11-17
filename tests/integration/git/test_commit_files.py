@@ -37,7 +37,7 @@ class CommitFilesTest(unittest.TestCase):
         request = CommitRequest(
             repository=self.repository,
             files=("_schema.awawa", ".gitignore"),
-            message="brigade init: the operational corpus",
+            message="brigade init: the registry",
         )
 
         # Act
@@ -46,13 +46,13 @@ class CommitFilesTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             run_git(self.repository, "log", "--format=%an <%ae>%n%s", "--name-only"),
-            "Ada Lovelace <ada@example.org>\nbrigade init: the operational corpus\n\n.gitignore\n_schema.awawa\n",
+            "Ada Lovelace <ada@example.org>\nbrigade init: the registry\n\n.gitignore\n_schema.awawa\n",
         )
 
     def test_should_commit_nothing_for_files_the_repository_holds_unchanged(self):
         # Arrange
         request = CommitRequest(
-            repository=self.repository, files=("_schema.awawa",), message="brigade init: the operational corpus"
+            repository=self.repository, files=("_schema.awawa",), message="brigade init: the registry"
         )
         commit_files(run_process_without_trail, request)
 

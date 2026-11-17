@@ -97,7 +97,7 @@ class MainGroupHelpTest(MainTestCase):
             ("adapter", "transcripts", "answer transcripts, the request read on stdin"),
             ("ledger", "budgets", "p50 and p90 turns per procedure over its last runs, and the turn cap of each role"),
             ("ledger", "compare", "two ranges of days against each other, or one range against reference figures"),
-            ("project", "add", "register a git repository in the operational corpus"),
+            ("project", "add", "register a git repository in the registry"),
             ("project", "list", "list every registered project"),
             ("project", "pause", "pause a project"),
             ("project", "resume", "resume a paused project"),

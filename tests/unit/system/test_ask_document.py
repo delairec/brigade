@@ -127,7 +127,7 @@ class AskDocumentTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             str(refusal.exception),
-            "document plugin awawa answered detect_entry: holds_entry is a string, not a boolean",
+            "progress_form plugin awawa answered detect_entry: holds_entry is a string, not a boolean",
         )
 
     def test_should_refuse_a_rendering_whose_entities_are_no_list(self):
@@ -141,7 +141,7 @@ class AskDocumentTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             str(refusal.exception),
-            "document plugin awawa answered render_document: entities is a string, not a list",
+            "progress_form plugin awawa answered render_document: entities is a string, not a list",
         )
 
     def test_should_refuse_a_rendering_whose_entities_hold_an_item_that_is_no_object(self):
@@ -155,7 +155,7 @@ class AskDocumentTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             str(refusal.exception),
-            "document plugin awawa answered render_document: entities[0] is a string, not an object",
+            "progress_form plugin awawa answered render_document: entities[0] is a string, not an object",
         )
 
     def test_should_refuse_a_creation_answering_no_document(self):
@@ -169,5 +169,5 @@ class AskDocumentTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             str(refusal.exception),
-            "document plugin markdown answered create_document: the document is null, not an object",
+            "progress_form plugin markdown answered create_document: the document is null, not an object",
         )

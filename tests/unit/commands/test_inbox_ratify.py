@@ -446,7 +446,7 @@ class InboxRatifyRefusalTest(unittest.TestCase):
         refusal = self._ratify_unknown()
 
         # Assert
-        self.assertEqual(str(refusal), "@PATTERN.Unknown is not defined in the operational corpus")
+        self.assertEqual(str(refusal), "@PATTERN.Unknown is not defined in the registry")
 
     def _ratify_unknown(self) -> BrigadeError:
         runner = ScriptedProcessRunner({}, fallback=create_corpus_double({}))

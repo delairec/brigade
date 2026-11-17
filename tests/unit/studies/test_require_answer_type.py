@@ -26,4 +26,4 @@ class RequireAnswerTypeTest(unittest.TestCase):
             require_answer_type(check_type_declared, CORPUS, "VERDICT")
 
         # Assert
-        self.assertEqual(str(refusal.exception), "the schema of the operational corpus declares no VERDICT")
+        self.assertEqual(str(refusal.exception), "the schema of the registry declares no VERDICT")

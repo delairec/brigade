@@ -6,7 +6,7 @@ capabilities: read, shell
 Answer the question of one study from the evidence its collectors gathered, and nothing else: the collectors already
 collected, and a fact they did not gather is a gap the answer names, not a search you run.
 
-Arguments, which the Arguments section names: `study`, the STUDY entity of the operational corpus, and `run`, the
+Arguments, which the Arguments section names: `study`, the STUDY entity of the registry, and `run`, the
 run of that study you judge.
 
 **Budget**: the turns the Budget section names, the cap of your role. On reaching it, stop and

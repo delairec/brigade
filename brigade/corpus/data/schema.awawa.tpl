@@ -1,8 +1,8 @@
-// Schema of the brigade operational corpus, installed by `brigade init` as _schema.awawa in the
+// Schema of the brigade registry, installed by `brigade init` as _schema.awawa in the
 // config directory from brigade/corpus/data/schema.awawa.tpl, a name that keeps it out of brigade's
 // own corpus (two SCHEMA * in one workspace collide).
 SCHEMA *
-	DESC "fields legal on every entity of the operational corpus"
+	DESC "fields legal on every entity of the registry"
 	FIELD DESC string
 		REPEATABLE
 	FIELD RATIONALE string

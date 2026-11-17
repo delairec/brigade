@@ -47,4 +47,4 @@ class RequireOperationalCorpusTest(unittest.TestCase):
             require_operational_corpus(self.paths)
 
         # Assert
-        self.assertEqual(str(refusal.exception), "the operational corpus is missing; run brigade init first")
+        self.assertEqual(str(refusal.exception), "the registry is missing; run brigade init first")

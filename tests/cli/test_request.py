@@ -88,7 +88,7 @@ class RequestTestCase(FileWaitingTestCase):
         recordings.mkdir()
         (recordings / "planner.json").write_text(json.dumps(DONE_RESULT))
         self.machine.write_configuration(
-            f'client = "fake"\ndocument = "markdown"\n[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}'
+            f'client = "fake"\nprogress_form = "markdown"\n[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}'
         )
 
 

@@ -11,7 +11,7 @@ Every command of brigade, what it does in one line, and the page that documents 
 | Command | What it does | Page |
 |---|---|---|
 | `brigade doctor` | inspect the prerequisites and report the optional items with their fallback | [Install](Install.md) |
-| `brigade init` | create the operational corpus repository, its schema and `config.toml` | [Install](Install.md) |
+| `brigade init` | create the registry repository, its schema and `config.toml` | [Install](Install.md) |
 | `brigade project add\|list\|show\|pause\|resume` | register the projects brigade works on, list and show them | [Projects](Projects.md) |
 | `brigade adapter <operation>` | answer one operation of the configured client adapter: `probe`, `launch-argv`, `parse-result`, `resume-argv`, `transcripts`, `actions` | [Client adapters](Client-adapters.md) |
 | `brigade adapter matrix` | print the capabilities every client adapter declares | [Client adapters](Client-adapters.md) |

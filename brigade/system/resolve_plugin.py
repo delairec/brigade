@@ -16,10 +16,10 @@ from brigade.system.run_process import ProcessRecord, ProcessRequest
 BUILT_IN_PLUGIN_PACKAGES = {
     "forge": "brigade.adapters.forges",
     "scheduler": "brigade.adapters.schedulers",
-    "document": "brigade.adapters.documents",
+    "progress_form": "brigade.adapters.documents",
 }
 CLIENT_PACKAGES = ("brigade.adapters.clients", "brigade.adapters.test_clients")
-BUILT_IN_ENTRY_POINTS = {"forge": "describe_account", "scheduler": "install", "document": "detect_entry"}
+BUILT_IN_ENTRY_POINTS = {"forge": "describe_account", "scheduler": "install", "progress_form": "detect_entry"}
 CLIENT_NAME_PATTERN = re.compile(r"[a-z][a-z0-9-]*")
 CLIENT_EXECUTABLE_PREFIX = "brigade-client-"
 CLIENT_EXECUTABLE_DIRECTORY = "/"

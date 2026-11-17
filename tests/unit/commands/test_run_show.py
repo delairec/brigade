@@ -428,7 +428,7 @@ class RunsShowOfARunWithItsProgressTest(unittest.TestCase):
             resolve_plugin=self.resolve_plugin,
         )
         runtime.paths.config_root.mkdir(parents=True)
-        runtime.paths.configuration_file.write_text('document = "markdown"\n', encoding="utf-8")
+        runtime.paths.configuration_file.write_text('progress_form = "markdown"\n', encoding="utf-8")
 
         # Act
         document = COMMAND.run(Namespace(run=FIRST_RUN, log=False, follow=False), runtime)

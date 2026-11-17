@@ -15,7 +15,7 @@ from brigade.triage.read_new_pattern import NEW_STATUS as PROPOSED_STATUS
 from brigade.triage.read_new_pattern import PATTERN_TYPE
 
 DOCUMENT_SCHEMA_VERSION = 1
-DOCUMENT_KIND = "document"
+DOCUMENT_KIND = "progress_form"
 OPERATIONAL_CORPUS_DOCUMENT = "awawa"
 NO_SIGNAL = "no signal in the inbox"
 NO_PROJECT = "-"

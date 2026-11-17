@@ -15,7 +15,7 @@ STEP_COUNTING_PROBE = {
     "models": {},
 }
 CLOCK_PROBE = {**STEP_COUNTING_PROBE, "features": []}
-CLIENT_AND_DOCUMENT_CONFIGURATION = 'client = "double"\ndocument = "markdown"\n'
+CLIENT_AND_DOCUMENT_CONFIGURATION = 'client = "double"\nprogress_form = "markdown"\n'
 
 
 def create_plugin_resolution(probe: dict, forge=None):
@@ -23,7 +23,7 @@ def create_plugin_resolution(probe: dict, forge=None):
         create_plugin_resolver(
             {
                 ("client", "double"): ScriptedClient({"probe": probe}),
-                ("document", "markdown"): markdown,
+                ("progress_form", "markdown"): markdown,
                 ("forge", "github"): forge or PluginDouble(kind="forge", name="github"),
             }
         )
