@@ -265,7 +265,7 @@ class WaveFacts:
             "tasks": [task.to_document() for task in self.tasks],
             "states": dict(self.states),
             "implemented": list(self.implemented),
-            "pause": None if self.pause is None else self.pause.to_document(),
+            "halt": None if self.pause is None else self.pause.to_document(),
             "forge_account_unavailable": self.forge_account_unavailable,
             "milestone_branch": self.milestone_branch,
             "blocked_rebase": (
