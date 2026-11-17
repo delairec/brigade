@@ -291,7 +291,7 @@ class CheckPatternsTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             str(refusal.exception),
-            "@PATTERN.cli_is_hard_to_read is held by the operational corpus: an answer adds EVIDENCE to it, STATUS"
+            "@PATTERN.cli_is_hard_to_read is held by the registry: an answer adds EVIDENCE to it, STATUS"
             " given",
         )
 

@@ -34,6 +34,6 @@ def ask_document(
         validate_document(answer, DOCUMENT_ANSWER_SHAPES[question.operation])
     except DocumentInvalid as problem:
         raise BrigadeError(
-            f"document plugin {question.document_name} answered {question.operation}: {problem}"
+            f"progress_form plugin {question.document_name} answered {question.operation}: {problem}"
         ) from None
     return ANSWER_KINDS[question.operation].from_document(answer)

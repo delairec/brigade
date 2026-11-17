@@ -168,7 +168,7 @@ class LaunchingTickTestCase(WaveTickTestCase, FileWaitingTestCase):
 
     def configure(self, recordings: Path, instructions: Path, keys: str = "") -> None:
         self.machine.write_configuration(
-            f'client = "fake"\ndocument = "markdown"\ninstructions = "{instructions}"\n{keys}'
+            f'client = "fake"\nprogress_form = "markdown"\ninstructions = "{instructions}"\n{keys}'
             f'[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}'
         )
 

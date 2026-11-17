@@ -21,7 +21,7 @@ from brigade.system.write_bytes_file import write_bytes_file
 DOCUMENT_SCHEMA_VERSION = 1
 GITIGNORE_FILE = ".gitignore"
 GITIGNORE_CONTENT = "config.toml\n"
-COMMIT_MESSAGE = "brigade init: the operational corpus"
+COMMIT_MESSAGE = "brigade init: the registry"
 STATE_WIDTH = 9
 NAME_WIDTH = 13
 STATES = ("created", "present", "differs")
@@ -185,7 +185,7 @@ def init(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("init",),
-    help="create the operational corpus repository, its schema and config.toml",
+    help="create the registry repository, its schema and config.toml",
     run=init,
     render_text=_render_text,
     arguments=(Argument(("--remote",), {"help": "the url set as origin of the configuration repository"}),),

@@ -73,7 +73,7 @@ class AskProgressTest(unittest.TestCase):
     def test_should_ask_the_document_of_the_run_about_its_progress_file(self):
         # Arrange
         document = EntryDetectorDouble()
-        plan = _create_plan(document, Configuration(document="markdown"))
+        plan = _create_plan(document, Configuration(progress_form="markdown"))
 
         # Act
         answer = ask_progress(plan, "detect_entry", NO_RUNTIME_NEEDED)
@@ -84,7 +84,7 @@ class AskProgressTest(unittest.TestCase):
 
     def test_should_refuse_an_answer_breaking_its_shape_naming_the_plugin_the_configuration_chose(self):
         # Arrange
-        plan = _create_plan(EntryDetectorAnsweringNoVersionDouble(), Configuration(document="markdown"))
+        plan = _create_plan(EntryDetectorAnsweringNoVersionDouble(), Configuration(progress_form="markdown"))
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
@@ -92,5 +92,5 @@ class AskProgressTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            str(refusal.exception), "document plugin markdown answered detect_entry: lacks the key schema_version"
+            str(refusal.exception), "progress_form plugin markdown answered detect_entry: lacks the key schema_version"
         )

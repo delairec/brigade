@@ -6,7 +6,7 @@ capabilities: read, shell
 Report what working with the corpus cost and returned on one pull request, from the evidence the collectors of the
 order gathered, and nothing else: a fact they did not gather is a gap the report names, not a search you run.
 
-Arguments, which the Arguments section names: `order`, the ORDER entity of the operational corpus, and `run`, the
+Arguments, which the Arguments section names: `order`, the ORDER entity of the registry, and `run`, the
 run of that order you judge.
 
 **Budget**: the turns the Budget section names, the cap of your role. On reaching it, stop and

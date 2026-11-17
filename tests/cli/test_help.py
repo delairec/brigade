@@ -32,7 +32,7 @@ class BrigadeHelpTest(HelpTestCase):
                 "read a registered project's tree at a branch, a SHA or a worktree; -- <awawa args> runs awawa there",
             ),
             ("doctor", "inspect the prerequisites and report the optional items with their fallback"),
-            ("init", "create the operational corpus repository, its schema and config.toml"),
+            ("init", "create the registry repository, its schema and config.toml"),
             ("ledger", "read the event ledger: an overview, a task or a project"),
             ("project", "register the projects brigade works on, list and show them"),
             ("role", "list, show and lint the roles each slot resolves to"),

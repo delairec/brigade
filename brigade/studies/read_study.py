@@ -14,5 +14,5 @@ def read_study(runtime: Runtime, name: str) -> Study:
     except EntityNotDefined:
         built_in = next((study for study in list_built_in_studies(runtime) if study.name == name), None)
     if built_in is None:
-        raise BrigadeError(f"@{ENTITY_TYPE}.{name} is not defined in the operational corpus")
+        raise BrigadeError(f"@{ENTITY_TYPE}.{name} is not defined in the registry")
     return built_in

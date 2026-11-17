@@ -18,7 +18,7 @@ from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_confi
 
 CLIENT_KIND = "client"
 COLLECTOR_KIND = "collector"
-DOCUMENT_KIND = "document"
+DOCUMENT_KIND = "progress_form"
 ANSWER_DOCUMENT = "awawa"
 
 

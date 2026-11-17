@@ -230,7 +230,7 @@ def _plan_identity(request: RunRequest, setting: RunSetting, plugins: RunPlugins
     brief_path, brief = _read_brief(request.brief)
     run_id = _choose_run_id(request.run_id, runtime)
     run_directory = runtime.paths.state_root / RUNS_DIRECTORY / run_id
-    extension = EXTENSIONS_BY_DOCUMENT_PLUGIN[setting.configuration.document]
+    extension = EXTENSIONS_BY_DOCUMENT_PLUGIN[setting.configuration.progress_form]
     return {
         "run_id": run_id,
         "run_directory": run_directory,

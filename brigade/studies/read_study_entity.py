@@ -11,4 +11,4 @@ def read_study_entity(runtime: Runtime, name: str) -> Entity:
     try:
         return read_entity(runtime.run_process, runtime.paths.config_root, ENTITY_TYPE, name)
     except EntityNotDefined:
-        raise BrigadeError(f"@{ENTITY_TYPE}.{name} is not defined in the operational corpus") from None
+        raise BrigadeError(f"@{ENTITY_TYPE}.{name} is not defined in the registry") from None

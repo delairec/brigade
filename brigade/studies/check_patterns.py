@@ -74,7 +74,7 @@ def _check_evidence_added(target: str, pattern: Entity) -> None:
     for field in pattern.fields:
         if field.name != EVIDENCE_FIELD:
             raise BrigadeError(
-                f"{target} is held by the operational corpus: an answer adds EVIDENCE to it, {field.name} given"
+                f"{target} is held by the registry: an answer adds EVIDENCE to it, {field.name} given"
             )
 
 

@@ -7,7 +7,7 @@ from brigade.reports.render_report_markdown import render_report_markdown
 from brigade.runtime import Runtime
 
 DOCUMENT_SCHEMA_VERSION = 1
-DOCUMENT_KIND = "document"
+DOCUMENT_KIND = "progress_form"
 OPERATIONAL_CORPUS_DOCUMENT = "awawa"
 PATTERN_FIELD = "PATTERN"
 

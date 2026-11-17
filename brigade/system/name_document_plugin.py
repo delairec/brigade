@@ -9,5 +9,5 @@ EXTENSIONS_BY_DOCUMENT_PLUGIN = {plugin: extension for extension, plugin in DOCU
 def name_document_plugin(path: Path) -> str:
     plugin = DOCUMENT_PLUGINS_BY_EXTENSION.get(path.suffix)
     if plugin is None:
-        raise BrigadeError(f"no document plugin reads {path}")
+        raise BrigadeError(f"no progress_form plugin reads {path}")
     return plugin

@@ -84,7 +84,7 @@ schema of its type. `slot` is one of the slots of [Roles](Roles.md); `report` is
 |----------------------------|--------------------------------------------------------------------------|
 | `pr-file:<n>:<path>`       | as a file committed and pushed on the head branch of the pull request `<n>` |
 | `file:<path>`              | as a file                                                                |
-| `entity:<TYPE>`            | as an entity appended to the operational corpus                          |
+| `entity:<TYPE>`            | as an entity appended to the registry                          |
 | `issue`                    | as an issue of the project's forge                                       |
 | `inbox`                    | as a signal of the inbox                                                 |
 | `<name>`                   | to the executable `brigade-output-<name>` found on PATH                  |

@@ -688,4 +688,4 @@ class ProjectAddBeforeInitTest(unittest.TestCase):
             project_add(request, self.runtime)
 
         # Assert
-        self.assertEqual(str(refusal.exception), "the operational corpus is missing; run brigade init first")
+        self.assertEqual(str(refusal.exception), "the registry is missing; run brigade init first")

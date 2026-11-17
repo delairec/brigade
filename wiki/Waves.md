@@ -21,7 +21,7 @@ Each prints text or, with `--json`, a JSON document.
 
 ## From a request to a plan
 
-A request is a `REQUEST` entity of `requests.awawa` in the operational corpus: what the user wants for one project,
+A request is a `REQUEST` entity of `requests.awawa` in the registry: what the user wants for one project,
 in their words, and the plan it receives.
 
 1. `request new` records the request as `<project>_r<n>` with the status `planning`, launches the planner on it
@@ -64,7 +64,7 @@ reason. `wave list` prints one row per wave, the open waves first.
 
 ## Details and edge cases
 
-<details><summary>Which commands need the operational corpus</summary>
+<details><summary>Which commands need the registry</summary>
 
 Every command but `wave show`, `wave list`, `wave cancel` and `wave resume`, which read the ledger alone, and
 `wave requeue`, which reads the ledger until the task proves parked, exits 1 naming `brigade init` until the corpus
@@ -82,7 +82,7 @@ exists.
   for a field it does not hold yet. `request list` prints one row per request, those of one project with `--project`.
 - `request cancel` moves a `planning` or `planned` request to `cancelled`; a request of another status exits 1 naming
   it.
-- Every write to the operational corpus goes through the lock, `awawa fmt`, `awawa lint --strict` and the commit of
+- Every write to the registry goes through the lock, `awawa fmt`, `awawa lint --strict` and the commit of
   the registry's writes.
 
 </details>

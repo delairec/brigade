@@ -21,4 +21,4 @@ class NameDocumentPluginTest(unittest.TestCase):
             name_document_plugin(Path("/state/runs/r1/progress.txt"))
 
         # Assert
-        self.assertEqual(str(refusal.exception), "no document plugin reads /state/runs/r1/progress.txt")
+        self.assertEqual(str(refusal.exception), "no progress_form plugin reads /state/runs/r1/progress.txt")

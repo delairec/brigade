@@ -74,4 +74,4 @@ class RenderProgressTest(unittest.TestCase):
             render_progress(PROGRESS_FILE, document, NO_RUNTIME_NEEDED)
 
         # Assert
-        self.assertEqual(str(refusal.exception), "document plugin awawa answered render_document: lacks the key text")
+        self.assertEqual(str(refusal.exception), "progress_form plugin awawa answered render_document: lacks the key text")

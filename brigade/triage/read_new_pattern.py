@@ -13,7 +13,7 @@ def read_new_pattern(runtime: Runtime, name: str) -> Entity:
     try:
         pattern = read_entity(runtime.run_process, runtime.paths.config_root, PATTERN_TYPE, name)
     except EntityNotDefined:
-        raise BrigadeError(f"@{PATTERN_TYPE}.{name} is not defined in the operational corpus") from None
+        raise BrigadeError(f"@{PATTERN_TYPE}.{name} is not defined in the registry") from None
     status = read_project_field(pattern, "STATUS")
     if status != NEW_STATUS:
         raise BrigadeError(f"@{PATTERN_TYPE}.{name} is {status}: only a {NEW_STATUS} pattern is ratified or dismissed")

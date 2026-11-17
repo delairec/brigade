@@ -108,7 +108,7 @@ class InitTest(unittest.TestCase):
         init(self.no_option, self.runtime)
 
         # Assert
-        self.assertIn(("git", "commit", "--quiet", "-m", "brigade init: the operational corpus"), self.runner.argvs)
+        self.assertIn(("git", "commit", "--quiet", "-m", "brigade init: the registry"), self.runner.argvs)
 
     def test_should_install_the_shipped_schema(self):
         # Act
@@ -252,7 +252,7 @@ class InitTest(unittest.TestCase):
             ],
         )
         self.assertNotIn(("git", "add", "--", "_schema.awawa", ".gitignore"), self.runner.argvs)
-        self.assertNotIn(("git", "commit", "--quiet", "-m", "brigade init: the operational corpus"), self.runner.argvs)
+        self.assertNotIn(("git", "commit", "--quiet", "-m", "brigade init: the registry"), self.runner.argvs)
 
     def test_should_leave_a_file_that_differs_from_the_shipped_one(self):
         # Arrange

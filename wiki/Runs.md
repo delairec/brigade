@@ -73,9 +73,9 @@ Each run keeps its directory, `$XDG_STATE_HOME/brigade/runs/<run id>/`:
 ## Segments and the progress file
 
 A segment is one launch of the client; a run cut on the clock goes on as a fresh segment, from its progress file.
-The progress of a run is one file, in the form the key `document` of `config.toml` chooses for what brigade creates:
+The progress of a run is one file, in the form the key `progress_form` of `config.toml` chooses for what brigade creates:
 
-| `document` | File |
+| `progress_form` | File |
 |---|---|
 | `awawa`, the default | `progress.awawa`, an awawa corpus holding the ENTRY and HANDOVER schema brigade ships, then one `ENTRY` per step of the procedure completed and one `HANDOVER` per handover, named `e1`, `e2`, `h1` in order of writing |
 | `markdown` | `progress.md`, created empty |
@@ -134,16 +134,16 @@ each append.
 - When the lint fails, it opens on the lint output, the instruction to rewrite the file and the file whole, and the run
   goes on with the same count of relaunches.
 - In the markdown form the next brief opens on the file as it is.
-- A relaunched segment's brief opens on what the document plugin reads of the progress. A `progress.awawa` holding no
+- A relaunched segment's brief opens on what the progress_form plugin reads of the progress. A `progress.awawa` holding no
   entity, as that of a run the quota stopped before its first entry was written, reads as the empty inventory of each
   type of its schema.
 
 </details>
 
-<details><summary>The document plugin</summary>
+<details><summary>The progress_form plugin</summary>
 
 The extension of a file brigade reads back routes it to its plugin, `.md` to markdown and `.awawa` to awawa. Every
-request to the document plugin carries `schema_version` 1, and brigade checks every answer it reads against the shape
+request to the progress_form plugin carries `schema_version` 1, and brigade checks every answer it reads against the shape
 of its operation, naming the plugin and the operation when one breaks it.
 
 </details>
@@ -219,7 +219,7 @@ and the ledger as the foreground command does.
 | ended on `handed_over` or `undeclared` | that name | the procedure, the run and the segment |
 | whose main turns, as `run.finished` counts them, exceed the cap of its role | `budget_exceeded` | the procedure, the run, the segment, the cap applied and `turns`, the turns it took |
 
-- In each of the first three cases, when the document plugin answers that its progress holds an entry, the segment is
+- In each of the first three cases, when the progress_form plugin answers that its progress holds an entry, the segment is
   launched again as a fresh segment, up to the `HANDOVERS`.
 - `budget_exceeded` is recorded whatever the outcome, beside `budget_reached` when the segment also reached the turn
   cap. A segment whose turns are null records none, and the signal launches nothing again.

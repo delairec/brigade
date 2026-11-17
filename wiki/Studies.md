@@ -18,7 +18,7 @@ Every command prints text or, with `--json`, a JSON document.
 
 ## What a study does
 
-A study is a `STUDY` entity of `studies.awawa` in the operational corpus, run in three steps:
+A study is a `STUDY` entity of `studies.awawa` in the registry, run in three steps:
 
 1. `collect` — deterministic collectors gather items, without a model;
 2. `judge` — at most one judging run reads `study context <run>` and hands its answer to `study answer`;
@@ -52,7 +52,7 @@ lines the command prints.
 
 | `--output`        | where the answer goes                                                                          |
 |-------------------|------------------------------------------------------------------------------------------------|
-| `entity:<TYPE>`   | appended to the operational corpus through `awawa fmt`, `awawa lint --strict` and a commit     |
+| `entity:<TYPE>`   | appended to the registry through `awawa fmt`, `awawa lint --strict` and a commit     |
 | `file:<pattern>`  | committed on the branch `brigade/study-<study>-<run>` of the project, pushed with a pull request where the project has a forge; `{run}` in the pattern is the run |
 | `inbox`           | recorded in the inbox as a signal of kind `study`, as [Inbox](Inbox.md) says                               |
 | `issue`           | a forge issue of the project                                                                   |
@@ -71,7 +71,7 @@ signal of kind `scan` per item they print, so that the same fact found again rai
 dismissal holds. An item without a `fingerprint` key parks the run at its output step, naming the collector.
 
 For each registered project `P`, brigade ships four scans, due once a day and listed by `study list`; a `STUDY` of the
-same name in the operational corpus replaces the built-in one, `STATUS paused` included. They report and remove
+same name in the registry replaces the built-in one, `STATUS paused` included. They report and remove
 nothing.
 
 | Scan | Collector | One item per | Fingerprint of the item |

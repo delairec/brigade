@@ -64,7 +64,7 @@ class ReadStudyTest(unittest.TestCase):
             read_study(self.runtime, "ash")
 
         # Assert
-        self.assertEqual(str(refusal.exception), "@STUDY.ash is not defined in the operational corpus")
+        self.assertEqual(str(refusal.exception), "@STUDY.ash is not defined in the registry")
 
     def test_should_read_the_built_in_triage_the_operational_corpus_does_not_define(self):
         # Arrange
@@ -216,4 +216,4 @@ class ReadStudyWithoutOperationalCorpusTest(unittest.TestCase):
             read_study(self.runtime, "triage")
 
         # Assert
-        self.assertEqual(str(refusal.exception), "the operational corpus is missing; run brigade init first")
+        self.assertEqual(str(refusal.exception), "the registry is missing; run brigade init first")

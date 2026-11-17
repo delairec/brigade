@@ -11,7 +11,7 @@ from brigade.runtime import Runtime
 from brigade.system.render_inline_json import render_inline_json
 
 DOCUMENT_SCHEMA_VERSION = 1
-DOCUMENT_KIND = "document"
+DOCUMENT_KIND = "progress_form"
 OPERATIONAL_CORPUS_DOCUMENT = "awawa"
 FIELD_NAME_WIDTH = 13
 NO_PROJECT = "-"

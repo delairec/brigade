@@ -81,7 +81,7 @@ def _prepare_run(request, configuration: Configuration, runtime: Runtime) -> Run
     forge_environment = read_forge_environment(configuration, forge_slot, runtime)
     plugins = RunPlugins(
         client_adapter=runtime.resolve_plugin("client", setting.client),
-        document=runtime.resolve_plugin("document", configuration.document),
+        document=runtime.resolve_plugin("progress_form", configuration.progress_form),
     )
     plan = dataclasses.replace(plan_run(run_request, setting, plugins, runtime), forge_environment=forge_environment)
     create_run_directory(plan, runtime)
