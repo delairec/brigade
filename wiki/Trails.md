@@ -37,11 +37,11 @@ exit code.
 |---------------------|-------------------------------------------------------------|
 | `brigade run`       | `$XDG_STATE_HOME/brigade/runs/<run id>/processes.jsonl`     |
 | a tick, each round of `tick --loop` included | `$XDG_STATE_HOME/brigade/ticks/<instant>.jsonl` |
-| any other command   | `$XDG_STATE_HOME/brigade/commands/<instant>-<command>.jsonl` |
+| any other command   | `$XDG_STATE_HOME/brigade/processes/<instant>-<command>.jsonl` |
 
 `<instant>` is the UTC compact form, `20261007T120000Z`, of the instant the command or the tick read.
 
-> **Watch out:** the trails of `ticks/` and `commands/` are removed after `trail_days` of `config.toml`, 7 by default;
+> **Watch out:** the trails of `ticks/` and `processes/` are removed after `trail_days` of `config.toml`, 7 by default;
 > the trail of a run goes with its run, removed beyond `runs_kept` as [Runs](Runs.md) says.
 
 ## Details and edge cases

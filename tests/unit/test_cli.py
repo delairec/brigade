@@ -311,7 +311,7 @@ class MainTrailTest(MainTestCase):
         empty_search_path.mkdir()
         self.environment["PATH"] = str(empty_search_path)
         self.ticks = self.root / "state" / "brigade" / "ticks"
-        self.commands = self.root / "state" / "brigade" / "commands"
+        self.commands = self.root / "state" / "brigade" / "processes"
 
     def write_trails(self, *paths: Path) -> None:
         for path in paths:

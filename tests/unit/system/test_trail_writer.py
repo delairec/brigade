@@ -19,7 +19,7 @@ class TrailWriterTestCase(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
-        self.destination = Path(self.root.name) / "commands" / "20261007T120000Z-doctor.jsonl"
+        self.destination = Path(self.root.name) / "processes" / "20261007T120000Z-doctor.jsonl"
         self.reported = []
         self.trail = TrailWriter(self.reported.append, keep_stderr_as_is)
 
