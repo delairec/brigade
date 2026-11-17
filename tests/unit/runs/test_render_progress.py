@@ -6,7 +6,7 @@ from brigade.runs.render_progress import render_progress
 
 NO_RUNTIME_NEEDED = None
 PROGRESS_FILE = Path("/state/runs/20261007T090000Z-b70a01/progress.awawa")
-STEP_ENTITY = {"type": "STEP", "name": "s1", "fields": [{"name": "DONE", "value": "read the task"}]}
+ENTRY_ENTITY = {"type": "ENTRY", "name": "e1", "fields": [{"name": "DONE", "value": "read the task"}]}
 
 
 class DocumentPluginDouble:
@@ -20,7 +20,7 @@ class DocumentPluginDouble:
 
     def render_document(self, request: dict, runtime) -> dict:
         self.requests.append(("render_document", request["document"], request["path"]))
-        return {"schema_version": 1, "text": "STEP s1\n  DONE: read the task\n", "entities": [STEP_ENTITY]}
+        return {"schema_version": 1, "text": "ENTRY e1\n  DONE: read the task\n", "entities": [ENTRY_ENTITY]}
 
 
 class RendererAnsweringNoTextDouble(DocumentPluginDouble):
@@ -37,7 +37,7 @@ class RenderProgressTest(unittest.TestCase):
         progress = render_progress(PROGRESS_FILE, document, NO_RUNTIME_NEEDED)
 
         # Assert
-        self.assertEqual(progress, {"text": "STEP s1\n  DONE: read the task\n", "entities": [STEP_ENTITY]})
+        self.assertEqual(progress, {"text": "ENTRY e1\n  DONE: read the task\n", "entities": [ENTRY_ENTITY]})
 
     def test_should_ask_the_plugin_about_the_progress_file(self):
         # Arrange
