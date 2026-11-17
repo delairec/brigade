@@ -9,6 +9,7 @@ from brigade.ledger.pr_merged import PrMerged
 from brigade.ledger.read_ledger import LedgerReading
 from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_state import TaskState
+from brigade.ledger.wave_blocked import WaveBlocked
 from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
@@ -138,6 +139,26 @@ class DescribeWaveResumedTest(unittest.TestCase):
         self.assertEqual(
             wave["halts"],
             [{"halted_at": "2026-10-10T09:00:00Z", "resumed_at": "2026-10-10T09:04:00Z", "duration_ms": 240000}],
+        )
+
+    def test_should_count_as_a_halt_a_wave_blocked_until_the_quota_reset(self):
+        # Arrange
+        reading = LedgerReading(
+            entries=(
+                LedgerEntry(at_minute(0), WaveBlocked(wave="w1", reason="quota", resume_at="2026-10-10T09:06:00Z")),
+                LedgerEntry(at_minute(6), WaveResumed(wave="w1", reason="quota reset")),
+            ),
+            files=(),
+            skipped=(),
+        )
+
+        # Act
+        wave = describe_wave(reading, "w1")
+
+        # Assert
+        self.assertEqual(
+            wave["halts"],
+            [{"halted_at": "2026-10-10T09:00:00Z", "resumed_at": "2026-10-10T09:06:00Z", "duration_ms": 360000}],
         )
 
 
