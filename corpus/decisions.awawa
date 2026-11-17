@@ -3674,7 +3674,7 @@ DECISION ARepairRoundIsOneFixingStateOfTheTask
 		+ "the rebase slot on a task in changes_requested, with a failing check or whose git rebase"
 		+ "conflicted; the rounds of a task are the count of those events of the task in its wave"
 	DESC "a task left fixing whose pull request head is still the head of its last preflight, with"
-		+ "no run holding its worktree, is launched again, one more round; past the VERIFY_ROUNDS"
+		+ "no run holding its worktree, is launched again, one more round; past the REPAIR_ROUNDS"
 		+ "of the project's POLICY it is parked"
 	DESC "binds @TASK.B18 and @TASK.B143, whose rebase run counts one round the same way"
 		REF @TASK.B18
@@ -4036,13 +4036,13 @@ DECISION AVerificationAfterTheFirstVerdictJudgesThePreviousFindingsAndTheRepairD
 	DESC "the previous verdict is the last task.verdict of the task at the pull request, naming the"
 		+ "head its run judged as"
 		+ "@DECISION.AVerificationRunEndedWithoutAVerdictIsNotRelaunchedAtTheSameHead asks; the"
-		+ "repair rounds of @DECISION.ARepairRoundIsOneFixingStateOfTheTask and the VERIFY_ROUNDS"
+		+ "repair rounds of @DECISION.ARepairRoundIsOneFixingStateOfTheTask and the REPAIR_ROUNDS"
 		+ "bounding them are unchanged"
 		REF @DECISION.AVerificationRunEndedWithoutAVerdictIsNotRelaunchedAtTheSameHead
 		REF @DECISION.ARepairRoundIsOneFixingStateOfTheTask
 	DESC "binds @TASK.B209"
 		REF @TASK.B209
-	REJECTED "VERIFY_ROUNDS raised in the POLICY of brigade, 4 for instance, and B22 requeued at"
+	REJECTED "REPAIR_ROUNDS raised in the POLICY of brigade, 4 for instance, and B22 requeued at"
 		+ "once: the non-convergence remains for the other tasks of M2"
 	REJECTED "a verdict with no medium or high finding passing with remarks: a finding of the"
 		+ "previous verdict of grade low still blocks until it is fixed or soundly challenged"
@@ -4099,8 +4099,8 @@ DECISION ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsN
 	DESC "the rounds of a task are the count of the runs of the remediate slot and of the build"
 		+ "slot the tick launched on it in its wave since its last task.verdict or its last"
 		+ "requeue, whichever is later, each recorded as task.state fixing after its launch; past"
-		+ "the VERIFY_ROUNDS of the project's POLICY the task is parked with the reason of the"
-		+ "rounds spent: VERIFY_ROUNDS bounds the repair of one verdict, and a verdict or a requeue"
+		+ "the REPAIR_ROUNDS of the project's POLICY the task is parked with the reason of the"
+		+ "rounds spent: REPAIR_ROUNDS bounds the repair of one verdict, and a verdict or a requeue"
 		+ "restarts the count"
 	DESC "a run of the remediate or the build slot cut by a rate limit spends no round: its"
 		+ "task.state fixing is not counted, and the run is launched again after the reset, as"
@@ -4158,7 +4158,7 @@ DECISION ARepairRoundIsOneLaunchOfTheRemediateOrTheBuildSlotAndARebaseRunCountsN
 		+ "were spent by check repairs and privacy repairs before the first verdict, the runs that"
 		+ "debit the budget without receiving the findings of a verdict, so the first verdict"
 		+ "asking for changes parked each task at once and no remediation of a verdict ever ran on"
-		+ "either; a count restarted by each verdict bounds what VERIFY_ROUNDS was meant to bound,"
+		+ "either; a count restarted by each verdict bounds what REPAIR_ROUNDS was meant to bound,"
 		+ "the repair of one verdict"
 		REF @TASK.B210
 		REF @TASK.B28
@@ -7049,14 +7049,14 @@ DECISION ARunWhoseClientFailsToAuthenticatePausesItsWaveUntilWaveResumeAndSpends
 DECISION AReviewRunEndedWithoutAVerdictIsLaunchedAgainUpToVerifyRoundsThenParksItsTask
 	TITLE "a review run that ends on the model without recording a verdict leaves its head"
 		+ "unjudged: the tick launches the review again on the same head while the review runs"
-		+ "without a verdict on it number at most VERIFY_ROUNDS, then parks the task naming them"
+		+ "without a verdict on it number at most REPAIR_ROUNDS, then parks the task naming them"
 	STATUS active
 	DESC "the review runs of a task are those of the slot review that ended neither on rate_limit"
 		+ "nor on authentication, since its last preflight and its last requeue; a verdict recorded"
 		+ "at the head decides the task whatever those runs"
 	DESC "with no verdict at the head, the tick launches the review while the task counts at most"
-		+ "VERIFY_ROUNDS of the POLICY of its project review runs, 2 by default: one review and"
-		+ "VERIFY_ROUNDS reviews again"
+		+ "REPAIR_ROUNDS of the POLICY of its project review runs, 2 by default: one review and"
+		+ "REPAIR_ROUNDS reviews again"
 	DESC "past it, the tick parks the task with the reason « <n> review runs without a verdict:"
 		+ "<run>, … », for a pull request and for a head delivered without a forge alike"
 	DESC "a review launched again records no task.state and counts no repair round"
@@ -7064,7 +7064,7 @@ DECISION AReviewRunEndedWithoutAVerdictIsLaunchedAgainUpToVerifyRoundsThenParksI
 		+ "verdict left TASK B248 verifying with nothing planned for 24 hours"
 	REJECTED "a review launched again with no bound: a review that fails for a lasting cause would"
 		+ "be launched at every tick"
-	REJECTED "a bound of its own for the review runs: VERIFY_ROUNDS already bounds what the tick"
+	REJECTED "a bound of its own for the review runs: REPAIR_ROUNDS already bounds what the tick"
 		+ "retries on a task before the user looks at it"
 	REJECTED "only the runs ended failed counted: a review run that ends done without calling"
 		+ "brigade verify record leaves the same head unjudged"
