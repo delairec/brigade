@@ -989,7 +989,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         write_run(self.root / "state", stopped_run, create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"))
         finished = {**create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"), "wave": WAVE, "task": "T7"}
         write_ledger(
-            self.root, [WAVE_STARTED, _record_task_state("running"), finished, _record_task_state("paused:quota")]
+            self.root, [WAVE_STARTED, _record_task_state("running"), finished, _record_task_state("blocked:quota")]
         )
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
 
@@ -1033,7 +1033,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         write_run(self.root / "state", stopped_run, create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"))
         finished = {**create_run_result(FIRST_RUN, "failed", "2026-10-18T10:00:00Z"), "wave": WAVE, "task": "T7"}
         write_ledger(
-            self.root, [WAVE_STARTED, _record_task_state("running"), finished, _record_task_state("paused:quota")]
+            self.root, [WAVE_STARTED, _record_task_state("running"), finished, _record_task_state("blocked:quota")]
         )
         self.spawn = SpawnReadingTheLedgerDouble(self.root / "state" / "ledger" / "2026-10.jsonl")
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
@@ -2052,7 +2052,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "event": "task.state",
                     "wave": "tidepool_w16",
                     "task": "T7",
-                    "state": "paused:quota",
+                    "state": "blocked:quota",
                 },
             ],
         )
@@ -2135,7 +2135,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "event": "task.state",
                     "wave": "tidepool_w16",
                     "task": "T7",
-                    "state": "paused:quota",
+                    "state": "blocked:quota",
                 },
             ],
         )
@@ -2213,7 +2213,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "event": "task.state",
                     "wave": "tidepool_w16",
                     "task": "T7",
-                    "state": "paused:quota",
+                    "state": "blocked:quota",
                 },
             ],
         )
@@ -2236,7 +2236,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 _record_task_state("running"),
                 finished,
                 PAUSED_ON_THE_QUOTA_UNTIL_08,
-                _record_task_state("paused:quota"),
+                _record_task_state("blocked:quota"),
             ],
         )
         runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
@@ -2303,7 +2303,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "event": "task.state",
                     "wave": "tidepool_w16",
                     "task": "T7",
-                    "state": "paused:quota",
+                    "state": "blocked:quota",
                 },
                 {
                     "schema_version": 1,

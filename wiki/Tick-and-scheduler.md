@@ -316,10 +316,10 @@ dies before it records a `run.finished` does.
 
 - A quota pause records `wave.paused` with the reason `quota` and `resume_at`: the first instant after the tick's clock
   at the hour and in the timezone of the result's `reset`, or that clock plus 30 minutes when `reset` is null. The task
-  of a build run moves to `paused:quota`.
+  of a build run moves to `blocked:quota`.
 - A wave started during a quota pause is paused until the same `resume_at`.
 - The forge-account pause and the client-login pause carry no `resume_at`.
-- The first tick past `resume_at` records `wave.resumed` for the wave and resumes the run of each `paused:quota` task as
+- The first tick past `resume_at` records `wave.resumed` for the wave and resumes the run of each `blocked:quota` task as
   its next segment, through `resume-argv` with the session of its last segment, or as a fresh launch from its progress
   file when the client adapter declares no resume. Only a segment that wrote its `result.json` counts: a segment
   directory left without one, by a segment that failed before or while it ran, is run again under its number. It moves the task back to `running` with the reason `resumed after

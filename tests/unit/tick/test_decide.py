@@ -1025,7 +1025,7 @@ RATE_LIMITED_UNTIL_15 = (
 RATE_LIMITED_WITHOUT_RESET = (TaskFacts(name="S3", branch="feature/S3-task", rate_limit=RateLimit(reset=None)),)
 STOPPED_RUN = "20261006T113000Z-a1b2c3"
 STOPPED_S3 = (TaskFacts(name="S3", branch="feature/S3-task", stopped_run=STOPPED_RUN),)
-PAUSED_S3 = RecordTaskState(wave="shop_w1", task="S3", state="paused:quota", reason=None)
+PAUSED_S3 = RecordTaskState(wave="shop_w1", task="S3", state="blocked:quota", reason=None)
 QUOTA_UNTIL_13 = WavePause(reason="quota", resume_at=datetime(2026, 10, 6, 13, 0, tzinfo=UTC))
 QUOTA_UNTIL_12 = WavePause(reason="quota", resume_at=NOW)
 FORGE_ACCOUNT = WavePause(reason="forge_account", resume_at=None)
@@ -1152,7 +1152,7 @@ class PlanQuotaResumeTest(unittest.TestCase):
     def test_should_resume_a_wave_paused_on_the_quota_and_its_paused_runs_once_resume_at_is_reached(self):
         # Arrange
         wave = dataclasses.replace(
-            create_wave(STOPPED_S3 + ALONE_S9, {"S3": "paused:quota", "S9": "running"}), pause=QUOTA_UNTIL_12
+            create_wave(STOPPED_S3 + ALONE_S9, {"S3": "blocked:quota", "S9": "running"}), pause=QUOTA_UNTIL_12
         )
         snapshot = Snapshot(now=NOW, waves=(wave,), projects=(dataclasses.replace(SHOP, live_runs=(LIVE_RUN_OF_S9,)),))
 
@@ -1172,7 +1172,7 @@ class PlanQuotaResumeTest(unittest.TestCase):
         for case, pause in [("before resume_at", QUOTA_UNTIL_13), ("on the forge account", FORGE_ACCOUNT)]:
             with self.subTest(case=case):
                 # Arrange
-                wave = dataclasses.replace(create_wave(STOPPED_S3, {"S3": "paused:quota"}), pause=pause)
+                wave = dataclasses.replace(create_wave(STOPPED_S3, {"S3": "blocked:quota"}), pause=pause)
                 snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
                 # Act
@@ -1183,7 +1183,7 @@ class PlanQuotaResumeTest(unittest.TestCase):
 
     def test_should_resume_the_paused_runs_of_a_wave_the_user_resumed(self):
         # Arrange
-        snapshot = Snapshot(now=NOW, waves=(create_wave(STOPPED_S3, {"S3": "paused:quota"}),), projects=(SHOP,))
+        snapshot = Snapshot(now=NOW, waves=(create_wave(STOPPED_S3, {"S3": "blocked:quota"}),), projects=(SHOP,))
 
         # Act
         actions = decide(snapshot)
@@ -1715,7 +1715,7 @@ class PlanRebaseTest(unittest.TestCase):
             ("a task still running", "running", WORKTREE_S3, (RECORD_PR_OPEN,)),
             (
                 "a task paused on the quota",
-                "paused:quota",
+                "blocked:quota",
                 WORKTREE_S3,
                 (ResumeTaskRun(wave="shop_w1", task="S3", run=None),),
             ),
@@ -2614,7 +2614,7 @@ class PlanQuotaOfATaskInRepairTest(unittest.TestCase):
     def test_should_resume_the_cut_repair_run_with_the_task_back_in_fixing(self):
         # Arrange
         task = TaskFacts(name="S3", branch="feature/S3-task", stopped_run=STOPPED_RUN, resumed_state="fixing")
-        wave = dataclasses.replace(create_wave((task,), {"S3": "paused:quota"}), pause=QUOTA_UNTIL_12)
+        wave = dataclasses.replace(create_wave((task,), {"S3": "blocked:quota"}), pause=QUOTA_UNTIL_12)
         snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))
 
         # Act
@@ -3580,7 +3580,7 @@ class PlanNoRunWhileARateLimitIsInForceTest(unittest.TestCase):
                 "the resume of a run cut by an earlier rate limit",
                 Snapshot(
                     now=NOW,
-                    waves=(dataclasses.replace(create_wave(STOPPED_S3, {"S3": "paused:quota"}), pause=QUOTA_UNTIL_12),),
+                    waves=(dataclasses.replace(create_wave(STOPPED_S3, {"S3": "blocked:quota"}), pause=QUOTA_UNTIL_12),),
                     projects=(SHOP,),
                     rate_limits=RATE_LIMIT_IN_FORCE,
                 ),
@@ -3719,9 +3719,9 @@ class PlanStallSignalTest(unittest.TestCase):
         for case, state, pause in [
             ("a merged task", "merged", NO_PAUSE),
             ("a parked task", "parked", NO_PAUSE),
-            ("a task paused on the quota", "paused:quota", NO_PAUSE),
+            ("a task paused on the quota", "blocked:quota", NO_PAUSE),
             ("a task of a wave paused on the quota", "queued", QUOTA_UNTIL_13),
-            ("a task paused on the quota in a wave paused on the forge account", "paused:quota", FORGE_ACCOUNT_PAUSE),
+            ("a task paused on the quota in a wave paused on the forge account", "blocked:quota", FORGE_ACCOUNT_PAUSE),
         ]:
             with self.subTest(case=case):
                 # Arrange

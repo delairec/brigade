@@ -108,7 +108,7 @@ class BrigadeTickOfARemediationCutByARateLimitTest(LaunchingTickTestCase):
                     "event": "task.state",
                     "wave": "shop_w1",
                     "task": "S3",
-                    "state": "paused:quota",
+                    "state": "blocked:quota",
                 },
                 {"schema_version": 1, "ts": ANY, "event": "wave.resumed", "wave": "shop_w1", "reason": "quota"},
                 {
