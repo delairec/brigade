@@ -18792,7 +18792,8 @@ TASK B255
 	TITLE "Each word of brigade's public vocabulary keeps the one sense ruled on 2026-11-14, the"
 		+ "command groups are named in the singular after their entity or their slot, and wave-plan"
 		+ "is renamed request-plan"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 437
 	TYPE refactor
 	MILESTONE @MILESTONE.M8
 	COMPONENT "audit"
