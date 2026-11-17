@@ -433,7 +433,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         self.write_operational_corpus()
         self.record(60, WaveStarted(wave="w1", project="shop", tasks=("B1", "B2", "B3", "B4")))
         self.record(50, TaskState(wave="w1", task="B1", state="running"))
-        self.record(50, TaskState(wave="w1", task="B2", state="paused:quota"))
+        self.record(50, TaskState(wave="w1", task="B2", state="blocked:quota"))
         self.record(50, TaskState(wave="w1", task="B3", state="merged"))
         self.record(50, TaskState(wave="w1", task="B4", state="running"))
         self.record(2, create_run_finished("r1", wave="w1", task="B1", outcome="failed", error_class="rate_limit"))
@@ -481,7 +481,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
 
     def test_should_note_no_quota_stop_on_a_task_whose_run_was_resumed_since_it_hit_the_limit(self):
         # Arrange
-        self.record(1, TaskState(wave="w1", task="B1", state="paused:quota"))
+        self.record(1, TaskState(wave="w1", task="B1", state="blocked:quota"))
         self.record(1, TaskState(wave="w1", task="B1", state="running", reason="resumed after the quota reset"))
 
         # Act
@@ -503,7 +503,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
 
     def test_should_keep_the_quota_stop_of_a_task_whose_resume_the_ledger_does_not_record(self):
         # Arrange
-        self.record(1, TaskState(wave="w1", task="B1", state="paused:quota"))
+        self.record(1, TaskState(wave="w1", task="B1", state="blocked:quota"))
         self.record(1, TaskState(wave="w1", task="B1", state="running"))
 
         # Act
@@ -525,7 +525,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
 
     def test_should_note_the_quota_stop_of_a_resumed_run_that_hit_the_limit_again(self):
         # Arrange
-        self.record(1, TaskState(wave="w1", task="B1", state="paused:quota"))
+        self.record(1, TaskState(wave="w1", task="B1", state="blocked:quota"))
         self.record(1, TaskState(wave="w1", task="B1", state="running", reason="resumed after the quota reset"))
         self.record(0, create_run_finished("r1", wave="w1", task="B1", outcome="failed", error_class="rate_limit"))
 
@@ -827,7 +827,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                             last_run=None,
                         ),
                     ),
-                    states={"B1": "running", "B2": "paused:quota", "B3": "merged", "B4": "running"},
+                    states={"B1": "running", "B2": "blocked:quota", "B3": "merged", "B4": "running"},
                     implemented=("B0",),
                     pause=None,
                     forge_account_unavailable=True,
@@ -1107,7 +1107,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                             last_run=None,
                         ),
                     ),
-                    states={"B1": "running", "B2": "paused:quota", "B3": "merged", "B4": "running"},
+                    states={"B1": "running", "B2": "blocked:quota", "B3": "merged", "B4": "running"},
                     implemented=("B0",),
                     pause=None,
                     forge_account_unavailable=True,
@@ -1236,7 +1236,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                             last_run=None,
                         ),
                     ),
-                    states={"B1": "running", "B2": "paused:quota", "B3": "merged", "B4": "running"},
+                    states={"B1": "running", "B2": "blocked:quota", "B3": "merged", "B4": "running"},
                     implemented=("B0",),
                     pause=None,
                     forge_account_unavailable=False,
@@ -2422,7 +2422,7 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
                 "20261019T082100Z-a00002", wave="w1", task="B1", outcome="failed", error_class="rate_limit"
             ),
         )
-        self.record(29, TaskState(wave="w1", task="B1", state="paused:quota"))
+        self.record(29, TaskState(wave="w1", task="B1", state="blocked:quota"))
         self.record(20, TaskState(wave="w1", task="B1", state="fixing"))
         self.record(10, create_run_finished("20261019T082100Z-a00002", wave="w1", task="B1", outcome="done"))
 
@@ -2455,7 +2455,7 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
                 "20261019T085500Z-a00003", wave="w1", task="B1", outcome="failed", error_class="rate_limit"
             ),
         )
-        self.record(4, TaskState(wave="w1", task="B1", state="paused:quota"))
+        self.record(4, TaskState(wave="w1", task="B1", state="blocked:quota"))
 
         # Act
         snapshot, _ = self.build()

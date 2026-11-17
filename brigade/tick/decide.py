@@ -86,7 +86,7 @@ CLOSED_PULL_REQUEST = "closed"
 SETTLED_PULL_REQUESTS = (MERGED_PULL_REQUEST, CLOSED_PULL_REQUEST)
 CLOSED_REASON = "pull request closed"
 SCAN_SLOT = "none"
-PAUSED_ON_QUOTA_STATE = "paused:quota"
+BLOCKED_ON_QUOTA_STATE = "blocked:quota"
 QUOTA_REASON = "quota"
 FORGE_ACCOUNT_REASON = "forge_account"
 AUTOMATIC_WAVE_START = "auto"
@@ -285,7 +285,7 @@ def _decide_quota_resume_at(snapshot: Snapshot) -> datetime | None:
 def _plan_pauses(snapshot: Snapshot) -> tuple:
     unpaused = [wave for wave in snapshot.waves if wave.pause is None]
     stopped_tasks = tuple(
-        RecordTaskState(wave=wave.wave, task=task.name, state=PAUSED_ON_QUOTA_STATE, reason=None)
+        RecordTaskState(wave=wave.wave, task=task.name, state=BLOCKED_ON_QUOTA_STATE, reason=None)
         for wave in snapshot.waves
         for task in wave.tasks
         if task.rate_limit is not None
@@ -336,7 +336,7 @@ def _plan_resumes(snapshot: Snapshot) -> tuple:
         actions.extend(
             ResumeTaskRun(wave=wave.wave, task=task.name, run=task.stopped_run, state=task.resumed_state)
             for task in wave.tasks
-            if wave.states.get(task.name) == PAUSED_ON_QUOTA_STATE
+            if wave.states.get(task.name) == BLOCKED_ON_QUOTA_STATE
         )
     return tuple(actions)
 
@@ -1077,7 +1077,7 @@ def _plan_study_and_order_runs(snapshot: Snapshot) -> tuple:
 
 def _is_paused_on_the_quota(wave: WaveFacts, task: TaskFacts) -> bool:
     is_wave_paused_on_the_quota = wave.pause is not None and wave.pause.reason == QUOTA_REASON
-    return is_wave_paused_on_the_quota or wave.states.get(task.name) == PAUSED_ON_QUOTA_STATE
+    return is_wave_paused_on_the_quota or wave.states.get(task.name) == BLOCKED_ON_QUOTA_STATE
 
 
 def _is_stalled(wave: WaveFacts, task: TaskFacts, snapshot: Snapshot, attended_tasks: frozenset) -> bool:

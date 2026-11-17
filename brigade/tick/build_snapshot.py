@@ -115,7 +115,7 @@ PATH_FIELD = "PATH"
 MAIN_FIELD = "MAIN"
 DESCENDING = 0
 RUNNING_STATE = "running"
-PAUSED_ON_QUOTA_STATE = "paused:quota"
+BLOCKED_ON_QUOTA_STATE = "blocked:quota"
 RATE_LIMIT = "rate_limit"
 AUTHENTICATION = "authentication"
 CLIENT_STOP_ERROR_CLASSES = (RATE_LIMIT, AUTHENTICATION)
@@ -602,13 +602,13 @@ def _read_state_before_pause(reading: WaveReading, wave: str, task: str) -> str 
         if isinstance(event, TaskState)
         and event.wave == wave
         and event.task == task
-        and event.state != PAUSED_ON_QUOTA_STATE
+        and event.state != BLOCKED_ON_QUOTA_STATE
     ]
     return held[-1] if held else None
 
 
 def _note_quota(task: TaskFacts, reading: WaveReading, wave: str, states: dict) -> TaskFacts:
-    if states.get(task.name) == PAUSED_ON_QUOTA_STATE:
+    if states.get(task.name) == BLOCKED_ON_QUOTA_STATE:
         return dataclasses.replace(
             task,
             stopped_run=_list_task_runs(reading, wave, task.name)[-1].run,

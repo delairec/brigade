@@ -218,7 +218,7 @@ class ReadLedgerWhenALineFailsItsEnvelopeTest(ReadLedgerTestCase):
                 ),
                 (
                     "the task state abandoned is none of queued, running, pr_open, verifying, verified, merged,"
-                    " changes_requested, fixing, parked, paused:quota"
+                    " changes_requested, fixing, parked, blocked:quota"
                 ),
             ),
         ]
