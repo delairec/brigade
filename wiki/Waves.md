@@ -117,7 +117,7 @@ exists.
 - `wave show` prints a wave, its branch, the instant it started and its last wave event, then each task with its last
   `task.state`, its pull request, its last run in the wave and, for a parked task, the reason of its `task.parked`,
   `-` when none. With `--events`, it adds what `brigade ledger` once printed for a wave: its cost and tokens, the
-  steps, duration and cost of each task, its merged pull requests, its steps by slot and by role, its pauses, its
+  steps, duration and cost of each task, its merged pull requests, its steps by slot and by role, its halts, its
   handovers, its parked tasks, then every event the ledger holds for the wave, in the order recorded.
 - `wave list` prints one row per wave of the ledger, its project, branch, last wave event and task count, the open
   waves first, those of one project with `--project`.
@@ -135,12 +135,12 @@ already closed or cancelled exits 1 naming that event.
 <details><summary><code>wave resume</code> in detail</summary>
 
 `wave resume` records `wave.resumed` for the wave named, whatever the reason of its pause, or, without one, for every
-wave paused on the forge account, the tick resuming by itself a wave paused on the quota. It prints each wave it
+wave parked on the forge account, the tick resuming by itself a wave blocked on the quota. It prints each wave it
 resumed; a wave no `wave.started` names, or one that is not paused, exits 1 naming it.
 
-A wave paused on the client login, the reason `client_login`, is resumed by naming it, once you have signed in to the
+A wave parked on the client login, the reason `client_login`, is resumed by naming it, once you have signed in to the
 AI client again: the next tick launches its task again from the state it holds, as
-[Tick and scheduler](Tick-and-scheduler.md#quota-forge-account-and-client-login-pauses) says.
+[Tick and scheduler](Tick-and-scheduler.md#quota-blocks-forge-account-and-client-login-parks) says.
 
 </details>
 

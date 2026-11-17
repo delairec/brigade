@@ -2,14 +2,15 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from brigade.ledger.ledger_entry import LedgerEntry
+from brigade.ledger.wave_blocked import WaveBlocked
 from brigade.ledger.wave_cancelled import WaveCancelled
 from brigade.ledger.wave_closed import WaveClosed
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
 
-WAVE_EVENTS = (WaveStarted, WavePaused, WaveResumed, WaveReported, WaveClosed, WaveCancelled)
+WAVE_EVENTS = (WaveStarted, WaveParked, WaveBlocked, WaveResumed, WaveReported, WaveClosed, WaveCancelled)
 ENDING_EVENTS = (WaveClosed, WaveCancelled)
 
 

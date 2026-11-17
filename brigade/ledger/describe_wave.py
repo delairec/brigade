@@ -12,7 +12,8 @@ from brigade.ledger.sum_reported import sum_reported
 from brigade.ledger.sum_token_usage import sum_token_usage
 from brigade.ledger.summarize_measure import summarize_measure
 from brigade.ledger.task_parked import TaskParked
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_blocked import WaveBlocked
+from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.waves.count_repair_rounds import count_repair_rounds
 
@@ -36,24 +37,24 @@ def _summarize_by(runs: list[FinishedRun], attribute: str) -> dict:
     }
 
 
-def _pair_pauses(entries: list[LedgerEntry]) -> list[dict]:
-    pauses = []
-    paused_at = None
+def _pair_halts(entries: list[LedgerEntry]) -> list[dict]:
+    halts = []
+    halted_at = None
     for entry in entries:
-        if isinstance(entry.event, WavePaused) and paused_at is None:
-            paused_at = entry.instant
-        elif isinstance(entry.event, WaveResumed) and paused_at is not None:
-            pauses.append(
+        if isinstance(entry.event, (WaveParked, WaveBlocked)) and halted_at is None:
+            halted_at = entry.instant
+        elif isinstance(entry.event, WaveResumed) and halted_at is not None:
+            halts.append(
                 {
-                    "paused_at": format_instant(paused_at),
+                    "halted_at": format_instant(halted_at),
                     "resumed_at": format_instant(entry.instant),
-                    "duration_ms": _measure_ms(paused_at, entry.instant),
+                    "duration_ms": _measure_ms(halted_at, entry.instant),
                 }
             )
-            paused_at = None
-    if paused_at is not None:
-        pauses.append({"paused_at": format_instant(paused_at), "resumed_at": None, "duration_ms": None})
-    return pauses
+            halted_at = None
+    if halted_at is not None:
+        halts.append({"halted_at": format_instant(halted_at), "resumed_at": None, "duration_ms": None})
+    return halts
 
 
 def _list_merged_pull_requests(events: list) -> list[dict]:
@@ -128,7 +129,7 @@ def describe_wave(reading: LedgerReading, wave: str) -> dict:
     first = min(entry.instant for entry in entries)
     last = max(entry.instant for entry in entries)
     runs = group_runs(entries)
-    pauses = _pair_pauses(entries)
+    halts = _pair_halts(entries)
     tasks = _list_tasks(events)
     return {
         "view": "wave",
@@ -140,8 +141,8 @@ def describe_wave(reading: LedgerReading, wave: str) -> dict:
         **_cost_wave(events, runs, tasks),
         "pull_requests": _list_merged_pull_requests(events),
         "turns": {"by_slot": _summarize_by(runs, "slot"), "by_role": _summarize_by(runs, "role")},
-        "pauses": pauses,
-        "paused_ms": sum(pause["duration_ms"] for pause in pauses if pause["duration_ms"] is not None),
+        "halts": halts,
+        "halted_ms": sum(halt["duration_ms"] for halt in halts if halt["duration_ms"] is not None),
         "handovers": _list_handovers(events),
         "parked": [event.task for event in events if isinstance(event, TaskParked)],
         "rounds_by_task": count_repair_rounds(tuple(entries), _list_runs(events), wave),

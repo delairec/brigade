@@ -32,9 +32,10 @@ from brigade.ledger.task_review_answered import TaskReviewAnswered
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.tick_action_failed import TickActionFailed
+from brigade.ledger.wave_blocked import WaveBlocked
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_merged import WaveMerged
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_pr_opened import WavePrOpened
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_resumed import WaveResumed
@@ -67,7 +68,8 @@ AppendedEvent = (
     | MilestoneReported
     | TaskReported
     | TaskPromoted
-    | WavePaused
+    | WaveParked
+    | WaveBlocked
     | WaveResumed
     | TaskPreflighted
     | TaskVerdict

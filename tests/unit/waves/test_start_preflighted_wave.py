@@ -5,7 +5,7 @@ from contextlib import redirect_stderr
 from pathlib import Path
 
 from brigade.ledger.read_ledger import read_ledger
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_parked import WaveParked
 from brigade.preflights.run_preflight import PreflightOutcome
 from brigade.waves.start_preflighted_wave import PreflightedWaveStart, start_preflighted_wave
 from tests.unit.create_test_paths import create_test_paths
@@ -62,7 +62,7 @@ class StartPreflightedWaveTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             read_ledger(self.paths.state_root).entries[-1].event,
-            WavePaused(wave="shop_w3", reason="forge_account", resume_at=None),
+            WaveParked(wave="shop_w3", reason="forge_account"),
         )
 
     def test_should_name_the_findings_of_the_failed_preflight_on_stderr(self):
@@ -72,7 +72,7 @@ class StartPreflightedWaveTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             stderr,
-            "brigade tick: the wave shop_w3 paused before any run: gh printed no token for the login prudence-bot,"
+            "brigade tick: the wave shop_w3 parked before any run: gh printed no token for the login prudence-bot,"
             " bound to review; repair the login, then run brigade wave resume shop_w3\n",
         )
 

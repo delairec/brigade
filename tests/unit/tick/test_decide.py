@@ -1149,7 +1149,7 @@ class PlanQuotaPauseTest(unittest.TestCase):
 
 
 class PlanQuotaResumeTest(unittest.TestCase):
-    def test_should_resume_a_wave_paused_on_the_quota_and_its_paused_runs_once_resume_at_is_reached(self):
+    def test_should_resume_a_wave_blocked_on_the_quota_and_its_blocked_runs_once_resume_at_is_reached(self):
         # Arrange
         wave = dataclasses.replace(
             create_wave(STOPPED_S3 + ALONE_S9, {"S3": "blocked:quota", "S9": "running"}), pause=QUOTA_UNTIL_12
@@ -1168,7 +1168,7 @@ class PlanQuotaResumeTest(unittest.TestCase):
             ),
         )
 
-    def test_should_keep_a_wave_paused_before_its_resume_at_or_on_the_forge_account(self):
+    def test_should_keep_a_wave_blocked_before_its_resume_at_or_parked_on_the_forge_account(self):
         for case, pause in [("before resume_at", QUOTA_UNTIL_13), ("on the forge account", FORGE_ACCOUNT)]:
             with self.subTest(case=case):
                 # Arrange
@@ -1714,7 +1714,7 @@ class PlanRebaseTest(unittest.TestCase):
         for case, state, worktree, expected in [
             ("a task still running", "running", WORKTREE_S3, (RECORD_PR_OPEN,)),
             (
-                "a task paused on the quota",
+                "a task blocked on the quota",
                 "blocked:quota",
                 WORKTREE_S3,
                 (ResumeTaskRun(wave="shop_w1", task="S3", run=None),),
@@ -3580,7 +3580,9 @@ class PlanNoRunWhileARateLimitIsInForceTest(unittest.TestCase):
                 "the resume of a run cut by an earlier rate limit",
                 Snapshot(
                     now=NOW,
-                    waves=(dataclasses.replace(create_wave(STOPPED_S3, {"S3": "blocked:quota"}), pause=QUOTA_UNTIL_12),),
+                    waves=(
+                        dataclasses.replace(create_wave(STOPPED_S3, {"S3": "blocked:quota"}), pause=QUOTA_UNTIL_12),
+                    ),
                     projects=(SHOP,),
                     rate_limits=RATE_LIMIT_IN_FORCE,
                 ),
@@ -3719,9 +3721,9 @@ class PlanStallSignalTest(unittest.TestCase):
         for case, state, pause in [
             ("a merged task", "merged", NO_PAUSE),
             ("a parked task", "parked", NO_PAUSE),
-            ("a task paused on the quota", "blocked:quota", NO_PAUSE),
-            ("a task of a wave paused on the quota", "queued", QUOTA_UNTIL_13),
-            ("a task paused on the quota in a wave paused on the forge account", "blocked:quota", FORGE_ACCOUNT_PAUSE),
+            ("a task blocked on the quota", "blocked:quota", NO_PAUSE),
+            ("a task of a wave blocked on the quota", "queued", QUOTA_UNTIL_13),
+            ("a task blocked on the quota in a wave parked on the forge account", "blocked:quota", FORGE_ACCOUNT_PAUSE),
         ]:
             with self.subTest(case=case):
                 # Arrange
@@ -3736,7 +3738,7 @@ class PlanStallSignalTest(unittest.TestCase):
                 # Assert
                 self.assertNotIn(SIGNAL_STALL_OF_S3, actions)
 
-    def test_should_signal_a_task_of_a_wave_paused_for_another_reason_than_the_quota(self):
+    def test_should_signal_a_task_of_a_wave_parked_for_another_reason_than_the_quota(self):
         # Arrange
         wave = dataclasses.replace(create_wave((create_waiting_task(THREE_HOURS_AGO),), {}), pause=FORGE_ACCOUNT_PAUSE)
         snapshot = Snapshot(now=NOW, waves=(wave,), projects=(SHOP,))

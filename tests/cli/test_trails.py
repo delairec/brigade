@@ -90,6 +90,6 @@ class BrigadeCommandTrailTest(TrailTestCase):
             completed.stdout,
             '{"schema_version": 1, "scheduler": "none", "unit_files": [], "cron_line": null,'
             ' "next_activation": null, "last_tick": null, "tick_stale_after": 15, "stale": false,'
-            ' "paused_waves": [], "parked_tasks": []}\n',
+            ' "halted_waves": [], "parked_tasks": []}\n',
         )
         self.assertEqual(completed.stderr, "brigade scheduler status: ran crontab -l, not on PATH\n")

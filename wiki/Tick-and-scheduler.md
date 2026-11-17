@@ -10,7 +10,7 @@ brigade tick --once --log-file <file>   # the same, its stderr appended to <file
 brigade tick --dry-run      # the snapshot and the decisions, applied to nothing
 brigade tick --loop         # a tick at once, then one every five minutes, until SIGTERM or SIGINT
 brigade scheduler install   # install what fires brigade tick --once every five minutes
-brigade scheduler status    # the scheduler, the last tick, the paused waves and the parked tasks
+brigade scheduler status    # the scheduler, the last tick, the parked and blocked waves and the parked tasks
 ```
 
 Every mode prints text or, with `--json`, a JSON document.
@@ -23,8 +23,8 @@ plan is empty or ten rounds have passed. Among those actions, it:
 - runs the due studies, as [Studies](Studies.md) says;
 - starts a wave for each project whose `POLICY` sets `WAVE_START` to `auto`;
 - carries each task of an open wave from its launch to its merge, as below;
-- pauses every running wave on the quota or on the forge account, and the wave of a run whose AI client lost its
-  login, and resumes it;
+- blocks every running wave on the quota and parks it on the forge account, parks the wave of a run whose AI
+  client lost its login, and resumes it;
 - removes the local branch of an integration branch the ledger records, and its worktree with it when one stands,
   once the branch has nothing left to do: the branch of a milestone once the ledger holds its `milestone.closed`, the
   branch of a wave once it holds its `wave.closed` or its `wave.cancelled`;
@@ -87,7 +87,7 @@ The procedure of each run is the one brigade ships, or the one the key of its sl
 > **Watch out:** the tick never queues a parked task again by itself: `brigade wave requeue`, as [Waves](Waves.md)
 > says.
 
-## Quota, forge-account and client-login pauses
+## Quota blocks, forge-account and client-login parks
 
 | Cause | Reason | Resumed |
 |---|---|---|
@@ -95,14 +95,14 @@ The procedure of each run is the one brigade ships, or the one the key of its sl
 | a `forge_account.unavailable` in the ledger | `forge_account` | by `brigade wave resume` alone |
 | a run of the wave finished on the `error_class` `authentication`: its AI client could not sign in | `client_login` | by `brigade wave resume <wave>` alone |
 
-The tick launches no run of a paused wave.
+The tick launches no run of a parked or blocked wave.
 
-> **Watch out:** a wave paused on the forge account stays paused, waves started after the event included, until you
+> **Watch out:** a wave parked on the forge account stays parked, waves started after the event included, until you
 > run `brigade wave resume`.
 
-> **Watch out:** a wave paused on the client login stays paused until you sign in to the client again (`claude auth
+> **Watch out:** a wave parked on the client login stays parked until you sign in to the client again (`claude auth
 > login`, or `claude setup-token` and `CLAUDE_CODE_OAUTH_TOKEN` for unattended jobs) and run `brigade wave resume
-> <wave>`. The tick records the pause once and names on stderr the wave and the command to run.
+> <wave>`. The tick records the park once and names on stderr the wave and the command to run.
 
 ## The scheduler
 
@@ -184,7 +184,7 @@ dies before it records a `run.finished` does.
   the same head, with no `task.state` and no repair round, while the review runs of the task since its last preflight
   number at most `REPAIR_ROUNDS` of the `POLICY` of its project, 2 by default. Past them, it parks the task with the
   reason `<n> review runs without a verdict: <run>, …`. A review run that ends on `rate_limit` or `authentication`
-  counts as none: its wave is paused, and the review is launched again once the wave is resumed. The same holds for a
+  counts as none: its wave is parked or blocked, and the review is launched again once the wave is resumed. The same holds for a
   head delivered without a forge.
 - A task in `verifying` whose pull request head is no longer the head of its last `task.preflighted` moves back to
   `pr_open`, where the preflight of the new head opens the next review.
@@ -259,10 +259,10 @@ dies before it records a `run.finished` does.
   same rebase, check before the push and hold, replaying the commit of the report and the commit `STATUS reached`
   with the rest of the branch. The body of the pull request stays the report; the next tick retitles it from the
   head pushed. Once that pull request is merged or closed, the tick no longer reads the branch to rebase it.
-- No rebase is planned for a wave that is paused, or whose rebase run lives or ended blocked; a blocked rebase run
-  pauses its wave on its question.
+- No rebase is planned for a wave that is parked or blocked, or whose rebase run lives or ended blocked; a blocked rebase run
+  parks its wave on its question.
 - `brigade wave resume` answers every rebase run of the wave that ended blocked before it, one that ended while the
-  wave was paused on another question included: only a rebase run that ends blocked after the resume pauses the wave
+  wave was parked on another question included: only a rebase run that ends blocked after the resume parks the wave
   again. The resume the tick records after a quota reset answers none.
 
 </details>
@@ -312,34 +312,34 @@ dies before it records a `run.finished` does.
 
 </details>
 
-<details><summary>Quota pauses in detail</summary>
+<details><summary>Quota blocks in detail</summary>
 
-- A quota pause records `wave.paused` with the reason `quota` and `resume_at`: the first instant after the tick's clock
+- A quota block records `wave.blocked` with the reason `quota` and `resume_at`: the first instant after the tick's clock
   at the hour and in the timezone of the result's `reset`, or that clock plus 30 minutes when `reset` is null. The task
   of a build run moves to `blocked:quota`.
-- A wave started during a quota pause is paused until the same `resume_at`.
-- The forge-account pause and the client-login pause carry no `resume_at`.
+- A wave started during a quota block is blocked until the same `resume_at`.
+- The forge-account park and the client-login park record `wave.parked`, which carries no `resume_at`.
 - The first tick past `resume_at` records `wave.resumed` for the wave and resumes the run of each `blocked:quota` task as
   its next segment, through `resume-argv` with the session of its last segment, or as a fresh launch from its progress
   file when the client adapter declares no resume. Only a segment that wrote its `result.json` counts: a segment
   directory left without one, by a segment that failed before or while it ran, is run again under its number. It moves the task back to `running` with the reason `resumed after
-  the quota reset`: that resume ends the stop, and only a later `run.finished` on `rate_limit` pauses the task again.
+  the quota reset`: that resume ends the stop, and only a later `run.finished` on `rate_limit` blocks the task again.
 
 </details>
 
-<details><summary>Client-login pauses in detail</summary>
+<details><summary>Client-login parks in detail</summary>
 
 - The `claude-code` client adapter classifies `authentication` an error result whose message names `Failed to
   authenticate` or `auth login`, as when its login reached its time limit and cannot be renewed. The `vibe` adapter
   recognises no login failure and reports it as `execution`.
 - A run that ends on `authentication` spends no repair round, is no dead run to park, and ends no review of the head
   it was launched on.
-- The tick records `wave.paused` with the reason `client_login` and no `resume_at` for the wave of such a run, once,
-  and writes on stderr `brigade tick: the wave <wave> paused: the login of its AI client is lost; sign in to the
+- The tick records `wave.parked` with the reason `client_login` for the wave of such a run, once,
+  and writes on stderr `brigade tick: the wave <wave> parked: the login of its AI client is lost; sign in to the
   client again, then run brigade wave resume <wave>`. Until then it plans no action on the task of that run.
 - Once `brigade wave resume <wave>` records `wave.resumed` with the reason `client_login`, the next tick launches the
   task again from the state it holds: a build run anew for a task `running`, a repair for a task `fixing`, a review for
-  a task `verifying`. A run that fails to authenticate after the resume pauses the wave again.
+  a task `verifying`. A run that fails to authenticate after the resume parks the wave again.
 
 </details>
 
@@ -371,7 +371,7 @@ dies before it records a `run.finished` does.
 <details><summary><code>brigade scheduler status</code> in detail</summary>
 
 It reports the scheduler installed or `none`, its unit files or cron line, the next activation of the timer, the last
-tick read from the heartbeat, the paused waves with their reason and their `resume_at`, and the parked tasks of the
+tick read from the heartbeat, the parked and blocked waves with their reason and their `resume_at`, and the parked tasks of the
 open waves with their wave and their reason; it resumes no wave. It exits 1 when the last tick is older than
 `tick_stale_after`, or when no tick ever ran while a scheduler is installed, and 0 otherwise.
 

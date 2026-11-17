@@ -29,9 +29,9 @@ def _list_open_waves(entries: tuple[LedgerEntry, ...]) -> list[str]:
     return [summary.started.wave for summary in summarize_waves(entries) if summary.is_open]
 
 
-def _list_paused_waves(events: tuple, waves: list[str]) -> list[dict]:
-    pauses = [(wave, read_wave_pause(events, wave)) for wave in waves]
-    return [{"wave": wave, **pause.to_document()} for wave, pause in pauses if pause is not None]
+def _list_halted_waves(events: tuple, waves: list[str]) -> list[dict]:
+    halts = [(wave, read_wave_pause(events, wave)) for wave in waves]
+    return [{"wave": wave, **halt.to_document()} for wave, halt in halts if halt is not None]
 
 
 def _list_parked_tasks(events: tuple, waves: list[str]) -> list[dict]:
@@ -57,10 +57,10 @@ def _render_staleness(document: dict) -> str:
     return f"the last tick is older than {document['tick_stale_after']} minutes"
 
 
-def _render_resumption(pause: dict) -> str:
-    if pause["resume_at"] is None:
-        return "resumes on brigade wave resume"
-    return f"resumes at {pause['resume_at']}"
+def _render_halted_wave(halt: dict) -> str:
+    if halt["resume_at"] is None:
+        return f"parked     {halt['wave']}, {halt['reason']}, resumes on brigade wave resume"
+    return f"blocked    {halt['wave']}, {halt['reason']}, resumes at {halt['resume_at']}"
 
 
 def _render_parked_task(task: dict) -> str:
@@ -78,10 +78,7 @@ def _render_text(document: dict) -> str:
     lines.append(f"last tick  {_render_last_tick(document['last_tick'])}")
     if document["stale"]:
         lines.append(f"stale      {_render_staleness(document)}")
-    lines.extend(
-        f"paused     {pause['wave']}, {pause['reason']}, {_render_resumption(pause)}"
-        for pause in document["paused_waves"]
-    )
+    lines.extend(_render_halted_wave(halt) for halt in document["halted_waves"])
     lines.extend(_render_parked_task(task) for task in document["parked_tasks"])
     return "\n".join(lines)
 
@@ -106,14 +103,14 @@ def scheduler_status(request: argparse.Namespace, runtime: Runtime) -> dict:
         "last_tick": describe_heartbeat(heartbeat),
         "tick_stale_after": minutes,
         "stale": _is_stale(heartbeat, status, runtime.now, minutes),
-        "paused_waves": _list_paused_waves(events, open_waves),
+        "halted_waves": _list_halted_waves(events, open_waves),
         "parked_tasks": _list_parked_tasks(events, open_waves),
     }
 
 
 COMMAND = Command(
     path=("scheduler", "status"),
-    help="report the scheduler installed, whether its tick is stale, the paused waves and the parked tasks",
+    help="report the scheduler installed, whether its tick is stale, the parked and blocked waves and the parked tasks",
     group_help="install what fires the tick, and report it",
     run=scheduler_status,
     render_text=_render_text,

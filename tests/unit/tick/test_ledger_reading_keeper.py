@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.ledger.ledger_entry import LedgerEntry
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_started import WaveStarted
 from brigade.tick.ledger_reading_keeper import LedgerReadingKeeper
 from tests.unit.ledger_reader_double import LedgerReaderDouble
@@ -14,8 +14,8 @@ WAVE_STARTED = (
     ' "project": "tidepool", "branch": "integration/M4", "tasks": ["T7"]}\n'
 )
 WAVE_PAUSED = (
-    '{"schema_version": 1, "ts": "2026-10-18T09:30:00Z", "event": "wave.paused", "wave": "tidepool_w16",'
-    ' "reason": "quota", "resume_at": null}\n'
+    '{"schema_version": 1, "ts": "2026-10-18T09:30:00Z", "event": "wave.parked", "wave": "tidepool_w16",'
+    ' "reason": "quota"}\n'
 )
 
 
@@ -58,7 +58,7 @@ class LedgerReadingKeeperTest(unittest.TestCase):
                 ),
                 LedgerEntry(
                     instant=datetime(2026, 10, 18, 9, 30, tzinfo=UTC),
-                    event=WavePaused(wave="tidepool_w16", reason="quota", resume_at=None),
+                    event=WaveParked(wave="tidepool_w16", reason="quota"),
                 ),
             ),
         )

@@ -54,7 +54,7 @@ def _list_open_waves(entries: tuple[LedgerEntry, ...]) -> list[dict]:
                 "branch": summary.started.branch,
                 "last_event": summary.last_event,
                 "tasks": len(summary.started.tasks),
-                "pause": None if pause is None else pause.to_document(),
+                "halt": None if pause is None else pause.to_document(),
             }
         )
     return waves
@@ -64,10 +64,10 @@ def _describe_quota(entries: tuple[LedgerEntry, ...], waves: list[dict], runtime
     window_hours = read_configuration(runtime, CONFIGURATION_OPTIONAL).quota_window_hours
     return {
         **sum_quota_usage(entries, runtime.now, window_hours),
-        "paused_waves": [
-            {"wave": wave["wave"], "resume_at": wave["pause"]["resume_at"]}
+        "blocked_waves": [
+            {"wave": wave["wave"], "resume_at": wave["halt"]["resume_at"]}
             for wave in waves
-            if wave["pause"] is not None and wave["pause"]["reason"] == QUOTA_REASON
+            if wave["halt"] is not None and wave["halt"]["reason"] == QUOTA_REASON
         ],
     }
 
@@ -120,15 +120,15 @@ def _list_scans(new_signals: list[Signal]) -> list[dict]:
     ]
 
 
-def _describe_pause(pause: dict) -> str:
+def _describe_halt(pause: dict) -> str:
     if pause["resume_at"] is None:
-        return f"paused on {pause['reason']}"
-    return f"paused on {pause['reason']} until {pause['resume_at']}"
+        return f"parked on {pause['reason']}"
+    return f"blocked on {pause['reason']} until {pause['resume_at']}"
 
 
 def _render_wave(wave: dict) -> str:
     line = f"wave       {wave['wave']} of {wave['project']}, {wave['last_event']}"
-    return line if wave["pause"] is None else f"{line}, {_describe_pause(wave['pause'])}"
+    return line if wave["halt"] is None else f"{line}, {_describe_halt(wave['halt'])}"
 
 
 def _render_quota(quota: dict) -> str:

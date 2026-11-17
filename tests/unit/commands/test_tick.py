@@ -672,7 +672,7 @@ PULL_REQUEST_DETAILS = {
 PAUSED_ON_THE_QUOTA_UNTIL_08 = {
     "schema_version": 1,
     "ts": "2026-10-19T07:30:00Z",
-    "event": "wave.paused",
+    "event": "wave.blocked",
     "wave": "tidepool_w16",
     "reason": "quota",
     "resume_at": "2026-10-19T08:00:00Z",
@@ -687,10 +687,9 @@ FORGE_ACCOUNT_UNAVAILABLE = {
 PAUSED_ON_THE_FORGE_ACCOUNT = {
     "schema_version": 1,
     "ts": "2026-10-19T08:10:00Z",
-    "event": "wave.paused",
+    "event": "wave.parked",
     "wave": "tidepool_w16",
     "reason": "forge_account",
-    "resume_at": None,
 }
 RESUMED_FROM_THE_FORGE_ACCOUNT = {
     "schema_version": 1,
@@ -709,10 +708,9 @@ RUN_FINISHED_ON_THE_CLIENT_LOGIN = {
 PAUSED_ON_THE_CLIENT_LOGIN = {
     "schema_version": 1,
     "ts": "2026-10-19T08:55:00Z",
-    "event": "wave.paused",
+    "event": "wave.parked",
     "wave": "tidepool_w16",
     "reason": "client_login",
-    "resume_at": None,
 }
 RESUMED_FROM_THE_CLIENT_LOGIN = {
     "schema_version": 1,
@@ -2041,7 +2039,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T09:00:00Z",
-                    "event": "wave.paused",
+                    "event": "wave.blocked",
                     "wave": "tidepool_w16",
                     "reason": "quota",
                     "resume_at": "2026-10-19T09:30:00Z",
@@ -2124,7 +2122,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T09:00:00Z",
-                    "event": "wave.paused",
+                    "event": "wave.blocked",
                     "wave": "tidepool_w16",
                     "reason": "quota",
                     "resume_at": "2026-10-19T15:00:00Z",
@@ -2202,7 +2200,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T09:00:00Z",
-                    "event": "wave.paused",
+                    "event": "wave.blocked",
                     "wave": "tidepool_w16",
                     "reason": "quota",
                     "resume_at": "2026-10-19T09:30:00Z",
@@ -2292,7 +2290,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T07:30:00Z",
-                    "event": "wave.paused",
+                    "event": "wave.blocked",
                     "wave": "tidepool_w16",
                     "reason": "quota",
                     "resume_at": "2026-10-19T08:00:00Z",
@@ -2357,10 +2355,9 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T09:00:00Z",
-                    "event": "wave.paused",
+                    "event": "wave.parked",
                     "wave": "tidepool_w16",
                     "reason": "forge_account",
-                    "resume_at": None,
                 },
             ],
         )
@@ -2471,10 +2468,9 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                 {
                     "schema_version": 1,
                     "ts": "2026-10-19T09:00:00Z",
-                    "event": "wave.paused",
+                    "event": "wave.parked",
                     "wave": "tidepool_w16",
                     "reason": "client_login",
-                    "resume_at": None,
                 },
             ],
         )
@@ -2493,7 +2489,7 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            "brigade tick: the wave tidepool_w16 paused: the login of its AI client is lost;"
+            "brigade tick: the wave tidepool_w16 parked: the login of its AI client is lost;"
             " sign in to the client again, then run brigade wave resume tidepool_w16\n",
             errors.getvalue(),
         )
@@ -3495,10 +3491,9 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "ts": ANY,
-                "event": "wave.paused",
+                "event": "wave.parked",
                 "wave": "tidepool_w1",
                 "reason": "forge_account",
-                "resume_at": None,
             },
         )
         self.assertEqual(spawner.argvs, [])

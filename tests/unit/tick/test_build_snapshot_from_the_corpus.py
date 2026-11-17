@@ -26,9 +26,10 @@ from brigade.ledger.task_reported import TaskReported
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.tick_action_failed import TickActionFailed
+from brigade.ledger.wave_blocked import WaveBlocked
 from brigade.ledger.wave_cancelled import WaveCancelled
 from brigade.ledger.wave_closed import WaveClosed
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.orders.is_order_due import OrderFacts
@@ -2579,8 +2580,8 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
 
 BLOCKED_REBASE_MESSAGE = "Keep the guard of plan.py or drop it?\nbrigade-end: blocked"
 WAVE_BRANCH_RUN = None
-PAUSE_ON_THE_BLOCKED_REBASE_RUN = WavePaused(
-    wave="w1", reason="run 20261019T083000Z-4eba5e blocked: Keep the guard of plan.py or drop it?", resume_at=None
+PAUSE_ON_THE_BLOCKED_REBASE_RUN = WaveParked(
+    wave="w1", reason="run 20261019T083000Z-4eba5e blocked: Keep the guard of plan.py or drop it?"
 )
 
 
@@ -2637,7 +2638,7 @@ class BuildSnapshotOfARebaseRunOfAWaveBranchTest(BuildSnapshotTestCase):
         # Assert
         self.assertIsNone(snapshot.waves[0].blocked_rebase)
 
-    def test_should_carry_no_blocked_rebase_run_once_the_wave_paused_on_it_is_resumed(self):
+    def test_should_carry_no_blocked_rebase_run_once_the_wave_parked_on_it_is_resumed(self):
         # Arrange
         self.record_rebase_run(WAVE_BRANCH_RUN, "blocked")
         self.record(4, PAUSE_ON_THE_BLOCKED_REBASE_RUN)
@@ -2652,7 +2653,7 @@ class BuildSnapshotOfARebaseRunOfAWaveBranchTest(BuildSnapshotTestCase):
     def test_should_carry_the_blocked_rebase_run_past_a_quota_pause_of_the_wave_and_its_resume(self):
         # Arrange
         self.record_rebase_run(WAVE_BRANCH_RUN, "blocked")
-        self.record(4, WavePaused(wave="w1", reason="quota", resume_at="2026-10-19T10:00:00Z"))
+        self.record(4, WaveBlocked(wave="w1", reason="quota", resume_at="2026-10-19T10:00:00Z"))
         self.record(3, WaveResumed(wave="w1", reason="quota"))
 
         # Act
@@ -2666,7 +2667,7 @@ class BuildSnapshotOfARebaseRunOfAWaveBranchTest(BuildSnapshotTestCase):
 
     def test_should_carry_no_blocked_rebase_run_ended_while_the_wave_was_paused_once_the_user_resumes_it(self):
         # Arrange
-        self.record(6, WavePaused(wave="w1", reason="forge_account", resume_at=None))
+        self.record(6, WaveParked(wave="w1", reason="forge_account"))
         self.record_rebase_run(WAVE_BRANCH_RUN, "blocked")
         self.record(3, WaveResumed(wave="w1", reason="forge_account"))
 
@@ -2692,7 +2693,7 @@ class BuildSnapshotOfARebaseRunOfAWaveBranchTest(BuildSnapshotTestCase):
 
     def test_should_carry_the_blocked_rebase_run_ended_after_the_user_resumed_the_wave(self):
         # Arrange
-        self.record(7, WavePaused(wave="w1", reason="forge_account", resume_at=None))
+        self.record(7, WaveParked(wave="w1", reason="forge_account"))
         self.record(6, WaveResumed(wave="w1", reason="forge_account"))
         self.record_rebase_run(WAVE_BRANCH_RUN, "blocked")
 
@@ -2739,7 +2740,7 @@ class BuildSnapshotOfARebaseRunOfAWaveBranchTest(BuildSnapshotTestCase):
     def test_should_carry_the_blocked_rebase_run_when_another_wave_is_paused_after_it(self):
         # Arrange
         self.record_rebase_run(WAVE_BRANCH_RUN, "blocked")
-        self.record(4, WavePaused(wave="w0", reason="user", resume_at=None))
+        self.record(4, WaveParked(wave="w0", reason="user"))
 
         # Act
         snapshot, _ = self.build()

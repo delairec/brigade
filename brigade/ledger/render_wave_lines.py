@@ -41,10 +41,10 @@ def _render_steps(heading: str, summaries: dict) -> list[str]:
     return lines
 
 
-def _render_pause(pause: dict) -> str:
+def _render_halt(pause: dict) -> str:
     if pause["resumed_at"] is None:
-        return f"  {pause['paused_at']}, still paused"
-    return f"  {pause['paused_at']} to {pause['resumed_at']}  {format_duration(pause['duration_ms'])}"
+        return f"  {pause['halted_at']}, still halted"
+    return f"  {pause['halted_at']} to {pause['resumed_at']}  {format_duration(pause['duration_ms'])}"
 
 
 def _render_event(entry: dict) -> str:
@@ -69,8 +69,8 @@ def render_wave_lines(document: dict) -> list[str]:
         f"pull requests: {_join_or_none(pull_requests)}",
         *_render_steps("turns by slot", document["turns"]["by_slot"]),
         *_render_steps("turns by role", document["turns"]["by_role"]),
-        f"pauses: {len(document['pauses'])}, {format_duration(document['paused_ms'])} in all",
-        *(_render_pause(pause) for pause in document["pauses"]),
+        f"halts: {len(document['halts'])}, {format_duration(document['halted_ms'])} in all",
+        *(_render_halt(halt) for halt in document["halts"]),
         f"handovers: {_join_or_none(handovers)}",
         f"parked: {_join_or_none(document['parked'])}",
         "events:",

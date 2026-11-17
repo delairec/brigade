@@ -8,10 +8,10 @@ NEVER = "never"
 DUE = "due"
 
 
-def _describe_pause(reason: str, resume_at: str | None) -> str:
+def _describe_halt(reason: str, resume_at: str | None) -> str:
     if resume_at is None:
-        return f"paused on {escape(reason)}"
-    return f"paused on {escape(reason)} until {escape(resume_at)}"
+        return f"parked on {escape(reason)}"
+    return f"blocked on {escape(reason)} until {escape(resume_at)}"
 
 
 def _render_section(heading: str, body: str) -> str:
@@ -35,19 +35,21 @@ def _render_wave(wave: dict) -> str:
         f'<a href="#waves/{escape(quote(name, safe=""))}">{escape(name)}</a>'
         f" of {escape(wave['project'])}, {escape(wave['last_event'])}"
     )
-    pause = wave["pause"]
+    pause = wave["halt"]
     if pause is None:
         return line
     resume = render_action(("waves", name, "resume"), "resume")
-    return f"{line}, {_describe_pause(pause['reason'], pause['resume_at'])}{resume}"
+    return f"{line}, {_describe_halt(pause['reason'], pause['resume_at'])}{resume}"
 
 
 def _render_quota(quota: dict) -> str:
     usage = "".join(f"<dt>{escape(measure)}</dt><dd>{tokens}</dd>" for measure, tokens in quota["usage"].items())
-    paused = [f"{escape(wave['wave'])} {_describe_pause('quota', wave['resume_at'])}" for wave in quota["paused_waves"]]
+    blocked = [
+        f"{escape(wave['wave'])} {_describe_halt('quota', wave['resume_at'])}" for wave in quota["blocked_waves"]
+    ]
     return (
         f"<p>over the last {quota['window_hours']} hours, {quota['runs_without_usage']} runs without usage</p>"
-        f"<dl>{usage}</dl>{_render_list(paused) if paused else ''}"
+        f"<dl>{usage}</dl>{_render_list(blocked) if blocked else ''}"
     )
 
 

@@ -3,14 +3,14 @@ from typing import ClassVar
 
 
 @dataclass(frozen=True)
-class WavePaused:
-    name: ClassVar[str] = "wave.paused"
+class WaveBlocked:
+    name: ClassVar[str] = "wave.blocked"
     wave: str
     reason: str
-    resume_at: str | None
+    resume_at: str
 
     @classmethod
-    def from_document(cls, document: dict) -> "WavePaused":
+    def from_document(cls, document: dict) -> "WaveBlocked":
         return cls(wave=document["wave"], reason=document["reason"], resume_at=document["resume_at"])
 
     def to_document(self) -> dict:

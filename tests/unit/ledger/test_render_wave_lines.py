@@ -30,11 +30,11 @@ class RenderWaveLinesTest(unittest.TestCase):
             ],
             "pull_requests": [{"task": "T7", "pr": 42, "rounds": 2}],
             "turns": {"by_slot": {"build": build_steps}, "by_role": {}},
-            "pauses": [
-                {"paused_at": "2026-10-01T00:15:00Z", "resumed_at": "2026-10-01T01:15:00Z", "duration_ms": 3600000},
-                {"paused_at": "2026-10-01T02:00:00Z", "resumed_at": None, "duration_ms": None},
+            "halts": [
+                {"halted_at": "2026-10-01T00:15:00Z", "resumed_at": "2026-10-01T01:15:00Z", "duration_ms": 3600000},
+                {"halted_at": "2026-10-01T02:00:00Z", "resumed_at": None, "duration_ms": None},
             ],
-            "paused_ms": 3600000,
+            "halted_ms": 3600000,
             "handovers": [{"task": "T7", "role": "ada", "slot": "build", "segment": 2}],
             "parked": [],
             "events": [],
@@ -58,9 +58,9 @@ class RenderWaveLinesTest(unittest.TestCase):
             "    runs p50 40  p90 52  measured 2  partial 0  unmeasured 0\n"
             "    segments p50 40  p90 52  measured 2  unmeasured 0\n"
             "turns by role: none\n"
-            "pauses: 2, 1h00m in all\n"
+            "halts: 2, 1h00m in all\n"
             "  2026-10-01T00:15:00Z to 2026-10-01T01:15:00Z  1h00m\n"
-            "  2026-10-01T02:00:00Z, still paused\n"
+            "  2026-10-01T02:00:00Z, still halted\n"
             "handovers: T7 ada build segment 2\n"
             "parked: none\n"
             "events:",
@@ -80,8 +80,8 @@ class RenderWaveLinesTest(unittest.TestCase):
             "by_task": [],
             "pull_requests": [],
             "turns": {"by_slot": {}, "by_role": {}},
-            "pauses": [{"paused_at": "2026-10-02T10:00:00Z", "resumed_at": None, "duration_ms": None}],
-            "paused_ms": 0,
+            "halts": [{"halted_at": "2026-10-02T10:00:00Z", "resumed_at": None, "duration_ms": None}],
+            "halted_ms": 0,
             "handovers": [],
             "parked": [],
             "events": [],
@@ -100,8 +100,8 @@ class RenderWaveLinesTest(unittest.TestCase):
             "pull requests: none\n"
             "turns by slot: none\n"
             "turns by role: none\n"
-            "pauses: 1, 0h00m in all\n"
-            "  2026-10-02T10:00:00Z, still paused\n"
+            "halts: 1, 0h00m in all\n"
+            "  2026-10-02T10:00:00Z, still halted\n"
             "handovers: none\n"
             "parked: none\n"
             "events:",
@@ -125,8 +125,8 @@ class RenderWaveLinesTest(unittest.TestCase):
             "by_task": [{"task": "TP147", "turns": 40, "partial": False, "duration_ms": 60000, "cost_usd": None}],
             "pull_requests": [],
             "turns": {"by_slot": {}, "by_role": {"ada": ada_steps}},
-            "pauses": [],
-            "paused_ms": 0,
+            "halts": [],
+            "halted_ms": 0,
             "handovers": [],
             "parked": ["TP147"],
             "events": [],
@@ -149,7 +149,7 @@ class RenderWaveLinesTest(unittest.TestCase):
             "  ada\n"
             "    runs p50 40  p90 40  measured 1  partial 1  unmeasured 0\n"
             "    segments p50 40  p90 40  measured 1  unmeasured 1\n"
-            "pauses: 0, 0h00m in all\n"
+            "halts: 0, 0h00m in all\n"
             "handovers: none\n"
             "parked: TP147\n"
             "events:",
@@ -169,8 +169,8 @@ class RenderWaveLinesTest(unittest.TestCase):
             "by_task": [],
             "pull_requests": [],
             "turns": {"by_slot": {}, "by_role": {}},
-            "pauses": [],
-            "paused_ms": 0,
+            "halts": [],
+            "halted_ms": 0,
             "handovers": [],
             "parked": [],
             "events": [
@@ -192,7 +192,7 @@ class RenderWaveLinesTest(unittest.TestCase):
             "pull requests: none\n"
             "turns by slot: none\n"
             "turns by role: none\n"
-            "pauses: 0, 0h00m in all\n"
+            "halts: 0, 0h00m in all\n"
             "handovers: none\n"
             "parked: none\n"
             "events:\n"

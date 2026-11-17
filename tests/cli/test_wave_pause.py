@@ -4,9 +4,9 @@ from tests.cli.temporary_machine import CLONE_ENTRY_POINT
 from tests.cli.wave_tick_test_case import WaveTickTestCase
 
 PAUSED_ON_THE_FORGE_ACCOUNT = (
-    '{"schema_version": 1, "ts": "2026-10-13T11:00:00Z", "event": "wave.paused", "wave": "shop_w1",'
-    ' "reason": "forge_account", "resume_at": null}\n'
-    '{"schema_version": 1, "ts": "2026-10-13T11:00:00Z", "event": "wave.paused", "wave": "cafe_w1",'
+    '{"schema_version": 1, "ts": "2026-10-13T11:00:00Z", "event": "wave.parked", "wave": "shop_w1",'
+    ' "reason": "forge_account"}\n'
+    '{"schema_version": 1, "ts": "2026-10-13T11:00:00Z", "event": "wave.blocked", "wave": "cafe_w1",'
     ' "reason": "quota", "resume_at": "2026-10-13T12:00:00Z"}\n'
 )
 
@@ -67,15 +67,14 @@ class BrigadeWaveResumeTest(WaveTickTestCase):
                 {
                     "schema_version": 1,
                     "ts": "2026-10-13T11:00:00Z",
-                    "event": "wave.paused",
+                    "event": "wave.parked",
                     "wave": "shop_w1",
                     "reason": "forge_account",
-                    "resume_at": None,
                 },
                 {
                     "schema_version": 1,
                     "ts": "2026-10-13T11:00:00Z",
-                    "event": "wave.paused",
+                    "event": "wave.blocked",
                     "wave": "cafe_w1",
                     "reason": "quota",
                     "resume_at": "2026-10-13T12:00:00Z",

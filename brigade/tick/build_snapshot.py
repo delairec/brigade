@@ -31,7 +31,7 @@ from brigade.ledger.task_reported import TaskReported
 from brigade.ledger.task_state import QUOTA_RESUME_REASON, TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_closed import WaveClosed
-from brigade.ledger.wave_paused import WavePaused
+from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_resumed import WaveResumed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.orders.convert_order import convert_order
@@ -629,7 +629,7 @@ def _read_blocked_run(reading: WaveReading, run: str) -> BlockedRun | None:
 def _is_blocked_run_answered(event, wave: str, run: str) -> bool:
     if isinstance(event, WaveResumed):
         return event.wave == wave and event.reason != QUOTA_REASON
-    return isinstance(event, WavePaused) and event.wave == wave and event.reason.startswith(f"run {run} blocked")
+    return isinstance(event, WaveParked) and event.wave == wave and event.reason.startswith(f"run {run} blocked")
 
 
 def _read_blocked_rebase(reading: WaveReading, wave: str) -> BlockedRun | None:
