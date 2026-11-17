@@ -111,7 +111,7 @@ def review_context(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("review", "context"),
-    help="print in one read what the verification of the pull request of a task judges",
+    help="print in one read what the review of the pull request of a task judges",
     group_help="review the pull request of a task",
     arguments=(
         Argument(

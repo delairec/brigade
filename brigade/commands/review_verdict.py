@@ -78,7 +78,7 @@ def review_verdict(request: argparse.Namespace, runtime: Runtime) -> dict:
 
 COMMAND = Command(
     path=("review", "verdict"),
-    help="validate the verdict of the verification of the pull request of a task and record it",
+    help="validate the verdict of the review of the pull request of a task and record it",
     group_help="review the pull request of a task",
     arguments=(
         Argument(

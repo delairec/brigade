@@ -72,6 +72,24 @@ class ContextCommandsHelpTest(HelpTestCase):
                 self.assert_listed(completed.stdout, "context", expected_help)
 
 
+class ReviewHelpTest(HelpTestCase):
+    def test_should_call_the_judging_of_a_pull_request_its_review(self):
+        # Arrange
+        rows = [
+            ("context", "print in one read what the review of the pull request of a task judges"),
+            ("verdict", "validate the verdict of the review of the pull request of a task and record it"),
+        ]
+
+        # Act
+        completed = self.run_help("review")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        for name, expected_help in rows:
+            with self.subTest(subcommand=name):
+                self.assert_listed(completed.stdout, name, expected_help)
+
+
 class BrigadeCorpusHelpTest(HelpTestCase):
     def test_should_print_the_help_of_the_awawa_passthrough_under_its_options(self):
         # Act
