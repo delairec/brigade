@@ -697,7 +697,7 @@ class PrepareTaskWorktreeOfABranchOffTheWaveBranchTest(PrepareTaskWorktreeTestCa
             ],
         )
 
-    def test_should_hand_over_a_rebased_branch_as_put_on_the_head_of_the_wave_branch(self):
+    def test_should_deliver_a_rebased_branch_as_put_on_the_head_of_the_wave_branch(self):
         # Arrange
         self.record_commit_checks(TASK_HEAD, exit_code=0)
         self.record_commit_checks(WAVE_HEAD, exit_code=0)
@@ -864,7 +864,7 @@ class PrepareTaskWorktreeOfARedBranchOffTheWaveBranchTest(PrepareTaskWorktreeTes
         self.assertNotIn((str(WORKTREE), REBASE_ON_THE_WAVE_BRANCH), runner.commands)
         self.assertEqual(runner.commands[-1], (str(WORKTREE), ("make", "deps")))
 
-    def test_should_hand_over_the_worktree_off_its_start_with_the_commands_that_failed_at_its_head(self):
+    def test_should_deliver_the_worktree_off_its_start_with_the_commands_that_failed_at_its_head(self):
         # Arrange
         self.record_commit_checks(TASK_HEAD, exit_code=1)
         runner = self.create_runner(branch=TASK_BRANCH_FOUND, answers=OFF_THE_WAVE_BRANCH)

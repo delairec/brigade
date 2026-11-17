@@ -246,7 +246,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
         # Assert
         self.assertEqual(str(raised.exception), f"another tick holds {self.lock}")
 
-    def test_should_plan_nothing_on_a_dry_run(self):
+    def test_should_decide_nothing_on_a_dry_run(self):
         # Arrange
         request = Namespace(log_file=None, mode="dry-run")
 
@@ -376,7 +376,7 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
         self.assertEqual((self.root / "state" / "locks").exists(), False)
         self.assertEqual((self.root / "state" / "tick.json").exists(), False)
 
-    def test_should_plan_while_another_tick_holds_the_lock(self):
+    def test_should_decide_while_another_tick_holds_the_lock(self):
         # Arrange
         request = Namespace(log_file=None, mode="dry-run")
         self.lock.parent.mkdir(parents=True)
@@ -3935,7 +3935,7 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
         # Assert
         self.assertNotIn(FORGE_REBASE_OF_THE_MILESTONE_BRANCH, self.machine.argvs)
 
-    def test_should_plan_no_rebase_of_the_milestone_branch_whose_pull_request_is_open_while_its_rebase_run_lives(
+    def test_should_decide_no_rebase_of_the_milestone_branch_whose_pull_request_is_open_while_its_rebase_run_lives(
         self,
     ):
         # Arrange
@@ -4537,7 +4537,7 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
             1,
         )
 
-    def test_should_name_the_red_wave_branch_holding_the_launch_in_the_plan_of_a_dry_run(self):
+    def test_should_name_the_red_wave_branch_holding_the_launch_in_the_decisions_of_a_dry_run(self):
         # Act
         document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), self.runtime)
 
@@ -5567,7 +5567,7 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
             str(raised.exception), "gh printed no token for the login tidepool-tokenless, bound to cli, after 1 attempt"
         )
 
-    def test_should_plan_the_wave_of_a_project_without_a_forge_with_no_token_for_the_login_of_the_key_cli(self):
+    def test_should_decide_the_wave_of_a_project_without_a_forge_with_no_token_for_the_login_of_the_key_cli(self):
         # Arrange
         write_ledger(self.root, [CUT_OF_M4_ON_THE_WAVE_BRANCH, WAVE_STARTED])
         forge = create_forge_of_the_cli(NO_PULL_REQUEST, NO_TOKEN)
@@ -5840,7 +5840,7 @@ class TickRunningTheConnectorsTest(unittest.TestCase):
         # Assert
         self.assertEqual(document["actions_applied"], 4)
 
-    def test_should_plan_the_connector_actions_on_a_dry_run_and_apply_none(self):
+    def test_should_decide_the_connector_actions_on_a_dry_run_and_apply_none(self):
         # Arrange
         projects = {"elm": self._describe_project("elm"), "oak": self._describe_project("oak")}
         runtime = self._create_runtime(projects, create_connector_forge(_list_the_open_pull_request))

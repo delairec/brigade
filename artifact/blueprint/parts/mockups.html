@@ -10,7 +10,7 @@
     <li><a href="#m-wave-new">brigade wave new</a></li>
     <li><a href="#m-tick">brigade tick</a></li>
     <li><a href="#m-task-context">brigade build context (what an agent gets)</a></li>
-    <li><a href="#m-verify">brigade verify preflight</a></li>
+    <li><a href="#m-preflight">brigade preflight review-pull-request</a></li>
     <li><a href="#m-wave-show">brigade wave show</a></li>
     <li><a href="#m-inbox">brigade inbox, triage</a></li>
     <li><a href="#m-ledger">brigade ledger</a></li>
@@ -119,11 +119,11 @@ WAVE tp/16  integration/station-page  POLICY plan_review=auto → starting at ne
   </figure>
 </section>
 
-<section id="m-verify">
+<section id="m-preflight">
   <h2>The pass, deterministic half</h2>
   <figure class="shot">
-    <div class="shot-bar"><span></span><span></span><span></span><em>brigade verify preflight 292</em></div>
-<pre class="term" id="t-verify"><span class="p">$</span> <span class="c">brigade verify preflight tidepool 292</span>
+    <div class="shot-bar"><span></span><span></span><span></span><em>brigade preflight review-pull-request pr=292</em></div>
+<pre class="term" id="t-preflight"><span class="p">$</span> <span class="c">brigade preflight review-pull-request pr=292</span>
 pr 292  feat/tp151-station-page → integration/station-page  task TP151  head 4c1e9d2
 <span class="ok">ok</span>    ancestry        descends from integration head (0 behind)
 <span class="ok">ok</span>    checks          7/7 green: test, test (coverage), lint:types, guards, fallow, ui (chromium, firefox, webkit), audit
@@ -234,7 +234,7 @@ TASK TP151
 <section id="m-units">
   <h2>The scheduler, the adapter and a run</h2>
   <figure class="shot">
-    <div class="shot-bar"><span></span><span></span><span></span><em>config.toml · brigade scheduler install · brigade adapter launch-argv · brigade runs logs</em></div>
+    <div class="shot-bar"><span></span><span></span><span></span><em>config.toml · brigade scheduler install · brigade adapter launch-argv · brigade run show --log</em></div>
 <pre class="term" id="t-units"><span class="dim"># $XDG_CONFIG_HOME/brigade/config.toml (excerpt): the machine's bindings</span>
 schema = 1
 client = "claude"
@@ -257,7 +257,7 @@ claude -p "@runs/r-0193/brief.md" --output-format stream-json \
   --allowedTools "Read,Glob,Grep,Write,Edit,Bash" --add-dir "$XDG_STATE_HOME/brigade" \
   --append-system-prompt-file runs/r-0193/role-package.md --max-turns 94
 
-<span class="p">$</span> <span class="c">brigade runs logs r-0193 --tail 3</span>
+<span class="p">$</span> <span class="c">brigade run show r-0193 --log</span>
 09:07:12  run r-0193 · build (bastien) · tp/16 TP146 · started · pid 48211
 09:38:40  result · outcome pr_open · turns 31 · 31 m 28 s · pr 291
 09:38:40  ledger run.finished · segment 1 · exit 0</pre>
