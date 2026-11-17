@@ -20,7 +20,7 @@ WRITING_LINE_END = '4:00:02Z", "segment": 1, "kind": "text", "summary": "Writing
 class JournalReaderTest(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
-        self.journal_path = Path(self.directory.name) / "journal.jsonl"
+        self.journal_path = Path(self.directory.name) / "log.jsonl"
 
     def tearDown(self):
         self.directory.cleanup()
@@ -29,7 +29,7 @@ class JournalReaderTest(unittest.TestCase):
         with self.journal_path.open("a", encoding="utf-8") as journal:
             journal.write(text)
 
-    def test_should_read_nothing_from_a_journal_not_written_yet(self):
+    def test_should_read_nothing_from_a_log_not_written_yet(self):
         # Arrange
         reader = JournalReader(self.journal_path)
 
@@ -39,7 +39,7 @@ class JournalReaderTest(unittest.TestCase):
         # Assert
         self.assertEqual(records, [])
 
-    def test_should_read_the_records_of_the_journal_in_their_order(self):
+    def test_should_read_the_records_of_the_log_in_their_order(self):
         # Arrange
         self.append(READING_LINE + WRITING_LINE)
         reader = JournalReader(self.journal_path)
@@ -143,7 +143,7 @@ class JournalReaderTest(unittest.TestCase):
             ],
         )
 
-    def test_should_name_the_line_of_the_journal_that_is_no_record_counting_the_lines_already_read(self):
+    def test_should_name_the_line_of_the_log_that_is_no_record_counting_the_lines_already_read(self):
         # Arrange
         self.append(READING_LINE + WRITING_LINE)
         reader = JournalReader(self.journal_path)
@@ -156,10 +156,10 @@ class JournalReaderTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            str(raised.exception), f"line 3 of {self.journal_path} is not a journal record: not a JSON document"
+            str(raised.exception), f"line 3 of {self.journal_path} is not a log record: not a JSON document"
         )
 
-    def test_should_name_the_line_of_the_journal_off_the_record_shape(self):
+    def test_should_name_the_line_of_the_log_off_the_record_shape(self):
         # Arrange
         self.append('{"schema_version": 1, "at": "2026-10-09T14:00:00Z", "segment": 1, "kind": "text"}\n')
         reader = JournalReader(self.journal_path)
@@ -170,5 +170,5 @@ class JournalReaderTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            str(raised.exception), f"line 1 of {self.journal_path} is not a journal record: lacks the key summary"
+            str(raised.exception), f"line 1 of {self.journal_path} is not a log record: lacks the key summary"
         )

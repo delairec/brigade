@@ -76,7 +76,7 @@ class RunsShowTextTest(unittest.TestCase):
             "run": {**FINISHED_RUN, "project": None, "outcome": None, "message": None},
             "segments": [{"segment": 1, "outcome": None, "turns": None, "duration_ms": None}],
             "progress": NO_PROGRESS,
-            "journal": None,
+            "log": None,
         }
 
         # Act
@@ -98,14 +98,14 @@ class RunsShowTextTest(unittest.TestCase):
             "1        -        -      -",
         )
 
-    def test_should_add_the_journal_after_the_segments(self):
+    def test_should_add_the_log_after_the_segments(self):
         # Arrange
         document = {
             "schema_version": 1,
             "run": FINISHED_RUN,
             "segments": [FINISHED_SEGMENT],
             "progress": NO_PROGRESS,
-            "journal": [{"at": "2026-10-07T09:01:00Z", "segment": 1, "kind": "text", "summary": "reads the task"}],
+            "log": [{"at": "2026-10-07T09:01:00Z", "segment": 1, "kind": "text", "summary": "reads the task"}],
         }
 
         # Act
@@ -129,14 +129,14 @@ class RunsShowTextTest(unittest.TestCase):
             "2026-10-07T09:01:00Z  1  text  reads the task",
         )
 
-    def test_should_print_the_progress_after_the_segments_and_before_the_journal(self):
+    def test_should_print_the_progress_after_the_segments_and_before_the_log(self):
         # Arrange
         document = {
             "schema_version": 1,
             "run": FINISHED_RUN,
             "segments": [FINISHED_SEGMENT],
             "progress": {"text": "STEP s1\n  DONE: read the task\n", "entities": None},
-            "journal": [{"at": "2026-10-07T09:01:00Z", "segment": 1, "kind": "text", "summary": "reads the task"}],
+            "log": [{"at": "2026-10-07T09:01:00Z", "segment": 1, "kind": "text", "summary": "reads the task"}],
         }
 
         # Act
@@ -178,7 +178,7 @@ class RunsShowExitCodeTest(unittest.TestCase):
     def test_should_exit_on_the_outcome_of_a_run_followed_to_its_end(self):
         # Arrange
         rows = [
-            ("a run shown", {"run": {**FINISHED_RUN, "outcome": "failed"}, "segments": [], "journal": None}, 0),
+            ("a run shown", {"run": {**FINISHED_RUN, "outcome": "failed"}, "segments": [], "log": None}, 0),
             ("a run followed until a signal", {"run": {**FINISHED_RUN, "outcome": "failed"}, "interrupted": True}, 0),
             ("a run followed to its failure", {"run": {**FINISHED_RUN, "outcome": "failed"}, "interrupted": False}, 1),
             ("a run followed to its end", {"run": FINISHED_RUN, "interrupted": False}, 0),
@@ -249,7 +249,7 @@ class RunFinishingOnItsFirstRecordStdoutDouble(io.StringIO):
 
 
 JOURNAL_LINE = "2026-10-07T09:01:00Z  1  text  reads the task\n"
-JOURNAL_POLLED_AT_ONCE = "journal_poll_s = 0.01\n"
+JOURNAL_POLLED_AT_ONCE = "log_poll_s = 0.01\n"
 
 
 class RunsShowFollowingARunningRunTest(unittest.TestCase):
@@ -258,7 +258,7 @@ class RunsShowFollowingARunningRunTest(unittest.TestCase):
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         run_directory = write_run(root / "state", create_run_record(FIRST_RUN, None, None), None)
         record_run_pid(run_directory, os.getpid())
-        (run_directory / "journal.jsonl").write_text(json.dumps(JOURNAL_RECORD) + "\n", encoding="utf-8")
+        (run_directory / "log.jsonl").write_text(json.dumps(JOURNAL_RECORD) + "\n", encoding="utf-8")
         printed = RunFinishingOnItsFirstRecordStdoutDouble(run_directory)
         runtime = create_test_runtime(create_test_paths(root))
         runtime.paths.config_root.mkdir(parents=True)
@@ -298,14 +298,14 @@ class PollOnceDouble:
 
 
 class RunsShowFollowIntervalTest(unittest.TestCase):
-    def test_should_read_the_run_again_every_journal_poll_s_seconds_of_the_configuration(self):
+    def test_should_read_the_run_again_every_log_poll_s_seconds_of_the_configuration(self):
         # Arrange
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_run(root / "state", create_run_record(FIRST_RUN, None, None), None)
         polls = PollOnceDouble()
         runtime = create_test_runtime(create_test_paths(root), poll_until_signalled=polls.poll_until_signalled)
         runtime.paths.config_root.mkdir(parents=True)
-        runtime.paths.configuration_file.write_text("journal_poll_s = 3600\n", encoding="utf-8")
+        runtime.paths.configuration_file.write_text("log_poll_s = 3600\n", encoding="utf-8")
 
         # Act
         with contextlib.redirect_stdout(io.StringIO()):
@@ -325,9 +325,9 @@ class RunsShowOfAFinishedRunTest(unittest.TestCase):
             create_run_record(FIRST_RUN, None, None),
             create_run_result(FIRST_RUN, "done", "2026-10-07T09:12:00Z"),
         )
-        (run_directory / "journal.jsonl").write_text(json.dumps(JOURNAL_RECORD) + "\n", encoding="utf-8")
+        (run_directory / "log.jsonl").write_text(json.dumps(JOURNAL_RECORD) + "\n", encoding="utf-8")
 
-    def test_should_show_the_run_with_its_journal(self):
+    def test_should_show_the_run_with_its_log(self):
         # Arrange
         request = Namespace(run=FIRST_RUN, log=True, follow=False)
 
@@ -342,11 +342,11 @@ class RunsShowOfAFinishedRunTest(unittest.TestCase):
                 "run": FINISHED_RUN,
                 "segments": [FINISHED_SEGMENT],
                 "progress": NO_PROGRESS,
-                "journal": [JOURNAL_RECORD],
+                "log": [JOURNAL_RECORD],
             },
         )
 
-    def test_should_print_the_run_and_its_journal_when_following_a_run_already_ended(self):
+    def test_should_print_the_run_and_its_log_when_following_a_run_already_ended(self):
         # Arrange
         request = Namespace(run=FIRST_RUN, log=False, follow=True)
         printed = io.StringIO()

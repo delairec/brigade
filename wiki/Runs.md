@@ -8,7 +8,7 @@ brigade run start <procedure> --slot <slot> [--project <name>] [--cwd <dir>] [--
             [--detach] [key=value ...]
 brigade run list [--wave <wave>] [--task <task>] [--state running|finished|dead] [--json]
                                                  # every run: id, procedure, slot, role, project, wave, task, state, outcome
-brigade run show <id> [--log] [--json]          # the summary of a run, its segments and its progress; --log adds its journal
+brigade run show <id> [--log] [--json]          # the summary of a run, its segments and its progress; --log adds its log
 brigade run show <id> --follow                  # the same with --log, then each record as it is written
 brigade run stop <id>                           # stop a running run; exit 0 once it finished on stopped
 brigade run stop-hook --at <epoch>              # the stop document a client hook prints once the soft limit has passed
@@ -67,7 +67,7 @@ Each run keeps its directory, `$XDG_STATE_HOME/brigade/runs/<run id>/`:
 | `progress.awawa` or `progress.md` | the progress of the run |
 | `processes.jsonl` | its trail |
 | `segments/<n>/` | `brief.md`, `stdout.log`, `stderr.log`, `result.json` (the normalised result of the segment) |
-| `journal.jsonl` | one record per action of the client |
+| `log.jsonl` | one record per action of the client |
 | `result.json` | written last: the normalised result of the last segment |
 
 ## Segments and the progress file
@@ -170,12 +170,12 @@ and the ledger as the foreground command does.
 
 </details>
 
-<details><summary>The journal and <code>runs show</code></summary>
+<details><summary>The log and <code>run show</code></summary>
 
-- During each segment brigade reads the new complete lines of `stdout.log` every `journal_poll_s` seconds of
-  `config.toml`, 2 by default, and the rest once the segment ends. A `journal_poll_s` that is no positive number keeps
+- During each segment brigade reads the new complete lines of `stdout.log` every `log_poll_s` seconds of
+  `config.toml`, 2 by default, and the rest once the segment ends. A `log_poll_s` that is no positive number keeps
   2 s, and `brigade doctor` names it.
-- It appends to `journal.jsonl` one JSON record per action of the client: `schema_version`, `at` (the UTC instant
+- It appends to `log.jsonl` one JSON record per action of the client: `schema_version`, `at` (the UTC instant
   brigade read it), `segment`, `kind` and `summary`, cut to 200 characters with `cut` true.
 - The adapter's `actions` operation turns the output into actions: `tool` (the tool and the path, command or pattern
   it acts on), `text` (its first line) and `result` (the outcome of the segment). A client whose probe declares no
@@ -187,7 +187,7 @@ and the ledger as the foreground command does.
   progress absent or holding no entry is `null` and prints nothing. A `progress.awawa` that `awawa lint --strict`
   refuses, a file caught in the middle of a write, is printed as its raw text with `entities` `null`.
 - `--follow` prints the summary and the segments, then each record once its line is whole, read every
-  `journal_poll_s` seconds, until the run is `finished` or `dead`. It then prints the state and the outcome of the run
+  `log_poll_s` seconds, until the run is `finished` or `dead`. It then prints the state and the outcome of the run
   and exits with the code `brigade run` gives that outcome, 1 for a dead run. SIGINT or SIGTERM ends the follow alone,
   exit 0, the run going on; `--follow` with `--json` exits 2.
 

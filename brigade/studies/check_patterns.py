@@ -73,9 +73,7 @@ def _check_new_pattern(target: str, pattern: Entity) -> None:
 def _check_evidence_added(target: str, pattern: Entity) -> None:
     for field in pattern.fields:
         if field.name != EVIDENCE_FIELD:
-            raise BrigadeError(
-                f"{target} is held by the registry: an answer adds EVIDENCE to it, {field.name} given"
-            )
+            raise BrigadeError(f"{target} is held by the registry: an answer adds EVIDENCE to it, {field.name} given")
 
 
 def _check_pattern(pattern: Entity, citable: Citable, held_names: frozenset[str]) -> None:

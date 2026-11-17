@@ -288,7 +288,7 @@ class DoctorPrerequisitesTest(DoctorTestCase):
 
     def test_should_report_each_finding_of_the_configuration(self):
         # Arrange
-        self.configure("journal_poll_s = 0\n" + CONFIGURATION)
+        self.configure("log_poll_s = 0\n" + CONFIGURATION)
 
         # Act
         document = doctor(self.no_option, self.runtime)
@@ -299,7 +299,7 @@ class DoctorPrerequisitesTest(DoctorTestCase):
                 "name": "config",
                 "kind": "prerequisite",
                 "state": "finding",
-                "detail": f"journal_poll_s is 0, not a positive number, in {self.runtime.paths.configuration_file};"
+                "detail": f"log_poll_s is 0, not a positive number, in {self.runtime.paths.configuration_file};"
                 " the default of 2 s holds",
                 "fallback": None,
             },

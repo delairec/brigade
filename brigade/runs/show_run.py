@@ -50,5 +50,5 @@ def show_run(state_root: Path, run_id: str, *, with_journal: bool) -> dict:
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "run": {**describe_run(run_directory), "message": _read_message(run_directory)},
         "segments": segments,
-        "journal": JournalReader(run_directory / JOURNAL_FILE).read_whole_records() if with_journal else None,
+        "log": JournalReader(run_directory / JOURNAL_FILE).read_whole_records() if with_journal else None,
     }

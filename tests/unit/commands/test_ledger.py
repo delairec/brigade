@@ -34,7 +34,7 @@ class LedgerTest(unittest.TestCase):
         self.ledger_directory = self.runtime.paths.state_root / "ledger"
         self.ledger_directory.mkdir(parents=True)
 
-    def test_should_give_the_overview_of_the_journal_when_no_wave_and_no_project_is_asked(self):
+    def test_should_give_the_overview_of_the_ledger_when_no_wave_and_no_project_is_asked(self):
         # Arrange
         (self.ledger_directory / "2026-10.jsonl").write_text("not a document\n")
         request = argparse.Namespace(wave=None, task=None, project=None, since=None)
@@ -150,7 +150,7 @@ class LedgerSinceTest(unittest.TestCase):
         self.assertEqual(document["first"], "2026-10-06T09:00:00Z")
 
 
-class LedgerOfNoJournalTest(unittest.TestCase):
+class LedgerOfNoLedgerTest(unittest.TestCase):
     def test_should_give_an_empty_overview_when_the_ledger_directory_does_not_exist(self):
         # Arrange
         directory = tempfile.TemporaryDirectory()
@@ -197,7 +197,7 @@ class LedgerRequestTest(unittest.TestCase):
 
 
 class LedgerExitCodeTest(unittest.TestCase):
-    def test_should_exit_0_once_the_journal_is_read(self):
+    def test_should_exit_0_once_the_ledger_is_read(self):
         # Arrange
         document = {"view": "project"}
 
@@ -239,7 +239,7 @@ class LedgerOverviewTextTest(unittest.TestCase):
             "error classes of segments: execution 1",
         )
 
-    def test_should_state_an_empty_journal_in_three_lines(self):
+    def test_should_state_an_empty_ledger_in_three_lines(self):
         # Arrange
         document = {
             "view": "overview",
@@ -369,7 +369,7 @@ class LedgerProjectTextTest(unittest.TestCase):
             "constraints delivered: 0",
         )
 
-    def test_should_count_no_order_done_as_0_over_the_whole_journal(self):
+    def test_should_count_no_order_done_as_0_over_the_whole_ledger(self):
         # Arrange
         document = {
             "view": "project",

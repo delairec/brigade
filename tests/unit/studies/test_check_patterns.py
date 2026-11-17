@@ -291,8 +291,7 @@ class CheckPatternsTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             str(refusal.exception),
-            "@PATTERN.cli_is_hard_to_read is held by the registry: an answer adds EVIDENCE to it, STATUS"
-            " given",
+            "@PATTERN.cli_is_hard_to_read is held by the registry: an answer adds EVIDENCE to it, STATUS given",
         )
 
     def test_should_refuse_a_held_pattern_the_answer_adds_no_evidence_to(self):

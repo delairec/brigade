@@ -129,7 +129,11 @@ class ReadConfigurationWhenAKeyIsWrongTest(ReadConfigurationTestCase):
                 "unknown key reasoning.deep.temperature",
             ),
             ("a client of the wrong type", "client = 1\n", "client is an integer, not a string,"),
-            ("a progress form of the wrong type", "progress_form = true\n", "progress_form is a boolean, not a string,"),
+            (
+                "a progress form of the wrong type",
+                "progress_form = true\n",
+                "progress_form is a boolean, not a string,",
+            ),
             (
                 "the forge account the table forge_accounts replaced",
                 'forge_account = "octo-bot"\n',
@@ -333,7 +337,7 @@ class ReadConfigurationOfTheTickStaleAfterTest(ReadConfigurationTestCase):
         self.assertEqual(configuration.tick_stale_after, 30)
 
 
-class ReadConfigurationOfTheJournalPollTest(ReadConfigurationTestCase):
+class ReadConfigurationOfTheLogPollTest(ReadConfigurationTestCase):
     def test_should_answer_2_and_no_finding_when_the_key_is_absent(self):
         # Arrange
         self.path.write_text('client = "fake"\n')
@@ -342,25 +346,25 @@ class ReadConfigurationOfTheJournalPollTest(ReadConfigurationTestCase):
         configuration = parse_configuration(self.path)
 
         # Assert
-        self.assertEqual(configuration.journal_poll_s, 2)
+        self.assertEqual(configuration.log_poll_s, 2)
         self.assertEqual(configuration.findings, ())
 
     def test_should_answer_the_seconds_the_key_sets(self):
         # Arrange
-        self.path.write_text("journal_poll_s = 0.5\n")
+        self.path.write_text("log_poll_s = 0.5\n")
 
         # Act
         configuration = parse_configuration(self.path)
 
         # Assert
-        self.assertEqual(configuration.journal_poll_s, 0.5)
+        self.assertEqual(configuration.log_poll_s, 0.5)
 
     def test_should_keep_the_default_and_record_a_finding_naming_the_key_and_the_file(self):
         # Arrange
         rows = [
-            ("a string", 'journal_poll_s = "2"\n', "journal_poll_s is a string, not a positive number,"),
-            ("zero", "journal_poll_s = 0\n", "journal_poll_s is 0, not a positive number,"),
-            ("a boolean", "journal_poll_s = true\n", "journal_poll_s is a boolean, not a positive number,"),
+            ("a string", 'log_poll_s = "2"\n', "log_poll_s is a string, not a positive number,"),
+            ("zero", "log_poll_s = 0\n", "log_poll_s is 0, not a positive number,"),
+            ("a boolean", "log_poll_s = true\n", "log_poll_s is a boolean, not a positive number,"),
         ]
         for case, content, expected_problem in rows:
             with self.subTest(case=case):
@@ -371,7 +375,7 @@ class ReadConfigurationOfTheJournalPollTest(ReadConfigurationTestCase):
                 configuration = parse_configuration(self.path)
 
                 # Assert
-                self.assertEqual(configuration.journal_poll_s, 2)
+                self.assertEqual(configuration.log_poll_s, 2)
                 self.assertEqual(
                     configuration.findings, (f"{expected_problem} in {self.path}; the default of 2 s holds",)
                 )

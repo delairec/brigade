@@ -64,6 +64,4 @@ class TasksOutsideAfterCheckTest(unittest.TestCase):
         document = check(subject, create_test_runtime())
 
         # Assert
-        self.assertEqual(
-            document, {"schema_version": 1, "name": "tasks_outside_after", "result": "ok", "findings": []}
-        )
+        self.assertEqual(document, {"schema_version": 1, "name": "tasks_outside_after", "result": "ok", "findings": []})

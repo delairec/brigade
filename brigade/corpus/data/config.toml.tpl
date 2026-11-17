@@ -60,8 +60,8 @@ $client_line
 # within it.
 # quota_window_hours = 5
 
-# The seconds between two reads of a running segment's output into the journal of its run, a positive number.
-# journal_poll_s = 2
+# The seconds between two reads of a running segment's output into the log of its run, a positive number.
+# log_poll_s = 2
 
 # The model and effort a reasoning level maps to, replacing that row of the client adapter's table;
 # levels deepest, deep, standard, light.

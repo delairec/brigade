@@ -64,7 +64,7 @@ each fallback. For the built-in adapters, `brigade adapter matrix --markdown` pr
 Fallbacks:
 
 - no resume: a fresh launch from the progress file
-- no transcripts: brigade's journal of the run
+- no transcripts: brigade's log of the run
 - no actions: one raw record per line of the client's output
 - no step count: steps null and the run held on the clock alone
 - no tool grants: the client's unattended mode and a disposable worktree for a reading slot

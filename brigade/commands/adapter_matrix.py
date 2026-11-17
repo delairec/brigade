@@ -17,7 +17,7 @@ FEATURE_CAPABILITIES = ("step_count", "tool_grants", "reset_hour", "graceful_sto
 CAPABILITIES = OPERATION_CAPABILITIES + FEATURE_CAPABILITIES
 FALLBACKS = {
     "resume": "a fresh launch from the progress file",
-    "transcripts": "brigade's journal of the run",
+    "transcripts": "brigade's log of the run",
     "actions": "one raw record per line of the client's output",
     "step_count": "steps null and the run held on the clock alone",
     "tool_grants": "the client's unattended mode and a disposable worktree for a reading slot",

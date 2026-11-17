@@ -283,7 +283,7 @@ class ProcessReadingTheJournalAfterAPollDouble:
 
     def __init__(self, journal: Path):
         self._journal = journal
-        self._answers = [self._keep_running, self._read_the_journal]
+        self._answers = [self._keep_running, self._read_the_log]
         self.journal_while_running = None
 
     def wait(self, timeout: float) -> int:
@@ -292,7 +292,7 @@ class ProcessReadingTheJournalAfterAPollDouble:
     def _keep_running(self, timeout: float) -> int:
         raise subprocess.TimeoutExpired("double-client", timeout)
 
-    def _read_the_journal(self, _timeout: float) -> int:
+    def _read_the_log(self, _timeout: float) -> int:
         self.journal_while_running = _read_journal_records(self._journal)
         return 0
 
@@ -494,7 +494,9 @@ class RunSegmentTest(unittest.TestCase):
             run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, self.spawn), StopSignalReceiver())
 
         # Assert
-        self.assertEqual(str(refusal.exception), "progress_form plugin awawa answered describe_document: lacks the key text")
+        self.assertEqual(
+            str(refusal.exception), "progress_form plugin awawa answered describe_document: lacks the key text"
+        )
 
     def test_should_return_the_result_the_client_parses_from_what_the_process_wrote(self):
         # Arrange
@@ -765,7 +767,7 @@ class RunSegmentJournalTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        self.journal = self.root / "state" / "runs" / "20261007T090000Z-b73a01" / "journal.jsonl"
+        self.journal = self.root / "state" / "runs" / "20261007T090000Z-b73a01" / "log.jsonl"
 
     def test_should_journal_one_raw_record_per_line_of_a_client_that_reads_no_actions(self):
         # Arrange
@@ -892,7 +894,7 @@ class RunSegmentJournalTest(unittest.TestCase):
             ],
         )
 
-    def test_should_name_the_journal_it_cannot_write(self):
+    def test_should_name_the_log_it_cannot_write(self):
         # Arrange
         plan = _create_plan(self.root, reads_actions=False)
         self.journal.mkdir(parents=True)
@@ -1081,9 +1083,9 @@ class RunSegmentStoppedWhileItsJournalIsWrittenTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        self.journal = self.root / "state" / "runs" / "20261007T090000Z-b73a01" / "journal.jsonl"
+        self.journal = self.root / "state" / "runs" / "20261007T090000Z-b73a01" / "log.jsonl"
 
-    def test_should_keep_in_the_journal_the_lines_the_stop_arrived_on(self):
+    def test_should_keep_in_the_log_the_lines_the_stop_arrived_on(self):
         # Arrange
         plan = _create_plan(self.root, reads_actions=True, client_type=ClientStoppedWhileReadingActionsDouble)
 

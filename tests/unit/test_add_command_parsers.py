@@ -110,7 +110,7 @@ class AddCommandParsersWhenAGroupHasACommandOfItsOwnTest(unittest.TestCase):
         # Arrange
         commands = (
             _create_command(("ledger",), "read the event ledger"),
-            _create_command(("ledger", "budgets"), "the steps per procedure", group_help="the journal"),
+            _create_command(("ledger", "budgets"), "the steps per procedure", group_help="the ledger"),
         )
 
         # Act
