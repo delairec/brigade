@@ -28,18 +28,18 @@ def _render_text(document: dict) -> str:
     return "\n".join(_render_record(record) for record in document["processes"])
 
 
-def processes_show(request: argparse.Namespace, runtime: Runtime) -> dict:
+def process_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     return show_invocation(runtime.paths.state_root, request.id, failed_only=request.failed)
 
 
 COMMAND = Command(
-    path=("processes", "show"),
+    path=("process", "show"),
     help="print the subprocesses a run, a tick or a command started, one line per process",
     group_help="list the subprocesses brigade started and show those of one run, tick or command",
     arguments=(
-        Argument(("id",), {"help": "a run id, or the id brigade processes list prints for a tick or a command"}),
+        Argument(("id",), {"help": "a run id, or the id brigade process list prints for a tick or a command"}),
         Argument(("--failed",), {"action": "store_true", "help": "keep the processes not exited with code 0"}),
     ),
-    run=processes_show,
+    run=process_show,
     render_text=_render_text,
 )
