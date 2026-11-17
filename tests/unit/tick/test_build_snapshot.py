@@ -323,7 +323,7 @@ class SnapshotTest(unittest.TestCase):
                     ],
                     "states": {},
                     "implemented": [],
-                    "pause": {"reason": "quota", "resume_at": "2026-10-18T17:00:00Z"},
+                    "halt": {"reason": "quota", "resume_at": "2026-10-18T17:00:00Z"},
                     "forge_account_unavailable": False,
                     "milestone_branch": None,
                     "blocked_rebase": None,
