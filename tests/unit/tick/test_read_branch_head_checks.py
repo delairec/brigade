@@ -49,7 +49,7 @@ class ReadBranchHeadChecksTest(unittest.TestCase):
         checks = read_branch_head_checks(query)
 
         # Assert
-        self.assertEqual(checks, (ForgeCheck(name="unit", verdict="success"),))
+        self.assertEqual(checks, (ForgeCheck(name="unit", conclusion="success"),))
 
     def test_should_ask_the_check_runs_of_the_branch_in_the_repository_of_the_project(self):
         # Arrange

@@ -1,7 +1,7 @@
 ---
 capabilities: read, shell
 ---
-# Procedure — verify one pull request of a wave
+# Procedure — review one pull request of a wave
 
 Judge one pull request a build run opened for its task, in the worktree of that task, and hand back a verdict: pass,
 or changes with the findings that ask for them. You did not write the pull request; change nothing in it.
@@ -27,7 +27,7 @@ files, the privacy and the body, so do not judge them again.
 
 Once a verdict is recorded on the pull request, the package also prints a section `previous verdict`, the head that
 verdict judged and each of its findings with the answer the remediation recorded for it, or none, and a section
-`repair diff`, what changed since that head. The package holds a previous verdict: take the re-verification path,
+`repair diff`, what changed since that head. The package holds a previous verdict: take the second-review path,
 step 2b, in place of steps 2 and 3. It holds none: judge the whole pull request, steps 2 and 3.
 
 ## 2. Judge each acceptance criterion
@@ -35,7 +35,7 @@ step 2b, in place of steps 2 and 3. It holds none: judge the whole pull request,
 For each `SPEC` line, find the test, the command or the line of code that proves it holds, and run what can be run.
 A criterion nothing proves is not met. Read every changed file in full, not only the lines of the diff.
 
-## 2b. Re-verify: judge the answer to each previous finding and the repair diff
+## 2b. Review again: judge the answer to each previous finding and the repair diff
 
 Judge each finding of the previous verdict by its answer. A fix is checked in the repair diff: the finding is
 resolved when the diff removes what it named. A challenge is accepted only when its argument holds against the code
@@ -62,10 +62,10 @@ package, the one you judged, each finding with a `summary` saying in one sentenc
 ```
 
 `pass` when every criterion is met and no finding asks for a change; `changes` otherwise, with at least one finding.
-On the re-verification path, `pass` when every finding of the previous verdict is fixed or soundly challenged and no
+On the second-review path, `pass` when every finding of the previous verdict is fixed or soundly challenged and no
 new finding is raised; `changes` otherwise, carrying the findings still open and the new ones.
 Then `brigade review verdict <pr> --file <path>`, `<pr>` left out as in step 1. It validates the verdict and records
 it, and posts it as a review of the pull request when the project's review policy asks for one; a verdict naming no
 pull request is recorded in the ledger alone. A refusal names what to correct: correct the file and
 hand it back again. A refusal naming a head no longer the head of the pull request, or of the task branch, ends the run without a verdict: the
-tick verifies the new head once its preflight has run. The verdict it accepts is your result; end there.
+tick reviews the new head once its preflight has run. The verdict it accepts is your result; end there.

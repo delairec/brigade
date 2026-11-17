@@ -28,7 +28,7 @@ Every command of brigade, what it does in one line, and the page that documents 
 | `brigade plan context` | print the package a planner reads to cut a request into a wave | — |
 | `brigade wave start\|show\|list\|cancel\|resume\|requeue` | start the waves of the projects, list, show and cancel them | [Waves](Waves.md) |
 | `brigade build context\|check\|push\|pr\|promote` | work on a task of a wave from its worktree | [Tasks](Tasks.md) |
-| `brigade review context\|verdict` | print what the verification of the pull request of a task judges, and record its verdict | [Verification](Review.md) |
+| `brigade review context\|verdict` | print what the review of the pull request of a task judges, and record its verdict | [Review](Review.md) |
 | `brigade remediate context\|reply` | answer the review of the pull request of a task | [Review answers](Review-answers.md) |
 | `brigade rebase context\|done\|pr` | put the pull request of a task back on its base, or open the pull request repairing a red main branch | [Rebase on the base](Rebase-on-the-base.md) |
 | `brigade run start <procedure>` | run a procedure as a slot through the client adapter | [Runs](Runs.md) |
@@ -73,7 +73,7 @@ Every command of brigade, what it does in one line, and the page that documents 
 - `brigade adapter <operation>`: the line names the six operations in place of the help line of `brigade adapter`,
   which covers `matrix` too.
 - `brigade review context|verdict` and `brigade report list|show`: each line joins the help lines of its two
-  subcommands, `verify context` and `verify verdict`, `reports list` and `reports show`.
-- `brigade reports`: `brigade --help` prints an empty line for it; its line comes from its two subcommands.
+  subcommands, `review context` and `review verdict`, `report list` and `report show`.
+- `brigade report`: `brigade --help` prints an empty line for it; its line comes from its two subcommands.
 
 </details>

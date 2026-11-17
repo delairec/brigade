@@ -21,7 +21,7 @@ def read_branch_head_checks(query: BranchHeadQuery) -> tuple[ForgeCheck, ...]:
     if not is_on_a_forge(query.project):
         return NO_FORGE_CHECK
     return tuple(
-        ForgeCheck(name=check_run["name"], verdict=check_run["conclusion"])
+        ForgeCheck(name=check_run["name"], conclusion=check_run["conclusion"])
         for check_run in query.list_check_runs(read_project_field(query.project, "PATH"), query.branch)
         if check_run["head"] == query.commit
     )

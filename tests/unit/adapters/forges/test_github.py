@@ -500,7 +500,7 @@ class FindPullRequestTest(unittest.TestCase):
                 "pull_request": {
                     "number": 42,
                     "state": "open",
-                    "checks": [{"name": "tests", "verdict": "failure"}, {"name": "lint", "verdict": "pending"}],
+                    "checks": [{"name": "tests", "conclusion": "failure"}, {"name": "lint", "conclusion": "pending"}],
                     "review": "changes_requested",
                     "behind": True,
                     "head": "0123abc",
@@ -796,7 +796,7 @@ class ListPullRequestsOfEveryStateTest(unittest.TestCase):
                         "draft": True,
                         "review": "approved",
                         "reviews": 2,
-                        "checks": [{"name": "unit", "verdict": "pending"}],
+                        "checks": [{"name": "unit", "conclusion": "pending"}],
                     },
                     {
                         "number": 5,
@@ -855,7 +855,7 @@ class ListOpenPullRequestsTest(unittest.TestCase):
                         "draft": True,
                         "review": "approved",
                         "reviews": 2,
-                        "checks": [{"name": "unit", "verdict": "pending"}],
+                        "checks": [{"name": "unit", "conclusion": "pending"}],
                     },
                 ],
             },
@@ -918,7 +918,7 @@ class ReadPullRequestTest(unittest.TestCase):
                     "body": "Coverage\n",
                     "head": "test/unit-coverage-rest",
                     "head_sha": "4f2a9c1",
-                    "checks": [{"name": "unit", "verdict": "success"}],
+                    "checks": [{"name": "unit", "conclusion": "success"}],
                 },
             },
         )

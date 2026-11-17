@@ -80,7 +80,7 @@ CHECKS_FINDING = "checks"
 UNREQUESTED_FINDINGS = ("ancestry", CHECKS_FINDING)
 STATES_BY_VERDICT = {"pass": VERIFIED_STATE, "changes": CHANGES_REQUESTED_STATE}
 OPEN_PULL_REQUEST = "open"
-PENDING_VERDICT = "pending"
+PENDING_CONCLUSION = "pending"
 MERGED_PULL_REQUEST = "merged"
 CLOSED_PULL_REQUEST = "closed"
 SETTLED_PULL_REQUESTS = (MERGED_PULL_REQUEST, CLOSED_PULL_REQUEST)
@@ -265,7 +265,7 @@ def _read_open_pull_request_checks(task: TaskFacts) -> HeadChecks | None:
         return None
     return HeadChecks(
         head=task.pull_request.head,
-        checks=tuple(ForgeCheck(name=check.name, verdict=check.verdict) for check in task.pull_request.checks),
+        checks=tuple(ForgeCheck(name=check.name, conclusion=check.conclusion) for check in task.pull_request.checks),
     )
 
 
@@ -569,7 +569,7 @@ def _launch_repair(wave: WaveFacts, task: TaskFacts) -> LaunchRemediation | Laun
             task_branch=task.branch,
             pr=task.pull_request.number,
             worktree=task.worktree,
-            checks=tuple(check.name for check in task.pull_request.checks if check.verdict != SUCCESSFUL_CHECK),
+            checks=tuple(check.name for check in task.pull_request.checks if check.conclusion != SUCCESSFUL_CHECK),
             findings=tuple(failure for failure in task.preflight_failures if failure.name != CHECKS_FINDING),
         )
     return LaunchRemediation(
@@ -613,7 +613,7 @@ def _is_awaiting_check_runs(pull_request: PullRequestFacts, project: ProjectFact
 
 def _are_checks_passed(pull_request: PullRequestFacts, project: ProjectFacts, now: datetime) -> bool:
     return not _is_awaiting_check_runs(pull_request, project, now) and all(
-        check.verdict == SUCCESSFUL_CHECK for check in pull_request.checks
+        check.conclusion == SUCCESSFUL_CHECK for check in pull_request.checks
     )
 
 
@@ -661,7 +661,7 @@ def _is_ready_for_preflight(wave: WaveFacts, task: TaskFacts, project: ProjectFa
         and task.opened_pull_request == task.pull_request.number
         and task.pull_request.state == OPEN_PULL_REQUEST
         and not _is_awaiting_check_runs(task.pull_request, project, now)
-        and all(check.verdict != PENDING_VERDICT for check in task.pull_request.checks)
+        and all(check.conclusion != PENDING_CONCLUSION for check in task.pull_request.checks)
         and task.preflighted_head != task.pull_request.head
     )
 

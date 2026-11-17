@@ -65,5 +65,5 @@ Any other failure is reported verbatim, with the path of the plan file, and neve
 
 ## 5. Report
 
-The verdict first, in one line: the plan recorded, or what stopped it. Then one line per task: its id,
+The conclusion first, in one line: the plan recorded, or what stopped it. Then one line per task: its id,
 its title and its `AFTER` edges; then the path of the plan file; then each question left out of the plan.

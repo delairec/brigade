@@ -135,7 +135,7 @@ class PreflightCommandTest(unittest.TestCase):
                 "folder": ".",
                 "changed": [],
                 "added_lines": [],
-                "check_runs": [{"name": "unit", "verdict": "success"}],
+                "check_runs": [{"name": "unit", "conclusion": "success"}],
                 "body": "Delivers @TASK.B1.\n",
                 "acceptance": [],
                 "privacy": {"private": [], "public": []},

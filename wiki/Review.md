@@ -16,21 +16,21 @@ Both run from the worktree of the task whose pull request they judge.
 
 | Key | Holds |
 |---|---|
-| `head` | the commit `verify context` printed |
+| `head` | the commit `review context` printed |
 | `verdict` | `pass` or `changes` |
 | `grade` | `critical`, `high`, `medium` or `low` |
 | `broken` | the `SPEC` or the rule the finding breaks |
 | `summary` | what is wrong |
 
-`verify verdict` records the ledger event `task.verdict` at that head.
+`review verdict` records the ledger event `task.verdict` at that head.
 
-> **Watch out:** `verify verdict` refuses a document of another shape, a grade outside the four, `changes` without a
+> **Watch out:** `review verdict` refuses a document of another shape, a grade outside the four, `changes` without a
 > finding, and a `head` that is no longer the head of the pull request: exit 1 naming what to correct, and nothing is
 > recorded.
 
 ## Details and edge cases
 
-<details><summary>What <code>verify context</code> prints</summary>
+<details><summary>What <code>review context</code> prints</summary>
 
 - the head it judges;
 - the task with its `awawa context` and its closure;
@@ -50,7 +50,7 @@ Once a `task.verdict` of the task is recorded on the pull request, it also print
 
 <details><summary>Under <code>REVIEW approval</code></summary>
 
-Under `REVIEW approval` of the project's `POLICY`, `verify verdict` also posts the verdict as a GitHub review of that
+Under `REVIEW approval` of the project's `POLICY`, `review verdict` also posts the verdict as a GitHub review of that
 commit, approving or requesting changes, as the login of the key `review` of `[forge_accounts]`, and the event carries
 that login. Under `REVIEW verdict`, the default, the event alone is the verdict and its login is null.
 

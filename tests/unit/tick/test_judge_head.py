@@ -15,7 +15,7 @@ class JudgeHeadTest(unittest.TestCase):
         # Arrange
         evidence = HeadEvidence(
             commit="c0ffee",
-            forge_checks=(ForgeCheck(name="unit", verdict="success"), ForgeCheck(name="lint", verdict="success")),
+            forge_checks=(ForgeCheck(name="unit", conclusion="success"), ForgeCheck(name="lint", conclusion="success")),
             build_check=NO_TASK_CHECK,
             commit_checks=NO_COMMIT_CHECKS,
         )
@@ -77,7 +77,7 @@ class JudgeHeadTest(unittest.TestCase):
         # Arrange
         evidence = HeadEvidence(
             commit="c0ffee",
-            forge_checks=(ForgeCheck(name="unit", verdict="pending"), ForgeCheck(name="lint", verdict="success")),
+            forge_checks=(ForgeCheck(name="unit", conclusion="pending"), ForgeCheck(name="lint", conclusion="success")),
             build_check=NO_TASK_CHECK,
             commit_checks=NO_COMMIT_CHECKS,
         )
@@ -92,7 +92,7 @@ class JudgeHeadTest(unittest.TestCase):
         # Arrange
         evidence = HeadEvidence(
             commit="c0ffee",
-            forge_checks=(ForgeCheck(name="unit", verdict="failure"), ForgeCheck(name="lint", verdict="success")),
+            forge_checks=(ForgeCheck(name="unit", conclusion="failure"), ForgeCheck(name="lint", conclusion="success")),
             build_check=NO_TASK_CHECK,
             commit_checks=NO_COMMIT_CHECKS,
         )
@@ -156,7 +156,7 @@ class JudgeHeadTest(unittest.TestCase):
         # Arrange
         evidence = HeadEvidence(
             commit="c0ffee",
-            forge_checks=(ForgeCheck(name="unit", verdict="failure"),),
+            forge_checks=(ForgeCheck(name="unit", conclusion="failure"),),
             build_check=NO_TASK_CHECK,
             commit_checks=CommitChecks(
                 project="oak", commit="c0ffee", results=(CommandResult(command="npm test", exit_code=0),)
