@@ -19076,7 +19076,8 @@ TASK B256
 TASK B257
 	TITLE "wiki/Concepts.md becomes wiki/Glossary.md, one row per word of brigade between two"
 		+ "markers, and a guard of tests/guards holds it to the code and the corpus"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 438
 	TYPE docs
 	MILESTONE @MILESTONE.M8
 	COMPONENT "audit"
