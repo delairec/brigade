@@ -742,7 +742,7 @@ RUN_R1_SHOWN = (
     '{"schema_version": 1, "run": {"run": "r1", "procedure": "build-task", "slot": "build", "role": "ada",'
     ' "project": "oak", "worktree": "/srv/oak/B94", "state": "running", "outcome": null, "wave": null,'
     ' "task": null, "message": null}, "segments": [], "log": null,'
-    ' "progress": {"text": "STEP s1 <read>\\n", "entities": null}}\n'
+    ' "progress": {"text": "ENTRY e1 <read>\\n", "entities": null}}\n'
 )
 
 
@@ -789,7 +789,7 @@ class AnswerDashboardRequestOfTheRunsViewsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(response.status, 200)
-        self.assertIn(b"<h3>Progress</h3><pre>STEP s1 &lt;read&gt;\n</pre>", response.body)
+        self.assertIn(b"<h3>Progress</h3><pre>ENTRY e1 &lt;read&gt;\n</pre>", response.body)
 
     def test_should_render_the_error_of_a_run_no_listing_names(self):
         # Arrange

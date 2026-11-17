@@ -27,7 +27,7 @@ class RenderRunFragmentTest(unittest.TestCase):
             "run": RUNNING_RUN,
             "segments": [FIRST_SEGMENT_HANDED_OVER, SECOND_SEGMENT_RUNNING],
             "log": None,
-            "progress": {"text": 'STEP s1\n\tDONE "read the package"\n', "entities": None},
+            "progress": {"text": 'ENTRY e1\n\tDONE "read the package"\n', "entities": None},
         }
 
         # Act
@@ -44,7 +44,7 @@ class RenderRunFragmentTest(unittest.TestCase):
             "<h3>Segments</h3><table><thead><tr><th>segment</th><th>outcome</th><th>turns</th><th>duration</th>"
             "</tr></thead><tbody><tr><td>1</td><td>handed_over</td><td>75</td><td>12m34s</td></tr>"
             "<tr><td>2</td><td>-</td><td>-</td><td>-</td></tr></tbody></table>"
-            "<h3>Progress</h3><pre>STEP s1\n\tDONE &quot;read the package&quot;\n</pre>",
+            "<h3>Progress</h3><pre>ENTRY e1\n\tDONE &quot;read the package&quot;\n</pre>",
         )
 
     def test_should_show_no_progress_section_for_a_run_that_wrote_none(self):

@@ -49,13 +49,13 @@ NO_PROGRESS = None
 NO_EXECUTABLE_DIRECTORY = ""
 MARKDOWN_PROGRESS = "- read the task\n- wrote the tests\n"
 AWAWA_PROGRESS = (
-    "SCHEMA STEP\n"
+    "SCHEMA ENTRY\n"
     '\tDESC "a step the run completed"\n'
     "\tFIELD DONE string\n"
     "\t\tREQUIRED\n"
     '\t\tDESC "what the step did, one line"\n'
     "\n"
-    "STEP s1\n"
+    "ENTRY e1\n"
     '\tDONE "read the task"\n'
 )
 JOURNAL_RECORD = {
@@ -135,7 +135,7 @@ class RunsShowTextTest(unittest.TestCase):
             "schema_version": 1,
             "run": FINISHED_RUN,
             "segments": [FINISHED_SEGMENT],
-            "progress": {"text": "STEP s1\n  DONE: read the task\n", "entities": None},
+            "progress": {"text": "ENTRY e1\n  DONE: read the task\n", "entities": None},
             "log": [{"at": "2026-10-07T09:01:00Z", "segment": 1, "kind": "text", "summary": "reads the task"}],
         }
 
@@ -157,7 +157,7 @@ class RunsShowTextTest(unittest.TestCase):
             "segment  outcome  turns  duration\n"
             "1        done     12     0m04s\n"
             "\n"
-            "STEP s1\n"
+            "ENTRY e1\n"
             "  DONE: read the task\n"
             "\n"
             "2026-10-07T09:01:00Z  1  text  reads the task",
@@ -437,8 +437,8 @@ class RunsShowOfARunWithItsProgressTest(unittest.TestCase):
         self.assertEqual(
             document["progress"],
             {
-                "text": "STEP s1\n  DONE: read the task\n",
-                "entities": [{"type": "STEP", "name": "s1", "fields": [{"name": "DONE", "value": "read the task"}]}],
+                "text": "ENTRY e1\n  DONE: read the task\n",
+                "entities": [{"type": "ENTRY", "name": "e1", "fields": [{"name": "DONE", "value": "read the task"}]}],
             },
         )
 

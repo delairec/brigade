@@ -9,7 +9,7 @@ class DocumentRequestTest(unittest.TestCase):
         request = DocumentRequest(
             document="progress",
             path="/state/brigade/runs/r1/progress.awawa",
-            schema='SCHEMA STEP\n\tDESC "a step the run completed"\n',
+            schema='SCHEMA ENTRY\n\tDESC "a step the run completed"\n',
             frame=("a fact is what the next segment needs and no command gives back",),
             role_has_shell=True,
         )
@@ -24,7 +24,7 @@ class DocumentRequestTest(unittest.TestCase):
                 "schema_version": 1,
                 "document": "progress",
                 "path": "/state/brigade/runs/r1/progress.awawa",
-                "schema": 'SCHEMA STEP\n\tDESC "a step the run completed"\n',
+                "schema": 'SCHEMA ENTRY\n\tDESC "a step the run completed"\n',
                 "frame": ["a fact is what the next segment needs and no command gives back"],
                 "shell": True,
             },
