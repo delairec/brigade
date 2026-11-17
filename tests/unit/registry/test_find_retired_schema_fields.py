@@ -21,6 +21,15 @@ ANSWER_WITH_COLLECTED_DOCUMENT = """SCHEMA ANSWER
 \t\t\tREQUIRED
 """
 
+RESULT_WITH_COLLECTED_DOCUMENT = """SCHEMA RESULT
+\tFIELD ORDER string
+\t\tREQUIRED
+\tFIELD COLLECTED string
+\t\tREPEATABLE
+\t\tFIELD DOCUMENT string
+\t\t\tREQUIRED
+"""
+
 PROJECT_WITH_VERIFY_ROUNDS = """SCHEMA PROJECT
 \tFIELD VERIFY_ROUNDS uint
 """
@@ -40,6 +49,13 @@ class FindRetiredSchemaFieldsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(retired, [RetiredName(old="ANSWER.DOCUMENT", new="ANSWER.COLLECTION")])
+
+    def test_should_name_the_retired_document_of_a_result_with_its_new_name(self):
+        # Act
+        retired = find_retired_schema_fields(RESULT_WITH_COLLECTED_DOCUMENT)
+
+        # Assert
+        self.assertEqual(retired, [RetiredName(old="RESULT.DOCUMENT", new="RESULT.COLLECTION")])
 
     def test_should_find_no_retired_field_in_the_shipped_schema(self):
         # Act
