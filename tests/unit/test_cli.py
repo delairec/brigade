@@ -13,13 +13,13 @@ from brigade.commands.tick import LOCK_NAME
 from brigade.system.hold_lock import hold_lock
 
 ADAPTER_MATRIX = (
-    "| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour"
+    "| Supported client | Launch | Result | Resume | Transcripts | Actions | Turn count | Tool grants | Reset hour"
     " | Graceful stop |\n"
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
     "| claude-code | full | full | full | full | full | full | full | full | full |\n"
     "| vibe | full | full | fallback | full | fallback | full | full | fallback | fallback |\n"
     "\n"
-    "| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour"
+    "| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Turn count | Tool grants | Reset hour"
     " | Graceful stop |\n"
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
     "| fake | full | full | fallback | fallback | fallback | fallback | fallback | fallback | fallback |\n"
@@ -29,7 +29,7 @@ ADAPTER_MATRIX = (
     "- no resume: a fresh launch from the progress file\n"
     "- no transcripts: brigade's log of the run\n"
     "- no actions: one raw record per line of the client's output\n"
-    "- no step count: steps null and the run held on the clock alone\n"
+    "- no turn count: turns null and the run held on the clock alone\n"
     "- no tool grants: the client's unattended mode and a disposable worktree for a reading slot\n"
     "- no reset hour: now plus thirty minutes\n"
     "- no graceful stop: the hard cut at the wall-time limit\n"
@@ -145,7 +145,7 @@ class MainVersionTest(MainTestCase):
 class MainOfACommandTest(MainTestCase):
     def test_should_print_the_document_of_the_command_as_json_when_asked(self):
         # Act
-        exit_code, stdout, _ = self.run_main(["processes", "list", "--json"])
+        exit_code, stdout, _ = self.run_main(["process", "list", "--json"])
 
         # Assert
         self.assertEqual(exit_code, 0)
@@ -153,7 +153,7 @@ class MainOfACommandTest(MainTestCase):
 
     def test_should_print_the_text_of_the_command(self):
         # Act
-        outcome = self.run_main(["processes", "list"])
+        outcome = self.run_main(["process", "list"])
 
         # Assert
         self.assertEqual(outcome, (0, "kind  id  instant  processes  failed\n", ""))
@@ -201,7 +201,7 @@ class MainOfACommandFailingUnexpectedlyTest(MainTestCase):
         (ticks / f"{tick_too_recent_to_expire}.jsonl").write_bytes(b"\xff\n")
 
         # Act
-        exit_code, _, stderr = self.run_main(["processes", "show", tick_too_recent_to_expire])
+        exit_code, _, stderr = self.run_main(["process", "show", tick_too_recent_to_expire])
 
         # Assert
         self.assertEqual(exit_code, 70)
