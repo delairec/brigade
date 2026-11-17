@@ -26,7 +26,7 @@ brigade run prune [--keep <n>] [--before <YYYY-MM-DD>] [--resumable] [--dry-run]
   double the shipped budget, g the tokens a turn adds to the context of the next, R the tokens a restarted segment
   spends up to its first edit. A change of the applied cap is appended as `budget.applied`, and the brief states the
   cap in its Budget section.
-- **The slot** resolves to its role as [`brigade roles`](Roles.md) shows, unless the project of `--project` binds it
+- **The slot** resolves to its role as [`brigade role show`](Roles.md) shows, unless the project of `--project` binds it
   otherwise.
 - **The client** is the one `[slot_clients]` binds to the slot, else the project's `CLIENT`, else the `client` key of
   `config.toml`.

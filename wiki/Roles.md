@@ -1,4 +1,4 @@
-What a slot and a role are, where a slot finds its role, and how `brigade roles` lists, shows and lints them.
+What a slot and a role are, where a slot finds its role, and how `brigade role` lists, shows and lints them.
 
 ## Commands
 
