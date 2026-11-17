@@ -14,7 +14,7 @@ of another page is unknown.
 | milestone | a `MILESTONE` entity of the project corpus whose tasks merge into the branch `integration/<slug>`; reached when the user merges its pull request into the main branch, the tick committing `STATUS reached` on its branch before opening it, held while one of its tasks is `draft` or `todo`, and taking no task once reached | [Tick and scheduler](Tick-and-scheduler.md) |
 | wave | a batch of ratified tasks started together, recorded in the ledger alone, with no branch and no pull request of its own | [Waves](Waves.md) |
 | task | a `TASK` entity of the project corpus, delivered by a build run on the branch `<prefix>/<id>-<slug>` | [Tasks](Tasks.md) |
-| preflight | a named set of collectors and checks run by `brigade preflight <name>`; `verify-pull-request` holds the deterministic checks of the pull request of a task, before any judgment | [Preflight](Preflight.md) |
+| preflight | a named set of collectors and checks run by `brigade preflight <name>`; `review-pull-request` holds the deterministic checks of the pull request of a task, before any judgment | [Preflight](Preflight.md) |
 | check | one deterministic judgment of a preflight, answering `result` `ok` or `fail` with its findings; a check run of the forge keeps the forge's sense | [Preflight](Preflight.md) |
 | verdict | `pass` or `changes`, the judgment of a review run on the pull request of a task, recorded as `task.verdict` | [Review](Review.md) |
 | finding | one defect a verdict names, graded `critical`, `high`, `medium` or `low`, which a remediation run answers | [Review answers](Review-answers.md) |

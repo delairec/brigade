@@ -15,7 +15,7 @@ def create_resolver(kind: str, known: str):
 
 RESOLVERS = RecipeResolvers(
     resolve_collector=create_resolver("collector", "pull-request"),
-    resolve_preflight=create_resolver("preflight", "verify-pull-request"),
+    resolve_preflight=create_resolver("preflight", "review-pull-request"),
     resolve_output=create_resolver("output", "inbox"),
     resolve_procedure=create_resolver("procedure", "review-pr"),
     slots=("review", "report"),
@@ -73,7 +73,7 @@ class LintRecipeTest(unittest.TestCase):
             ),
             (
                 "an on_fail outside park, skip, stop and retry:N",
-                create_recipe([{"kind": "gate", "preflight": "verify-pull-request", "on_fail": "retry"}]),
+                create_recipe([{"kind": "gate", "preflight": "review-pull-request", "on_fail": "retry"}]),
                 ["schema: steps[0]: on_fail is 'retry', not park, skip, stop or retry:N"],
             ),
             (
@@ -83,12 +83,12 @@ class LintRecipeTest(unittest.TestCase):
             ),
             (
                 "a gate step holding a check of its own",
-                create_recipe([{"kind": "gate", "preflight": "verify-pull-request", "check": "mine"}]),
+                create_recipe([{"kind": "gate", "preflight": "review-pull-request", "check": "mine"}]),
                 ["schema: steps[0]: holds the key check, which a gate step does not take"],
             ),
             (
                 "a misspelt on_fail",
-                create_recipe([{"kind": "gate", "preflight": "verify-pull-request", "on_fial": "skip"}]),
+                create_recipe([{"kind": "gate", "preflight": "review-pull-request", "on_fial": "skip"}]),
                 ["schema: steps[0]: holds the key on_fial, which a gate step does not take"],
             ),
             (
@@ -107,7 +107,7 @@ class LintRecipeTest(unittest.TestCase):
 
     def test_should_pass_a_gate_step_handing_its_preflight_a_declared_param(self):
         # Arrange
-        recipe = create_recipe([{"kind": "gate", "preflight": "verify-pull-request", "parameters": {"pr": "{pr}"}}])
+        recipe = create_recipe([{"kind": "gate", "preflight": "review-pull-request", "parameters": {"pr": "{pr}"}}])
 
         # Act
         findings = lint_recipe(recipe, RESOLVERS)

@@ -1,4 +1,4 @@
-What a preflight is, where it and its checks come from, how a project adds a custom one, and which deterministic checks `brigade preflight verify-pull-request` runs
+What a preflight is, where it and its checks come from, how a project adds a custom one, and which deterministic checks `brigade preflight review-pull-request` runs
 on the pull request of a task before any judgment.
 
 A preflight is a named set of collectors and checks, run on demand. It declares no action of its own: each action it
@@ -9,7 +9,7 @@ needs is a collector or a check, resolved by name and reusable elsewhere. A buil
 brigade preflight <name> [key=value...] [--json]   # exit 1 when a check fails
 brigade preflight add <name> <collector or check> [key=value...]   # adds a step to a custom preflight, commits nothing
 brigade check list [--json]                        # every check found, its name and its source
-brigade preflight verify-pull-request pr=<pr> [--json]   # the pull request of a task, and the size
+brigade preflight review-pull-request pr=<pr> [--json]   # the pull request of a task, and the size
 ```
 
 `brigade preflight <name>` runs from a checkout of a registered project. It runs the collectors of the preflight, then
@@ -85,9 +85,9 @@ and `collected`, the documents of the collectors by name. It answers one JSON do
 `result` `ok` or `fail` and `findings`, a list of strings; an answer that is not that document is refused, naming
 the check.
 
-## verify-pull-request
+## review-pull-request
 
-`brigade preflight verify-pull-request pr=<pr>` runs the built-in preflight `verify-pull-request` on the pull request
+`brigade preflight review-pull-request pr=<pr>` runs the built-in preflight `review-pull-request` on the pull request
 of a task: it reads the task from the `task.pr_opened` naming the pull request and the base from the milestone of the
 task, the collector `pull-request` reads the pull request and the trees of its head and of its base, and seven built-in
 checks judge them. The command adds the size beside them, and prints the project, the pull request, the task and the
@@ -118,7 +118,7 @@ branch.
 
 | Preflight | Collectors | Checks | What it reports |
 |---|---|---|---|
-| `verify-pull-request` | `pull-request` | `ancestry`, `check_runs`, `corpus_at_head`, `promotion`, `untouched_files`, `privacy`, `body` | the deterministic checks of the pull request of a task, before any judgment |
+| `review-pull-request` | `pull-request` | `ancestry`, `check_runs`, `corpus_at_head`, `promotion`, `untouched_files`, `privacy`, `body` | the deterministic checks of the pull request of a task, before any judgment |
 | `task` | `task-worktree` | `acceptance`, `corpus_at_head` | the acceptance commands of the project and the checks of the corpus at the head of the worktree of a task; `brigade build check` runs it |
 | `refinement` | `draft`, `forge-logins` | `moved_citations`, `tasks_outside_after`, `overlapping_deliverables`, `forge_logins` | on a draft task, `brigade preflight refinement task=<id>`: each `file:line` citation whose lines moved since the commit of its `SOURCE`, with where they stand now; the draft and todo tasks touching a file of its `TITLE` or `SPEC` that its `AFTER` does not name; the draft and todo tasks whose `TITLE` and `SPEC` cite a file or an entity its own cite; and the forge logins |
 | `wave` | `forge-logins` | `forge_logins` | each login of `[forge_accounts]` of `config.toml` gh prints no token for; the tick runs it before it starts a wave, and a failure pauses the wave on `forge_account` before any run, until `brigade wave resume` |

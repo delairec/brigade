@@ -74,7 +74,7 @@ class LocatePreflightsTest(unittest.TestCase):
 
     def test_should_read_a_built_in_preflight_where_neither_the_project_nor_the_machine_holds_it(self):
         # Act
-        preflight = self.find_nightly("none", NOT_DEFINED, name="verify-pull-request")
+        preflight = self.find_nightly("none", NOT_DEFINED, name="review-pull-request")
 
         # Assert
         self.assertEqual(

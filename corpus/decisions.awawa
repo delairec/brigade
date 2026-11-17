@@ -7836,3 +7836,26 @@ DECISION AStudyRunsAsAnOrderOfTheRecipeStudyAndAReportCarriesItsArgumentsInAPara
 		+ "study run would have to choose between"
 	SOURCE "the pull request of @TASK.B251"
 		REF @TASK.B251
+
+DECISION SignalRecordedKeepsItsSchemaVersionWithItsOptionalFieldTurns
+	TITLE "the event signal.recorded stays at schema_version 1, its optional field steps being"
+		+ "turns: a line written before the rename reads with no turn count"
+	STATUS active
+	REJECTED "signal.recorded at schema_version 2 with older lines skipped: the field is optional,"
+		+ "and skipping the older lines would drop the signals they record"
+	SOURCE "the build run of @TASK.B255, SPEC 2"
+		REF @TASK.B255
+
+DECISION TheTaskStatesVerifyingAndVerifiedAndThePackageBrigadeVerifyKeepTheirNames
+	TITLE "the task states verifying and verified and the package brigade/verify keep their names:"
+		+ "the word verify leaves the command groups, the subcommands, the procedure, the wiki"
+		+ "page, the policy and the preflight review-pull-request, the list SPEC 1 gives"
+	STATUS active
+	REJECTED "verifying and verified renamed reviewing and reviewed: SPEC 1 does not list the"
+		+ "states, which the ledger, the dashboard and every recorded task.* event carry"
+	REJECTED "brigade/verify renamed brigade/review: a package is no word of the public vocabulary,"
+		+ "which alone is renamed"
+	SOURCE "the build run of @TASK.B255, SPEC 1"
+		REF @TASK.B255
+	RATIONALE "the public vocabulary alone is renamed, the names of the code keeping theirs"
+		REF @DECISION.AWordOfBrigadeCarriesOneSenseAndBorrowedSensesKeepTheirs

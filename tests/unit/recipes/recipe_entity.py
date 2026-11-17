@@ -12,7 +12,7 @@ parameters = { number = "{pr}", project = "{project}" }
 
 [[steps]]
 kind = "gate"
-preflight = "verify-pull-request"
+preflight = "review-pull-request"
 on_fail = "retry:2"
 
 [[steps]]
@@ -51,7 +51,7 @@ REVIEW_RECIPE_ENTITY = {
             "name": "STEP",
             "atoms": ["gate"],
             "fields": [
-                {"name": "PREFLIGHT", "atoms": ['"verify-pull-request"'], "fields": []},
+                {"name": "PREFLIGHT", "atoms": ['"review-pull-request"'], "fields": []},
                 {"name": "ON_FAIL", "atoms": ['"retry:2"'], "fields": []},
             ],
         },
@@ -87,7 +87,7 @@ REVIEW_RECIPE_DOCUMENT = {
     "max_wall": 30,
     "steps": [
         {"kind": "collect", "collector": "pull-request", "parameters": {"number": "{pr}", "project": "{project}"}},
-        {"kind": "gate", "preflight": "verify-pull-request", "on_fail": "retry:2"},
+        {"kind": "gate", "preflight": "review-pull-request", "on_fail": "retry:2"},
         {"kind": "command", "argv": ["uvx", "ruff", "check", "."]},
         {"kind": "judge", "slot": "review", "procedure": "review-pr", "answer": "REPORT"},
         {"kind": "output", "output": "inbox"},
