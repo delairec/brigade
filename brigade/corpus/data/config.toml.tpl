@@ -38,7 +38,7 @@ $client_line
 # a positive number; a wall-time limit not above it gives no such stop.
 # soft_limit_margin_s = 120
 
-# The days a trail of ticks/ and commands/ is kept in $state_root, 1 or more; older trails are removed at each tick and command.
+# The days a trail of ticks/ and processes/ is kept in $state_root, 1 or more; older trails are removed at each tick and command.
 # trail_days = 7
 
 # The finished and dead runs kept in $state_root/runs, 1 or more; past it, each run removes the oldest at its end,

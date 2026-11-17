@@ -14,8 +14,8 @@ class StateWithTrailsTestCase(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.state_root)
         self.write_trail("runs/20261010T090000Z-b86a01/processes.jsonl", SUCCEEDED + EXITED_ONE)
         self.write_trail("ticks/20261010T100000Z.jsonl", TIMED_OUT)
-        self.write_trail("commands/20261010T080000Z-ab12.jsonl", SUCCEEDED)
-        self.write_trail("commands/notes.jsonl", SUCCEEDED)
+        self.write_trail("processes/20261010T080000Z-ab12.jsonl", SUCCEEDED)
+        self.write_trail("processes/notes.jsonl", SUCCEEDED)
         self.write_trail("ticks/notes.jsonl", SUCCEEDED)
         self.write_trail("runs/notes/processes.jsonl", SUCCEEDED)
 

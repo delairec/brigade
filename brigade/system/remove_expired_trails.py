@@ -7,7 +7,7 @@ from brigade.system.paths import Paths
 from brigade.system.read_trail_days import read_trail_days
 from brigade.system.read_trail_instant import read_trail_instant
 from brigade.system.trail_locations import (
-    COMMANDS_DIRECTORY,
+    PROCESSES_DIRECTORY,
     TICKS_DIRECTORY,
     TRAIL_SUFFIX,
 )
@@ -25,7 +25,7 @@ def _read_configuration_document(configuration: Path) -> dict | None:
 def _list_trails(state_root: Path) -> list[Path]:
     return [
         trail
-        for directory in (TICKS_DIRECTORY, COMMANDS_DIRECTORY)
+        for directory in (TICKS_DIRECTORY, PROCESSES_DIRECTORY)
         if (state_root / directory).is_dir()
         for trail in (state_root / directory).glob(f"*{TRAIL_SUFFIX}")
     ]

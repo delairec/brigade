@@ -16,7 +16,7 @@ class ProcessesShowTest(unittest.TestCase):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
         self.runtime = create_test_runtime(create_test_paths(Path(self.root.name)))
-        commands = self.runtime.paths.state_root / "commands"
+        commands = self.runtime.paths.state_root / "processes"
         commands.mkdir(parents=True)
         (commands / "20261019T090000Z-a1b2c3.jsonl").write_text(EXITED + FAILED)
 

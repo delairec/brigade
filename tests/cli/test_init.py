@@ -49,7 +49,7 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             [list((self.machine.state_home / "brigade").iterdir()), (self.machine.cache_home / "brigade").exists()],
-            [[self.machine.state_home / "brigade" / "commands"], False],
+            [[self.machine.state_home / "brigade" / "processes"], False],
         )
 
     def test_should_set_the_remote_as_origin_of_the_configuration_repository(self):

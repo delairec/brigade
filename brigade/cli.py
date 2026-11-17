@@ -17,7 +17,7 @@ from brigade.runtime import Invocation, Runtime, build_runtime
 from brigade.select_command_modules import PASSTHROUGH_SEPARATOR, select_command_modules
 from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT
 from brigade.system.remove_expired_trails import remove_expired_trails
-from brigade.system.trail_locations import COMMANDS_DIRECTORY, TRAIL_SUFFIX
+from brigade.system.trail_locations import PROCESSES_DIRECTORY, TRAIL_SUFFIX
 from brigade.write_command_output import OutputStreams, write_command_output
 
 USAGE_EXIT_CODE = 2
@@ -82,7 +82,7 @@ def _find_passthrough(arguments: list[str], passthroughs: list):
 
 def _locate_command_trail(command, runtime: Runtime) -> Path:
     instant = runtime.now.strftime(COMPACT_INSTANT_FORMAT)
-    return runtime.paths.state_root / COMMANDS_DIRECTORY / f"{instant}-{'-'.join(command.path)}{TRAIL_SUFFIX}"
+    return runtime.paths.state_root / PROCESSES_DIRECTORY / f"{instant}-{'-'.join(command.path)}{TRAIL_SUFFIX}"
 
 
 def _run_and_settle_trail(command, options: argparse.Namespace):

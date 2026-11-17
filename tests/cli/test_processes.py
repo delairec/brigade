@@ -88,7 +88,7 @@ class ProcessesTestCase(unittest.TestCase):
             self.state / "runs" / RUN_ID / "processes.jsonl", GIT_STATUS_EXITED_0 + GIT_FETCH_EXITED_128 + CLIENT_CUT
         )
         self.write_trail(self.tick_trail, GIT_STATUS_EXITED_0 + RUN_SPAWNED)
-        self.write_trail(self.state / "commands" / f"{COMMAND_ID}.jsonl", CRONTAB_NOT_FOUND)
+        self.write_trail(self.state / "processes" / f"{COMMAND_ID}.jsonl", CRONTAB_NOT_FOUND)
 
     def tearDown(self):
         self.root.cleanup()
