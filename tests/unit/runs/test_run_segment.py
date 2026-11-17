@@ -108,7 +108,7 @@ class ClientDouble:
         return {
             "schema_version": 1,
             "outcome": "done",
-            "steps": 12,
+            "turns": 12,
             "usage": None,
             "session_id": "session-b73",
             "duration_ms": 4200,
@@ -188,7 +188,7 @@ class ClientAnsweringParseResultWithoutOutcomeDouble(ClientDouble):
         if operation == "parse-result":
             return {
                 "schema_version": 1,
-                "steps": 12,
+                "turns": 12,
                 "usage": None,
                 "session_id": "session-b73",
                 "duration_ms": 4200,

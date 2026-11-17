@@ -22,7 +22,7 @@ SUCCESSFUL_CHECK_RUN = {"__typename": "CheckRun", "name": "tests", "status": "CO
 FIVE_HOUR_LIMIT_RESULT = {
     **DONE_RESULT,
     "outcome": "failed",
-    "steps": 7,
+    "turns": 7,
     "error_class": "rate_limit",
     "message": "You've hit your 5-hour limit",
 }

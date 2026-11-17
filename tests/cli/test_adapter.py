@@ -130,7 +130,7 @@ class BrigadeAdapterParseResultTest(AdapterTestCase):
             {
                 "schema_version": 1,
                 "outcome": "undeclared",
-                "steps": 1,
+                "turns": 1,
                 "usage": {
                     "input_tokens": 9,
                     "output_tokens": 55,

@@ -34,7 +34,7 @@ from brigade.system.probe_answer import ProbeAnswer
 from brigade.system.probe_request import ProbeRequest
 
 SHIPPED_PROCEDURES = files("brigade.runs") / "data" / "procedures"
-STEP_COUNT_FEATURE = "step_count"
+TURN_COUNT_FEATURE = "turn_count"
 TOOL_GRANTS_FEATURE = "tool_grants"
 ACTIONS_OPERATION = "actions"
 TRANSCRIPTS_OPERATION = "transcripts"
@@ -253,7 +253,7 @@ def _plan_identity(request: RunRequest, setting: RunSetting, plugins: RunPlugins
 def _plan_resumption(request: RunRequest, probe: ProbeAnswer, run_directory: Path) -> dict:
     last_finished_segment = _find_last_finished_segment(run_directory) if request.resume else None
     return {
-        "counts_steps": STEP_COUNT_FEATURE in probe.features,
+        "counts_steps": TURN_COUNT_FEATURE in probe.features,
         "reads_actions": ACTIONS_OPERATION in probe.operations,
         "reads_transcripts": TRANSCRIPTS_OPERATION in probe.operations,
         "resumed": request.resume,
@@ -281,6 +281,6 @@ def plan_run(request: RunRequest, setting: RunSetting, plugins: RunPlugins, runt
         cwd=cwd,
         worktree=identity["run_directory"] / DISPOSABLE_WORKTREE_DIRECTORY if disposable_worktree else cwd,
         disposable_worktree=disposable_worktree,
-        warnings=() if STEP_COUNT_FEATURE in probe.features else clock_warnings,
+        warnings=() if TURN_COUNT_FEATURE in probe.features else clock_warnings,
         edit_tools=probe.edit_tools,
     )

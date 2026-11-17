@@ -5,7 +5,7 @@ from brigade.system.parse_result_answer import ParseResultAnswer
 RESULT_OF_A_RATE_LIMITED_RUN = {
     "schema_version": 1,
     "outcome": "failed",
-    "steps": 31,
+    "turns": 31,
     "usage": {
         "input_tokens": 1200,
         "output_tokens": 340,
@@ -22,7 +22,7 @@ RESULT_OF_A_RATE_LIMITED_RUN = {
 RESULT_REPORTING_NOTHING = {
     "schema_version": 1,
     "outcome": "done",
-    "steps": None,
+    "turns": None,
     "usage": None,
     "session_id": None,
     "duration_ms": None,
@@ -44,7 +44,7 @@ class ParseResultAnswerTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "failed",
-                "steps": 31,
+                "turns": 31,
                 "usage": {
                     "input_tokens": 1200,
                     "output_tokens": 340,
@@ -70,7 +70,7 @@ class ParseResultAnswerTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "done",
-                "steps": None,
+                "turns": None,
                 "usage": None,
                 "session_id": None,
                 "duration_ms": None,

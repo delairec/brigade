@@ -8,7 +8,7 @@ from tests.unit.commands.command_runtime import create_corpus_double, write_oper
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
     CLOCK_PROBE,
-    STEP_COUNTING_PROBE,
+    TURN_COUNTING_PROBE,
     create_plugin_resolution,
     spawn_as_this_process,
 )
@@ -35,7 +35,7 @@ class LaunchPlannerTest(unittest.TestCase):
 
     def test_should_start_the_planner_of_the_request_detached(self):
         # Arrange
-        runtime = self._create_runtime(STEP_COUNTING_PROBE)
+        runtime = self._create_runtime(TURN_COUNTING_PROBE)
 
         # Act
         launched = launch_planner(runtime, "shop", "shop_r2")

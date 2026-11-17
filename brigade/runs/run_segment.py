@@ -303,7 +303,7 @@ def _describe_answer(
         number=context.number,
         outcome=TURN_LIMIT if answer.error_class == TURN_LIMIT else answer.outcome,
         session_id=session_id,
-        client_steps=answer.steps,
+        client_steps=answer.turns,
         usage=answer.usage,
         error_class=answer.error_class,
         reset=answer.reset,

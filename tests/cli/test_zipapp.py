@@ -114,12 +114,12 @@ class BrigadeZipappTest(unittest.TestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             completed.stdout,
-            "| Supported client | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour | Graceful stop |\n"
+            "| Supported client | Launch | Result | Resume | Transcripts | Actions | Turn count | Tool grants | Reset hour | Graceful stop |\n"
             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
             "| claude-code | full | full | full | full | full | full | full | full | full |\n"
             "| vibe | full | full | fallback | full | fallback | full | full | fallback | fallback |\n"
             "\n"
-            "| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Step count | Tool grants | Reset hour | Graceful stop |\n"
+            "| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Turn count | Tool grants | Reset hour | Graceful stop |\n"
             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
             "| fake | full | full | fallback | fallback | fallback | fallback | fallback | fallback | fallback |\n"
             "\n"
@@ -128,7 +128,7 @@ class BrigadeZipappTest(unittest.TestCase):
             "- no resume: a fresh launch from the progress file\n"
             "- no transcripts: brigade's log of the run\n"
             "- no actions: one raw record per line of the client's output\n"
-            "- no step count: steps null and the run held on the clock alone\n"
+            "- no turn count: turns null and the run held on the clock alone\n"
             "- no tool grants: the client's unattended mode and a disposable worktree for a reading slot\n"
             "- no reset hour: now plus thirty minutes\n"
             "- no graceful stop: the hard cut at the wall-time limit\n",

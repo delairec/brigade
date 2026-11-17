@@ -17,7 +17,7 @@ from tests.unit.commands.command_runtime import (
 from tests.unit.commands.inbox_lines import NOTE_ON_OAK_RECORDED, THREAD_RECORDED
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
-    STEP_COUNTING_PROBE,
+    TURN_COUNTING_PROBE,
     create_plugin_resolution,
     spawn_as_this_process,
 )
@@ -59,7 +59,7 @@ class InboxRatifyTest(unittest.TestCase):
             create_test_paths(self.root),
             run_process=runner.run,
             spawn_process=spawn_as_this_process,
-            resolve_plugin=create_plugin_resolution(STEP_COUNTING_PROBE),
+            resolve_plugin=create_plugin_resolution(TURN_COUNTING_PROBE),
         )
 
     def _create_wave_runtime(self):

@@ -26,7 +26,7 @@ PROBE = {
     "client": "scripted",
     "version_argv": ["scripted", "--version"],
     "operations": ["probe", "launch", "result"],
-    "features": ["step_count"],
+    "features": ["turn_count"],
     "models": {},
 }
 POLICIES = json.dumps({"entities": [{"type": "POLICY", "name": "p1"}, {"type": "POLICY", "name": "p2"}]})

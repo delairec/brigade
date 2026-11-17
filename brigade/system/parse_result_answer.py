@@ -9,7 +9,7 @@ DOCUMENT_SCHEMA_VERSION = 1
 @dataclass(frozen=True)
 class ParseResultAnswer:
     outcome: str
-    steps: int | None
+    turns: int | None
     usage: TokenUsage | None
     session_id: str | None
     duration_ms: int | None
@@ -24,7 +24,7 @@ class ParseResultAnswer:
         reset = document["reset"]
         return cls(
             outcome=document["outcome"],
-            steps=document["steps"],
+            turns=document["turns"],
             usage=None if usage is None else TokenUsage.from_document(usage),
             session_id=document["session_id"],
             duration_ms=document["duration_ms"],
@@ -38,7 +38,7 @@ class ParseResultAnswer:
         return {
             "schema_version": DOCUMENT_SCHEMA_VERSION,
             "outcome": self.outcome,
-            "steps": self.steps,
+            "turns": self.turns,
             "usage": None if self.usage is None else self.usage.to_document(),
             "session_id": self.session_id,
             "duration_ms": self.duration_ms,

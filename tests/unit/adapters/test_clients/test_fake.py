@@ -186,7 +186,7 @@ class FakeLaunchOfARolePlayingItsCommandsTest(unittest.TestCase):
 class FakeProbeOfDeclaredFeaturesTest(unittest.TestCase):
     def test_should_declare_the_features_its_settings_name(self):
         # Arrange
-        settings = {"features": "step_count,tool_grants"}
+        settings = {"features": "turn_count,tool_grants"}
 
         # Act
         probe = answer(
@@ -194,7 +194,7 @@ class FakeProbeOfDeclaredFeaturesTest(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual(probe["features"], ["step_count", "tool_grants"])
+        self.assertEqual(probe["features"], ["turn_count", "tool_grants"])
 
 
 class FakeLaunchOfASlowClientWritingProgressTest(unittest.TestCase):
@@ -274,7 +274,7 @@ class FakeResultTest(unittest.TestCase):
     def test_should_answer_the_recorded_result_document_as_it_is(self):
         # Arrange
         recording = (
-            '{"schema_version": 1, "outcome": "done", "steps": 12, "usage": null, "session_id": "fake-session",'
+            '{"schema_version": 1, "outcome": "done", "turns": 12, "usage": null, "session_id": "fake-session",'
             ' "duration_ms": 61000, "cost_usd": null, "error_class": null, "reset": null, "message": null}'
         )
 
@@ -298,7 +298,7 @@ class FakeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "done",
-                "steps": 12,
+                "turns": 12,
                 "usage": None,
                 "session_id": "fake-session",
                 "duration_ms": 61000,
@@ -330,7 +330,7 @@ class FakeResultTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "outcome": "failed",
-                "steps": None,
+                "turns": None,
                 "usage": None,
                 "session_id": None,
                 "duration_ms": None,
@@ -400,7 +400,7 @@ class FakeResultOfARecordingOfSeveralLinesTest(unittest.TestCase):
         # Arrange
         recording = (
             "Reading the task\n"
-            '{"schema_version": 1, "outcome": "done", "steps": 12, "usage": null, "session_id": "fake-session",'
+            '{"schema_version": 1, "outcome": "done", "turns": 12, "usage": null, "session_id": "fake-session",'
             ' "duration_ms": 61000, "cost_usd": null, "error_class": null, "reset": null, "message": null}\n'
         )
 
@@ -428,7 +428,7 @@ class FakeActionsTest(unittest.TestCase):
         output = (
             "Reading the task\n"
             "\n"
-            '{"schema_version": 1, "outcome": "done", "steps": 12, "usage": null, "session_id": "fake-session",'
+            '{"schema_version": 1, "outcome": "done", "turns": 12, "usage": null, "session_id": "fake-session",'
             ' "duration_ms": 61000, "cost_usd": null, "error_class": null, "reset": null, "message": null}\n'
         )
 
