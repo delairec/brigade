@@ -32,7 +32,7 @@ TIMER_INSTALLED = {
 NO_PROJECT = {}
 REMOTE_URL = "git@example.org:ada/brigade-config.git"
 EARLIER_SCHEMA = "SCHEMA PROJECT\n\tFIELD PATH string\n\tFIELD GRAPH string\n"
-REGISTERED_PROJECT = 'PROJECT ada\n\tPATH "/home/ada/ada"\n'
+REGISTERED_PROJECT = 'PROJECT ada\n\tPATH "/srv/ada"\n'
 LINT_FINDINGS = "projects.awawa:3:2: L002 GRAPH is not a field of PROJECT"
 
 

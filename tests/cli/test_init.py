@@ -7,7 +7,7 @@ from tests.cli.temporary_machine import REPOSITORY_ROOT, TemporaryMachine
 from tests.process_launcher import ProcessLauncher
 
 EARLIER_SCHEMA = REPOSITORY_ROOT / "tests" / "cli" / "fixtures" / "registry" / "earlier_schema.awawa.tpl"
-REGISTERED_PROJECT = 'PROJECT ada\n\tPATH "/home/ada/ada"\n\tMAIN "main"\n\tFORGE "none"\n\tSTATUS active\n'
+REGISTERED_PROJECT = 'PROJECT ada\n\tPATH "/srv/ada"\n\tMAIN "main"\n\tFORGE "none"\n\tSTATUS active\n'
 
 
 class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
@@ -102,7 +102,7 @@ class BrigadeInitOverARegistryOfAnEarlierSchemaTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             self.registry.read_text(),
-            'PROJECT ada\n\tPATH "/home/ada/ada"\n\tMAIN "main"\n\tFORGE "none"\n\tSTATUS active\n',
+            'PROJECT ada\n\tPATH "/srv/ada"\n\tMAIN "main"\n\tFORGE "none"\n\tSTATUS active\n',
         )
 
     def test_should_leave_a_registry_awawa_lint_accepts(self):
@@ -115,6 +115,7 @@ class BrigadeInitOverARegistryOfAnEarlierSchemaTest(unittest.TestCase):
             capture_output=True,
             text=True,
             check=False,
+            cwd=self.machine.corpus,
             env=self.machine.describe_environment(),
         )
 
