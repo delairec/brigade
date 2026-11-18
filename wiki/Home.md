@@ -9,6 +9,8 @@ decide whether to read on. The pages are written in `wiki/` of the repository an
 
 - [Install](Install.md) — how to install brigade, check the machine with `brigade doctor` and create the registry with
   `brigade init`.
+- [Platforms](Platforms.md) — which platforms brigade runs on, feature by feature, and why a feature breaks where it
+  does.
 - [Glossary](Glossary.md) — the page to read when a word is unknown: what each word of brigade means, every command,
   entity and field among them, each with the page that holds it and the task that delivers it.
 

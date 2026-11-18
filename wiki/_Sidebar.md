@@ -3,6 +3,7 @@
 **Getting started**
 
 - [Install](Install.md)
+- [Platforms](Platforms.md)
 - [Glossary](Glossary.md)
 
 **Configuring**

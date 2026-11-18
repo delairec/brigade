@@ -174,11 +174,24 @@ MILESTONE M13
 MILESTONE M14
 	TITLE "Observability"
 	STATUS planned
-	AFTER @MILESTONE.M8
+	AFTER @MILESTONE.M18
 	DESC "post-MVP: brigade measures and shows what its runs and waves do and what its gate yields"
 	DESC "split out of the milestone post-mvp, ADD0, by"
 		+ "@DECISION.ThePostMvpMilestoneAdd0IsSplitIntoFourMilestonesByThemeAndATaskOfNoThemeNamesNoMilestone"
 		REF @DECISION.ThePostMvpMilestoneAdd0IsSplitIntoFourMilestonesByThemeAndATaskOfNoThemeNamesNoMilestone
+	DESC "follows @MILESTONE.M18 since 2026-11-18, the AFTER it held on @MILESTONE.M8 replaced, M18"
+		+ "naming M8 in its own: what it adds to the dashboard, the curve of @TASK.B229 first, is"
+		+ "built on the redesigned dashboard and not redone;"
+		+ "@DECISION.AMilestoneIsServedByItsStatusAndOrderedByItsAfter serves it once M18 is"
+		+ "reached"
+		REF @MILESTONE.M18
+		REF @MILESTONE.M8
+		REF @TASK.B229
+		REF @DECISION.AMilestoneIsServedByItsStatusAndOrderedByItsAfter
+	SOURCE "the user's ruling of 2026-11-18: « Avant M14 (Recommandé) », « M18 AFTER M8, M14 AFTER"
+		+ "M18 : la courbe des caps (B229) et les vues des vagues arrivent sur le dashboard"
+		+ "refondu, pas à refaire. », chosen over a place of M18 after M14 and over the last place,"
+		+ "after M17"
 
 MILESTONE M15
 	TITLE "Admin console"
@@ -227,3 +240,78 @@ MILESTONE M17
 		+ "en attendant », the option « La nouvelle milestone est placée après M8 sans bloquer M13"
 		+ ": brigade avance sur M13 jusqu'au refine, puis la nouvelle passe en premier. »"
 		REF @MILESTONE.M13
+
+MILESTONE M18
+	TITLE "User-friendly dashboard"
+	SUBJECT "redesign the dashboard and add an awawa tab"
+	STATUS active
+	AFTER @MILESTONE.M8
+	DESC "post-MVP: the dashboard tells its user where to look, with a real stylesheet and each"
+		+ "page reviewed for what it shows, which of it matters, what the information is for, which"
+		+ "analysis makes it useful to a human and how it is brought out"
+	DESC "brigade serve also serves an awawa tab, the read-only views of the IntelliJ plugin"
+		+ "awawa-ui, as an addon of the dashboard for the projects that use awawa, as"
+		+ "@DECISION.TheAwawaTabIsAnAddonServedByAChildProcessOfBrigadeServeForTheProjectsHoldingACorpus"
+		+ "and @DECISION.TheAwawaTabPortsTheReadOnlyViewsOfAwawaUiAndReplacesTheCorpusView rule"
+		REF @DECISION.TheAwawaTabIsAnAddonServedByAChildProcessOfBrigadeServeForTheProjectsHoldingACorpus
+		REF @DECISION.TheAwawaTabPortsTheReadOnlyViewsOfAwawaUiAndReplacesTheCorpusView
+	DESC "its first step was a mockup in an Artifact, made with the role max, covering the"
+		+ "stylesheet, the navigation, every page of brigade and the awawa tab; its twelve tasks,"
+		+ "@TASK.B264 to @TASK.B275, are drafted from that mockup, page by page, and @TASK.B197,"
+		+ "moved from M16, upgrades an installed registry ahead of the fold of @TASK.B272"
+		REF @TASK.B197
+		REF @TASK.B272
+		REF @TASK.B264
+		REF @TASK.B275
+	DESC "comes before @MILESTONE.M14, which names it in AFTER: the curve of the caps of @TASK.B229"
+		+ "arrives on the redesigned dashboard and is not redone"
+		REF @MILESTONE.M14
+		REF @TASK.B229
+	SOURCE "the user's words of 2026-11-18: « j'aimerais créer une nouvelle milestone consacrée à"
+		+ "rendre le dashboard plus \"user friendly\" et pour que brigade serve lance aussi un"
+		+ "dashboard awawa inspiré du plugin intellij qui sera fondu dans le dashboard brigade"
+		+ "comme un \"plugin\" pour les projets qui utilisent awawa »"
+	SOURCE "the user's words of 2026-11-18, cut where marked: « En gros, la première étape serait"
+		+ "d'avoir un vrai css, et je pense qu'il faut faire une maquette dans un artifact avec"
+		+ "max. Pour l'instant c'est très pauvre et l'utilisateur ne sait pas vraiment où regarder."
+		+ "[...] Par exemple si je vais dans la vue Reports, je vois une liste mais ça me dit pas"
+		+ "ce que c'est un report, ni ce que ça m'apporte comme info ou comment je m'en sers / dans"
+		+ "quel cadre c'est utile. Si je clique sur un des liens, je me retrouve sur la vue du"
+		+ "rapport et c'est une liste d'informations brutes, pas d'analyse, pour un humain c'est"
+		+ "inutilisable tel quel. Donc il faut passer en revue chaque page, déterminer ce qu'on"
+		+ "veut y montrer, c'est quoi les info importantes, c'est quoi l'objectif de ces"
+		+ "informations, quelle analyse on peut faire pour rendre ces infos utiles à l'utilisateur,"
+		+ "et comment on les mets en valeur, etc. »"
+	SOURCE "the user's rulings of 2026-11-18: on what the mockup covers, the option « Tout"
+		+ "(Recommandé) », the CSS foundation, the navigation, every brigade page and the awawa"
+		+ "tab; on the place of the milestone, « Avant M14 (Recommandé) », « M18 AFTER M8, M14"
+		+ "AFTER M18 : la courbe des caps (B229) et les vues des vagues arrivent sur le dashboard"
+		+ "refondu, pas à refaire. », chosen over a place after M14 and over the last place, after"
+		+ "M17"
+
+MILESTONE M19
+	TITLE "Portability"
+	STATUS planned
+	AFTER @MILESTONE.M8
+	DESC "post-MVP: brigade runs on Linux, on macOS and on Windows, each checked by a CI job that"
+		+ "runs on that platform, as"
+		+ "@DECISION.BrigadeSupportsLinuxMacOsAndWindowsEachCheckedByACiJobOnThatPlatform rules"
+		REF @DECISION.BrigadeSupportsLinuxMacOsAndWindowsEachCheckedByACiJobOnThatPlatform
+	DESC "holds no task yet: its tasks are drafted at its refinement"
+	DESC "independent of @MILESTONE.M18: neither names the other in AFTER"
+		REF @MILESTONE.M18
+	DESC "until it is delivered, wiki/Platforms.md states the support of each feature on each"
+		+ "platform, as"
+		+ "@DECISION.WikiPlatformsHoldsTheSupportOfEachFeaturePerPlatformAndIsUpdatedInTheChangeThatMovesIt"
+		+ "rules"
+		REF @DECISION.WikiPlatformsHoldsTheSupportOfEachFeaturePerPlatformAndIsUpdatedInTheChangeThatMovesIt
+	SOURCE "the user's words of 2026-11-18, answering the question of the session « brigade"
+		+ "platform target … Which platforms does brigade support, recorded as a DECISION and"
+		+ "checked by CI? »: « on va devoir créer une milestone pour ça. En attendant on tient un"
+		+ "tableau à jour qui décrit le support des fonctionalités par platform dans le wiki? »"
+	SOURCE "the user's ruling of 2026-11-18 on where the work goes: « Nouveau milestone M19 », the"
+		+ "option described as \"« Portability », planned, AFTER M8, indépendant de M18 ; ses"
+		+ "tâches raffinées plus tard.\""
+	SOURCE "the user's words of 2026-11-18 before it: « faut que ça soit compatible sur toutes les"
+		+ "machines, pas seulement la nôtre, donc il faut éviter le spécifique », and « oui brigade"
+		+ "», the concern being brigade's own and no general rule"
