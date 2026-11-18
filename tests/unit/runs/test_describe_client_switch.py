@@ -104,3 +104,13 @@ class DescribeClientSwitchBackToTheClientTest(DescribeClientSwitchTestCase):
 
         # Assert
         self.assertIsNone(switch)
+
+    def test_should_describe_no_switch_for_a_run_resumed_after_a_client_the_fallback_does_not_name(self):
+        # Arrange
+        plan = self.create_plan("claude-code", CONFIGURATION.reasoning, resumed_client="codex")
+
+        # Act
+        switch = describe_client_switch(plan, "claude-code", CONFIGURATION)
+
+        # Assert
+        self.assertIsNone(switch)
