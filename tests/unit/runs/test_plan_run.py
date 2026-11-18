@@ -370,6 +370,18 @@ class PlanRunOfARoleWhoseCapWasAppliedBeforeTest(PlanRunOfARoleMeasuredAtTheDige
         )
 
 
+class PlanRunOfANewRunOnAClientThatCanResumeTest(PlanRunTestCase):
+    def test_should_open_its_first_segment_in_a_session_of_its_own(self):
+        # Arrange
+        new_run = self.create_request()
+
+        # Act
+        plan = self.plan(new_run, {"operations": "resume"})
+
+        # Assert
+        self.assertIsNone(plan.resumed_session)
+
+
 class PlanRunOfAResumedRunTest(PlanRunTestCase):
     def test_should_resume_after_its_last_segment_on_the_session_it_left(self):
         # Arrange
