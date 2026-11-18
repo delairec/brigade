@@ -1,5 +1,6 @@
 import unittest
 
+from brigade.ledger.declared_events import DECLARED_EVENTS
 from brigade.ledger.run_noted import RunNoted
 
 
@@ -32,3 +33,10 @@ class RunNotedTest(unittest.TestCase):
         self.assertEqual(
             document, {"run": "20261007T090000Z-b70a01", "text": "the corpus of main holds two L016 errors"}
         )
+
+    def test_should_be_declared_in_the_ledger(self):
+        # Act
+        declared = DECLARED_EVENTS.get("run.noted")
+
+        # Assert
+        self.assertIs(declared, RunNoted)
