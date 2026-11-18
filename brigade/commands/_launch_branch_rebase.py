@@ -22,5 +22,6 @@ def launch_branch_rebase(runtime: Runtime, configuration: Configuration, rebase:
         task=None,
         detach=True,
         resume=False,
+        fallback=False,
     )
     return run(rebasing, runtime)["run"]

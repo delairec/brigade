@@ -9,6 +9,7 @@ from brigade.errors import BrigadeError, UsageError
 from brigade.ledger.budget_applied import BudgetApplied
 from brigade.ledger.describe_role_budget import CurrentDigests, RoleBudget, describe_role_budget
 from brigade.ledger.read_ledger import read_ledger
+from brigade.ledger.run_client_switched import RunClientSwitched
 from brigade.ledger.run_finished import RunFinished
 from brigade.registry.read_project_field import read_project_field
 from brigade.roles.read_role_bindings import read_role_bindings
@@ -62,6 +63,7 @@ class RunRequest:
     wave: str | None
     task: str | None
     resume: bool = False
+    on_fallback: bool = False
 
 
 @dataclass(frozen=True)
@@ -99,6 +101,9 @@ class RunPlan:
     forge_environment: dict = field(default_factory=dict, repr=False)
     edit_tools: tuple[str, ...] = ()
     budget_applied: BudgetApplied | None = None
+    on_fallback: bool = False
+    resumed_client: str | None = None
+    client_switched: RunClientSwitched | None = None
 
 
 def _locate_cwd(cwd: str | None, project: Entity | None) -> Path:
@@ -157,10 +162,14 @@ def _find_last_finished_segment(run_directory: Path) -> int:
     )
 
 
-def _read_resumed_session(run_directory: Path, segment: int) -> str | None:
-    path = run_directory / SEGMENTS_DIRECTORY / str(segment) / RESULT_FILE
-    finished = read_run_finished(path, "segment result")
-    return NO_RESUMED_SESSION if finished.outcome == HANDED_OVER_OUTCOME else finished.session
+def _read_resumed_session(finished: RunFinished, client: str) -> str | None:
+    if finished.outcome == HANDED_OVER_OUTCOME or finished.client != client:
+        return NO_RESUMED_SESSION
+    return finished.session
+
+
+def _read_finished_segment(run_directory: Path, segment: int) -> RunFinished:
+    return read_run_finished(run_directory / SEGMENTS_DIRECTORY / str(segment) / RESULT_FILE, "segment result")
 
 
 @dataclass(frozen=True)
@@ -230,8 +239,11 @@ def _plan_identity(request: RunRequest, setting: RunSetting, plugins: RunPlugins
     }
 
 
-def _plan_resumption(request: RunRequest, probe: ProbeAnswer, run_directory: Path) -> dict:
+def _plan_resumption(request: RunRequest, probe: ProbeAnswer, run_directory: Path, client: str) -> dict:
     last_finished_segment = _find_last_finished_segment(run_directory) if request.resume else None
+    last_finished = (
+        None if last_finished_segment is None else _read_finished_segment(run_directory, last_finished_segment)
+    )
     return {
         "counts_steps": TURN_COUNT_FEATURE in probe.features,
         "reads_actions": ACTIONS_OPERATION in probe.operations,
@@ -239,10 +251,12 @@ def _plan_resumption(request: RunRequest, probe: ProbeAnswer, run_directory: Pat
         "resumed": request.resume,
         "first_segment": FIRST_SEGMENT if last_finished_segment is None else last_finished_segment + 1,
         "resumed_session": (
-            _read_resumed_session(run_directory, last_finished_segment)
-            if last_finished_segment is not None and RESUME_OPERATION in probe.operations
+            _read_resumed_session(last_finished, client)
+            if last_finished is not None and RESUME_OPERATION in probe.operations
             else None
         ),
+        "resumed_client": None if last_finished is None else last_finished.client,
+        "on_fallback": request.on_fallback,
     }
 
 
@@ -257,7 +271,7 @@ def plan_run(request: RunRequest, setting: RunSetting, plugins: RunPlugins, runt
     return RunPlan(
         **work,
         **identity,
-        **_plan_resumption(request, probe, identity["run_directory"]),
+        **_plan_resumption(request, probe, identity["run_directory"], setting.client),
         cwd=cwd,
         worktree=identity["run_directory"] / DISPOSABLE_WORKTREE_DIRECTORY if disposable_worktree else cwd,
         disposable_worktree=disposable_worktree,

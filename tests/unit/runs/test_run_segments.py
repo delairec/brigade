@@ -8,6 +8,7 @@ from pathlib import Path
 
 from brigade.ledger.budget_applied import BudgetApplied
 from brigade.ledger.describe_role_budget import RoleBudget
+from brigade.ledger.run_client_switched import RunClientSwitched
 from brigade.runs.ask_progress import ask_progress
 from brigade.runs.resolve_procedure import Procedure
 from brigade.runs.run_segment import SegmentRecord
@@ -857,6 +858,39 @@ class RunSegmentsStoppedAtTheSoftLimitTest(RunSegmentsTestCase):
                     adapter_failure=None,
                 ),
             ],
+        )
+
+
+class RunSegmentsOfARunThatSwitchedClientTest(RunSegmentsTestCase):
+    def test_should_record_the_switch_of_the_client_before_its_first_segment(self):
+        # Arrange
+        switch = RunClientSwitched(
+            run=RUN_ID,
+            client_left="claude-code",
+            model_left="opus",
+            client_taken="vibe",
+            model_taken="devstral",
+            reason="rate_limit",
+        )
+        plan = self.create_plan(["done"], client_switched=switch)
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            self.read_events()[0],
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "run.client_switched",
+                "run": RUN_ID,
+                "client_left": "claude-code",
+                "model_left": "opus",
+                "client_taken": "vibe",
+                "model_taken": "devstral",
+                "reason": "rate_limit",
+            },
         )
 
 

@@ -86,6 +86,35 @@ class DetachRunWithEveryOptionTest(DetachRunTestCase):
         )
 
 
+class DetachRunOnTheFallbackTest(DetachRunTestCase):
+    def test_should_relaunch_brigade_run_on_the_fallback(self):
+        # Arrange
+        plan = create_run_plan(self.root, on_fallback=True)
+        plan.run_directory.mkdir(parents=True)
+
+        # Act
+        detach_run(plan, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.requests[0].argv,
+            (
+                sys.executable,
+                "/srv/brigade/bin/brigade",
+                "run",
+                "start",
+                "build-task",
+                "--slot",
+                "build",
+                "--cwd",
+                str(self.root / "project"),
+                "--run-id",
+                RUN_ID,
+                "--fallback",
+            ),
+        )
+
+
 class DetachRunWithNoOptionTest(DetachRunTestCase):
     def test_should_log_the_detached_run_and_answer_its_pid(self):
         # Arrange

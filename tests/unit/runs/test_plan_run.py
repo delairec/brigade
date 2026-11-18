@@ -374,7 +374,10 @@ class PlanRunOfAResumedRunTest(PlanRunTestCase):
     def test_should_resume_after_its_last_segment_on_the_session_it_left(self):
         # Arrange
         write_run_result(
-            self.paths.state_root / "runs" / RUN_ID / "segments" / "1" / "result.json", "failed", session="s1"
+            self.paths.state_root / "runs" / RUN_ID / "segments" / "1" / "result.json",
+            "failed",
+            session="s1",
+            client="fake",
         )
 
         # Act
@@ -415,7 +418,7 @@ class PlanRunOfAResumedRunTest(PlanRunTestCase):
     def test_should_resume_on_the_session_of_its_last_finished_segment_when_a_later_segment_left_no_result(self):
         # Arrange
         segments = self.paths.state_root / "runs" / RUN_ID / "segments"
-        write_run_result(segments / "1" / "result.json", "failed", session="s1")
+        write_run_result(segments / "1" / "result.json", "failed", session="s1", client="fake")
         (segments / "2").mkdir()
 
         # Act
@@ -423,6 +426,23 @@ class PlanRunOfAResumedRunTest(PlanRunTestCase):
 
         # Assert
         self.assertEqual(plan.resumed_session, "s1")
+
+    def test_should_resume_in_a_session_of_its_own_after_a_last_segment_run_by_another_client(self):
+        # Arrange
+        write_run_result(
+            self.paths.state_root / "runs" / RUN_ID / "segments" / "1" / "result.json",
+            "failed",
+            session="s1",
+            client="claude-code",
+        )
+
+        # Act
+        plan = self.plan(self.create_request(run_id=RUN_ID, resume=True), {"operations": "resume"})
+
+        # Assert
+        self.assertEqual(plan.first_segment, 2)
+        self.assertIsNone(plan.resumed_session)
+        self.assertEqual(plan.resumed_client, "claude-code")
 
     def test_should_run_again_the_segment_that_left_no_result(self):
         # Arrange

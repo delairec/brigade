@@ -6,6 +6,7 @@ from brigade.commands._read_forge_environment import ForgeSlot, read_forge_envir
 from brigade.registry.read_project_forge import read_project_forge
 from brigade.runs.create_run_directory import create_run_directory
 from brigade.runs.decide_run_exit_code import decide_run_exit_code
+from brigade.runs.describe_client_switch import describe_client_switch
 from brigade.runs.describe_skipped_runs import describe_skipped_runs
 from brigade.runs.detach_run import detach_run
 from brigade.runs.plan_run import RunPlan, RunPlugins, RunRequest, plan_run
@@ -34,6 +35,7 @@ def _read_run_request(request) -> RunRequest:
         wave=request.wave,
         task=request.task,
         resume=request.resume,
+        on_fallback=request.fallback,
     )
 
 
@@ -76,14 +78,24 @@ def _describe_diagnostics(document: dict) -> list[str]:
 
 def _prepare_run(request, configuration: Configuration, runtime: Runtime) -> RunPlan:
     run_request = _read_run_request(request)
-    setting = read_run_setting(run_request.project, run_request.slot, configuration, runtime)
+    regular = read_run_setting(run_request.project, run_request.slot, configuration, runtime)
+    setting = (
+        read_run_setting(run_request.project, run_request.slot, configuration, runtime, on_fallback=True)
+        if run_request.on_fallback
+        else regular
+    )
     forge_slot = ForgeSlot(read_project_forge(setting.project), run_request.slot)
     forge_environment = read_forge_environment(configuration, forge_slot, runtime)
     plugins = RunPlugins(
         client_adapter=runtime.resolve_plugin("client", setting.client),
         document=runtime.resolve_plugin("progress_form", configuration.progress_form),
     )
-    plan = dataclasses.replace(plan_run(run_request, setting, plugins, runtime), forge_environment=forge_environment)
+    plan = plan_run(run_request, setting, plugins, runtime)
+    plan = dataclasses.replace(
+        plan,
+        forge_environment=forge_environment,
+        client_switched=describe_client_switch(plan, regular.client, configuration),
+    )
     create_run_directory(plan, runtime)
     runtime.trail.locate(plan.run_directory / PROCESSES_FILE)
     return plan
@@ -136,6 +148,7 @@ COMMAND = Command(
         Argument(("--detach",), {"action": "store_true", "help": "run in the background and print the run id"}),
         Argument(("--run-id",), {"help": argparse.SUPPRESS}),
         Argument(("--resume",), {"action": "store_true", "help": argparse.SUPPRESS}),
+        Argument(("--fallback",), {"action": "store_true", "help": argparse.SUPPRESS}),
     ),
     run=run,
     read_request=_read_request,

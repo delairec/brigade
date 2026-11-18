@@ -76,6 +76,8 @@ def _run_with_handovers(plan: RunPlan, runtime: Runtime, stop: StopSignalReceive
     instant = runtime.now
     if plan.budget_applied is not None:
         append_event(runtime.paths, instant, plan.budget_applied)
+    if plan.client_switched is not None:
+        append_event(runtime.paths, instant, plan.client_switched)
     while True:
         record = run_segment(plan, plan.first_segment + len(records), runtime, stop)
         records.append(record)
