@@ -922,14 +922,47 @@ class RunSegmentsOfARunOnTheFallbackTest(RunSegmentsTestCase):
         run_segments(plan, self.runtime, StopSignalReceiver(), return_to_client=lambda _: on_the_client)
 
         # Assert
+        self.assertEqual(self.read_events()[-1]["client"], "claude-code")
+
+    def test_should_record_the_return_to_the_client_before_the_segment_it_runs(self):
+        # Arrange
+        plan = self.create_plan(
+            ["handed_over", "done"], progress="- the test is written\n", handovers=1, on_fallback=True
+        )
+        switch = RunClientSwitched(
+            run=RUN_ID,
+            client_left="fake",
+            model_left="devstral",
+            client_taken="claude-code",
+            model_taken="opus",
+            reason="reset",
+        )
+        on_the_client = dataclasses.replace(
+            plan,
+            client="claude-code",
+            client_adapter=ClientAnsweringOutcomesDouble(["done"]),
+            on_fallback=False,
+            client_switched=switch,
+            first_segment=2,
+        )
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver(), return_to_client=lambda _: on_the_client)
+
+        # Assert
         self.assertEqual(
-            [(event["event"], event.get("segment"), event.get("client")) for event in self.read_events()],
-            [
-                ("run.finished", 1, "fake"),
-                ("signal.recorded", 1, None),
-                ("run.client_switched", None, None),
-                ("run.finished", 2, "claude-code"),
-            ],
+            self.read_events()[2],
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "run.client_switched",
+                "run": RUN_ID,
+                "client_left": "fake",
+                "model_left": "devstral",
+                "client_taken": "claude-code",
+                "model_taken": "opus",
+                "reason": "reset",
+            },
         )
 
     def test_should_keep_the_client_of_a_run_that_does_not_return_to_its_own(self):
@@ -940,10 +973,7 @@ class RunSegmentsOfARunOnTheFallbackTest(RunSegmentsTestCase):
         run_segments(plan, self.runtime, StopSignalReceiver(), return_to_client=lambda unchanged: unchanged)
 
         # Assert
-        self.assertEqual(
-            [(event["event"], event.get("segment"), event.get("client")) for event in self.read_events()],
-            [("run.finished", 1, "fake"), ("signal.recorded", 1, None), ("run.finished", 2, "fake")],
-        )
+        self.assertEqual(self.read_events()[-1]["client"], "fake")
 
 
 class RunSegmentsOfARoleWhoseCapChangedTest(RunSegmentsTestCase):

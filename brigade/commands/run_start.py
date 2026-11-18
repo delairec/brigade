@@ -14,7 +14,7 @@ from brigade.runs.detach_run import detach_run
 from brigade.runs.is_client_on_rate_limit import is_client_on_rate_limit
 from brigade.runs.plan_run import RunPlan, RunPlugins, RunRequest, plan_run
 from brigade.runs.prune_runs import PruneRequest, prune_runs
-from brigade.runs.read_run_setting import read_run_setting
+from brigade.runs.read_run_setting import RunSettingQuery, read_run_setting
 from brigade.runs.run_locations import PROCESSES_FILE
 from brigade.runs.run_segments import run_segments
 from brigade.runtime import Runtime
@@ -81,9 +81,11 @@ def _describe_diagnostics(document: dict) -> list[str]:
 
 def _prepare_run(request, configuration: Configuration, runtime: Runtime) -> RunPlan:
     run_request = _read_run_request(request)
-    regular = read_run_setting(run_request.project, run_request.slot, configuration, runtime)
+    regular = read_run_setting(RunSettingQuery(run_request.project, run_request.slot), configuration, runtime)
     setting = (
-        read_run_setting(run_request.project, run_request.slot, configuration, runtime, on_fallback=True)
+        read_run_setting(
+            RunSettingQuery(run_request.project, run_request.slot, on_fallback=True), configuration, runtime
+        )
         if run_request.on_fallback
         else regular
     )
@@ -109,7 +111,7 @@ def _return_to_the_client(
 ) -> RunPlan:
     if not plan.on_fallback:
         return plan
-    regular = read_run_setting(request.project, request.slot, configuration, runtime)
+    regular = read_run_setting(RunSettingQuery(request.project, request.slot), configuration, runtime)
     if is_client_on_rate_limit(read_ledger(runtime.paths.state_root).entries, regular.client, runtime.read_clock()):
         return plan
     resumed_on_the_client = argparse.Namespace(
