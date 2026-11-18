@@ -14406,7 +14406,8 @@ TASK B196
 TASK B197
 	TITLE "brigade init brings the installed schema of a registry to the schema brigade ships, its"
 		+ "entities kept and checked by awawa lint"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 449
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "corpus"
