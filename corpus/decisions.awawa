@@ -1590,7 +1590,7 @@ DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 	SOURCE "DESC 3 and the last two REJECTED added in pull request #166 of the brigade repository,"
 		+ "delivering @TASK.B192"
 		REF @TASK.B192
-	SOURCE "DESC 1 amended in the pull request of the brigade repository delivering @TASK.B91"
+	SOURCE "DESC 1 amended in pull request #443 of the brigade repository, delivering @TASK.B91"
 		REF @TASK.B91
 
 DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
@@ -7965,5 +7965,6 @@ DECISION ASegmentRecordsTheCountOfNotesItsBriefCarriedAndEachNoteIsCarriedOnce
 		+ "note appends to it could lose a note"
 	REJECTED "the notes listed from the run.noted events of the ledger: the directory of the run"
 		+ "answers alone, as the run-directory decision rules for run.finished"
-	SOURCE "the build run of @TASK.B91 on 2026-11-18"
+	SOURCE "pull request #443 of the brigade repository, delivering @TASK.B91, by its build run of"
+		+ "2026-11-18"
 		REF @TASK.B91
