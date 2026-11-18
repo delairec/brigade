@@ -11158,7 +11158,8 @@ TASK B143
 TASK B144
 	TITLE "A fallback client named in config.toml takes the runs of the machine while its client is"
 		+ "on a rate limit"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 444
 	TYPE feat
 	MILESTONE @MILESTONE.M13
 	COMPONENT "runs"
