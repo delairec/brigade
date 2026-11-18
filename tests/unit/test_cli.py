@@ -106,7 +106,12 @@ class MainGroupHelpTest(MainTestCase):
             ("role", "list", "list the role, the source and the model of each slot"),
             ("role", "show", "print the role file a slot resolves to"),
             ("run", "list", "list every run with its state and outcome"),
-            ("run", "show", "print the summary of a run, its segments and its progress, and with --log its log"),
+            ("run", "note", "hand a note to a run: the brief of its next segment carries it"),
+            (
+                "run",
+                "show",
+                "print the summary of a run, its segments, its notes and its progress, and with --log its log",
+            ),
             ("scheduler", "install", "install the scheduler config.toml names, or the default"),
             (
                 "scheduler",
@@ -254,7 +259,7 @@ class MainRefusalTest(MainTestCase):
             ),
             (
                 ["run", "frobnicate"],
-                r"invalid choice: 'frobnicate' \(choose from '?list'?, '?prune'?, '?show'?, '?start'?, '?stop'?, '?stop-hook'?\)\n$",
+                r"invalid choice: 'frobnicate' \(choose from '?list'?, '?note'?, '?prune'?, '?show'?, '?start'?, '?stop'?, '?stop-hook'?\)\n$",
             ),
             (["frobnicate"], r"invalid choice: 'frobnicate' \(choose from '?adapter'?, .+, '?wave'?\)\n$"),
             (["run", "show"], r"\nbrigade run show: error: the following arguments are required: run\n$"),
