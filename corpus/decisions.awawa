@@ -6387,9 +6387,12 @@ DECISION ATaskSlugWithNoHyphenWithinFortyCharactersIsCutAtItsFortiethAndATaskWit
 	DESC "the slug of a TITLE longer than 40 characters is cut at its last hyphen at or before its"
 		+ "40th character, and at its 40th character when no hyphen stands within them"
 	DESC "the snapshot of the tick names the branch of each task of a wave from its TYPE and its"
-		+ "TITLE; a task carrying no TYPE stops the read of its wave with an error naming the task,"
-		+ "as any unreadable fact of a wave does"
+		+ "TITLE until that branch is cut, then reads it from the ledger as"
+		+ "@DECISION.TheTickRecordsTheBranchItCutsForATaskAndTheSnapshotReadsItFromItsLastCut sets;"
+		+ "a task carrying no TYPE and no branch cut stops the read of its wave with an error"
+		+ "naming the task, as any unreadable fact of a wave does"
 		REF @TASK.B232
+		REF @DECISION.TheTickRecordsTheBranchItCutsForATaskAndTheSnapshotReadsItFromItsLastCut
 	REJECTED "a default prefix for a task carrying no TYPE: brigade task pr already refuses such a"
 		+ "task, so a branch named for it would end on a refusal"
 	RATIONALE "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch"
@@ -7917,3 +7920,26 @@ DECISION ARunResumedAfterItsHandoversRecordsItsTaskRunningUnderAReasonOfItsOwn
 		+ "stopped the run"
 	SOURCE "the build run of @TASK.B231 on 2026-11-18"
 		REF @TASK.B231
+
+DECISION TheTickRecordsTheBranchItCutsForATaskAndTheSnapshotReadsItFromItsLastCut
+	TITLE "the tick appends task.branch_cut, the project, the task and the branch, when its launch"
+		+ "runs git worktree add -b for a task, and every reader of the branch of a task takes the"
+		+ "last task.branch_cut of that task, naming it from TYPE and TITLE only when it has none"
+	STATUS active
+	DESC "the event is appended by the launch that cuts the branch, never by a launch that reuses"
+		+ "the worktree holding the branch or adds a worktree on a branch that stands"
+	DESC "the readers are the snapshot of the tick, and through it every order naming the branch of"
+		+ "a task, ReportTask included, and the merge commands brigade wave show prints"
+	DESC "a task cut before the event existed has none and is named from its TYPE and its TITLE,"
+		+ "with no event written for it after the fact"
+	DESC "binds @TASK.B241"
+		REF @TASK.B241
+	REJECTED "the branch read from the worktree at the scheduled path: the worktree is gone once it"
+		+ "is cleaned while the branch stands"
+	REJECTED "the branch read from the last task.pr_opened of the task: a task parked before its"
+		+ "pull request, as TASK B46 was, has none"
+	REJECTED "a task.branch_cut appended at a launch that adds a worktree on a standing branch with"
+		+ "no event: the task is served as before with no event, and a branch renamed by hand would"
+		+ "be recorded under a name the tick never cut"
+	SOURCE "the build run of @TASK.B241 on 2026-11-18"
+		REF @TASK.B241

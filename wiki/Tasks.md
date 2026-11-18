@@ -14,8 +14,9 @@ brigade build promote [<task>] [--pr <n>]       # STATUS implemented and DELIVER
 A build run works in the worktree of its task, on the branch `<prefix>/<id>-<slug>` the tick cut from the branch of
 its milestone, `integration/<slug>`, or from the main branch for a task naming no milestone: the prefix is the `TYPE`
 of the task, `feat` becoming `feature`, the slug its `TITLE` lowercased, each run of other characters than ASCII
-letters and digits made one hyphen, cut at a hyphen within 40 characters (`feature/B46-local-mode`). Its pull request
-goes to that base. Every command runs from that worktree, takes the task of the branch when `<task>` is left out,
+letters and digits made one hyphen, cut at a hyphen within 40 characters (`feature/B46-local-mode`). The tick names
+the branch once, at its cut, which it records as `task.branch_cut`: a task whose `TITLE` or `TYPE` changes afterwards
+keeps that branch, its worktree and its pull request. Its pull request goes to that base. Every command runs from that worktree, takes the task of the branch when `<task>` is left out,
 and its wave from the open wave of the ledger that holds the task. Each prints text or, with `--json`, a JSON document.
 `build push`, `build pr` and `build promote` push the branch with `--force-with-lease`, never with `--force`: the lease is the head of
 `origin/<branch>` they read, or that the branch is absent from `origin`, so a branch the tick rebased since its last

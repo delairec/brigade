@@ -27,7 +27,7 @@ from brigade.runtime import Runtime
 from brigade.system.parse_configuration import Configuration
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.render_table import render_table
-from brigade.tick.name_branch_of_task import name_branch_of_task
+from brigade.tick.read_branch_of_task import read_branch_of_task
 from brigade.waves.describe_milestone_merge import describe_milestone_merge
 from brigade.waves.find_integration_pull_request import find_integration_pull_request
 from brigade.waves.find_last_task_event import find_last_task_event
@@ -139,7 +139,10 @@ def _read_task_merge_commands(
         return []
     branch = find_milestone_branch(entries, started.project, milestone)
     target = _locate_task_merge(runtime, project, configuration.worktree_root, branch)
-    return [describe_merge_command(target, name_branch_of_task(of_wave[task])) for task in verified]
+    events = tuple(entry.event for entry in entries)
+    return [
+        describe_merge_command(target, read_branch_of_task(events, started.project, of_wave[task])) for task in verified
+    ]
 
 
 def _describe_events(reading: LedgerReading, request: argparse.Namespace) -> dict:

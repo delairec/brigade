@@ -21,6 +21,7 @@ from brigade.ledger.milestone_pr_opened import MilestonePrOpened
 from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.run_finished import RunFinished
+from brigade.ledger.task_branch_cut import TaskBranchCut
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_reported import TaskReported
 from brigade.ledger.task_state import TaskState
@@ -1245,6 +1246,16 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 ),
             ),
         )
+
+    def test_should_read_the_pull_request_of_a_retitled_task_by_the_branch_it_was_first_cut_on(self):
+        # Arrange
+        self.record(55, TaskBranchCut(project="shop", task="B1", branch="feature/B1-first-title"))
+
+        # Act
+        self.build()
+
+        # Assert
+        self.assertEqual(self.reader.branches, ["feature/B1-first-title", "feature/B2-task", "feature/B4-task"])
 
     def test_should_read_no_pull_request_of_a_settled_task_whose_worktree_is_gone(self):
         # Act

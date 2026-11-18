@@ -66,7 +66,7 @@ from brigade.tick.describe_study_facts import describe_study_facts
 from brigade.tick.find_last_action import find_last_action
 from brigade.tick.is_milestone_rebase_held import MilestoneHeads, is_milestone_rebase_held
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
-from brigade.tick.name_branch_of_task import name_branch_of_task
+from brigade.tick.read_branch_of_task import read_branch_of_task
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
 from brigade.tick.read_integration_branches import (
     IntegrationBranchFacts,
@@ -422,16 +422,6 @@ class Snapshot:
 def _read_milestone(task: Entity) -> str | None:
     milestone = read_project_field(task, MILESTONE_FIELD)
     return None if milestone is None else milestone.removeprefix(MILESTONE_PREFIX)
-
-
-def _read_task_facts(runtime: Runtime, root: Path, task: Entity) -> TaskFacts:
-    return TaskFacts(
-        name=task.name,
-        branch=name_branch_of_task(task),
-        after=tuple(field.value.removeprefix(TASK_PREFIX) for field in task.fields if field.name == AFTER_FIELD),
-        blocked_by=runtime.read_live_blockers(runtime.run_process, root, task.name),
-        milestone=_read_milestone(task),
-    )
 
 
 @dataclass(frozen=True)
@@ -846,10 +836,20 @@ def _note_delivered_head(reading: WaveReading, open_wave: _OpenWave, task: TaskF
     )
 
 
+def _read_task_facts(runtime: Runtime, reading: WaveReading, open_wave: _OpenWave, task: Entity) -> TaskFacts:
+    return TaskFacts(
+        name=task.name,
+        branch=read_branch_of_task(reading.events, open_wave.started.project, task),
+        after=tuple(field.value.removeprefix(TASK_PREFIX) for field in task.fields if field.name == AFTER_FIELD),
+        blocked_by=runtime.read_live_blockers(runtime.run_process, open_wave.tree_root, task.name),
+        milestone=_read_milestone(task),
+    )
+
+
 def _read_wave_task(runtime: Runtime, reading: WaveReading, open_wave: _OpenWave, task: Entity) -> TaskFacts:
     wave = open_wave.started.wave
     followed = _follow_task(
-        _read_task_facts(runtime, open_wave.tree_root, task), open_wave.followed, open_wave.implemented
+        _read_task_facts(runtime, reading, open_wave, task), open_wave.followed, open_wave.implemented
     )
     amended = _note_amendment(followed, _read_task_on_its_pull_request(runtime, reading, open_wave, followed), task)
     noted = _note_login(
