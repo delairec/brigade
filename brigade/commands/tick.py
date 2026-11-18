@@ -41,7 +41,7 @@ from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_rebased import TaskRebased
 from brigade.ledger.task_reported import TaskReported
-from brigade.ledger.task_state import QUOTA_RESUME_REASON, TaskState
+from brigade.ledger.task_state import TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.tick_action_failed import TickActionFailed
 from brigade.ledger.wave_blocked import WaveBlocked
@@ -431,7 +431,7 @@ def _resume_task_run(runtime: Runtime, action: ResumeTaskRun) -> None:
     append_event(
         runtime.paths,
         runtime.now,
-        TaskState(wave=action.wave, task=action.task, state=action.state, reason=QUOTA_RESUME_REASON),
+        TaskState(wave=action.wave, task=action.task, state=action.state, reason=action.reason),
     )
     run(resuming, runtime)
 

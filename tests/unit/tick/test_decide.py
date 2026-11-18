@@ -51,6 +51,7 @@ from brigade.tick.actions import (
 )
 from brigade.tick.build_snapshot import (
     BlockedRun,
+    HandedOverRun,
     LiveRun,
     MilestoneFacts,
     PreflightFailure,
@@ -1148,6 +1149,32 @@ class PlanQuotaPauseTest(unittest.TestCase):
                 self.assertEqual(actions, ())
 
 
+class PlanRequeuedTaskLaunchTest(unittest.TestCase):
+    def test_should_resume_the_run_a_requeued_task_handed_over_and_launch_anew_the_one_of_a_dead_run(self):
+        for case, handed_over_run, expected in [
+            (
+                "its last run handed over",
+                HANDED_OVER_AFTER_THREE_SEGMENTS,
+                ResumeTaskRun(
+                    wave="shop_w1", task="S3", run=LAST_RUN_OF_S3, state="running", reason="resumed after its handovers"
+                ),
+            ),
+            ("its last run dead", NOT_HANDED_OVER, LAUNCH_S3),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3", branch="feature/S3-task", last_run=LAST_RUN_OF_S3, handed_over_run=handed_over_run
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "queued"}),), projects=(SHOP,))
+
+                # Act
+                actions = decide(snapshot)
+
+                # Assert
+                self.assertEqual(actions, (expected,))
+
+
 class PlanQuotaResumeTest(unittest.TestCase):
     def test_should_resume_a_wave_blocked_on_the_quota_and_its_blocked_runs_once_resume_at_is_reached(self):
         # Arrange
@@ -2074,28 +2101,52 @@ LAST_RUN_OF_S3 = "20261006T110000Z-d1e2f3"
 NO_RUN = None
 NOT_BLOCKED = None
 PARK_S3_RUN_NOT_STARTED = ParkTask(wave="shop_w1", task="S3", reason="run not started", blockers=())
+NOT_HANDED_OVER = None
+HANDED_OVER_AFTER_THREE_SEGMENTS = HandedOverRun(run=LAST_RUN_OF_S3, segments=3)
 
 
 class PlanRunningTaskWithoutALiveRunTest(unittest.TestCase):
     def test_should_park_a_running_task_no_live_run_names_with_the_reason_of_its_last_run(self):
-        for case, last_run, blocked_run, expected in [
+        for case, last_run, blocked_run, handed_over_run, expected in [
             (
                 "its last run dead",
                 LAST_RUN_OF_S3,
                 NOT_BLOCKED,
+                NOT_HANDED_OVER,
                 (ParkTask(wave="shop_w1", task="S3", reason="run dead: 20261006T110000Z-d1e2f3", blockers=()),),
             ),
             (
                 "its first build ended blocked on a question",
                 "20261006T110000Z-b10c4d",
                 BLOCKED_ON_A_RULING,
+                NOT_HANDED_OVER,
                 (PARK_S3_ON_THE_QUESTION,),
             ),
-            ("no run naming it", NO_RUN, NOT_BLOCKED, (PARK_S3_RUN_NOT_STARTED,)),
+            (
+                "its last run handed over at its last handover",
+                LAST_RUN_OF_S3,
+                NOT_BLOCKED,
+                HANDED_OVER_AFTER_THREE_SEGMENTS,
+                (
+                    ParkTask(
+                        wave="shop_w1",
+                        task="S3",
+                        reason="run 20261006T110000Z-d1e2f3 handed over after 3 segments",
+                        blockers=(),
+                    ),
+                ),
+            ),
+            ("no run naming it", NO_RUN, NOT_BLOCKED, NOT_HANDED_OVER, (PARK_S3_RUN_NOT_STARTED,)),
         ]:
             with self.subTest(case=case):
                 # Arrange
-                task = TaskFacts(name="S3", branch="feature/S3-task", last_run=last_run, blocked_run=blocked_run)
+                task = TaskFacts(
+                    name="S3",
+                    branch="feature/S3-task",
+                    last_run=last_run,
+                    blocked_run=blocked_run,
+                    handed_over_run=handed_over_run,
+                )
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
 
                 # Act

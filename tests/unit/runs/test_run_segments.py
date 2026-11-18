@@ -1826,6 +1826,73 @@ class RunSegmentsOfARunHandedOverAtEverySegmentTest(RunSegmentsTestCase):
             ],
         )
 
+    def test_should_count_the_handovers_of_a_resumed_run_from_its_first_resumed_segment(self):
+        # Arrange
+        plan = self.create_plan(
+            ["handed_over", "handed_over", "handed_over", "handed_over"],
+            progress=PROGRESS_OF_THE_FIRST_SEGMENT,
+            handovers=2,
+            first_segment=4,
+        )
+
+        # Act
+        records = run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            records,
+            [
+                SegmentRecord(
+                    number=4,
+                    outcome="handed_over",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+                SegmentRecord(
+                    number=5,
+                    outcome="handed_over",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+                SegmentRecord(
+                    number=6,
+                    outcome="handed_over",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+            ],
+        )
+
     def test_should_open_the_brief_of_the_next_segment_on_the_progress_file(self):
         # Arrange
         client = ClientRecordingLaunchesDouble(["handed_over", "done"])

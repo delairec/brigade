@@ -42,6 +42,7 @@ from brigade.tick.actions import LaunchTask
 from brigade.tick.build_snapshot import (
     BlockedRun,
     ForgeReaders,
+    HandedOverRun,
     LiveRun,
     PreflightFailure,
     ProjectFacts,
@@ -2502,6 +2503,37 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
 
                 # Assert
                 self.assertEqual(snapshot.waves[0].tasks[0].blocked_run, expected)
+
+    def test_should_carry_the_last_run_of_the_task_and_its_segment_when_it_ended_handed_over(self):
+        for case, outcome, expected in [
+            (
+                "a run handed over at its third segment",
+                "handed_over",
+                HandedOverRun(run="20261019T083000Z-b10c4d", segments=3),
+            ),
+            ("a run delivered", "done", None),
+            ("a run blocked", "blocked", None),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                write_run(self.paths.state_root, create_run_record("20261019T081100Z-a00001", "w1", "B1"), None)
+                write_run(self.paths.state_root, create_run_record("20261019T083000Z-b10c4d", "w1", "B1"), None)
+                self.record(
+                    5,
+                    create_run_finished(
+                        "20261019T083000Z-b10c4d", segment=2, wave="w1", task="B1", outcome="handed_over"
+                    ),
+                )
+                self.record(
+                    4, create_run_finished("20261019T083000Z-b10c4d", segment=3, wave="w1", task="B1", outcome=outcome)
+                )
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].tasks[0].handed_over_run, expected)
 
     def test_should_note_a_task_rebased_by_its_last_run_when_a_rebase_run_ended_done(self):
         for case, slot, outcome, expected in [

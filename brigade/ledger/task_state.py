@@ -18,6 +18,7 @@ TASK_STATES = (
 REQUEUE_REASON = "brigade wave requeue"
 REBUILD_REASON = "the entity of the task amended on"
 QUOTA_RESUME_REASON = "resumed after the quota reset"
+HANDOVER_RESUME_REASON = "resumed after its handovers"
 
 
 @dataclass(frozen=True)
