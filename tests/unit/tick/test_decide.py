@@ -4309,3 +4309,69 @@ class PlanPauseOnARateLimitOfTheFallbackTest(unittest.TestCase):
                 PauseWave(wave="cafe_w1", reason="quota", resume_at="2026-10-06T16:00:00Z"),
             ),
         )
+
+
+BEHIND_MAIN_M9 = MilestoneFacts(
+    project="shop", milestone="M9", branch="integration/delivery", open_waves=("shop_w4",), behind_main=True
+)
+
+
+class PlanRunsOfNoTaskWhileTheFallbackServesTest(unittest.TestCase):
+    def test_should_hold_a_study_an_order_and_a_milestone_rebase_until_the_reset(self):
+        for case, served, expected in [
+            ("a due study", Snapshot(now=NOW, studies=(create_study(),)), ()),
+            ("a due order", Snapshot(now=NOW, orders=(create_order(),)), ()),
+            (
+                "a milestone branch main has outrun",
+                Snapshot(now=NOW, projects=(PROJECT_WITH_CANDIDATES,), milestones=(BEHIND_MAIN_M9,)),
+                START_OF_M10_AND_NO_MILESTONE,
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                snapshot = dataclasses.replace(
+                    served, rate_limits=(CLIENT_RATE_LIMITED_UNTIL_15,), fallback=VIBE_BINDING_STANDARD
+                )
+
+                # Act
+                actions = decide(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+
+class PlanRequeuedHandedOverRunOnTheFallbackTest(unittest.TestCase):
+    def test_should_resume_on_the_fallback_the_run_a_requeued_task_handed_over_in_the_slot_it_ran_in(self):
+        # Arrange
+        task = TaskFacts(
+            name="S3",
+            branch="feature/S3-task",
+            last_run=LAST_RUN_OF_S3,
+            handed_over_run=HandedOverRun(run=LAST_RUN_OF_S3, segments=3, slot="build"),
+        )
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(create_wave((task,), {"S3": "queued"}),),
+            projects=(SHOP_BUILDING_AT_STANDARD,),
+            rate_limits=(CLIENT_RATE_LIMITED_UNTIL_15,),
+            fallback=VIBE_BINDING_STANDARD,
+        )
+
+        # Act
+        actions = decide(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                ResumeTaskRun(
+                    wave="shop_w1",
+                    task="S3",
+                    run=LAST_RUN_OF_S3,
+                    state="running",
+                    reason="resumed on the fallback client",
+                    slot="build",
+                    on_fallback=True,
+                ),
+            ),
+        )
