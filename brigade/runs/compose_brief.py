@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 ARGUMENT_SEPARATOR = "="
 PROGRESS_SECTION = "Progress so far"
+NOTES_SECTION = "Notes handed to the run"
 END_OF_SEGMENT = (
     "End your final message on one of these lines: brigade-end: done once the work is delivered,"
     " brigade-end: handed_over when a next segment resumes it from the progress file,"
@@ -12,6 +13,7 @@ END_OF_SEGMENT = (
 @dataclass(frozen=True)
 class BriefParts:
     progress: str | None
+    notes: tuple[dict, ...]
     procedure: str
     procedure_body: str
     arguments: dict
@@ -28,6 +30,8 @@ def compose_brief(parts: BriefParts) -> str:
     sections = []
     if parts.progress is not None:
         sections.append((PROGRESS_SECTION, parts.progress))
+    if parts.notes:
+        sections.append((NOTES_SECTION, "\n".join(f"- {note['at']}: {note['text']}" for note in parts.notes)))
     sections.append((f"Procedure {parts.procedure}", parts.procedure_body))
     if parts.arguments:
         lines = "\n".join(f"{key}{ARGUMENT_SEPARATOR}{value}" for key, value in parts.arguments.items())

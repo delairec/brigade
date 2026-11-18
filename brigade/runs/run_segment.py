@@ -21,6 +21,7 @@ from brigade.runs.run_locations import (
 )
 from brigade.runs.segment_journal_writer import SegmentJournalWriter
 from brigade.runs.sum_session_usage import sum_session_usage
+from brigade.runs.take_pending_notes import take_pending_notes
 from brigade.runtime import Runtime
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_command import ClientCommand
@@ -88,6 +89,7 @@ def _compose_segment_brief(plan: RunPlan, number: int, runtime: Runtime) -> str:
             brief=plan.brief,
             progress_description=ask_progress(plan, "describe_document", runtime).text,
             budget=plan.budget.applied,
+            notes=tuple(take_pending_notes(plan.run_directory, number)),
         )
     )
 

@@ -10,6 +10,7 @@ brigade run list [--wave <wave>] [--task <task>] [--state running|finished|dead]
                                                  # every run: id, procedure, slot, role, project, wave, task, state, outcome
 brigade run show <id> [--log] [--json]          # the summary of a run, its segments and its progress; --log adds its log
 brigade run show <id> --follow                  # the same with --log, then each record as it is written
+brigade run note <id> <text>                    # hand a note to a run, carried by the brief of its next segment
 brigade run stop <id>                           # stop a running run; exit 0 once it finished on stopped
 brigade run stop-hook --at <epoch>              # the stop document a client hook prints once the soft limit has passed
 brigade run prune [--keep <n>] [--before <YYYY-MM-DD>] [--resumable] [--dry-run] [--json]
@@ -30,8 +31,8 @@ brigade run prune [--keep <n>] [--before <YYYY-MM-DD>] [--resumable] [--dry-run]
   otherwise.
 - **The client** is the one `[slot_clients]` binds to the slot, else the project's `CLIENT`, else the `client` key of
   `config.toml`.
-- **The brief** the client receives is made of the procedure, the `key=value` arguments, the text of `--brief` and the
-  progress of the run.
+- **The brief** the client receives is made of the procedure, the `key=value` arguments, the text of `--brief`, the
+  progress of the run and the notes handed to it since the brief of its segment before.
 
 The run works in `--cwd`, else the project's `PATH`, else the current directory. `--detach` prints the run id and
 exits 0, the run going on in the background.
@@ -66,7 +67,8 @@ Each run keeps its directory, `$XDG_STATE_HOME/brigade/runs/<run id>/`:
 | `role.md` | the role file passed |
 | `progress.awawa` or `progress.md` | the progress of the run |
 | `processes.jsonl` | its trail |
-| `segments/<n>/` | `brief.md`, `stdout.log`, `stderr.log`, `result.json` (the normalised result of the segment) |
+| `notes.jsonl` | the notes `brigade run note` handed to it, one line each: `at` and `text` |
+| `segments/<n>/` | `brief.md`, `stdout.log`, `stderr.log`, `result.json` (the normalised result of the segment), `notes.json` (`carried`, the count of notes its brief carried) |
 | `log.jsonl` | one record per action of the client |
 | `result.json` | written last: the normalised result of the last segment |
 
@@ -87,6 +89,15 @@ launched again while its progress holds an entry, up to the `HANDOVERS` of the p
 > progress file holds.
 
 > **Watch out:** awawa stays a prerequisite whichever form of progress is chosen.
+
+## Notes handed to a run
+
+`brigade run note <id> <text>` appends the note and its timestamp to `notes.jsonl` and records `run.noted` in the
+ledger, with the run and the text. A segment already launched takes no input: the note waits for the brief of the
+next segment of the run, after a handover, a cut on the clock, a resume after the quota or the resume of a re-queued
+task, which carries every note no brief before carried in its section `Notes handed to the run`, after the progress.
+`brigade run show` lists each note with the segment whose brief carried it, or `pending`. An unknown run, and a run
+whose `result.json` is written, exit 1, nothing appended.
 
 ## Details and edge cases
 

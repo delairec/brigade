@@ -2148,3 +2148,168 @@ class RunSegmentsOfASegmentEndedWithoutRelaunchTest(RunSegmentsTestCase):
 
                 # Assert
                 self.assertEqual(records, expected)
+
+
+NOTE_OF_THE_FIRST_SEGMENT = '{"at": "2026-10-19T08:30:00Z", "text": "rebase onto main before the check"}\n'
+NOTE_OF_THE_SECOND_SEGMENT = '{"at": "2026-10-19T08:45:00Z", "text": "the corpus of main holds two L016 errors"}\n'
+NO_NOTE = None
+
+
+class ClientAppendingNotesSpawnerDouble:
+    def __init__(self, notes: list[str | None]):
+        self.notes = notes
+
+    def spawn(self, request) -> ExitedProcessDouble:
+        note = self.notes.pop(0)
+        if note is not None:
+            with (Path(request.environment["BRIGADE_RUN_DIR"]) / "notes.jsonl").open("a") as notes:
+                notes.write(note)
+        return spawn_an_exited_client(request)
+
+
+class RunSegmentsOfARunNotedWhileItRunsTest(RunSegmentsTestCase):
+    def create_noted_plan(self, client: ClientRecordingLaunchesDouble, notes: list[str | None]):
+        spawner = ClientAppendingNotesSpawnerDouble(notes)
+        self.runtime = create_test_runtime(self.paths, run_process=self.git, spawn_process=spawner.spawn)
+        plan = create_run_plan(self.root, client_adapter=client, handovers=2)
+        plan.run_directory.mkdir(parents=True)
+        ask_progress(plan, "create_document", self.runtime)
+        plan.progress_file.write_text(PROGRESS_OF_THE_FIRST_SEGMENT)
+        return plan
+
+    def test_should_carry_the_note_in_the_brief_of_the_segment_after_the_handover_in_a_section_after_the_progress(
+        self,
+    ):
+        # Arrange
+        client = ClientRecordingLaunchesDouble(["handed_over", "done"])
+        plan = self.create_noted_plan(client, [NOTE_OF_THE_FIRST_SEGMENT, NO_NOTE])
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            client.launches[1]["brief"],
+            "# Progress so far\n\n"
+            "- the first segment is done\n\n"
+            "# Notes handed to the run\n\n"
+            "- 2026-10-19T08:30:00Z: rebase onto main before the check\n\n"
+            "# Procedure build-task\n\n"
+            "Deliver the task.\n\n"
+            "# Progress file\n\n"
+            f"The progress is the Markdown file {plan.progress_file}.\n\n"
+            "- one entry per major step: what it did in one line, the facts it established, one line each and five"
+            " at most, and the next step as the procedure names it, complete at the end\n"
+            "- a fact is what the next segment needs and no command gives back\n"
+            "- never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier"
+            " entry holds\n"
+            "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
+            "# Budget\n\n"
+            "40 turns, the cap of your role for this segment.\n\n"
+            "# End of segment\n\n"
+            "End your final message on one of these lines: brigade-end: done once the work is delivered,"
+            " brigade-end: handed_over when a next segment resumes it from the progress file,"
+            " brigade-end: blocked when it waits for a ruling.\n",
+        )
+
+    def test_should_carry_in_the_brief_of_a_segment_only_the_notes_appended_since_the_brief_before(self):
+        # Arrange
+        client = ClientRecordingLaunchesDouble(["handed_over", "handed_over", "done"])
+        plan = self.create_noted_plan(client, [NOTE_OF_THE_FIRST_SEGMENT, NOTE_OF_THE_SECOND_SEGMENT, NO_NOTE])
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            client.launches[2]["brief"],
+            "# Progress so far\n\n"
+            "- the first segment is done\n\n"
+            "# Notes handed to the run\n\n"
+            "- 2026-10-19T08:45:00Z: the corpus of main holds two L016 errors\n\n"
+            "# Procedure build-task\n\n"
+            "Deliver the task.\n\n"
+            "# Progress file\n\n"
+            f"The progress is the Markdown file {plan.progress_file}.\n\n"
+            "- one entry per major step: what it did in one line, the facts it established, one line each and five"
+            " at most, and the next step as the procedure names it, complete at the end\n"
+            "- a fact is what the next segment needs and no command gives back\n"
+            "- never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier"
+            " entry holds\n"
+            "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
+            "# Budget\n\n"
+            "40 turns, the cap of your role for this segment.\n\n"
+            "# End of segment\n\n"
+            "End your final message on one of these lines: brigade-end: done once the work is delivered,"
+            " brigade-end: handed_over when a next segment resumes it from the progress file,"
+            " brigade-end: blocked when it waits for a ruling.\n",
+        )
+
+    def test_should_carry_no_note_in_the_brief_of_the_segment_running_when_it_was_appended(self):
+        # Arrange
+        client = ClientRecordingLaunchesDouble(["done"])
+        plan = self.create_noted_plan(client, [NOTE_OF_THE_FIRST_SEGMENT])
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            client.launches[0]["brief"],
+            "# Procedure build-task\n\n"
+            "Deliver the task.\n\n"
+            "# Progress file\n\n"
+            f"The progress is the Markdown file {plan.progress_file}.\n\n"
+            "- one entry per major step: what it did in one line, the facts it established, one line each and five"
+            " at most, and the next step as the procedure names it, complete at the end\n"
+            "- a fact is what the next segment needs and no command gives back\n"
+            "- never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier"
+            " entry holds\n"
+            "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
+            "# Budget\n\n"
+            "40 turns, the cap of your role for this segment.\n\n"
+            "# End of segment\n\n"
+            "End your final message on one of these lines: brigade-end: done once the work is delivered,"
+            " brigade-end: handed_over when a next segment resumes it from the progress file,"
+            " brigade-end: blocked when it waits for a ruling.\n",
+        )
+
+
+class RunSegmentsOfAResumedRunNotedBeforeItsResumeTest(RunSegmentsTestCase):
+    def test_should_carry_in_the_brief_of_the_resumed_segment_the_notes_no_segment_before_carried(self):
+        # Arrange
+        client = ClientRecordingLaunchesDouble(["done"])
+        plan = create_run_plan(self.root, client_adapter=client, first_segment=2, resumed_session=NO_SESSION_TO_RESUME)
+        (plan.run_directory / "segments" / "1").mkdir(parents=True)
+        (plan.run_directory / "segments" / "1" / "notes.json").write_text('{"carried": 1}\n')
+        (plan.run_directory / "notes.jsonl").write_text(NOTE_OF_THE_FIRST_SEGMENT + NOTE_OF_THE_SECOND_SEGMENT)
+        ask_progress(plan, "create_document", self.runtime)
+        plan.progress_file.write_text(PROGRESS_OF_THE_FIRST_SEGMENT)
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            client.launches[0]["brief"],
+            "# Progress so far\n\n"
+            "- the first segment is done\n\n"
+            "# Notes handed to the run\n\n"
+            "- 2026-10-19T08:45:00Z: the corpus of main holds two L016 errors\n\n"
+            "# Procedure build-task\n\n"
+            "Deliver the task.\n\n"
+            "# Progress file\n\n"
+            f"The progress is the Markdown file {plan.progress_file}.\n\n"
+            "- one entry per major step: what it did in one line, the facts it established, one line each and five"
+            " at most, and the next step as the procedure names it, complete at the end\n"
+            "- a fact is what the next segment needs and no command gives back\n"
+            "- never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier"
+            " entry holds\n"
+            "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
+            "# Budget\n\n"
+            "40 turns, the cap of your role for this segment.\n\n"
+            "# End of segment\n\n"
+            "End your final message on one of these lines: brigade-end: done once the work is delivered,"
+            " brigade-end: handed_over when a next segment resumes it from the progress file,"
+            " brigade-end: blocked when it waits for a ruling.\n",
+        )

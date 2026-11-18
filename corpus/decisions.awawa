@@ -1544,9 +1544,10 @@ DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 	STATUS active
 	DESC "runs/<id>/ holds run.json, the record of the run as planned, pid, role.md, progress.md or"
 		+ "progress.awawa by the form the document key chooses, journal.jsonl, the journal of the"
-		+ "actions of every segment, segments/<n>/ with brief.md, stdout.log, stderr.log and"
-		+ "result.json, the run.finished document of that segment, the line the ledger appends, and"
-		+ "result.json, that of the last segment"
+		+ "actions of every segment, notes.jsonl, the notes brigade run note handed to the run,"
+		+ "segments/<n>/ with brief.md, stdout.log, stderr.log, notes.json, the count of notes its"
+		+ "brief carried, and result.json, the run.finished document of that segment, the line the"
+		+ "ledger appends, and result.json, that of the last segment"
 	DESC "result.json is written atomically after the ledger events of the run: a run with a result"
 		+ "is finished, one whose pid lives without it is running, any other is dead"
 	DESC "brigade runs stop signals a run only once its process has signalled it is ready: the"
@@ -1589,6 +1590,8 @@ DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 	SOURCE "DESC 3 and the last two REJECTED added in pull request #166 of the brigade repository,"
 		+ "delivering @TASK.B192"
 		REF @TASK.B192
+	SOURCE "DESC 1 amended in the pull request of the brigade repository delivering @TASK.B91"
+		REF @TASK.B91
 
 DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 	TITLE "the CI runs zizmor, ruff, semgrep, vulture, pytest with pytest-xdist and coverage.py,"
@@ -7943,3 +7946,24 @@ DECISION TheTickRecordsTheBranchItCutsForATaskAndTheSnapshotReadsItFromItsLastCu
 		+ "be recorded under a name the tick never cut"
 	SOURCE "the build run of @TASK.B241 on 2026-11-18"
 		REF @TASK.B241
+
+DECISION ASegmentRecordsTheCountOfNotesItsBriefCarriedAndEachNoteIsCarriedOnce
+	TITLE "the brief of a segment carries the notes of its run that no brief before carried, and"
+		+ "the segment records their count in segments/<n>/notes.json, from which run show names"
+		+ "the segment that carried each note"
+	STATUS active
+	DESC "notes.jsonl holds one line per note, at and text, in the order brigade run note appended"
+		+ "them; the notes carried before segment n are the first ones, as many as the counts of"
+		+ "the segments before it add up to, and the brief of segment n carries the rest as read"
+		+ "when it is composed, a note appended after that read waiting for the next segment"
+	DESC "binds @TASK.B91"
+		REF @TASK.B91
+	REJECTED "the notes carried read from their timestamps against the instant each brief was"
+		+ "composed: a note stamped in the second its brief is composed would be carried twice or"
+		+ "never"
+	REJECTED "a carried flag written back into notes.jsonl: rewriting the file while brigade run"
+		+ "note appends to it could lose a note"
+	REJECTED "the notes listed from the run.noted events of the ledger: the directory of the run"
+		+ "answers alone, as the run-directory decision rules for run.finished"
+	SOURCE "the build run of @TASK.B91 on 2026-11-18"
+		REF @TASK.B91
