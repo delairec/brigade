@@ -43,7 +43,7 @@ def _is_unknown(route: CommandRoute, runtime: Runtime) -> bool:
 
 def run_routed_command(route: CommandRoute, runtime: Runtime) -> CommandAnswer:
     record = _run_brigade(route.arguments, runtime)
-    if record.exit_code == 0:
+    if record.exit_code in route.documented_exit_codes:
         return CommandAnswer(status=OK, document=record.stdout)
     status = NOT_FOUND if _is_unknown(route, runtime) else SERVER_ERROR
     return CommandAnswer(status=status, document=json.dumps({"error": record.stderr}))

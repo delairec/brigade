@@ -9,4 +9,4 @@ def render_html_table(header: tuple[str, ...], rows: list[tuple[str, ...]], empt
     if not rows:
         return f"<p>{escape(empty)}</p>"
     body = "".join(_render_row("td", row) for row in rows)
-    return f"<table><thead>{_render_row('th', header)}</thead><tbody>{body}</tbody></table>"
+    return f"<table><thead>{_render_row('th', tuple(escape(name) for name in header))}</thead><tbody>{body}</tbody></table>"

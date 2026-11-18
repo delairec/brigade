@@ -8253,3 +8253,32 @@ DECISION InitPutsBackTheInstalledBytesOfTheSchemaWhenLintRefusesItsUpgrade
 		+ "write hold it whatever the index and HEAD of the registry repository hold"
 	SOURCE "the build run of @TASK.B197 of 2026-11-18"
 		REF @TASK.B197
+
+DECISION TheProjectChosenInTheDashboardIsAParameterOfThePageAndEachViewKeepsTheRowsNamingIt
+	TITLE "the project chosen in the dashboard is the parameter project of the page address, and"
+		+ "each view keeps the rows of its document whose field project names it"
+	STATUS active
+	DESC "the page at /?project=<name> asks every fragment with that parameter; a list of the"
+		+ "document keeps its rows naming the project and the rows naming none, the rest of the"
+		+ "document is unchanged"
+	DESC "binds @TASK.B264"
+		REF @TASK.B264
+	REJECTED "an option --project on each command a view runs: wave list, ledger and request list"
+		+ "carry one, the other listings none, and one filter serves every view"
+	REJECTED "the project in the fragment of the address beside the view: each link of the rail"
+		+ "would drop it"
+	SOURCE "the build run of @TASK.B264 of 2026-11-18"
+		REF @TASK.B264
+
+DECISION TheHeartbeatRegionAnswersTheDocumentOfAStaleSchedulerUnder200
+	TITLE "the heartbeat region renders brigade scheduler status --json under 200 when it exits 1"
+		+ "on a stale tick"
+	STATUS active
+	DESC "a route of the dashboard names the exit codes whose standard output is its document; the"
+		+ "heartbeat names 0 and 1, every other route 0 alone"
+	DESC "binds @TASK.B264"
+		REF @TASK.B264
+	REJECTED "answering 500 on a stale tick: the stale tick is the state the heartbeat exists to"
+		+ "show"
+	SOURCE "the build run of @TASK.B264 of 2026-11-18"
+		REF @TASK.B264

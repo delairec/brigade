@@ -17,6 +17,7 @@ class CommandRoute:
     arguments: tuple[str, ...]
     identifier: str | None = None
     listing: Listing | None = None
+    documented_exit_codes: tuple[int, ...] = (0,)
 
 
 WAVE_LISTING = Listing(arguments=("wave", "list", "--json"), names=(("waves", "wave"),))

@@ -877,3 +877,65 @@ class AnswerDashboardRequestOfAnInboxItemTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(response.status, 500)
+
+
+SCHEDULER_STATUS = (PYTHON, ENTRY_POINT, "scheduler", "status", "--json")
+STALE_SCHEDULER = (
+    '{"schema_version": 1, "last_tick": {"ts": "2026-10-19T08:00:00Z", "duration_ms": 4, "actions_applied": 0},'
+    ' "tick_stale_after": 15, "stale": true}\n'
+)
+
+
+class AnswerDashboardRequestOfTheHeartbeatTest(unittest.TestCase):
+    def test_should_render_the_last_tick_of_a_stale_scheduler_under_200(self):
+        # Arrange
+        runner = ScriptedProcessRunner({SCHEDULER_STATUS: ProcessAnswer(exit_code=1, stdout=STALE_SCHEDULER)})
+
+        # Act
+        response = answer_get("/views/heartbeat", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(
+            response,
+            DashboardResponse(
+                status=200,
+                content_type="text/html; charset=utf-8",
+                body=b'<p class="heartbeat">Last tick <time datetime="2026-10-19T08:00:00Z">2026-10-19T08:00:00Z</time>,'
+                b' 60 min ago <strong class="heartbeat-stale">stale</strong></p>',
+            ),
+        )
+
+
+class AnswerDashboardRequestOfTheProjectSelectorTest(unittest.TestCase):
+    def test_should_select_the_project_carried_in_the_address(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {PROJECT_LIST: ProcessAnswer(stdout='{"schema_version": 1, "projects": [{"name": "oak"}]}\n')}
+        )
+
+        # Act
+        response = answer_get("/views/selector?project=oak", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(
+            response.body,
+            b'<label>Project <select name="project"><option value="">All projects</option>'
+            b'<option value="oak" selected>oak</option></select></label><button>show</button>',
+        )
+
+
+class AnswerDashboardRequestOfAViewOfOneProjectTest(unittest.TestCase):
+    def test_should_render_the_rows_of_that_project_alone(self):
+        # Arrange
+        waves = '{"schema_version": 1, "waves": [{"wave": "w4", "project": "oak"}, {"wave": "w5", "project": "elm"}]}\n'
+        runner = ScriptedProcessRunner({WAVE_LIST: ProcessAnswer(stdout=waves)})
+
+        # Act
+        response = answer_get("/views/waves?project=oak", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(
+            response.body,
+            b"<dl><dt>schema_version</dt><dd>1</dd><dt>waves</dt><dd><ol><li><dl><dt>wave</dt><dd>w4</dd>"
+            b"<dt>project</dt><dd>oak</dd></dl></li></ol></dd></dl>",
+        )

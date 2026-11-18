@@ -13,7 +13,7 @@ from brigade.dashboard.render_report_fragment import render_report_fragment
 from brigade.dashboard.render_reports_fragment import render_reports_fragment
 from brigade.dashboard.render_run_fragment import render_run_fragment
 from brigade.dashboard.render_wave import render_wave
-from brigade.dashboard.route_command import WAVE_LISTING, CommandRoute, route_command
+from brigade.dashboard.route_command import PROJECT_LISTING, WAVE_LISTING, CommandRoute, route_command
 from brigade.dashboard.run_routed_command import CommandAnswer
 
 LEDGER_VIEW = "ledger"
@@ -23,6 +23,13 @@ CORPUS_VIEW = "corpus"
 INBOX_VIEW = "inbox"
 DOCUMENT = "document"
 WAVE_EVENTS = ("wave", "show", "--json", "--events")
+STALE_SCHEDULER_EXIT_CODE = 1
+REGION_ROUTES = {
+    "heartbeat": CommandRoute(
+        arguments=("scheduler", "status", "--json"), documented_exit_codes=(0, STALE_SCHEDULER_EXIT_CODE)
+    ),
+    "selector": CommandRoute(arguments=PROJECT_LISTING.arguments),
+}
 
 
 @dataclass(frozen=True)
@@ -73,6 +80,8 @@ def _route_ledger(query: dict) -> ViewRoute:
 
 def route_view(target: str, renderers: dict[str, Callable[[dict], str]]) -> ViewRoute | None:
     address = urlsplit(target)
+    if address.path in REGION_ROUTES:
+        return ViewRoute(routes={DOCUMENT: REGION_ROUTES[address.path]}, render=_render_with(renderers[address.path]))
     if address.path == LEDGER_VIEW:
         return _route_ledger(parse_qs(address.query))
     route = route_command(target)
