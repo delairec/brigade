@@ -37,7 +37,7 @@ from tests.unit.commands.command_runtime import (
     write_operational_corpus,
 )
 from tests.unit.commands.create_plugin_resolver import create_plugin_resolver
-from tests.unit.commands.run_directories import FIRST_RUN, create_run_record, create_run_result, write_run
+from tests.unit.commands.run_directories import FIRST_RUN, SECOND_RUN, create_run_record, create_run_result, write_run
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
     TURN_COUNTING_PROBE,
@@ -888,6 +888,55 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "T7",
                     "--run-id",
                     ANY,
+                )
+            ],
+        )
+
+    def test_should_launch_the_build_run_on_the_fallback_while_the_client_is_on_a_rate_limit(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        (self.root / "config" / "config.toml").write_text(
+            CONFIGURATION_OF_A_TWO_DAY_STALL
+            + '[fallback]\nclient = "fake"\n[fallback.reasoning]\nstandard = { model = "devstral", effort = "high" }\n',
+            encoding="utf-8",
+        )
+        cut_on_the_rate_limit = {
+            **create_run_result(SECOND_RUN, "failed", "2026-10-19T08:30:00Z"),
+            "client": "double",
+            "error_class": "rate_limit",
+            "reset": {"hour": "15:00", "timezone": "UTC"},
+        }
+        write_ledger(self.root, [CUT_OF_M4_ON_THE_WAVE_BRANCH, cut_on_the_rate_limit, WAVE_STARTED])
+        runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+
+        # Act
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "start",
+                    "build-task",
+                    "task=@TASK.T7",
+                    "base=integration/M4",
+                    "--slot",
+                    "build",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--brief",
+                    str(self.root / "state" / "briefs" / "tidepool_w16-T7.md"),
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                    "--fallback",
                 )
             ],
         )

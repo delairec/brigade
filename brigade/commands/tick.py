@@ -225,6 +225,7 @@ def _launch_rebase_of_the_branch(runtime: Runtime, configuration: Configuration,
         task=action.task,
         detach=True,
         resume=False,
+        fallback=action.on_fallback,
     )
     append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=RUNNING_STATE))
     run(rebasing, runtime)
@@ -262,6 +263,7 @@ def _launch_task(runtime: Runtime, configuration: Configuration, action: LaunchT
         task=action.task,
         detach=True,
         resume=False,
+        fallback=action.on_fallback,
     )
     append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=RUNNING_STATE))
     run(building, runtime)
@@ -286,6 +288,7 @@ def _launch_verification(runtime: Runtime, configuration: Configuration, action:
         task=action.task,
         detach=True,
         resume=False,
+        fallback=action.on_fallback,
     )
     run(verifying, runtime)
 
@@ -303,6 +306,7 @@ def _launch_remediation(runtime: Runtime, configuration: Configuration, action: 
         task=action.task,
         detach=True,
         resume=False,
+        fallback=action.on_fallback,
     )
     run(remediating, runtime)
     append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=FIXING_STATE))
@@ -339,6 +343,7 @@ def _launch_check_repair(runtime: Runtime, configuration: Configuration, action:
         task=action.task,
         detach=True,
         resume=False,
+        fallback=action.on_fallback,
     )
     run(repairing, runtime)
     append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=FIXING_STATE))
@@ -357,6 +362,7 @@ def _rebuild_task(runtime: Runtime, configuration: Configuration, action: Rebuil
         task=action.task,
         detach=True,
         resume=False,
+        fallback=action.on_fallback,
     )
     run(rebuilding, runtime)
     append_event(
@@ -379,6 +385,7 @@ def _launch_rebase(runtime: Runtime, configuration: Configuration, action: Rebas
         task=action.task,
         detach=True,
         resume=False,
+        fallback=action.on_fallback,
     )
     run(rebasing, runtime)
     append_event(runtime.paths, runtime.now, TaskState(wave=action.wave, task=action.task, state=FIXING_STATE))
@@ -427,6 +434,7 @@ def _resume_task_run(runtime: Runtime, action: ResumeTaskRun) -> None:
         task=record.task,
         detach=True,
         resume=True,
+        fallback=action.on_fallback,
     )
     append_event(
         runtime.paths,

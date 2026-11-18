@@ -21,6 +21,7 @@ def launch_planner(runtime: Runtime, project: str, request: str) -> dict:
         task=None,
         detach=True,
         resume=False,
+        fallback=False,
     )
     launched = run(planning, runtime)
     return {field: launched[field] for field in LAUNCH_FIELDS if field in launched}

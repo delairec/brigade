@@ -66,6 +66,7 @@ class RunClientPrecedenceTest(unittest.TestCase):
             task=None,
             detach=False,
             resume=False,
+            fallback=False,
         )
 
         # Act
@@ -207,6 +208,7 @@ class RunDetachedTest(unittest.TestCase):
             task=None,
             detach=True,
             resume=False,
+            fallback=False,
         )
 
     def test_should_record_the_run_and_hand_it_to_a_process_of_its_own(self):
@@ -341,6 +343,44 @@ def _resolve_the_delivering_client(kind: str, name: str, **places):
     return plugins[kind]
 
 
+class RunDetachedOnTheFallbackTest(unittest.TestCase):
+    def test_should_record_the_run_on_the_client_the_fallback_names(self):
+        # Arrange
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        (root / "config").mkdir()
+        (root / "config" / "config.toml").write_text(
+            CLIENT_AND_DOCUMENT_CONFIGURATION + '[fallback]\nclient = "fake"\n', encoding="utf-8"
+        )
+        request = Namespace(
+            procedure="request-plan",
+            slot="plan",
+            project=None,
+            cwd=str(root),
+            brief=None,
+            arguments=("request=tidepool_1",),
+            run_id="20261019T090000Z-a1b2c3",
+            wave=None,
+            task=None,
+            detach=True,
+            resume=False,
+            fallback=True,
+        )
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            spawn_process=spawn_as_this_process,
+            resolve_plugin=create_plugin_resolution(TURN_COUNTING_PROBE),
+        )
+
+        # Act
+        run(request, runtime)
+
+        # Assert
+        record = json.loads((root / "state" / "runs" / "20261019T090000Z-a1b2c3" / "run.json").read_text("utf-8"))
+        self.assertEqual(record["client"], "fake")
+
+
 class RunAttachedTest(unittest.TestCase):
     def test_should_run_the_client_to_its_end_and_report_its_outcome(self):
         # Arrange
@@ -359,6 +399,7 @@ class RunAttachedTest(unittest.TestCase):
             task=None,
             detach=False,
             resume=False,
+            fallback=False,
         )
         runtime = create_test_runtime(
             create_test_paths(root),
@@ -405,6 +446,7 @@ class RunAttachedTest(unittest.TestCase):
             task=None,
             detach=False,
             resume=False,
+            fallback=False,
         )
         runtime = create_test_runtime(
             create_test_paths(root),
@@ -446,6 +488,7 @@ class RunAttachedBoundingTheRunsTest(unittest.TestCase):
             task=None,
             detach=False,
             resume=False,
+            fallback=False,
         )
         runtime = create_test_runtime(
             create_test_paths(self.root),
@@ -526,6 +569,7 @@ class RunAttachedInterruptedTest(unittest.TestCase):
             task=None,
             detach=False,
             resume=False,
+            fallback=False,
         )
         runtime = create_test_runtime(
             create_test_paths(root),
@@ -565,6 +609,7 @@ class RunOfASlotBoundInAnUnreadableInstructionsCorpusTest(unittest.TestCase):
             task=None,
             detach=False,
             resume=False,
+            fallback=False,
         )
         runtime = create_test_runtime(
             create_test_paths(root), run_process=_fail_awawa, resolve_plugin=_resolve_the_delivering_client
@@ -654,6 +699,7 @@ class RunOfAProjectWithoutAForgeTest(unittest.TestCase):
             task=None,
             detach=True,
             resume=False,
+            fallback=False,
         )
 
         # Act

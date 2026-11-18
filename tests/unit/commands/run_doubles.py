@@ -23,6 +23,7 @@ def create_plugin_resolution(probe: dict, forge=None):
         create_plugin_resolver(
             {
                 ("client", "double"): ScriptedClient({"probe": probe}),
+                ("client", "fake"): ScriptedClient({"probe": probe}),
                 ("progress_form", "markdown"): markdown,
                 ("forge", "github"): forge or PluginDouble(kind="forge", name="github"),
             }

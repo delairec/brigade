@@ -20,6 +20,7 @@ from brigade.ledger.pattern_ratified import PatternRatified
 from brigade.ledger.plan_lint_failed import PlanLintFailed
 from brigade.ledger.pr_merged import PrMerged
 from brigade.ledger.repair_pr_opened import RepairPrOpened
+from brigade.ledger.run_client_switched import RunClientSwitched
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.run_noted import RunNoted
 from brigade.ledger.signal_recorded import SignalRecorded
@@ -60,6 +61,7 @@ DECLARED_EVENTS = {
     kind.name: kind
     for kind in (
         RunFinished,
+        RunClientSwitched,
         WaveStarted,
         WaveParked,
         WaveBlocked,

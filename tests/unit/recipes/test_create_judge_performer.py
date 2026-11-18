@@ -74,6 +74,7 @@ class CreateJudgePerformerTest(unittest.TestCase):
                     task=None,
                     detach=False,
                     resume=False,
+                    fallback=False,
                 )
             ],
         )
