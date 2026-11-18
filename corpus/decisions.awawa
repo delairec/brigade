@@ -8001,3 +8001,90 @@ DECISION ARunOnTheFallbackStaysOnItWhenItsClientWouldRunItInAnotherWorktree
 		+ "run on a client granting no tools in the checkout of the project"
 	SOURCE "the delivery of @TASK.B144"
 		REF @TASK.B144
+
+DECISION TheAwawaTabIsAnAddonServedByAChildProcessOfBrigadeServeForTheProjectsHoldingACorpus
+	TITLE "the awawa tab of the dashboard is an addon: brigade serve starts, for the projects where"
+		+ "awawa finds a corpus and for those alone, a child process that serves the tab, calls the"
+		+ "awawa binary and keeps its answers in a cache until the .awawa files change; a crash of"
+		+ "it leaves the dashboard up"
+	STATUS active
+	DESC "brigade serve starts the child process only for the registered projects where awawa finds"
+		+ "a corpus: where no project holds one it starts no awawa process, and the tab serves no"
+		+ "project that holds none"
+	DESC "the child process reads a corpus through the awawa binary alone, and keeps each answer in"
+		+ "a cache until a .awawa file of the project changes"
+	DESC "a crash of the child process leaves brigade serve up and its other views served"
+	DESC "the addon is no plugin kind of"
+		+ "@DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported: it answers no"
+		+ "operation by a document, the resolver gains no kind, and brigade serve starts and owns"
+		+ "the process"
+		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
+	DESC "narrows DESC 1 of @DECISION.ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand for"
+		+ "the awawa tab alone: the child process serves the tab, and every other view stays"
+		+ "rendered by the server from the --json of a command"
+		REF @DECISION.ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand
+	DESC "binds the tasks of @MILESTONE.M18 on the awawa tab"
+		REF @MILESTONE.M18
+	REJECTED "the process of brigade serve calling the awawa binary at each request of the tab,"
+		+ "with a cache in memory and no second process, the option « À la demande »: the user"
+		+ "chose the addon as a process of its own, whose crash does not take the dashboard down"
+		+ "and that is not started where no project uses awawa"
+	RATIONALE "the user sees the awawa view as an addon launched beside the dashboard; the cache"
+		+ "answers the cost awawa-ui states in its README, editors/intellij/ui/README.md of the"
+		+ "awawa repository: one awawa show per entity of a type, 0.6 s for 232 entities over 5,000"
+		+ "lines on 8 threads, its own view refreshing when a .awawa file is saved"
+	RATIONALE "how the page reaches the child process, behind the port and the token of the"
+		+ "dashboard or otherwise, and whether one process serves every such project or one each,"
+		+ "are not ruled: the tasks of @MILESTONE.M18 settle them from the mockup; the child"
+		+ "process is written under @DECISION.PythonStandardLibraryOnly as the rest of brigade"
+		REF @MILESTONE.M18
+		REF @DECISION.PythonStandardLibraryOnly
+	SOURCE "the user's words of 2026-11-18: « Ensuite pour la vue \"awawa\", en effet ça sera du"
+		+ "read-only, mais on avait bien travaillé le plugin ui (actuellement installé dans"
+		+ "intellij) et donc j'aimerais qu'on reprenne les fruits de ce travail dans la vue web de"
+		+ "brigade dans un onglet dédié pour awawa, qui doit donc être lancé en parallèle je"
+		+ "suppose, et je le considère comme un addon dans le dashboard car les projets sans awawa"
+		+ "= on ne lance pas de process awawa pour ce cas. »"
+	SOURCE "the user's ruling of 2026-11-18: « Process addon à part (Recommandé) », « brigade serve"
+		+ "démarre, pour les seuls projets où awawa trouve un corpus, un process enfant qui sert"
+		+ "l'onglet awawa, appelle le binaire et garde ses réponses en cache jusqu'au prochain"
+		+ "changement des fichiers .awawa ; un crash n'emporte pas le dashboard. »"
+
+DECISION TheAwawaTabPortsTheReadOnlyViewsOfAwawaUiAndReplacesTheCorpusView
+	TITLE "the awawa tab ports to the web the read-only views of the IntelliJ plugin awawa-ui and"
+		+ "replaces the Corpus view of the dashboard; Clean, which deletes entities, is not ported"
+	STATUS active
+	DESC "the tab carries what awawa-ui shows of a corpus: its Tree, its Board, its Dependencies"
+		+ "and its Health views, its filters and its search, its colours by lifecycle and its"
+		+ "reading of a registered project at a ref; how each is laid on the page is left to the"
+		+ "mockup and to the tasks of @MILESTONE.M18"
+		REF @MILESTONE.M18
+	DESC "the tab is read-only: it writes nothing to a corpus, and Clean, the one action of"
+		+ "awawa-ui that deletes entities, is not ported"
+	DESC "the Corpus view of the dashboard, brigade/dashboard/render_corpus_view.py, its tree, its"
+		+ "board and its dependencies, is replaced by the tab and removed once the tab serves them"
+	DESC "binds the tasks of @MILESTONE.M18 on the awawa tab, with"
+		+ "@DECISION.TheAwawaTabIsAnAddonServedByAChildProcessOfBrigadeServeForTheProjectsHoldingACorpus"
+		REF @MILESTONE.M18
+		REF @DECISION.TheAwawaTabIsAnAddonServedByAChildProcessOfBrigadeServeForTheProjectsHoldingACorpus
+	REJECTED "Clean ported with the other views: it deletes entities, the user ruling the tab"
+		+ "read-only, « en effet ça sera du read-only », and a second corpus editor in the"
+		+ "dashboard being already refused, awawa-web editing the corpus"
+	RATIONALE "the user wants the work done on the plugin taken up in the web view of brigade, in a"
+		+ "tab of its own; the README of awawa-ui, editors/intellij/ui/README.md of the awawa"
+		+ "repository, names the views listed here, and its docs/handbook.html describes the plugin"
+		+ "for a port to another editor or to the web"
+	RATIONALE "@DECISION.TheDashboardIsBuiltThePluginAndAwawaWebAreKept keeps the plugin for the"
+		+ "work in the IDE and awawa-web as the editor of the corpus, and rejects a second corpus"
+		+ "editor in the dashboard: the tab adds a reader and replaces neither; the plugin reads a"
+		+ "registered project at a ref through GET /api/corpus/<project>?ref=<ref>, an /api/ route"
+		+ "@DECISION.ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand keeps serving"
+		REF @DECISION.TheDashboardIsBuiltThePluginAndAwawaWebAreKept
+		REF @DECISION.ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand
+	SOURCE "the user's words of 2026-11-18: « Ensuite pour la vue \"awawa\", en effet ça sera du"
+		+ "read-only, mais on avait bien travaillé le plugin ui (actuellement installé dans"
+		+ "intellij) et donc j'aimerais qu'on reprenne les fruits de ce travail dans la vue web de"
+		+ "brigade dans un onglet dédié pour awawa »"
+	SOURCE "the facts the session established on 2026-11-18 from the README of awawa-ui: its views,"
+		+ "Tree, Board, Dependencies and Health, its filters and search, its colours by lifecycle,"
+		+ "its reading at a ref through brigade serve, and Clean, which deletes entities"
