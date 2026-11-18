@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import shutil
 import signal
@@ -891,6 +892,57 @@ class RunSegmentsOfARunThatSwitchedClientTest(RunSegmentsTestCase):
                 "model_taken": "devstral",
                 "reason": "rate_limit",
             },
+        )
+
+
+class RunSegmentsOfARunOnTheFallbackTest(RunSegmentsTestCase):
+    def test_should_run_the_segment_after_a_handover_on_the_client_the_run_returns_to(self):
+        # Arrange
+        plan = self.create_plan(
+            ["handed_over", "done"], progress="- the test is written\n", handovers=1, on_fallback=True
+        )
+        switch = RunClientSwitched(
+            run=RUN_ID,
+            client_left="fake",
+            model_left="devstral",
+            client_taken="claude-code",
+            model_taken="opus",
+            reason="reset",
+        )
+        on_the_client = dataclasses.replace(
+            plan,
+            client="claude-code",
+            client_adapter=ClientAnsweringOutcomesDouble(["done"]),
+            on_fallback=False,
+            client_switched=switch,
+            first_segment=2,
+        )
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver(), return_to_client=lambda _: on_the_client)
+
+        # Assert
+        self.assertEqual(
+            [(event["event"], event.get("segment"), event.get("client")) for event in self.read_events()],
+            [
+                ("run.finished", 1, "fake"),
+                ("signal.recorded", 1, None),
+                ("run.client_switched", None, None),
+                ("run.finished", 2, "claude-code"),
+            ],
+        )
+
+    def test_should_keep_the_client_of_a_run_that_does_not_return_to_its_own(self):
+        # Arrange
+        plan = self.create_plan(["handed_over", "done"], progress="- the test is written\n", handovers=1)
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver(), return_to_client=lambda unchanged: unchanged)
+
+        # Assert
+        self.assertEqual(
+            [(event["event"], event.get("segment"), event.get("client")) for event in self.read_events()],
+            [("run.finished", 1, "fake"), ("signal.recorded", 1, None), ("run.finished", 2, "fake")],
         )
 
 
