@@ -10,6 +10,7 @@ The `client` key of `config.toml` selects the client adapter:
 | `claude-code` | Claude Code |
 | `vibe` | Mistral Vibe, its Rust CLI |
 | `fake` | the adapter that replays recorded result documents |
+| `fake-fallback` | the `fake` adapter under another name, the fallback of the tests |
 | any name `<name>` | an executable `brigade-client-<name>` on your `PATH` |
 
 The table `[clients.<name>]` of `config.toml` holds the settings of that adapter.
@@ -45,6 +46,25 @@ review = "vibe"
 The table `[slot_clients]` of `config.toml` binds a slot to another client adapter, one key per slot among the nine.
 A slot runs on the client `[slot_clients]` binds to it, else on the `CLIENT` of its project, else on the `client` key.
 
+## A fallback client
+
+```toml
+[fallback]
+client = "vibe"
+
+[fallback.reasoning]
+standard = { model = "devstral", effort = "high" }
+light = { model = "devstral-small", effort = "medium" }
+```
+
+While a rate limit of a client is in force and none of the fallback, no wave pauses on the quota: the tick launches
+the runs of the tasks on the fallback, with the model its table `[fallback.reasoning]` binds to the level of their
+role, and a run cut on `rate_limit` continues there at the next tick, in a new session on its progress file. A role
+whose level the table does not bind waits for the reset, its task in `blocked:quota`; an order, a study and a report
+wait for it too. From the reset, the next launches and the next segment of a run on the fallback go back to the
+client; a running segment is never cut. Each switch records `run.client_switched`. A rate limit of the fallback
+itself pauses the waves as a rate limit does without one.
+
 ## What each client can do
 
 `brigade adapter matrix` prints one row per client adapter and one column per capability: `full` when the probe
@@ -60,6 +80,7 @@ each fallback. For the built-in adapters, `brigade adapter matrix --markdown` pr
 | Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Turn count | Tool grants | Reset hour | Graceful stop |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | fake | full | full | fallback | fallback | fallback | fallback | fallback | fallback | fallback |
+| fake-fallback | full | full | fallback | fallback | fallback | fallback | fallback | fallback | fallback |
 
 Fallbacks:
 
