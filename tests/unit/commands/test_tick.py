@@ -992,7 +992,33 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
         COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
-        self.assertEqual([(argv[6], argv[-1]) for argv in self.spawn.argvs], [("build", "--fallback")])
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "start",
+                    "build-task",
+                    "task=@TASK.T7",
+                    "base=integration/M4",
+                    "--slot",
+                    "build",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--brief",
+                    str(self.root / "state" / "briefs" / "tidepool_w16-T7-checks.md"),
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                    "--fallback",
+                )
+            ],
+        )
 
     def test_should_launch_the_review_on_the_fallback_while_the_client_is_on_a_rate_limit(self):
         # Arrange
@@ -4398,7 +4424,31 @@ class TickLaunchingATaskWhoseChecksPassedAndWhoseBranchConflictsWithTheWaveBranc
         COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
-        self.assertEqual([(argv[6], argv[-1]) for argv in self.spawn.argvs], [("rebase", "--fallback")])
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "start",
+                    "rebase-on-base",
+                    "task=@TASK.T7",
+                    "base=integration/M4",
+                    "--slot",
+                    "rebase",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                    "--fallback",
+                )
+            ],
+        )
 
     def test_should_launch_the_rebase_slot_on_the_worktree_of_the_task_instead_of_its_build(self):
         # Act
@@ -4497,7 +4547,31 @@ class TickLaunchingATaskWithoutAPullRequestWhoseBranchConflictsWithTheWaveBranch
         COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
-        self.assertEqual([(argv[6], argv[-1]) for argv in self.spawn.argvs], [("rebase", "--fallback")])
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "start",
+                    "rebase-on-base",
+                    "task=@TASK.T7",
+                    "base=integration/M4",
+                    "--slot",
+                    "rebase",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                    "--fallback",
+                )
+            ],
+        )
 
     def test_should_launch_the_rebase_slot_with_the_task_and_its_base_and_no_pull_request(self):
         # Act
@@ -5511,7 +5585,31 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
 
         # Assert
-        self.assertEqual([(argv[6], argv[-1]) for argv in self.spawn.argvs], [("rebase", "--fallback")])
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "start",
+                    "rebase-on-base",
+                    "pr=42",
+                    "task=@TASK.T7",
+                    "--slot",
+                    "rebase",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                    "--fallback",
+                )
+            ],
+        )
 
     def test_should_abort_a_conflicting_rebase_and_launch_the_rebase_slot_in_fixing(self):
         # Arrange
@@ -6682,7 +6780,33 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
         COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
 
         # Assert
-        self.assertEqual([(argv[6], argv[-1]) for argv in self.spawn.argvs], [("build", "--fallback")])
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "start",
+                    "build-task",
+                    "task=@TASK.T7",
+                    "base=integration/M4",
+                    "--slot",
+                    "build",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--brief",
+                    str(self.root / "state" / "briefs" / "tidepool_w16-T7-rebuild.md"),
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                    "--fallback",
+                )
+            ],
+        )
 
     def test_should_launch_the_build_slot_on_the_worktree_of_the_task_and_rebase_nothing(self):
         # Act
