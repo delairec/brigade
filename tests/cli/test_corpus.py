@@ -151,3 +151,41 @@ class BrigadeCorpusThroughTheDashboardWithoutARefTest(unittest.TestCase):
                 "types": ["DECISION", "SCHEMA", "TASK"],
             },
         )
+
+
+BOARD_SCHEMA = (
+    'SCHEMA TASK\n\tDESC "a task"\n\tFIELD TITLE string\n\t\tREQUIRED\n'
+    "\tFIELD STATUS draft|todo|implemented\n\t\tREQUIRED\n"
+)
+BOARD_TASKS = (
+    'TASK B1\n\tTITLE "Read the corpus"\n\tSTATUS todo\n\nTASK B2\n\tTITLE "Draw the board"\n\tSTATUS implemented\n'
+)
+
+
+class BrigadeCorpusViewBoardTest(unittest.TestCase):
+    def setUp(self):
+        root = tempfile.TemporaryDirectory()
+        self.addCleanup(root.cleanup)
+        self.machine = TemporaryMachine(Path(root.name).resolve())
+        self.machine.install_awawa(self)
+        self.machine.run_init()
+        project = TemporaryProject(Path(root.name).resolve() / "projects" / "app", self.machine.describe_environment())
+        project.write("corpus/schema.awawa", BOARD_SCHEMA)
+        project.write("corpus/tasks.awawa", BOARD_TASKS)
+        project.track("corpus")
+        project.run_git("commit", "--quiet", "-m", "first")
+        self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(project.path), "--corpus-mode", "control")
+
+    def test_should_print_the_board_of_the_tasks_by_status(self):
+        # Act
+        completed = self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "corpus", "app", "--view", "board", "--type", "TASK", "--json"
+        )
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        document = json.loads(completed.stdout)
+        self.assertEqual(document["view"], "board")
+        self.assertEqual(document["columns"][0], {"label": "draft", "value": "draft", "entities": []})
+        self.assertEqual(document["columns"][1]["entities"][0]["label"], "Read the corpus")
+        self.assertEqual(document["columns"][2]["entities"][0]["code"], "B2")

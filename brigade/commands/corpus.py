@@ -1,8 +1,11 @@
 import argparse
+import json
 from pathlib import Path
 
 from brigade.command import Argument, Command, ExclusiveArguments
+from brigade.corpus.corpus_reader import CorpusReader
 from brigade.corpus.describe_corpus_view import CorpusView, describe_corpus_view
+from brigade.corpus.describe_view_document import ViewRequest, describe_view_document
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_corpus_types import read_corpus_types
 from brigade.errors import BrigadeError
@@ -15,6 +18,8 @@ FIELD_NAME_WIDTH = 6
 TREE_FIELDS = ("ref", "sha", "kind", "root")
 AWAWA_WEB_ADDRESS = "http://127.0.0.1:7878/"
 NOTHING = "nothing"
+VIEWS = ("tree", "board", "dependencies", "health")
+JSON_INDENT = 2
 
 
 def _render_board(document: dict) -> list[str]:
@@ -37,6 +42,8 @@ def _render_dependencies(dependencies: dict) -> list[str]:
 
 
 def _render_text(document: dict) -> str:
+    if "view" in document:
+        return json.dumps(document, indent=JSON_INDENT)
     lines = [
         f"@PROJECT.{document['project']}",
         *(f"{name:<{FIELD_NAME_WIDTH}}{document[name]}" for name in TREE_FIELDS if document[name] is not None),
@@ -51,7 +58,7 @@ def _render_text(document: dict) -> str:
 
 
 def corpus(request: argparse.Namespace, runtime: Runtime) -> dict:
-    if request.type is None and (request.field is not None or request.entity is not None):
+    if request.view is None and request.type is None and (request.field is not None or request.entity is not None):
         raise BrigadeError("--field and --entity read the entities of --type")
     configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     tree = prepare_project_tree(request, configuration, runtime)
@@ -64,13 +71,24 @@ def corpus(request: argparse.Namespace, runtime: Runtime) -> dict:
         "root": str(tree.root),
         "types": read_corpus_types(runtime.run_process, tree.root),
     }
-    if request.type is None:
+    if request.view is None and request.type is None:
         return document
+    awawa_web = {"awawa_web": AWAWA_WEB_ADDRESS if find_awawa_web(runtime.run_process) else None}
+    if request.view is not None:
+        reader = CorpusReader(runtime.run_process, tree.root, configuration.ide_link)
+        view_request = ViewRequest(
+            view=request.view,
+            entity_type=request.type,
+            field=request.field,
+            filters=tuple(request.filter),
+            search=request.search,
+            entity=request.entity,
+        )
+        return document | awawa_web | describe_view_document(reader, view_request)
     view = CorpusView(
         entity_type=request.type, field=request.field, entity=request.entity, ide_link=configuration.ide_link
     )
-    awawa_web = AWAWA_WEB_ADDRESS if find_awawa_web(runtime.run_process) else None
-    return document | describe_corpus_view(runtime.run_process, tree.root, view) | {"awawa_web": awawa_web}
+    return document | describe_corpus_view(runtime.run_process, tree.root, view) | awawa_web
 
 
 COMMAND = Command(
@@ -95,7 +113,31 @@ COMMAND = Command(
         ),
         Argument(("--type",), {"help": "the entity type whose entities the document lists"}),
         Argument(("--field",), {"help": "with --type, the field whose values the board groups the entities by"}),
-        Argument(("--entity",), {"help": "with --type, an @TYPE.Name whose dependencies the document lists"}),
+        Argument(
+            ("--entity",),
+            {
+                "help": "with --type, an @TYPE.Name whose dependencies the document lists;"
+                " with --view, the detail of that entity added to the view"
+            },
+        ),
+        Argument(
+            ("--view",),
+            {"choices": VIEWS, "help": "the document of one view of the corpus, by the rules of awawa-ui"},
+        ),
+        Argument(
+            ("--filter",),
+            {
+                "action": "append",
+                "default": [],
+                "metavar": "<field>=<value>",
+                "help": "with --view, keeps the entities of --type whose field holds the value;"
+                " <field>.<field>=<value> reads a field of the entities it refers to; repeatable",
+            },
+        ),
+        Argument(
+            ("--search",),
+            {"help": "with --view, keeps the entities whose label, code, facts, status or file carries the text"},
+        ),
     ),
     run=corpus,
     render_text=_render_text,
