@@ -35,11 +35,41 @@ class DashboardPageTest(unittest.TestCase):
         self.assertEqual(collector.style_elements, [])
         self.assertEqual(collector.inline_attributes, [])
 
-    def test_should_link_every_view_from_its_navigation(self):
+    def test_should_group_the_views_of_its_rail_by_what_they_serve(self):
         # Act
         collector = collect_page_elements()
 
         # Assert
         self.assertEqual(
-            collector.view_links, ["#status", "#waves", "#inbox", "#corpus", "#ledger", "#reports", "#runs"]
+            collector.groups,
+            [
+                ("Operate", ["#status", "#waves", "#runs", "#inbox"]),
+                ("Understand", ["#ledger", "#reports"]),
+                ("Addons", ["#corpus"]),
+            ],
+        )
+
+    def test_should_hold_the_project_selector_and_the_heartbeat_of_the_tick_as_regions_of_their_own(self):
+        # Act
+        collector = collect_page_elements()
+
+        # Assert
+        self.assertEqual(
+            collector.regions,
+            [
+                (
+                    "form",
+                    {"class": "project-selector", "method": "get", "action": "/", "data-region": "/views/selector"},
+                ),
+                ("div", {"class": "heartbeat-region", "data-region": "/views/heartbeat"}),
+            ],
+        )
+
+    def test_should_hold_the_notice_a_refused_post_is_shown_in(self):
+        # Act
+        collector = collect_page_elements()
+
+        # Assert
+        self.assertEqual(
+            collector.alerts, [("p", {"id": "notice", "class": "notice", "role": "alert", "hidden": None})]
         )

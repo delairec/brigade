@@ -118,7 +118,7 @@ def _render_comparison(document: dict) -> str:
     ]
     header = (
         "measure",
-        *(escape(f"{percentile} {_name_range(day_range)}") for day_range in ranges for percentile in ("p50", "p90")),
+        *(f"{percentile} {_name_range(day_range)}" for day_range in ranges for percentile in ("p50", "p90")),
     )
     counts = ", ".join(escape(f"{day_range['runs']} runs from {_name_range(day_range)}") for day_range in ranges)
     return f"<p>{counts}</p>{render_html_table(header, rows, 'no measure')}"

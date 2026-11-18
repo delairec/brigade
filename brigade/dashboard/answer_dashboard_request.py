@@ -2,17 +2,20 @@ import hmac
 import json
 from importlib.resources import files
 from string import Template
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from brigade.dashboard.dashboard_exchange import LOOPBACK_HOST, Dashboard, DashboardResponse, IncomingRequest
+from brigade.dashboard.render_heartbeat import render_heartbeat
 from brigade.dashboard.render_home import render_home
 from brigade.dashboard.render_inbox_view import render_inbox_view
+from brigade.dashboard.render_project_selector import render_project_selector
 from brigade.dashboard.render_runs_fragment import render_runs_fragment
 from brigade.dashboard.route_action import route_action
 from brigade.dashboard.route_change import route_change
 from brigade.dashboard.route_command import CommandRoute, route_command
 from brigade.dashboard.route_view import route_view
-from brigade.dashboard.run_routed_command import run_routed_command
+from brigade.dashboard.run_routed_command import CommandAnswer, run_routed_command
+from brigade.dashboard.select_project_rows import select_project_rows
 from brigade.runtime import Runtime
 
 PAGE_DATA = files("brigade.dashboard") / "data"
@@ -33,6 +36,7 @@ FORBIDDEN = 403
 NOT_FOUND = 404
 OK = 200
 VIEW_RENDERERS = {"inbox": render_inbox_view, "status": render_home, "runs": render_runs_fragment}
+PROJECT_PARAMETER = "project"
 
 
 def _answer_error(status: int, message: str) -> DashboardResponse:
@@ -84,11 +88,28 @@ def _answer_change(target: str, runtime: Runtime) -> DashboardResponse:
     return _answer_route(route, runtime)
 
 
+def _read_project(target: str) -> str | None:
+    return next(iter(parse_qs(urlsplit(target).query).get(PROJECT_PARAMETER, ())), None)
+
+
+def _select_project_answer(answer: CommandAnswer, project: str | None) -> CommandAnswer:
+    document = select_project_rows(json.loads(answer.document), project)
+    return CommandAnswer(status=answer.status, document=json.dumps(document))
+
+
 def _answer_view(target: str, runtime: Runtime) -> DashboardResponse:
-    view = route_view(target.removeprefix(VIEWS_PREFIX), VIEW_RENDERERS)
+    project = _read_project(target)
+    renderers = {
+        **VIEW_RENDERERS,
+        "heartbeat": lambda document: render_heartbeat(document, runtime.read_clock()),
+        "selector": lambda document: render_project_selector(document, project),
+    }
+    view = route_view(target.removeprefix(VIEWS_PREFIX), renderers)
     if view is None:
         return _answer_error(NOT_FOUND, f"no view serves {target}")
-    answers = {name: run_routed_command(route, runtime) for name, route in view.routes.items()}
+    answers = {
+        name: _select_project_answer(run_routed_command(route, runtime), project) for name, route in view.routes.items()
+    }
     status = next(iter(answers.values())).status
     return DashboardResponse(status=status, content_type=HTML, body=view.render(answers).encode())
 
