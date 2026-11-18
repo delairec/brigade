@@ -254,9 +254,11 @@ MILESTONE M18
 		+ "and @DECISION.TheAwawaTabPortsTheReadOnlyViewsOfAwawaUiAndReplacesTheCorpusView rule"
 		REF @DECISION.TheAwawaTabIsAnAddonServedByAChildProcessOfBrigadeServeForTheProjectsHoldingACorpus
 		REF @DECISION.TheAwawaTabPortsTheReadOnlyViewsOfAwawaUiAndReplacesTheCorpusView
-	DESC "its first step is a mockup in an Artifact, made with the role max, covering the"
-		+ "stylesheet, the navigation, every page of brigade and the awawa tab; its tasks are"
-		+ "drafted from the mockup, page by page, and it holds none until then"
+	DESC "its first step was a mockup in an Artifact, made with the role max, covering the"
+		+ "stylesheet, the navigation, every page of brigade and the awawa tab; its twelve tasks,"
+		+ "@TASK.B264 to @TASK.B275, are drafted from that mockup, page by page"
+		REF @TASK.B264
+		REF @TASK.B275
 	DESC "comes before @MILESTONE.M14, which names it in AFTER: the curve of the caps of @TASK.B229"
 		+ "arrives on the redesigned dashboard and is not redone"
 		REF @MILESTONE.M14
