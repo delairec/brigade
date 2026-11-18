@@ -952,7 +952,7 @@ class DoctorSchemaTest(DoctorTestCase):
             "kind": "optional",
             "state": "warning",
             "detail": f"{self.runtime.paths.schema_file} differs from the shipped schema",
-            "fallback": "throw the registry away, then run brigade init",
+            "fallback": "run brigade init: it upgrades the schema to the shipped one, every entity kept",
         }
 
     def test_should_warn_of_a_schema_that_differs_from_the_shipped_one(self):
