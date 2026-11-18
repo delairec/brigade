@@ -122,6 +122,7 @@ class BrigadeZipappTest(unittest.TestCase):
             "| Test-suite adapter | Launch | Result | Resume | Transcripts | Actions | Turn count | Tool grants | Reset hour | Graceful stop |\n"
             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
             "| fake | full | full | fallback | fallback | fallback | fallback | fallback | fallback | fallback |\n"
+            "| fake-fallback | full | full | fallback | fallback | fallback | fallback | fallback | fallback | fallback |\n"
             "\n"
             "Fallbacks:\n"
             "\n"
