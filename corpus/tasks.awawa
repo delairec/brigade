@@ -17718,7 +17718,8 @@ TASK B241
 	TITLE "A task keeps the branch it was first cut on: a change of its TITLE or TYPE between two"
 		+ "ticks orphans no branch, worktree or pull request of it, the snapshot naming a branch"
 		+ "from TYPE and TITLE only for a task whose branch is not yet cut"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 442
 	TYPE fix
 	MILESTONE @MILESTONE.M13
 	COMPONENT "the tick"
