@@ -5,8 +5,10 @@ from string import Template
 from brigade.command import Argument, Command
 from brigade.commands._find_answering_clients import find_answering_clients
 from brigade.commands._find_installed_scheduler import find_installed_scheduler
+from brigade.corpus.lint_corpus import lint_corpus
+from brigade.corpus.locate_corpus_lock import locate_corpus_lock
 from brigade.corpus.shipped_data import SHIPPED_DATA, SHIPPED_SCHEMA
-from brigade.errors import BrigadeError, ToolFailure
+from brigade.errors import BrigadeError, CorpusLintFailed, ToolFailure
 from brigade.git.add_origin import add_origin
 from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.create_repository import create_repository
@@ -15,6 +17,7 @@ from brigade.git.read_origin_url import read_origin_url
 from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
 from brigade.system.create_directory import create_directory
+from brigade.system.hold_lock import hold_lock
 from brigade.system.read_configuration import CONFIGURATION_REQUIRED, read_configuration
 from brigade.system.write_bytes_file import write_bytes_file
 
@@ -22,9 +25,10 @@ DOCUMENT_SCHEMA_VERSION = 1
 GITIGNORE_FILE = ".gitignore"
 GITIGNORE_CONTENT = "config.toml\n"
 COMMIT_MESSAGE = "brigade init: the registry"
+UPGRADE_MESSAGE = "brigade init: upgrade the schema of the registry"
 STATE_WIDTH = 9
 NAME_WIDTH = 13
-STATES = ("created", "present", "differs")
+STATES = ("created", "present", "upgraded", "differs")
 COMMENTED_CLIENT_LINE = '# client = ""'
 DOCTOR_STEP = "brigade doctor"
 PROJECT_STEP = "brigade project add <path>"
@@ -109,6 +113,35 @@ def _ensure_file(name: str, path: Path, content: bytes) -> dict:
     return {**item, "state": "differs"}
 
 
+def _upgrade_schema(runtime: Runtime, item: dict, shipped: bytes) -> dict:
+    config_root = runtime.paths.config_root
+    schema = runtime.paths.schema_file
+    with hold_lock(locate_corpus_lock(runtime.paths.lock_directory, config_root)):
+        installed = schema.read_bytes()
+        write_bytes_file(schema, shipped)
+        report = lint_corpus(runtime.run_process, config_root)
+        if not report.clean:
+            write_bytes_file(schema, installed)
+            raise CorpusLintFailed(
+                f"awawa lint --strict refused the registry against the shipped schema:\n{report.output}\n"
+                "the registry is restored, its schema as it was installed: correct the entities lint names,"
+                " then run brigade init again"
+            )
+        commit_files(
+            runtime.run_process,
+            CommitRequest(repository=config_root, files=(schema.name,), message=UPGRADE_MESSAGE),
+        )
+    return {**item, "state": "upgraded"}
+
+
+def _ensure_schema(runtime: Runtime) -> dict:
+    shipped = SHIPPED_SCHEMA.read_bytes()
+    item = _ensure_file("schema", runtime.paths.schema_file, shipped)
+    if item["state"] != "differs":
+        return item
+    return _upgrade_schema(runtime, item, shipped)
+
+
 def _render_item(item: dict) -> str:
     return f"{item['state']:<{STATE_WIDTH}}{item['name']:<{NAME_WIDTH}}{item['path']}"
 
@@ -148,16 +181,16 @@ def _render_text(document: dict) -> str:
 def _ensure_shipped_files(runtime: Runtime, clients: tuple[str, ...]) -> list[dict]:
     gitignore = runtime.paths.config_root / GITIGNORE_FILE
     shipped_files = [
-        ("schema", runtime.paths.schema_file, SHIPPED_SCHEMA.read_bytes()),
         (".gitignore", gitignore, GITIGNORE_CONTENT.encode("utf-8")),
         ("config.toml", runtime.paths.configuration_file, _render_configuration(runtime, clients).encode("utf-8")),
     ]
-    committed_files = (runtime.paths.schema_file, gitignore)
-    file_items = [_ensure_file(name, path, content) for name, path, content in shipped_files]
+    committed_files = (str(runtime.paths.schema_file), str(gitignore))
+    file_items = [
+        _ensure_schema(runtime),
+        *(_ensure_file(name, path, content) for name, path, content in shipped_files),
+    ]
     created_to_commit = tuple(
-        path.name
-        for (_, path, _), item in zip(shipped_files, file_items, strict=True)
-        if path in committed_files and item["state"] == "created"
+        Path(item["path"]).name for item in file_items if item["path"] in committed_files and item["state"] == "created"
     )
     if created_to_commit:
         commit_files(

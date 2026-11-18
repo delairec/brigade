@@ -5,10 +5,18 @@ import unittest
 from pathlib import Path
 
 from brigade.commands.init import COMMAND, init
+from brigade.corpus.locate_corpus_lock import locate_corpus_lock
 from brigade.corpus.shipped_data import SHIPPED_SCHEMA
-from brigade.errors import BrigadeError, CannotWrite, ToolNotFound
+from brigade.errors import BrigadeError, CannotWrite, CorpusLintFailed, ToolNotFound
+from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 from tests.unit.client_double import create_built_in_clients
-from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner, create_corpus_double
+from tests.unit.commands.command_runtime import (
+    ProcessAnswer,
+    ScriptedProcessRunner,
+    answer,
+    answer_from_corpus,
+    create_corpus_double,
+)
 from tests.unit.commands.create_plugin_resolver import create_plugin_resolver
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -23,6 +31,9 @@ TIMER_INSTALLED = {
 }
 NO_PROJECT = {}
 REMOTE_URL = "git@example.org:ada/brigade-config.git"
+EARLIER_SCHEMA = "SCHEMA PROJECT\n\tFIELD PATH string\n\tFIELD GRAPH string\n"
+REGISTERED_PROJECT = 'PROJECT ada\n\tPATH "/home/ada/ada"\n'
+LINT_FINDINGS = "projects.awawa:3:2: L002 GRAPH is not a field of PROJECT"
 
 
 class SchedulerStatusDouble:
@@ -201,7 +212,6 @@ class InitTest(unittest.TestCase):
         init(self.no_option, self.runtime)
         (self.config_root / ".git").mkdir()
         rows = [
-            ("schema", "_schema.awawa", 1),
             (".gitignore", ".gitignore", 2),
             ("config.toml", "config.toml", 3),
         ]
@@ -282,6 +292,173 @@ class InitTest(unittest.TestCase):
         self.assertEqual(
             str(refusal.exception), f"cannot write {self.config_root / '_schema.awawa'}: No such file or directory"
         )
+
+
+class LockProbingProcessRunnerDouble:
+    def __init__(self, lock: Path):
+        self.lock = lock
+        self.lock_free_at_lint = []
+
+    def run(self, request):
+        if request.argv[:2] != ("awawa", "lint"):
+            return answer_from_corpus(NO_PROJECT, request)
+        with hold_lock_without_waiting(self.lock) as acquired:
+            self.lock_free_at_lint.append(acquired)
+        return answer(request, "")
+
+
+class InitSchemaUpgradeTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.addCleanup(self.root.cleanup)
+        self.answers = {
+            **_create_git_answers(ProcessAnswer(stdout="Ada\n"), ProcessAnswer(stdout="ada@example.org\n")),
+            ("awawa", "lint"): ProcessAnswer(),
+        }
+        self.runtime, self.runner = _create_machine_runtime(Path(self.root.name), self.answers)
+        self.config_root = self.runtime.paths.config_root
+        self.schema = self.config_root / "_schema.awawa"
+        self.registry = self.config_root / "projects.awawa"
+        self.no_option = argparse.Namespace(remote=None)
+        init(self.no_option, self.runtime)
+        (self.config_root / ".git").mkdir()
+        self.schema.write_text(EARLIER_SCHEMA)
+        self.registry.write_text(REGISTERED_PROJECT)
+        self.registry_written_at = self.registry.stat().st_mtime_ns
+        self.runner.argvs.clear()
+
+    def refuse_the_registry(self) -> None:
+        self.answers[("awawa", "lint")] = ProcessAnswer(stdout=LINT_FINDINGS, exit_code=1)
+
+    def test_should_report_the_schema_upgraded(self):
+        # Act
+        document = init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(document["items"][1], {"name": "schema", "path": str(self.schema), "state": "upgraded"})
+
+    def test_should_write_the_shipped_schema_in_place_of_the_installed_one(self):
+        # Act
+        init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(self.schema.read_bytes(), SHIPPED_SCHEMA.read_bytes())
+
+    def test_should_lint_the_registry_against_the_shipped_schema(self):
+        # Act
+        init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(("awawa", "lint", "--strict", str(self.config_root)), self.runner.argvs)
+
+    def test_should_lint_the_registry_while_it_holds_the_lock_of_the_registry_repository(self):
+        # Arrange
+        prober = LockProbingProcessRunnerDouble(locate_corpus_lock(self.runtime.paths.lock_directory, self.config_root))
+        runtime = create_test_runtime(
+            self.runtime.paths,
+            run_process=ScriptedProcessRunner(
+                _create_git_answers(ProcessAnswer(stdout="Ada\n"), ProcessAnswer(stdout="ada@example.org\n")),
+                fallback=prober.run,
+            ).run,
+            resolve_plugin=create_plugin_resolver(_create_machine_plugins()),
+        )
+
+        # Act
+        init(self.no_option, runtime)
+
+        # Assert
+        self.assertEqual(prober.lock_free_at_lint, [False])
+
+    def test_should_commit_the_schema_alone(self):
+        # Act
+        init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(("git", "add", "--", "_schema.awawa"), self.runner.argvs)
+        self.assertIn(
+            ("git", "commit", "--quiet", "-m", "brigade init: upgrade the schema of the registry"), self.runner.argvs
+        )
+
+    def test_should_keep_every_entity_of_an_upgraded_registry(self):
+        # Act
+        init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(self.registry.stat().st_mtime_ns, self.registry_written_at)
+
+    def test_should_refuse_the_upgrade_with_the_output_of_lint_and_say_the_registry_is_restored(self):
+        # Arrange
+        self.refuse_the_registry()
+
+        # Act
+        with self.assertRaises(CorpusLintFailed) as refusal:
+            init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "awawa lint --strict refused the registry against the shipped schema:\n"
+            "projects.awawa:3:2: L002 GRAPH is not a field of PROJECT\n"
+            "the registry is restored, its schema as it was installed: correct the entities lint names,"
+            " then run brigade init again",
+        )
+
+    def test_should_put_the_installed_schema_back_when_lint_refuses_the_registry(self):
+        # Arrange
+        self.refuse_the_registry()
+
+        # Act
+        with self.assertRaises(CorpusLintFailed):
+            init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(self.schema.read_text(), "SCHEMA PROJECT\n\tFIELD PATH string\n\tFIELD GRAPH string\n")
+
+    def test_should_commit_nothing_when_lint_refuses_the_registry(self):
+        # Arrange
+        self.refuse_the_registry()
+
+        # Act
+        with self.assertRaises(CorpusLintFailed):
+            init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertNotIn(("git", "add", "--", "_schema.awawa"), self.runner.argvs)
+        self.assertNotIn(
+            ("git", "commit", "--quiet", "-m", "brigade init: upgrade the schema of the registry"), self.runner.argvs
+        )
+
+    def test_should_keep_every_entity_of_a_registry_lint_refuses(self):
+        # Arrange
+        self.refuse_the_registry()
+
+        # Act
+        with self.assertRaises(CorpusLintFailed):
+            init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(self.registry.stat().st_mtime_ns, self.registry_written_at)
+
+    def test_should_leave_a_shipped_schema_present_and_unlinted(self):
+        # Arrange
+        self.schema.write_bytes(SHIPPED_SCHEMA.read_bytes())
+
+        # Act
+        document = init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(document["items"][1], {"name": "schema", "path": str(self.schema), "state": "present"})
+        self.assertNotIn(("awawa", "lint", "--strict", str(self.config_root)), self.runner.argvs)
+
+    def test_should_keep_every_entity_of_a_registry_whose_schema_is_the_shipped_one(self):
+        # Arrange
+        self.schema.write_bytes(SHIPPED_SCHEMA.read_bytes())
+
+        # Act
+        init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(self.registry.stat().st_mtime_ns, self.registry_written_at)
 
 
 class InitOverAFileWhereTheRepositoryGoesTest(unittest.TestCase):
@@ -377,7 +554,7 @@ class InitTextTest(unittest.TestCase):
             "created  schema       /c/_schema.awawa\n"
             "differs  .gitignore   /c/.gitignore\n"
             "\n"
-            "init: created 1 · present 1 · differs 1\n"
+            "init: created 1 · present 1 · upgraded 0 · differs 1\n"
             "warning: .gitignore differs from the shipped file and is left as it is\n"
             "\n"
             "next steps:\n"
@@ -411,7 +588,7 @@ class InitTextTest(unittest.TestCase):
                     text,
                     "present  repository   /c\n"
                     "\n"
-                    "init: created 0 · present 1 · differs 0\n"
+                    "init: created 0 · present 1 · upgraded 0 · differs 0\n"
                     f"{expected_line}\n"
                     "\n"
                     "next steps:\n"

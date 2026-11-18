@@ -8238,3 +8238,18 @@ DECISION BrigadeSupportsLinuxMacOsAndWindowsEachCheckedByACiJobOnThatPlatform
 		+ "besoin d'ajouter en open question vu qu'on l'a tranchée. »"
 	SOURCE "the user's words of 2026-11-18 before it: « faut que ça soit compatible sur toutes les"
 		+ "machines, pas seulement la nôtre, donc il faut éviter le spécifique »"
+
+DECISION InitPutsBackTheInstalledBytesOfTheSchemaWhenLintRefusesItsUpgrade
+	TITLE "brigade init, when awawa lint --strict refuses the registry against the shipped schema,"
+		+ "writes back the bytes of _schema.awawa it read before the upgrade, under the same lock,"
+		+ "and never checks the schema out of HEAD"
+	STATUS active
+	DESC "binds SPEC 3 of @TASK.B197"
+		REF @TASK.B197
+	REJECTED "restore_files, git checkout HEAD -- _schema.awawa, as write_corpus_files restores a"
+		+ "refused write: an installed schema the user edited without committing it would come back"
+		+ "as HEAD holds it, not as it was"
+	RATIONALE "SPEC 3 puts the installed schema back as it was, and only the bytes read before the"
+		+ "write hold it whatever the index and HEAD of the registry repository hold"
+	SOURCE "the build run of @TASK.B197 of 2026-11-18"
+		REF @TASK.B197

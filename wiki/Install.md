@@ -46,8 +46,11 @@ is 1; a missing optional item is a warning, reported with its fallback.
 | the instructions corpus `config.toml` names, `awawa lint --strict` clean or not | no |
 | an installed `_schema.awawa` identical to the shipped one | no |
 
-> **Watch out:** an installed `_schema.awawa` that differs from the shipped one is only a warning, yet brigade supports
-> no registry of an older schema: throw it away and run `brigade init` again, then register the projects anew.
+An installed `_schema.awawa` that differs from the shipped one is a warning naming `brigade init`, which upgrades it:
+it writes the shipped schema in its place, every entity of the registry kept as it is, and checks the registry with
+`awawa lint --strict`. When lint passes, it commits `_schema.awawa` alone and reports the schema `upgraded`; when lint
+refuses an entity the shipped schema no longer admits, it puts the installed schema back, commits nothing and exits 1
+with the output of lint: correct the entities lint names, then run `brigade init` again.
 
 <details><summary>Rarer warnings of <code>brigade doctor</code></summary>
 
@@ -80,6 +83,8 @@ it.
 
 <details><summary>Running <code>brigade init</code> again</summary>
 
-Run again, it rewrites nothing: a file that differs from the shipped one is left as it is and reported as a warning.
+Run again, it upgrades a `_schema.awawa` that differs from the shipped one, as above, and leaves one identical to it
+`present`. `config.toml` and `.gitignore` are left as they are: one that differs from the shipped file is reported as
+a warning.
 
 </details>
