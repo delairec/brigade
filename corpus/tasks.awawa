@@ -7907,7 +7907,8 @@ TASK B90
 TASK B91
 	TITLE "A note handed to a running run by brigade run note, carried by the brief of its next"
 		+ "segment"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 443
 	TYPE feat
 	MILESTONE @MILESTONE.M13
 	COMPONENT "runs"
