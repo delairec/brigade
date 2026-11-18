@@ -39,6 +39,8 @@ TOOL_GRANTS_FEATURE = "tool_grants"
 ACTIONS_OPERATION = "actions"
 TRANSCRIPTS_OPERATION = "transcripts"
 RESUME_OPERATION = "resume"
+HANDED_OVER_OUTCOME = "handed_over"
+NO_RESUMED_SESSION = None
 FIRST_SEGMENT = 1
 WRITE_CAPABILITY = "write"
 CAPABILITY_SEPARATOR = ","
@@ -178,9 +180,10 @@ def _find_last_finished_segment(run_directory: Path) -> int:
     )
 
 
-def _read_session(run_directory: Path, segment: int) -> str | None:
+def _read_resumed_session(run_directory: Path, segment: int) -> str | None:
     path = run_directory / SEGMENTS_DIRECTORY / str(segment) / RESULT_FILE
-    return read_run_finished(path, "segment result").session
+    finished = read_run_finished(path, "segment result")
+    return NO_RESUMED_SESSION if finished.outcome == HANDED_OVER_OUTCOME else finished.session
 
 
 @dataclass(frozen=True)
@@ -259,7 +262,7 @@ def _plan_resumption(request: RunRequest, probe: ProbeAnswer, run_directory: Pat
         "resumed": request.resume,
         "first_segment": FIRST_SEGMENT if last_finished_segment is None else last_finished_segment + 1,
         "resumed_session": (
-            _read_session(run_directory, last_finished_segment)
+            _read_resumed_session(run_directory, last_finished_segment)
             if last_finished_segment is not None and RESUME_OPERATION in probe.operations
             else None
         ),

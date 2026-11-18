@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from brigade.ledger.task_pr_opened import TaskPrOpened
+from brigade.ledger.task_state import QUOTA_RESUME_REASON
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.task_report_order import TaskReportOrder
 from brigade.tick.build_snapshot import PreflightFailure, TaskAmendment
@@ -156,6 +157,7 @@ class ResumeTaskRun:
     task: str
     run: str
     state: str | None = None
+    reason: str = QUOTA_RESUME_REASON
 
 
 @dataclass(frozen=True)

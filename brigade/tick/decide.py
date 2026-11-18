@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 from brigade.ledger.branch_kept import BranchKept
 from brigade.ledger.format_instant import format_instant
-from brigade.ledger.task_state import REBUILD_REASON
+from brigade.ledger.task_state import HANDOVER_RESUME_REASON, REBUILD_REASON
 from brigade.orders.is_order_due import is_order_due
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.task_report_order import TaskReportOrder
@@ -98,6 +98,7 @@ PASSING_VERDICT = "pass"
 SUCCESSFUL_CHECK = "success"
 OTHER_BASE_REASON = "pull request base is not the base of its task"
 RUN_DEAD_REASON = "run dead"
+HANDED_OVER_RUN_REASON = "run {run} handed over after {segments} segments"
 RUN_NOT_STARTED_REASON = "run not started"
 PREFLIGHT_FAILED_REASON = "preflight failed"
 CHECK_SUITE_CREATION_DELAY = timedelta(minutes=1)
@@ -247,17 +248,27 @@ def _plan_launches(snapshot: Snapshot, paused: set) -> tuple:
             if free_slots[wave.project] <= 0:
                 break
             free_slots[wave.project] -= 1
-            launches.append(
-                LaunchTask(
-                    project=wave.project,
-                    wave=wave.wave,
-                    branch=wave.base,
-                    task=task.name,
-                    task_branch=task.branch,
-                    pull_request_checks=_read_open_pull_request_checks(task),
-                )
-            )
+            launches.append(_decide_launch(wave, task))
     return tuple(launches)
+
+
+def _decide_launch(wave: WaveFacts, task: TaskFacts) -> LaunchTask | ResumeTaskRun:
+    if task.handed_over_run is not None:
+        return ResumeTaskRun(
+            wave=wave.wave,
+            task=task.name,
+            run=task.handed_over_run.run,
+            state=RUNNING_STATE,
+            reason=HANDOVER_RESUME_REASON,
+        )
+    return LaunchTask(
+        project=wave.project,
+        wave=wave.wave,
+        branch=wave.base,
+        task=task.name,
+        task_branch=task.branch,
+        pull_request_checks=_read_open_pull_request_checks(task),
+    )
 
 
 def _read_open_pull_request_checks(task: TaskFacts) -> HeadChecks | None:
@@ -834,6 +845,8 @@ def _describe_blocked_run(blocked: BlockedRun) -> str:
 def _describe_dead_run(task: TaskFacts) -> str:
     if task.blocked_run is not None:
         return _describe_blocked_run(task.blocked_run)
+    if task.handed_over_run is not None:
+        return HANDED_OVER_RUN_REASON.format(run=task.handed_over_run.run, segments=task.handed_over_run.segments)
     if task.last_run is None:
         return RUN_NOT_STARTED_REASON
     return f"{RUN_DEAD_REASON}: {task.last_run}"

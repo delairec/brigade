@@ -89,7 +89,7 @@ def _run_with_handovers(plan: RunPlan, runtime: Runtime, stop: StopSignalReceive
         if record.outcome not in RELAUNCH_SIGNALS:
             return records
         append_event(runtime.paths, instant, _describe_signal(plan, record))
-        if record.number > plan.handovers or not _holds_progress(plan, runtime):
+        if len(records) > plan.handovers or not _holds_progress(plan, runtime):
             return records
 
 

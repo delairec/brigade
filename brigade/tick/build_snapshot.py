@@ -122,6 +122,7 @@ CLIENT_STOP_ERROR_CLASSES = (RATE_LIMIT, AUTHENTICATION)
 REVIEW_SLOT = "review"
 REBASE_SLOT = "rebase"
 BLOCKED_OUTCOME = "blocked"
+HANDED_OVER_OUTCOME = "handed_over"
 DONE_OUTCOME = "done"
 FORGE_ACCOUNT_REASON = "forge_account"
 CLIENT_LOGIN_REASON = "client_login"
@@ -175,6 +176,12 @@ class BlockedRun:
 
 
 @dataclass(frozen=True)
+class HandedOverRun:
+    run: str
+    segments: int
+
+
+@dataclass(frozen=True)
 class TaskAmendment:
     on_pull_request: Entity
     on_wave: Entity
@@ -202,6 +209,7 @@ class TaskFacts:
     holds_uncommitted_changes: bool = False
     last_run: str | None = None
     blocked_run: BlockedRun | None = None
+    handed_over_run: HandedOverRun | None = None
     rebased_by_last_run: bool = False
     last_run_is_a_rebase: bool = False
     stopped_by_login: bool = False
@@ -626,6 +634,13 @@ def _read_blocked_run(reading: WaveReading, run: str) -> BlockedRun | None:
     return BlockedRun(run=run, question=read_run_question(finished[-1].message))
 
 
+def _read_handed_over_run(reading: WaveReading, run: str) -> HandedOverRun | None:
+    finished = [event for event in reading.events if isinstance(event, RunFinished) and event.run == run]
+    if not finished or finished[-1].outcome != HANDED_OVER_OUTCOME:
+        return None
+    return HandedOverRun(run=run, segments=finished[-1].segment)
+
+
 def _is_blocked_run_answered(event, wave: str, run: str) -> bool:
     if isinstance(event, WaveResumed):
         return event.wave == wave and event.reason != QUOTA_REASON
@@ -658,6 +673,7 @@ def _note_last_run(task: TaskFacts, reading: WaveReading, wave: str) -> TaskFact
         task,
         last_run=naming[-1]["run"],
         blocked_run=_read_blocked_run(reading, naming[-1]["run"]),
+        handed_over_run=_read_handed_over_run(reading, naming[-1]["run"]),
         rebased_by_last_run=_is_rebase_done(reading, naming[-1]),
         last_run_is_a_rebase=naming[-1]["slot"] == REBASE_SLOT,
     )

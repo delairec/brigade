@@ -3854,11 +3854,16 @@ DECISION ARunningTaskThatNoLiveRunNamesIsParkedWithItsLastRunInTheReason
 	DESC "the reason is run dead: <run>, the last run directory naming the wave and the task"
 		+ "whatever its state, or run not started when none names them; task.parked keeps its"
 		+ "fields"
-	DESC "a run that ended blocked is the one exception: its task is parked on the text of its"
+	DESC "a run that ended blocked is the first exception: its task is parked on the text of its"
 		+ "question, as"
 		+ "@DECISION.ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQuestion"
 		+ "says"
 		REF @DECISION.ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQuestion
+	DESC "a run whose last run.finished ended handed_over is the second exception: its task is"
+		+ "parked with the reason run <run> handed over after <N> segments, N the segment of that"
+		+ "run.finished, and a requeue resumes that run on its progress file, as @TASK.B231"
+		+ "delivers"
+		REF @TASK.B231
 	DESC "binds @TASK.B168"
 		REF @TASK.B168
 	REJECTED "a run field added to task.parked: a change of the event shape and of every reader of"
@@ -7896,3 +7901,19 @@ DECISION AGlossaryRowNamesACommandByItsLineAFieldAfterItsEntityAndCitesTheTaskOf
 		+ "entity and a field"
 	SOURCE "the build run of @TASK.B257 on 2026-11-17"
 		REF @TASK.B257
+
+DECISION ARunResumedAfterItsHandoversRecordsItsTaskRunningUnderAReasonOfItsOwn
+	TITLE "the resume of a requeued task whose last run handed over records the task running with"
+		+ "the reason resumed after its handovers, never the reason of the resume after the quota"
+		+ "reset"
+	STATUS active
+	DESC "ResumeTaskRun carries the reason its executor records in task.state: resumed after the"
+		+ "quota reset for a run stopped on the quota, resumed after its handovers for a run the"
+		+ "requeue of its task resumes"
+	DESC "binds @TASK.B231"
+		REF @TASK.B231
+	REJECTED "the quota reason reused for both resumes: the snapshot reads the end of a rate limit"
+		+ "from a task.state carrying that reason, and the ledger would name a quota that never"
+		+ "stopped the run"
+	SOURCE "the build run of @TASK.B231 on 2026-11-18"
+		REF @TASK.B231
