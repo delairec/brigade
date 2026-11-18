@@ -172,8 +172,6 @@ def _move_launches_to_the_fallback(snapshot: Snapshot, actions: tuple) -> tuple:
             moved.append(action)
             continue
         slot = _read_launched_slot(action)
-        if slot is None:
-            continue
         level = levels_of_projects[projects_of_waves[action.wave]].get(slot)
         if level in snapshot.fallback.levels:
             moved.append(_move_to_the_fallback(action))
