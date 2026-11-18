@@ -19750,7 +19750,7 @@ TASK B264
 	TITLE "The dashboard gets its foundation: a stylesheet on state tones, a shell with a rail, a"
 		+ "project selector and the heartbeat of the tick, one Python function per component, and a"
 		+ "page script that swaps only what changed"
-	STATUS draft
+	STATUS todo
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
@@ -19831,7 +19831,7 @@ TASK B265
 	TITLE "The Reports view says what a report is and, before one is opened, whether its delivery"
 		+ "went well; brigade report list --json carries the subject, the verdict, the statistics"
 		+ "and the date of each report"
-	STATUS draft
+	STATUS todo
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
@@ -19882,7 +19882,7 @@ TASK B266
 	TITLE "The page of a report is ordered by use: the verdict, what went wrong, what went well and"
 		+ "what comes next, the tasks and what to test by hand, the rest folded; brigade report"
 		+ "show --json names its waves, its pull request and its date"
-	STATUS draft
+	STATUS todo
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
@@ -19943,7 +19943,7 @@ TASK B267
 	TITLE "Home says in one sentence whether brigade works, lists what waits for the user with one"
 		+ "action each, and what the next tick will do; brigade status --json and brigade tick"
 		+ "--dry-run --json carry what it needs"
-	STATUS draft
+	STATUS todo
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
@@ -20015,7 +20015,7 @@ TASK B268
 	TITLE "The Waves view says the state of each wave in the user's words, what the waves delivered"
 		+ "and which tasks were served again and again; brigade wave list --json carries the dates,"
 		+ "the tasks, the halt, the rounds and the cost of each wave"
-	STATUS draft
+	STATUS todo
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
@@ -20068,7 +20068,7 @@ TASK B269
 	TITLE "The page of a wave tells its story: one sentence, what it cost and which task took it,"
 		+ "its halts on a timeline and its events folded; brigade wave show --json names its"
 		+ "milestone"
-	STATUS draft
+	STATUS todo
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
@@ -20122,7 +20122,7 @@ TASK B270
 	TITLE "The Runs view and the page of a run say what a run is, where each run stands and what it"
 		+ "left for its next segment; brigade run list --json dates each run, and brigade run show"
 		+ "--json carries its arguments and the date and the cost of each segment"
-	STATUS draft
+	STATUS todo
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
@@ -20175,7 +20175,7 @@ TASK B271
 	TITLE "The Ledger view says whether brigade is well tuned: what its measures cover, whether the"
 		+ "turn caps fit, what a run takes and what keeps failing; brigade ledger budgets --json"
 		+ "carries the percentiles of each role and brigade ledger --json the failed tick actions"
-	STATUS draft
+	STATUS todo
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
@@ -20327,7 +20327,7 @@ TASK B273
 	TITLE "brigade corpus --view tree, board, dependencies or health prints the document of one"
 		+ "view of a corpus by the rules of awawa-ui, with its filters, its search and the detail"
 		+ "of one entity"
-	STATUS draft
+	STATUS todo
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "corpus"
@@ -20427,7 +20427,7 @@ TASK B274
 	TITLE "brigade serve starts the awawa addon: one child process that answers over its pipes the"
 		+ "documents of brigade corpus --view for the projects holding a corpus, kept warm until"
 		+ "their .awawa files change, and whose crash leaves the dashboard up"
-	STATUS draft
+	STATUS todo
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
@@ -20491,7 +20491,7 @@ TASK B275
 	TITLE "The awawa tab shows the corpus of a project at a ref as awawa-ui does, its tree, its"
 		+ "board, its dependencies and its health, with a detail panel and its state carried by the"
 		+ "address alone; the Corpus view is removed"
-	STATUS draft
+	STATUS todo
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
