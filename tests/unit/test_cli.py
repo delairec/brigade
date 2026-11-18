@@ -23,6 +23,7 @@ ADAPTER_MATRIX = (
     " | Graceful stop |\n"
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
     "| fake | full | full | fallback | fallback | fallback | fallback | fallback | fallback | fallback |\n"
+    "| fake-fallback | full | full | fallback | fallback | fallback | fallback | fallback | fallback | fallback |\n"
     "\n"
     "Fallbacks:\n"
     "\n"

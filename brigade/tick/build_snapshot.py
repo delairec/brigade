@@ -28,7 +28,7 @@ from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_reported import TaskReported
-from brigade.ledger.task_state import QUOTA_RESUME_REASON, TaskState
+from brigade.ledger.task_state import FALLBACK_RESUME_REASON, QUOTA_RESUME_REASON, TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_parked import WaveParked
@@ -544,7 +544,7 @@ def _is_quota_event_of_task(event, wave: str, task: str) -> bool:
         isinstance(event, TaskState)
         and event.wave == wave
         and event.task == task
-        and event.reason == QUOTA_RESUME_REASON
+        and event.reason in (QUOTA_RESUME_REASON, FALLBACK_RESUME_REASON)
     )
 
 

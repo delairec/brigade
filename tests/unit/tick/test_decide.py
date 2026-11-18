@@ -4226,7 +4226,13 @@ class PlanLaunchesOnTheFallbackTest(unittest.TestCase):
             actions,
             (
                 ResumeTaskRun(
-                    wave="shop_w1", task="S3", run=STOPPED_RUN, state="running", slot="build", on_fallback=True
+                    wave="shop_w1",
+                    task="S3",
+                    run=STOPPED_RUN,
+                    state="running",
+                    reason="resumed on the fallback client",
+                    slot="build",
+                    on_fallback=True,
                 ),
             ),
         )

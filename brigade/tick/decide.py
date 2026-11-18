@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 from brigade.ledger.branch_kept import BranchKept
 from brigade.ledger.format_instant import format_instant
-from brigade.ledger.task_state import HANDOVER_RESUME_REASON, REBUILD_REASON
+from brigade.ledger.task_state import FALLBACK_RESUME_REASON, HANDOVER_RESUME_REASON, REBUILD_REASON
 from brigade.orders.is_order_due import is_order_due
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.task_report_order import TaskReportOrder
@@ -157,6 +157,12 @@ def _read_launched_slot(action) -> str | None:
     return SLOTS_OF_TASK_LAUNCHES.get(type(action))
 
 
+def _move_to_the_fallback(action):
+    if isinstance(action, ResumeTaskRun):
+        return dataclasses.replace(action, on_fallback=True, reason=FALLBACK_RESUME_REASON)
+    return dataclasses.replace(action, on_fallback=True)
+
+
 def _move_launches_to_the_fallback(snapshot: Snapshot, actions: tuple) -> tuple:
     projects_of_waves = {wave.wave: wave.project for wave in snapshot.waves}
     levels_of_projects = {project.name: project.levels for project in snapshot.projects}
@@ -170,7 +176,7 @@ def _move_launches_to_the_fallback(snapshot: Snapshot, actions: tuple) -> tuple:
             continue
         level = levels_of_projects[projects_of_waves[action.wave]].get(slot)
         if level in snapshot.fallback.levels:
-            moved.append(dataclasses.replace(action, on_fallback=True))
+            moved.append(_move_to_the_fallback(action))
     return tuple(moved)
 
 

@@ -506,6 +506,17 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             ),
         )
 
+    def test_should_note_no_quota_stop_on_a_task_whose_run_was_resumed_on_the_fallback(self):
+        # Arrange
+        self.record(1, TaskState(wave="w1", task="B1", state="blocked:quota"))
+        self.record(1, TaskState(wave="w1", task="B1", state="running", reason="resumed on the fallback client"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertIsNone(snapshot.waves[0].tasks[0].rate_limit)
+
     def test_should_keep_the_quota_stop_of_a_task_whose_resume_the_ledger_does_not_record(self):
         # Arrange
         self.record(1, TaskState(wave="w1", task="B1", state="blocked:quota"))
