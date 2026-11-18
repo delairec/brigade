@@ -51,6 +51,7 @@ from brigade.tick.actions import (
 )
 from brigade.tick.build_snapshot import (
     BlockedRun,
+    FallbackFacts,
     HandedOverRun,
     LiveRun,
     MilestoneFacts,
@@ -4147,3 +4148,158 @@ class PlanOrderRunsPastTheirMaxWallTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(actions, ())
+
+
+VIBE_BINDING_STANDARD = FallbackFacts(client="vibe", levels=frozenset({"standard"}))
+SHOP_BUILDING_AT_STANDARD = ProjectFacts(name="shop", slots=4, levels={"build": "standard"})
+SHOP_BUILDING_AT_DEEP = ProjectFacts(name="shop", slots=4, levels={"build": "deep"})
+CLIENT_RATE_LIMITED_UNTIL_15 = RateLimit(reset=ResetHour(hour="15:00", timezone="UTC"), client="claude-code")
+FALLBACK_RATE_LIMITED_UNTIL_16 = RateLimit(reset=ResetHour(hour="16:00", timezone="UTC"), client="vibe")
+CUT_ON_THE_CLIENT_S3 = TaskFacts(name="S3", branch="feature/S3-task", rate_limit=CLIENT_RATE_LIMITED_UNTIL_15)
+BUILD_CUT_ON_THE_QUOTA_S3 = TaskFacts(
+    name="S3", branch="feature/S3-task", stopped_run=STOPPED_RUN, stopped_slot="build", resumed_state="running"
+)
+NO_RATE_LIMIT_IN_FORCE = ()
+
+
+class PlanLaunchesOnTheFallbackTest(unittest.TestCase):
+    def test_should_launch_the_next_task_on_the_fallback_without_pausing_its_wave(self):
+        # Arrange
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(create_wave(ALONE, {}),),
+            projects=(SHOP_BUILDING_AT_STANDARD,),
+            rate_limits=(CLIENT_RATE_LIMITED_UNTIL_15,),
+            fallback=VIBE_BINDING_STANDARD,
+        )
+
+        # Act
+        actions = decide(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                LaunchTask(
+                    project="shop",
+                    wave="shop_w1",
+                    branch=TASK_BASE,
+                    task="S3",
+                    task_branch="feature/S3-task",
+                    pull_request_checks=None,
+                    on_fallback=True,
+                ),
+            ),
+        )
+
+    def test_should_record_the_task_of_the_cut_run_on_the_quota_without_pausing_its_wave(self):
+        # Arrange
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(create_wave((CUT_ON_THE_CLIENT_S3,), {"S3": "running"}),),
+            projects=(SHOP_BUILDING_AT_STANDARD,),
+            rate_limits=(CLIENT_RATE_LIMITED_UNTIL_15,),
+            fallback=VIBE_BINDING_STANDARD,
+        )
+
+        # Act
+        actions = decide(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (RecordTaskState(wave="shop_w1", task="S3", state="blocked:quota", reason=None),))
+
+    def test_should_resume_the_cut_run_on_the_fallback_at_the_next_tick(self):
+        # Arrange
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(create_wave((BUILD_CUT_ON_THE_QUOTA_S3,), {"S3": "blocked:quota"}),),
+            projects=(SHOP_BUILDING_AT_STANDARD,),
+            rate_limits=(CLIENT_RATE_LIMITED_UNTIL_15,),
+            fallback=VIBE_BINDING_STANDARD,
+        )
+
+        # Act
+        actions = decide(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                ResumeTaskRun(
+                    wave="shop_w1", task="S3", run=STOPPED_RUN, state="running", slot="build", on_fallback=True
+                ),
+            ),
+        )
+
+
+class PlanLaunchesOfALevelTheFallbackDoesNotBindTest(unittest.TestCase):
+    def test_should_leave_the_task_blocked_on_the_quota_and_launch_nothing_until_the_reset(self):
+        # Arrange
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(create_wave((BUILD_CUT_ON_THE_QUOTA_S3, *ALONE_S9), {"S3": "blocked:quota"}),),
+            projects=(SHOP_BUILDING_AT_DEEP,),
+            rate_limits=(CLIENT_RATE_LIMITED_UNTIL_15,),
+            fallback=VIBE_BINDING_STANDARD,
+        )
+
+        # Act
+        actions = decide(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+
+class PlanLaunchesBackOnTheClientAtTheResetTest(unittest.TestCase):
+    def test_should_resume_the_run_on_the_client_once_its_rate_limit_is_over(self):
+        # Arrange
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(create_wave((BUILD_CUT_ON_THE_QUOTA_S3, *ALONE_S9), {"S3": "blocked:quota"}),),
+            projects=(SHOP_BUILDING_AT_STANDARD,),
+            rate_limits=NO_RATE_LIMIT_IN_FORCE,
+            fallback=VIBE_BINDING_STANDARD,
+        )
+
+        # Act
+        actions = decide(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                ResumeTaskRun(wave="shop_w1", task="S3", run=STOPPED_RUN, state="running", slot="build"),
+                LaunchTask(
+                    project="shop",
+                    wave="shop_w1",
+                    branch=TASK_BASE,
+                    task="S9",
+                    task_branch="feature/S9-task",
+                    pull_request_checks=None,
+                ),
+            ),
+        )
+
+
+class PlanPauseOnARateLimitOfTheFallbackTest(unittest.TestCase):
+    def test_should_pause_every_running_wave_until_the_later_of_the_two_resets(self):
+        # Arrange
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(create_wave(ALONE, {}), CAFE_WAVE),
+            projects=(SHOP_BUILDING_AT_STANDARD, CAFE),
+            rate_limits=(CLIENT_RATE_LIMITED_UNTIL_15, FALLBACK_RATE_LIMITED_UNTIL_16),
+            fallback=VIBE_BINDING_STANDARD,
+        )
+
+        # Act
+        actions = decide(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                PauseWave(wave="shop_w1", reason="quota", resume_at="2026-10-06T16:00:00Z"),
+                PauseWave(wave="cafe_w1", reason="quota", resume_at="2026-10-06T16:00:00Z"),
+            ),
+        )

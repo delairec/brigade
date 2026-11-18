@@ -11,7 +11,8 @@ from brigade.ledger.describe_role_budget import CurrentDigests, RoleBudget, desc
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.run_finished import RunFinished
 from brigade.registry.read_project_field import read_project_field
-from brigade.roles.resolve_role import NO_PROJECT_BINDINGS, ResolvedRole, RoleBindings, resolve_role
+from brigade.roles.read_role_bindings import read_role_bindings
+from brigade.roles.resolve_role import ResolvedRole, resolve_role
 from brigade.runs.create_run_id import create_run_id
 from brigade.runs.read_handovers import read_handovers
 from brigade.runs.read_run_finished import read_run_finished
@@ -44,7 +45,6 @@ NO_RESUMED_SESSION = None
 FIRST_SEGMENT = 1
 WRITE_CAPABILITY = "write"
 CAPABILITY_SEPARATOR = ","
-BINDING_SEPARATOR = "="
 ARGUMENT_SEPARATOR = "="
 CAP_MARGIN = 1.25
 RUN_ID_PATTERN = re.compile(r"\d{8}T\d{6}Z-[0-9a-f]{6}")
@@ -99,29 +99,6 @@ class RunPlan:
     forge_environment: dict = field(default_factory=dict, repr=False)
     edit_tools: tuple[str, ...] = ()
     budget_applied: BudgetApplied | None = None
-
-
-def _read_values(project: Entity, field_name: str) -> list[str]:
-    return [field.value for field in project.fields if field.name == field_name]
-
-
-def _read_role_binding(project: Entity, value: str) -> tuple[str, str]:
-    slot, separator, name = value.partition(BINDING_SEPARATOR)
-    if not separator or not slot.strip() or not name.strip():
-        raise BrigadeError(f"@PROJECT.{project.name} has ROLE {value}, not slot=name")
-    return slot.strip(), name.strip()
-
-
-def _read_bindings(project: Entity | None) -> RoleBindings:
-    if project is None:
-        return NO_PROJECT_BINDINGS
-    path = read_project_field(project, "PATH")
-    return RoleBindings(
-        project=project.name,
-        roles=dict(_read_role_binding(project, value) for value in _read_values(project, "ROLE")),
-        roleset=read_project_field(project, "ROLESET"),
-        project_path=None if path is None else Path(path),
-    )
 
 
 def _locate_cwd(cwd: str | None, project: Entity | None) -> Path:
@@ -217,7 +194,7 @@ def _plan_work(request: RunRequest, setting: RunSetting, runtime: Runtime) -> di
     configuration = setting.configuration
     directories = ProcedureDirectories(shipped=SHIPPED_PROCEDURES, instructions=configuration.instructions)
     procedure = resolve_procedure(request.procedure, directories)
-    role = resolve_role(request.slot, runtime, _read_bindings(setting.project), configuration)
+    role = resolve_role(request.slot, runtime, read_role_bindings(setting.project), configuration)
     role_capabilities = _read_role_capabilities(role)
     budget = _plan_budget(role, procedure, runtime)
     return {

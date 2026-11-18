@@ -36,12 +36,13 @@ from brigade.ledger.wave_started import WaveStarted
 from brigade.orders.is_order_due import OrderFacts
 from brigade.orders.live_order_run import LiveOrderRun
 from brigade.runs.record_run_pid import record_run_pid
-from brigade.system.parse_configuration import Configuration, parse_configuration
+from brigade.system.parse_configuration import Configuration, Fallback, ReasoningRow, parse_configuration
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.reset_hour import ResetHour
 from brigade.tick.actions import LaunchTask
 from brigade.tick.build_snapshot import (
     BlockedRun,
+    FallbackFacts,
     ForgeReaders,
     HandedOverRun,
     LiveRun,
@@ -458,7 +459,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
-                    rate_limit=RateLimit(reset=None),
+                    rate_limit=RateLimit(reset=None, client="claude-code"),
                 ),
                 TaskFacts(
                     name="B2",
@@ -466,6 +467,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
                     pull_request=PULL_REQUEST,
                     stopped_run="r2",
+                    stopped_slot="build",
                 ),
                 TaskFacts(
                     name="B3",
@@ -522,7 +524,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 after=("B0",),
                 pull_request=PULL_REQUEST,
                 worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
-                rate_limit=RateLimit(reset=None),
+                rate_limit=RateLimit(reset=None, client="claude-code"),
             ),
         )
 
@@ -545,7 +547,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 after=("B0",),
                 pull_request=PULL_REQUEST,
                 worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
-                rate_limit=RateLimit(reset=None),
+                rate_limit=RateLimit(reset=None, client="claude-code"),
             ),
         )
 
@@ -570,7 +572,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
-                    rate_limit=RateLimit(reset=None),
+                    rate_limit=RateLimit(reset=None, client="claude-code"),
                     last_run="20261013T100000Z-a00003",
                 ),
                 TaskFacts(
@@ -579,6 +581,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
                     pull_request=PULL_REQUEST,
                     stopped_run="r2",
+                    stopped_slot="build",
                 ),
                 TaskFacts(
                     name="B3",
@@ -616,7 +619,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
-                    rate_limit=RateLimit(reset=None),
+                    rate_limit=RateLimit(reset=None, client="claude-code"),
                     holds_uncommitted_changes=True,
                 ),
                 TaskFacts(
@@ -625,6 +628,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
                     pull_request=PULL_REQUEST,
                     stopped_run="r2",
+                    stopped_slot="build",
                 ),
                 TaskFacts(
                     name="B3",
@@ -742,7 +746,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=f"{self.root}/shop/.brigade/worktrees/B1",
-                            rate_limit=RateLimit(reset=None),
+                            rate_limit=RateLimit(reset=None, client="claude-code"),
                             stopped_run=None,
                             opened_pull_request=None,
                             preflighted_head=None,
@@ -772,6 +776,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                             worktree=None,
                             rate_limit=None,
                             stopped_run="r2",
+                            stopped_slot="build",
                             opened_pull_request=None,
                             preflighted_head=None,
                             verdict=None,
@@ -906,12 +911,49 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             ),
         )
 
+    def test_should_carry_the_fallback_and_the_level_of_each_slot_of_a_project_once_a_fallback_is_configured(self):
+        # Arrange
+        self.configuration = Configuration(
+            fallback=Fallback(client="vibe", reasoning={"standard": ReasoningRow(model="devstral", effort="high")})
+        )
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.fallback, FallbackFacts(client="vibe", levels=frozenset({"standard"})))
+        self.assertEqual(
+            snapshot.projects[0].levels,
+            {
+                "plan": "deep",
+                "build": "standard",
+                "review": "deep",
+                "remediate": "standard",
+                "rebase": "light",
+                "report": "standard",
+                "triage": "standard",
+                "rules": "deep",
+                "explore": "light",
+            },
+        )
+
+    def test_should_carry_no_fallback_and_no_level_without_a_fallback_configured(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertIsNone(snapshot.fallback)
+        self.assertEqual(snapshot.projects[0].levels, {})
+
     def test_should_carry_the_rate_limits_in_force_and_the_studies(self):
         # Act
         snapshot, _ = self.build()
 
         # Assert
-        self.assertEqual(snapshot.rate_limits, (RateLimit(reset=None), RateLimit(reset=None)))
+        self.assertEqual(
+            snapshot.rate_limits,
+            (RateLimit(reset=None, client="claude-code"), RateLimit(reset=None, client="claude-code")),
+        )
         self.assertEqual(
             snapshot.studies,
             (
@@ -987,7 +1029,10 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         snapshot, _ = self.build()
 
         # Assert
-        self.assertEqual(snapshot.rate_limits, (RateLimit(reset=None), RateLimit(reset=None)))
+        self.assertEqual(
+            snapshot.rate_limits,
+            (RateLimit(reset=None, client="claude-code"), RateLimit(reset=None, client="claude-code")),
+        )
 
     def test_should_note_no_rate_limit_on_a_merged_task_whose_last_run_hit_one(self):
         # Arrange
@@ -1022,7 +1067,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=f"{self.root}/shop/.brigade/worktrees/B1",
-                            rate_limit=RateLimit(reset=None),
+                            rate_limit=RateLimit(reset=None, client="claude-code"),
                             stopped_run=None,
                             opened_pull_request=None,
                             preflighted_head=None,
@@ -1052,6 +1097,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                             worktree=None,
                             rate_limit=None,
                             stopped_run="r2",
+                            stopped_slot="build",
                             opened_pull_request=None,
                             preflighted_head=None,
                             verdict=None,
@@ -1151,7 +1197,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=f"{self.root}/shop/.brigade/worktrees/B1",
-                            rate_limit=RateLimit(reset=None),
+                            rate_limit=RateLimit(reset=None, client="claude-code"),
                             stopped_run=None,
                             opened_pull_request=None,
                             preflighted_head=None,
@@ -1181,6 +1227,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                             worktree=None,
                             rate_limit=None,
                             stopped_run="r2",
+                            stopped_slot="build",
                             opened_pull_request=None,
                             preflighted_head=None,
                             verdict=None,
@@ -2458,7 +2505,7 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
         snapshot, _ = self.build()
 
         # Assert
-        self.assertEqual(snapshot.waves[0].tasks[0].rate_limit, RateLimit(reset=None))
+        self.assertEqual(snapshot.waves[0].tasks[0].rate_limit, RateLimit(reset=None, client="claude-code"))
 
     def test_should_resume_a_task_paused_on_the_quota_in_the_state_it_held_before_its_pause(self):
         # Arrange
@@ -2520,7 +2567,7 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
             (
                 "a run handed over at its third segment",
                 "handed_over",
-                HandedOverRun(run="20261019T083000Z-b10c4d", segments=3),
+                HandedOverRun(run="20261019T083000Z-b10c4d", segments=3, slot="build"),
             ),
             ("a run delivered", "done", None),
             ("a run blocked", "blocked", None),

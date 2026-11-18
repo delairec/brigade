@@ -38,12 +38,22 @@ FORGE_ATTEMPTS_KEY = "forge_attempts"
 FORGE_ATTEMPTS_BY_DEFAULT = 3
 FEWEST_FORGE_ATTEMPTS = 1
 ATTRIBUTION_KEY = "attribution"
+REASONING_KEY = "reasoning"
+FALLBACK_KEY = "fallback"
+FALLBACK_CLIENT_KEY = "client"
+FALLBACK_KEYS = (FALLBACK_CLIENT_KEY, REASONING_KEY)
 
 
 @dataclass(frozen=True)
 class ReasoningRow:
     model: str
     effort: str
+
+
+@dataclass(frozen=True)
+class Fallback:
+    client: str
+    reasoning: dict
 
 
 @dataclass(frozen=True)
@@ -74,6 +84,7 @@ class Configuration:
     dashboard_port: int = DASHBOARD_PORT_BY_DEFAULT
     ide_link: str = ""
     quota_window_hours: int = QUOTA_WINDOW_BY_DEFAULT_H
+    fallback: Fallback | None = None
 
 
 @dataclass(frozen=True)
@@ -99,8 +110,7 @@ def _refuse_unknown_keys(table: dict, known_keys: tuple, prefix: str, path: Path
             raise BrigadeError(f"unknown key {prefix}{key} in {path}")
 
 
-def _read_reasoning_row(row, level: str, path: Path) -> ReasoningRow:
-    location = f"reasoning.{level}"
+def _read_reasoning_row(row, location: str, path: Path) -> ReasoningRow:
     _require(row, TABLE, location, path)
     _refuse_unknown_keys(row, REASONING_ROW_KEYS, f"{location}.", path)
     for key in REASONING_ROW_KEYS:
@@ -110,10 +120,23 @@ def _read_reasoning_row(row, level: str, path: Path) -> ReasoningRow:
     return ReasoningRow(model=row["model"], effort=row["effort"])
 
 
-def _read_reasoning(table, path: Path) -> dict:
-    _require(table, TABLE, "reasoning", path)
-    _refuse_unknown_keys(table, REASONING_LEVELS, "reasoning.", path)
-    return {level: _read_reasoning_row(row, level, path) for level, row in table.items()}
+def _read_reasoning(table, location: str, path: Path) -> dict:
+    _require(table, TABLE, location, path)
+    _refuse_unknown_keys(table, REASONING_LEVELS, f"{location}.", path)
+    return {level: _read_reasoning_row(row, f"{location}.{level}", path) for level, row in table.items()}
+
+
+def _read_fallback(document: dict, path: Path) -> Fallback | None:
+    if FALLBACK_KEY not in document:
+        return None
+    table = _require(document[FALLBACK_KEY], TABLE, FALLBACK_KEY, path)
+    _refuse_unknown_keys(table, FALLBACK_KEYS, f"{FALLBACK_KEY}.", path)
+    if FALLBACK_CLIENT_KEY not in table:
+        raise BrigadeError(f"{FALLBACK_KEY} lacks {FALLBACK_CLIENT_KEY} in {path}")
+    return Fallback(
+        client=_require(table[FALLBACK_CLIENT_KEY], STRING, f"{FALLBACK_KEY}.{FALLBACK_CLIENT_KEY}", path),
+        reasoning=_read_reasoning(table.get(REASONING_KEY, {}), f"{FALLBACK_KEY}.{REASONING_KEY}", path),
+    )
 
 
 def _read_client_settings(settings, name: str, path: Path) -> dict:
@@ -190,7 +213,7 @@ def _read_attribution(document: dict, path: Path) -> tuple[str, ...] | None:
 KNOWN_KEYS = (
     *STRING_KEYS,
     REFS_CACHE_MB_KEY,
-    "reasoning",
+    REASONING_KEY,
     "clients",
     "slots",
     SLOT_CLIENTS_KEY,
@@ -208,6 +231,7 @@ KNOWN_KEYS = (
     ATTRIBUTION_KEY,
     DASHBOARD_PORT_KEY,
     QUOTA_WINDOW_KEY,
+    FALLBACK_KEY,
 )
 
 
@@ -234,7 +258,7 @@ def parse_configuration(path: Path) -> Configuration:
     return Configuration(
         **strings,
         refs_cache_mb=_read_refs_cache_mb(document, path),
-        reasoning=_read_reasoning(document.get("reasoning", {}), path),
+        reasoning=_read_reasoning(document.get(REASONING_KEY, {}), REASONING_KEY, path),
         clients=_read_clients(document.get("clients", {}), path),
         slots=_read_slots(document.get("slots", {}), path),
         slot_clients=_read_slot_clients(document.get(SLOT_CLIENTS_KEY, {}), path),
@@ -255,4 +279,5 @@ def parse_configuration(path: Path) -> Configuration:
         attribution=_read_attribution(document, path),
         dashboard_port=read_dashboard_port(document, path),
         quota_window_hours=read_quota_window(document, path),
+        fallback=_read_fallback(document, path),
     )

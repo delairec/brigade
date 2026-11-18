@@ -4550,6 +4550,7 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
                 "task": "T7",
                 "task_branch": "feature/T7-tide-table",
                 "pull_request_checks": None,
+                "on_fallback": False,
                 "waits": "integration/M4 is red at 8885daa, `make test` failed",
             },
             document["decisions"],
@@ -4571,6 +4572,7 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
                 "task": "T7",
                 "task_branch": "feature/T7-tide-table",
                 "pull_request_checks": None,
+                "on_fallback": False,
             },
             document["decisions"],
         )
@@ -5081,6 +5083,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
                 "worktree": str(self.worktree),
                 "head": WAVE_HEAD,
                 "holds_uncommitted_changes": False,
+                "on_fallback": False,
                 "waits": f"integration/M4 is red at {WAVE_HEAD}, `ci / tests` failed",
             },
             document["decisions"],
@@ -5587,6 +5590,7 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
                     "task": "T7",
                     "task_branch": "feature/T7-tide-table",
                     "pull_request_checks": None,
+                    "on_fallback": False,
                 }
             ],
         )
@@ -6560,6 +6564,7 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
                             ),
                         },
                     },
+                    "on_fallback": False,
                 },
                 {"project": "tidepool"},
                 {"project": "tidepool"},

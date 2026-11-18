@@ -64,6 +64,9 @@ from brigade.waves.read_parked_question import BLOCKED_RUN_REASON
 from brigade.waves.read_task_state import PARKED_STATE
 
 BUILD_SLOT = "build"
+REVIEW_SLOT = "review"
+REMEDIATE_SLOT = "remediate"
+REBASE_SLOT = "rebase"
 WAITING_STATE = "queued"
 MERGED_STATE = "merged"
 RUNNING_STATE = "running"
@@ -122,11 +125,53 @@ RUN_LAUNCHES = (
 )
 
 
+SLOTS_OF_TASK_LAUNCHES = {
+    LaunchTask: BUILD_SLOT,
+    LaunchCheckRepair: BUILD_SLOT,
+    RebuildTask: BUILD_SLOT,
+    LaunchVerification: REVIEW_SLOT,
+    LaunchRemediation: REMEDIATE_SLOT,
+    RebaseTask: REBASE_SLOT,
+}
+
+
 def decide(snapshot: Snapshot) -> tuple:
     actions = _plan_every_action(snapshot)
+    if _is_served_by_the_fallback(snapshot):
+        return _move_launches_to_the_fallback(snapshot, actions)
     if _decide_quota_resume_at(snapshot) is None:
         return actions
     return tuple(action for action in actions if not isinstance(action, RUN_LAUNCHES))
+
+
+def _is_served_by_the_fallback(snapshot: Snapshot) -> bool:
+    if snapshot.fallback is None:
+        return False
+    limited_clients = {rate_limit.client for rate_limit in snapshot.rate_limits}
+    return bool(limited_clients) and snapshot.fallback.client not in limited_clients
+
+
+def _read_launched_slot(action) -> str | None:
+    if isinstance(action, ResumeTaskRun):
+        return action.slot
+    return SLOTS_OF_TASK_LAUNCHES.get(type(action))
+
+
+def _move_launches_to_the_fallback(snapshot: Snapshot, actions: tuple) -> tuple:
+    projects_of_waves = {wave.wave: wave.project for wave in snapshot.waves}
+    levels_of_projects = {project.name: project.levels for project in snapshot.projects}
+    moved = []
+    for action in actions:
+        if not isinstance(action, (*RUN_LAUNCHES, LaunchTask)):
+            moved.append(action)
+            continue
+        slot = _read_launched_slot(action)
+        if slot is None:
+            continue
+        level = levels_of_projects[projects_of_waves[action.wave]].get(slot)
+        if level in snapshot.fallback.levels:
+            moved.append(dataclasses.replace(action, on_fallback=True))
+    return tuple(moved)
 
 
 def _plan_every_action(snapshot: Snapshot) -> tuple:
@@ -260,6 +305,7 @@ def _decide_launch(wave: WaveFacts, task: TaskFacts) -> LaunchTask | ResumeTaskR
             run=task.handed_over_run.run,
             state=RUNNING_STATE,
             reason=HANDOVER_RESUME_REASON,
+            slot=task.handed_over_run.slot,
         )
     return LaunchTask(
         project=wave.project,
@@ -301,7 +347,7 @@ def _plan_pauses(snapshot: Snapshot) -> tuple:
         for task in wave.tasks
         if task.rate_limit is not None
     )
-    resume_at = _decide_quota_resume_at(snapshot)
+    resume_at = None if _is_served_by_the_fallback(snapshot) else _decide_quota_resume_at(snapshot)
     if resume_at is None:
         return (
             tuple(pause for pause in (_decide_lost_access_pause(wave) for wave in unpaused) if pause is not None)
@@ -345,7 +391,9 @@ def _plan_resumes(snapshot: Snapshot) -> tuple:
         if wave.pause is not None:
             actions.append(ResumeWave(wave=wave.wave, reason=QUOTA_REASON))
         actions.extend(
-            ResumeTaskRun(wave=wave.wave, task=task.name, run=task.stopped_run, state=task.resumed_state)
+            ResumeTaskRun(
+                wave=wave.wave, task=task.name, run=task.stopped_run, state=task.resumed_state, slot=task.stopped_slot
+            )
             for task in wave.tasks
             if wave.states.get(task.name) == BLOCKED_ON_QUOTA_STATE
         )
