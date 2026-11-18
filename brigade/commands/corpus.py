@@ -5,9 +5,10 @@ from pathlib import Path
 from brigade.command import Argument, Command, ExclusiveArguments
 from brigade.corpus.corpus_reader import CorpusReader
 from brigade.corpus.describe_corpus_view import CorpusView, describe_corpus_view
-from brigade.corpus.describe_view_document import ViewRequest, describe_view_document
+from brigade.corpus.describe_view_document import describe_view_document
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_corpus_types import read_corpus_types
+from brigade.corpus.view_request import ViewRequest
 from brigade.errors import BrigadeError
 from brigade.runtime import Runtime
 from brigade.system.find_awawa_web import find_awawa_web
@@ -57,6 +58,17 @@ def _render_text(document: dict) -> str:
     return "\n".join(lines)
 
 
+def _read_view_request(request: argparse.Namespace) -> ViewRequest:
+    return ViewRequest(
+        view=request.view,
+        entity_type=request.type,
+        field=request.field,
+        filters=tuple(request.filter),
+        search=request.search,
+        entity=request.entity,
+    )
+
+
 def corpus(request: argparse.Namespace, runtime: Runtime) -> dict:
     if request.view is None and request.type is None and (request.field is not None or request.entity is not None):
         raise BrigadeError("--field and --entity read the entities of --type")
@@ -76,15 +88,7 @@ def corpus(request: argparse.Namespace, runtime: Runtime) -> dict:
     awawa_web = {"awawa_web": AWAWA_WEB_ADDRESS if find_awawa_web(runtime.run_process) else None}
     if request.view is not None:
         reader = CorpusReader(runtime.run_process, tree.root, configuration.ide_link)
-        view_request = ViewRequest(
-            view=request.view,
-            entity_type=request.type,
-            field=request.field,
-            filters=tuple(request.filter),
-            search=request.search,
-            entity=request.entity,
-        )
-        return document | awawa_web | describe_view_document(reader, view_request)
+        return document | awawa_web | describe_view_document(reader, _read_view_request(request))
     view = CorpusView(
         entity_type=request.type, field=request.field, entity=request.entity, ide_link=configuration.ide_link
     )
