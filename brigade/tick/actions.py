@@ -16,6 +16,7 @@ class LaunchTask:
     task: str
     task_branch: str
     pull_request_checks: HeadChecks | None
+    on_fallback: bool = False
 
 
 @dataclass(frozen=True)
@@ -74,6 +75,7 @@ class LaunchVerification:
     task: str
     pr: int | None
     worktree: str
+    on_fallback: bool = False
 
 
 @dataclass(frozen=True)
@@ -83,6 +85,7 @@ class LaunchRemediation:
     task: str
     pr: int
     worktree: str
+    on_fallback: bool = False
 
 
 @dataclass(frozen=True)
@@ -96,6 +99,7 @@ class LaunchCheckRepair:
     worktree: str
     checks: tuple[str, ...]
     findings: tuple[PreflightFailure, ...]
+    on_fallback: bool = False
 
 
 @dataclass(frozen=True)
@@ -158,6 +162,8 @@ class ResumeTaskRun:
     run: str
     state: str | None = None
     reason: str = QUOTA_RESUME_REASON
+    slot: str | None = None
+    on_fallback: bool = False
 
 
 @dataclass(frozen=True)
@@ -223,6 +229,7 @@ class RebaseTask:
     worktree: str
     head: str
     holds_uncommitted_changes: bool
+    on_fallback: bool = False
 
 
 @dataclass(frozen=True)
@@ -246,6 +253,7 @@ class RebuildTask:
     worktree: str
     reason: str
     amendment: TaskAmendment
+    on_fallback: bool = False
 
 
 @dataclass(frozen=True)
