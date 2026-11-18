@@ -22,7 +22,11 @@ def _select_dependency_field(reader: CorpusReader, entity_type: str) -> str:
 def _describe_view(reader: CorpusReader, request: ViewRequest) -> dict:
     if request.view == "health":
         return describe_health_view(reader, request.search)
+    if request.entity_type is not None and not reader.rows_of(request.entity_type):
+        raise BrigadeError(f"the corpus holds no entity of type {request.entity_type}")
     if request.view == "tree":
+        if request.filters and request.entity_type is None:
+            raise BrigadeError("--filter reads the entities of --type")
         types = dict.fromkeys(row.type for row in reader.rows)
         rows = [row for entity_type in types for row in reader.rows_of(entity_type)]
         cards = select_view_cards(reader, rows, request)

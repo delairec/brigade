@@ -2,6 +2,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.errors import CommandFailed
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 from tests.unit.commands.command_runtime import answer
 
@@ -79,7 +80,11 @@ def _answer_status(corpus: FakeCorpus, root: Path) -> dict:
 
 def _answer_context(corpus: FakeCorpus, root: Path, entity: FakeEntity) -> dict:
     referring = [
-        other for other in corpus.entities for _, atoms in other.fields for atom in atoms if atom == _target(entity)
+        other
+        for other in corpus.entities
+        for _, atoms in other.fields
+        for atom in atoms
+        if atom == _target(entity) and _target(other) not in _references(entity)
     ]
     return {
         "entities": [_describe_row(entity, root) | {"depth": 0, "fields": _shown_fields(entity)}],
@@ -114,5 +119,12 @@ def _answer(corpus: FakeCorpus, root: Path, request: ProcessRequest) -> ProcessR
     return answer(request, json.dumps(_describe_row(entity, root) | {"fields": _shown_fields(entity)}))
 
 
+def _answer_as_run(corpus: FakeCorpus, root: Path, request: ProcessRequest) -> ProcessRecord:
+    record = _answer(corpus, root, request)
+    if record.exit_code not in request.acceptable_exit_codes:
+        raise CommandFailed(record.argv, record.exit_code, record.stderr)
+    return record
+
+
 def create_awawa_double(corpus: FakeCorpus, root: Path):
-    return lambda request: _answer(corpus, root, request)
+    return lambda request: _answer_as_run(corpus, root, request)
