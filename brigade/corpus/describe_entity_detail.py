@@ -7,10 +7,15 @@ def _describe_neighbour(reader: CorpusReader, target: str) -> dict:
     return {"target": target, "code": card["code"], "label": card["label"], "status": card["status"]}
 
 
+def _read_targets(entities: list[dict]) -> list[str]:
+    return [f"@{entity['type']}.{entity['name']}" for entity in entities]
+
+
 def describe_entity_detail(reader: CorpusReader, target: str) -> dict:
     context = reader.read_context(target)
-    references = [f"@{entity['type']}.{entity['name']}" for entity in context["frontier"]]
-    referencing = [f"@{entity['type']}.{entity['name']}" for entity in context["referenced_by"]]
+    references = _read_targets(context["frontier"])
+    referring_back = [other for other in references if target in _read_targets(reader.read_context(other)["frontier"])]
+    referencing = [*_read_targets(context["referenced_by"]), *referring_back]
     return {
         "entity": reader.show(target),
         "references": [_describe_neighbour(reader, other) for other in references],

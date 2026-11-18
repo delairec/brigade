@@ -69,7 +69,8 @@ type standing no further along that lifecycle, its `file`, its `line` and its `i
 | `--entity @TYPE.Name` | adds `detail`: the entity as `awawa show --json` answers it, `references`, the entities it refers to, and `referenced_by`, those that refer to it, each with its code, its label and its status |
 
 > **Watch out:** `--view board` or `--view dependencies` without `--type` exits 1, and so does a type with no field
-> referring to its own entities under `--view dependencies` without `--field`.
+> referring to its own entities under `--view dependencies` without `--field`; under every view but health, a
+> `--type` the corpus holds no entity of exits 1, and so does `--filter` without `--type`.
 
 The command reads the corpus through awawa alone: one `awawa status --json`, one `awawa context --depth 0
 --with-schema --json` per type shown, one `awawa show --json` per entity, eight at a time, and `awawa lint --json` for

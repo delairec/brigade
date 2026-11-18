@@ -133,6 +133,44 @@ class DescribeTreeViewTest(unittest.TestCase):
         self.assertEqual(len(document["domain"][0]["groups"]), 1)
         self.assertEqual(document["domain"][1]["groups"][0]["entities"][0]["code"], "TheBoardIsRead")
 
+    def test_should_group_a_type_whose_entities_stand_at_a_status_for_exactly_half_of_them(self):
+        # Act
+        document = describe(TREE_CORPUS, "tree")
+
+        # Assert
+        self.assertEqual(document["domain"][3]["type"], "OPEN_QUESTION")
+        self.assertEqual(document["domain"][3]["groups"][0]["status"], "open")
+
+    def test_should_refuse_a_filter_without_a_type(self):
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            describe(TREE_CORPUS, "tree", filters=("STATUS=todo",))
+
+        # Assert
+        self.assertEqual(str(raised.exception), "--filter reads the entities of --type")
+
+
+SEARCH_CORPUS = FakeCorpus(
+    entities=(
+        FakeEntity("TASK", "B1", "implemented", (("TITLE", ('"Read the corpus"',)),)),
+        FakeEntity("TASK", "B2", "todo", (("TITLE", ('"Draw the board"',)),), file="corpus/board.awawa"),
+        FakeEntity("TASK", "B3", "draft", (("TITLE", ('"Draw the tree"',)), ("ROLE", ("lex",)))),
+    ),
+    schemas=SCHEMAS,
+)
+
+
+class SearchTheEntitiesTest(unittest.TestCase):
+    def test_should_keep_the_entity_whose_code_fact_status_or_file_carries_the_search(self):
+        for searched, code in (("b1", "B1"), ("lex", "B3"), ("todo", "B2"), ("board.awawa", "B2")):
+            with self.subTest(searched=searched):
+                # Act
+                document = describe(SEARCH_CORPUS, "dependencies", entity_type="TASK", search=searched)
+
+                # Assert
+                self.assertEqual(document["roots"][0]["code"], code)
+                self.assertEqual(len(document["roots"]), 1)
+
 
 BOARD_CORPUS = FakeCorpus(
     entities=(
@@ -243,6 +281,16 @@ class DescribeBoardViewTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(raised.exception), "--filter takes <field>=<value>, given STATUS")
+
+    def test_should_refuse_a_type_the_corpus_holds_no_entity_of(self):
+        for view in ("tree", "board", "dependencies"):
+            with self.subTest(view=view):
+                # Act
+                with self.assertRaises(BrigadeError) as raised:
+                    describe(BOARD_CORPUS, view, entity_type="NOPE")
+
+                # Assert
+                self.assertEqual(str(raised.exception), "the corpus holds no entity of type NOPE")
 
 
 DEPENDENCIES_CORPUS = FakeCorpus(
@@ -489,6 +537,16 @@ class DescribeEntityDetailTest(unittest.TestCase):
         self.assertEqual(
             document["detail"]["references"],
             [{"target": "@MILESTONE.M17", "code": "M17", "label": "Orders", "status": "reached"}],
+        )
+
+    def test_should_describe_an_entity_that_refers_to_it_and_that_it_refers_to(self):
+        # Act
+        document = describe(DEPENDENCIES_CORPUS, "dependencies", entity_type="TASK", entity="@TASK.B4")
+
+        # Assert
+        self.assertEqual(
+            document["detail"]["referenced_by"],
+            [{"target": "@TASK.B3", "code": "B3", "label": "B3", "status": "todo"}],
         )
 
 
