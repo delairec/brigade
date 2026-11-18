@@ -1212,8 +1212,13 @@ DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 	DESC "during the build phase, brigade having no user, a reader supports the current version of"
 		+ "each kind alone: a document of an older version is refused like an unknown one, by name,"
 		+ "never upgraded and never rewritten; a file of an older version left on a machine is"
-		+ "thrown away, not supported; this ruling expires when brigade leaves the build phase, and"
-		+ "the decision is then revisited"
+		+ "thrown away, not supported; the one exception is the _schema.awawa of the registry:"
+		+ "brigade init brings an installed one to the schema brigade ships, the entities of the"
+		+ "registry kept and checked by awawa lint against it, as @TASK.B197 delivers, every other"
+		+ "document, the ledger, the results and the configuration among them, staying refused at"
+		+ "an older version; this ruling expires when brigade leaves the build phase, and the"
+		+ "decision is then revisited"
+		REF @TASK.B197
 	DESC "inside the core a document becomes a frozen dataclass; the module of its kind declares"
 		+ "from_document when brigade reads the kind and to_document when brigade writes it, no"
 		+ "function for a direction no code crosses; dicts stay at the edges"
@@ -1264,6 +1269,17 @@ DECISION DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
 		+ "par la décision, en précisant que celle-ci se périme dès qu'on sort de la phase de"
 		+ "build. A ce moment, il faudra revenir sur la décision »; DESC 3 and REJECTED 5 amended"
 		REF @TASK.B162
+	REJECTED "the end of the build phase, every versioned kind of document reading or migrating its"
+		+ "older versions: the user limited the exception to the schema of the registry, a small"
+		+ "perimeter, the other documents staying refused at an older version"
+	SOURCE "the user's ruling of 2026-11-18, asked what becomes of the build-phase ruling"
+		+ "@TASK.B197 waited for: « Registre seul (Recommandé) », « Exception limitée au"
+		+ "_schema.awawa du registre : brigade init le met au schéma livré, entités gardées et"
+		+ "vérifiées par lint ; les autres documents (ledger, résultats, config) restent « ancienne"
+		+ "version refusée ». Petit périmètre pour B197. », chosen over « Fin de la build phase »,"
+		+ "« brigade sort de la build phase : chaque type de document versionné doit lire ou migrer"
+		+ "ses anciennes versions. »; DESC 3 amended"
+		REF @TASK.B197
 
 DECISION TaskPullRequestCarriesTheGitHubMilestoneNamedByItsMilestoneTitle
 	TITLE "the pull request of a task carries the GitHub milestone named after the TITLE of the"

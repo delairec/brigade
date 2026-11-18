@@ -14404,26 +14404,75 @@ TASK B196
 		+ "Oui, todo »"
 
 TASK B197
-	TITLE "brigade init upgrades an installed operational schema"
-	STATUS draft
+	TITLE "brigade init brings the installed schema of a registry to the schema brigade ships, its"
+		+ "entities kept and checked by awawa lint"
+	STATUS todo
 	TYPE feat
-	MILESTONE @MILESTONE.M16
+	MILESTONE @MILESTONE.M18
 	COMPONENT "corpus"
 	ROLE ada
-	SPEC "brigade init brings an installed _schema.awawa that differs from the shipped one to the"
-		+ "shipped schema, the entities of the registry kept and checked by awawa lint against it,"
-		+ "so that a schema brigade extends reaches a machine that installed an earlier one without"
-		+ "the registry being thrown away"
-	RATIONALE "today brigade init installs the schema in a new registry alone, as SPEC 1 of"
-		+ "@TASK.B48 and SPEC 1 of @TASK.B20 say, and a registry of an older schema is thrown away,"
-		+ "as DESC 4 of @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry rules"
-		+ "for the build phase; this task is refined once that ruling is revisited, and it then"
-		+ "rewrites those SPEC lines"
+	SPEC "brigade init run on a registry whose _schema.awawa differs, byte for byte, from the"
+		+ "schema brigade ships, brigade/corpus/data/schema.awawa.tpl, writes the shipped schema in"
+		+ "its place, under the lock of the registry repository, and writes no other file of the"
+		+ "registry: every entity is kept as it is"
+	SPEC "it then runs awawa lint --strict on the registry; when lint passes, it commits"
+		+ "_schema.awawa alone and reports the schema as upgraded, in its text and as the state"
+		+ "upgraded of the item schema of --json, exit 0"
+	SPEC "when lint refuses the registry against the shipped schema, brigade init puts the"
+		+ "installed _schema.awawa back as it was, commits nothing, and exits 1 with the output of"
+		+ "lint and the line saying the registry is restored; no entity is rewritten or removed"
+	SPEC "a registry whose _schema.awawa is the shipped one is left as it is and reported present,"
+		+ "as today; config.toml and .gitignore keep the behaviour of today, a file that differs"
+		+ "being left as it is and reported as a warning"
+	SPEC "the warning of brigade doctor on an installed schema that differs names brigade init as"
+		+ "the command that upgrades it"
+	SPEC "tests/unit/commands/test_init.py proves, on a faked awawa runner: a schema that differs"
+		+ "upgraded and committed when lint passes, put back with exit 1 and the output of lint"
+		+ "when lint refuses, an identical schema left present, and no entity file written in any"
+		+ "of the three; tests/cli/test_init.py proves the path of a user: a registry installed"
+		+ "with an earlier schema and holding an entity is upgraded by brigade init, its entity"
+		+ "unchanged, and awawa lint --strict then passes on it"
+	SPEC "wiki/Install.md replaces its warning that a registry of an older schema is thrown away by"
+		+ "what brigade init does to it, and says, where it describes running brigade init again,"
+		+ "that the schema is upgraded while config.toml and .gitignore are left as they are"
+	RATIONALE "read at 1302de78: brigade/commands/init.py:102-109 creates a file that is missing"
+		+ "and leaves one that differs as it is, reporting it, and :148-166 commits the files it"
+		+ "created, so the schema is installed in a new registry alone;"
+		+ "brigade/commands/doctor.py:347-349 warns of an installed schema that differs, and"
+		+ "wiki/Install.md:49-50 tells the user to throw the registry away and to register the"
+		+ "projects anew"
+	RATIONALE "DESC 3 of @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry"
+		+ "refuses every document of an older version during the build phase; the user ruled on"
+		+ "2026-11-18 the schema of the registry as its one exception, which that DESC now names: a"
+		+ "small perimeter, the ledger, the results and the configuration staying refused at an"
+		+ "older version"
+		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
+	RATIONALE "a refused upgrade restores the registry, as brigade does for every write of a corpus"
+		+ "that awawa lint --strict refuses, brigade/corpus/write_corpus_files.py:22-31: an entity"
+		+ "the shipped schema no longer admits is corrected by the user, then brigade init is run"
+		+ "again; the task migrates no entity"
+	RATIONALE "@TASK.B48 and @TASK.B20, whose SPEC 1 say brigade init installs the schema in a new"
+		+ "operational corpus, are archived: their SPEC stays as it was written and this task"
+		+ "rewrites none, where its RATIONALE of 2026-10-22 planned to"
 		REF @TASK.B48
 		REF @TASK.B20
-		REF @DECISION.DocumentsCarryAnIntegerSchemaVersionAndAreValidatedOnEntry
+	RATIONALE "moved on 2026-11-18 from @MILESTONE.M16 to @MILESTONE.M18, before @TASK.B272: the"
+		+ "field that task adds to the PATTERN type reaches an installed registry in the milestone"
+		+ "that delivers it"
+		REF @MILESTONE.M16
+		REF @MILESTONE.M18
+		REF @TASK.B272
 	SOURCE "the user's ruling of 2026-10-22 on the review of pull request #183: « A : on jette"
 		+ "(Recommended) », B197 opened as draft for the future upgrade of an installed schema"
+	SOURCE "the user's ruling of 2026-11-18 on where the upgrade goes: « B197 dans M18 (Recommandé)"
+		+ "», « B197 passe dans M18, avant B272 : le regroupement apparaît chez toi dès que M18 est"
+		+ "livré ; B197 est à raffiner (draft). », chosen over B272 with no AFTER and over an AFTER"
+		+ "on a B197 left in M16"
+	SOURCE "the user's ruling of 2026-11-18 on the build-phase ruling this task waited for: «"
+		+ "Registre seul (Recommandé) », « Exception limitée au _schema.awawa du registre : brigade"
+		+ "init le met au schéma livré, entités gardées et vérifiées par lint ; les autres"
+		+ "documents (ledger, résultats, config) restent « ancienne version refusée ». Petit"
+		+ "périmètre pour B197. »"
 
 TASK B205
 	TITLE "A study publishes on a private GitHub repository with the environment of the login bound"
@@ -20237,7 +20286,7 @@ TASK B272
 		+ "with what ratifying it starts, its repeats folded under it, then the signals grouped by"
 		+ "what recorded them; a pattern records the pattern it repeats, brigade inbox list --json"
 		+ "names the title and the target of a pattern, and brigade inbox show shows a pattern"
-	STATUS draft
+	STATUS todo
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
@@ -20281,6 +20330,7 @@ TASK B272
 	SPEC "wiki/Dashboard.md says in its Inbox bullet what the view puts first, and wiki/Inbox.md"
 		+ "names the new keys and brigade inbox show <pattern>"
 	AFTER @TASK.B264
+	AFTER @TASK.B197
 	RATIONALE "drawn in the mockup of the role max, the Artifact"
 		+ "https://claude.ai/artifact/QYoFsx8Kq7LnSQrnKUJ7Je, version 2, its page Inbox, built on"
 		+ "data read on this machine on 2026-11-18: the figures quoted from it are that day's and"
@@ -20304,15 +20354,15 @@ TASK B272
 		+ "covered subject to the held pattern and to propose no new one, and the registry holds"
 		+ "repeats all the same; brigade/studies/check_patterns.py checks the EVIDENCE and the"
 		+ "ACTION of an answer"
-	RATIONALE "the field changes the operational schema, which brigade init installs in a new"
-		+ "registry alone, brigade/commands/init.py:151, an installed one waiting for the upgrade"
-		+ "of @TASK.B197 of @MILESTONE.M16; this task names no AFTER on it: the field is optional"
-		+ "and read with a default, a pattern without it standing alone, and the triage study"
-		+ "writes it only where the installed schema declares it, so an installed registry works as"
-		+ "today and folds its repeats once its schema carries the field; the repeats recorded"
-		+ "before the field are not migrated, no rule on their names telling what each repeats"
+	RATIONALE "the field changes the operational schema, which brigade init installed in a new"
+		+ "registry alone, brigade/commands/init.py:151; @TASK.B197, moved into @MILESTONE.M18 and"
+		+ "named in AFTER, upgrades an installed one, so the fold reaches an installed registry in"
+		+ "the milestone that delivers it; the field stays optional and read with a default, and"
+		+ "the triage study writes it only where the installed schema declares it, a registry not"
+		+ "yet upgraded working as today; the repeats recorded before the field are not migrated,"
+		+ "no rule on their names telling what each repeats"
 		REF @TASK.B197
-		REF @MILESTONE.M16
+		REF @MILESTONE.M18
 	SOURCE "the user's words of 2026-11-18 quoted in the SOURCE of @MILESTONE.M18: each page is"
 		+ "reviewed for what it shows, what matters in it, what the information is for, which"
 		+ "analysis makes it useful and how it is brought out"
@@ -20322,6 +20372,9 @@ TASK B272
 	SOURCE "the user's ruling of 2026-11-18 on the repeats of the patterns: « B272: si on regroupe,"
 		+ "c'est ça qui est simple pour l'utilisateur. »; the session applies it as a field naming"
 		+ "the pattern repeated, written by the triage study, the user not objecting"
+	SOURCE "the user's ruling of 2026-11-18 on the installed registry: « B197 dans M18 (Recommandé)"
+		+ "», « B197 passe dans M18, avant B272 : le regroupement apparaît chez toi dès que M18 est"
+		+ "livré ; B197 est à raffiner (draft). »"
 
 TASK B273
 	TITLE "brigade corpus --view tree, board, dependencies or health prints the document of one"

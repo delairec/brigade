@@ -256,7 +256,10 @@ MILESTONE M18
 		REF @DECISION.TheAwawaTabPortsTheReadOnlyViewsOfAwawaUiAndReplacesTheCorpusView
 	DESC "its first step was a mockup in an Artifact, made with the role max, covering the"
 		+ "stylesheet, the navigation, every page of brigade and the awawa tab; its twelve tasks,"
-		+ "@TASK.B264 to @TASK.B275, are drafted from that mockup, page by page"
+		+ "@TASK.B264 to @TASK.B275, are drafted from that mockup, page by page, and @TASK.B197,"
+		+ "moved from M16, upgrades an installed registry ahead of the fold of @TASK.B272"
+		REF @TASK.B197
+		REF @TASK.B272
 		REF @TASK.B264
 		REF @TASK.B275
 	DESC "comes before @MILESTONE.M14, which names it in AFTER: the curve of the caps of @TASK.B229"
