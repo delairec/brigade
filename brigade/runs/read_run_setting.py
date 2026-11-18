@@ -1,3 +1,4 @@
+import dataclasses
 from dataclasses import dataclass
 
 from brigade.corpus.read_entities import Entity
@@ -26,8 +27,17 @@ def _read_project(name: str | None, runtime: Runtime) -> Entity | None:
     return find_project(read_projects(runtime), name)
 
 
-def read_run_setting(project_name: str | None, slot: str, configuration: Configuration, runtime: Runtime) -> RunSetting:
+def read_run_setting(
+    project_name: str | None, slot: str, configuration: Configuration, runtime: Runtime, *, on_fallback: bool = False
+) -> RunSetting:
     project = _read_project(project_name, runtime)
+    if on_fallback:
+        fallback = configuration.fallback
+        return RunSetting(
+            configuration=dataclasses.replace(configuration, reasoning=fallback.reasoning),
+            project=project,
+            client=fallback.client,
+        )
     client = configuration.slot_clients.get(slot) or read_project_field(project, CLIENT_FIELD) or configuration.client
     if client is None:
         raise BrigadeError(f"config.toml names no client: set the client key in {runtime.paths.configuration_file}")
