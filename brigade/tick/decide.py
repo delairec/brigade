@@ -133,6 +133,7 @@ SLOTS_OF_TASK_LAUNCHES = {
     LaunchRemediation: REMEDIATE_SLOT,
     RebaseTask: REBASE_SLOT,
 }
+TASK_RUN_LAUNCHES = (*SLOTS_OF_TASK_LAUNCHES, ResumeTaskRun)
 
 
 def decide(snapshot: Snapshot) -> tuple:
@@ -168,8 +169,10 @@ def _move_launches_to_the_fallback(snapshot: Snapshot, actions: tuple) -> tuple:
     levels_of_projects = {project.name: project.levels for project in snapshot.projects}
     moved = []
     for action in actions:
-        if not isinstance(action, (*RUN_LAUNCHES, LaunchTask)):
+        if not isinstance(action, (*RUN_LAUNCHES, LaunchTask, LaunchOrder)):
             moved.append(action)
+            continue
+        if not isinstance(action, TASK_RUN_LAUNCHES):
             continue
         slot = _read_launched_slot(action)
         level = levels_of_projects[projects_of_waves[action.wave]].get(slot)
