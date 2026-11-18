@@ -25,3 +25,7 @@ def read_tone_classes() -> list[tuple[str, str]]:
 
 def read_colour_literals_of_the_views() -> list[str]:
     return COLOUR_LITERAL.findall(DARK_BLOCK.sub("", LIGHT_BLOCK.sub("", STYLESHEET)))
+
+
+def read_stylesheet() -> str:
+    return STYLESHEET
