@@ -3507,6 +3507,10 @@ DECISION ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset
 		REF @DECISION.QuotaPausesTheWaveAndResumesTheSameSession
 	DESC "a wave started after forge_account.unavailable is paused on the forge account like the"
 		+ "waves running then: only brigade wave resume lifts that pause"
+	DESC "while a fallback is configured and no rate limit of its client is in force, a rate limit"
+		+ "of another client pauses no wave: the tick launches on the fallback the runs whose level"
+		+ "its table binds, as @TASK.B144 provides"
+		REF @TASK.B144
 	DESC "the pause of a task in fixing and the round it spares bind @TASK.B220; until it is"
 		+ "delivered a task in fixing stays fixing and the tick launches a new repair run at each"
 		+ "tick, one round each"
@@ -7968,3 +7972,32 @@ DECISION ASegmentRecordsTheCountOfNotesItsBriefCarriedAndEachNoteIsCarriedOnce
 	SOURCE "pull request #443 of the brigade repository, delivering @TASK.B91, by its build run of"
 		+ "2026-11-18"
 		REF @TASK.B91
+
+DECISION WhileTheFallbackServesTheTickLaunchesOnItTheRunsOfATaskAlone
+	TITLE "while the fallback serves, the tick launches on it the runs of a task of a wave alone,"
+		+ "and holds an order, a study and a report until the reset"
+	STATUS active
+	DESC "while the fallback serves, decide moves to it a launch of a run of a task of a wave whose"
+		+ "slot level its table binds, and drops every other run launch, an order, a study and a"
+		+ "report included, until the reset of the rate limit"
+		REF @TASK.B144
+	REJECTED "the order, study and report launches moved to the fallback too: their slot is read"
+		+ "from no project of a wave, so the level its table binds cannot be checked"
+	SOURCE "the delivery of @TASK.B144"
+		REF @TASK.B144
+
+DECISION ARunOnTheFallbackStaysOnItWhenItsClientWouldRunItInAnotherWorktree
+	TITLE "a run on the fallback stays on it after a handover when its client would run it in"
+		+ "another worktree than the one the run set up"
+	STATUS active
+	DESC "after a handover, run start returns a run on the fallback to its client once the rate"
+		+ "limit of that client is over, unless the plan on the client differs from the running one"
+		+ "in disposable_worktree: the run then ends on the fallback"
+		REF @TASK.B144
+	REJECTED "the next segment on the client in the worktree the plan on the client names: a"
+		+ "disposable worktree that no segment set up does not exist, and the worktree the run set"
+		+ "up is removed only once the run ends"
+	REJECTED "the next segment on the client in the worktree the run set up: a read-only role would"
+		+ "run on a client granting no tools in the checkout of the project"
+	SOURCE "the delivery of @TASK.B144"
+		REF @TASK.B144
