@@ -316,10 +316,10 @@ def _read_forge_of(runtime: Runtime, project_name: str) -> str:
     return read_project_forge(find_project(read_projects(runtime), project_name))
 
 
-def _launch_check_repair(runtime: Runtime, configuration: Configuration, action: LaunchCheckRepair) -> None:
+def _read_check_logs(runtime: Runtime, configuration: Configuration, action: LaunchCheckRepair) -> list[dict]:
     project = find_project(read_projects(runtime), action.project)
     forge_name = read_project_forge(project)
-    logs = ask_check_logs(
+    return ask_check_logs(
         runtime.resolve_plugin("forge", forge_name),
         forge_name,
         CheckLogsQuery(
@@ -331,6 +331,10 @@ def _launch_check_repair(runtime: Runtime, configuration: Configuration, action:
         ),
         runtime,
     )
+
+
+def _launch_check_repair(runtime: Runtime, configuration: Configuration, action: LaunchCheckRepair) -> None:
+    logs = _read_check_logs(runtime, configuration, action)
     repairing = argparse.Namespace(
         procedure=configuration.procedures.get(BUILD_SLOT, BUILD_PROCEDURE),
         slot=BUILD_SLOT,

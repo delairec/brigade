@@ -1,10 +1,7 @@
-from brigade.adapters.test_clients import fake
+from brigade.adapters.test_clients.answer_as_client import answer_as_client
 
 CLIENT_NAME = "fake-fallback"
 
 
 def answer(operation: str, request: dict) -> dict:
-    document = fake.answer(operation, request)
-    if operation == "probe":
-        return {**document, "client": CLIENT_NAME}
-    return document
+    return answer_as_client(CLIENT_NAME, operation, request)
