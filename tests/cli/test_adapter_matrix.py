@@ -62,6 +62,22 @@ FAKE_ROW = {
     },
     "error": None,
 }
+FAKE_FALLBACK_ROW = {
+    "name": "fake-fallback",
+    "audience": "test_suite",
+    "capabilities": {
+        "launch": "full",
+        "result": "full",
+        "resume": "fallback",
+        "transcripts": "fallback",
+        "actions": "fallback",
+        "turn_count": "fallback",
+        "tool_grants": "fallback",
+        "reset_hour": "fallback",
+        "graceful_stop": "fallback",
+    },
+    "error": None,
+}
 
 
 class AdapterMatrixTestCase(unittest.TestCase):
@@ -90,5 +106,9 @@ class BrigadeAdapterMatrixOfTheBuiltInAdaptersTest(AdapterMatrixTestCase):
         self.assertEqual(completed.stderr, "")
         self.assertEqual(
             json.loads(completed.stdout),
-            {"schema_version": 1, "adapters": [CLAUDE_CODE_ROW, VIBE_ROW, FAKE_ROW], "fallbacks": FALLBACKS},
+            {
+                "schema_version": 1,
+                "adapters": [CLAUDE_CODE_ROW, VIBE_ROW, FAKE_ROW, FAKE_FALLBACK_ROW],
+                "fallbacks": FALLBACKS,
+            },
         )

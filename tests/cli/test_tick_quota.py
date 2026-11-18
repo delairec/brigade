@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 from unittest.mock import ANY
 
-from tests.cli.run_test_case import DONE_RESULT
+from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT
 from tests.cli.wave_tick_test_case import (
     MILESTONE_BRANCH,
     MILESTONE_BRANCH_CUT,
@@ -159,3 +159,99 @@ class BrigadeTickOfARemediationCutByARateLimitTest(LaunchingTickTestCase):
 
         # Assert
         self.assertEqual(json.loads(completed.stdout)["snapshot"]["waves"][0]["tasks"][0]["repair_rounds"], 0)
+
+
+class BrigadeTickOfARemediationCutByARateLimitWithAFallbackTest(LaunchingTickTestCase):
+    def setUp(self):
+        super().setUp()
+        recordings = Path(self.root.name) / "recordings"
+        (recordings / "remediator.json").write_text(json.dumps(FIVE_HOUR_LIMIT_RESULT))
+        fallback_recordings = Path(self.root.name) / "fallback-recordings"
+        fallback_recordings.mkdir()
+        (fallback_recordings / "remediator.json").write_text(json.dumps(DONE_RESULT))
+        (fallback_recordings / "remediator.resumed.json").write_text(json.dumps(DONE_RESULT))
+        instructions = Path(self.root.name) / "instructions"
+        self.machine.write_configuration(
+            f'client = "fake"\nprogress_form = "markdown"\ninstructions = "{instructions}"\n'
+            f'[clients.fake]\nrecordings = "{recordings}"\n{COUNTING_CLIENT}'
+            f'[clients.fake-fallback]\nrecordings = "{fallback_recordings}"\n{COUNTING_CLIENT}'
+            '[fallback]\nclient = "fake-fallback"\n'
+            '[fallback.reasoning.standard]\nmodel = "devstral"\neffort = "high"\n'
+        )
+        self.project.run_git("branch", TASK_BRANCH, MILESTONE_BRANCH)
+        self.project.run_git("worktree", "add", "--quiet", str(self.worktree), TASK_BRANCH)
+        self.register_on_github("main", MILESTONE_BRANCH, TASK_BRANCH)
+        head = self.project.run_git("rev-parse", TASK_BRANCH).strip()
+        (self.pull_requests / "feature-S3-empty-the-cart-in-one-click.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "number": 12,
+                        "state": "OPEN",
+                        "headRefOid": head,
+                        "baseRefName": MILESTONE_BRANCH,
+                        "reviewDecision": "",
+                        "updatedAt": "2026-10-18T11:00:00Z",
+                        "statusCheckRollup": [SUCCESSFUL_CHECK_RUN],
+                    }
+                ]
+            )
+        )
+        (self.state / "ledger" / "2026-10.jsonl").write_text(
+            MILESTONE_BRANCH_CUT
+            + S3_IN_CHANGES_REQUESTED.format(wave_branch=MILESTONE_BRANCH, task_branch=TASK_BRANCH, head=head)
+        )
+
+    def test_should_resume_the_cut_remediation_on_the_fallback_at_the_next_tick(self):
+        # Arrange
+        self.run_tick("--once")
+        self.wait_for_the_runs()
+
+        # Act
+        self.run_tick("--once")
+        self.wait_for_the_runs()
+
+        # Assert
+        self.assertEqual(
+            self.read_events()[-2:],
+            [
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "run.client_switched",
+                    "run": ANY,
+                    "client_left": "fake",
+                    "model_left": None,
+                    "client_taken": "fake-fallback",
+                    "model_taken": "devstral",
+                    "reason": "rate_limit",
+                },
+                {
+                    "schema_version": 3,
+                    "ts": ANY,
+                    "event": "run.finished",
+                    "run": ANY,
+                    "segment": 2,
+                    "procedure": "remediate-pr",
+                    "slot": "remediate",
+                    "role": "remediator",
+                    "client": "fake-fallback",
+                    "project": "shop",
+                    "session": "fake-session",
+                    "main_turns": 12,
+                    "total_turns": None,
+                    "duration_ms": ANY,
+                    "usage": ANY,
+                    "outcome": "done",
+                    "error_class": None,
+                    "exit": 0,
+                    "wave": "shop_w1",
+                    "task": "S3",
+                    "role_digest": SHA256_DIGEST,
+                    "procedure_digest": SHA256_DIGEST,
+                    "shipped_budget": 50,
+                    "nulls": ANY,
+                    "cost_usd": 0.42,
+                },
+            ],
+        )
