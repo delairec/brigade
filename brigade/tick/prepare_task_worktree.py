@@ -14,6 +14,7 @@ from brigade.git.read_head import read_head
 from brigade.git.rebase_onto import rebase_onto
 from brigade.git.require_ancestor import require_ancestor
 from brigade.ledger.append_event import append_event
+from brigade.ledger.task_branch_cut import TaskBranchCut
 from brigade.ledger.task_state import TaskState
 from brigade.recipes.locate_recipes import locate_recipes
 from brigade.recipes.read_project_commands import read_project_commands
@@ -72,7 +73,26 @@ def _set_up(runtime: Runtime, project: Entity, prepared: PreparedWorktree, log: 
         require_ancestor(runtime.run_process, worktree.path, worktree.start)
 
 
-def _open_worktree(runtime: Runtime, repository: Path, worktree: BranchWorktree) -> bool:
+@dataclass(frozen=True)
+class _Launch:
+    project: Entity
+    repository: Path
+    worktree: BranchWorktree
+    action: LaunchTask
+    forge: TickForge
+
+
+def _cut_task_branch(runtime: Runtime, launch: _Launch) -> None:
+    add_branch_worktree(runtime.run_process, launch.repository, launch.worktree)
+    append_event(
+        runtime.paths,
+        runtime.now,
+        TaskBranchCut(project=launch.action.project, task=launch.action.task, branch=launch.worktree.branch),
+    )
+
+
+def _open_worktree(runtime: Runtime, launch: _Launch) -> bool:
+    repository, worktree = launch.repository, launch.worktree
     listed = list_worktrees(runtime.run_process, repository)
     held = next((found.branch for found in listed if found.path == worktree.path), None)
     if held == worktree.branch:
@@ -81,17 +101,8 @@ def _open_worktree(runtime: Runtime, repository: Path, worktree: BranchWorktree)
     if found:
         add_worktree_on_branch(runtime.run_process, repository, worktree)
     else:
-        add_branch_worktree(runtime.run_process, repository, worktree)
+        _cut_task_branch(runtime, launch)
     return found
-
-
-@dataclass(frozen=True)
-class _Launch:
-    project: Entity
-    repository: Path
-    worktree: BranchWorktree
-    action: LaunchTask
-    forge: TickForge
 
 
 def _prove_task_head(runtime: Runtime, launch: _Launch) -> HeadProof:
@@ -186,7 +197,7 @@ def prepare_task_worktree(
         launch = _Launch(project=project, repository=repository, worktree=worktree, action=action, forge=forge)
         prepared = (
             _put_on_start(runtime, launch)
-            if _open_worktree(runtime, repository, worktree)
+            if _open_worktree(runtime, launch)
             else PreparedWorktree(worktree=worktree, conflicted=False, on_start=True)
         )
         if prepared.conflicted or prepared.held_by is not None:

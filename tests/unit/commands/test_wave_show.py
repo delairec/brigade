@@ -345,6 +345,14 @@ TASK_VERIFIED = {
     "state": "verified",
 }
 TASK_MERGED = {**TASK_VERIFIED, "state": "merged"}
+BRANCH_CUT_UNDER_THE_FIRST_TITLE = {
+    "schema_version": 1,
+    "ts": "2026-10-18T09:30:00Z",
+    "event": "task.branch_cut",
+    "project": "tidepool",
+    "task": "T7",
+    "branch": "feature/T7-tidal-chart",
+}
 
 
 class WaveShowOfAProjectWithoutAForgeTest(unittest.TestCase):
@@ -397,6 +405,21 @@ class WaveShowOfAProjectWithoutAForgeTest(unittest.TestCase):
         command = f"git -C {worktree} merge feature/T7-tide-table"
         self.assertEqual(document["task_merge_commands"], [command])
         self.assertIn(f"to merge: {command}", COMMAND.render_text(document).splitlines())
+
+    def test_should_name_the_branch_a_retitled_task_was_first_cut_on_in_its_merge_command(self):
+        # Arrange
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root), run_process=create_machine_double(CORPUS_OF_NO_AUTO_MERGE, MACHINE_OUTPUTS)
+        )
+
+        # Act
+        document = self._show([CUT, FORGELESS_WAVE_STARTED, BRANCH_CUT_UNDER_THE_FIRST_TITLE, TASK_VERIFIED])
+
+        # Assert
+        self.assertEqual(
+            document["task_merge_commands"],
+            ["git -C /srv/tidepool/.brigade/worktrees/integration-tides merge feature/T7-tidal-chart"],
+        )
 
     def test_should_name_a_task_merge_only_for_a_verified_task_under_no_auto_merge(self):
         for case, corpus, state in [

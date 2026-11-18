@@ -24,6 +24,7 @@ from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.signal_recorded import SignalRecorded
 from brigade.ledger.step_done import StepDone
 from brigade.ledger.step_failed import StepFailed
+from brigade.ledger.task_branch_cut import TaskBranchCut
 from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_preflighted import TaskPreflighted
@@ -102,6 +103,7 @@ DECLARED_EVENTS = {
         BudgetApplied,
         BranchKept,
         BranchBaseGone,
+        TaskBranchCut,
     )
 }
 LedgerEvent = (
@@ -149,5 +151,6 @@ LedgerEvent = (
     | BudgetApplied
     | BranchKept
     | BranchBaseGone
+    | TaskBranchCut
     | UndeclaredEvent
 )

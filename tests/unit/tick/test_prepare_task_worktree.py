@@ -10,6 +10,7 @@ from brigade.git.add_branch_worktree import BranchWorktree
 from brigade.git.timeouts import REMOTE_TIMEOUT_S
 from brigade.ledger.append_event import append_event
 from brigade.ledger.read_ledger import read_ledger
+from brigade.ledger.task_branch_cut import TaskBranchCut
 from brigade.ledger.task_state import TaskState
 from brigade.ledger.wave_cancelled import WaveCancelled
 from brigade.ledger.wave_started import WaveStarted
@@ -87,6 +88,8 @@ TASK_WORKTREE_LISTED = ProcessAnswer(
 
 
 NO_RECIPE = {}
+REQUEUE_INSTANT = datetime(2026, 11, 8, 10, 0, tzinfo=UTC)
+FIRST_CUT_OF_THE_TASK = TaskBranchCut(project="shop", task="B1", branch="feature/B1-task")
 
 
 def read_no_environment(key: str) -> dict:
@@ -210,6 +213,19 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
             (self.paths.setup_directory / "shop" / "B1.log").read_text(), "$ make deps\ndeps installed\n1 warning\n"
         )
 
+    def test_should_record_the_branch_it_cuts_for_the_task_in_the_ledger(self):
+        # Arrange
+        runner = self.create_runner()
+
+        # Act
+        prepare_task_worktree(create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE)
+
+        # Assert
+        self.assertEqual(
+            [entry.event for entry in read_ledger(self.paths.state_root).entries],
+            [TaskBranchCut(project="shop", task="B1", branch="feature/B1-task")],
+        )
+
     def test_should_log_a_setup_step_quoting_an_argument_that_holds_a_space(self):
         # Arrange
         runner = self.create_runner(setup={"setup": (("make", "deps", "LEVEL=a b"),)})
@@ -325,6 +341,26 @@ class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
             ],
         )
 
+    def test_should_reuse_the_worktree_holding_the_first_branch_of_a_requeued_task_and_cut_no_branch(self):
+        # Arrange
+        append_event(self.paths, REQUEUE_INSTANT, FIRST_CUT_OF_THE_TASK)
+        append_event(self.paths, REQUEUE_INSTANT, TaskState(wave="w1", task="B1", state="queued"))
+        runner = self.create_runner(worktrees=TASK_WORKTREE_LISTED, branch=TASK_BRANCH_FOUND)
+
+        # Act
+        prepared = prepare_task_worktree(
+            create_test_runtime(self.paths, run_process=runner), Configuration(), ACTION, NO_FORGE
+        )
+
+        # Assert
+        self.assertEqual(
+            prepared.worktree, BranchWorktree(path=WORKTREE, branch="feature/B1-task", start="integration/w1")
+        )
+        self.assertEqual(
+            [entry.event for entry in read_ledger(self.paths.state_root).entries],
+            [FIRST_CUT_OF_THE_TASK, TaskState(wave="w1", task="B1", state="queued")],
+        )
+
     def test_should_add_a_worktree_on_the_existing_branch_of_the_task(self):
         # Arrange
         runner = self.create_runner(branch=TASK_BRANCH_FOUND)
@@ -368,7 +404,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
 
         # Assert
         self.assertEqual(
-            read_ledger(self.paths.state_root).entries[0].event,
+            read_ledger(self.paths.state_root).entries[-1].event,
             TaskState(wave="w1", task="B1", state="parked", reason="setup failed"),
         )
 
@@ -402,7 +438,7 @@ class PrepareTaskWorktreeFailedSetUpTest(PrepareTaskWorktreeTestCase):
 
         # Assert
         self.assertEqual(
-            read_ledger(self.paths.state_root).entries[0].event,
+            read_ledger(self.paths.state_root).entries[-1].event,
             TaskState(wave="w1", task="B1", state="parked", reason="setup failed"),
         )
 
