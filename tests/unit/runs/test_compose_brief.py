@@ -2,12 +2,15 @@ import unittest
 
 from brigade.runs.compose_brief import BriefParts, compose_brief
 
+NO_NOTES = ()
+
 
 class ComposeBriefTest(unittest.TestCase):
     def test_should_lay_out_every_section_given_in_its_order(self):
         # Arrange
         parts = BriefParts(
             progress="Step one is done.\n",
+            notes=NO_NOTES,
             procedure="build-task",
             procedure_body="Deliver the task.",
             arguments={"task": "@TASK.B1", "base": "main"},

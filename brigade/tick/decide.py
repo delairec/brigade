@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 from brigade.ledger.branch_kept import BranchKept
 from brigade.ledger.format_instant import format_instant
-from brigade.ledger.task_state import REBUILD_REASON
+from brigade.ledger.task_state import FALLBACK_RESUME_REASON, HANDOVER_RESUME_REASON, REBUILD_REASON
 from brigade.orders.is_order_due import is_order_due
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.task_report_order import TaskReportOrder
@@ -64,6 +64,9 @@ from brigade.waves.read_parked_question import BLOCKED_RUN_REASON
 from brigade.waves.read_task_state import PARKED_STATE
 
 BUILD_SLOT = "build"
+REVIEW_SLOT = "review"
+REMEDIATE_SLOT = "remediate"
+REBASE_SLOT = "rebase"
 WAITING_STATE = "queued"
 MERGED_STATE = "merged"
 RUNNING_STATE = "running"
@@ -98,6 +101,7 @@ PASSING_VERDICT = "pass"
 SUCCESSFUL_CHECK = "success"
 OTHER_BASE_REASON = "pull request base is not the base of its task"
 RUN_DEAD_REASON = "run dead"
+HANDED_OVER_RUN_REASON = "run {run} handed over after {segments} segments"
 RUN_NOT_STARTED_REASON = "run not started"
 PREFLIGHT_FAILED_REASON = "preflight failed"
 CHECK_SUITE_CREATION_DELAY = timedelta(minutes=1)
@@ -121,11 +125,60 @@ RUN_LAUNCHES = (
 )
 
 
+SLOTS_OF_TASK_LAUNCHES = {
+    LaunchTask: BUILD_SLOT,
+    LaunchCheckRepair: BUILD_SLOT,
+    RebuildTask: BUILD_SLOT,
+    LaunchVerification: REVIEW_SLOT,
+    LaunchRemediation: REMEDIATE_SLOT,
+    RebaseTask: REBASE_SLOT,
+}
+TASK_RUN_LAUNCHES = (*SLOTS_OF_TASK_LAUNCHES, ResumeTaskRun)
+
+
 def decide(snapshot: Snapshot) -> tuple:
     actions = _plan_every_action(snapshot)
+    if _is_served_by_the_fallback(snapshot):
+        return _move_launches_to_the_fallback(snapshot, actions)
     if _decide_quota_resume_at(snapshot) is None:
         return actions
     return tuple(action for action in actions if not isinstance(action, RUN_LAUNCHES))
+
+
+def _is_served_by_the_fallback(snapshot: Snapshot) -> bool:
+    if snapshot.fallback is None:
+        return False
+    limited_clients = {rate_limit.client for rate_limit in snapshot.rate_limits}
+    return bool(limited_clients) and snapshot.fallback.client not in limited_clients
+
+
+def _read_launched_slot(action) -> str | None:
+    if isinstance(action, ResumeTaskRun):
+        return action.slot
+    return SLOTS_OF_TASK_LAUNCHES.get(type(action))
+
+
+def _move_to_the_fallback(action):
+    if isinstance(action, ResumeTaskRun):
+        return dataclasses.replace(action, on_fallback=True, reason=FALLBACK_RESUME_REASON)
+    return dataclasses.replace(action, on_fallback=True)
+
+
+def _move_launches_to_the_fallback(snapshot: Snapshot, actions: tuple) -> tuple:
+    projects_of_waves = {wave.wave: wave.project for wave in snapshot.waves}
+    levels_of_projects = {project.name: project.levels for project in snapshot.projects}
+    moved = []
+    for action in actions:
+        if not isinstance(action, (*RUN_LAUNCHES, LaunchTask, LaunchOrder)):
+            moved.append(action)
+            continue
+        if not isinstance(action, TASK_RUN_LAUNCHES):
+            continue
+        slot = _read_launched_slot(action)
+        level = levels_of_projects[projects_of_waves[action.wave]].get(slot)
+        if level in snapshot.fallback.levels:
+            moved.append(_move_to_the_fallback(action))
+    return tuple(moved)
 
 
 def _plan_every_action(snapshot: Snapshot) -> tuple:
@@ -247,17 +300,28 @@ def _plan_launches(snapshot: Snapshot, paused: set) -> tuple:
             if free_slots[wave.project] <= 0:
                 break
             free_slots[wave.project] -= 1
-            launches.append(
-                LaunchTask(
-                    project=wave.project,
-                    wave=wave.wave,
-                    branch=wave.base,
-                    task=task.name,
-                    task_branch=task.branch,
-                    pull_request_checks=_read_open_pull_request_checks(task),
-                )
-            )
+            launches.append(_decide_launch(wave, task))
     return tuple(launches)
+
+
+def _decide_launch(wave: WaveFacts, task: TaskFacts) -> LaunchTask | ResumeTaskRun:
+    if task.handed_over_run is not None:
+        return ResumeTaskRun(
+            wave=wave.wave,
+            task=task.name,
+            run=task.handed_over_run.run,
+            state=RUNNING_STATE,
+            reason=HANDOVER_RESUME_REASON,
+            slot=task.handed_over_run.slot,
+        )
+    return LaunchTask(
+        project=wave.project,
+        wave=wave.wave,
+        branch=wave.base,
+        task=task.name,
+        task_branch=task.branch,
+        pull_request_checks=_read_open_pull_request_checks(task),
+    )
 
 
 def _read_open_pull_request_checks(task: TaskFacts) -> HeadChecks | None:
@@ -290,7 +354,7 @@ def _plan_pauses(snapshot: Snapshot) -> tuple:
         for task in wave.tasks
         if task.rate_limit is not None
     )
-    resume_at = _decide_quota_resume_at(snapshot)
+    resume_at = None if _is_served_by_the_fallback(snapshot) else _decide_quota_resume_at(snapshot)
     if resume_at is None:
         return (
             tuple(pause for pause in (_decide_lost_access_pause(wave) for wave in unpaused) if pause is not None)
@@ -334,7 +398,9 @@ def _plan_resumes(snapshot: Snapshot) -> tuple:
         if wave.pause is not None:
             actions.append(ResumeWave(wave=wave.wave, reason=QUOTA_REASON))
         actions.extend(
-            ResumeTaskRun(wave=wave.wave, task=task.name, run=task.stopped_run, state=task.resumed_state)
+            ResumeTaskRun(
+                wave=wave.wave, task=task.name, run=task.stopped_run, state=task.resumed_state, slot=task.stopped_slot
+            )
             for task in wave.tasks
             if wave.states.get(task.name) == BLOCKED_ON_QUOTA_STATE
         )
@@ -834,6 +900,8 @@ def _describe_blocked_run(blocked: BlockedRun) -> str:
 def _describe_dead_run(task: TaskFacts) -> str:
     if task.blocked_run is not None:
         return _describe_blocked_run(task.blocked_run)
+    if task.handed_over_run is not None:
+        return HANDED_OVER_RUN_REASON.format(run=task.handed_over_run.run, segments=task.handed_over_run.segments)
     if task.last_run is None:
         return RUN_NOT_STARTED_REASON
     return f"{RUN_DEAD_REASON}: {task.last_run}"

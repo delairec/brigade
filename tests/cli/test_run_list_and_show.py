@@ -99,6 +99,7 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
                 },
                 "segments": [{"segment": 1, "outcome": "done", "turns": 12, "duration_ms": ANY}],
                 "log": None,
+                "notes": [],
                 "progress": None,
             },
         )

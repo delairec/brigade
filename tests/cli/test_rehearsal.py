@@ -113,6 +113,7 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
                     "pr.merged": 3,
                     "run.finished": 8,
                     "step.done": 6,
+                    "task.branch_cut": 3,
                     "task.pr_opened": 3,
                     "task.preflighted": 3,
                     "task.promoted": 3,

@@ -8,6 +8,7 @@ from brigade.runs.decide_run_exit_code import decide_run_exit_code
 from brigade.runs.describe_run import describe_run
 from brigade.runs.find_progress_file import find_progress_file
 from brigade.runs.format_duration import format_duration
+from brigade.runs.list_notes import PENDING, list_notes
 from brigade.runs.render_progress import render_progress
 from brigade.runs.run_follower import RunFollower
 from brigade.runs.run_locations import RUNS_DIRECTORY
@@ -23,11 +24,14 @@ SUMMARY_FIELDS = ("run", "procedure", "slot", "role", "project", "state", "outco
 SUMMARY_WIDTH = max(len(field) for field in SUMMARY_FIELDS)
 ENDING_FIELDS = ("state", "outcome")
 SEGMENT_COLUMNS = ("segment", "outcome", "turns", "duration")
+NOTE_COLUMNS = ("noted", "carried by", "note")
+PENDING_NOTE = "pending"
 RECORD_SEPARATOR = "  "
 LINE_END = "\n"
 RUNNING = "running"
 NO_JOURNAL_YET = ()
 NO_PROGRESS = None
+NO_NOTES = []
 
 
 def _render_value(value) -> str:
@@ -51,6 +55,11 @@ def _render_segment(segment: dict) -> tuple[str, ...]:
     )
 
 
+def _render_note(note: dict) -> tuple[str, ...]:
+    carrier = PENDING_NOTE if note["segment"] is PENDING else f"segment {note['segment']}"
+    return note["at"], carrier, note["text"]
+
+
 def _render_record(record: dict) -> str:
     return RECORD_SEPARATOR.join((record["at"], str(record["segment"]), record["kind"], record["summary"]))
 
@@ -61,6 +70,8 @@ def _render_text(document: dict) -> str:
     summary = [_render_field(document["run"], field) for field in SUMMARY_FIELDS]
     segments = render_table(SEGMENT_COLUMNS, [_render_segment(segment) for segment in document["segments"]])
     lines = [*summary, "", segments]
+    if document["notes"]:
+        lines += ["", render_table(NOTE_COLUMNS, [_render_note(note) for note in document["notes"]])]
     if document["progress"] is not None:
         lines += ["", document["progress"]["text"].rstrip(LINE_END)]
     if document["log"] is not None:
@@ -95,7 +106,9 @@ class _FollowPrinter:
     def poll(self) -> bool:
         if not self.opened:
             opening = show_run(self.state_root, self.run_id, with_journal=False)
-            _print(_render_text({**opening, "progress": NO_PROGRESS, "log": NO_JOURNAL_YET}) + LINE_END)
+            _print(
+                _render_text({**opening, "notes": NO_NOTES, "progress": NO_PROGRESS, "log": NO_JOURNAL_YET}) + LINE_END
+            )
             self.opened = True
         _print("".join(_render_record(record) + LINE_END for record in self.follower.read_records()))
         return self.follower.run["state"] != RUNNING
@@ -120,12 +133,13 @@ def run_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     if request.follow:
         return _follow_run(request.run, runtime)
     shown = show_run(runtime.paths.state_root, request.run, with_journal=request.log)
-    return {**shown, "progress": _read_progress(request.run, runtime)}
+    notes = list_notes(runtime.paths.state_root / RUNS_DIRECTORY / request.run)
+    return {**shown, "notes": notes, "progress": _read_progress(request.run, runtime)}
 
 
 COMMAND = Command(
     path=("run", "show"),
-    help="print the summary of a run, its segments and its progress, and with --log its log",
+    help="print the summary of a run, its segments, its notes and its progress, and with --log its log",
     group_help="start a procedure as a slot through the client adapter, list the runs, show one, stop one and prune them",
     arguments=(
         Argument(("run",)),

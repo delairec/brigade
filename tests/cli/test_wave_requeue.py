@@ -1,7 +1,10 @@
 import json
+from pathlib import Path
 from unittest.mock import ANY
 
+from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT
+from tests.cli.test_collector_run import install_executable
 from tests.cli.wave_tick_test_case import (
     MILESTONE_BRANCH,
     MILESTONE_BRANCH_CUT,
@@ -76,6 +79,14 @@ class BrigadeWaveRequeueOfAParkedTaskTest(LaunchingTickTestCase):
                     "task": "S3",
                     "state": "queued",
                     "reason": "brigade wave requeue",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "task.branch_cut",
+                    "project": "shop",
+                    "task": "S3",
+                    "branch": "feature/S3-empty-the-cart-in-one-click",
                 },
                 {
                     "schema_version": 1,
@@ -402,3 +413,145 @@ class BrigadeWaveRequeueOfATaskParkedAfterItsFirstVerdictTest(LaunchingTickTestC
 
         # Assert
         self.assertEqual(self.read_run_records(), [])
+
+
+HANDED_OVER_RESULT = {**DONE_RESULT, "outcome": "handed_over"}
+S3_STARTED = (
+    '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
+    f' "project": "shop", "branch": "{MILESTONE_BRANCH}", "tasks": ["S3"]}}\n'
+)
+PROGRESS_OF_THE_HANDED_OVER_RUN = "- the failing test of the empty cart is written\n"
+S3_PARKED_AFTER_ITS_HANDOVER = (
+    '{{"schema_version": 1, "ts": "2026-11-18T10:00:00Z", "event": "task.parked", "wave": "shop_w1", "task": "S3",'
+    ' "reason": "run {run} handed over after 1 segments", "blockers": []}}\n'
+)
+BRIEF_KEEPING_BUILDER_PLAY = '#!/bin/sh\ncat > "{briefs}/last"\ncat -- "$1"\n'
+
+
+class BrigadeWaveRequeueOfATaskWhoseRunHandedOverTest(LaunchingTickTestCase):
+    def setUp(self):
+        super().setUp()
+        recordings = Path(self.root.name) / "recordings"
+        (recordings / "builder.json").write_text(json.dumps(HANDED_OVER_RESULT))
+        (recordings / "builder.resumed.json").write_text(json.dumps(DONE_RESULT))
+        plays = Path(self.root.name) / "plays"
+        self.briefs = Path(self.root.name) / "briefs"
+        self.briefs.mkdir()
+        install_executable(plays / "builder", BRIEF_KEEPING_BUILDER_PLAY.format(briefs=self.briefs))
+        instructions = Path(self.root.name) / "instructions"
+        self.machine.write_configuration(
+            f'client = "fake"\nprogress_form = "markdown"\ninstructions = "{instructions}"\n'
+            f'[clients.fake]\nrecordings = "{recordings}"\nplays = "{plays}"\n{COUNTING_CLIENT}'
+        )
+        (self.state / "ledger" / "2026-10.jsonl").write_text(MILESTONE_BRANCH_CUT + S3_STARTED)
+
+    def hand_over(self) -> str:
+        self.run_tick("--once")
+        self.wait_for_the_runs()
+        run = self.read_run_records()[0]["run"]
+        (self.state / "runs" / run / "progress.md").write_text(PROGRESS_OF_THE_HANDED_OVER_RUN)
+        return run
+
+    def hand_over_then_park(self) -> str:
+        run = self.hand_over()
+        self.run_tick("--once")
+        return run
+
+    def hand_over_then_record_the_parking(self) -> str:
+        run = self.hand_over()
+        with max((self.state / "ledger").glob("*.jsonl")).open("a") as ledger:
+            ledger.write(S3_PARKED_AFTER_ITS_HANDOVER.format(run=run))
+        return run
+
+    def requeue_then_tick(self) -> None:
+        self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "wave", "requeue", "shop_w1", "S3", environment=self.describe_environment()
+        )
+        self.run_tick("--once")
+        self.wait_for_the_runs()
+
+    def test_should_park_the_task_naming_the_run_and_the_segments_it_handed_over_after(self):
+        # Arrange
+        run = self.hand_over_then_park()
+
+        # Act
+        shown = self.machine.run_brigade(
+            CLONE_ENTRY_POINT, "wave", "show", "shop_w1", "--json", environment=self.describe_environment()
+        )
+
+        # Assert
+        self.assertEqual(
+            json.loads(shown.stdout)["tasks"],
+            [
+                {
+                    "task": "S3",
+                    "state": "parked",
+                    "pull_request": None,
+                    "run": run,
+                    "reason": f"run {run} handed over after 1 segments",
+                }
+            ],
+        )
+
+    def test_should_resume_the_run_on_its_progress_file_once_the_task_is_requeued(self):
+        # Arrange
+        self.hand_over_then_record_the_parking()
+
+        # Act
+        self.requeue_then_tick()
+
+        # Assert
+        self.assertRegex(
+            (self.briefs / "last").read_text(),
+            r"\A# Progress so far\n\n- the failing test of the empty cart is written\n",
+        )
+
+    def test_should_record_the_task_running_and_the_next_segment_of_the_same_run(self):
+        # Arrange
+        run = self.hand_over_then_record_the_parking()
+
+        # Act
+        self.requeue_then_tick()
+
+        # Assert
+        self.assertEqual(
+            self.read_events()[-2:],
+            [
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
+                    "event": "task.state",
+                    "wave": "shop_w1",
+                    "task": "S3",
+                    "state": "running",
+                    "reason": "resumed after its handovers",
+                },
+                {
+                    "schema_version": 3,
+                    "ts": ANY,
+                    "event": "run.finished",
+                    "run": run,
+                    "segment": 2,
+                    "procedure": "build-task",
+                    "slot": "build",
+                    "role": "builder",
+                    "client": "fake",
+                    "project": "shop",
+                    "session": "fake-session",
+                    "main_turns": 12,
+                    "total_turns": None,
+                    "duration_ms": ANY,
+                    "usage": ANY,
+                    "outcome": "done",
+                    "error_class": None,
+                    "exit": 0,
+                    "wave": "shop_w1",
+                    "task": "S3",
+                    "role_digest": SHA256_DIGEST,
+                    "procedure_digest": SHA256_DIGEST,
+                    "shipped_budget": 75,
+                    "nulls": ANY,
+                    "cost_usd": 0.42,
+                },
+            ],
+        )

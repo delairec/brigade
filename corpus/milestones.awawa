@@ -163,7 +163,7 @@ MILESTONE M12
 MILESTONE M13
 	TITLE "Run resumption"
 	SUBJECT "resume runs where they stopped"
-	STATUS active
+	STATUS reached
 	AFTER @MILESTONE.M8
 	DESC "post-MVP: a run that hands over, stops on a limit or sees its task retitled resumes its"
 		+ "work where it left it"

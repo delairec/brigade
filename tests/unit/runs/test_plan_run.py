@@ -370,11 +370,26 @@ class PlanRunOfARoleWhoseCapWasAppliedBeforeTest(PlanRunOfARoleMeasuredAtTheDige
         )
 
 
+class PlanRunOfANewRunOnAClientThatCanResumeTest(PlanRunTestCase):
+    def test_should_open_its_first_segment_in_a_session_of_its_own(self):
+        # Arrange
+        new_run = self.create_request()
+
+        # Act
+        plan = self.plan(new_run, {"operations": "resume"})
+
+        # Assert
+        self.assertIsNone(plan.resumed_session)
+
+
 class PlanRunOfAResumedRunTest(PlanRunTestCase):
     def test_should_resume_after_its_last_segment_on_the_session_it_left(self):
         # Arrange
         write_run_result(
-            self.paths.state_root / "runs" / RUN_ID / "segments" / "1" / "result.json", "handed_over", session="s1"
+            self.paths.state_root / "runs" / RUN_ID / "segments" / "1" / "result.json",
+            "failed",
+            session="s1",
+            client="fake",
         )
 
         # Act
@@ -384,6 +399,19 @@ class PlanRunOfAResumedRunTest(PlanRunTestCase):
         self.assertEqual(plan.resumed, True)
         self.assertEqual(plan.first_segment, 2)
         self.assertEqual(plan.resumed_session, "s1")
+
+    def test_should_resume_after_a_last_segment_that_handed_over_in_a_session_of_its_own(self):
+        # Arrange
+        write_run_result(
+            self.paths.state_root / "runs" / RUN_ID / "segments" / "3" / "result.json", "handed_over", session="s3"
+        )
+
+        # Act
+        plan = self.plan(self.create_request(run_id=RUN_ID, resume=True), {"operations": "resume"})
+
+        # Assert
+        self.assertEqual(plan.first_segment, 4)
+        self.assertIsNone(plan.resumed_session)
 
     def test_should_resume_after_its_last_segment_in_a_session_of_its_own_when_the_client_cannot_resume(self):
         # Arrange
@@ -402,7 +430,7 @@ class PlanRunOfAResumedRunTest(PlanRunTestCase):
     def test_should_resume_on_the_session_of_its_last_finished_segment_when_a_later_segment_left_no_result(self):
         # Arrange
         segments = self.paths.state_root / "runs" / RUN_ID / "segments"
-        write_run_result(segments / "1" / "result.json", "failed", session="s1")
+        write_run_result(segments / "1" / "result.json", "failed", session="s1", client="fake")
         (segments / "2").mkdir()
 
         # Act
@@ -410,6 +438,23 @@ class PlanRunOfAResumedRunTest(PlanRunTestCase):
 
         # Assert
         self.assertEqual(plan.resumed_session, "s1")
+
+    def test_should_resume_in_a_session_of_its_own_after_a_last_segment_run_by_another_client(self):
+        # Arrange
+        write_run_result(
+            self.paths.state_root / "runs" / RUN_ID / "segments" / "1" / "result.json",
+            "failed",
+            session="s1",
+            client="claude-code",
+        )
+
+        # Act
+        plan = self.plan(self.create_request(run_id=RUN_ID, resume=True), {"operations": "resume"})
+
+        # Assert
+        self.assertEqual(plan.first_segment, 2)
+        self.assertIsNone(plan.resumed_session)
+        self.assertEqual(plan.resumed_client, "claude-code")
 
     def test_should_run_again_the_segment_that_left_no_result(self):
         # Arrange

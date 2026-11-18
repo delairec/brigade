@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import shutil
 import signal
@@ -8,6 +9,7 @@ from pathlib import Path
 
 from brigade.ledger.budget_applied import BudgetApplied
 from brigade.ledger.describe_role_budget import RoleBudget
+from brigade.ledger.run_client_switched import RunClientSwitched
 from brigade.runs.ask_progress import ask_progress
 from brigade.runs.resolve_procedure import Procedure
 from brigade.runs.run_segment import SegmentRecord
@@ -858,6 +860,120 @@ class RunSegmentsStoppedAtTheSoftLimitTest(RunSegmentsTestCase):
                 ),
             ],
         )
+
+
+class RunSegmentsOfARunThatSwitchedClientTest(RunSegmentsTestCase):
+    def test_should_record_the_switch_of_the_client_before_its_first_segment(self):
+        # Arrange
+        switch = RunClientSwitched(
+            run=RUN_ID,
+            client_left="claude-code",
+            model_left="opus",
+            client_taken="vibe",
+            model_taken="devstral",
+            reason="rate_limit",
+        )
+        plan = self.create_plan(["done"], client_switched=switch)
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            self.read_events()[0],
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "run.client_switched",
+                "run": RUN_ID,
+                "client_left": "claude-code",
+                "model_left": "opus",
+                "client_taken": "vibe",
+                "model_taken": "devstral",
+                "reason": "rate_limit",
+            },
+        )
+
+
+class RunSegmentsOfARunOnTheFallbackTest(RunSegmentsTestCase):
+    def test_should_run_the_segment_after_a_handover_on_the_client_the_run_returns_to(self):
+        # Arrange
+        plan = self.create_plan(
+            ["handed_over", "done"], progress="- the test is written\n", handovers=1, on_fallback=True
+        )
+        switch = RunClientSwitched(
+            run=RUN_ID,
+            client_left="fake",
+            model_left="devstral",
+            client_taken="claude-code",
+            model_taken="opus",
+            reason="reset",
+        )
+        on_the_client = dataclasses.replace(
+            plan,
+            client="claude-code",
+            client_adapter=ClientAnsweringOutcomesDouble(["done"]),
+            on_fallback=False,
+            client_switched=switch,
+            first_segment=2,
+        )
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver(), return_to_client=lambda _: on_the_client)
+
+        # Assert
+        self.assertEqual(self.read_events()[-1]["client"], "claude-code")
+
+    def test_should_record_the_return_to_the_client_before_the_segment_it_runs(self):
+        # Arrange
+        plan = self.create_plan(
+            ["handed_over", "done"], progress="- the test is written\n", handovers=1, on_fallback=True
+        )
+        switch = RunClientSwitched(
+            run=RUN_ID,
+            client_left="fake",
+            model_left="devstral",
+            client_taken="claude-code",
+            model_taken="opus",
+            reason="reset",
+        )
+        on_the_client = dataclasses.replace(
+            plan,
+            client="claude-code",
+            client_adapter=ClientAnsweringOutcomesDouble(["done"]),
+            on_fallback=False,
+            client_switched=switch,
+            first_segment=2,
+        )
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver(), return_to_client=lambda _: on_the_client)
+
+        # Assert
+        self.assertEqual(
+            self.read_events()[2],
+            {
+                "schema_version": 1,
+                "ts": "2026-10-19T09:00:00Z",
+                "event": "run.client_switched",
+                "run": RUN_ID,
+                "client_left": "fake",
+                "model_left": "devstral",
+                "client_taken": "claude-code",
+                "model_taken": "opus",
+                "reason": "reset",
+            },
+        )
+
+    def test_should_keep_the_client_of_a_run_that_does_not_return_to_its_own(self):
+        # Arrange
+        plan = self.create_plan(["handed_over", "done"], progress="- the test is written\n", handovers=1)
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver(), return_to_client=lambda unchanged: unchanged)
+
+        # Assert
+        self.assertEqual(self.read_events()[-1]["client"], "fake")
 
 
 class RunSegmentsOfARoleWhoseCapChangedTest(RunSegmentsTestCase):
@@ -1826,6 +1942,73 @@ class RunSegmentsOfARunHandedOverAtEverySegmentTest(RunSegmentsTestCase):
             ],
         )
 
+    def test_should_count_the_handovers_of_a_resumed_run_from_its_first_resumed_segment(self):
+        # Arrange
+        plan = self.create_plan(
+            ["handed_over", "handed_over", "handed_over", "handed_over"],
+            progress=PROGRESS_OF_THE_FIRST_SEGMENT,
+            handovers=2,
+            first_segment=4,
+        )
+
+        # Act
+        records = run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            records,
+            [
+                SegmentRecord(
+                    number=4,
+                    outcome="handed_over",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+                SegmentRecord(
+                    number=5,
+                    outcome="handed_over",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+                SegmentRecord(
+                    number=6,
+                    outcome="handed_over",
+                    session_id="session-b73",
+                    client_steps=12,
+                    usage=None,
+                    error_class=None,
+                    reset=None,
+                    message=None,
+                    exit_code=0,
+                    measured_ms=0,
+                    cost_usd=None,
+                    counted_steps=None,
+                    uncounted="the client reads no transcript",
+                    adapter_failure=None,
+                ),
+            ],
+        )
+
     def test_should_open_the_brief_of_the_next_segment_on_the_progress_file(self):
         # Arrange
         client = ClientRecordingLaunchesDouble(["handed_over", "done"])
@@ -2081,3 +2264,168 @@ class RunSegmentsOfASegmentEndedWithoutRelaunchTest(RunSegmentsTestCase):
 
                 # Assert
                 self.assertEqual(records, expected)
+
+
+NOTE_OF_THE_FIRST_SEGMENT = '{"at": "2026-10-19T08:30:00Z", "text": "rebase onto main before the check"}\n'
+NOTE_OF_THE_SECOND_SEGMENT = '{"at": "2026-10-19T08:45:00Z", "text": "the corpus of main holds two L016 errors"}\n'
+NO_NOTE = None
+
+
+class ClientAppendingNotesSpawnerDouble:
+    def __init__(self, notes: list[str | None]):
+        self.notes = notes
+
+    def spawn(self, request) -> ExitedProcessDouble:
+        note = self.notes.pop(0)
+        if note is not None:
+            with (Path(request.environment["BRIGADE_RUN_DIR"]) / "notes.jsonl").open("a") as notes:
+                notes.write(note)
+        return spawn_an_exited_client(request)
+
+
+class RunSegmentsOfARunNotedWhileItRunsTest(RunSegmentsTestCase):
+    def create_noted_plan(self, client: ClientRecordingLaunchesDouble, notes: list[str | None]):
+        spawner = ClientAppendingNotesSpawnerDouble(notes)
+        self.runtime = create_test_runtime(self.paths, run_process=self.git, spawn_process=spawner.spawn)
+        plan = create_run_plan(self.root, client_adapter=client, handovers=2)
+        plan.run_directory.mkdir(parents=True)
+        ask_progress(plan, "create_document", self.runtime)
+        plan.progress_file.write_text(PROGRESS_OF_THE_FIRST_SEGMENT)
+        return plan
+
+    def test_should_carry_the_note_in_the_brief_of_the_segment_after_the_handover_in_a_section_after_the_progress(
+        self,
+    ):
+        # Arrange
+        client = ClientRecordingLaunchesDouble(["handed_over", "done"])
+        plan = self.create_noted_plan(client, [NOTE_OF_THE_FIRST_SEGMENT, NO_NOTE])
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            client.launches[1]["brief"],
+            "# Progress so far\n\n"
+            "- the first segment is done\n\n"
+            "# Notes handed to the run\n\n"
+            "- 2026-10-19T08:30:00Z: rebase onto main before the check\n\n"
+            "# Procedure build-task\n\n"
+            "Deliver the task.\n\n"
+            "# Progress file\n\n"
+            f"The progress is the Markdown file {plan.progress_file}.\n\n"
+            "- one entry per major step: what it did in one line, the facts it established, one line each and five"
+            " at most, and the next step as the procedure names it, complete at the end\n"
+            "- a fact is what the next segment needs and no command gives back\n"
+            "- never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier"
+            " entry holds\n"
+            "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
+            "# Budget\n\n"
+            "40 turns, the cap of your role for this segment.\n\n"
+            "# End of segment\n\n"
+            "End your final message on one of these lines: brigade-end: done once the work is delivered,"
+            " brigade-end: handed_over when a next segment resumes it from the progress file,"
+            " brigade-end: blocked when it waits for a ruling.\n",
+        )
+
+    def test_should_carry_in_the_brief_of_a_segment_only_the_notes_appended_since_the_brief_before(self):
+        # Arrange
+        client = ClientRecordingLaunchesDouble(["handed_over", "handed_over", "done"])
+        plan = self.create_noted_plan(client, [NOTE_OF_THE_FIRST_SEGMENT, NOTE_OF_THE_SECOND_SEGMENT, NO_NOTE])
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            client.launches[2]["brief"],
+            "# Progress so far\n\n"
+            "- the first segment is done\n\n"
+            "# Notes handed to the run\n\n"
+            "- 2026-10-19T08:45:00Z: the corpus of main holds two L016 errors\n\n"
+            "# Procedure build-task\n\n"
+            "Deliver the task.\n\n"
+            "# Progress file\n\n"
+            f"The progress is the Markdown file {plan.progress_file}.\n\n"
+            "- one entry per major step: what it did in one line, the facts it established, one line each and five"
+            " at most, and the next step as the procedure names it, complete at the end\n"
+            "- a fact is what the next segment needs and no command gives back\n"
+            "- never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier"
+            " entry holds\n"
+            "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
+            "# Budget\n\n"
+            "40 turns, the cap of your role for this segment.\n\n"
+            "# End of segment\n\n"
+            "End your final message on one of these lines: brigade-end: done once the work is delivered,"
+            " brigade-end: handed_over when a next segment resumes it from the progress file,"
+            " brigade-end: blocked when it waits for a ruling.\n",
+        )
+
+    def test_should_carry_no_note_in_the_brief_of_the_segment_running_when_it_was_appended(self):
+        # Arrange
+        client = ClientRecordingLaunchesDouble(["done"])
+        plan = self.create_noted_plan(client, [NOTE_OF_THE_FIRST_SEGMENT])
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            client.launches[0]["brief"],
+            "# Procedure build-task\n\n"
+            "Deliver the task.\n\n"
+            "# Progress file\n\n"
+            f"The progress is the Markdown file {plan.progress_file}.\n\n"
+            "- one entry per major step: what it did in one line, the facts it established, one line each and five"
+            " at most, and the next step as the procedure names it, complete at the end\n"
+            "- a fact is what the next segment needs and no command gives back\n"
+            "- never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier"
+            " entry holds\n"
+            "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
+            "# Budget\n\n"
+            "40 turns, the cap of your role for this segment.\n\n"
+            "# End of segment\n\n"
+            "End your final message on one of these lines: brigade-end: done once the work is delivered,"
+            " brigade-end: handed_over when a next segment resumes it from the progress file,"
+            " brigade-end: blocked when it waits for a ruling.\n",
+        )
+
+
+class RunSegmentsOfAResumedRunNotedBeforeItsResumeTest(RunSegmentsTestCase):
+    def test_should_carry_in_the_brief_of_the_resumed_segment_the_notes_no_segment_before_carried(self):
+        # Arrange
+        client = ClientRecordingLaunchesDouble(["done"])
+        plan = create_run_plan(self.root, client_adapter=client, first_segment=2, resumed_session=NO_SESSION_TO_RESUME)
+        (plan.run_directory / "segments" / "1").mkdir(parents=True)
+        (plan.run_directory / "segments" / "1" / "notes.json").write_text('{"carried": 1}\n')
+        (plan.run_directory / "notes.jsonl").write_text(NOTE_OF_THE_FIRST_SEGMENT + NOTE_OF_THE_SECOND_SEGMENT)
+        ask_progress(plan, "create_document", self.runtime)
+        plan.progress_file.write_text(PROGRESS_OF_THE_FIRST_SEGMENT)
+
+        # Act
+        run_segments(plan, self.runtime, StopSignalReceiver())
+
+        # Assert
+        self.assertEqual(
+            client.launches[0]["brief"],
+            "# Progress so far\n\n"
+            "- the first segment is done\n\n"
+            "# Notes handed to the run\n\n"
+            "- 2026-10-19T08:45:00Z: the corpus of main holds two L016 errors\n\n"
+            "# Procedure build-task\n\n"
+            "Deliver the task.\n\n"
+            "# Progress file\n\n"
+            f"The progress is the Markdown file {plan.progress_file}.\n\n"
+            "- one entry per major step: what it did in one line, the facts it established, one line each and five"
+            " at most, and the next step as the procedure names it, complete at the end\n"
+            "- a fact is what the next segment needs and no command gives back\n"
+            "- never command output, a diff, the course of the step, a restatement of the brief or a fact an earlier"
+            " entry holds\n"
+            "- a handover entry holds what remains, one line per step not done, and the next step\n\n"
+            "# Budget\n\n"
+            "40 turns, the cap of your role for this segment.\n\n"
+            "# End of segment\n\n"
+            "End your final message on one of these lines: brigade-end: done once the work is delivered,"
+            " brigade-end: handed_over when a next segment resumes it from the progress file,"
+            " brigade-end: blocked when it waits for a ruling.\n",
+        )

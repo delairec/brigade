@@ -1,4 +1,5 @@
 import json
+from collections.abc import Callable
 from contextlib import AbstractContextManager, nullcontext
 from datetime import timedelta
 from pathlib import Path
@@ -71,13 +72,17 @@ def _locate_segment_result(plan: RunPlan, number: int) -> Path:
     return plan.run_directory / SEGMENTS_DIRECTORY / str(number) / RESULT_FILE
 
 
-def _run_with_handovers(plan: RunPlan, runtime: Runtime, stop: StopSignalReceiver) -> list[SegmentRecord]:
+def _run_with_handovers(
+    plan: RunPlan, runtime: Runtime, stop: StopSignalReceiver, return_to_client: Callable[[RunPlan], RunPlan]
+) -> list[SegmentRecord]:
     records = []
     instant = runtime.now
     if plan.budget_applied is not None:
         append_event(runtime.paths, instant, plan.budget_applied)
+    if plan.client_switched is not None:
+        append_event(runtime.paths, instant, plan.client_switched)
     while True:
-        record = run_segment(plan, plan.first_segment + len(records), runtime, stop)
+        record = run_segment(plan, records[-1].number + 1 if records else plan.first_segment, runtime, stop)
         records.append(record)
         instant += timedelta(milliseconds=record.measured_ms)
         finished = describe_finished(plan, record)
@@ -89,8 +94,12 @@ def _run_with_handovers(plan: RunPlan, runtime: Runtime, stop: StopSignalReceive
         if record.outcome not in RELAUNCH_SIGNALS:
             return records
         append_event(runtime.paths, instant, _describe_signal(plan, record))
-        if record.number > plan.handovers or not _holds_progress(plan, runtime):
+        if len(records) > plan.handovers or not _holds_progress(plan, runtime):
             return records
+        returned = return_to_client(plan)
+        if returned is not plan:
+            append_event(runtime.paths, instant, returned.client_switched)
+            plan = returned
 
 
 def _describe_disposable_worktree(plan: RunPlan) -> DetachedWorktree:
@@ -103,12 +112,21 @@ def _hold_worktrees_lock(plan: RunPlan, runtime: Runtime) -> AbstractContextMana
     return hold_lock(locate_worktrees_lock(runtime.paths.lock_directory, plan.project))
 
 
-def run_segments(plan: RunPlan, runtime: Runtime, stop: StopSignalReceiver) -> list[SegmentRecord]:
+def _keep_the_plan(plan: RunPlan) -> RunPlan:
+    return plan
+
+
+def run_segments(
+    plan: RunPlan,
+    runtime: Runtime,
+    stop: StopSignalReceiver,
+    return_to_client: Callable[[RunPlan], RunPlan] = _keep_the_plan,
+) -> list[SegmentRecord]:
     if plan.disposable_worktree:
         with _hold_worktrees_lock(plan, runtime):
             add_detached_worktree(runtime.run_process, _describe_disposable_worktree(plan))
     try:
-        records = _run_with_handovers(plan, runtime, stop)
+        records = _run_with_handovers(plan, runtime, stop, return_to_client)
     finally:
         if plan.disposable_worktree:
             with _hold_worktrees_lock(plan, runtime):

@@ -21,6 +21,7 @@ from brigade.ledger.milestone_pr_opened import MilestonePrOpened
 from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.run_finished import RunFinished
+from brigade.ledger.task_branch_cut import TaskBranchCut
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_reported import TaskReported
 from brigade.ledger.task_state import TaskState
@@ -35,13 +36,15 @@ from brigade.ledger.wave_started import WaveStarted
 from brigade.orders.is_order_due import OrderFacts
 from brigade.orders.live_order_run import LiveOrderRun
 from brigade.runs.record_run_pid import record_run_pid
-from brigade.system.parse_configuration import Configuration, parse_configuration
+from brigade.system.parse_configuration import Configuration, Fallback, ReasoningRow, parse_configuration
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.reset_hour import ResetHour
 from brigade.tick.actions import LaunchTask
 from brigade.tick.build_snapshot import (
     BlockedRun,
+    FallbackFacts,
     ForgeReaders,
+    HandedOverRun,
     LiveRun,
     PreflightFailure,
     ProjectFacts,
@@ -456,7 +459,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
-                    rate_limit=RateLimit(reset=None),
+                    rate_limit=RateLimit(reset=None, client="claude-code"),
                 ),
                 TaskFacts(
                     name="B2",
@@ -464,6 +467,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
                     pull_request=PULL_REQUEST,
                     stopped_run="r2",
+                    stopped_slot="build",
                 ),
                 TaskFacts(
                     name="B3",
@@ -502,6 +506,17 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             ),
         )
 
+    def test_should_note_no_quota_stop_on_a_task_whose_run_was_resumed_on_the_fallback(self):
+        # Arrange
+        self.record(1, TaskState(wave="w1", task="B1", state="blocked:quota"))
+        self.record(1, TaskState(wave="w1", task="B1", state="running", reason="resumed on the fallback client"))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertIsNone(snapshot.waves[0].tasks[0].rate_limit)
+
     def test_should_keep_the_quota_stop_of_a_task_whose_resume_the_ledger_does_not_record(self):
         # Arrange
         self.record(1, TaskState(wave="w1", task="B1", state="blocked:quota"))
@@ -520,7 +535,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 after=("B0",),
                 pull_request=PULL_REQUEST,
                 worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
-                rate_limit=RateLimit(reset=None),
+                rate_limit=RateLimit(reset=None, client="claude-code"),
             ),
         )
 
@@ -543,7 +558,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 after=("B0",),
                 pull_request=PULL_REQUEST,
                 worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
-                rate_limit=RateLimit(reset=None),
+                rate_limit=RateLimit(reset=None, client="claude-code"),
             ),
         )
 
@@ -568,7 +583,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
-                    rate_limit=RateLimit(reset=None),
+                    rate_limit=RateLimit(reset=None, client="claude-code"),
                     last_run="20261013T100000Z-a00003",
                 ),
                 TaskFacts(
@@ -577,6 +592,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
                     pull_request=PULL_REQUEST,
                     stopped_run="r2",
+                    stopped_slot="build",
                 ),
                 TaskFacts(
                     name="B3",
@@ -614,7 +630,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     after=("B0",),
                     pull_request=PULL_REQUEST,
                     worktree=str(self.repository / ".brigade" / "worktrees" / "B1"),
-                    rate_limit=RateLimit(reset=None),
+                    rate_limit=RateLimit(reset=None, client="claude-code"),
                     holds_uncommitted_changes=True,
                 ),
                 TaskFacts(
@@ -623,6 +639,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                     last_action=datetime(2026, 10, 19, 8, 59, tzinfo=UTC),
                     pull_request=PULL_REQUEST,
                     stopped_run="r2",
+                    stopped_slot="build",
                 ),
                 TaskFacts(
                     name="B3",
@@ -740,7 +757,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=f"{self.root}/shop/.brigade/worktrees/B1",
-                            rate_limit=RateLimit(reset=None),
+                            rate_limit=RateLimit(reset=None, client="claude-code"),
                             stopped_run=None,
                             opened_pull_request=None,
                             preflighted_head=None,
@@ -770,6 +787,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                             worktree=None,
                             rate_limit=None,
                             stopped_run="r2",
+                            stopped_slot="build",
                             opened_pull_request=None,
                             preflighted_head=None,
                             verdict=None,
@@ -904,12 +922,49 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
             ),
         )
 
+    def test_should_carry_the_fallback_and_the_level_of_each_slot_of_a_project_once_a_fallback_is_configured(self):
+        # Arrange
+        self.configuration = Configuration(
+            fallback=Fallback(client="vibe", reasoning={"standard": ReasoningRow(model="devstral", effort="high")})
+        )
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.fallback, FallbackFacts(client="vibe", levels=frozenset({"standard"})))
+        self.assertEqual(
+            snapshot.projects[0].levels,
+            {
+                "plan": "deep",
+                "build": "standard",
+                "review": "deep",
+                "remediate": "standard",
+                "rebase": "light",
+                "report": "standard",
+                "triage": "standard",
+                "rules": "deep",
+                "explore": "light",
+            },
+        )
+
+    def test_should_carry_no_fallback_and_no_level_without_a_fallback_configured(self):
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertIsNone(snapshot.fallback)
+        self.assertEqual(snapshot.projects[0].levels, {})
+
     def test_should_carry_the_rate_limits_in_force_and_the_studies(self):
         # Act
         snapshot, _ = self.build()
 
         # Assert
-        self.assertEqual(snapshot.rate_limits, (RateLimit(reset=None), RateLimit(reset=None)))
+        self.assertEqual(
+            snapshot.rate_limits,
+            (RateLimit(reset=None, client="claude-code"), RateLimit(reset=None, client="claude-code")),
+        )
         self.assertEqual(
             snapshot.studies,
             (
@@ -985,7 +1040,10 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         snapshot, _ = self.build()
 
         # Assert
-        self.assertEqual(snapshot.rate_limits, (RateLimit(reset=None), RateLimit(reset=None)))
+        self.assertEqual(
+            snapshot.rate_limits,
+            (RateLimit(reset=None, client="claude-code"), RateLimit(reset=None, client="claude-code")),
+        )
 
     def test_should_note_no_rate_limit_on_a_merged_task_whose_last_run_hit_one(self):
         # Arrange
@@ -1020,7 +1078,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=f"{self.root}/shop/.brigade/worktrees/B1",
-                            rate_limit=RateLimit(reset=None),
+                            rate_limit=RateLimit(reset=None, client="claude-code"),
                             stopped_run=None,
                             opened_pull_request=None,
                             preflighted_head=None,
@@ -1050,6 +1108,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                             worktree=None,
                             rate_limit=None,
                             stopped_run="r2",
+                            stopped_slot="build",
                             opened_pull_request=None,
                             preflighted_head=None,
                             verdict=None,
@@ -1149,7 +1208,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                                 updated_at=datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
                             ),
                             worktree=f"{self.root}/shop/.brigade/worktrees/B1",
-                            rate_limit=RateLimit(reset=None),
+                            rate_limit=RateLimit(reset=None, client="claude-code"),
                             stopped_run=None,
                             opened_pull_request=None,
                             preflighted_head=None,
@@ -1179,6 +1238,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                             worktree=None,
                             rate_limit=None,
                             stopped_run="r2",
+                            stopped_slot="build",
                             opened_pull_request=None,
                             preflighted_head=None,
                             verdict=None,
@@ -1244,6 +1304,16 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 ),
             ),
         )
+
+    def test_should_read_the_pull_request_of_a_retitled_task_by_the_branch_it_was_first_cut_on(self):
+        # Arrange
+        self.record(55, TaskBranchCut(project="shop", task="B1", branch="feature/B1-first-title"))
+
+        # Act
+        self.build()
+
+        # Assert
+        self.assertEqual(self.reader.branches, ["feature/B1-first-title", "feature/B2-task", "feature/B4-task"])
 
     def test_should_read_no_pull_request_of_a_settled_task_whose_worktree_is_gone(self):
         # Act
@@ -2446,7 +2516,7 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
         snapshot, _ = self.build()
 
         # Assert
-        self.assertEqual(snapshot.waves[0].tasks[0].rate_limit, RateLimit(reset=None))
+        self.assertEqual(snapshot.waves[0].tasks[0].rate_limit, RateLimit(reset=None, client="claude-code"))
 
     def test_should_resume_a_task_paused_on_the_quota_in_the_state_it_held_before_its_pause(self):
         # Arrange
@@ -2502,6 +2572,37 @@ class BuildSnapshotOfTasksInRepairTest(BuildSnapshotTestCase):
 
                 # Assert
                 self.assertEqual(snapshot.waves[0].tasks[0].blocked_run, expected)
+
+    def test_should_carry_the_last_run_of_the_task_and_its_segment_when_it_ended_handed_over(self):
+        for case, outcome, expected in [
+            (
+                "a run handed over at its third segment",
+                "handed_over",
+                HandedOverRun(run="20261019T083000Z-b10c4d", segments=3, slot="build"),
+            ),
+            ("a run delivered", "done", None),
+            ("a run blocked", "blocked", None),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                self.setUp()
+                write_run(self.paths.state_root, create_run_record("20261019T081100Z-a00001", "w1", "B1"), None)
+                write_run(self.paths.state_root, create_run_record("20261019T083000Z-b10c4d", "w1", "B1"), None)
+                self.record(
+                    5,
+                    create_run_finished(
+                        "20261019T083000Z-b10c4d", segment=2, wave="w1", task="B1", outcome="handed_over"
+                    ),
+                )
+                self.record(
+                    4, create_run_finished("20261019T083000Z-b10c4d", segment=3, wave="w1", task="B1", outcome=outcome)
+                )
+
+                # Act
+                snapshot, _ = self.build()
+
+                # Assert
+                self.assertEqual(snapshot.waves[0].tasks[0].handed_over_run, expected)
 
     def test_should_note_a_task_rebased_by_its_last_run_when_a_rebase_run_ended_done(self):
         for case, slot, outcome, expected in [

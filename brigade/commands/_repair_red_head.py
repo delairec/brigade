@@ -82,5 +82,6 @@ def repair_red_head(runtime: Runtime, configuration: Configuration, project: Ent
         task=None,
         detach=True,
         resume=False,
+        fallback=False,
     )
     run(repairing, runtime)

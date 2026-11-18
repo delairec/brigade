@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from brigade.ledger.task_pr_opened import TaskPrOpened
+from brigade.ledger.task_state import QUOTA_RESUME_REASON
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.task_report_order import TaskReportOrder
 from brigade.tick.build_snapshot import PreflightFailure, TaskAmendment
@@ -15,6 +16,7 @@ class LaunchTask:
     task: str
     task_branch: str
     pull_request_checks: HeadChecks | None
+    on_fallback: bool = False
 
 
 @dataclass(frozen=True)
@@ -73,6 +75,7 @@ class LaunchVerification:
     task: str
     pr: int | None
     worktree: str
+    on_fallback: bool = False
 
 
 @dataclass(frozen=True)
@@ -82,6 +85,7 @@ class LaunchRemediation:
     task: str
     pr: int
     worktree: str
+    on_fallback: bool = False
 
 
 @dataclass(frozen=True)
@@ -95,6 +99,7 @@ class LaunchCheckRepair:
     worktree: str
     checks: tuple[str, ...]
     findings: tuple[PreflightFailure, ...]
+    on_fallback: bool = False
 
 
 @dataclass(frozen=True)
@@ -156,6 +161,9 @@ class ResumeTaskRun:
     task: str
     run: str
     state: str | None = None
+    reason: str = QUOTA_RESUME_REASON
+    slot: str | None = None
+    on_fallback: bool = False
 
 
 @dataclass(frozen=True)
@@ -221,6 +229,7 @@ class RebaseTask:
     worktree: str
     head: str
     holds_uncommitted_changes: bool
+    on_fallback: bool = False
 
 
 @dataclass(frozen=True)
@@ -244,6 +253,7 @@ class RebuildTask:
     worktree: str
     reason: str
     amendment: TaskAmendment
+    on_fallback: bool = False
 
 
 @dataclass(frozen=True)

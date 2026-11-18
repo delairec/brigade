@@ -37,7 +37,7 @@ from tests.unit.commands.command_runtime import (
     write_operational_corpus,
 )
 from tests.unit.commands.create_plugin_resolver import create_plugin_resolver
-from tests.unit.commands.run_directories import FIRST_RUN, create_run_record, create_run_result, write_run
+from tests.unit.commands.run_directories import FIRST_RUN, SECOND_RUN, create_run_record, create_run_result, write_run
 from tests.unit.commands.run_doubles import (
     CLIENT_AND_DOCUMENT_CONFIGURATION,
     TURN_COUNTING_PROBE,
@@ -816,6 +816,26 @@ class SpawnRecorderDouble:
         return SpawnedProcessDouble(pid=os.getpid())
 
 
+FALLBACK_BINDING_EVERY_LEVEL = (
+    '[fallback]\nclient = "fake"\n[fallback.reasoning]\n'
+    'light = { model = "ministral", effort = "medium" }\n'
+    'standard = { model = "devstral", effort = "high" }\n'
+    'deep = { model = "magistral", effort = "high" }\n'
+)
+CLIENT_CUT_ON_A_RATE_LIMIT = {
+    **create_run_result(SECOND_RUN, "failed", "2026-10-19T08:30:00Z"),
+    "client": "double",
+    "error_class": "rate_limit",
+    "reset": {"hour": "15:00", "timezone": "UTC"},
+}
+
+
+def serve_from_the_fallback(root: Path, events: list) -> None:
+    configuration = root / "config" / "config.toml"
+    configuration.write_text(configuration.read_text(encoding="utf-8") + FALLBACK_BINDING_EVERY_LEVEL, encoding="utf-8")
+    write_ledger(root, [*events, CLIENT_CUT_ON_A_RATE_LIMIT])
+
+
 class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
@@ -888,6 +908,182 @@ class TickApplyingTheActionsOfAWaveTest(unittest.TestCase):
                     "T7",
                     "--run-id",
                     ANY,
+                )
+            ],
+        )
+
+    def test_should_launch_the_build_run_on_the_fallback_while_the_client_is_on_a_rate_limit(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        (self.root / "config" / "config.toml").write_text(
+            CONFIGURATION_OF_A_TWO_DAY_STALL
+            + '[fallback]\nclient = "fake"\n[fallback.reasoning]\nstandard = { model = "devstral", effort = "high" }\n',
+            encoding="utf-8",
+        )
+        cut_on_the_rate_limit = {
+            **create_run_result(SECOND_RUN, "failed", "2026-10-19T08:30:00Z"),
+            "client": "double",
+            "error_class": "rate_limit",
+            "reset": {"hour": "15:00", "timezone": "UTC"},
+        }
+        write_ledger(self.root, [CUT_OF_M4_ON_THE_WAVE_BRANCH, cut_on_the_rate_limit, WAVE_STARTED])
+        runtime = self._create_runtime(TASK_TO_DELIVER, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED))
+
+        # Act
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "start",
+                    "build-task",
+                    "task=@TASK.T7",
+                    "base=integration/M4",
+                    "--slot",
+                    "build",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--brief",
+                    str(self.root / "state" / "briefs" / "tidepool_w16-T7.md"),
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                    "--fallback",
+                )
+            ],
+        )
+
+    def _launch_on_the_fallback_in(self, state: str) -> list[tuple]:
+        self.worktree.mkdir(parents=True)
+        serve_from_the_fallback(
+            self.root, [WAVE_STARTED, TASK_PR_OPENED, TASK_PREFLIGHTED_AT_THE_HEAD, _record_task_state(state)]
+        )
+        runtime = self._create_runtime(TASK_DELIVERED, create_forge(OPEN_PULL_REQUEST, NO_DETAILS_ASKED))
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
+        return self.spawn.argvs
+
+    def test_should_launch_the_check_repair_on_the_fallback_while_the_client_is_on_a_rate_limit(self):
+        # Arrange
+        self.worktree.mkdir(parents=True)
+        serve_from_the_fallback(
+            self.root,
+            [
+                CUT_OF_M4_ON_THE_WAVE_BRANCH,
+                WAVE_STARTED,
+                TASK_PR_OPENED,
+                TASK_PREFLIGHTED_ON_FAILING_CHECKS_AND_PRIVACY,
+                _record_task_state("pr_open"),
+            ],
+        )
+        tails = {"ci": "FAIL test_cart\nexit 1", "coverage": None}
+        runtime = self._create_runtime(
+            TASK_DELIVERED, create_forge(PULL_REQUEST_FAILING_TWO_CHECKS, NO_DETAILS_ASKED, tails)
+        )
+
+        # Act
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "start",
+                    "build-task",
+                    "task=@TASK.T7",
+                    "base=integration/M4",
+                    "--slot",
+                    "build",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--brief",
+                    str(self.root / "state" / "briefs" / "tidepool_w16-T7-checks.md"),
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                    "--fallback",
+                )
+            ],
+        )
+
+    def test_should_launch_the_review_on_the_fallback_while_the_client_is_on_a_rate_limit(self):
+        # Arrange
+        state = "verifying"
+
+        # Act
+        argvs = self._launch_on_the_fallback_in(state)
+
+        # Assert
+        self.assertEqual(
+            argvs,
+            [
+                (
+                    "run",
+                    "start",
+                    "review-pr",
+                    "pr=42",
+                    "task=@TASK.T7",
+                    "--slot",
+                    "review",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                    "--fallback",
+                )
+            ],
+        )
+
+    def test_should_launch_the_remediation_on_the_fallback_while_the_client_is_on_a_rate_limit(self):
+        # Arrange
+        state = "changes_requested"
+
+        # Act
+        argvs = self._launch_on_the_fallback_in(state)
+
+        # Assert
+        self.assertEqual(
+            argvs,
+            [
+                (
+                    "run",
+                    "start",
+                    "remediate-pr",
+                    "pr=42",
+                    "task=@TASK.T7",
+                    "--slot",
+                    "remediate",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                    "--fallback",
                 )
             ],
         )
@@ -4220,6 +4416,40 @@ class TickLaunchingATaskWhoseChecksPassedAndWhoseBranchConflictsWithTheWaveBranc
             errors.getvalue(),
         )
 
+    def test_should_launch_the_rebase_slot_on_the_fallback_while_the_client_is_on_a_rate_limit(self):
+        # Arrange
+        serve_from_the_fallback(self.root, [CUT_OF_M4_ON_THE_WAVE_BRANCH, WAVE_STARTED, T7_RUNNING, REBASE_OF_T7_DONE])
+
+        # Act
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "start",
+                    "rebase-on-base",
+                    "task=@TASK.T7",
+                    "base=integration/M4",
+                    "--slot",
+                    "rebase",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                    "--fallback",
+                )
+            ],
+        )
+
     def test_should_launch_the_rebase_slot_on_the_worktree_of_the_task_instead_of_its_build(self):
         # Act
         COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
@@ -4307,6 +4537,40 @@ class TickLaunchingATaskWithoutAPullRequestWhoseBranchConflictsWithTheWaveBranch
         self.assertEqual(
             select_argvs_opening_on(self.machine.argvs, GIT_REBASE),
             [("git", "rebase", "--fork-point", "integration/M4"), ("git", "rebase", "--abort")],
+        )
+
+    def test_should_launch_the_rebase_slot_on_the_fallback_while_the_client_is_on_a_rate_limit(self):
+        # Arrange
+        serve_from_the_fallback(self.root, [CUT_OF_M4_ON_THE_WAVE_BRANCH, WAVE_STARTED])
+
+        # Act
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "start",
+                    "rebase-on-base",
+                    "task=@TASK.T7",
+                    "base=integration/M4",
+                    "--slot",
+                    "rebase",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                    "--fallback",
+                )
+            ],
         )
 
     def test_should_launch_the_rebase_slot_with_the_task_and_its_base_and_no_pull_request(self):
@@ -4550,6 +4814,7 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
                 "task": "T7",
                 "task_branch": "feature/T7-tide-table",
                 "pull_request_checks": None,
+                "on_fallback": False,
                 "waits": "integration/M4 is red at 8885daa, `make test` failed",
             },
             document["decisions"],
@@ -4571,6 +4836,7 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
                 "task": "T7",
                 "task_branch": "feature/T7-tide-table",
                 "pull_request_checks": None,
+                "on_fallback": False,
             },
             document["decisions"],
         )
@@ -5081,6 +5347,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
                 "worktree": str(self.worktree),
                 "head": WAVE_HEAD,
                 "holds_uncommitted_changes": False,
+                "on_fallback": False,
                 "waits": f"integration/M4 is red at {WAVE_HEAD}, `ci / tests` failed",
             },
             document["decisions"],
@@ -5307,6 +5574,41 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         self.assertEqual(
             self.environments_of_the_fetch,
             [ENVIRONMENT_OF_THE_CLI_ACCOUNT, ENVIRONMENT_OF_THE_CLI_ACCOUNT, ENVIRONMENT_OF_THE_CLI_ACCOUNT],
+        )
+
+    def test_should_launch_the_rebase_slot_on_the_fallback_while_the_client_is_on_a_rate_limit(self):
+        # Arrange
+        serve_from_the_fallback(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
+        runtime = self._create_runtime(OUTPUTS_OF_A_REBASE_STOPPED_ON_A_CONFLICT, [BEHIND_PULL_REQUEST])
+
+        # Act
+        COMMAND.run(Namespace(log_file=None, mode="once"), runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "start",
+                    "rebase-on-base",
+                    "pr=42",
+                    "task=@TASK.T7",
+                    "--slot",
+                    "rebase",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                    "--fallback",
+                )
+            ],
         )
 
     def test_should_abort_a_conflicting_rebase_and_launch_the_rebase_slot_in_fixing(self):
@@ -5587,6 +5889,7 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
                     "task": "T7",
                     "task_branch": "feature/T7-tide-table",
                     "pull_request_checks": None,
+                    "on_fallback": False,
                 }
             ],
         )
@@ -6469,6 +6772,42 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
             ),
         )
 
+    def test_should_launch_the_rebuild_on_the_fallback_while_the_client_is_on_a_rate_limit(self):
+        # Arrange
+        serve_from_the_fallback(self.root, LEDGER_OF_A_TASK_IN_VERIFYING)
+
+        # Act
+        COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.spawn.argvs,
+            [
+                (
+                    "run",
+                    "start",
+                    "build-task",
+                    "task=@TASK.T7",
+                    "base=integration/M4",
+                    "--slot",
+                    "build",
+                    "--cwd",
+                    str(self.worktree),
+                    "--project",
+                    "tidepool",
+                    "--brief",
+                    str(self.root / "state" / "briefs" / "tidepool_w16-T7-rebuild.md"),
+                    "--wave",
+                    "tidepool_w16",
+                    "--task",
+                    "T7",
+                    "--run-id",
+                    ANY,
+                    "--fallback",
+                )
+            ],
+        )
+
     def test_should_launch_the_build_slot_on_the_worktree_of_the_task_and_rebase_nothing(self):
         # Act
         COMMAND.run(Namespace(log_file=None, mode="once"), self.runtime)
@@ -6560,6 +6899,7 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
                             ),
                         },
                     },
+                    "on_fallback": False,
                 },
                 {"project": "tidepool"},
                 {"project": "tidepool"},

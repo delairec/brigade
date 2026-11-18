@@ -136,8 +136,9 @@ row names a word the code or the corpus carries.
 | `brigade role list` | command | list the role, the source and the model of each slot | [Roles](Roles.md) | M8 | B255 |
 | `brigade role show` | command | print the role file a slot resolves to | [Roles](Roles.md) | M8 | B255 |
 | `brigade run list` | command | list every run with its state and outcome | [Runs](Runs.md) | M8 | B255 |
+| `brigade run note` | command | hand a note to a run: the brief of its next segment carries it | [Runs](Runs.md) | M13 | B91 |
 | `brigade run prune` | command | remove the finished and dead runs beyond the bound, or older than a day; a running run stays | [Runs](Runs.md) | M8 | B255 |
-| `brigade run show` | command | print the summary of a run, its segments and its progress, and with --log its log | [Runs](Runs.md) | M8 | B255 |
+| `brigade run show` | command | print the summary of a run, its segments, its notes and its progress, and with --log its log | [Runs](Runs.md) | M8 | B255 |
 | `brigade run start` | command | run a procedure as a slot through the client adapter | [Runs](Runs.md) | M8 | B255 |
 | `brigade run stop` | command | stop a run: its client's group gets SIGTERM, then SIGKILL after the grace | [Runs](Runs.md) | M8 | B255 |
 | `brigade run stop-hook` | command | print the document that stops a client session once the soft limit of its run has passed | [Runs](Runs.md) | M8 | B255 |

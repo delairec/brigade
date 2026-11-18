@@ -1,5 +1,6 @@
 import argparse
 import contextlib
+import dataclasses
 import functools
 import io
 import itertools
@@ -11,13 +12,16 @@ import sys
 import tempfile
 import unittest
 from argparse import Namespace
+from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.adapters.documents import markdown
 from brigade.add_command_parsers import add_command_parsers
 from brigade.commands.run_start import COMMAND, run
 from brigade.errors import BrigadeError, ToolFailure
+from brigade.ledger.append_event import append_event
 from brigade.runtime import Runtime
+from brigade.system.reset_hour import ResetHour
 from brigade.system.resolve_plugin import PluginSources, resolve_plugin
 from brigade.system.run_process import ProcessRequest
 from tests.unit.commands.command_runtime import create_machine_double, write_operational_corpus
@@ -30,6 +34,7 @@ from tests.unit.commands.run_doubles import (
 )
 from tests.unit.create_test_paths import NO_SEARCH_PATH, create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.ledger.create_run_finished import create_run_finished
 from tests.unit.plugin_double import PluginDouble
 from tests.unit.refuse_to_run import refuse_to_run
 from tests.unit.runs.write_run_record import write_run_record
@@ -66,6 +71,7 @@ class RunClientPrecedenceTest(unittest.TestCase):
             task=None,
             detach=False,
             resume=False,
+            fallback=False,
         )
 
         # Act
@@ -207,6 +213,7 @@ class RunDetachedTest(unittest.TestCase):
             task=None,
             detach=True,
             resume=False,
+            fallback=False,
         )
 
     def test_should_record_the_run_and_hand_it_to_a_process_of_its_own(self):
@@ -341,6 +348,44 @@ def _resolve_the_delivering_client(kind: str, name: str, **places):
     return plugins[kind]
 
 
+class RunDetachedOnTheFallbackTest(unittest.TestCase):
+    def test_should_record_the_run_on_the_client_the_fallback_names(self):
+        # Arrange
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        (root / "config").mkdir()
+        (root / "config" / "config.toml").write_text(
+            CLIENT_AND_DOCUMENT_CONFIGURATION + '[fallback]\nclient = "fake"\n', encoding="utf-8"
+        )
+        request = Namespace(
+            procedure="request-plan",
+            slot="plan",
+            project=None,
+            cwd=str(root),
+            brief=None,
+            arguments=("request=tidepool_1",),
+            run_id="20261019T090000Z-a1b2c3",
+            wave=None,
+            task=None,
+            detach=True,
+            resume=False,
+            fallback=True,
+        )
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            spawn_process=spawn_as_this_process,
+            resolve_plugin=create_plugin_resolution(TURN_COUNTING_PROBE),
+        )
+
+        # Act
+        run(request, runtime)
+
+        # Assert
+        record = json.loads((root / "state" / "runs" / "20261019T090000Z-a1b2c3" / "run.json").read_text("utf-8"))
+        self.assertEqual(record["client"], "fake")
+
+
 class RunAttachedTest(unittest.TestCase):
     def test_should_run_the_client_to_its_end_and_report_its_outcome(self):
         # Arrange
@@ -359,6 +404,7 @@ class RunAttachedTest(unittest.TestCase):
             task=None,
             detach=False,
             resume=False,
+            fallback=False,
         )
         runtime = create_test_runtime(
             create_test_paths(root),
@@ -405,6 +451,7 @@ class RunAttachedTest(unittest.TestCase):
             task=None,
             detach=False,
             resume=False,
+            fallback=False,
         )
         runtime = create_test_runtime(
             create_test_paths(root),
@@ -446,6 +493,7 @@ class RunAttachedBoundingTheRunsTest(unittest.TestCase):
             task=None,
             detach=False,
             resume=False,
+            fallback=False,
         )
         runtime = create_test_runtime(
             create_test_paths(self.root),
@@ -526,6 +574,7 @@ class RunAttachedInterruptedTest(unittest.TestCase):
             task=None,
             detach=False,
             resume=False,
+            fallback=False,
         )
         runtime = create_test_runtime(
             create_test_paths(root),
@@ -565,6 +614,7 @@ class RunOfASlotBoundInAnUnreadableInstructionsCorpusTest(unittest.TestCase):
             task=None,
             detach=False,
             resume=False,
+            fallback=False,
         )
         runtime = create_test_runtime(
             create_test_paths(root), run_process=_fail_awawa, resolve_plugin=_resolve_the_delivering_client
@@ -654,6 +704,7 @@ class RunOfAProjectWithoutAForgeTest(unittest.TestCase):
             task=None,
             detach=True,
             resume=False,
+            fallback=False,
         )
 
         # Act
@@ -661,3 +712,154 @@ class RunOfAProjectWithoutAForgeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(forge.questions, [])
+
+
+HANDED_OVER_RUN_ID = "20261019T090000Z-a1b2c3"
+HANDED_OVER_PROGRESS = "- the failing test is written\n"
+CUT_ON_RATE_LIMIT_AT_EIGHT = datetime(2026, 10, 19, 8, 0, tzinfo=UTC)
+RESET_AT_THREE = ResetHour(hour="15:00", timezone="UTC")
+
+
+class ClientAnsweringItsOutcomeDouble:
+    def __init__(self, outcome: str, probe: dict = TURN_COUNTING_PROBE):
+        self.outcome = outcome
+        self.probe = probe
+
+    def answer(self, operation: str, request: dict) -> dict:
+        if operation == "probe":
+            return self.probe
+        if operation == "launch-argv":
+            return {
+                "schema_version": 1,
+                "argv": ["double-client", "--print"],
+                "environment": {},
+                "stdin": request["brief"],
+                "session_id": None,
+            }
+        return {
+            "schema_version": 1,
+            "outcome": self.outcome,
+            "turns": 12,
+            "usage": None,
+            "session_id": None,
+            "duration_ms": 4200,
+            "cost_usd": None,
+            "error_class": None,
+            "reset": None,
+            "message": "the segment ended",
+        }
+
+
+def _create_handing_over_spawn(root: Path):
+    def spawn_a_client_writing_its_progress(request):
+        progress = root / "state" / "runs" / HANDED_OVER_RUN_ID / "progress.md"
+        progress.write_text(HANDED_OVER_PROGRESS, encoding="utf-8")
+        return _spawn_a_client_that_exits(request)
+
+    return spawn_a_client_writing_its_progress
+
+
+def _create_handed_over_request(root: Path, *, on_fallback: bool) -> Namespace:
+    return Namespace(
+        procedure="build-task",
+        slot="build",
+        project=None,
+        cwd=str(root),
+        brief=None,
+        arguments=("task=@TASK.T7",),
+        run_id=HANDED_OVER_RUN_ID,
+        wave=None,
+        task=None,
+        detach=False,
+        resume=False,
+        fallback=on_fallback,
+    )
+
+
+class RunAttachedHandedOverTestCase(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (self.root / "config").mkdir()
+        (self.root / "config" / "config.toml").write_text(
+            CLIENT_AND_DOCUMENT_CONFIGURATION + '[fallback]\nclient = "fake"\n', encoding="utf-8"
+        )
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            spawn_process=_create_handing_over_spawn(self.root),
+            resolve_plugin=self.resolve_plugin,
+        )
+
+    def resolve_plugin(self, kind: str, name: str, **places):
+        plugins = {
+            ("client", "fake"): ClientAnsweringItsOutcomeDouble("handed_over"),
+            ("client", "double"): ClientAnsweringItsOutcomeDouble("done"),
+            ("progress_form", "markdown"): markdown,
+            ("forge", "github"): PluginDouble(kind="forge", name="github"),
+        }
+        return plugins[kind, name]
+
+    def read_client_of_the_second_segment(self) -> str:
+        result = self.root / "state" / "runs" / HANDED_OVER_RUN_ID / "segments" / "2" / "result.json"
+        return json.loads(result.read_text(encoding="utf-8"))["client"]
+
+
+class RunAttachedOnTheFallbackTest(RunAttachedHandedOverTestCase):
+    def test_should_run_the_segment_after_a_handover_on_the_client_once_its_rate_limit_is_over(self):
+        # Act
+        run(_create_handed_over_request(self.root, on_fallback=True), self.runtime)
+
+        # Assert
+        self.assertEqual(self.read_client_of_the_second_segment(), "double")
+
+    def test_should_keep_the_next_segment_on_the_fallback_while_the_rate_limit_of_the_client_is_in_force(self):
+        # Arrange
+        cut_on_rate_limit = dataclasses.replace(
+            create_run_finished("20261019T070000Z-d4e5f6", client="double"),
+            error_class="rate_limit",
+            reset=RESET_AT_THREE,
+        )
+        append_event(self.runtime.paths, CUT_ON_RATE_LIMIT_AT_EIGHT, cut_on_rate_limit)
+
+        # Act
+        run(_create_handed_over_request(self.root, on_fallback=True), self.runtime)
+
+        # Assert
+        self.assertEqual(self.read_client_of_the_second_segment(), "fake")
+
+
+class RunAttachedOnAFallbackGrantingItsToolsTest(RunAttachedHandedOverTestCase):
+    def resolve_plugin(self, kind: str, name: str, **places):
+        if (kind, name) == ("client", "fake"):
+            return ClientAnsweringItsOutcomeDouble("handed_over", {**TURN_COUNTING_PROBE, "features": ["tool_grants"]})
+        return super().resolve_plugin(kind, name, **places)
+
+    def test_should_keep_on_the_fallback_a_review_its_client_would_move_into_a_disposable_worktree(self):
+        # Arrange
+        review = Namespace(
+            **{
+                **vars(_create_handed_over_request(self.root, on_fallback=True)),
+                "procedure": "review-pr",
+                "slot": "review",
+                "arguments": ("pr=7", "task=@TASK.T7"),
+            }
+        )
+
+        # Act
+        run(review, self.runtime)
+
+        # Assert
+        self.assertEqual(self.read_client_of_the_second_segment(), "fake")
+
+
+class RunAttachedOnItsClientHandedOverTest(RunAttachedHandedOverTestCase):
+    def resolve_plugin(self, kind: str, name: str, **places):
+        if (kind, name) == ("client", "double"):
+            return ClientAnsweringItsOutcomeDouble("handed_over")
+        return super().resolve_plugin(kind, name, **places)
+
+    def test_should_run_its_next_segment_on_its_client(self):
+        # Act
+        run(_create_handed_over_request(self.root, on_fallback=False), self.runtime)
+
+        # Assert
+        self.assertEqual(self.read_client_of_the_second_segment(), "double")

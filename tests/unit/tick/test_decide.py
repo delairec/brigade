@@ -51,6 +51,8 @@ from brigade.tick.actions import (
 )
 from brigade.tick.build_snapshot import (
     BlockedRun,
+    FallbackFacts,
+    HandedOverRun,
     LiveRun,
     MilestoneFacts,
     PreflightFailure,
@@ -1148,6 +1150,32 @@ class PlanQuotaPauseTest(unittest.TestCase):
                 self.assertEqual(actions, ())
 
 
+class PlanRequeuedTaskLaunchTest(unittest.TestCase):
+    def test_should_resume_the_run_a_requeued_task_handed_over_and_launch_anew_the_one_of_a_dead_run(self):
+        for case, handed_over_run, expected in [
+            (
+                "its last run handed over",
+                HANDED_OVER_AFTER_THREE_SEGMENTS,
+                ResumeTaskRun(
+                    wave="shop_w1", task="S3", run=LAST_RUN_OF_S3, state="running", reason="resumed after its handovers"
+                ),
+            ),
+            ("its last run dead", NOT_HANDED_OVER, LAUNCH_S3),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                task = TaskFacts(
+                    name="S3", branch="feature/S3-task", last_run=LAST_RUN_OF_S3, handed_over_run=handed_over_run
+                )
+                snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "queued"}),), projects=(SHOP,))
+
+                # Act
+                actions = decide(snapshot)
+
+                # Assert
+                self.assertEqual(actions, (expected,))
+
+
 class PlanQuotaResumeTest(unittest.TestCase):
     def test_should_resume_a_wave_blocked_on_the_quota_and_its_blocked_runs_once_resume_at_is_reached(self):
         # Arrange
@@ -2074,28 +2102,52 @@ LAST_RUN_OF_S3 = "20261006T110000Z-d1e2f3"
 NO_RUN = None
 NOT_BLOCKED = None
 PARK_S3_RUN_NOT_STARTED = ParkTask(wave="shop_w1", task="S3", reason="run not started", blockers=())
+NOT_HANDED_OVER = None
+HANDED_OVER_AFTER_THREE_SEGMENTS = HandedOverRun(run=LAST_RUN_OF_S3, segments=3)
 
 
 class PlanRunningTaskWithoutALiveRunTest(unittest.TestCase):
     def test_should_park_a_running_task_no_live_run_names_with_the_reason_of_its_last_run(self):
-        for case, last_run, blocked_run, expected in [
+        for case, last_run, blocked_run, handed_over_run, expected in [
             (
                 "its last run dead",
                 LAST_RUN_OF_S3,
                 NOT_BLOCKED,
+                NOT_HANDED_OVER,
                 (ParkTask(wave="shop_w1", task="S3", reason="run dead: 20261006T110000Z-d1e2f3", blockers=()),),
             ),
             (
                 "its first build ended blocked on a question",
                 "20261006T110000Z-b10c4d",
                 BLOCKED_ON_A_RULING,
+                NOT_HANDED_OVER,
                 (PARK_S3_ON_THE_QUESTION,),
             ),
-            ("no run naming it", NO_RUN, NOT_BLOCKED, (PARK_S3_RUN_NOT_STARTED,)),
+            (
+                "its last run handed over at its last handover",
+                LAST_RUN_OF_S3,
+                NOT_BLOCKED,
+                HANDED_OVER_AFTER_THREE_SEGMENTS,
+                (
+                    ParkTask(
+                        wave="shop_w1",
+                        task="S3",
+                        reason="run 20261006T110000Z-d1e2f3 handed over after 3 segments",
+                        blockers=(),
+                    ),
+                ),
+            ),
+            ("no run naming it", NO_RUN, NOT_BLOCKED, NOT_HANDED_OVER, (PARK_S3_RUN_NOT_STARTED,)),
         ]:
             with self.subTest(case=case):
                 # Arrange
-                task = TaskFacts(name="S3", branch="feature/S3-task", last_run=last_run, blocked_run=blocked_run)
+                task = TaskFacts(
+                    name="S3",
+                    branch="feature/S3-task",
+                    last_run=last_run,
+                    blocked_run=blocked_run,
+                    handed_over_run=handed_over_run,
+                )
                 snapshot = Snapshot(now=NOW, waves=(create_wave((task,), {"S3": "running"}),), projects=(SHOP,))
 
                 # Act
@@ -4096,3 +4148,230 @@ class PlanOrderRunsPastTheirMaxWallTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(actions, ())
+
+
+VIBE_BINDING_STANDARD = FallbackFacts(client="vibe", levels=frozenset({"standard"}))
+SHOP_BUILDING_AT_STANDARD = ProjectFacts(name="shop", slots=4, levels={"build": "standard"})
+SHOP_BUILDING_AT_DEEP = ProjectFacts(name="shop", slots=4, levels={"build": "deep"})
+CLIENT_RATE_LIMITED_UNTIL_15 = RateLimit(reset=ResetHour(hour="15:00", timezone="UTC"), client="claude-code")
+FALLBACK_RATE_LIMITED_UNTIL_16 = RateLimit(reset=ResetHour(hour="16:00", timezone="UTC"), client="vibe")
+CUT_ON_THE_CLIENT_S3 = TaskFacts(name="S3", branch="feature/S3-task", rate_limit=CLIENT_RATE_LIMITED_UNTIL_15)
+BUILD_CUT_ON_THE_QUOTA_S3 = TaskFacts(
+    name="S3", branch="feature/S3-task", stopped_run=STOPPED_RUN, stopped_slot="build", resumed_state="running"
+)
+NO_RATE_LIMIT_IN_FORCE = ()
+
+
+class PlanLaunchesOnTheFallbackTest(unittest.TestCase):
+    def test_should_launch_the_next_task_on_the_fallback_without_pausing_its_wave(self):
+        # Arrange
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(create_wave(ALONE, {}),),
+            projects=(SHOP_BUILDING_AT_STANDARD,),
+            rate_limits=(CLIENT_RATE_LIMITED_UNTIL_15,),
+            fallback=VIBE_BINDING_STANDARD,
+        )
+
+        # Act
+        actions = decide(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                LaunchTask(
+                    project="shop",
+                    wave="shop_w1",
+                    branch=TASK_BASE,
+                    task="S3",
+                    task_branch="feature/S3-task",
+                    pull_request_checks=None,
+                    on_fallback=True,
+                ),
+            ),
+        )
+
+    def test_should_record_the_task_of_the_cut_run_on_the_quota_without_pausing_its_wave(self):
+        # Arrange
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(create_wave((CUT_ON_THE_CLIENT_S3,), {"S3": "running"}),),
+            projects=(SHOP_BUILDING_AT_STANDARD,),
+            rate_limits=(CLIENT_RATE_LIMITED_UNTIL_15,),
+            fallback=VIBE_BINDING_STANDARD,
+        )
+
+        # Act
+        actions = decide(snapshot)
+
+        # Assert
+        self.assertEqual(actions, (RecordTaskState(wave="shop_w1", task="S3", state="blocked:quota", reason=None),))
+
+    def test_should_resume_the_cut_run_on_the_fallback_at_the_next_tick(self):
+        # Arrange
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(create_wave((BUILD_CUT_ON_THE_QUOTA_S3,), {"S3": "blocked:quota"}),),
+            projects=(SHOP_BUILDING_AT_STANDARD,),
+            rate_limits=(CLIENT_RATE_LIMITED_UNTIL_15,),
+            fallback=VIBE_BINDING_STANDARD,
+        )
+
+        # Act
+        actions = decide(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                ResumeTaskRun(
+                    wave="shop_w1",
+                    task="S3",
+                    run=STOPPED_RUN,
+                    state="running",
+                    reason="resumed on the fallback client",
+                    slot="build",
+                    on_fallback=True,
+                ),
+            ),
+        )
+
+
+class PlanLaunchesOfALevelTheFallbackDoesNotBindTest(unittest.TestCase):
+    def test_should_leave_the_task_blocked_on_the_quota_and_launch_nothing_until_the_reset(self):
+        # Arrange
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(create_wave((BUILD_CUT_ON_THE_QUOTA_S3, *ALONE_S9), {"S3": "blocked:quota"}),),
+            projects=(SHOP_BUILDING_AT_DEEP,),
+            rate_limits=(CLIENT_RATE_LIMITED_UNTIL_15,),
+            fallback=VIBE_BINDING_STANDARD,
+        )
+
+        # Act
+        actions = decide(snapshot)
+
+        # Assert
+        self.assertEqual(actions, ())
+
+
+class PlanLaunchesBackOnTheClientAtTheResetTest(unittest.TestCase):
+    def test_should_resume_the_run_on_the_client_once_its_rate_limit_is_over(self):
+        # Arrange
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(create_wave((BUILD_CUT_ON_THE_QUOTA_S3, *ALONE_S9), {"S3": "blocked:quota"}),),
+            projects=(SHOP_BUILDING_AT_STANDARD,),
+            rate_limits=NO_RATE_LIMIT_IN_FORCE,
+            fallback=VIBE_BINDING_STANDARD,
+        )
+
+        # Act
+        actions = decide(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                ResumeTaskRun(wave="shop_w1", task="S3", run=STOPPED_RUN, state="running", slot="build"),
+                LaunchTask(
+                    project="shop",
+                    wave="shop_w1",
+                    branch=TASK_BASE,
+                    task="S9",
+                    task_branch="feature/S9-task",
+                    pull_request_checks=None,
+                ),
+            ),
+        )
+
+
+class PlanPauseOnARateLimitOfTheFallbackTest(unittest.TestCase):
+    def test_should_pause_every_running_wave_until_the_later_of_the_two_resets(self):
+        # Arrange
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(create_wave(ALONE, {}), CAFE_WAVE),
+            projects=(SHOP_BUILDING_AT_STANDARD, CAFE),
+            rate_limits=(CLIENT_RATE_LIMITED_UNTIL_15, FALLBACK_RATE_LIMITED_UNTIL_16),
+            fallback=VIBE_BINDING_STANDARD,
+        )
+
+        # Act
+        actions = decide(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                PauseWave(wave="shop_w1", reason="quota", resume_at="2026-10-06T16:00:00Z"),
+                PauseWave(wave="cafe_w1", reason="quota", resume_at="2026-10-06T16:00:00Z"),
+            ),
+        )
+
+
+BEHIND_MAIN_M9 = MilestoneFacts(
+    project="shop", milestone="M9", branch="integration/delivery", open_waves=("shop_w4",), behind_main=True
+)
+
+
+class PlanRunsOfNoTaskWhileTheFallbackServesTest(unittest.TestCase):
+    def test_should_hold_a_study_an_order_and_a_milestone_rebase_until_the_reset(self):
+        for case, served, expected in [
+            ("a due study", Snapshot(now=NOW, studies=(create_study(),)), ()),
+            ("a due order", Snapshot(now=NOW, orders=(create_order(),)), ()),
+            (
+                "a milestone branch main has outrun",
+                Snapshot(now=NOW, projects=(PROJECT_WITH_CANDIDATES,), milestones=(BEHIND_MAIN_M9,)),
+                START_OF_M10_AND_NO_MILESTONE,
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                snapshot = dataclasses.replace(
+                    served, rate_limits=(CLIENT_RATE_LIMITED_UNTIL_15,), fallback=VIBE_BINDING_STANDARD
+                )
+
+                # Act
+                actions = decide(snapshot)
+
+                # Assert
+                self.assertEqual(actions, expected)
+
+
+class PlanRequeuedHandedOverRunOnTheFallbackTest(unittest.TestCase):
+    def test_should_resume_on_the_fallback_the_run_a_requeued_task_handed_over_in_the_slot_it_ran_in(self):
+        # Arrange
+        task = TaskFacts(
+            name="S3",
+            branch="feature/S3-task",
+            last_run=LAST_RUN_OF_S3,
+            handed_over_run=HandedOverRun(run=LAST_RUN_OF_S3, segments=3, slot="build"),
+        )
+        snapshot = Snapshot(
+            now=NOW,
+            waves=(create_wave((task,), {"S3": "queued"}),),
+            projects=(SHOP_BUILDING_AT_STANDARD,),
+            rate_limits=(CLIENT_RATE_LIMITED_UNTIL_15,),
+            fallback=VIBE_BINDING_STANDARD,
+        )
+
+        # Act
+        actions = decide(snapshot)
+
+        # Assert
+        self.assertEqual(
+            actions,
+            (
+                ResumeTaskRun(
+                    wave="shop_w1",
+                    task="S3",
+                    run=LAST_RUN_OF_S3,
+                    state="running",
+                    reason="resumed on the fallback client",
+                    slot="build",
+                    on_fallback=True,
+                ),
+            ),
+        )

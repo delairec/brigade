@@ -1,16 +1,20 @@
 import argparse
 import dataclasses
+import functools
 
 from brigade.command import Argument, Command
 from brigade.commands._read_forge_environment import ForgeSlot, read_forge_environment
+from brigade.ledger.read_ledger import read_ledger
 from brigade.registry.read_project_forge import read_project_forge
 from brigade.runs.create_run_directory import create_run_directory
 from brigade.runs.decide_run_exit_code import decide_run_exit_code
+from brigade.runs.describe_client_switch import describe_client_switch
 from brigade.runs.describe_skipped_runs import describe_skipped_runs
 from brigade.runs.detach_run import detach_run
+from brigade.runs.is_client_on_rate_limit import is_client_on_rate_limit
 from brigade.runs.plan_run import RunPlan, RunPlugins, RunRequest, plan_run
 from brigade.runs.prune_runs import PruneRequest, prune_runs
-from brigade.runs.read_run_setting import read_run_setting
+from brigade.runs.read_run_setting import RunSettingQuery, read_run_setting
 from brigade.runs.run_locations import PROCESSES_FILE
 from brigade.runs.run_segments import run_segments
 from brigade.runtime import Runtime
@@ -34,6 +38,7 @@ def _read_run_request(request) -> RunRequest:
         wave=request.wave,
         task=request.task,
         resume=request.resume,
+        on_fallback=request.fallback,
     )
 
 
@@ -76,17 +81,46 @@ def _describe_diagnostics(document: dict) -> list[str]:
 
 def _prepare_run(request, configuration: Configuration, runtime: Runtime) -> RunPlan:
     run_request = _read_run_request(request)
-    setting = read_run_setting(run_request.project, run_request.slot, configuration, runtime)
+    regular = read_run_setting(RunSettingQuery(run_request.project, run_request.slot), configuration, runtime)
+    setting = (
+        read_run_setting(
+            RunSettingQuery(run_request.project, run_request.slot, on_fallback=True), configuration, runtime
+        )
+        if run_request.on_fallback
+        else regular
+    )
     forge_slot = ForgeSlot(read_project_forge(setting.project), run_request.slot)
     forge_environment = read_forge_environment(configuration, forge_slot, runtime)
     plugins = RunPlugins(
         client_adapter=runtime.resolve_plugin("client", setting.client),
         document=runtime.resolve_plugin("progress_form", configuration.progress_form),
     )
-    plan = dataclasses.replace(plan_run(run_request, setting, plugins, runtime), forge_environment=forge_environment)
+    plan = plan_run(run_request, setting, plugins, runtime)
+    plan = dataclasses.replace(
+        plan,
+        forge_environment=forge_environment,
+        client_switched=describe_client_switch(plan, regular.client, configuration),
+    )
     create_run_directory(plan, runtime)
     runtime.trail.locate(plan.run_directory / PROCESSES_FILE)
     return plan
+
+
+def _return_to_the_client(
+    request: argparse.Namespace, configuration: Configuration, runtime: Runtime, plan: RunPlan
+) -> RunPlan:
+    if not plan.on_fallback:
+        return plan
+    regular = read_run_setting(RunSettingQuery(request.project, request.slot), configuration, runtime)
+    if is_client_on_rate_limit(read_ledger(runtime.paths.state_root).entries, regular.client, runtime.read_clock()):
+        return plan
+    resumed_on_the_client = argparse.Namespace(
+        **{**vars(request), "run_id": plan.run_id, "resume": True, "fallback": False}
+    )
+    returned = _prepare_run(resumed_on_the_client, configuration, runtime)
+    if returned.disposable_worktree != plan.disposable_worktree:
+        return plan
+    return returned
 
 
 def run(request: argparse.Namespace, runtime: Runtime) -> dict:
@@ -99,7 +133,8 @@ def run(request: argparse.Namespace, runtime: Runtime) -> dict:
         )
     with StopSignalReceiver() as stop:
         plan = _prepare_run(request, configuration, runtime)
-        records = run_segments(plan, runtime, stop)
+        return_to_client = functools.partial(_return_to_the_client, request, configuration, runtime)
+        records = run_segments(plan, runtime, stop, return_to_client)
     pruned = prune_runs(PruneRequest(paths=runtime.paths, keep=configuration.runs_kept))
     document = {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
@@ -136,6 +171,7 @@ COMMAND = Command(
         Argument(("--detach",), {"action": "store_true", "help": "run in the background and print the run id"}),
         Argument(("--run-id",), {"help": argparse.SUPPRESS}),
         Argument(("--resume",), {"action": "store_true", "help": argparse.SUPPRESS}),
+        Argument(("--fallback",), {"action": "store_true", "help": argparse.SUPPRESS}),
     ),
     run=run,
     read_request=_read_request,

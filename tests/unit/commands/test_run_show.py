@@ -46,6 +46,7 @@ FOLLOWED_RUN = {
 }
 FINISHED_SEGMENT = {"segment": 1, "outcome": "done", "turns": 12, "duration_ms": 4200}
 NO_PROGRESS = None
+NO_NOTES = []
 NO_EXECUTABLE_DIRECTORY = ""
 MARKDOWN_PROGRESS = "- read the task\n- wrote the tests\n"
 AWAWA_PROGRESS = (
@@ -75,6 +76,7 @@ class RunsShowTextTest(unittest.TestCase):
             "schema_version": 1,
             "run": {**FINISHED_RUN, "project": None, "outcome": None, "message": None},
             "segments": [{"segment": 1, "outcome": None, "turns": None, "duration_ms": None}],
+            "notes": NO_NOTES,
             "progress": NO_PROGRESS,
             "log": None,
         }
@@ -104,6 +106,7 @@ class RunsShowTextTest(unittest.TestCase):
             "schema_version": 1,
             "run": FINISHED_RUN,
             "segments": [FINISHED_SEGMENT],
+            "notes": NO_NOTES,
             "progress": NO_PROGRESS,
             "log": [{"at": "2026-10-07T09:01:00Z", "segment": 1, "kind": "text", "summary": "reads the task"}],
         }
@@ -135,6 +138,7 @@ class RunsShowTextTest(unittest.TestCase):
             "schema_version": 1,
             "run": FINISHED_RUN,
             "segments": [FINISHED_SEGMENT],
+            "notes": NO_NOTES,
             "progress": {"text": "ENTRY e1\n  DONE: read the task\n", "entities": None},
             "log": [{"at": "2026-10-07T09:01:00Z", "segment": 1, "kind": "text", "summary": "reads the task"}],
         }
@@ -172,6 +176,46 @@ class RunsShowTextTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(text, "\nstate      finished\noutcome    done")
+
+    def test_should_print_the_notes_with_the_segment_that_carried_each_after_the_segments(self):
+        # Arrange
+        document = {
+            "schema_version": 1,
+            "run": FINISHED_RUN,
+            "segments": [FINISHED_SEGMENT],
+            "notes": [
+                {"at": "2026-10-07T09:02:00Z", "text": "rebase onto main before the check", "segment": 2},
+                {"at": "2026-10-07T09:05:00Z", "text": "the corpus of main holds two L016 errors", "segment": None},
+            ],
+            "progress": {"text": "ENTRY e1\n  DONE: read the task\n", "entities": None},
+            "log": None,
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text,
+            f"run        {FIRST_RUN}\n"
+            "procedure  deliver\n"
+            "slot       build\n"
+            "role       builder\n"
+            "project    -\n"
+            "state      finished\n"
+            "outcome    done\n"
+            "message    the task is delivered\n"
+            "\n"
+            "segment  outcome  turns  duration\n"
+            "1        done     12     0m04s\n"
+            "\n"
+            "noted                 carried by  note\n"
+            "2026-10-07T09:02:00Z  segment 2   rebase onto main before the check\n"
+            "2026-10-07T09:05:00Z  pending     the corpus of main holds two L016 errors\n"
+            "\n"
+            "ENTRY e1\n"
+            "  DONE: read the task",
+        )
 
 
 class RunsShowExitCodeTest(unittest.TestCase):
@@ -341,6 +385,7 @@ class RunsShowOfAFinishedRunTest(unittest.TestCase):
                 "schema_version": 1,
                 "run": FINISHED_RUN,
                 "segments": [FINISHED_SEGMENT],
+                "notes": NO_NOTES,
                 "progress": NO_PROGRESS,
                 "log": [JOURNAL_RECORD],
             },
@@ -468,4 +513,69 @@ class RunsShowOfARunWithItsProgressTest(unittest.TestCase):
             "segment  outcome  turns  duration\n"
             "1        done     12     0m04s\n"
             "\n",
+        )
+
+
+class RunsShowOfANotedRunTest(unittest.TestCase):
+    def test_should_list_the_notes_delivered_with_their_segment_and_the_notes_pending(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        run_directory = write_run(
+            root / "state",
+            create_run_record(FIRST_RUN, None, None),
+            create_run_result(FIRST_RUN, "done", "2026-10-07T09:12:00Z"),
+        )
+        (run_directory / "segments" / "1" / "notes.json").write_text('{"carried": 0}\n', encoding="utf-8")
+        (run_directory / "segments" / "2").mkdir()
+        (run_directory / "segments" / "2" / "notes.json").write_text('{"carried": 1}\n', encoding="utf-8")
+        (run_directory / "notes.jsonl").write_text(
+            '{"at": "2026-10-07T09:02:00Z", "text": "rebase onto main before the check"}\n'
+            '{"at": "2026-10-07T09:05:00Z", "text": "the corpus of main holds two L016 errors"}\n',
+            encoding="utf-8",
+        )
+
+        # Act
+        document = COMMAND.run(
+            Namespace(run=FIRST_RUN, log=False, follow=False), create_test_runtime(create_test_paths(root))
+        )
+
+        # Assert
+        self.assertEqual(
+            document["notes"],
+            [
+                {"at": "2026-10-07T09:02:00Z", "text": "rebase onto main before the check", "segment": 2},
+                {"at": "2026-10-07T09:05:00Z", "text": "the corpus of main holds two L016 errors", "segment": None},
+            ],
+        )
+
+    def test_should_name_the_segments_that_carried_the_notes_in_the_order_of_their_numbers(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        run_directory = write_run(
+            root / "state",
+            create_run_record(FIRST_RUN, None, None),
+            create_run_result(FIRST_RUN, "done", "2026-10-07T09:12:00Z"),
+        )
+        (run_directory / "segments" / "9").mkdir()
+        (run_directory / "segments" / "9" / "notes.json").write_text('{"carried": 1}\n', encoding="utf-8")
+        (run_directory / "segments" / "10").mkdir()
+        (run_directory / "segments" / "10" / "notes.json").write_text('{"carried": 1}\n', encoding="utf-8")
+        (run_directory / "notes.jsonl").write_text(
+            '{"at": "2026-10-07T09:02:00Z", "text": "rebase onto main before the check"}\n'
+            '{"at": "2026-10-07T09:05:00Z", "text": "the corpus of main holds two L016 errors"}\n',
+            encoding="utf-8",
+        )
+
+        # Act
+        document = COMMAND.run(
+            Namespace(run=FIRST_RUN, log=False, follow=False), create_test_runtime(create_test_paths(root))
+        )
+
+        # Assert
+        self.assertEqual(
+            document["notes"],
+            [
+                {"at": "2026-10-07T09:02:00Z", "text": "rebase onto main before the check", "segment": 9},
+                {"at": "2026-10-07T09:05:00Z", "text": "the corpus of main holds two L016 errors", "segment": 10},
+            ],
         )

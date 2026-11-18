@@ -20,6 +20,7 @@ def create_judge_performer(launch: Callable[[argparse.Namespace], dict]) -> Step
             task=None,
             detach=False,
             resume=False,
+            fallback=False,
         )
         launched = launch(judging)
         if not (run.run_directory / ANSWER_FILE).is_file():

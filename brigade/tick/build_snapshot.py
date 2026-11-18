@@ -28,7 +28,7 @@ from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_reported import TaskReported
-from brigade.ledger.task_state import QUOTA_RESUME_REASON, TaskState
+from brigade.ledger.task_state import FALLBACK_RESUME_REASON, QUOTA_RESUME_REASON, TaskState
 from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_parked import WaveParked
@@ -45,6 +45,8 @@ from brigade.registry.read_policy_field import read_policy_field
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
+from brigade.roles.read_role_bindings import read_role_bindings
+from brigade.roles.resolve_role import resolve_role
 from brigade.runs.is_recorded_process_alive import is_recorded_process_alive
 from brigade.runs.list_runs import list_runs
 from brigade.runs.read_run_question import read_run_question
@@ -53,7 +55,7 @@ from brigade.studies.read_last_study_orders import read_last_study_orders
 from brigade.studies.read_live_study_runs import LiveStudyRun, read_live_study_runs
 from brigade.studies.read_quota_resumes import read_quota_resumes
 from brigade.studies.read_studies import read_studies
-from brigade.system.parse_configuration import Configuration
+from brigade.system.parse_configuration import REASONING_KEY, SLOTS, Configuration
 from brigade.system.pull_request_facts import PullRequestFacts
 from brigade.system.read_stall_after import STALL_AFTER_BY_DEFAULT_MIN
 from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
@@ -66,7 +68,7 @@ from brigade.tick.describe_study_facts import describe_study_facts
 from brigade.tick.find_last_action import find_last_action
 from brigade.tick.is_milestone_rebase_held import MilestoneHeads, is_milestone_rebase_held
 from brigade.tick.locate_scheduled_worktree import locate_scheduled_worktree
-from brigade.tick.name_branch_of_task import name_branch_of_task
+from brigade.tick.read_branch_of_task import read_branch_of_task
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
 from brigade.tick.read_integration_branches import (
     IntegrationBranchFacts,
@@ -122,6 +124,7 @@ CLIENT_STOP_ERROR_CLASSES = (RATE_LIMIT, AUTHENTICATION)
 REVIEW_SLOT = "review"
 REBASE_SLOT = "rebase"
 BLOCKED_OUTCOME = "blocked"
+HANDED_OVER_OUTCOME = "handed_over"
 DONE_OUTCOME = "done"
 FORGE_ACCOUNT_REASON = "forge_account"
 CLIENT_LOGIN_REASON = "client_login"
@@ -151,6 +154,7 @@ PROMOTION_FIELDS = (STATUS_FIELD, "DELIVERED_BY")
 @dataclass(frozen=True)
 class RateLimit:
     reset: ResetHour | None
+    client: str | None = None
 
     def to_document(self) -> dict:
         return {"reset": None if self.reset is None else self.reset.to_document()}
@@ -175,6 +179,13 @@ class BlockedRun:
 
 
 @dataclass(frozen=True)
+class HandedOverRun:
+    run: str
+    segments: int
+    slot: str | None = None
+
+
+@dataclass(frozen=True)
 class TaskAmendment:
     on_pull_request: Entity
     on_wave: Entity
@@ -190,6 +201,7 @@ class TaskFacts:
     worktree: str | None = None
     rate_limit: RateLimit | None = None
     stopped_run: str | None = None
+    stopped_slot: str | None = None
     resumed_state: str | None = None
     opened_pull_request: int | None = None
     opening_of_its_pull_request: TaskPrOpened | None = None
@@ -202,6 +214,7 @@ class TaskFacts:
     holds_uncommitted_changes: bool = False
     last_run: str | None = None
     blocked_run: BlockedRun | None = None
+    handed_over_run: HandedOverRun | None = None
     rebased_by_last_run: bool = False
     last_run_is_a_rebase: bool = False
     stopped_by_login: bool = False
@@ -307,6 +320,7 @@ class ProjectFacts:
     repair_rounds: int = REPAIR_ROUNDS_BY_DEFAULT
     on_github: bool = False
     uncut_milestones: tuple[UncutMilestone, ...] = ()
+    levels: dict = field(default_factory=dict)
 
     def to_document(self) -> dict:
         return {
@@ -376,6 +390,12 @@ class MilestoneFacts:
 
 
 @dataclass(frozen=True)
+class FallbackFacts:
+    client: str
+    levels: frozenset[str]
+
+
+@dataclass(frozen=True)
 class Snapshot:
     now: datetime
     waves: tuple[WaveFacts, ...] = ()
@@ -391,6 +411,7 @@ class Snapshot:
     integration_branches: tuple[IntegrationBranchFacts, ...] = ()
     leftovers: tuple[LeftoverFacts, ...] = ()
     kept_branches: frozenset[BranchKept] = frozenset()
+    fallback: FallbackFacts | None = None
 
     def to_document(self) -> dict:
         return {
@@ -414,16 +435,6 @@ class Snapshot:
 def _read_milestone(task: Entity) -> str | None:
     milestone = read_project_field(task, MILESTONE_FIELD)
     return None if milestone is None else milestone.removeprefix(MILESTONE_PREFIX)
-
-
-def _read_task_facts(runtime: Runtime, root: Path, task: Entity) -> TaskFacts:
-    return TaskFacts(
-        name=task.name,
-        branch=name_branch_of_task(task),
-        after=tuple(field.value.removeprefix(TASK_PREFIX) for field in task.fields if field.name == AFTER_FIELD),
-        blocked_by=runtime.read_live_blockers(runtime.run_process, root, task.name),
-        milestone=_read_milestone(task),
-    )
 
 
 @dataclass(frozen=True)
@@ -533,7 +544,7 @@ def _is_quota_event_of_task(event, wave: str, task: str) -> bool:
         isinstance(event, TaskState)
         and event.wave == wave
         and event.task == task
-        and event.reason == QUOTA_RESUME_REASON
+        and event.reason in (QUOTA_RESUME_REASON, FALLBACK_RESUME_REASON)
     )
 
 
@@ -544,12 +555,12 @@ def _read_rate_limit(reading: WaveReading, wave: str, task: str) -> RateLimit | 
     last = quota_events[-1]
     if last.error_class != RATE_LIMIT or last.run in reading.live_runs:
         return None
-    return RateLimit(reset=last.reset)
+    return RateLimit(reset=last.reset, client=last.client)
 
 
 def _read_rate_limits(reading: WaveReading, now: datetime) -> tuple[RateLimit, ...]:
     return tuple(
-        RateLimit(reset=entry.event.reset)
+        RateLimit(reset=entry.event.reset, client=entry.event.client)
         for entry in reading.entries
         if isinstance(entry.event, RunFinished)
         and entry.event.error_class == RATE_LIMIT
@@ -609,9 +620,11 @@ def _read_state_before_pause(reading: WaveReading, wave: str, task: str) -> str 
 
 def _note_quota(task: TaskFacts, reading: WaveReading, wave: str, states: dict) -> TaskFacts:
     if states.get(task.name) == BLOCKED_ON_QUOTA_STATE:
+        stopped = _list_task_runs(reading, wave, task.name)[-1]
         return dataclasses.replace(
             task,
-            stopped_run=_list_task_runs(reading, wave, task.name)[-1].run,
+            stopped_run=stopped.run,
+            stopped_slot=stopped.slot,
             resumed_state=_read_state_before_pause(reading, wave, task.name),
         )
     if states.get(task.name) not in QUOTA_PAUSED_STATES:
@@ -624,6 +637,13 @@ def _read_blocked_run(reading: WaveReading, run: str) -> BlockedRun | None:
     if not finished or finished[-1].outcome != BLOCKED_OUTCOME:
         return None
     return BlockedRun(run=run, question=read_run_question(finished[-1].message))
+
+
+def _read_handed_over_run(reading: WaveReading, run: str) -> HandedOverRun | None:
+    finished = [event for event in reading.events if isinstance(event, RunFinished) and event.run == run]
+    if not finished or finished[-1].outcome != HANDED_OVER_OUTCOME:
+        return None
+    return HandedOverRun(run=run, segments=finished[-1].segment, slot=finished[-1].slot)
 
 
 def _is_blocked_run_answered(event, wave: str, run: str) -> bool:
@@ -658,6 +678,7 @@ def _note_last_run(task: TaskFacts, reading: WaveReading, wave: str) -> TaskFact
         task,
         last_run=naming[-1]["run"],
         blocked_run=_read_blocked_run(reading, naming[-1]["run"]),
+        handed_over_run=_read_handed_over_run(reading, naming[-1]["run"]),
         rebased_by_last_run=_is_rebase_done(reading, naming[-1]),
         last_run_is_a_rebase=naming[-1]["slot"] == REBASE_SLOT,
     )
@@ -830,10 +851,20 @@ def _note_delivered_head(reading: WaveReading, open_wave: _OpenWave, task: TaskF
     )
 
 
+def _read_task_facts(runtime: Runtime, reading: WaveReading, open_wave: _OpenWave, task: Entity) -> TaskFacts:
+    return TaskFacts(
+        name=task.name,
+        branch=read_branch_of_task(reading.events, open_wave.started.project, task),
+        after=tuple(field.value.removeprefix(TASK_PREFIX) for field in task.fields if field.name == AFTER_FIELD),
+        blocked_by=runtime.read_live_blockers(runtime.run_process, open_wave.tree_root, task.name),
+        milestone=_read_milestone(task),
+    )
+
+
 def _read_wave_task(runtime: Runtime, reading: WaveReading, open_wave: _OpenWave, task: Entity) -> TaskFacts:
     wave = open_wave.started.wave
     followed = _follow_task(
-        _read_task_facts(runtime, open_wave.tree_root, task), open_wave.followed, open_wave.implemented
+        _read_task_facts(runtime, reading, open_wave, task), open_wave.followed, open_wave.implemented
     )
     amended = _note_amendment(followed, _read_task_on_its_pull_request(runtime, reading, open_wave, followed), task)
     noted = _note_login(
@@ -949,6 +980,19 @@ def _read_wave_making(runtime: Runtime, reading: WaveReading, project: Entity) -
     )
 
 
+def _read_levels_of_slots(runtime: Runtime, configuration: Configuration, project: Entity) -> dict:
+    if configuration.fallback is None:
+        return {}
+    bindings = read_role_bindings(project)
+    return {slot: resolve_role(slot, runtime, bindings, configuration).front_matter[REASONING_KEY] for slot in SLOTS}
+
+
+def _read_fallback_facts(configuration: Configuration) -> FallbackFacts | None:
+    if configuration.fallback is None:
+        return None
+    return FallbackFacts(client=configuration.fallback.client, levels=frozenset(configuration.fallback.reasoning))
+
+
 def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity, runs: list[dict]) -> ProjectFacts:
     slots = read_project_field(project, SLOTS_FIELD)
     policies = read_entities(runtime.run_process, runtime.paths.config_root, POLICY_TYPE)
@@ -970,6 +1014,7 @@ def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity,
         repair_rounds=int(
             read_policy_field(policies, project.name, REPAIR_ROUNDS_FIELD, str(REPAIR_ROUNDS_BY_DEFAULT))
         ),
+        levels=_read_levels_of_slots(runtime, reading.configuration, project),
         on_github=is_on_a_forge(project),
         uncut_milestones=wave_making.uncut_milestones,
     )
@@ -1303,4 +1348,5 @@ def build_snapshot(runtime: Runtime, configuration: Configuration, forge: ForgeR
         integration_branches=_read_integration_branches(runtime, configuration, reading, projects_read),
         leftovers=_read_leftovers(runtime, reading, projects_read),
         kept_branches=_read_kept_branches(reading),
+        fallback=_read_fallback_facts(configuration),
     )

@@ -12,6 +12,7 @@ def _repeat_options(plan: RunPlan) -> tuple[str, ...]:
     wave = ("--wave", plan.wave) if plan.wave is not None else ()
     task = ("--task", plan.task) if plan.task is not None else ()
     resume = ("--resume",) if plan.resumed else ()
+    fallback = ("--fallback",) if plan.on_fallback else ()
     return (
         "--slot",
         plan.slot,
@@ -24,6 +25,7 @@ def _repeat_options(plan: RunPlan) -> tuple[str, ...]:
         "--run-id",
         plan.run_id,
         *resume,
+        *fallback,
     )
 
 

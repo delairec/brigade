@@ -9,9 +9,11 @@ from brigade.errors import BrigadeError, UsageError
 from brigade.ledger.budget_applied import BudgetApplied
 from brigade.ledger.describe_role_budget import CurrentDigests, RoleBudget, describe_role_budget
 from brigade.ledger.read_ledger import read_ledger
+from brigade.ledger.run_client_switched import RunClientSwitched
 from brigade.ledger.run_finished import RunFinished
 from brigade.registry.read_project_field import read_project_field
-from brigade.roles.resolve_role import NO_PROJECT_BINDINGS, ResolvedRole, RoleBindings, resolve_role
+from brigade.roles.read_role_bindings import read_role_bindings
+from brigade.roles.resolve_role import ResolvedRole, resolve_role
 from brigade.runs.create_run_id import create_run_id
 from brigade.runs.read_handovers import read_handovers
 from brigade.runs.read_run_finished import read_run_finished
@@ -39,10 +41,11 @@ TOOL_GRANTS_FEATURE = "tool_grants"
 ACTIONS_OPERATION = "actions"
 TRANSCRIPTS_OPERATION = "transcripts"
 RESUME_OPERATION = "resume"
+HANDED_OVER_OUTCOME = "handed_over"
+NO_RESUMED_SESSION = None
 FIRST_SEGMENT = 1
 WRITE_CAPABILITY = "write"
 CAPABILITY_SEPARATOR = ","
-BINDING_SEPARATOR = "="
 ARGUMENT_SEPARATOR = "="
 CAP_MARGIN = 1.25
 RUN_ID_PATTERN = re.compile(r"\d{8}T\d{6}Z-[0-9a-f]{6}")
@@ -60,6 +63,7 @@ class RunRequest:
     wave: str | None
     task: str | None
     resume: bool = False
+    on_fallback: bool = False
 
 
 @dataclass(frozen=True)
@@ -97,29 +101,9 @@ class RunPlan:
     forge_environment: dict = field(default_factory=dict, repr=False)
     edit_tools: tuple[str, ...] = ()
     budget_applied: BudgetApplied | None = None
-
-
-def _read_values(project: Entity, field_name: str) -> list[str]:
-    return [field.value for field in project.fields if field.name == field_name]
-
-
-def _read_role_binding(project: Entity, value: str) -> tuple[str, str]:
-    slot, separator, name = value.partition(BINDING_SEPARATOR)
-    if not separator or not slot.strip() or not name.strip():
-        raise BrigadeError(f"@PROJECT.{project.name} has ROLE {value}, not slot=name")
-    return slot.strip(), name.strip()
-
-
-def _read_bindings(project: Entity | None) -> RoleBindings:
-    if project is None:
-        return NO_PROJECT_BINDINGS
-    path = read_project_field(project, "PATH")
-    return RoleBindings(
-        project=project.name,
-        roles=dict(_read_role_binding(project, value) for value in _read_values(project, "ROLE")),
-        roleset=read_project_field(project, "ROLESET"),
-        project_path=None if path is None else Path(path),
-    )
+    on_fallback: bool = False
+    resumed_client: str | None = None
+    client_switched: RunClientSwitched | None = None
 
 
 def _locate_cwd(cwd: str | None, project: Entity | None) -> Path:
@@ -178,9 +162,14 @@ def _find_last_finished_segment(run_directory: Path) -> int:
     )
 
 
-def _read_session(run_directory: Path, segment: int) -> str | None:
-    path = run_directory / SEGMENTS_DIRECTORY / str(segment) / RESULT_FILE
-    return read_run_finished(path, "segment result").session
+def _read_resumed_session(finished: RunFinished, client: str) -> str | None:
+    if finished.outcome == HANDED_OVER_OUTCOME or finished.client != client:
+        return NO_RESUMED_SESSION
+    return finished.session
+
+
+def _read_finished_segment(run_directory: Path, segment: int) -> RunFinished:
+    return read_run_finished(run_directory / SEGMENTS_DIRECTORY / str(segment) / RESULT_FILE, "segment result")
 
 
 @dataclass(frozen=True)
@@ -214,7 +203,7 @@ def _plan_work(request: RunRequest, setting: RunSetting, runtime: Runtime) -> di
     configuration = setting.configuration
     directories = ProcedureDirectories(shipped=SHIPPED_PROCEDURES, instructions=configuration.instructions)
     procedure = resolve_procedure(request.procedure, directories)
-    role = resolve_role(request.slot, runtime, _read_bindings(setting.project), configuration)
+    role = resolve_role(request.slot, runtime, read_role_bindings(setting.project), configuration)
     role_capabilities = _read_role_capabilities(role)
     budget = _plan_budget(role, procedure, runtime)
     return {
@@ -250,8 +239,11 @@ def _plan_identity(request: RunRequest, setting: RunSetting, plugins: RunPlugins
     }
 
 
-def _plan_resumption(request: RunRequest, probe: ProbeAnswer, run_directory: Path) -> dict:
+def _plan_resumption(request: RunRequest, probe: ProbeAnswer, run_directory: Path, client: str) -> dict:
     last_finished_segment = _find_last_finished_segment(run_directory) if request.resume else None
+    last_finished = (
+        None if last_finished_segment is None else _read_finished_segment(run_directory, last_finished_segment)
+    )
     return {
         "counts_steps": TURN_COUNT_FEATURE in probe.features,
         "reads_actions": ACTIONS_OPERATION in probe.operations,
@@ -259,10 +251,12 @@ def _plan_resumption(request: RunRequest, probe: ProbeAnswer, run_directory: Pat
         "resumed": request.resume,
         "first_segment": FIRST_SEGMENT if last_finished_segment is None else last_finished_segment + 1,
         "resumed_session": (
-            _read_session(run_directory, last_finished_segment)
-            if last_finished_segment is not None and RESUME_OPERATION in probe.operations
+            _read_resumed_session(last_finished, client)
+            if last_finished is not None and RESUME_OPERATION in probe.operations
             else None
         ),
+        "resumed_client": None if last_finished is None else last_finished.client,
+        "on_fallback": request.on_fallback,
     }
 
 
@@ -277,7 +271,7 @@ def plan_run(request: RunRequest, setting: RunSetting, plugins: RunPlugins, runt
     return RunPlan(
         **work,
         **identity,
-        **_plan_resumption(request, probe, identity["run_directory"]),
+        **_plan_resumption(request, probe, identity["run_directory"], setting.client),
         cwd=cwd,
         worktree=identity["run_directory"] / DISPOSABLE_WORKTREE_DIRECTORY if disposable_worktree else cwd,
         disposable_worktree=disposable_worktree,

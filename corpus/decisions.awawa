@@ -1544,9 +1544,10 @@ DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 	STATUS active
 	DESC "runs/<id>/ holds run.json, the record of the run as planned, pid, role.md, progress.md or"
 		+ "progress.awawa by the form the document key chooses, journal.jsonl, the journal of the"
-		+ "actions of every segment, segments/<n>/ with brief.md, stdout.log, stderr.log and"
-		+ "result.json, the run.finished document of that segment, the line the ledger appends, and"
-		+ "result.json, that of the last segment"
+		+ "actions of every segment, notes.jsonl, the notes brigade run note handed to the run,"
+		+ "segments/<n>/ with brief.md, stdout.log, stderr.log, notes.json, the count of notes its"
+		+ "brief carried, and result.json, the run.finished document of that segment, the line the"
+		+ "ledger appends, and result.json, that of the last segment"
 	DESC "result.json is written atomically after the ledger events of the run: a run with a result"
 		+ "is finished, one whose pid lives without it is running, any other is dead"
 	DESC "brigade runs stop signals a run only once its process has signalled it is ready: the"
@@ -1589,6 +1590,8 @@ DECISION ARunKeepsOneDirectoryWithAFolderPerSegmentAndItsResultWrittenLast
 	SOURCE "DESC 3 and the last two REJECTED added in pull request #166 of the brigade repository,"
 		+ "delivering @TASK.B192"
 		REF @TASK.B192
+	SOURCE "DESC 1 amended in pull request #443 of the brigade repository, delivering @TASK.B91"
+		REF @TASK.B91
 
 DECISION TheCiRunsPinnedDevelopmentToolsThatAreNoDependencyOfBrigade
 	TITLE "the CI runs zizmor, ruff, semgrep, vulture, pytest with pytest-xdist and coverage.py,"
@@ -3504,6 +3507,10 @@ DECISION ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset
 		REF @DECISION.QuotaPausesTheWaveAndResumesTheSameSession
 	DESC "a wave started after forge_account.unavailable is paused on the forge account like the"
 		+ "waves running then: only brigade wave resume lifts that pause"
+	DESC "while a fallback is configured and no rate limit of its client is in force, a rate limit"
+		+ "of another client pauses no wave: the tick launches on the fallback the runs whose level"
+		+ "its table binds, as @TASK.B144 provides"
+		REF @TASK.B144
 	DESC "the pause of a task in fixing and the round it spares bind @TASK.B220; until it is"
 		+ "delivered a task in fixing stays fixing and the tick launches a new repair run at each"
 		+ "tick, one round each"
@@ -3854,11 +3861,16 @@ DECISION ARunningTaskThatNoLiveRunNamesIsParkedWithItsLastRunInTheReason
 	DESC "the reason is run dead: <run>, the last run directory naming the wave and the task"
 		+ "whatever its state, or run not started when none names them; task.parked keeps its"
 		+ "fields"
-	DESC "a run that ended blocked is the one exception: its task is parked on the text of its"
+	DESC "a run that ended blocked is the first exception: its task is parked on the text of its"
 		+ "question, as"
 		+ "@DECISION.ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQuestion"
 		+ "says"
 		REF @DECISION.ARunThatCannotGoOnWithoutARulingEndsBlockedAndTheTickParksItsTaskOnTheQuestion
+	DESC "a run whose last run.finished ended handed_over is the second exception: its task is"
+		+ "parked with the reason run <run> handed over after <N> segments, N the segment of that"
+		+ "run.finished, and a requeue resumes that run on its progress file, as @TASK.B231"
+		+ "delivers"
+		REF @TASK.B231
 	DESC "binds @TASK.B168"
 		REF @TASK.B168
 	REJECTED "a run field added to task.parked: a change of the event shape and of every reader of"
@@ -6382,9 +6394,12 @@ DECISION ATaskSlugWithNoHyphenWithinFortyCharactersIsCutAtItsFortiethAndATaskWit
 	DESC "the slug of a TITLE longer than 40 characters is cut at its last hyphen at or before its"
 		+ "40th character, and at its 40th character when no hyphen stands within them"
 	DESC "the snapshot of the tick names the branch of each task of a wave from its TYPE and its"
-		+ "TITLE; a task carrying no TYPE stops the read of its wave with an error naming the task,"
-		+ "as any unreadable fact of a wave does"
+		+ "TITLE until that branch is cut, then reads it from the ledger as"
+		+ "@DECISION.TheTickRecordsTheBranchItCutsForATaskAndTheSnapshotReadsItFromItsLastCut sets;"
+		+ "a task carrying no TYPE and no branch cut stops the read of its wave with an error"
+		+ "naming the task, as any unreadable fact of a wave does"
 		REF @TASK.B232
+		REF @DECISION.TheTickRecordsTheBranchItCutsForATaskAndTheSnapshotReadsItFromItsLastCut
 	REJECTED "a default prefix for a task carrying no TYPE: brigade task pr already refuses such a"
 		+ "task, so a branch named for it would end on a refusal"
 	RATIONALE "@DECISION.ATaskBranchNamedByTypeIdAndTitleIsCutFromAndMergedIntoItsMilestoneBranchAndAWaveHasNoBranch"
@@ -7896,3 +7911,93 @@ DECISION AGlossaryRowNamesACommandByItsLineAFieldAfterItsEntityAndCitesTheTaskOf
 		+ "entity and a field"
 	SOURCE "the build run of @TASK.B257 on 2026-11-17"
 		REF @TASK.B257
+
+DECISION ARunResumedAfterItsHandoversRecordsItsTaskRunningUnderAReasonOfItsOwn
+	TITLE "the resume of a requeued task whose last run handed over records the task running with"
+		+ "the reason resumed after its handovers, never the reason of the resume after the quota"
+		+ "reset"
+	STATUS active
+	DESC "ResumeTaskRun carries the reason its executor records in task.state: resumed after the"
+		+ "quota reset for a run stopped on the quota, resumed after its handovers for a run the"
+		+ "requeue of its task resumes"
+	DESC "binds @TASK.B231"
+		REF @TASK.B231
+	REJECTED "the quota reason reused for both resumes: the snapshot reads the end of a rate limit"
+		+ "from a task.state carrying that reason, and the ledger would name a quota that never"
+		+ "stopped the run"
+	SOURCE "the build run of @TASK.B231 on 2026-11-18"
+		REF @TASK.B231
+
+DECISION TheTickRecordsTheBranchItCutsForATaskAndTheSnapshotReadsItFromItsLastCut
+	TITLE "the tick appends task.branch_cut, the project, the task and the branch, when its launch"
+		+ "runs git worktree add -b for a task, and every reader of the branch of a task takes the"
+		+ "last task.branch_cut of that task, naming it from TYPE and TITLE only when it has none"
+	STATUS active
+	DESC "the event is appended by the launch that cuts the branch, never by a launch that reuses"
+		+ "the worktree holding the branch or adds a worktree on a branch that stands"
+	DESC "the readers are the snapshot of the tick, and through it every order naming the branch of"
+		+ "a task, ReportTask included, and the merge commands brigade wave show prints"
+	DESC "a task cut before the event existed has none and is named from its TYPE and its TITLE,"
+		+ "with no event written for it after the fact"
+	DESC "binds @TASK.B241"
+		REF @TASK.B241
+	REJECTED "the branch read from the worktree at the scheduled path: the worktree is gone once it"
+		+ "is cleaned while the branch stands"
+	REJECTED "the branch read from the last task.pr_opened of the task: a task parked before its"
+		+ "pull request, as TASK B46 was, has none"
+	REJECTED "a task.branch_cut appended at a launch that adds a worktree on a standing branch with"
+		+ "no event: the task is served as before with no event, and a branch renamed by hand would"
+		+ "be recorded under a name the tick never cut"
+	SOURCE "the build run of @TASK.B241 on 2026-11-18"
+		REF @TASK.B241
+
+DECISION ASegmentRecordsTheCountOfNotesItsBriefCarriedAndEachNoteIsCarriedOnce
+	TITLE "the brief of a segment carries the notes of its run that no brief before carried, and"
+		+ "the segment records their count in segments/<n>/notes.json, from which run show names"
+		+ "the segment that carried each note"
+	STATUS active
+	DESC "notes.jsonl holds one line per note, at and text, in the order brigade run note appended"
+		+ "them; the notes carried before segment n are the first ones, as many as the counts of"
+		+ "the segments before it add up to, and the brief of segment n carries the rest as read"
+		+ "when it is composed, a note appended after that read waiting for the next segment"
+	DESC "binds @TASK.B91"
+		REF @TASK.B91
+	REJECTED "the notes carried read from their timestamps against the instant each brief was"
+		+ "composed: a note stamped in the second its brief is composed would be carried twice or"
+		+ "never"
+	REJECTED "a carried flag written back into notes.jsonl: rewriting the file while brigade run"
+		+ "note appends to it could lose a note"
+	REJECTED "the notes listed from the run.noted events of the ledger: the directory of the run"
+		+ "answers alone, as the run-directory decision rules for run.finished"
+	SOURCE "pull request #443 of the brigade repository, delivering @TASK.B91, by its build run of"
+		+ "2026-11-18"
+		REF @TASK.B91
+
+DECISION WhileTheFallbackServesTheTickLaunchesOnItTheRunsOfATaskAlone
+	TITLE "while the fallback serves, the tick launches on it the runs of a task of a wave alone,"
+		+ "and holds an order, a study and a report until the reset"
+	STATUS active
+	DESC "while the fallback serves, decide moves to it a launch of a run of a task of a wave whose"
+		+ "slot level its table binds, and drops every other run launch, an order, a study and a"
+		+ "report included, until the reset of the rate limit"
+		REF @TASK.B144
+	REJECTED "the order, study and report launches moved to the fallback too: their slot is read"
+		+ "from no project of a wave, so the level its table binds cannot be checked"
+	SOURCE "the delivery of @TASK.B144"
+		REF @TASK.B144
+
+DECISION ARunOnTheFallbackStaysOnItWhenItsClientWouldRunItInAnotherWorktree
+	TITLE "a run on the fallback stays on it after a handover when its client would run it in"
+		+ "another worktree than the one the run set up"
+	STATUS active
+	DESC "after a handover, run start returns a run on the fallback to its client once the rate"
+		+ "limit of that client is over, unless the plan on the client differs from the running one"
+		+ "in disposable_worktree: the run then ends on the fallback"
+		REF @TASK.B144
+	REJECTED "the next segment on the client in the worktree the plan on the client names: a"
+		+ "disposable worktree that no segment set up does not exist, and the worktree the run set"
+		+ "up is removed only once the run ends"
+	REJECTED "the next segment on the client in the worktree the run set up: a read-only role would"
+		+ "run on a client granting no tools in the checkout of the project"
+	SOURCE "the delivery of @TASK.B144"
+		REF @TASK.B144

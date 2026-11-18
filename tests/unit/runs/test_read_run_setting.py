@@ -5,8 +5,8 @@ import unittest
 from pathlib import Path
 
 from brigade.errors import BrigadeError
-from brigade.runs.read_run_setting import read_run_setting
-from brigade.system.parse_configuration import Configuration
+from brigade.runs.read_run_setting import RunSettingQuery, read_run_setting
+from brigade.system.parse_configuration import Configuration, Fallback, ReasoningRow
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
@@ -36,7 +36,9 @@ class ReadRunSettingTest(unittest.TestCase):
 
         # Act
         setting = read_run_setting(
-            "tidepool", "build", Configuration(client="claude-code"), create_test_runtime(self.paths, run_process=awawa)
+            RunSettingQuery("tidepool", "build"),
+            Configuration(client="claude-code"),
+            create_test_runtime(self.paths, run_process=awawa),
         )
 
         # Assert
@@ -62,7 +64,7 @@ class ReadRunSettingTest(unittest.TestCase):
 
         # Act
         setting = read_run_setting(
-            "tidepool", "build", configuration, create_test_runtime(self.paths, run_process=awawa)
+            RunSettingQuery("tidepool", "build"), configuration, create_test_runtime(self.paths, run_process=awawa)
         )
 
         # Assert
@@ -74,7 +76,7 @@ class ReadRunSettingTest(unittest.TestCase):
         configuration = Configuration(client="claude-code", slot_clients={"build": "codex"})
 
         # Act
-        setting = read_run_setting(no_project, "build", configuration, create_test_runtime(self.paths))
+        setting = read_run_setting(RunSettingQuery(no_project, "build"), configuration, create_test_runtime(self.paths))
 
         # Assert
         self.assertEqual(setting.client, "codex")
@@ -85,7 +87,7 @@ class ReadRunSettingTest(unittest.TestCase):
         configuration = Configuration(client="claude-code", slot_clients={"review": "codex"})
 
         # Act
-        setting = read_run_setting(no_project, "build", configuration, create_test_runtime(self.paths))
+        setting = read_run_setting(RunSettingQuery(no_project, "build"), configuration, create_test_runtime(self.paths))
 
         # Assert
         self.assertEqual(setting.client, "claude-code")
@@ -96,10 +98,34 @@ class ReadRunSettingTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as refusal:
-            read_run_setting(no_project, "build", Configuration(), create_test_runtime(self.paths))
+            read_run_setting(RunSettingQuery(no_project, "build"), Configuration(), create_test_runtime(self.paths))
 
         # Assert
         self.assertEqual(
             str(refusal.exception),
             f"config.toml names no client: set the client key in {self.paths.configuration_file}",
         )
+
+
+class ReadRunSettingOnTheFallbackTest(unittest.TestCase):
+    def test_should_take_the_client_of_the_fallback_and_the_models_its_table_binds(self):
+        # Arrange
+        root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, root)
+        no_project = None
+        configuration = Configuration(
+            client="claude-code",
+            reasoning={"standard": ReasoningRow(model="opus", effort="high")},
+            fallback=Fallback(client="vibe", reasoning={"standard": ReasoningRow(model="devstral", effort="high")}),
+        )
+
+        # Act
+        setting = read_run_setting(
+            RunSettingQuery(no_project, "build", on_fallback=True),
+            configuration,
+            create_test_runtime(create_test_paths(root)),
+        )
+
+        # Assert
+        self.assertEqual(setting.client, "vibe")
+        self.assertEqual(setting.configuration.reasoning, {"standard": ReasoningRow(model="devstral", effort="high")})

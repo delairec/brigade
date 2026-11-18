@@ -20,6 +20,7 @@ from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.plan_lint_failed import PlanLintFailed
 from brigade.ledger.run_finished import RunFinished
+from brigade.ledger.run_noted import RunNoted
 from brigade.ledger.signal_recorded import SignalRecorded
 from brigade.ledger.step_done import StepDone
 from brigade.ledger.step_failed import StepFailed
@@ -84,6 +85,7 @@ AppendedEvent = (
     | BudgetApplied
     | BranchKept
     | BranchBaseGone
+    | RunNoted
 )
 
 

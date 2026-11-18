@@ -39,6 +39,7 @@ class ListClientAdaptersOnAPathWithStrayEntriesTest(unittest.TestCase):
                 ClientAdapter(name="claude-code", audience="supported_client"),
                 ClientAdapter(name="vibe", audience="supported_client"),
                 ClientAdapter(name="fake", audience="test_suite"),
+                ClientAdapter(name="fake-fallback", audience="test_suite"),
             ),
         )
 
@@ -69,5 +70,6 @@ class ListClientAdaptersOnAPathWithUnfitExecutablesTest(unittest.TestCase):
                 ClientAdapter(name="claude-code", audience="supported_client"),
                 ClientAdapter(name="vibe", audience="supported_client"),
                 ClientAdapter(name="fake", audience="test_suite"),
+                ClientAdapter(name="fake-fallback", audience="test_suite"),
             ),
         )
