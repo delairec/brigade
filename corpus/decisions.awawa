@@ -8004,9 +8004,9 @@ DECISION ARunOnTheFallbackStaysOnItWhenItsClientWouldRunItInAnotherWorktree
 
 DECISION TheAwawaTabIsAnAddonServedByAChildProcessOfBrigadeServeForTheProjectsHoldingACorpus
 	TITLE "the awawa tab of the dashboard is an addon: brigade serve starts, for the projects where"
-		+ "awawa finds a corpus and for those alone, a child process that serves the tab, calls the"
-		+ "awawa binary and keeps its answers in a cache until the .awawa files change; a crash of"
-		+ "it leaves the dashboard up"
+		+ "awawa finds a corpus and for those alone, a child process that answers the documents of"
+		+ "the tab, calls the awawa binary and keeps its answers in a cache until the .awawa files"
+		+ "change; a crash of it leaves the dashboard up"
 	STATUS active
 	DESC "brigade serve starts one child process, never one per project: it serves every registered"
 		+ "project where awawa finds a corpus; where no project holds a corpus brigade serve starts"
@@ -8029,9 +8029,10 @@ DECISION TheAwawaTabIsAnAddonServedByAChildProcessOfBrigadeServeForTheProjectsHo
 		+ "operation by a document, the resolver gains no kind, and brigade serve starts and owns"
 		+ "the process"
 		REF @DECISION.PluginsAreReachedByNameThroughOneResolverAndNeverImported
-	DESC "narrows DESC 1 of @DECISION.ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand for"
-		+ "the awawa tab alone: the child process serves the tab, and every other view stays"
-		+ "rendered by the server from the --json of a command"
+	DESC "the child process answers the document brigade corpus --view ... --json prints, kept warm"
+		+ "in its cache, and the server renders the awawa tab from it in Python, as"
+		+ "@DECISION.ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand rules for every view:"
+		+ "that decision is not narrowed"
 		REF @DECISION.ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand
 	DESC "binds the tasks of @MILESTONE.M18 on the awawa tab"
 		REF @MILESTONE.M18
@@ -8048,6 +8049,12 @@ DECISION TheAwawaTabIsAnAddonServedByAChildProcessOfBrigadeServeForTheProjectsHo
 		+ "Windows, and a socket file to place and to clean"
 	REJECTED "a loopback TCP port between brigade serve and the child process: an exposed port the"
 		+ "child process would have to guard, which the relay already refuses"
+	REJECTED "the child process rendering the HTML of the tab: it would amend the decision"
+		+ "ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand, the one place where every"
+		+ "string is escaped and every view rendered"
+	REJECTED "the child process relaying the raw JSON of the awawa binary: the cache would then"
+		+ "hold what the dashboard recomputes at each request, the cost staying in the process that"
+		+ "polls"
 	RATIONALE "the user sees the awawa view as an addon launched beside the dashboard; the cache"
 		+ "answers the cost awawa-ui states in its README, editors/intellij/ui/README.md of the"
 		+ "awawa repository: one awawa show per entity of a type, 0.6 s for 232 entities over 5,000"
@@ -8067,6 +8074,10 @@ DECISION TheAwawaTabIsAnAddonServedByAChildProcessOfBrigadeServeForTheProjectsHo
 		+ "distributed_tool_free_of_authors_machine of the instructions corpus asks of any tool"
 		+ "installed elsewhere; the framing of a message, a line or a framed message, is left to"
 		+ "the task"
+	RATIONALE "what the child process answers was left to the tasks on 2026-11-18 and applied by"
+		+ "the session as the one valid option: the document of a command of brigade, brigade"
+		+ "corpus --view, so that the command line and the tab show one document and the rendering"
+		+ "stays the server's"
 	SOURCE "the user's words of 2026-11-18: « Ensuite pour la vue \"awawa\", en effet ça sera du"
 		+ "read-only, mais on avait bien travaillé le plugin ui (actuellement installé dans"
 		+ "intellij) et donc j'aimerais qu'on reprenne les fruits de ce travail dans la vue web de"
