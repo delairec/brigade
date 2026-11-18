@@ -83,6 +83,14 @@ class BrigadeWaveRequeueOfAParkedTaskTest(LaunchingTickTestCase):
                 {
                     "schema_version": 1,
                     "ts": ANY,
+                    "event": "task.branch_cut",
+                    "project": "shop",
+                    "task": "S3",
+                    "branch": "feature/S3-empty-the-cart-in-one-click",
+                },
+                {
+                    "schema_version": 1,
+                    "ts": ANY,
                     "event": "task.state",
                     "wave": "shop_w1",
                     "task": "S3",

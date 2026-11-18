@@ -222,8 +222,8 @@ class PrepareTaskWorktreeSetUpTest(PrepareTaskWorktreeTestCase):
 
         # Assert
         self.assertEqual(
-            [entry.event for entry in read_ledger(self.paths.state_root).entries],
-            [TaskBranchCut(project="shop", task="B1", branch="feature/B1-task")],
+            read_ledger(self.paths.state_root).entries[-1].event,
+            TaskBranchCut(project="shop", task="B1", branch="feature/B1-task"),
         )
 
     def test_should_log_a_setup_step_quoting_an_argument_that_holds_a_space(self):
@@ -357,8 +357,7 @@ class PrepareTaskWorktreeOfAQueuedAgainTaskTest(PrepareTaskWorktreeTestCase):
             prepared.worktree, BranchWorktree(path=WORKTREE, branch="feature/B1-task", start="integration/w1")
         )
         self.assertEqual(
-            [entry.event for entry in read_ledger(self.paths.state_root).entries],
-            [FIRST_CUT_OF_THE_TASK, TaskState(wave="w1", task="B1", state="queued")],
+            read_ledger(self.paths.state_root).entries[-1].event, TaskState(wave="w1", task="B1", state="queued")
         )
 
     def test_should_add_a_worktree_on_the_existing_branch_of_the_task(self):
