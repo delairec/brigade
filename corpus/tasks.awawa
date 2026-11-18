@@ -16222,7 +16222,8 @@ TASK B230
 TASK B231
 	TITLE "The tick parks the task of a run that handed over at its last handover with that outcome"
 		+ "in the reason, and a re-queue resumes the run on its progress file"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 441
 	TYPE fix
 	MILESTONE @MILESTONE.M13
 	COMPONENT "tick"
