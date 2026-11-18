@@ -31,7 +31,7 @@ def _searched_diagnostics(diagnostics: list[dict]) -> list[str]:
     return [text for diagnostic in diagnostics for text in (diagnostic["rule"], diagnostic["message"])]
 
 
-def describe_health_view(reader: CorpusReader, search: str | None) -> dict:
+def _gather_diagnostics(reader: CorpusReader) -> tuple[list[dict], list[dict]]:
     by_entity: dict[str, list[dict]] = {}
     by_file: dict[str, list[dict]] = {}
     for diagnostic in reader.lint()["diagnostics"]:
@@ -42,38 +42,41 @@ def describe_health_view(reader: CorpusReader, search: str | None) -> dict:
         else:
             by_file.setdefault(described["file"], []).append(described)
     entities = [
-        {
-            "entity": describe_entity_card(reader, reader.row(target)),
-            "diagnostics": sorted(diagnostics, key=lambda diagnostic: diagnostic["line"]),
-        }
+        {"entity": describe_entity_card(reader, reader.row(target)), "diagnostics": _sort_by_line(diagnostics)}
         for target, diagnostics in by_entity.items()
     ]
-    files = [
-        {"file": file, "diagnostics": sorted(diagnostics, key=lambda diagnostic: diagnostic["line"])}
-        for file, diagnostics in by_file.items()
-    ]
+    files = [{"file": file, "diagnostics": _sort_by_line(diagnostics)} for file, diagnostics in by_file.items()]
+    return entities, files
+
+
+def _sort_by_line(diagnostics: list[dict]) -> list[dict]:
+    return sorted(diagnostics, key=lambda diagnostic: diagnostic["line"])
+
+
+def _keep_searched(ailing: list[dict], texts, rank, search: str | None) -> list[dict]:
+    return sorted(
+        (patient for patient in ailing if carries_search(texts(patient), search)),
+        key=lambda patient: (_rank_by_severity(patient["diagnostics"]), rank(patient)),
+    )
+
+
+def describe_health_view(reader: CorpusReader, search: str | None) -> dict:
+    entities, files = _gather_diagnostics(reader)
     counts = reader.status
     return {
         "errors": counts["diagnostics"]["errors"],
         "warnings": counts["diagnostics"]["warnings"],
         "unresolved": counts["references"]["unresolved"],
-        "entities": sorted(
-            (
-                ailing
-                for ailing in entities
-                if carries_search(
-                    [*describe_searched_texts(ailing["entity"]), *_searched_diagnostics(ailing["diagnostics"])],
-                    search,
-                )
-            ),
-            key=lambda ailing: (_rank_by_severity(ailing["diagnostics"]), rank_naturally(ailing["entity"]["code"])),
+        "entities": _keep_searched(
+            entities,
+            lambda ailing: [*describe_searched_texts(ailing["entity"]), *_searched_diagnostics(ailing["diagnostics"])],
+            lambda ailing: rank_naturally(ailing["entity"]["code"]),
+            search,
         ),
-        "files": sorted(
-            (
-                ailing
-                for ailing in files
-                if carries_search([ailing["file"], *_searched_diagnostics(ailing["diagnostics"])], search)
-            ),
-            key=lambda ailing: (_rank_by_severity(ailing["diagnostics"]), rank_naturally(ailing["file"])),
+        "files": _keep_searched(
+            files,
+            lambda ailing: [ailing["file"], *_searched_diagnostics(ailing["diagnostics"])],
+            lambda ailing: rank_naturally(ailing["file"]),
+            search,
         ),
     }

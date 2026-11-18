@@ -24,9 +24,9 @@ def _describe_node(card: dict, dependents: dict[str, list[dict]], cyclic: set[st
     }
 
 
-def describe_dependencies_view(reader: CorpusReader, cards: list[dict], field: str) -> dict:
+def _read_prerequisites(reader: CorpusReader, cards: list[dict], field: str) -> dict[str, list[str]]:
     targets = {card["target"] for card in cards}
-    prerequisites = {
+    return {
         card["target"]: list(
             dict.fromkeys(
                 atom
@@ -37,12 +37,10 @@ def describe_dependencies_view(reader: CorpusReader, cards: list[dict], field: s
         )
         for card in cards
     }
-    dependents = {card["target"]: [] for card in cards}
-    for card in cards:
-        for prerequisite in prerequisites[card["target"]]:
-            dependents[prerequisite].append(card)
-    reaches = {target: _reach(prerequisites, target) for target in targets}
-    cyclic = {target for target in targets if target in reaches[target]}
+
+
+def _find_roots(cards: list[dict], prerequisites: dict[str, list[str]], reaches: dict[str, set[str]]) -> list[dict]:
+    targets = set(prerequisites)
     roots = [card for card in cards if not prerequisites[card["target"]]]
     reached = {root["target"] for root in roots} | {
         target for target in targets if any(root["target"] in reaches[target] for root in roots)
@@ -54,5 +52,17 @@ def describe_dependencies_view(reader: CorpusReader, cards: list[dict], field: s
         if is_source and not component & reached:
             roots.append(card)
             reached |= component
+    return roots
+
+
+def describe_dependencies_view(reader: CorpusReader, cards: list[dict], field: str) -> dict:
+    prerequisites = _read_prerequisites(reader, cards, field)
+    dependents = {card["target"]: [] for card in cards}
+    for card in cards:
+        for prerequisite in prerequisites[card["target"]]:
+            dependents[prerequisite].append(card)
+    reaches = {target: _reach(prerequisites, target) for target in prerequisites}
+    cyclic = {target for target in prerequisites if target in reaches[target]}
+    roots = _find_roots(cards, prerequisites, reaches)
     nodes = [_describe_node(root, dependents, cyclic, frozenset()) for root in roots]
     return {"field": field, "roots": nodes}

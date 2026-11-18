@@ -1,5 +1,6 @@
 from brigade.corpus.corpus_reader import CorpusReader, CorpusRow, is_reference_atom, read_atoms
 from brigade.corpus.describe_entity_card import describe_entity_card
+from brigade.corpus.view_request import ViewRequest
 from brigade.errors import BrigadeError
 
 VALUE_SEPARATOR = "="
@@ -38,11 +39,9 @@ def carries_search(texts: list[str], search: str | None) -> bool:
     return search is None or any(search.casefold() in text.casefold() for text in texts)
 
 
-def select_view_cards(
-    reader: CorpusReader, rows: list[CorpusRow], view_type: str | None, filters: tuple[str, ...], search: str | None
-) -> list[dict]:
-    wanted = _read_filters(filters)
+def select_view_cards(reader: CorpusReader, rows: list[CorpusRow], request: ViewRequest) -> list[dict]:
+    wanted = _read_filters(request.filters)
     reader.prefetch(rows)
-    kept = [row for row in rows if row.type != view_type or _holds(reader, row, wanted)]
+    kept = [row for row in rows if row.type != request.entity_type or _holds(reader, row, wanted)]
     cards = [describe_entity_card(reader, row) for row in kept]
-    return [card for card in cards if carries_search(describe_searched_texts(card), search)]
+    return [card for card in cards if carries_search(describe_searched_texts(card), request.search)]
