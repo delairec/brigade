@@ -19820,7 +19820,8 @@ TASK B264
 	TITLE "The dashboard gets its foundation: a stylesheet on state tones, a shell with a rail, a"
 		+ "project selector and the heartbeat of the tick, one Python function per component, and a"
 		+ "page script that swaps only what changed"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 447
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
