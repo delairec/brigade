@@ -1,10 +1,10 @@
 import unittest
 
 from tests.unit.dashboard.stylesheet_reader import (
-    STYLESHEET,
     read_colour_literals_of_the_views,
     read_dark_properties,
     read_light_properties,
+    read_stylesheet,
     read_tone_classes,
 )
 
@@ -109,11 +109,17 @@ class DashboardStylesheetTest(unittest.TestCase):
         self.assertEqual(literals, [])
 
     def test_should_draw_with_borders_and_no_shadow_on_system_fonts_and_tabular_figures(self):
+        # Act
+        stylesheet = read_stylesheet()
+
         # Assert
-        self.assertNotIn("box-shadow", STYLESHEET)
-        self.assertNotIn("@font-face", STYLESHEET)
-        self.assertIn("font-variant-numeric: tabular-nums;", STYLESHEET)
+        self.assertNotIn("box-shadow", stylesheet)
+        self.assertNotIn("@font-face", stylesheet)
+        self.assertIn("font-variant-numeric: tabular-nums;", stylesheet)
 
     def test_should_turn_the_rail_into_a_top_bar_under_900px(self):
+        # Act
+        stylesheet = read_stylesheet()
+
         # Assert
-        self.assertIn("@media (max-width: 900px) {\n  body {\n    grid-template-columns: 1fr;", STYLESHEET)
+        self.assertIn("@media (max-width: 900px) {\n  body {\n    grid-template-columns: 1fr;", stylesheet)
