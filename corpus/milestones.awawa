@@ -282,3 +282,30 @@ MILESTONE M18
 		+ "AFTER M18 : la courbe des caps (B229) et les vues des vagues arrivent sur le dashboard"
 		+ "refondu, pas à refaire. », chosen over a place after M14 and over the last place, after"
 		+ "M17"
+
+MILESTONE M19
+	TITLE "Portability"
+	STATUS planned
+	AFTER @MILESTONE.M8
+	DESC "post-MVP: brigade runs on Linux, on macOS and on Windows, each checked by a CI job that"
+		+ "runs on that platform, as"
+		+ "@DECISION.BrigadeSupportsLinuxMacOsAndWindowsEachCheckedByACiJobOnThatPlatform rules"
+		REF @DECISION.BrigadeSupportsLinuxMacOsAndWindowsEachCheckedByACiJobOnThatPlatform
+	DESC "holds no task yet: its tasks are drafted at its refinement"
+	DESC "independent of @MILESTONE.M18: neither names the other in AFTER"
+		REF @MILESTONE.M18
+	DESC "until it is delivered, wiki/Platforms.md states the support of each feature on each"
+		+ "platform, as"
+		+ "@DECISION.WikiPlatformsHoldsTheSupportOfEachFeaturePerPlatformAndIsUpdatedInTheChangeThatMovesIt"
+		+ "rules"
+		REF @DECISION.WikiPlatformsHoldsTheSupportOfEachFeaturePerPlatformAndIsUpdatedInTheChangeThatMovesIt
+	SOURCE "the user's words of 2026-11-18, answering the question of the session « brigade"
+		+ "platform target … Which platforms does brigade support, recorded as a DECISION and"
+		+ "checked by CI? »: « on va devoir créer une milestone pour ça. En attendant on tient un"
+		+ "tableau à jour qui décrit le support des fonctionalités par platform dans le wiki? »"
+	SOURCE "the user's ruling of 2026-11-18 on where the work goes: « Nouveau milestone M19 », the"
+		+ "option described as \"« Portability », planned, AFTER M8, indépendant de M18 ; ses"
+		+ "tâches raffinées plus tard.\""
+	SOURCE "the user's words of 2026-11-18 before it: « faut que ça soit compatible sur toutes les"
+		+ "machines, pas seulement la nôtre, donc il faut éviter le spécifique », and « oui brigade"
+		+ "», the concern being brigade's own and no general rule"
