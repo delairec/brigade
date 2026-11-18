@@ -20380,7 +20380,8 @@ TASK B273
 	TITLE "brigade corpus --view tree, board, dependencies or health prints the document of one"
 		+ "view of a corpus by the rules of awawa-ui, with its filters, its search and the detail"
 		+ "of one entity"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 448
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "corpus"
