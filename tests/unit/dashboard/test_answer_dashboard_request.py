@@ -585,14 +585,30 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
             response, DashboardResponse(status=200, content_type="text/html; charset=utf-8", body=b"<p>no report</p>")
         )
 
-    def test_should_render_the_report_asked(self):
+    def test_should_render_the_report_asked_with_the_measures_of_its_waves_and_the_forge_of_its_project(self):
         # Arrange
         shown = (
             '{"schema_version": 1, "report": {"id": "oak_w3", "kind": "wave-report", "project": "oak",'
-            ' "type": "REPORT", "fields": [{"name": "WAVE", "value": "oak_w3"}]}}'
+            ' "type": "REPORT", "fields": [{"name": "WAVE", "value": "oak_w3"},'
+            ' {"name": "NARRATIVE", "value": "Verdict: OK7 delivered"}]},'
+            ' "waves": ["oak_w3"], "pull_request": 31, "reported_at": "2026-10-04T09:00:00Z"}'
+        )
+        wave = (
+            '{"wave": "oak_w3", "tasks": [{"task": "OK7", "state": "merged"}], "ledger": {"wall_time_ms": 600000,'
+            ' "cost_usd": 1.5, "by_task": [{"task": "OK7", "duration_ms": 300000}],'
+            ' "turns": {"by_slot": {"build": {"runs": {"measured": 1, "unmeasured": 0}}}},'
+            ' "turns_by_task": {"OK7": 40}}}'
+        )
+        project = (
+            '{"schema_version": 1, "project": {"name": "oak", "fields": [{"name": "REMOTE", "value": "alice/oak"},'
+            ' {"name": "FORGE", "value": "github"}]}}'
         )
         runner = ScriptedProcessRunner(
-            {(PYTHON, ENTRY_POINT, "report", "show", "--json", "oak_w3"): ProcessAnswer(stdout=shown)}
+            {
+                (PYTHON, ENTRY_POINT, "report", "show", "--json", "oak_w3"): ProcessAnswer(stdout=shown),
+                (PYTHON, ENTRY_POINT, "wave", "show", "--json", "--events", "oak_w3"): ProcessAnswer(stdout=wave),
+                (PYTHON, ENTRY_POINT, "project", "show", "--json", "oak"): ProcessAnswer(stdout=project),
+            }
         )
 
         # Act
@@ -604,8 +620,45 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
             DashboardResponse(
                 status=200,
                 content_type="text/html; charset=utf-8",
-                body=b"<h2>wave-report oak_w3</h2><dl><dt>WAVE</dt><dd>oak_w3</dd></dl>",
+                body=b'<section class="report-verdict"><h2>wave-report oak_w3</h2>'
+                b'<p class="status-sentence">Verdict: <a href="#waves/oak_w3">OK7</a> delivered</p>'
+                b'<p class="report-delivery">reported 2026-10-04T09:00:00Z, pull request'
+                b' <a href="https://github.com/alice/oak/pull/31">#31</a></p></section>'
+                b'<div class="tiles">'
+                b'<div class="stat-tile"><span class="stat-value">1 of 1</span><span class="stat-label">tasks merged</span>'
+                b'<span class="stat-perimeter">the waves oak_w3</span></div>'
+                b'<div class="stat-tile"><span class="stat-value">1 runs, 40 turns</span><span class="stat-label">runs</span>'
+                b'<span class="stat-perimeter">the waves oak_w3</span></div>'
+                b'<div class="stat-tile"><span class="stat-value">1.50 USD</span><span class="stat-label">cost</span>'
+                b'<span class="stat-perimeter">the waves oak_w3</span></div>'
+                b'<div class="stat-tile"><span class="stat-value">10 min</span><span class="stat-label">wall time</span>'
+                b'<span class="stat-perimeter">5 min of run time</span></div></div>'
+                b"<details><summary>The full account</summary><dl><dt>WAVE</dt><dd>oak_w3</dd></dl></details>",
             ),
+        )
+
+    def test_should_leave_the_pull_request_unlinked_when_the_project_names_a_forge_without_an_address(self):
+        # Arrange
+        shown = (
+            '{"schema_version": 1, "report": {"id": "oak_w3", "kind": "wave-report", "project": "oak",'
+            ' "type": "REPORT", "fields": []}, "waves": [], "pull_request": 31, "reported_at": null}'
+        )
+        project = '{"schema_version": 1, "project": {"name": "oak", "fields": [{"name": "FORGE", "value": "none"}]}}'
+        runner = ScriptedProcessRunner(
+            {
+                (PYTHON, ENTRY_POINT, "report", "show", "--json", "oak_w3"): ProcessAnswer(stdout=shown),
+                (PYTHON, ENTRY_POINT, "project", "show", "--json", "oak"): ProcessAnswer(stdout=project),
+            }
+        )
+
+        # Act
+        response = answer_get("/views/reports/oak_w3", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(
+            response.body,
+            b'<section class="report-verdict"><h2>wave-report oak_w3</h2>'
+            b'<p class="report-delivery">pull request #31</p></section>',
         )
 
 
