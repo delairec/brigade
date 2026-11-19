@@ -153,6 +153,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
                 "last_event": "wave.started",
                 "pull_request": None,
                 "milestone": "M4",
+                "milestone_report": None,
                 "merge_command": None,
                 "task_merge_commands": [],
                 "tasks": [
@@ -495,6 +496,32 @@ class WaveShowOfAProjectWithoutAForgeTest(unittest.TestCase):
 
         # Assert
         self.assertIsNone(document["milestone"])
+
+    def test_should_name_the_report_of_the_milestone_of_the_wave_once_reported(self):
+        # Act
+        document = self._show([CUT, FORGELESS_WAVE_STARTED, REPORTED, REPORT_DONE])
+
+        # Assert
+        self.assertEqual(document["milestone_report"], "tidepool_M4")
+
+    def test_should_name_no_report_of_a_milestone_whose_report_is_not_committed(self):
+        # Act
+        document = self._show([CUT, FORGELESS_WAVE_STARTED, REPORTED])
+
+        # Assert
+        self.assertIsNone(document["milestone_report"])
+
+    def test_should_name_no_report_of_a_milestone_reported_for_another_project_or_milestone(self):
+        for case, reported in [
+            ("another project", OTHER_REPORTED),
+            ("another milestone", {**REPORTED, "milestone": "M5"}),
+        ]:
+            with self.subTest(case=case):
+                # Act
+                document = self._show([CUT, FORGELESS_WAVE_STARTED, reported, REPORT_DONE])
+
+                # Assert
+                self.assertIsNone(document["milestone_report"])
 
     def test_should_print_no_command_before_the_report_of_the_milestone(self):
         # Act
