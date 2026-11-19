@@ -8423,3 +8423,23 @@ DECISION TheStartOfARunIsTheInstantItsIdCarriesAndTheStartOfASegmentItsResultLes
 		+ "whose result carries no ts or no duration_ms has a null started_at"
 	SOURCE "@TASK.B270, delivered by its pull request"
 		REF @TASK.B270
+
+DECISION TheViewOfAReportFollowsItsDocumentWithTheWavesItNamesAndTheProjectOfItsForge
+	TITLE "the view of a report runs brigade report show, then wave show --json --events of each"
+		+ "wave it names and project show of its project"
+	STATUS active
+	DESC "a ViewRoute carries follow, a second stage of routes run once its document answers 200; a"
+		+ "wave or a project whose command fails leaves its tiles or its links out"
+	DESC "the address of the pull requests of a project is read from its FORGE and its REMOTE in"
+		+ "brigade/dashboard/locate_pull_request_pages.py, a table of one forge, github; another"
+		+ "forge leaves the number unlinked"
+	DESC "a RESULT of an order names no wave, no pull request and no reported_at; the inbox item of"
+		+ "a study answer keeps its own list of fields"
+	DESC "binds @TASK.B266"
+		REF @TASK.B266
+	REJECTED "adding the address of the pull request to brigade report show --json: the task names"
+		+ "the three keys it carries"
+	REJECTED "reading the waves of a milestone from the run of its report: the ledger names them by"
+		+ "the branch of the milestone"
+	SOURCE "the build run of @TASK.B266 of 2026-11-19"
+		REF @TASK.B266
