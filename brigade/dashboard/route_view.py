@@ -73,6 +73,8 @@ def _render_reports(answers: dict[str, CommandAnswer]) -> str:
 
 
 def _follow_report(answers: dict[str, CommandAnswer]) -> dict[str, CommandRoute]:
+    if answers[DOCUMENT].status != OK:
+        return {}
     document = json.loads(answers[DOCUMENT].document)
     routes = {f"{WAVE_PREFIX}{wave}": CommandRoute(arguments=(*WAVE_EVENTS, wave)) for wave in document["waves"]}
     project = document["report"]["project"]
