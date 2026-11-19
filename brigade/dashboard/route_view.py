@@ -5,7 +5,6 @@ from urllib.parse import parse_qs, urlsplit
 
 from brigade.dashboard.render_answer import render_answer
 from brigade.dashboard.render_corpus_view import render_corpus_view
-from brigade.dashboard.render_fragment import render_fragment
 from brigade.dashboard.render_home import HomeDocuments, render_home
 from brigade.dashboard.render_inbox_item import render_inbox_item
 from brigade.dashboard.render_ledger_fragment import render_ledger_fragment
