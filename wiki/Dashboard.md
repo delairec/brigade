@@ -56,9 +56,16 @@ Every view of the dashboard keeps three rules:
 
 Its seven views:
 
-- **Home**, the view shown first — the document of `brigade status`: the projects with their pause or resume button,
-  the open waves with a resume button on a paused one, the inbox and its scans, the quota, the last tick, the studies
-  and the parked orders.
+- **Home**, the view shown first — it opens on one sentence saying whether brigade is stopped (the scheduler reports
+  the tick stale), working (a run is live) or idle, and why nothing runs; then four tiles: the open waves and how many
+  are halted, the live runs, what waits for the user with the age of the oldest, and the quota of the window with the
+  waves it blocks. **Needs you** lists what waits for the user, one row each with the command to copy: a halted wave
+  with its reason, the proposed patterns of the inbox as one row with their count, the parked scans, a pull request of
+  a milestone waiting for the user's merge and a parked order, or says nothing needs the user; a stall signal whose
+  task merged since is listed apart as stale. **At work** lists the open waves with their tasks by state and their
+  live runs, **Last 24 hours** counts the failed tick actions, and the projects keep their pause and resume buttons.
+  **Next tick** shows the decisions of `brigade tick --dry-run --json` by action, read when the page loads, at each
+  new tick and on its refresh button, never by the poll.
 - **Waves** — the waves of `brigade wave list`, opening on one sentence counting the waves open, parked and blocked,
   and four tiles: the waves open now with the parked and the blocked, the waves started with their count by month
   from `brigade ledger`, the waves closed with the cancelled, and the tasks merged out of the tasks the last 12 waves

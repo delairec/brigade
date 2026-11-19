@@ -382,10 +382,32 @@ INBOX_HOLDING_A_NOTE_AND_A_PATTERN = (
 )
 
 HOME = (
-    '{"schema_version": 1, "projects": [{"name": "oak", "paused": false}], "waves": [], "inbox": {"new_signals": 0, "scans": []},'
+    '{"schema_version": 1, "projects": [{"name": "oak", "paused": false}], "waves": [], "live_runs": [],'
+    ' "awaiting_merge": [], "inbox": {"new_signals": 0, "scans": [], "stalls": []},'
     ' "quota": {"window_hours": 5, "usage": {"input_tokens": 0, "output_tokens": 0, "cache_creation_input_tokens": 0,'
     ' "cache_read_input_tokens": 0}, "runs_without_usage": 0, "blocked_waves": []}, "last_tick": null, "studies": [], "orders": []}\n'
 )
+FRESH_SCHEDULER = '{"schema_version": 1, "stale": false, "last_tick": null}\n'
+QUIET_DAY = '{"schema_version": 1, "view": "overview", "events": {}}\n'
+EMPTY_INBOX = '{"schema_version": 1, "signals": [], "families": [], "patterns": [], "answers": []}\n'
+HOME_STATUS = (PYTHON, ENTRY_POINT, "status", "--json")
+HOME_SCHEDULER = (PYTHON, ENTRY_POINT, "scheduler", "status", "--json")
+HOME_LEDGER = (PYTHON, ENTRY_POINT, "ledger", "--since", "1d", "--json")
+HOME_INBOX = (PYTHON, ENTRY_POINT, "inbox", "list", "--json")
+NEXT_TICK = (PYTHON, ENTRY_POINT, "tick", "--dry-run", "--json")
+
+
+def create_home_runner(status: str) -> ScriptedProcessRunner:
+    return ScriptedProcessRunner(
+        {
+            HOME_STATUS: ProcessAnswer(stdout=status),
+            HOME_SCHEDULER: ProcessAnswer(stdout=FRESH_SCHEDULER),
+            HOME_LEDGER: ProcessAnswer(stdout=QUIET_DAY),
+            HOME_INBOX: ProcessAnswer(stdout=EMPTY_INBOX),
+        }
+    )
+
+
 WAVE_W4_SHOWN = (
     '{"schema_version": 1, "wave": "w4", "project": "oak", "branch": "integration/w4", "started_at":'
     ' "2026-10-19T07:00:00Z", "last_event": "task.parked", "pull_request": null, "milestone": "M4",'
@@ -729,9 +751,9 @@ class AnswerDashboardRequestOfTheCorpusViewTest(unittest.TestCase):
 
 
 class AnswerDashboardRequestOfTheHomeViewTest(unittest.TestCase):
-    def test_should_render_the_document_of_brigade_status(self):
+    def test_should_render_home_from_the_status_the_scheduler_the_last_day_of_the_ledger_and_the_inbox(self):
         # Arrange
-        runner = ScriptedProcessRunner({(PYTHON, ENTRY_POINT, "status", "--json"): ProcessAnswer(stdout=HOME)})
+        runner = create_home_runner(HOME)
 
         # Act
         response = answer_get("/views/status", create_test_runtime(run_process=runner.run))
@@ -742,6 +764,20 @@ class AnswerDashboardRequestOfTheHomeViewTest(unittest.TestCase):
             b'<li>oak, active <button type="button" data-post="/api/projects/oak/pause">pause</button></li>',
             response.body,
         )
+
+
+class AnswerDashboardRequestOfTheNextTickTest(unittest.TestCase):
+    def test_should_render_the_decisions_of_a_dry_run_of_the_tick(self):
+        # Arrange
+        dry_run = '{"schema_version": 1, "mode": "dry-run", "snapshot": {}, "decisions": [{"action": "StartWave"}]}\n'
+        runner = ScriptedProcessRunner({NEXT_TICK: ProcessAnswer(stdout=dry_run)})
+
+        # Act
+        response = answer_get("/views/next-tick", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(response.status, 200)
+        self.assertEqual(response.body, b"<h3>StartWave</h3><ul><li></li></ul>")
 
 
 class AnswerDashboardRequestOfTheWaveViewTest(unittest.TestCase):
@@ -1003,16 +1039,14 @@ class AnswerDashboardRequestOfAViewOfOneProjectTest(unittest.TestCase):
             {"wave": "oak_w2", "project": "oak", "resume_at": "2026-10-19T10:00:00Z"},
             {"wave": "elm_w1", "project": "elm", "resume_at": "2026-10-19T10:00:00Z"},
         ]
-        runner = ScriptedProcessRunner(
-            {(PYTHON, ENTRY_POINT, "status", "--json"): ProcessAnswer(stdout=json.dumps(home))}
-        )
+        runner = create_home_runner(json.dumps(home))
 
         # Act
         response = answer_get("/views/status?project=oak", create_test_runtime(run_process=runner.run))
 
         # Assert
         self.assertNotIn(b"elm", response.body)
-        self.assertIn(b"oak_w2 blocked on quota", response.body)
+        self.assertIn(b"blocking oak_w2", response.body)
 
     def test_should_render_the_rows_of_that_project_alone(self):
         # Arrange

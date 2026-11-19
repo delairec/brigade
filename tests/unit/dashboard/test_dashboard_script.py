@@ -27,3 +27,20 @@ class DashboardScriptTest(unittest.TestCase):
         # Assert
         self.assertIn('querySelectorAll("details[open] > summary")', script)
         self.assertIn("document.activeElement", script)
+
+    def test_should_read_the_next_tick_at_the_load_on_each_new_tick_and_on_its_refresh_button(self):
+        # Act
+        script = SCRIPT.read_text(encoding="utf-8")
+
+        # Assert
+        self.assertIn('document.querySelector("[data-next-tick]")', script)
+        self.assertIn('region.querySelector("time")', script)
+        self.assertIn('event.target.closest("[data-refresh-next-tick]")', script)
+        self.assertIn("readNextTick();\n", script)
+
+    def test_should_show_the_next_tick_on_home_alone(self):
+        # Act
+        script = SCRIPT.read_text(encoding="utf-8")
+
+        # Assert
+        self.assertIn('document.querySelector(".next-tick").hidden = selectView() !== FIRST_VIEW;', script)

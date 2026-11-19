@@ -6,8 +6,8 @@ from urllib.parse import parse_qs, urlsplit
 
 from brigade.dashboard.dashboard_exchange import LOOPBACK_HOST, Dashboard, DashboardResponse, IncomingRequest
 from brigade.dashboard.render_heartbeat import render_heartbeat
-from brigade.dashboard.render_home import render_home
 from brigade.dashboard.render_inbox_view import render_inbox_view
+from brigade.dashboard.render_next_tick import render_next_tick
 from brigade.dashboard.render_project_selector import render_project_selector
 from brigade.dashboard.render_runs_fragment import render_runs_fragment
 from brigade.dashboard.route_action import route_action
@@ -39,7 +39,7 @@ BAD_REQUEST = 400
 FORBIDDEN = 403
 NOT_FOUND = 404
 OK = 200
-VIEW_RENDERERS = {"inbox": render_inbox_view, "status": render_home, "runs": render_runs_fragment}
+VIEW_RENDERERS = {"inbox": render_inbox_view, "runs": render_runs_fragment, "next-tick": render_next_tick}
 PROJECT_PARAMETER = "project"
 
 

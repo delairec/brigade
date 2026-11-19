@@ -1,8 +1,10 @@
 const POLL_INTERVAL_MS = 5000;
 const FIRST_VIEW = "status";
 const TOKEN_HEADER = "X-Brigade-Token";
+const HEARTBEAT_REGION = "/views/heartbeat";
 const PROJECT_PARAMETER = "project";
 const shownFragments = new Map();
+let lastTickSeen = null;
 
 function selectView() {
   return window.location.hash.slice(1) || FIRST_VIEW;
@@ -62,13 +64,40 @@ async function showRegion(region, path) {
   swapFragment(region, await response.text());
 }
 
+function readNextTick() {
+  const region = document.querySelector("[data-next-tick]");
+  showRegion(region, region.dataset.nextTick);
+}
+
+function followTheTick(region) {
+  const tick = region.querySelector("time");
+  const seen = tick === null ? null : tick.dateTime;
+  if (lastTickSeen !== null && seen !== lastTickSeen) {
+    readNextTick();
+  }
+  lastTickSeen = seen;
+}
+
+async function showHeartbeat(region, path) {
+  await showRegion(region, path);
+  followTheTick(region);
+}
+
+function refreshNextTick(event) {
+  if (event.target.closest("[data-refresh-next-tick]") !== null) {
+    readNextTick();
+  }
+}
+
 function showRegions() {
   if (document.visibilityState !== "visible") {
     return;
   }
+  document.querySelector(".next-tick").hidden = selectView() !== FIRST_VIEW;
   showRegion(document.getElementById("view"), `/views/${selectView()}`);
   for (const region of document.querySelectorAll("[data-region]")) {
-    showRegion(region, region.dataset.region);
+    const show = region.dataset.region === HEARTBEAT_REGION ? showHeartbeat : showRegion;
+    show(region, region.dataset.region);
   }
 }
 
@@ -106,6 +135,8 @@ function submitView(event) {
 window.addEventListener("hashchange", showRegions);
 document.addEventListener("visibilitychange", showRegions);
 document.addEventListener("click", postAction);
+document.addEventListener("click", refreshNextTick);
 document.addEventListener("submit", submitView);
 window.setInterval(pollRegions, POLL_INTERVAL_MS);
 showRegions();
+readNextTick();

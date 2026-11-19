@@ -15,6 +15,12 @@ from tests.cli.wave_tick_test_case import WaveTickTestCase
 from tests.process_launcher import ProcessLauncher
 
 STOP_WAIT_S = 20.0
+PARKED_WAVE = (
+    '{"schema_version": 2, "ts": "2026-11-18T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
+    ' "project": "shop", "branch": "integration/M1-empty-cart", "tasks": ["S3"]}\n'
+    '{"schema_version": 1, "ts": "2026-11-18T10:00:00Z", "event": "wave.parked", "wave": "shop_w1",'
+    ' "reason": "forge_account"}\n'
+)
 LAST_TICK = '{"schema_version": 1, "ts": "2026-10-06T12:00:00Z", "duration_ms": 4, "actions_applied": 0}'
 PARKED_WAVE_LEDGER = (
     '{"schema_version": 2, "ts": "2026-11-02T08:00:00Z", "event": "wave.started", "wave": "oak_w4",'
@@ -254,3 +260,35 @@ class BrigadeServeOfAWaveTest(WaveTickTestCase):
         self.assertIn('<p class="status-sentence">Wave shop_w1 of shop is running:', body)
         self.assertIn('<div class="stat-tiles"><div class="stat-tile">', body)
         self.assertIn("<details><summary>Events</summary><ol><li>", body)
+
+
+class BrigadeServeHomeTest(BrigadeServeTestCase):
+    def test_should_answer_home_opening_on_the_sentence_of_brigade(self):
+        # Arrange
+        url = self.start_serving().stdout.readline().strip()
+
+        # Act
+        status, body = fetch(url, "/views/status")
+
+        # Assert
+        self.assertEqual(status, 200)
+        self.assertIn('<p class="status-sentence">brigade is ', body)
+
+    def test_should_answer_home_with_a_parked_wave_under_needs_you(self):
+        # Arrange
+        ledger = self.machine.state_home / "brigade" / "ledger" / "2026-11.jsonl"
+        ledger.parent.mkdir(parents=True, exist_ok=True)
+        ledger.write_text(PARKED_WAVE)
+        url = self.start_serving().stdout.readline().strip()
+
+        # Act
+        status, body = fetch(url, "/views/status")
+
+        # Assert
+        self.assertEqual(status, 200)
+        self.assertIn(
+            '<section><h2>Needs you</h2><ul class="needs-you-list">'
+            '<li class="needs-you"><span class="needs-you-subject">shop_w1</span>'
+            '<span class="needs-you-reason">parked on forge_account</span>',
+            body,
+        )

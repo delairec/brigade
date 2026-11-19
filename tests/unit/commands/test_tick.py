@@ -3175,7 +3175,13 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            {"action": "SignalStall", "project": "tidepool", "wave": "tidepool_w16", "task": "T8", "last_action": "2026-10-18T09:00:00Z"},
+            {
+                "action": "SignalStall",
+                "project": "tidepool",
+                "wave": "tidepool_w16",
+                "task": "T8",
+                "last_action": "2026-10-18T09:00:00Z",
+            },
             json.loads(json.dumps(document["decisions"])),
         )
 
@@ -3724,7 +3730,8 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            document["decisions"], [{"action": "CutMilestoneBranch", "project": "tidepool", "milestone": "M4", "branch": "integration/tides"}]
+            document["decisions"],
+            [{"action": "CutMilestoneBranch", "project": "tidepool", "milestone": "M4", "branch": "integration/tides"}],
         )
 
     def test_should_name_on_stderr_the_milestone_whose_unrecorded_branch_it_refuses_to_cut(self):
@@ -4151,7 +4158,8 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
 
         # Assert
         self.assertNotIn(
-            {"action": "CutMilestoneBranch", "project": "tidepool", "milestone": "M4", "branch": "integration/tides"}, document["decisions"]
+            {"action": "CutMilestoneBranch", "project": "tidepool", "milestone": "M4", "branch": "integration/tides"},
+            document["decisions"],
         )
 
     def test_should_launch_a_rebase_run_on_the_worktree_of_the_milestone_branch_stopped_on_a_conflict(self):
@@ -6158,12 +6166,13 @@ class TickRunningTheConnectorsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            document["decisions"], [
+            document["decisions"],
+            [
                 {"action": "CollectCheckRuns", "project": "elm"},
                 {"action": "CollectReviewThreads", "project": "elm"},
                 {"action": "CollectCheckRuns", "project": "oak"},
                 {"action": "CollectReviewThreads", "project": "oak"},
-            ]
+            ],
         )
         self.assertFalse(self.root.joinpath("state", "inbox", "signals.jsonl").exists())
 
