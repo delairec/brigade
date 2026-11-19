@@ -35,6 +35,7 @@ def create_pattern(name: str, repeats: str | None, signals: list[str]) -> dict:
         "title": f"the title of {name}",
         "action": "wave",
         "target": "oak",
+        "recipe": None,
         "repeats": repeats,
         "signals": signals,
     }
@@ -148,6 +149,28 @@ class RenderInboxViewTest(unittest.TestCase):
 
                 # Assert
                 self.assertIn("<p>If ratified: nothing until the pattern names a target</p>", fragment)
+
+    def test_should_say_ratifying_an_order_starts_nothing_until_the_pattern_names_a_recipe(self):
+        # Arrange
+        pattern = {**create_pattern("StaleLocks", None, []), "action": "order", "recipe": None}
+        document = {**EMPTY_INBOX, "patterns": [pattern]}
+
+        # Act
+        fragment = render_inbox_view(document)
+
+        # Assert
+        self.assertIn("<p>If ratified: nothing until the pattern names a recipe</p>", fragment)
+
+    def test_should_say_ratifying_an_order_starts_an_order_of_the_recipe_it_names(self):
+        # Arrange
+        pattern = {**create_pattern("StaleLocks", None, []), "action": "order", "recipe": "clear-locks"}
+        document = {**EMPTY_INBOX, "patterns": [pattern]}
+
+        # Act
+        fragment = render_inbox_view(document)
+
+        # Assert
+        self.assertIn("<p>If ratified: an order of the recipe clear-locks on oak</p>", fragment)
 
     def test_should_fold_two_repeats_under_the_pattern_they_name_each_with_its_buttons(self):
         # Arrange
@@ -304,8 +327,24 @@ class RenderInboxViewOfStringsHoldingMarkupTest(unittest.TestCase):
             ],
             "families": [{"by": markup, "key": markup, "signals": [markup]}],
             "patterns": [
-                {"name": markup, "title": markup, "action": "wave", "target": markup, "repeats": None, "signals": []},
-                {"name": "other", "title": "t", "action": None, "target": None, "repeats": markup, "signals": []},
+                {
+                    "name": markup,
+                    "title": markup,
+                    "action": "order",
+                    "target": markup,
+                    "recipe": markup,
+                    "repeats": None,
+                    "signals": [],
+                },
+                {
+                    "name": "other",
+                    "title": "t",
+                    "action": None,
+                    "target": None,
+                    "recipe": None,
+                    "repeats": markup,
+                    "signals": [],
+                },
             ],
             "answers": [{"id": markup, "study": markup, "project": markup}],
         }

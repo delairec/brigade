@@ -79,6 +79,7 @@ def _describe_pattern(pattern: Entity, signals: tuple[Signal, ...]) -> dict:
         "title": read_project_field(pattern, "TITLE"),
         "action": read_project_field(pattern, "ACTION"),
         "target": read_project_field(pattern, "TARGET"),
+        "recipe": read_project_field(pattern, "RECIPE"),
         "repeats": _read_repeated_name(pattern),
         "signals": [
             signal.id for signal in signals if any(is_signal_cited(cited, signal.fingerprint) for cited in evidence)

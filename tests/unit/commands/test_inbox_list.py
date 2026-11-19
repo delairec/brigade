@@ -157,6 +157,7 @@ class InboxListOfProposedPatternsTest(unittest.TestCase):
                     "title": "the tests are flaky",
                     "action": "constraint",
                     "target": None,
+                    "recipe": None,
                     "repeats": None,
                     "signals": [
                         "a4a5f464d8bb319accf7b46a8bf8e366b35f89e2598d104fce5192ffc52659bc",
@@ -168,6 +169,7 @@ class InboxListOfProposedPatternsTest(unittest.TestCase):
                     "title": "the names are long",
                     "action": None,
                     "target": None,
+                    "recipe": None,
                     "repeats": None,
                     "signals": [],
                 },
@@ -203,11 +205,35 @@ class InboxListOfProposedPatternsTest(unittest.TestCase):
                     "title": "the tests are flaky again",
                     "action": "constraint",
                     "target": "tests/unit",
+                    "recipe": None,
                     "repeats": "FlakyTests",
                     "signals": [],
                 }
             ],
         )
+
+    def test_should_carry_the_recipe_an_order_pattern_names(self):
+        # Arrange
+        self.processes.answer_entities(
+            self.runtime.paths.config_root,
+            "PATTERN",
+            {
+                "StaleLocks": (
+                    ("TITLE", "the locks go stale"),
+                    ("STATUS", "new"),
+                    ("ACTION", "order"),
+                    ("TARGET", "oak"),
+                    ("RECIPE", "clear-locks"),
+                ),
+            },
+        )
+        request = argparse.Namespace(all=False)
+
+        # Act
+        document = inbox_list(request, self.runtime)
+
+        # Assert
+        self.assertEqual(document["patterns"][0]["recipe"], "clear-locks")
 
 
 class InboxListOfSignalsSharingAKeyTest(unittest.TestCase):
