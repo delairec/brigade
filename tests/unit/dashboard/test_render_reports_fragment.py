@@ -42,6 +42,16 @@ OAK_W4_REPORT = {
     "counts": {"WAVE": 1, "PROJECT": 1, "STATISTIC": 2, "NARRATIVE": 1},
     "reported_at": "2026-10-05T07:15:00Z",
 }
+OAK_W5_REPORT_MERGING_NOTHING = {
+    "id": "oak_w5",
+    "kind": "wave-report",
+    "project": "oak",
+    "subject": "oak_w5",
+    "statistics": {"tasks": "3", "merged": "0"},
+    "verdict": "The wave parked its three tasks.",
+    "counts": {"WAVE": 1, "PROJECT": 1, "STATISTIC": 2, "NARRATIVE": 1},
+    "reported_at": "2026-10-12T08:00:00Z",
+}
 DISK_ORDER_RESULT = {
     "id": "disk_r2",
     "kind": "disk-usage",
@@ -72,7 +82,7 @@ class RenderReportsFragmentTest(unittest.TestCase):
 
     def test_should_count_the_reports_of_each_kind_in_a_tile_and_the_waves_that_merged_nothing(self):
         # Arrange
-        reports = [M13_REPORT, B231_REPORT, OAK_W3_REPORT_WITHOUT_VERDICT, OAK_W4_REPORT]
+        reports = [M13_REPORT, B231_REPORT, OAK_W3_REPORT_WITHOUT_VERDICT, OAK_W4_REPORT, OAK_W5_REPORT_MERGING_NOTHING]
 
         # Act
         fragment = render_reports_fragment({"schema_version": 1, "reports": reports})
@@ -86,9 +96,9 @@ class RenderReportsFragmentTest(unittest.TestCase):
             '<div class="stat-tile"><span class="stat-value">1</span>'
             '<span class="stat-label">task reports</span>'
             '<span class="stat-perimeter">one per task of no milestone</span></div>'
-            '<div class="stat-tile"><span class="stat-value">2</span>'
+            '<div class="stat-tile"><span class="stat-value">3</span>'
             '<span class="stat-label">wave reports</span>'
-            '<span class="stat-perimeter">1 record a wave that merged nothing</span></div>'
+            '<span class="stat-perimeter">2 record a wave that merged nothing</span></div>'
             "</div>",
             fragment,
         )
