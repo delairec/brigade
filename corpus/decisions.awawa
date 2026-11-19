@@ -8308,3 +8308,27 @@ DECISION TheAwawaAddonAnswersOneJsonLinePerRequestAndItsRouteTellsItsStatesBySta
 		REF @DECISION.TheAwawaTabIsAnAddonServedByAChildProcessOfBrigadeServeForTheProjectsHoldingACorpus
 	SOURCE "@TASK.B274, delivered by the role ada on 2026-11-19"
 		REF @TASK.B274
+
+DECISION TheRoundsOfAWaveListedAreTheMostRoundsOneOfItsMergedPullRequestsTook
+	TITLE "the rounds of a wave in brigade wave list --json are the most rounds a pr.merged of the"
+		+ "wave records, 0 when none merged"
+	STATUS active
+	DESC "binds @TASK.B268"
+		REF @TASK.B268
+	REJECTED "the repair rounds the tick counts on the fixing states: they restart at each verdict,"
+		+ "so a task merged after its review counts none"
+	SOURCE "the build run of @TASK.B268 of 2026-11-19"
+		REF @TASK.B268
+
+DECISION TheHaltOfAWaveListedIsNullOnceTheWaveEnded
+	TITLE "brigade wave list --json gives a closed or cancelled wave no halt, even when the ledger"
+		+ "holds no wave.resumed after its pause"
+	STATUS active
+	DESC "the Waves view reads the state of a wave from its halt first, then from its wave.closed"
+		+ "or wave.cancelled, running otherwise"
+	DESC "binds @TASK.B268"
+		REF @TASK.B268
+	REJECTED "the pause the ledger leaves unresumed: a wave cancelled while parked would show"
+		+ "parked"
+	SOURCE "the build run of @TASK.B268 of 2026-11-19"
+		REF @TASK.B268

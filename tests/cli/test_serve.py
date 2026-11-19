@@ -15,6 +15,12 @@ from tests.process_launcher import ProcessLauncher
 
 STOP_WAIT_S = 20.0
 LAST_TICK = '{"schema_version": 1, "ts": "2026-10-06T12:00:00Z", "duration_ms": 4, "actions_applied": 0}'
+PARKED_WAVE_LEDGER = (
+    '{"schema_version": 2, "ts": "2026-11-02T08:00:00Z", "event": "wave.started", "wave": "oak_w4",'
+    ' "project": "oak", "branch": "integration/oak_w4", "tasks": ["B4"]}\n'
+    '{"schema_version": 1, "ts": "2026-11-02T09:00:00Z", "event": "wave.parked", "wave": "oak_w4",'
+    ' "reason": "forge_account"}\n'
+)
 
 
 def fetch_status(url: str) -> int:
@@ -106,6 +112,25 @@ class BrigadeServeTest(unittest.TestCase):
         # Assert
         self.assertEqual(status, 200)
         self.assertIn('<time datetime="2026-10-06T12:00:00Z">2026-10-06T12:00:00Z</time>', body)
+
+    def test_should_answer_the_waves_view_with_its_sentence_and_the_pill_of_a_parked_wave(self):
+        # Arrange
+        ledger = self.machine.state_home / "brigade" / "ledger" / "2026-11.jsonl"
+        ledger.parent.mkdir(parents=True, exist_ok=True)
+        ledger.write_text(PARKED_WAVE_LEDGER)
+        url = self.start_serving().stdout.readline().strip()
+
+        # Act
+        status, body = fetch(url, "/views/waves")
+
+        # Assert
+        self.assertEqual(status, 200)
+        self.assertIn('<p class="status-sentence">Waves open: 1, parked: 1, blocked: 0.</p>', body)
+        self.assertIn(
+            '<span class="pill"><span class="tone tone-you"><span class="tone-shape" aria-hidden="true">▲</span>'
+            "parked</span></span>",
+            body,
+        )
 
 
 ADDON_SCHEMA = (
