@@ -98,6 +98,7 @@ class CorpusViewAnswererTest(CorpusViewAnswererTestCase):
         self.assertEqual(implemented, {"label": "implemented", "value": "implemented", "entities": []})
 
     def test_should_refuse_a_view_the_corpus_command_refuses(self):
+        # Arrange
         rows = [("an unknown view", {"view": "foo"}), ("no view", {})]
         for case, view in rows:
             with self.subTest(case=case):
