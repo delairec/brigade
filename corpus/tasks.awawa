@@ -20007,7 +20007,8 @@ TASK B266
 	TITLE "The page of a report is ordered by use: the verdict, what went wrong, what went well and"
 		+ "what comes next, the tasks and what to test by hand, the rest folded; brigade report"
 		+ "show --json names its waves, its pull request and its date"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 454
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
