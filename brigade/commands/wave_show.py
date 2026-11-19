@@ -33,6 +33,7 @@ from brigade.waves.describe_milestone_merge import describe_milestone_merge
 from brigade.waves.find_integration_pull_request import find_integration_pull_request
 from brigade.waves.find_last_task_event import find_last_task_event
 from brigade.waves.find_milestone_branch import find_milestone_branch
+from brigade.waves.is_milestone_report_committed import is_milestone_report_committed
 from brigade.waves.locate_merge_worktree import locate_merge_worktree
 from brigade.waves.prepare_wave_tree import WaveTreeReading, prepare_wave_tree
 from brigade.waves.read_task_state import TASK_EVENTS
@@ -110,6 +111,12 @@ def _read_merge_command(
     return describe_milestone_merge(entries, find_project(read_projects(runtime), started.project), milestone)
 
 
+def _name_milestone_report(entries: tuple[LedgerEntry, ...], started: WaveStarted, milestone: str | None) -> str | None:
+    if not is_milestone_report_committed(entries, started.project, milestone):
+        return None
+    return f"{started.project}_{milestone}"
+
+
 def _read_wave_tasks(runtime: Runtime, configuration: Configuration, started: WaveStarted) -> dict[str, Entity]:
     tasks = read_entities(runtime.run_process, _prepare_tree(runtime, configuration, started).root, TASK_TYPE)
     return {task.name: task for task in tasks if task.name in started.tasks}
@@ -184,6 +191,7 @@ def wave_show(request: argparse.Namespace, runtime: Runtime) -> dict:
         "pull_request": find_integration_pull_request(events, started.wave),
         "tasks": [_describe_task(events, states, started.wave, task) for task in started.tasks],
         "milestone": tree.milestone,
+        "milestone_report": _name_milestone_report(entries, started, tree.milestone),
         "merge_command": _read_merge_command(runtime, entries, started, tree.milestone),
         "task_merge_commands": _read_task_merge_commands(runtime, entries, started, tree, states),
         **_describe_events(reading, request),
