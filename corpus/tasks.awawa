@@ -20333,7 +20333,8 @@ TASK B271
 	TITLE "The Ledger view says whether brigade is well tuned: what its measures cover, whether the"
 		+ "turn caps fit, what a run takes and what keeps failing; brigade ledger budgets --json"
 		+ "carries the percentiles of each role and brigade ledger --json the failed tick actions"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 456
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
