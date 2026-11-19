@@ -79,6 +79,7 @@ class CorpusReader:
         self.read_context = cache(self._read_context)
         self.show = cache(self._show)
         self.fields = cache(self._read_fields)
+        self.lint = cache(self._lint)
 
     def _read_document(self, arguments: tuple[str, ...], acceptable_exit_codes: tuple[int, ...] = SUCCESS) -> dict:
         record = run_awawa(self.run_process, self.root, (*arguments, "--json", str(self.root)), acceptable_exit_codes)
@@ -150,5 +151,5 @@ class CorpusReader:
         with ThreadPoolExecutor(PARALLEL_SHOWS) as executor:
             list(executor.map(self.show, [row.target for row in rows]))
 
-    def lint(self) -> dict:
+    def _lint(self) -> dict:
         return self._read_document(("lint",), LINTED)

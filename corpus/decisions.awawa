@@ -8282,3 +8282,27 @@ DECISION TheHeartbeatRegionAnswersTheDocumentOfAStaleSchedulerUnder200
 		+ "show"
 	SOURCE "the build run of @TASK.B264 of 2026-11-18"
 		REF @TASK.B264
+
+DECISION TheAwawaAddonAnswersOneJsonLinePerRequestAndItsRouteTellsItsStatesByStatus
+	TITLE "brigade serve and the awawa addon exchange one JSON line per request and one per answer,"
+		+ "the addon opening on a line naming the version of awawa; GET /api/awawa/<project>"
+		+ "answers 200 with the document, 404 for a project holding no corpus, 500 for an error of"
+		+ "the view and 503 for an addon stopped or failing to start"
+	STATUS active
+	DESC "binds @TASK.B274"
+		REF @TASK.B274
+	DESC "a request is a JSON object, the project and the parameters of the view, on one line of"
+		+ "the standard input of the addon; its answer, on one line of its standard output, holds"
+		+ "document or error; a line holding neither is an addon answering no document"
+	DESC "the addon reads the registry once, at its start, so a request on a cached corpus runs"
+		+ "awawa no more"
+	DESC "a registry or an awawa that brigade serve cannot read at its start counts as no project"
+		+ "holding a corpus: no addon is started and the other views are served"
+	REJECTED "a message framed by a length header: json.dumps escapes every newline, so one line"
+		+ "holds any document"
+	RATIONALE "@DECISION.TheAwawaTabIsAnAddonServedByAChildProcessOfBrigadeServeForTheProjectsHoldingACorpus"
+		+ "left the framing of a message to the task; the statuses let the tab tell its three"
+		+ "states, running, addon stopped and project without corpus, apart"
+		REF @DECISION.TheAwawaTabIsAnAddonServedByAChildProcessOfBrigadeServeForTheProjectsHoldingACorpus
+	SOURCE "@TASK.B274, delivered by the role ada on 2026-11-19"
+		REF @TASK.B274

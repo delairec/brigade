@@ -28,6 +28,10 @@ ASSETS = {
     "/dashboard.css": ("dashboard.css", "text/css; charset=utf-8"),
 }
 API_PREFIX = "/api/"
+AWAWA_PREFIX = "/api/awawa/"
+ADDON_PARAMETERS = ("ref", "view", "type", "field", "search", "entity")
+ADDON_FILTER = "filter"
+PATH_SEPARATOR = "/"
 VIEWS_PREFIX = "/views/"
 READING_METHOD = "GET"
 STATE_CHANGING_METHOD = "POST"
@@ -116,12 +120,25 @@ def _answer_view(target: str, runtime: Runtime) -> DashboardResponse:
     return DashboardResponse(status=status, content_type=HTML, body=view.render(answers).encode())
 
 
+def _answer_addon(target: str, dashboard: Dashboard) -> DashboardResponse:
+    address = urlsplit(target)
+    project = address.path.removeprefix(AWAWA_PREFIX)
+    if not project or PATH_SEPARATOR in project:
+        return _answer_error(NOT_FOUND, f"no route serves {target}")
+    parameters = parse_qs(address.query)
+    query = {name: parameters[name][0] for name in ADDON_PARAMETERS if name in parameters}
+    answer = dashboard.addon.ask(project, query | {ADDON_FILTER: parameters.get(ADDON_FILTER, [])})
+    return DashboardResponse(status=answer.status, content_type=JSON, body=json.dumps(answer.document).encode())
+
+
 def _answer_reading(target: str, dashboard: Dashboard, runtime: Runtime) -> DashboardResponse:
     path = urlsplit(target).path
     if path == PAGE_PATH:
         return _answer_page(dashboard)
     if path in ASSETS:
         return _answer_asset(path)
+    if path.startswith(AWAWA_PREFIX):
+        return _answer_addon(target, dashboard)
     if path.startswith(API_PREFIX):
         return _answer_command(target, runtime)
     if path.startswith(VIEWS_PREFIX):

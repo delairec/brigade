@@ -5,19 +5,17 @@ from pathlib import Path
 from brigade.command import Argument, Command, ExclusiveArguments
 from brigade.corpus.corpus_reader import CorpusReader
 from brigade.corpus.describe_corpus_view import CorpusView, describe_corpus_view
-from brigade.corpus.describe_view_document import describe_view_document
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_corpus_types import read_corpus_types
+from brigade.corpus.tree_view_describer import TreeViewDescriber, locate_awawa_web
 from brigade.corpus.view_request import ViewRequest
 from brigade.errors import BrigadeError
 from brigade.runtime import Runtime
-from brigade.system.find_awawa_web import find_awawa_web
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 
 DOCUMENT_SCHEMA_VERSION = 1
 FIELD_NAME_WIDTH = 6
 TREE_FIELDS = ("ref", "sha", "kind", "root")
-AWAWA_WEB_ADDRESS = "http://127.0.0.1:7878/"
 NOTHING = "nothing"
 VIEWS = ("tree", "board", "dependencies", "health")
 JSON_INDENT = 2
@@ -74,6 +72,10 @@ def corpus(request: argparse.Namespace, runtime: Runtime) -> dict:
         raise BrigadeError("--field and --entity read the entities of --type")
     configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     tree = prepare_project_tree(request, configuration, runtime)
+    if request.view is not None:
+        reader = CorpusReader(runtime.run_process, tree.root, configuration.ide_link)
+        describer = TreeViewDescriber(reader, locate_awawa_web(runtime.run_process))
+        return describer.describe(tree, _read_view_request(request))
     document = {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "project": tree.project,
@@ -83,12 +85,9 @@ def corpus(request: argparse.Namespace, runtime: Runtime) -> dict:
         "root": str(tree.root),
         "types": read_corpus_types(runtime.run_process, tree.root),
     }
-    if request.view is None and request.type is None:
+    if request.type is None:
         return document
-    awawa_web = {"awawa_web": AWAWA_WEB_ADDRESS if find_awawa_web(runtime.run_process) else None}
-    if request.view is not None:
-        reader = CorpusReader(runtime.run_process, tree.root, configuration.ide_link)
-        return document | awawa_web | describe_view_document(reader, _read_view_request(request))
+    awawa_web = {"awawa_web": locate_awawa_web(runtime.run_process)}
     view = CorpusView(
         entity_type=request.type, field=request.field, entity=request.entity, ide_link=configuration.ide_link
     )

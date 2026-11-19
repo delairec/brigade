@@ -17,6 +17,7 @@ from brigade.system.render_trace import render_trace
 from brigade.system.resolve_plugin import PluginSources, resolve_plugin
 from brigade.system.run_process import ProcessRecord, ProcessRequest, run_process
 from brigade.system.spawn_process import SpawnRequest, spawn_process
+from brigade.system.start_piped_process import PipedProcess, PipedProcessRequest, start_piped_process
 from brigade.system.stderr_masker import StderrMasker
 from brigade.system.trail_writer import TrailWriter
 from brigade.tick.read_live_blockers import read_live_blockers
@@ -32,6 +33,7 @@ class Invocation:
 class Runtime:
     run_process: Callable[[ProcessRequest], ProcessRecord]
     spawn_process: Callable[[SpawnRequest], object]
+    start_piped_process: Callable[[PipedProcessRequest], PipedProcess]
     signal_process: Callable[[int, int], None]
     paths: Paths
     now: datetime
@@ -68,6 +70,7 @@ def build_runtime(invocation: Invocation, environment: Mapping[str, str]) -> Run
     return Runtime(
         run_process=run_recorded_process,
         spawn_process=functools.partial(spawn_process, record_trace=trail.append, environment=environment),
+        start_piped_process=functools.partial(start_piped_process, environment=environment),
         signal_process=os.kill,
         paths=paths,
         now=datetime.now(UTC),

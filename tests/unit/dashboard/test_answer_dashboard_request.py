@@ -1,16 +1,28 @@
+import functools
 import json
 import sys
 import unittest
 
 from brigade.dashboard.answer_dashboard_request import answer_dashboard_request
+from brigade.dashboard.awawa_addon_supervisor import AwawaAddonSupervisor
 from brigade.dashboard.dashboard_exchange import Dashboard, DashboardResponse, IncomingRequest
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.dashboard.addon_child_double import ChildStarterDouble, PipedChildDouble, answer_with_the_message
 
 PYTHON = sys.executable
 ENTRY_POINT = "/srv/brigade/bin/brigade"
 ISSUED_CREDENTIAL = "t0k3n"
-DASHBOARD = Dashboard(port=8470, token=ISSUED_CREDENTIAL)
+ANSWER_TIMEOUT_S = 5.0
+
+
+def refuse_to_start_the_addon():
+    raise AssertionError("the awawa addon should not be started")
+
+
+DASHBOARD = Dashboard(
+    port=8470, token=ISSUED_CREDENTIAL, addon=AwawaAddonSupervisor(frozenset(), refuse_to_start_the_addon, 1.0)
+)
 LOOPBACK_HOST = "127.0.0.1:8470"
 LOOPBACK_ORIGIN = "http://127.0.0.1:8470"
 JSON = "application/json"
@@ -974,3 +986,78 @@ class AnswerDashboardRequestOfAViewOfOneProjectTest(unittest.TestCase):
             b"<dl><dt>schema_version</dt><dd>1</dd><dt>waves</dt><dd><ol><li><dl><dt>wave</dt><dd>w4</dd>"
             b"<dt>project</dt><dd>oak</dd></dl></li></ol></dd></dl>",
         )
+
+
+def create_dashboard_with_an_addon(test_case: unittest.TestCase, starter: ChildStarterDouble) -> Dashboard:
+    addon = AwawaAddonSupervisor(frozenset({"app"}), starter.start, ANSWER_TIMEOUT_S)
+    test_case.addCleanup(addon.stop)
+    return Dashboard(port=8470, token=ISSUED_CREDENTIAL, addon=addon)
+
+
+class AnswerDashboardRequestOfTheAwawaAddonTest(unittest.TestCase):
+    def setUp(self):
+        self.starter = ChildStarterDouble(functools.partial(PipedChildDouble, answer_with_the_message))
+        self.dashboard = create_dashboard_with_an_addon(self, self.starter)
+
+    def test_should_relay_the_project_and_the_arguments_of_the_view_and_answer_the_document(self):
+        # Arrange
+        incoming = IncomingRequest(
+            method="GET",
+            target="/api/awawa/app?ref=worktree%3Ab42&view=board&type=TASK&filter=STATUS%3Dtodo&filter=ROLE%3Dada",
+            host=LOOPBACK_HOST,
+        )
+
+        # Act
+        response = answer_dashboard_request(incoming, self.dashboard, create_test_runtime())
+
+        # Assert
+        self.assertEqual(response.status, 200)
+        self.assertEqual(response.content_type, JSON)
+        self.assertEqual(
+            json.loads(response.body),
+            {
+                "asked": {
+                    "project": "app",
+                    "ref": "worktree:b42",
+                    "view": "board",
+                    "type": "TASK",
+                    "filter": ["STATUS=todo", "ROLE=ada"],
+                }
+            },
+        )
+
+    def test_should_answer_the_status_the_addon_answers(self):
+        # Arrange
+        incoming = IncomingRequest(method="GET", target="/api/awawa/shop?view=tree", host=LOOPBACK_HOST)
+
+        # Act
+        response = answer_dashboard_request(incoming, self.dashboard, create_test_runtime())
+
+        # Assert
+        self.assertEqual(response.status, 404)
+        self.assertEqual(json.loads(response.body), {"error": "@PROJECT.shop holds no awawa corpus"})
+
+    def test_should_refuse_a_foreign_host_without_asking_the_addon(self):
+        # Arrange
+        incoming = IncomingRequest(method="GET", target="/api/awawa/app?view=tree", host="attacker.example:8470")
+
+        # Act
+        response = answer_dashboard_request(incoming, self.dashboard, create_test_runtime())
+
+        # Assert
+        self.assertEqual(response.status, 400)
+        self.assertEqual(self.starter.children, [])
+
+    def test_should_serve_no_route_for_an_address_naming_no_project_or_more_than_one(self):
+        for target in ("/api/awawa/", "/api/awawa/app/board"):
+            with self.subTest(target=target):
+                # Arrange
+                incoming = IncomingRequest(method="GET", target=target, host=LOOPBACK_HOST)
+
+                # Act
+                response = answer_dashboard_request(incoming, self.dashboard, create_test_runtime())
+
+                # Assert
+                self.assertEqual(response.status, 404)
+                self.assertEqual(json.loads(response.body), {"error": f"no route serves {target}"})
+                self.assertEqual(self.starter.children, [])
