@@ -8346,3 +8346,50 @@ DECISION TheLedgerCalloutCountsTheRunsFinishedBetweenTheFirstAndLastEventsOfTheL
 		+ "at once, so the sum would count each line twice"
 	SOURCE "@TASK.B271, its SPEC on the callout"
 		REF @TASK.B271
+
+DECISION TheViewOfAWaveFollowsWaveShowWithProjectShowToLinkItsPullRequestsOnTheForge
+	TITLE "the view of a wave runs brigade project show --json on the project wave show names, once"
+		+ "wave show answered, and links a pull request on the forge only when that answer names"
+		+ "FORGE github and a REMOTE"
+	STATUS active
+	DESC "a ViewRoute of brigade/dashboard/route_view.py carries a follow step: the routes it"
+		+ "derives from the answers of its first routes, run after them and rendered with them; a"
+		+ "failing project show leaves the pull requests named unlinked"
+	DESC "taken by @TASK.B269"
+		REF @TASK.B269
+	REJECTED "the address of the forge carried by wave show --json: the SPEC of the task names"
+		+ "project show as the source of the forge, and wave show would duplicate what project show"
+		+ "answers"
+	REJECTED "project show run from the project chosen in the address: the page of All projects"
+		+ "carries none, while the wave always names its project"
+	SOURCE "the build run of @TASK.B269 of 2026-11-19"
+		REF @TASK.B269
+
+DECISION WaveShowNamesTheReportOfItsMilestoneOnceItsOrderIsDone
+	TITLE "brigade wave show --json carries milestone_report, the REPORT <project>_<milestone>,"
+		+ "once the ledger holds a milestone.reported of that project and milestone and the"
+		+ "order.done of its run; null otherwise"
+	STATUS active
+	DESC "the page of a wave links that report at #reports/<id>; the name is the one the answer"
+		+ "form of the study milestone-report gives its REPORT"
+	DESC "taken by @TASK.B269"
+		REF @TASK.B269
+	REJECTED "a follow step running brigade report list --json: a third command per view of a wave,"
+		+ "where the ledger wave show reads already tells whether the report is committed"
+	REJECTED "the report named from milestone.reported alone: the study may still run or fail, and"
+		+ "the link would open a report that does not exist"
+	SOURCE "the build run of @TASK.B269 of 2026-11-19"
+		REF @TASK.B269
+
+DECISION AFailedTickActionIsClearedByTheFirstLaterEventOfItsTaskThatIsNoFailure
+	TITLE "the page of a wave says a failed tick action was cleared by the first event of the wave"
+		+ "after its last failure that names the same task, or none when the failure names none,"
+		+ "and is not itself a tick.action_failed"
+	STATUS active
+	DESC "with no such event the page says the failure is not cleared in the ledger"
+	DESC "taken by @TASK.B269"
+		REF @TASK.B269
+	REJECTED "the reason of the next wave.resumed: a failed tick action halts no wave, and most"
+		+ "failures are followed by no resume"
+	SOURCE "the build run of @TASK.B269 of 2026-11-19"
+		REF @TASK.B269
