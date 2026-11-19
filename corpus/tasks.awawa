@@ -20554,7 +20554,8 @@ TASK B272
 		+ "with what ratifying it starts, its repeats folded under it, then the signals grouped by"
 		+ "what recorded them; a pattern records the pattern it repeats, brigade inbox list --json"
 		+ "names the title and the target of a pattern, and brigade inbox show shows a pattern"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 458
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
