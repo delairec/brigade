@@ -20068,7 +20068,8 @@ TASK B267
 	TITLE "Home says in one sentence whether brigade works, lists what waits for the user with one"
 		+ "action each, and what the next tick will do; brigade status --json and brigade tick"
 		+ "--dry-run --json carry what it needs"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 453
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
