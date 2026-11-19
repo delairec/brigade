@@ -141,6 +141,19 @@ class AskADeadAwawaAddonTest(unittest.TestCase):
         self.assertEqual(answer.status, 200)
         self.assertEqual(len(starter.children), 2)
 
+    def test_should_stop_the_dead_child_before_starting_it_again(self):
+        # Arrange
+        starter = ChildStarterDouble(functools.partial(PipedChildDouble, answer_with_the_message))
+        supervisor = create_supervisor(self, starter)
+        supervisor.open()
+        starter.children[0].die()
+
+        # Act
+        supervisor.ask("app", BOARD_QUERY)
+
+        # Assert
+        self.assertTrue(starter.children[0].stopped)
+
     def test_should_answer_that_the_addon_stopped_when_the_child_dies_during_the_request(self):
         # Arrange
         starter = ChildStarterDouble(functools.partial(PipedChildDouble, exit_while_answering))
@@ -247,6 +260,7 @@ class AskAnAwawaAddonFailingAtItsStartTest(unittest.TestCase):
                 self.assertEqual(
                     answer, AddonAnswer(status=503, document={"error": "the awawa addon did not start: exited"})
                 )
+                self.assertTrue(starter.children[0].stopped)
 
     def test_should_report_a_child_that_could_not_be_launched(self):
         # Arrange
