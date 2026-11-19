@@ -11,7 +11,8 @@ from brigade.dashboard.render_ledger_fragment import render_ledger_fragment
 from brigade.dashboard.render_project_choice import render_project_choice
 from brigade.dashboard.render_report_fragment import render_report_fragment
 from brigade.dashboard.render_reports_fragment import render_reports_fragment
-from brigade.dashboard.render_run_fragment import render_run_fragment
+from brigade.dashboard.render_run_fragment import RunPage, render_run_fragment
+from brigade.dashboard.render_runs_fragment import RunFilters, render_runs_fragment
 from brigade.dashboard.render_wave import WavePage, render_wave
 from brigade.dashboard.render_waves_view import OVERVIEW, render_waves_view
 from brigade.dashboard.route_command import (
@@ -32,6 +33,10 @@ CORPUS_VIEW = "corpus"
 INBOX_VIEW = "inbox"
 DOCUMENT = "document"
 PROJECT = "project"
+BUDGETS = "budgets"
+TASK_RUNS = "task_runs"
+WAVE = "wave"
+LEDGER_BUDGETS = CommandRoute(arguments=("ledger", "budgets", "--json"))
 WAVE_EVENTS = ("wave", "show", "--json", "--events")
 STALE_SCHEDULER_EXIT_CODE = 1
 REGION_ROUTES = {
@@ -89,8 +94,9 @@ def _follow_wave(answers: dict[str, CommandAnswer]) -> dict[str, CommandRoute]:
     return {PROJECT: CommandRoute(arguments=("project", "show", "--json", project))}
 
 
-def _read_project(answer: CommandAnswer) -> dict | None:
-    if answer.status != OK:
+def _read_answered(answers: dict[str, CommandAnswer], name: str) -> dict | None:
+    answer = answers.get(name)
+    if answer is None or answer.status != OK:
         return None
     return json.loads(answer.document)
 
@@ -98,16 +104,49 @@ def _read_project(answer: CommandAnswer) -> dict | None:
 def _render_wave_page(answers: dict[str, CommandAnswer]) -> str:
     return render_answer(
         answers[DOCUMENT],
-        lambda shown: render_wave(WavePage(shown=shown, project=_read_project(answers[PROJECT]))),
+        lambda shown: render_wave(WavePage(shown=shown, project=_read_answered(answers, PROJECT))),
     )
+
+
+def _render_run(answers: dict[str, CommandAnswer]) -> str:
+    def render(shown: dict) -> str:
+        page = RunPage(
+            shown=shown,
+            budgets=_read_answered(answers, BUDGETS),
+            task_runs=_read_answered(answers, TASK_RUNS),
+            wave=_read_answered(answers, WAVE),
+        )
+        return render_run_fragment(page)
+
+    return render_answer(answers[DOCUMENT], render)
+
+
+def _follow_run(answers: dict[str, CommandAnswer]) -> dict[str, CommandRoute]:
+    shown = _read_answered(answers, DOCUMENT)
+    if shown is None:
+        return {}
+    run = shown["run"]
+    routes = {BUDGETS: LEDGER_BUDGETS}
+    if run["task"] is not None:
+        routes[TASK_RUNS] = CommandRoute(arguments=("ledger", "--task", run["task"], "--json"))
+    if run["wave"] is not None:
+        routes[WAVE] = CommandRoute(arguments=(*WAVE_EVENTS, run["wave"]))
+    return routes
 
 
 RENDERERS_BY_COLLECTION = {
     CORPUS_VIEW: _render_with(render_corpus_view),
     REPORTS_VIEW: _render_report,
-    RUNS_VIEW: _render_with(render_run_fragment),
     INBOX_VIEW: _render_with(render_inbox_item),
 }
+
+
+def _route_runs(route: CommandRoute, query: dict) -> ViewRoute:
+    chosen = {name: query[name][0] if name in query else None for name in ("state", "wave", "task")}
+    filters = RunFilters(**chosen)
+    return ViewRoute(
+        routes={DOCUMENT: route}, render=_render_with(lambda document: render_runs_fragment(document, filters))
+    )
 
 
 def _route_ledger(query: dict) -> ViewRoute:
@@ -145,6 +184,10 @@ def route_view(target: str, renderers: dict[str, Callable[[dict], str]]) -> View
     if route.listing == WAVE_LISTING:
         shown = replace(route, arguments=(*WAVE_EVENTS, route.identifier))
         return ViewRoute(routes={DOCUMENT: shown}, render=_render_wave_page, follow=_follow_wave)
+    if address.path == RUNS_VIEW:
+        return _route_runs(route, parse_qs(address.query))
+    if address.path.startswith(f"{RUNS_VIEW}/"):
+        return ViewRoute(routes={DOCUMENT: route}, render=_render_run, follow=_follow_run)
     if address.path in renderers:
         return ViewRoute(routes={DOCUMENT: route}, render=_render_with(renderers[address.path]))
     if address.path == CORPUS_VIEW:

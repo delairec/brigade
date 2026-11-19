@@ -21,6 +21,51 @@ PARKED_WAVE = (
     '{"schema_version": 1, "ts": "2026-11-18T10:00:00Z", "event": "wave.parked", "wave": "shop_w1",'
     ' "reason": "forge_account"}\n'
 )
+RUN_ID = "20261118T101500Z-a1b2c3"
+RUN_RECORD = {
+    "schema_version": 1,
+    "run": RUN_ID,
+    "procedure": "build-task",
+    "procedure_path": "built-in",
+    "slot": "build",
+    "role": "builder",
+    "role_source": "built-in",
+    "client": "fake",
+    "project": None,
+    "cwd": "/srv/tidepool",
+    "worktree": "/srv/tidepool",
+    "capabilities": ["read"],
+    "budget": 40,
+    "wall_limit_s": 1500.0,
+    "arguments": {},
+    "wave": None,
+    "task": None,
+    "brief": None,
+}
+SEGMENT_RESULT = {
+    "schema_version": 3,
+    "ts": "2026-11-18T10:20:00Z",
+    "event": "run.finished",
+    "run": RUN_ID,
+    "segment": 1,
+    "procedure": "build-task",
+    "slot": "build",
+    "role": "builder",
+    "client": "fake",
+    "project": None,
+    "session": None,
+    "main_turns": 12,
+    "total_turns": 12,
+    "duration_ms": 300000,
+    "usage": None,
+    "outcome": "done",
+    "error_class": None,
+    "exit": 0,
+    "wave": None,
+    "task": None,
+    "nulls": {},
+    "cost_usd": 0.5,
+}
 LAST_TICK = '{"schema_version": 1, "ts": "2026-10-06T12:00:00Z", "duration_ms": 4, "actions_applied": 0}'
 PARKED_WAVE_LEDGER = (
     '{"schema_version": 2, "ts": "2026-11-02T08:00:00Z", "event": "wave.started", "wave": "oak_w4",'
@@ -150,6 +195,37 @@ class BrigadeServeTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn('<div class="callout tone-faint"><p>The measures cover 0 runs finished in an empty ledger;', body)
         self.assertIn("<h3>Turn cap by role</h3>", body)
+
+    def write_finished_run(self) -> None:
+        run_directory = self.machine.state_home / "brigade" / "runs" / RUN_ID
+        (run_directory / "segments" / "1").mkdir(parents=True)
+        (run_directory / "run.json").write_text(json.dumps(RUN_RECORD))
+        (run_directory / "segments" / "1" / "result.json").write_text(json.dumps(SEGMENT_RESULT))
+        (run_directory / "result.json").write_text(json.dumps(SEGMENT_RESULT))
+
+    def test_should_answer_the_runs_view_with_its_explainer(self):
+        # Arrange
+        self.write_finished_run()
+        url = self.start_serving().stdout.readline().strip()
+
+        # Act
+        status, body = fetch(url, "/views/runs")
+
+        # Assert
+        self.assertEqual(status, 200)
+        self.assertIn('<aside class="explainer"><p class="explainer-what">A run is one procedure', body)
+
+    def test_should_answer_the_page_of_a_run_with_its_segments(self):
+        # Arrange
+        self.write_finished_run()
+        url = self.start_serving().stdout.readline().strip()
+
+        # Act
+        status, body = fetch(url, f"/views/runs/{RUN_ID}")
+
+        # Assert
+        self.assertEqual(status, 200)
+        self.assertIn("<td>2026-11-18T10:15:00Z</td><td>5m00s</td><td>$0.50</td></tr>", body)
 
 
 ADDON_SCHEMA = (

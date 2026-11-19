@@ -4,6 +4,8 @@ from urllib.parse import parse_qs, urlsplit
 OPTION_PREFIX = "-"
 PATH_SEPARATOR = "/"
 CORPUS_PARAMETERS = ("ref", "type", "field", "entity")
+RUN_FILTERS = ("state", "wave", "task")
+RUNS = "runs"
 
 
 @dataclass(frozen=True)
@@ -33,7 +35,6 @@ ROUTES_WITHOUT_IDENTIFIER = {
     "ledger": CommandRoute(arguments=("ledger", "--json")),
     "reports": CommandRoute(arguments=REPORT_LISTING.arguments),
     "corpus": CommandRoute(arguments=PROJECT_LISTING.arguments),
-    "runs": CommandRoute(arguments=RUN_LISTING.arguments),
 }
 
 
@@ -67,9 +68,16 @@ ROUTES_WITH_IDENTIFIER = {
 }
 
 
+def _route_runs(query: dict) -> CommandRoute:
+    filters = tuple(f"--{name}={query[name][0]}" for name in RUN_FILTERS if name in query)
+    return CommandRoute(arguments=(*RUN_LISTING.arguments, *filters))
+
+
 def route_command(target: str) -> CommandRoute | None:
     address = urlsplit(target)
     segments = address.path.split(PATH_SEPARATOR)
+    if segments == [RUNS]:
+        return _route_runs(parse_qs(address.query))
     if len(segments) == 1:
         return ROUTES_WITHOUT_IDENTIFIER.get(segments[0])
     collection, identifier = segments if len(segments) == 2 else (None, None)

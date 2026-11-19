@@ -97,7 +97,18 @@ Its seven views:
   sets two ranges of days side by side with `brigade ledger compare`, saying when a range under five runs is too
   small to compare.
 - **Reports** — the reports of `brigade report list`, each opening as `brigade report show` renders it.
-- **Runs** — the runs of `brigade run list`, each opening its segments and its progress.
+- **Runs** — the runs of `brigade run list`: a sentence and an explainer saying what a run and a segment are, tiles
+  counting the live runs, the finished ones by outcome and the dead ones, and how many run directories the list
+  skipped; the filters state, wave and task are chips carried by the address, `#runs?state=dead&wave=<wave>`, passed
+  to `--state`, `--wave` and `--task`; each row shows the run, its procedure, its task and its wave, linked, its state
+  as a pill and its start, the dead runs and the runs a limit cut under headings of their own. The page of a run,
+  `#runs/<id>`, opens on where it stands and the last `NEXT` entry of an awawa progress, then five tiles: its
+  outcome, its segments with the handovers, its turns against the cap of its role read from
+  `brigade ledger budgets --json`, its run time, and its cost with its share of the cost of its wave read from
+  `brigade wave show --json --events`; then each segment with its outcome, its turns as a bar against that cap, its
+  start, its duration and its cost, the progress cut by segment at each `HANDOVER`, a Markdown progress shown as
+  text, the notes handed to the run, the other runs of its task read from `brigade ledger --task --json`, and its
+  arguments.
 
 `/views/<route>` serves the HTML fragment of the document `/api/<route>` serves. Two fragments serve the rail:
 `/views/heartbeat` renders `brigade scheduler status --json`, answering 200 when the scheduler exits 1 on a stale tick,
@@ -136,7 +147,7 @@ no project holds one, or no registry exists, it starts none. Stopping `brigade s
 | `/api/ledger`                         | `brigade ledger`                   |
 | `/api/reports`                        | `brigade report list`              |
 | `/api/reports/<id>`                   | `brigade report show <id>`         |
-| `/api/runs`                           | `brigade run list`                 |
+| `/api/runs?state=<state>`             | `brigade run list`, and `--state`, `--wave`, `--task` of the parameters `state`, `wave`, `task` |
 | `/api/runs/<id>`                      | `brigade run show <id>`            |
 | `/api/corpus`                         | `brigade project list`             |
 | `/api/corpus/<project>?ref=<ref>`     | `brigade corpus <project> --ref <ref>`, and `--type`, `--field`, `--entity` of the parameters `type`, `field`, `entity`; without `ref`, `brigade corpus <project>`, the document of the project's `MAIN` branch |

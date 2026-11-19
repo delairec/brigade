@@ -830,10 +830,18 @@ RUN_LIST = (PYTHON, ENTRY_POINT, "run", "list", "--json")
 NO_RUN = '{"schema_version": 1, "runs": [], "skipped": []}\n'
 RUN_R1_SHOWN = (
     '{"schema_version": 1, "run": {"run": "r1", "procedure": "build-task", "slot": "build", "role": "ada",'
-    ' "project": "oak", "worktree": "/srv/oak/B94", "state": "running", "outcome": null, "wave": null,'
-    ' "task": null, "message": null}, "segments": [], "log": null,'
+    ' "project": "oak", "worktree": "/srv/oak/B94", "state": "running", "outcome": null, "wave": "w4",'
+    ' "task": "B94", "message": null, "started_at": "2026-11-18T10:15:00Z"}, "arguments": {},'
+    ' "segments": [{"segment": 1, "outcome": "handed_over", "turns": 70, "duration_ms": 1000,'
+    ' "started_at": "2026-11-18T10:15:00Z", "cost_usd": 1.5}], "log": null, "notes": [],'
     ' "progress": {"text": "ENTRY e1 <read>\\n", "entities": null}}\n'
 )
+RUN_SHOW_R1 = (PYTHON, ENTRY_POINT, "run", "show", "--json", "r1")
+LEDGER_BUDGETS = (PYTHON, ENTRY_POINT, "ledger", "budgets", "--json")
+LEDGER_OF_B94 = (PYTHON, ENTRY_POINT, "ledger", "--task", "B94", "--json")
+WAVE_SHOW_W4 = (PYTHON, ENTRY_POINT, "wave", "show", "--json", "--events", "w4")
+ADA_CAPPED = '{"schema_version": 1, "last": 20, "procedures": {}, "roles": {"ada": {"applied": 75}}}\n'
+WAVE_W4_COSTED = '{"schema_version": 1, "wave": "w4", "ledger": {"cost_usd": 30.0}}\n'
 
 
 class AnswerDashboardRequestOfARunNoListingNamesTest(unittest.TestCase):
@@ -856,7 +864,7 @@ class AnswerDashboardRequestOfARunNoListingNamesTest(unittest.TestCase):
 
 
 class AnswerDashboardRequestOfTheRunsViewsTest(unittest.TestCase):
-    def test_should_render_the_list_of_the_runs(self):
+    def test_should_render_the_list_of_the_runs_opening_on_its_explainer(self):
         # Arrange
         runner = ScriptedProcessRunner({RUN_LIST: ProcessAnswer(stdout=NO_RUN)})
 
@@ -864,14 +872,29 @@ class AnswerDashboardRequestOfTheRunsViewsTest(unittest.TestCase):
         response = answer_get("/views/runs", create_test_runtime(run_process=runner.run))
 
         # Assert
-        self.assertEqual(
-            response, DashboardResponse(status=200, content_type="text/html; charset=utf-8", body=b"<p>no run</p>")
-        )
+        self.assertEqual(response.status, 200)
+        self.assertIn(b'<aside class="explainer"><p class="explainer-what">A run is one procedure', response.body)
 
-    def test_should_render_the_run_asked_with_its_progress(self):
+    def test_should_pass_the_filters_the_address_carries_to_the_list(self):
+        # Arrange
+        runner = ScriptedProcessRunner({RUN_LIST: ProcessAnswer(stdout=NO_RUN)})
+
+        # Act
+        response = answer_get("/views/runs?task=B94&wave=w4&state=dead", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(runner.argvs, [(*RUN_LIST, "--state=dead", "--wave=w4", "--task=B94")])
+        self.assertIn(b'<a class="chip" href="#runs?wave=w4&amp;task=B94">every state</a>', response.body)
+
+    def test_should_render_the_run_asked_with_its_cap_its_task_and_its_wave(self):
         # Arrange
         runner = ScriptedProcessRunner(
-            {(PYTHON, ENTRY_POINT, "run", "show", "--json", "r1"): ProcessAnswer(stdout=RUN_R1_SHOWN)}
+            {
+                RUN_SHOW_R1: ProcessAnswer(stdout=RUN_R1_SHOWN),
+                LEDGER_BUDGETS: ProcessAnswer(stdout=ADA_CAPPED),
+                LEDGER_OF_B94: ProcessAnswer(exit_code=1, stderr="brigade ledger: no run names the task B94\n"),
+                WAVE_SHOW_W4: ProcessAnswer(stdout=WAVE_W4_COSTED),
+            }
         )
 
         # Act
@@ -879,7 +902,46 @@ class AnswerDashboardRequestOfTheRunsViewsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(response.status, 200)
-        self.assertIn(b"<h3>Progress</h3><pre>ENTRY e1 &lt;read&gt;\n</pre>", response.body)
+        self.assertEqual(runner.argvs, [RUN_SHOW_R1, LEDGER_BUDGETS, LEDGER_OF_B94, WAVE_SHOW_W4])
+        self.assertIn(b"</svg>70/75</td>", response.body)
+        self.assertIn(b"5% of the $30.00 of wave w4", response.body)
+        self.assertIn(b'<p class="empty-why">No other run of task B94 has finished.</p>', response.body)
+
+    def test_should_render_the_runs_of_its_task_the_ledger_names(self):
+        # Arrange
+        task_runs = (
+            '{"schema_version": 1, "view": "task", "task": "B94", "runs": [{"run": "r0",'
+            ' "finished_at": "2026-11-17T10:00:00Z", "slot": "build", "outcome": "done", "turns": 40,'
+            ' "partial": false, "duration_ms": 1000, "cost_usd": 1.0}]}\n'
+        )
+        runner = ScriptedProcessRunner(
+            {
+                RUN_SHOW_R1: ProcessAnswer(stdout=RUN_R1_SHOWN),
+                LEDGER_BUDGETS: ProcessAnswer(stdout=ADA_CAPPED),
+                LEDGER_OF_B94: ProcessAnswer(stdout=task_runs),
+                WAVE_SHOW_W4: ProcessAnswer(stdout=WAVE_W4_COSTED),
+            }
+        )
+
+        # Act
+        response = answer_get("/views/runs/r1", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertIn(b'<td><a href="#runs/r0">r0</a></td>', response.body)
+
+    def test_should_render_a_run_outside_a_task_and_a_wave_without_their_commands(self):
+        # Arrange
+        shown = RUN_R1_SHOWN.replace('"wave": "w4"', '"wave": null').replace('"task": "B94"', '"task": null')
+        runner = ScriptedProcessRunner(
+            {RUN_SHOW_R1: ProcessAnswer(stdout=shown), LEDGER_BUDGETS: ProcessAnswer(stdout=ADA_CAPPED)}
+        )
+
+        # Act
+        response = answer_get("/views/runs/r1", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(response.status, 200)
+        self.assertEqual(runner.argvs, [RUN_SHOW_R1, LEDGER_BUDGETS])
 
     def test_should_render_the_error_of_a_run_no_listing_names(self):
         # Arrange
