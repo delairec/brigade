@@ -5,6 +5,9 @@ from string import Template
 from urllib.parse import parse_qs, urlsplit
 
 from brigade.dashboard.dashboard_exchange import LOOPBACK_HOST, Dashboard, DashboardResponse, IncomingRequest
+from brigade.dashboard.read_awawa_address import read_awawa_address
+from brigade.dashboard.render_addons_rail import render_addons_rail
+from brigade.dashboard.render_awawa_tab import render_awawa_tab
 from brigade.dashboard.render_heartbeat import render_heartbeat
 from brigade.dashboard.render_inbox_view import render_inbox_view
 from brigade.dashboard.render_next_tick import render_next_tick
@@ -40,6 +43,9 @@ NOT_FOUND = 404
 OK = 200
 VIEW_RENDERERS = {"inbox": render_inbox_view, "next-tick": render_next_tick}
 PROJECT_PARAMETER = "project"
+ADDONS_REGION = "addons"
+VIEW_PARAMETER = "view"
+FIRST_AWAWA_VIEW = "tree"
 
 
 def _answer_error(status: int, message: str) -> DashboardResponse:
@@ -100,8 +106,28 @@ def _select_project_answer(answer: CommandAnswer, project: str | None) -> Comman
     return CommandAnswer(status=answer.status, document=json.dumps(document))
 
 
-def _answer_view(target: str, runtime: Runtime) -> DashboardResponse:
+def _answer_html(status: int, fragment: str) -> DashboardResponse:
+    return DashboardResponse(status=status, content_type=HTML, body=fragment.encode())
+
+
+def _answer_awawa_tab(target: str, dashboard: Dashboard) -> DashboardResponse | None:
+    address = read_awawa_address(target)
+    if address is None:
+        return None
+    asked = {name: address.read(name) for name in ADDON_PARAMETERS if address.read(name) is not None}
+    query = asked | {VIEW_PARAMETER: asked.get(VIEW_PARAMETER, FIRST_AWAWA_VIEW)}
+    answer = dashboard.addon.ask(address.project, query | {ADDON_FILTER: list(address.read_all(ADDON_FILTER))})
+    return _answer_html(answer.status, render_awawa_tab(answer, address))
+
+
+def _answer_view(target: str, dashboard: Dashboard, runtime: Runtime) -> DashboardResponse:
     project = _read_project(target)
+    shown = target.removeprefix(VIEWS_PREFIX)
+    if urlsplit(shown).path == ADDONS_REGION:
+        return _answer_html(OK, render_addons_rail(dashboard.addon.list_projects(), project))
+    tab = _answer_awawa_tab(shown, dashboard)
+    if tab is not None:
+        return tab
     selected = None if urlsplit(target.removeprefix(VIEWS_PREFIX)).path in REGION_ROUTES else project
     renderers = {
         **VIEW_RENDERERS,
@@ -145,7 +171,7 @@ def _answer_reading(target: str, dashboard: Dashboard, runtime: Runtime) -> Dash
     if path.startswith(API_PREFIX):
         return _answer_command(target, runtime)
     if path.startswith(VIEWS_PREFIX):
-        return _answer_view(target, runtime)
+        return _answer_view(target, dashboard, runtime)
     return _answer_error(NOT_FOUND, f"nothing is served at {target}")
 
 

@@ -57,6 +57,7 @@ class CorpusViewAnswererTestCase(unittest.TestCase):
         self.git = ScriptedProcessRunner(
             {
                 ("git", "worktree", "list"): list_worktrees(self.worktree, "de446f3"),
+                ("git", "for-each-ref"): ProcessAnswer(stdout="b42\nmain\n"),
                 ("awawa-web", "--help"): ProcessAnswer(),
             }
         )

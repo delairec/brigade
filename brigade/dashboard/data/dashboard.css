@@ -434,28 +434,120 @@ dd {
   margin: 0 0 var(--space-2);
 }
 
-form.corpus-selector {
+.awawa-banner,
+.awawa-toolbar,
+.awawa-ref,
+.awawa-field,
+.awawa-search,
+.awawa-views,
+.awawa-types {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
   align-items: center;
 }
 
-section.board {
+.awawa-banner,
+.awawa-toolbar {
+  justify-content: space-between;
+  margin: 0 0 var(--space-4);
+}
+
+.awawa-views a[aria-current="true"],
+.awawa-types a[aria-current="true"] {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.awawa-body {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.awawa-view {
+  flex: 1;
+  min-width: 0;
+}
+
+.awawa-detail {
+  width: 24rem;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.awawa-detail-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.awawa-cards,
+.awawa-nodes,
+.awawa-files,
+.awawa-diagnostics,
+.awawa-neighbours {
+  list-style: none;
+  padding-left: 0;
+}
+
+.awawa-nodes .awawa-nodes,
+.awawa-diagnostics {
+  padding-left: var(--space-4);
+}
+
+.awawa-card {
+  padding: var(--space-1) 0;
+}
+
+.awawa-code {
+  font-family: var(--font-mono);
+}
+
+.awawa-facts,
+.awawa-value,
+.awawa-waiting,
+.awawa-flag,
+.awawa-count,
+.awawa-place {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.awawa-fact,
+.awawa-value,
+.awawa-waiting,
+.awawa-flag {
+  margin-left: var(--space-2);
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: var(--space-1);
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.awawa-board {
   display: flex;
   gap: var(--space-4);
   overflow-x: auto;
 }
 
-section.board div {
-  min-width: 12rem;
+.awawa-column {
+  min-width: 14rem;
   padding: 0 var(--space-2);
   border: 1px solid var(--line);
+  border-radius: var(--radius);
 }
 
-section.tree ul,
-section.dependencies ul {
-  padding-left: var(--space-4);
+.awawa-counts {
+  display: flex;
+  gap: var(--space-5);
 }
 
 @media (max-width: 900px) {

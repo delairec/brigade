@@ -526,7 +526,22 @@ class DescribeEntityDetailTest(unittest.TestCase):
                 },
                 "references": [],
                 "referenced_by": [{"target": "@TASK.B2", "code": "B2", "label": "B2", "status": "todo"}],
+                "ide_link": None,
             },
+        )
+
+    def test_should_link_the_line_of_the_entity_in_the_ide_the_configuration_names(self):
+        # Arrange
+        reader = CorpusReader(create_awawa_double(BOARD_CORPUS, ROOT), ROOT, "idea://open?file={path}&line={line}")
+
+        # Act
+        document = describe_view_document(
+            reader, ViewRequest(view="board", entity_type="TASK", entity="@MILESTONE.M18")
+        )
+
+        # Assert
+        self.assertEqual(
+            document["detail"]["ide_link"], "idea://open?file=/cache/refs/app/de446f3/corpus/m.awawa&line=5"
         )
 
     def test_should_describe_the_entities_the_entity_refers_to(self):

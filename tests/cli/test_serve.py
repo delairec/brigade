@@ -329,8 +329,36 @@ class BrigadeServeWithAProjectHoldingACorpusTest(BrigadeServeTestCase):
         self.assertEqual(status, 200, body)
         self.assertEqual(json.loads(body)["view"], "board")
 
+    def test_should_draw_one_column_per_status_on_the_board_of_the_awawa_tab(self):
+        # Arrange
+        _, url = self.start_serving()
+
+        # Act
+        status, body = fetch(url, "/views/awawa/app?view=board&type=TASK&field=STATUS")
+
+        # Assert
+        self.assertEqual(status, 200, body)
+        self.assertIn(
+            '<h3>draft <span class="awawa-count">0</span></h3><ul class="awawa-cards"></ul></section>'
+            '<section class="awawa-column"><h3>todo <span class="awawa-count">1</span></h3>',
+            body,
+        )
+        self.assertIn(
+            '<h3>implemented <span class="awawa-count">0</span></h3><ul class="awawa-cards"></ul></section></div>', body
+        )
+
 
 class BrigadeServeWithoutAProjectHoldingACorpusTest(BrigadeServeTestCase):
+    def test_should_serve_the_corpus_view_no_more(self):
+        # Arrange
+        _, url = self.start_serving()
+
+        # Act
+        status, body = fetch(url, "/views/corpus")
+
+        # Assert
+        self.assertEqual(status, 404, body)
+
     def test_should_start_no_child_process(self):
         # Arrange
         process, url = self.start_serving()

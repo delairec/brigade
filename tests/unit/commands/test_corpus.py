@@ -206,6 +206,7 @@ class CorpusViewDocumentTest(unittest.TestCase):
                 ("awawa", "status", "PROJECT"): ProcessAnswer(stdout=PROJECTS),
                 ("awawa", "show", "@PROJECT.app"): ProcessAnswer(stdout=APP),
                 ("git", "worktree", "list"): ProcessAnswer(stdout=WORKTREES),
+                ("git", "for-each-ref"): ProcessAnswer(stdout="b42\nmain\n"),
                 ("awawa-web", "--help"): ProcessAnswer(),
             },
             fallback=create_awawa_double(VIEW_CORPUS, Path("/srv/app-b42")),
@@ -259,6 +260,18 @@ class CorpusViewDocumentTest(unittest.TestCase):
         # Assert
         self.assertEqual(document["domain"][0]["groups"][0]["entities"][1]["code"], "B3")
         self.assertEqual(document["detail"]["entity"]["name"], "B3")
+
+    def test_should_offer_the_refs_of_the_project_beside_the_view(self):
+        # Arrange
+        request = argparse.Namespace(
+            **NO_VIEW | {"project": "app", "ref": None, "worktree": Path("/srv/app-b42"), "view": "health"}
+        )
+
+        # Act
+        document = corpus(request, self.runtime)
+
+        # Assert
+        self.assertEqual(document["refs"], ["b42", "main", "worktree:b42"])
 
 
 class CorpusWithAConfigurationThatIsNotTomlTest(unittest.TestCase):

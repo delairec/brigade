@@ -20,7 +20,7 @@ The page is a left rail and a view; under 900px of width the rail becomes a top 
   reports it, on every page.
 - **Operate** — Home, Waves, Runs and Inbox, the views to act from.
 - **Understand** — Ledger and Reports, the views to read what happened.
-- **Addons** — the Corpus view, until the awawa tab replaces it.
+- **Addons** — the awawa tab of each project holding a corpus, listed for the project chosen alone when one is.
 
 The page polls the view and each region of the rail every five seconds while its tab is visible, and swaps a fragment
 only when it changed, keeping the open `<details>` and the focus. A refused POST is shown in the notice above the view.
@@ -87,9 +87,16 @@ Its seven views:
   before its dismiss button and its repeats folded under it; then the new signals grouped by what recorded them,
   each opening its evidence, a stall whose task merged since marked stale; then the study answers, each opening the
   answer rendered from its entity.
-- **Corpus** — choose a registered project, a ref, a type and a board field; it shows the tree of the type, the board
-  and the dependencies of the entity clicked. It is read-only: its one form only changes the view shown, and
-  awawa-web stays the editor.
+- **awawa** — the corpus of a project at a ref, as the IntelliJ plugin awawa-ui shows it: a banner naming the
+  project, the ref and the commit read, offering the local branches, the main one first, `worktree:<branch>` for each
+  linked worktree, or a ref typed; the views Tree, Board, Dependencies and Health, each entity with its code, its label,
+  its facts and the dot of its status; the filters in force as chips with Clear all; and a detail panel, opened by a
+  click on an entity, with its fields, the entities it refers to and those referring to it, and the links to the IDE and
+  to awawa-web. The view, the type, the field, the filters, the search and the entity shown live in the address alone,
+  `#awawa/<project>?view=board&type=TASK&field=STATUS&filter=ROLE=ada`, so an address can be shared; the colours and the
+  order of the columns are the defaults. The tab is read-only: its forms only change the address, it offers no Clean,
+  no Change Colour and no Arrange Columns, and awawa-web stays the editor. On a project holding no corpus it says so,
+  and with the addon stopped it says that the addon stopped, with its error.
 - **Ledger** — whether brigade is well tuned. It opens on a callout saying what its measures cover: the runs finished,
   the range of the ledger they were read from and the lines of the ledger skipped. *Do the turn caps fit* sets the
   segment p90 of each role against its applied cap, the role overshooting most first, with a bar marking the cap and

@@ -9,6 +9,7 @@ from brigade.dashboard.dashboard_exchange import Dashboard, DashboardResponse, I
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.dashboard.addon_child_double import ChildStarterDouble, PipedChildDouble, answer_with_the_message
+from tests.unit.dashboard.test_render_awawa_tab import BOARD_OF_OAK
 
 PYTHON = sys.executable
 ENTRY_POINT = "/srv/brigade/bin/brigade"
@@ -793,73 +794,6 @@ class AnswerDashboardRequestOfTheLedgerViewTest(unittest.TestCase):
                 self.assertEqual(runner.argvs, commands)
 
 
-class AnswerDashboardRequestOfTheCorpusViewTest(unittest.TestCase):
-    def test_should_render_the_board_of_the_corpus_at_the_ref(self):
-        # Arrange
-        board_of_oak = json.dumps(
-            {
-                "project": "oak",
-                "ref": "main",
-                "sha": "de446f3",
-                "type": "TASK",
-                "types": ["TASK"],
-                "entities": [],
-                "awawa_web": None,
-                "field": "STATUS",
-                "board": [{"value": "todo", "targets": ["@TASK.B30"]}],
-            }
-        )
-        runner = ScriptedProcessRunner(
-            {
-                (PYTHON, ENTRY_POINT, "corpus", "--ref=main", "--type=TASK", "--field=STATUS", "--json", "oak"): (
-                    ProcessAnswer(stdout=board_of_oak)
-                )
-            }
-        )
-
-        # Act
-        response = answer_get(
-            "/views/corpus/oak?ref=main&type=TASK&field=STATUS", create_test_runtime(run_process=runner.run)
-        )
-
-        # Assert
-        self.assertIn(
-            b'<section class="board"><h2>STATUS</h2><div><h3>todo</h3><ul><li>@TASK.B30</li></ul></div></section>',
-            response.body,
-        )
-
-    def test_should_offer_the_registered_projects_to_choose_from(self):
-        # Arrange
-        projects = '{"schema_version": 1, "projects": [{"name": "oak", "path": "/srv/oak", "status": "active"}]}'
-        runner = ScriptedProcessRunner({PROJECT_LIST: ProcessAnswer(stdout=projects)})
-
-        # Act
-        response = answer_get("/views/corpus", create_test_runtime(run_process=runner.run))
-
-        # Assert
-        self.assertIn(b'<a href="#corpus/oak">oak</a>', response.body)
-
-    def test_should_render_the_error_of_a_project_not_registered(self):
-        # Arrange
-        runner = ScriptedProcessRunner(
-            {
-                (PYTHON, ENTRY_POINT, "corpus"): ProcessAnswer(
-                    exit_code=1, stderr="brigade corpus: @PROJECT.elm is not registered\n"
-                ),
-                PROJECT_LIST: ProcessAnswer(stdout=NO_PROJECT),
-            }
-        )
-
-        # Act
-        response = answer_get("/views/corpus/elm?ref=main&type=TASK", create_test_runtime(run_process=runner.run))
-
-        # Assert
-        self.assertEqual(response.status, 404)
-        self.assertEqual(
-            response.body, b"<dl><dt>error</dt><dd>brigade corpus: @PROJECT.elm is not registered\n</dd></dl>"
-        )
-
-
 class AnswerDashboardRequestOfTheHomeViewTest(unittest.TestCase):
     def test_should_render_home_from_the_status_the_scheduler_the_last_day_of_the_ledger_and_the_inbox(self):
         # Arrange
@@ -1323,3 +1257,62 @@ class AnswerDashboardRequestOfTheAwawaAddonTest(unittest.TestCase):
                 self.assertEqual(response.status, 404)
                 self.assertEqual(json.loads(response.body), {"error": f"no route serves {target}"})
                 self.assertEqual(self.starter.children, [])
+
+
+class AnswerDashboardRequestOfTheAwawaTabTest(unittest.TestCase):
+    def setUp(self):
+        self.asked = []
+        self.starter = ChildStarterDouble(functools.partial(PipedChildDouble, self.answer_the_board))
+        self.dashboard = create_dashboard_with_an_addon(self, self.starter)
+
+    def answer_the_board(self, message: dict) -> dict:
+        self.asked.append(message)
+        return {"document": BOARD_OF_OAK}
+
+    def answer(self, target: str) -> DashboardResponse:
+        incoming = IncomingRequest(method="GET", target=target, host=LOOPBACK_HOST)
+        return answer_dashboard_request(incoming, self.dashboard, create_test_runtime())
+
+    def test_should_render_the_tab_from_the_document_the_addon_answers(self):
+        # Act
+        response = self.answer("/views/awawa/app?view=board&type=TASK&project=app")
+
+        # Assert
+        self.assertEqual((response.status, response.content_type), (200, "text/html; charset=utf-8"))
+        self.assertIn(b'<div class="awawa-view"><div class="awawa-board">', response.body)
+
+    def test_should_ask_the_addon_the_parameters_of_the_address_and_the_tree_when_it_names_no_view(self):
+        # Act
+        self.answer("/views/awawa/app?ref=worktree%3Ab42&filter=STATUS%3Dtodo&search=&project=app")
+
+        # Assert
+        self.assertEqual(
+            self.asked, [{"project": "app", "ref": "worktree:b42", "view": "tree", "filter": ["STATUS=todo"]}]
+        )
+
+    def test_should_say_that_a_project_holds_no_awawa_corpus_without_asking_the_addon(self):
+        # Act
+        response = self.answer("/views/awawa/shop")
+
+        # Assert
+        self.assertEqual(response.status, 404)
+        self.assertIn(b'<p class="empty-why">shop has no awawa corpus.</p>', response.body)
+        self.assertEqual(self.asked, [])
+
+    def test_should_offer_in_the_rail_the_awawa_tab_of_the_project_chosen_holding_a_corpus(self):
+        # Act
+        response = self.answer("/views/addons?project=app")
+
+        # Assert
+        self.assertEqual(response.body, b'<a href="#awawa/app">awawa</a>')
+
+    def test_should_serve_the_corpus_view_no_more(self):
+        rows = [("the project choice", "/views/corpus"), ("the corpus of a project", "/views/corpus/oak?ref=main")]
+        for case, target in rows:
+            with self.subTest(case):
+                # Act
+                response = self.answer(target)
+
+                # Assert
+                self.assertEqual(response.status, 404)
+                self.assertEqual(json.loads(response.body), {"error": f"no view serves {target}"})

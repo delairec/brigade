@@ -20,12 +20,13 @@ class TreeViewDescriber:
         self.reader = reader
         self.awawa_web = awawa_web
 
-    def describe(self, tree: Tree, request: ViewRequest) -> dict:
+    def describe(self, tree: Tree, request: ViewRequest, refs: list[str]) -> dict:
         return {
             "schema_version": DOCUMENT_SCHEMA_VERSION,
             "project": tree.project,
             "ref": tree.ref,
             "sha": tree.sha,
+            "refs": refs,
             "kind": tree.kind,
             "root": str(tree.root),
             "types": [row["type"] for row in self.reader.status["types"]],

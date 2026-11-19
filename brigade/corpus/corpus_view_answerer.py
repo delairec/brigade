@@ -3,6 +3,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from brigade.corpus.corpus_reader import CorpusReader
+from brigade.corpus.list_project_refs import list_project_refs
 from brigade.corpus.prepare_registered_tree import prepare_registered_tree
 from brigade.corpus.prepare_tree import Tree
 from brigade.corpus.read_entities import Entity
@@ -65,7 +66,8 @@ class CorpusViewAnswerer:
         view_request = _read_view_request(message)
         project = find_project(self.projects, request.project)
         tree = prepare_registered_tree(project, request, self.configuration, self.runtime)
-        return self._read(tree).describe(tree, view_request)
+        refs = list_project_refs(self.runtime.run_process, project)
+        return self._read(tree).describe(tree, view_request, refs)
 
     def _read(self, tree: Tree) -> TreeViewDescriber:
         key = (tree.project, tree.ref)
