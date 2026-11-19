@@ -58,7 +58,7 @@ def create_wave(
             "events": [
                 create_run_finished("OK7", 6.85),
                 create_run_finished("OK8", 1.15),
-                *[create_run_finished("OK8", None) for _ in range(costless_runs)],
+                *(create_run_finished("OK8", None),) * costless_runs,
             ],
         },
     }
@@ -66,11 +66,13 @@ def create_wave(
 
 def create_unrecorded_wave() -> dict:
     wave = create_wave()
-    by_task = [{**task, "turns": None, "duration_ms": None, "cost_usd": None} for task in wave["ledger"]["by_task"]]
     ledger = {
         **wave["ledger"],
         "cost_usd": None,
-        "by_task": by_task,
+        "by_task": [
+            {"task": "OK7", "turns": None, "partial": False, "duration_ms": None, "cost_usd": None},
+            {"task": "OK8", "turns": None, "partial": False, "duration_ms": None, "cost_usd": None},
+        ],
         "turns": {"by_slot": {}},
         "turns_by_task": {},
         "events": [],

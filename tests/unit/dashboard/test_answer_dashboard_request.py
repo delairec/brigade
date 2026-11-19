@@ -597,7 +597,8 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
             '{"wave": "oak_w3", "tasks": [{"task": "OK7", "state": "merged"}], "ledger": {"wall_time_ms": 600000,'
             ' "cost_usd": 1.5, "by_task": [{"task": "OK7", "duration_ms": 300000}],'
             ' "turns": {"by_slot": {"build": {"runs": {"measured": 1, "unmeasured": 0}}}},'
-            ' "turns_by_task": {"OK7": 40}}}'
+            ' "turns_by_task": {"OK7": 40},'
+            ' "events": [{"at": "2026-10-01T09:30:00Z", "event": "run.finished", "fields": {"cost_usd": 1.5}}]}}'
         )
         project = (
             '{"schema_version": 1, "project": {"name": "oak", "fields": [{"name": "REMOTE", "value": "alice/oak"},'
