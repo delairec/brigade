@@ -18,5 +18,5 @@ def describe_failed_actions(entries: tuple[LedgerEntry, ...]) -> dict:
         errors_by_action.setdefault(entry.event.action, []).append(entry.event.error)
     return {
         "by_day": count_by_name(entry.instant.strftime(DAY_FORMAT) for entry in failed),
-        "by_action": {action: _describe_action(errors) for action, errors in sorted(errors_by_action.items())},
+        "by_action": {action: _describe_action(errors) for action, errors in errors_by_action.items()},
     }
