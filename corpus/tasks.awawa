@@ -20225,7 +20225,8 @@ TASK B269
 	TITLE "The page of a wave tells its story: one sentence, what it cost and which task took it,"
 		+ "its halts on a timeline and its events folded; brigade wave show --json names its"
 		+ "milestone"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 457
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
