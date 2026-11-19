@@ -29,10 +29,12 @@ SERVED_AGAIN = 3
 
 
 def _read_wave_state(wave: dict) -> str:
+    if wave["ended_by"] is not None:
+        return ENDED_STATES[wave["ended_by"]]
     halt = wave["halt"]
     if halt is not None:
         return PARKED if halt["resume_at"] is None else BLOCKED
-    return ENDED_STATES.get(wave["last_event"], RUNNING)
+    return RUNNING
 
 
 def _render_link(name: str) -> str:

@@ -137,7 +137,7 @@ exists.
 - `wave list` prints one row per wave of the ledger, its project, the branch recorded as in `wave show`, its last wave
   event and its task count, the open waves first, those of one project with `--project`. With `--json`, each wave
   also carries `started_at`; `ended_at`, the instant of its `wave.closed` or `wave.cancelled`, `null` while it is
-  open; `task_states`, each task with its last state, `null` for a task no event served yet; `halt`, the `reason` and
+  open; `ended_by`, the name of that event, `null` while it is open; `task_states`, each task with its last state, `null` for a task no event served yet; `halt`, the `reason` and
   the `resume_at` of the pause in force, `null` once resumed or ended; `rounds`, the most review rounds one of its
   merged pull requests took, `0` when none merged; and `cost_usd`, the sum of the costs its runs record, `null` when
   none records one: a floor, since a run of a client that reports no cost adds nothing.
