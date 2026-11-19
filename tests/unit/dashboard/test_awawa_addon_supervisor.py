@@ -359,3 +359,17 @@ class ListTheProjectsOfTheAwawaAddonTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(projects, (frozenset(), frozenset({"app"})))
+
+    def test_should_list_the_projects_holding_a_corpus_once(self):
+        # Arrange
+        listing = HolderListingDouble(HOLDERS)
+        starter = ChildStarterDouble(functools.partial(PipedChildDouble, answer_with_the_message))
+        supervisor = AwawaAddonSupervisor(listing.list, starter.start, ANSWER_TIMEOUT_S)
+        self.addCleanup(supervisor.stop)
+
+        # Act
+        supervisor.list_projects()
+        supervisor.list_projects()
+
+        # Assert
+        self.assertEqual(listing.calls, 1)
