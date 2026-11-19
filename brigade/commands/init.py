@@ -14,6 +14,7 @@ from brigade.git.commit_files import CommitRequest, commit_files
 from brigade.git.create_repository import create_repository
 from brigade.git.read_git_identity import read_git_identity
 from brigade.git.read_origin_url import read_origin_url
+from brigade.git.unstage_files import unstage_files
 from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
 from brigade.system.create_directory import create_directory
@@ -113,24 +114,38 @@ def _ensure_file(name: str, path: Path, content: bytes) -> dict:
     return {**item, "state": "differs"}
 
 
-def _upgrade_schema(runtime: Runtime, item: dict, shipped: bytes) -> dict:
+def _lint_and_commit_schema(runtime: Runtime, installed: bytes) -> None:
     config_root = runtime.paths.config_root
     schema = runtime.paths.schema_file
-    with hold_lock(locate_corpus_lock(runtime.paths.lock_directory, config_root)):
-        installed = schema.read_bytes()
-        write_bytes_file(schema, shipped)
+    try:
         report = lint_corpus(runtime.run_process, config_root)
-        if not report.clean:
-            write_bytes_file(schema, installed)
-            raise CorpusLintFailed(
-                f"awawa lint --strict refused the registry against the shipped schema:\n{report.output}\n"
-                "the registry is restored, its schema as it was installed: correct the entities lint names,"
-                " then run brigade init again"
-            )
+    except BrigadeError:
+        write_bytes_file(schema, installed)
+        raise
+    if not report.clean:
+        write_bytes_file(schema, installed)
+        raise CorpusLintFailed(
+            f"awawa lint --strict refused the registry against the shipped schema:\n{report.output}\n"
+            "the registry is restored, its schema as it was installed: correct the entities lint names,"
+            " then run brigade init again"
+        )
+    try:
         commit_files(
             runtime.run_process,
             CommitRequest(repository=config_root, files=(schema.name,), message=UPGRADE_MESSAGE),
         )
+    except BrigadeError:
+        write_bytes_file(schema, installed)
+        unstage_files(runtime.run_process, config_root, (schema.name,))
+        raise
+
+
+def _upgrade_schema(runtime: Runtime, item: dict, shipped: bytes) -> dict:
+    schema = runtime.paths.schema_file
+    with hold_lock(locate_corpus_lock(runtime.paths.lock_directory, runtime.paths.config_root)):
+        installed = schema.read_bytes()
+        write_bytes_file(schema, shipped)
+        _lint_and_commit_schema(runtime, installed)
     return {**item, "state": "upgraded"}
 
 

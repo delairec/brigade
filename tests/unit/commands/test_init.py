@@ -7,7 +7,7 @@ from pathlib import Path
 from brigade.commands.init import COMMAND, init
 from brigade.corpus.locate_corpus_lock import locate_corpus_lock
 from brigade.corpus.shipped_data import SHIPPED_SCHEMA
-from brigade.errors import BrigadeError, CannotWrite, CorpusLintFailed, ToolNotFound
+from brigade.errors import BrigadeError, CannotWrite, CommandFailed, CorpusLintFailed, ToolNotFound
 from brigade.system.hold_lock_without_waiting import hold_lock_without_waiting
 from tests.unit.client_double import create_built_in_clients
 from tests.unit.commands.command_runtime import (
@@ -60,6 +60,7 @@ def _create_git_answers(name: ProcessAnswer, email: ProcessAnswer) -> dict:
         ("git", "add"): ProcessAnswer(),
         ("git", "diff"): ProcessAnswer(exit_code=1),
         ("git", "commit"): ProcessAnswer(),
+        ("git", "reset"): ProcessAnswer(),
         ("git", "remote", "get-url", "origin"): ProcessAnswer(exit_code=2),
         ("git", "remote", "add"): ProcessAnswer(),
         ("claude", "--version"): ProcessAnswer(stdout="2.1.291\n"),
@@ -438,6 +439,61 @@ class InitSchemaUpgradeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(self.registry.stat().st_mtime_ns, self.registry_written_at)
+
+    def test_should_put_the_installed_schema_back_when_awawa_is_absent(self):
+        # Arrange
+        self.answers[("awawa", "lint")] = ToolNotFound("awawa")
+
+        # Act
+        with self.assertRaises(ToolNotFound):
+            init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(self.schema.read_text(), EARLIER_SCHEMA)
+
+    def test_should_commit_nothing_when_awawa_is_absent(self):
+        # Arrange
+        self.answers[("awawa", "lint")] = ToolNotFound("awawa")
+
+        # Act
+        with self.assertRaises(ToolNotFound):
+            init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertNotIn(("git", "add", "--", "_schema.awawa"), self.runner.argvs)
+
+    def test_should_put_the_installed_schema_back_when_lint_fails_as_a_tool(self):
+        # Arrange
+        self.answers[("awawa", "lint")] = CommandFailed(("awawa", "lint"), 2, "the workspace cannot be read")
+
+        # Act
+        with self.assertRaises(CommandFailed):
+            init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(self.schema.read_text(), EARLIER_SCHEMA)
+
+    def test_should_put_the_installed_schema_back_when_the_commit_fails(self):
+        # Arrange
+        self.answers[("git", "commit")] = CommandFailed(("git", "commit"), 1, "the hook refused the commit")
+
+        # Act
+        with self.assertRaises(CommandFailed):
+            init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertEqual(self.schema.read_text(), EARLIER_SCHEMA)
+
+    def test_should_unstage_the_schema_when_the_commit_fails(self):
+        # Arrange
+        self.answers[("git", "commit")] = CommandFailed(("git", "commit"), 1, "the hook refused the commit")
+
+        # Act
+        with self.assertRaises(CommandFailed):
+            init(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(("git", "reset", "--quiet", "--", "_schema.awawa"), self.runner.argvs)
 
     def test_should_leave_a_shipped_schema_present_and_unlinted(self):
         # Arrange
