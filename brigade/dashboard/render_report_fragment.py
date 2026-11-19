@@ -169,41 +169,48 @@ def _render_delivery(document: dict, linker: _Linker) -> str:
     return "" if not parts else f'<p class="report-delivery">{", ".join(parts)}</p>'
 
 
-def render_report_fragment(reading: ReportReading) -> str:
-    report = reading.document["report"]
-    fields = report["fields"]
-    linker = _Linker(
-        {task["task"]: wave["wave"] for wave in reading.waves for task in wave["tasks"]}, reading.pull_request_address
-    )
-    narrative = _read_values(fields, (NARRATIVE,))
+def _sort_narrative(fields: list[dict]) -> dict[str | None, list[str]]:
     sorted_narrative: dict[str | None, list[str]] = {}
-    for value in narrative:
+    for value in _read_values(fields, (NARRATIVE,)):
         sorted_narrative.setdefault(_read_leading(value), []).append(value)
-    verdict = "".join(
-        f'<p class="status-sentence">{linker.link(value)}</p>' for value in sorted_narrative.get(VERDICT, [])
-    )
-    blocks = "".join(
-        _render_block(heading, _render_list(sorted_narrative.get(words, []), linker))
-        for words, heading in NARRATIVE_BLOCKS.items()
-    )
+    return sorted_narrative
+
+
+def _render_verdict(reading: ReportReading, verdict: list[str], linker: _Linker) -> str:
+    report = reading.document["report"]
+    sentences = "".join(f'<p class="status-sentence">{linker.link(value)}</p>' for value in verdict)
+    heading = f"<h2>{escape(report['kind'])} {escape(report['id'])}</h2>"
+    delivery = _render_delivery(reading.document, linker)
+    return f'<section class="report-verdict">{heading}{sentences}{delivery}</section>'
+
+
+def _render_folded(fields: list[dict], linker: _Linker) -> str:
     folded = "".join(
         f"<dt>{escape(field['name'])}</dt><dd>{linker.link(field['value'])}</dd>"
         for field in fields
         if field["name"] not in SHOWN_FIELDS
     )
-    return "".join(
-        [
-            f'<section class="report-verdict"><h2>{escape(report["kind"])} {escape(report["id"])}</h2>',
-            verdict,
-            _render_delivery(reading.document, linker),
-            "</section>",
-            _render_tiles(reading.waves, fields),
-            blocks,
-            _render_list(sorted_narrative.get(None, []), linker),
-            _render_block("Tasks", _render_tables(fields, linker)),
-            _render_block("Test it by hand", _render_groups(fields, BY_HAND, linker)),
-            _render_block("Why a task was held", _render_list(_read_values(fields, HELD), linker)),
-            _render_block("Worth reading in the code", _render_groups(fields, (SAMPLING,), linker)),
-            "" if not folded else render_details("The full account", f"<dl>{folded}</dl>"),
-        ]
+    return "" if not folded else render_details("The full account", f"<dl>{folded}</dl>")
+
+
+def render_report_fragment(reading: ReportReading) -> str:
+    fields = reading.document["report"]["fields"]
+    linker = _Linker(
+        {task["task"]: wave["wave"] for wave in reading.waves for task in wave["tasks"]}, reading.pull_request_address
+    )
+    narrative = _sort_narrative(fields)
+    blocks = "".join(
+        _render_block(heading, _render_list(narrative.get(words, []), linker))
+        for words, heading in NARRATIVE_BLOCKS.items()
+    )
+    return (
+        _render_verdict(reading, narrative.get(VERDICT, []), linker)
+        + _render_tiles(reading.waves, fields)
+        + blocks
+        + _render_list(narrative.get(None, []), linker)
+        + _render_block("Tasks", _render_tables(fields, linker))
+        + _render_block("Test it by hand", _render_groups(fields, BY_HAND, linker))
+        + _render_block("Why a task was held", _render_list(_read_values(fields, HELD), linker))
+        + _render_block("Worth reading in the code", _render_groups(fields, (SAMPLING,), linker))
+        + _render_folded(fields, linker)
     )
