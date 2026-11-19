@@ -7,7 +7,7 @@ from brigade.dashboard.render_stat_tile import StatTile, render_stat_tile
 from brigade.dashboard.render_status_sentence import render_status_sentence
 from brigade.inbox.inbox_locations import SHOWN_ID_LENGTH
 from brigade.inbox.render_age import render_age
-from brigade.triage.ratify_pattern import CONSTRAINT_ACTION, CONSTRAINT_KINDS
+from brigade.triage.ratify_pattern import CONSTRAINT_ACTION, CONSTRAINT_KINDS, DISMISS_ACTION
 
 NO_PROJECT = "-"
 NO_SIGNAL_AGE = "-"
@@ -21,6 +21,7 @@ WHAT_RATIFYING_STARTS = {
     "dismiss": "nothing: the pattern proposes its own dismissal",
     None: "nothing until the pattern names an action",
 }
+NOTHING_WITHOUT_TARGET = "nothing until the pattern names a target"
 STALE_MARK = ' <span class="stale">stale: its task merged since</span>'
 NO_STALE_MARK = ""
 NO_REPEATED_PATTERN = ""
@@ -78,10 +79,17 @@ def _render_repeated(pattern: dict, proposed: set[str]) -> str:
     return f" repeats <code>{escape(pattern['repeats'])}</code>"
 
 
+def _describe_what_ratifying_starts(pattern: dict) -> str:
+    action = pattern["action"]
+    if action not in (None, DISMISS_ACTION) and pattern["target"] is None:
+        return NOTHING_WITHOUT_TARGET
+    return WHAT_RATIFYING_STARTS[action].format(target=pattern["target"])
+
+
 def _render_pattern(pattern: dict, repeats_of: dict[str, list[dict]], new_signals: set[str]) -> str:
     proposed = set(repeats_of)
     name = pattern["name"]
-    starts = WHAT_RATIFYING_STARTS[pattern["action"]].format(target=pattern["target"])
+    starts = _describe_what_ratifying_starts(pattern)
     still_new = sum(signal in new_signals for signal in pattern["signals"])
     repeats = repeats_of[name]
     folded = "".join(_render_pattern(repeat, repeats_of, new_signals) for repeat in repeats)
