@@ -18,7 +18,7 @@ OAK_W2_BLOCKED = {
     "last_event": "wave.blocked",
     "tasks": 2,
     "task_states": {"blocked:quota": 2},
-    "halt": {"reason": "quota", "resume_at": "2026-10-19T10:00:00Z"},
+    "halt": {"reason": "quota", "resume_at": "2026-10-19T10:00:00Z", "age_s": 600},
 }
 LIVE_RUN_OF_E1 = {"run": "20261019T080000Z-e1", "slot": "build", "project": "elm", "wave": "elm_w1", "task": "E1"}
 STATUS = {
@@ -121,6 +121,49 @@ class RenderHomeTilesTest(unittest.TestCase):
             fragment,
         )
 
+    def test_should_take_the_age_of_the_oldest_from_every_thing_waiting_for_the_user(self):
+        # Arrange
+        rows = [
+            ("a halted wave", {"waves": [{**OAK_W2_BLOCKED, "halt": {**OAK_W2_BLOCKED["halt"], "age_s": 172800}}]}),
+            (
+                "a milestone pull request",
+                {
+                    "awaiting_merge": [
+                        {"project": "oak", "repository": "/srv/oak", "milestone": "M2", "pr": 31, "age_s": 172800}
+                    ]
+                },
+            ),
+            (
+                "a parked order",
+                {
+                    "orders": [
+                        {
+                            "name": "nightly",
+                            "recipe": "usage-report",
+                            "project": "oak",
+                            "run": "20261019T081500Z-n1",
+                            "step": "1-gate",
+                            "reason": "the gate failed",
+                            "age_s": 172800,
+                        }
+                    ]
+                },
+            ),
+        ]
+        scan = {"study": "corpus_lint_oak", "project": "oak", "signals": 1, "oldest_age_s": 900}
+        for name, status_change in rows:
+            with self.subTest(name):
+                home = create_home({**status_change, "inbox": {"new_signals": 1, "scans": [scan], "stalls": []}})
+
+                # Act
+                fragment = render_home(home)
+
+                # Assert
+                self.assertIn(
+                    '<span class="stat-label">need you</span><span class="stat-perimeter">the oldest 2d</span>',
+                    fragment,
+                )
+
     def test_should_say_no_age_is_recorded_when_nothing_waiting_carries_one(self):
         # Act
         fragment = render_home(HOME)
@@ -145,7 +188,9 @@ class RenderHomeNeedsYouTest(unittest.TestCase):
             status={
                 **STATUS,
                 "waves": [OAK_W2_BLOCKED],
-                "awaiting_merge": [{"project": "oak", "milestone": "M2", "pr": 31}],
+                "awaiting_merge": [
+                    {"project": "oak", "repository": "/srv/oak", "milestone": "M2", "pr": 31, "age_s": 60}
+                ],
                 "inbox": {
                     "new_signals": 1,
                     "scans": [{"study": "corpus_lint_oak", "project": "oak", "signals": 1, "oldest_age_s": 900}],
@@ -159,6 +204,7 @@ class RenderHomeNeedsYouTest(unittest.TestCase):
                         "run": "20261019T081500Z-n1",
                         "step": "1-gate",
                         "reason": "the gate failed",
+                        "age_s": 60,
                     }
                 ],
             },
@@ -184,7 +230,7 @@ class RenderHomeNeedsYouTest(unittest.TestCase):
             '<code class="needs-you-action">brigade inbox list</code></li>'
             '<li class="needs-you"><span class="needs-you-subject">M2 of oak</span>'
             '<span class="needs-you-reason">pull request 31 waits for your merge</span>'
-            '<code class="needs-you-action">gh pr merge 31</code></li>'
+            '<code class="needs-you-action">cd /srv/oak &amp;&amp; gh pr merge 31</code></li>'
             '<li class="needs-you"><span class="needs-you-subject">nightly of oak</span>'
             '<span class="needs-you-reason">parked at 1-gate: the gate failed</span>'
             '<code class="needs-you-action">brigade order resume nightly</code></li>'
@@ -194,7 +240,7 @@ class RenderHomeNeedsYouTest(unittest.TestCase):
 
     def test_should_say_a_wave_parked_until_further_notice(self):
         # Arrange
-        parked = {**OAK_W2_BLOCKED, "halt": {"reason": "a question", "resume_at": None}}
+        parked = {**OAK_W2_BLOCKED, "halt": {"reason": "a question", "resume_at": None, "age_s": 60}}
         home = create_home({"waves": [parked]})
 
         # Act
@@ -345,6 +391,7 @@ class RenderHomeAtWorkTest(unittest.TestCase):
                         "run": "r2",
                         "step": "1-gate",
                         "reason": "the gate <step> failed",
+                        "age_s": 60,
                     }
                 ],
             }

@@ -7,6 +7,7 @@ class NeedsYou:
     subject: str
     reason: str
     command: str
+    age_s: int | None = None
 
 
 def render_needs_you_row(row: NeedsYou) -> str:

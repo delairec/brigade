@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from html import escape
+from shlex import quote as quote_argument
 from urllib.parse import quote
 
 from brigade.dashboard.render_action import render_action
@@ -70,6 +71,7 @@ def _list_inbox_rows(home: HomeDocuments) -> list[NeedsYou]:
             scan["study"],
             f"{scan['signals']} new signals, the oldest {render_age(scan['oldest_age_s'])}",
             INBOX_COMMAND,
+            scan["oldest_age_s"],
         )
         for scan in home.status["inbox"]["scans"]
     ]
@@ -81,7 +83,8 @@ def _list_merges_and_orders(status: dict) -> list[NeedsYou]:
         NeedsYou(
             f"{merge['milestone']} of {merge['project']}",
             f"pull request {merge['pr']} waits for your merge",
-            f"gh pr merge {merge['pr']}",
+            f"cd {quote_argument(merge['repository'])} && gh pr merge {merge['pr']}",
+            merge["age_s"],
         )
         for merge in status["awaiting_merge"]
     ]
@@ -90,6 +93,7 @@ def _list_merges_and_orders(status: dict) -> list[NeedsYou]:
             f"{order['name']} of {order['project']}",
             f"parked at {order['step']}: {order['reason']}",
             f"brigade order resume {order['name']}",
+            order["age_s"],
         )
         for order in status["orders"]
     ]
@@ -98,14 +102,16 @@ def _list_merges_and_orders(status: dict) -> list[NeedsYou]:
 
 def _list_needs_you(home: HomeDocuments) -> list[NeedsYou]:
     halted = [
-        NeedsYou(wave["wave"], _describe_halt(wave["halt"]), f"brigade wave resume {wave['wave']}")
+        NeedsYou(
+            wave["wave"], _describe_halt(wave["halt"]), f"brigade wave resume {wave['wave']}", wave["halt"]["age_s"]
+        )
         for wave in _halted_waves(home.status)
     ]
     return [*halted, *_list_inbox_rows(home), *_list_merges_and_orders(home.status)]
 
 
-def _describe_oldest(status: dict) -> str:
-    ages = [scan["oldest_age_s"] for scan in status["inbox"]["scans"]]
+def _describe_oldest(needs_you: list[NeedsYou]) -> str:
+    ages = [row.age_s for row in needs_you if row.age_s is not None]
     return f"the oldest {render_age(max(ages))}" if ages else "no age recorded"
 
 
@@ -116,7 +122,7 @@ def _render_tiles(home: HomeDocuments, needs_you: list[NeedsYou]) -> str:
     tiles = [
         StatTile("open waves", str(len(status["waves"])), f"{len(_halted_waves(status))} halted"),
         StatTile("live runs", str(len(status["live_runs"])), "now"),
-        StatTile("need you", str(len(needs_you)), _describe_oldest(status)),
+        StatTile("need you", str(len(needs_you)), _describe_oldest(needs_you)),
         StatTile(
             "quota tokens",
             str(sum(quota["usage"].values())),

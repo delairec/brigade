@@ -61,6 +61,7 @@ PARKED_NIGHTLY = {
     "run": "20261019T081500Z-n1",
     "step": "1-gate",
     "reason": "the gate step failed",
+    "age_s": 2640,
 }
 HOME = {
     "schema_version": 1,
@@ -73,7 +74,7 @@ HOME = {
             "last_event": "wave.blocked",
             "tasks": 2,
             "task_states": {"queued": 2},
-            "halt": {"reason": "quota", "resume_at": "2026-10-19T10:00:00Z"},
+            "halt": {"reason": "quota", "resume_at": "2026-10-19T10:00:00Z", "age_s": 6000},
         },
         {
             "wave": "elm_w1",
@@ -336,7 +337,10 @@ class StatusOfTheMachineTest(unittest.TestCase):
         document = COMMAND.run(Namespace(), runtime)
 
         # Assert
-        self.assertEqual(document["awaiting_merge"], [{"project": "oak", "milestone": "M2", "pr": 31}])
+        self.assertEqual(
+            document["awaiting_merge"],
+            [{"project": "oak", "repository": "/srv/oak", "milestone": "M2", "pr": 31, "age_s": 1800}],
+        )
 
     def test_should_list_each_new_stall_signal_saying_whether_its_task_merged_since(self):
         # Arrange

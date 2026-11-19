@@ -1,5 +1,6 @@
 import argparse
 from collections import Counter
+from datetime import datetime
 
 from brigade.command import Command
 from brigade.corpus.read_entities import Entity, read_entities
@@ -11,8 +12,11 @@ from brigade.ledger.milestone_pr_opened import MilestonePrOpened
 from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.sum_quota_usage import sum_quota_usage
+from brigade.ledger.wave_blocked import WaveBlocked
+from brigade.ledger.wave_parked import WaveParked
 from brigade.orders.convert_order import convert_order
 from brigade.orders.read_order_facts import ORDER_EVENTS
+from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runs.list_runs import list_runs
@@ -49,13 +53,27 @@ def _is_paused(project: Entity) -> bool:
     return any(field.name == "STATUS" and field.value == PAUSED_STATUS for field in project.fields)
 
 
-def _list_open_waves(entries: tuple[LedgerEntry, ...]) -> list[dict]:
-    events = tuple(entry.event for entry in entries)
+def _measure_age(instant: datetime, now: datetime) -> int:
+    return int((now - instant).total_seconds())
+
+
+def _describe_wave_halt(entries: tuple[LedgerEntry, ...], wave: str, now: datetime) -> dict | None:
+    pause = read_wave_pause(tuple(entry.event for entry in entries), wave)
+    if pause is None:
+        return None
+    halted = [
+        entry.instant
+        for entry in entries
+        if isinstance(entry.event, (WaveParked, WaveBlocked)) and entry.event.wave == wave
+    ]
+    return {**pause.to_document(), "age_s": _measure_age(halted[-1], now)}
+
+
+def _list_open_waves(entries: tuple[LedgerEntry, ...], now: datetime) -> list[dict]:
     waves = []
     for summary in summarize_waves(entries):
         if not summary.is_open:
             continue
-        pause = read_wave_pause(events, summary.started.wave)
         states = read_task_states(entries, summary.started.wave)
         waves.append(
             {
@@ -65,7 +83,7 @@ def _list_open_waves(entries: tuple[LedgerEntry, ...]) -> list[dict]:
                 "last_event": summary.last_event,
                 "tasks": len(summary.started.tasks),
                 "task_states": dict(Counter(states.get(task, QUEUED_STATE) for task in summary.started.tasks)),
-                "halt": None if pause is None else pause.to_document(),
+                "halt": _describe_wave_halt(entries, summary.started.wave, now),
             }
         )
     return waves
@@ -98,8 +116,8 @@ def _list_studies_to_watch(runtime: Runtime) -> list[dict]:
 
 
 def _list_parked_orders(runtime: Runtime, entries: tuple[LedgerEntry, ...]) -> list[dict]:
-    last_events = {
-        (entry.event.kind, entry.event.order): entry.event for entry in entries if isinstance(entry.event, ORDER_EVENTS)
+    last_entries = {
+        (entry.event.kind, entry.event.order): entry for entry in entries if isinstance(entry.event, ORDER_EVENTS)
     }
     orders = (
         convert_order(entity)
@@ -110,12 +128,13 @@ def _list_parked_orders(runtime: Runtime, entries: tuple[LedgerEntry, ...]) -> l
             "name": order.name,
             "recipe": order.recipe,
             "project": order.project,
-            "run": parked.run,
-            "step": parked.step,
-            "reason": parked.reason,
+            "run": entry.event.run,
+            "step": entry.event.step,
+            "reason": entry.event.reason,
+            "age_s": _measure_age(entry.instant, runtime.now),
         }
         for order in orders
-        if isinstance(parked := last_events.get((order.recipe, order.name)), OrderParked)
+        if (entry := last_entries.get((order.recipe, order.name))) is not None and isinstance(entry.event, OrderParked)
     ]
 
 
@@ -139,14 +158,24 @@ def _list_live_runs(runtime: Runtime) -> list[dict]:
     ]
 
 
-def _list_awaiting_merge(entries: tuple[LedgerEntry, ...]) -> list[dict]:
-    opened = {}
+def _list_awaiting_merge(runtime: Runtime, entries: tuple[LedgerEntry, ...]) -> list[dict]:
+    opened: dict[tuple[str, str], LedgerEntry] = {}
     for entry in entries:
         if isinstance(entry.event, MilestonePrOpened):
-            opened[(entry.event.project, entry.event.milestone)] = entry.event.pr
+            opened[(entry.event.project, entry.event.milestone)] = entry
         if isinstance(entry.event, MilestoneClosed):
             opened.pop((entry.event.project, entry.event.milestone), None)
-    return [{"project": project, "milestone": milestone, "pr": pr} for (project, milestone), pr in opened.items()]
+    projects = {project.name: project for project in read_projects(runtime)}
+    return [
+        {
+            "project": project,
+            "repository": read_project_field(projects.get(project), "PATH"),
+            "milestone": milestone,
+            "pr": entry.event.pr,
+            "age_s": _measure_age(entry.instant, runtime.now),
+        }
+        for (project, milestone), entry in opened.items()
+    ]
 
 
 def _list_stalls(new_signals: list[Signal], entries: tuple[LedgerEntry, ...]) -> list[dict]:
@@ -214,7 +243,7 @@ def _render_text(document: dict) -> str:
 def status(request: argparse.Namespace, runtime: Runtime) -> dict:
     require_operational_corpus(runtime.paths)
     entries = read_ledger(runtime.paths.state_root).entries
-    waves = _list_open_waves(entries)
+    waves = _list_open_waves(entries, runtime.now)
     new_signals = [
         signal for signal in read_inbox(runtime.paths.state_root, runtime.now) if signal.status == NEW_STATUS
     ]
@@ -223,7 +252,7 @@ def status(request: argparse.Namespace, runtime: Runtime) -> dict:
         "projects": [{"name": project.name, "paused": _is_paused(project)} for project in read_projects(runtime)],
         "waves": waves,
         "live_runs": _list_live_runs(runtime),
-        "awaiting_merge": _list_awaiting_merge(entries),
+        "awaiting_merge": _list_awaiting_merge(runtime, entries),
         "inbox": {
             "new_signals": len(new_signals),
             "scans": _list_scans(new_signals),
