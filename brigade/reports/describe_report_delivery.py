@@ -22,7 +22,7 @@ def _read_last(entries: tuple[LedgerEntry, ...], matches) -> LedgerEntry | None:
 
 def _describe(waves: list[str], opened: LedgerEntry | None, reported: LedgerEntry | None) -> dict:
     return {
-        "waves": list(dict.fromkeys(waves)),
+        "waves": waves,
         "pull_request": None if opened is None else opened.event.pr,
         "reported_at": None if reported is None else format_instant(reported.instant),
     }

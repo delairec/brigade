@@ -661,6 +661,72 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
             b'<p class="report-delivery">pull request #31</p></section>',
         )
 
+    def test_should_follow_no_wave_and_no_project_when_the_report_asked_is_unknown(self):
+        # Arrange
+        report_show = (PYTHON, ENTRY_POINT, "report", "show", "--json", "oak_w9")
+        report_list = (PYTHON, ENTRY_POINT, "report", "list", "--json")
+        runner = ScriptedProcessRunner(
+            {
+                report_show: ProcessAnswer(exit_code=1, stderr="no report oak_w9\n"),
+                report_list: ProcessAnswer(stdout='{"schema_version": 1, "reports": []}'),
+            }
+        )
+
+        # Act
+        response = answer_get("/views/reports/oak_w9", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual((response.status, runner.argvs), (404, [report_show, report_list]))
+
+    def test_should_run_no_project_show_for_a_report_of_no_project(self):
+        # Arrange
+        shown = (
+            '{"schema_version": 1, "report": {"id": "oak_w3", "kind": "wave-report", "project": null,'
+            ' "type": "REPORT", "fields": []}, "waves": [], "pull_request": 31, "reported_at": null}'
+        )
+        report_show = (PYTHON, ENTRY_POINT, "report", "show", "--json", "oak_w3")
+        runner = ScriptedProcessRunner({report_show: ProcessAnswer(stdout=shown)})
+
+        # Act
+        response = answer_get("/views/reports/oak_w3", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(
+            (response.body, runner.argvs),
+            (
+                (
+                    b'<section class="report-verdict"><h2>wave-report oak_w3</h2>'
+                    b'<p class="report-delivery">pull request #31</p></section>'
+                ),
+                [report_show],
+            ),
+        )
+
+    def test_should_render_the_report_without_what_a_failing_wave_show_or_project_show_would_give(self):
+        # Arrange
+        shown = (
+            '{"schema_version": 1, "report": {"id": "oak_w3", "kind": "wave-report", "project": "oak",'
+            ' "type": "REPORT", "fields": []}, "waves": ["oak_w3"], "pull_request": 31, "reported_at": null}'
+        )
+        refused = ProcessAnswer(exit_code=1, stderr="refused\n")
+        runner = ScriptedProcessRunner(
+            {
+                (PYTHON, ENTRY_POINT, "report", "show", "--json", "oak_w3"): ProcessAnswer(stdout=shown),
+                (PYTHON, ENTRY_POINT, "wave", "show", "--json", "--events", "oak_w3"): refused,
+                (PYTHON, ENTRY_POINT, "project", "show", "--json", "oak"): refused,
+            }
+        )
+
+        # Act
+        response = answer_get("/views/reports/oak_w3", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(
+            response.body,
+            b'<section class="report-verdict"><h2>wave-report oak_w3</h2>'
+            b'<p class="report-delivery">pull request #31</p></section>',
+        )
+
 
 class AnswerDashboardRequestOfTheLedgerViewTest(unittest.TestCase):
     def test_should_run_the_commands_of_the_sections_the_query_asks_for(self):
