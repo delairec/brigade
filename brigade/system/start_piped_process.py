@@ -26,11 +26,9 @@ class PipedProcess:
         self.written = ""
 
     def send(self, line: str) -> None:
-        try:
+        with contextlib.suppress(OSError):
             self.process.stdin.write(line)
             self.process.stdin.flush()
-        except OSError:
-            self.stop()
 
     def receive(self, timeout_s: float) -> str | None:
         return self.receiver.receive(timeout_s)

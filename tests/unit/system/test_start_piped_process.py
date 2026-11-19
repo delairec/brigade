@@ -76,6 +76,26 @@ class StartPipedProcessTest(unittest.TestCase):
         # Assert
         self.assertFalse(process.is_running())
 
+    def test_should_close_its_standard_input_once_stopped(self):
+        # Arrange
+        process = start_python(self, SILENT)
+
+        # Act
+        process.stop()
+
+        # Assert
+        self.assertTrue(process.process.stdin.closed)
+
+    def test_should_run_in_a_session_of_its_own_so_a_signal_to_the_terminal_reaches_brigade_serve_alone(self):
+        # Arrange
+        process = start_python(self, SILENT)
+
+        # Act
+        session = os.getsid(process.process.pid)
+
+        # Assert
+        self.assertEqual(session, process.process.pid)
+
     def test_should_take_a_broken_pipe_as_a_process_that_stopped(self):
         # Arrange
         process = start_python(self, QUIET_FAILURE)
