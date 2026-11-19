@@ -136,6 +136,19 @@ class RenderInboxViewTest(unittest.TestCase):
             fragment,
         )
 
+    def test_should_say_ratifying_starts_nothing_until_a_pattern_acting_on_a_target_names_one(self):
+        for action in ("wave", "constraint", "order"):
+            with self.subTest(action=action):
+                # Arrange
+                pattern = {**create_pattern("FlakyTests", None, []), "action": action, "target": None}
+                document = {**EMPTY_INBOX, "patterns": [pattern]}
+
+                # Act
+                fragment = render_inbox_view(document)
+
+                # Assert
+                self.assertIn("<p>If ratified: nothing until the pattern names a target</p>", fragment)
+
     def test_should_fold_two_repeats_under_the_pattern_they_name_each_with_its_buttons(self):
         # Arrange
         no_cited_signal = []
