@@ -3,7 +3,7 @@ import threading
 import unittest
 
 from brigade.dashboard.awawa_addon_supervisor import AddonAnswer, AwawaAddonSupervisor
-from brigade.errors import ToolNotFound
+from brigade.errors import BrigadeError, ToolNotFound
 from tests.unit.dashboard.addon_child_double import ChildStarterDouble, PipedChildDouble, answer_with_the_message
 
 HOLDERS = frozenset({"app"})
@@ -40,8 +40,21 @@ def refuse_to_start():
     raise ToolNotFound("python3 not on PATH")
 
 
+class HolderListingDouble:
+    def __init__(self, *outcomes: frozenset[str] | BrigadeError):
+        self.outcomes = list(outcomes)
+        self.calls = 0
+
+    def list(self) -> frozenset[str]:
+        outcome = self.outcomes[min(self.calls, len(self.outcomes) - 1)]
+        self.calls += 1
+        if isinstance(outcome, BrigadeError):
+            raise outcome
+        return outcome
+
+
 def create_supervisor(test_case, starter, holders=HOLDERS, timeout_s=ANSWER_TIMEOUT_S) -> AwawaAddonSupervisor:
-    supervisor = AwawaAddonSupervisor(holders, starter.start, timeout_s)
+    supervisor = AwawaAddonSupervisor(lambda: holders, starter.start, timeout_s)
     test_case.addCleanup(supervisor.stop)
     return supervisor
 
@@ -237,7 +250,7 @@ class AskAnAwawaAddonFailingAtItsStartTest(unittest.TestCase):
 
     def test_should_report_a_child_that_could_not_be_launched(self):
         # Arrange
-        supervisor = AwawaAddonSupervisor(HOLDERS, refuse_to_start, ANSWER_TIMEOUT_S)
+        supervisor = AwawaAddonSupervisor(lambda: HOLDERS, refuse_to_start, ANSWER_TIMEOUT_S)
 
         # Act
         answer = supervisor.ask("app", BOARD_QUERY)
@@ -248,11 +261,44 @@ class AskAnAwawaAddonFailingAtItsStartTest(unittest.TestCase):
         )
 
 
+class AskAnAwawaAddonWhoseHoldersCouldNotBeListedTest(unittest.TestCase):
+    def test_should_report_the_error_of_the_listing_and_list_again_at_each_request(self):
+        # Arrange
+        listing = HolderListingDouble(ToolNotFound("awawa not on PATH"))
+        starter = ChildStarterDouble(functools.partial(PipedChildDouble, answer_with_the_message))
+        supervisor = AwawaAddonSupervisor(listing.list, starter.start, ANSWER_TIMEOUT_S)
+        supervisor.open()
+
+        # Act
+        answers = (supervisor.ask("app", BOARD_QUERY), supervisor.ask("app", BOARD_QUERY))
+
+        # Assert
+        unavailable = AddonAnswer(status=503, document={"error": "the awawa addon did not start: awawa not on PATH"})
+        self.assertEqual(answers, (unavailable, unavailable))
+        self.assertEqual(listing.calls, 3)
+        self.assertEqual(starter.children, [])
+
+    def test_should_serve_once_a_later_request_lists_the_holders(self):
+        # Arrange
+        listing = HolderListingDouble(ToolNotFound("awawa not on PATH"), HOLDERS)
+        starter = ChildStarterDouble(functools.partial(PipedChildDouble, answer_with_the_message))
+        supervisor = AwawaAddonSupervisor(listing.list, starter.start, ANSWER_TIMEOUT_S)
+        self.addCleanup(supervisor.stop)
+        supervisor.open()
+
+        # Act
+        answers = (supervisor.ask("app", BOARD_QUERY), supervisor.ask("app", BOARD_QUERY))
+
+        # Assert
+        self.assertEqual([answer.status for answer in answers], [200, 200])
+        self.assertEqual(listing.calls, 2)
+
+
 class StopAwawaAddonTest(unittest.TestCase):
     def test_should_stop_the_child(self):
         # Arrange
         starter = ChildStarterDouble(functools.partial(PipedChildDouble, answer_with_the_message))
-        supervisor = AwawaAddonSupervisor(HOLDERS, starter.start, ANSWER_TIMEOUT_S)
+        supervisor = AwawaAddonSupervisor(lambda: HOLDERS, starter.start, ANSWER_TIMEOUT_S)
         supervisor.open()
 
         # Act
@@ -264,7 +310,7 @@ class StopAwawaAddonTest(unittest.TestCase):
     def test_should_stop_nothing_when_no_child_runs(self):
         # Arrange
         starter = ChildStarterDouble(functools.partial(PipedChildDouble, answer_with_the_message))
-        supervisor = AwawaAddonSupervisor(NO_HOLDER, starter.start, ANSWER_TIMEOUT_S)
+        supervisor = AwawaAddonSupervisor(lambda: NO_HOLDER, starter.start, ANSWER_TIMEOUT_S)
 
         # Act
         supervisor.stop()

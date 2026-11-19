@@ -21,16 +21,19 @@ NO_HOLDER = frozenset()
 
 
 def _holds_a_corpus(project: Entity, runtime: Runtime) -> bool:
-    status = read_awawa_document(runtime.run_process, Path(read_project_field(project, PATH_FIELD)), ("status",))
+    try:
+        status = read_awawa_document(runtime.run_process, Path(read_project_field(project, PATH_FIELD)), ("status",))
+    except BrigadeError:
+        return False
     return status["summary"]["files"] > 0
 
 
 def _list_corpus_holders(runtime: Runtime) -> frozenset[str]:
     try:
         require_operational_corpus(runtime.paths)
-        return frozenset(project.name for project in read_projects(runtime) if _holds_a_corpus(project, runtime))
     except BrigadeError:
         return NO_HOLDER
+    return frozenset(project.name for project in read_projects(runtime) if _holds_a_corpus(project, runtime))
 
 
 @contextlib.contextmanager
@@ -39,7 +42,9 @@ def start_awawa_addon(runtime: Runtime) -> Iterator[AwawaAddonSupervisor]:
         argv=(sys.executable, str(runtime.entry_point), ADDON_COMMAND), cwd=str(runtime.paths.home)
     )
     addon = AwawaAddonSupervisor(
-        _list_corpus_holders(runtime), functools.partial(runtime.start_piped_process, request), ANSWER_TIMEOUT_S
+        functools.partial(_list_corpus_holders, runtime),
+        functools.partial(runtime.start_piped_process, request),
+        ANSWER_TIMEOUT_S,
     )
     addon.open()
     try:

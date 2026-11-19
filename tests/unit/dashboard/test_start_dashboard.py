@@ -23,7 +23,7 @@ def refuse_to_start_the_addon():
     raise AssertionError("the awawa addon should not be started")
 
 
-NO_ADDON = AwawaAddonSupervisor(frozenset(), refuse_to_start_the_addon, ANSWER_TIMEOUT_S)
+NO_ADDON = AwawaAddonSupervisor(lambda: frozenset(), refuse_to_start_the_addon, ANSWER_TIMEOUT_S)
 
 
 def exchange(port: int, request: bytes) -> bytes:

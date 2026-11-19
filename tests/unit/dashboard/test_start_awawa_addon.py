@@ -4,8 +4,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.dashboard.awawa_addon_supervisor import AddonAnswer
 from brigade.dashboard.start_awawa_addon import start_awawa_addon
-from brigade.errors import ToolNotFound
+from brigade.errors import CommandFailed, ToolNotFound
 from brigade.system.start_piped_process import PipedProcessRequest
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
 from tests.unit.create_test_paths import create_test_paths
@@ -17,6 +18,8 @@ APP = json.dumps({"fields": [{"name": "PATH", "atoms": ['"/srv/app"']}]})
 SHOP = json.dumps({"fields": [{"name": "PATH", "atoms": ['"/srv/shop"']}]})
 FILES_OF_APP = json.dumps({"summary": {"files": 7, "entities": 518}})
 NO_FILE = json.dumps({"summary": {"files": 0, "entities": 0}})
+STATUS_OF_NO_FILE = ProcessAnswer(stdout=NO_FILE)
+BOARD_QUERY = {"view": "board", "type": "TASK"}
 
 
 class PipedStarterDouble:
@@ -40,14 +43,14 @@ class StartAwawaAddonTestCase(unittest.TestCase):
         self.paths.schema_file.write_text("SCHEMA PROJECT\n")
         self.starter = PipedStarterDouble()
 
-    def create_runtime(self, files_of_app: str):
+    def create_runtime(self, files_of_app: str, status_of_shop: ProcessAnswer | CommandFailed = STATUS_OF_NO_FILE):
         runner = ScriptedProcessRunner(
             {
                 ("awawa", "status", "PROJECT"): ProcessAnswer(stdout=TWO_PROJECTS),
                 ("awawa", "show", "@PROJECT.app"): ProcessAnswer(stdout=APP),
                 ("awawa", "show", "@PROJECT.shop"): ProcessAnswer(stdout=SHOP),
                 ("awawa", "status", "--json", "/srv/app"): ProcessAnswer(stdout=files_of_app),
-                ("awawa", "status", "--json", "/srv/shop"): ProcessAnswer(stdout=NO_FILE),
+                ("awawa", "status", "--json", "/srv/shop"): status_of_shop,
             }
         )
         return create_test_runtime(self.paths, run_process=runner.run, start_piped_process=self.starter.start)
@@ -113,15 +116,33 @@ class StartAwawaAddonWithoutARegistryTest(unittest.TestCase):
 
 
 class StartAwawaAddonWithoutAwawaTest(StartAwawaAddonTestCase):
-    def test_should_start_no_child(self):
+    def test_should_start_no_child_and_report_the_error_in_the_tab(self):
         # Arrange
         runner = ScriptedProcessRunner({("awawa",): ToolNotFound("awawa not on PATH")})
         runtime = create_test_runtime(self.paths, run_process=runner.run, start_piped_process=self.starter.start)
 
         # Act
         with start_awawa_addon(runtime) as addon:
+            answer = addon.ask("app", BOARD_QUERY)
+
+        # Assert
+        self.assertEqual(
+            answer, AddonAnswer(status=503, document={"error": "the awawa addon did not start: awawa not on PATH"})
+        )
+        self.assertEqual(self.starter.requests, [])
+
+
+class StartAwawaAddonWithAProjectWhoseStatusFailsTest(StartAwawaAddonTestCase):
+    def test_should_serve_the_other_projects_holding_a_corpus(self):
+        # Arrange
+        runtime = self.create_runtime(
+            FILES_OF_APP, CommandFailed(("awawa", "status", "--json", "/srv/shop"), 2, "error: /srv/shop not found\n")
+        )
+
+        # Act
+        with start_awawa_addon(runtime) as addon:
             holders = addon.holders
 
         # Assert
-        self.assertEqual(holders, frozenset())
-        self.assertEqual(self.starter.requests, [])
+        self.assertEqual(holders, frozenset({"app"}))
+        self.assertEqual(len(self.starter.requests), 1)

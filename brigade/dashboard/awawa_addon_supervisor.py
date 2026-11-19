@@ -47,22 +47,33 @@ def _answer_unavailable(reason: str) -> AddonAnswer:
 
 
 class AwawaAddonSupervisor:
-    def __init__(self, holders: frozenset[str], start_child: Callable[[], AddonChild], answer_timeout_s: float):
-        self.holders = holders
+    def __init__(
+        self,
+        list_holders: Callable[[], frozenset[str]],
+        start_child: Callable[[], AddonChild],
+        answer_timeout_s: float,
+    ):
+        self.list_holders = list_holders
+        self.holders: frozenset[str] | None = None
         self.start_child = start_child
         self.answer_timeout_s = answer_timeout_s
         self.child: AddonChild | None = None
         self.lock = threading.Lock()
 
     def open(self) -> None:
-        if self.holders:
-            with self.lock:
+        with self.lock:
+            if self._list_holders() is None and self.holders:
                 self._start()
 
     def ask(self, project: str, query: dict) -> AddonAnswer:
-        if project not in self.holders:
-            return AddonAnswer(status=NOT_FOUND, document={ERROR_FIELD: f"@PROJECT.{project} holds no awawa corpus"})
         with self.lock:
+            failure = self._list_holders() if self.holders is None else None
+            if failure is not None:
+                return _answer_unavailable(f"did not start: {failure}")
+            if project not in self.holders:
+                return AddonAnswer(
+                    status=NOT_FOUND, document={ERROR_FIELD: f"@PROJECT.{project} holds no awawa corpus"}
+                )
             return self._ask({"project": project, **query})
 
     def stop(self) -> None:
@@ -89,6 +100,13 @@ class AwawaAddonSupervisor:
             return AddonAnswer(status=SERVER_ERROR, document={ERROR_FIELD: answer[ERROR_FIELD]})
         self._discard()
         return _answer_unavailable("answered no document; the next request starts it again")
+
+    def _list_holders(self) -> str | None:
+        try:
+            self.holders = self.list_holders()
+        except BrigadeError as error:
+            return str(error)
+        return None
 
     def _start(self) -> str | None:
         try:

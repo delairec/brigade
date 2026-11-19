@@ -21,7 +21,7 @@ def refuse_to_start_the_addon():
 
 
 DASHBOARD = Dashboard(
-    port=8470, token=ISSUED_CREDENTIAL, addon=AwawaAddonSupervisor(frozenset(), refuse_to_start_the_addon, 1.0)
+    port=8470, token=ISSUED_CREDENTIAL, addon=AwawaAddonSupervisor(lambda: frozenset(), refuse_to_start_the_addon, 1.0)
 )
 LOOPBACK_HOST = "127.0.0.1:8470"
 LOOPBACK_ORIGIN = "http://127.0.0.1:8470"
@@ -989,7 +989,7 @@ class AnswerDashboardRequestOfAViewOfOneProjectTest(unittest.TestCase):
 
 
 def create_dashboard_with_an_addon(test_case: unittest.TestCase, starter: ChildStarterDouble) -> Dashboard:
-    addon = AwawaAddonSupervisor(frozenset({"app"}), starter.start, ANSWER_TIMEOUT_S)
+    addon = AwawaAddonSupervisor(lambda: frozenset({"app"}), starter.start, ANSWER_TIMEOUT_S)
     test_case.addCleanup(addon.stop)
     return Dashboard(port=8470, token=ISSUED_CREDENTIAL, addon=addon)
 
