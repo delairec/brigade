@@ -1,6 +1,6 @@
 import dataclasses
-import os
 import json
+import os
 import tempfile
 import unittest
 from argparse import Namespace
@@ -345,6 +345,7 @@ class StatusOfTheMachineTest(unittest.TestCase):
             STALL_OF_B2_RECORDED + STALL_OF_B3_RECORDED, encoding="utf-8"
         )
         append_event(self.paths, at(8, 50), TaskState(wave="oak_w2", task="B2", state="merged", reason=None))
+        append_event(self.paths, at(8, 52), TaskState(wave="oak_w2", task="B3", state="running", reason=None))
         runtime = create_test_runtime(self.paths, run_process=create_corpus_double(CORPUS))
 
         # Act

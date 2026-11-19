@@ -65,6 +65,18 @@ class DashboardPageTest(unittest.TestCase):
             ],
         )
 
+    def test_should_hold_the_next_tick_as_a_region_read_apart_from_the_poll_with_its_refresh_button(self):
+        # Act
+        page = PAGE.read_text(encoding="utf-8")
+
+        # Assert
+        self.assertIn(
+            '<section class="next-tick" hidden><h2>Next tick</h2>'
+            '<button type="button" data-refresh-next-tick>refresh</button>'
+            '<div class="next-tick-decisions" data-next-tick="/views/next-tick"></div></section>',
+            page,
+        )
+
     def test_should_hold_the_notice_a_refused_post_is_shown_in(self):
         # Act
         collector = collect_page_elements()

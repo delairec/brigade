@@ -4,6 +4,7 @@ LOADING_TAGS = ("script", "link")
 EVENT_HANDLER_PREFIX = "on"
 REGION_ATTRIBUTE = "data-region"
 ALERT_ROLE = "alert"
+RAIL_GROUP_CLASS = "rail-group"
 
 
 class PageElementsCollector(HTMLParser):
@@ -19,11 +20,14 @@ class PageElementsCollector(HTMLParser):
         self.alerts = []
         self.in_script = False
         self.in_group_title = False
+        self.in_rail_group = False
 
     def handle_starttag(self, tag, attrs):
         attributes = dict(attrs)
         self.in_script = tag == "script"
-        self.in_group_title = tag == "h2"
+        if tag == "section":
+            self.in_rail_group = attributes.get("class") == RAIL_GROUP_CLASS
+        self.in_group_title = tag == "h2" and self.in_rail_group
         if tag in LOADING_TAGS:
             self.loaded.append((tag, attributes))
         if tag == "a":

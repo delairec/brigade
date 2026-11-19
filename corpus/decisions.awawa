@@ -8393,3 +8393,20 @@ DECISION AFailedTickActionIsClearedByTheFirstLaterEventOfItsTaskThatIsNoFailure
 		+ "failures are followed by no resume"
 	SOURCE "the build run of @TASK.B269 of 2026-11-19"
 		REF @TASK.B269
+
+DECISION BrigadeStatusCarriesEachNewStallSignalAndWhetherItsTaskMergedSince
+	TITLE "brigade status --json carries in its inbox each new stall signal with its project, its"
+		+ "wave, its task and whether that task merged since; Home reads the proposed patterns from"
+		+ "brigade inbox list --json"
+	STATUS active
+	DESC "Home reads four commands: brigade status --json, brigade scheduler status --json, brigade"
+		+ "ledger --since 1d --json and brigade inbox list --json; the stale stall needs the state"
+		+ "of its task, which only the ledger brigade status reads holds"
+	DESC "the action of a dry-run decision is the name of the class of the action, the name a"
+		+ "failed action already carries on stderr"
+	DESC "binds @TASK.B267"
+		REF @TASK.B267
+	REJECTED "a fifth command read by Home for the state of each task: the poll of 5 s would spawn"
+		+ "one more process for one boolean"
+	SOURCE "the build run of @TASK.B267 of 2026-11-19"
+		REF @TASK.B267

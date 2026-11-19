@@ -5,6 +5,8 @@ from urllib.parse import parse_qs, urlsplit
 
 from brigade.dashboard.render_answer import render_answer
 from brigade.dashboard.render_corpus_view import render_corpus_view
+from brigade.dashboard.render_fragment import render_fragment
+from brigade.dashboard.render_home import HomeDocuments, render_home
 from brigade.dashboard.render_inbox_item import render_inbox_item
 from brigade.dashboard.render_ledger_fragment import render_ledger_fragment
 from brigade.dashboard.render_project_choice import render_project_choice
@@ -38,6 +40,14 @@ REGION_ROUTES = {
         arguments=("scheduler", "status", "--json"), documented_exit_codes=(0, STALE_SCHEDULER_EXIT_CODE)
     ),
     "selector": CommandRoute(arguments=PROJECT_LISTING.arguments),
+    "next-tick": CommandRoute(arguments=("tick", "--dry-run", "--json")),
+}
+HOME_VIEW = "status"
+HOME_ROUTES = {
+    DOCUMENT: CommandRoute(arguments=("status", "--json")),
+    "scheduler": REGION_ROUTES["heartbeat"],
+    "ledger": CommandRoute(arguments=("ledger", "--since", "1d", "--json")),
+    "inbox": CommandRoute(arguments=("inbox", "list", "--json")),
 }
 
 
@@ -58,6 +68,14 @@ def _render_reports(answers: dict[str, CommandAnswer]) -> str:
 
 def _render_report(answers: dict[str, CommandAnswer]) -> str:
     return render_answer(answers[DOCUMENT], render_report_fragment)
+
+
+def _render_home(answers: dict[str, CommandAnswer]) -> str:
+    def render(status: dict) -> str:
+        readings = {name: json.loads(answers[name].document) for name in ("scheduler", "ledger", "inbox")}
+        return render_home(HomeDocuments(status=status, **readings))
+
+    return render_answer(answers[DOCUMENT], render)
 
 
 def _render_with(render: Callable[[dict], str]) -> Callable[[dict[str, CommandAnswer]], str]:
@@ -120,6 +138,8 @@ def route_view(target: str, renderers: dict[str, Callable[[dict], str]]) -> View
             routes={DOCUMENT: CommandRoute(arguments=WAVE_LISTING.arguments), OVERVIEW: LEDGER_OVERVIEW},
             render=render_waves_view,
         )
+    if address.path == HOME_VIEW:
+        return ViewRoute(routes=HOME_ROUTES, render=_render_home)
     route = route_command(target)
     if route is None:
         return None
