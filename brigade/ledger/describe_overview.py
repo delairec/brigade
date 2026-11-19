@@ -1,4 +1,5 @@
 from brigade.ledger.count_by_name import count_by_name
+from brigade.ledger.describe_failed_actions import describe_failed_actions
 from brigade.ledger.format_instant import format_instant
 from brigade.ledger.group_runs import group_runs
 from brigade.ledger.read_ledger import LedgerReading
@@ -36,4 +37,5 @@ def describe_overview(reading: LedgerReading) -> dict:
         "runs": _count_outcomes([run.last for run in runs]),
         "segments": _count_outcomes([segment for run in runs for segment in run.segments]),
         "waves_started": _group_waves_started_by_month(reading.entries),
+        "failed_actions": describe_failed_actions(reading.entries),
     }

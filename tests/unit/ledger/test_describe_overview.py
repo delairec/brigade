@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from brigade.ledger.describe_overview import describe_overview
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.read_ledger import LedgerReading
+from brigade.ledger.tick_action_failed import TickActionFailed
 from brigade.ledger.wave_started import WaveStarted
 from tests.unit.ledger.create_run_finished import create_run_finished
 
@@ -45,6 +46,7 @@ class DescribeOverviewTest(unittest.TestCase):
                 "runs": {"outcomes": {"failed": 1}, "error_classes": {"ToolFailure": 1}},
                 "segments": {"outcomes": {"failed": 1, "wall_limit": 1}, "error_classes": {"ToolFailure": 1}},
                 "waves_started": {"2026-10": ["w1"]},
+                "failed_actions": {"by_day": {}, "by_action": {}},
             },
         )
 
@@ -85,3 +87,51 @@ class DescribeOverviewTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(overview["waves_started"], {"2026-09": ["w1"], "2026-10": ["w2", "w3"]})
+
+    def test_should_count_the_failed_tick_actions_by_day_and_by_action_with_its_most_frequent_error(self):
+        # Arrange
+        reading = LedgerReading(
+            entries=(
+                LedgerEntry(
+                    instant=datetime(2026, 11, 17, 23, 55, tzinfo=UTC),
+                    event=TickActionFailed(
+                        action="LaunchTask", project="brigade", wave="w58", task="B271", error="quota reached"
+                    ),
+                ),
+                LedgerEntry(
+                    instant=datetime(2026, 11, 18, 0, 0, tzinfo=UTC),
+                    event=TickActionFailed(
+                        action="LaunchTask", project="brigade", wave="w58", task="B272", error="worktree locked"
+                    ),
+                ),
+                LedgerEntry(
+                    instant=datetime(2026, 11, 18, 0, 5, tzinfo=UTC),
+                    event=TickActionFailed(
+                        action="LaunchTask", project="brigade", wave="w58", task="B271", error="quota reached"
+                    ),
+                ),
+                LedgerEntry(
+                    instant=datetime(2026, 11, 18, 0, 10, tzinfo=UTC),
+                    event=TickActionFailed(
+                        action="MergeWavePullRequest", project="brigade", wave="w58", task="B264", error="not mergeable"
+                    ),
+                ),
+            ),
+            files=("/state/ledger/2026-11.jsonl",),
+            skipped=(),
+        )
+
+        # Act
+        overview = describe_overview(reading)
+
+        # Assert
+        self.assertEqual(
+            overview["failed_actions"],
+            {
+                "by_day": {"2026-11-17": 1, "2026-11-18": 3},
+                "by_action": {
+                    "LaunchTask": {"count": 3, "error": "quota reached"},
+                    "MergeWavePullRequest": {"count": 1, "error": "not mergeable"},
+                },
+            },
+        )

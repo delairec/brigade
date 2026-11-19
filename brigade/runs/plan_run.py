@@ -7,7 +7,8 @@ from pathlib import Path
 from brigade.corpus.read_entities import Entity
 from brigade.errors import BrigadeError, UsageError
 from brigade.ledger.budget_applied import BudgetApplied
-from brigade.ledger.describe_role_budget import CurrentDigests, RoleBudget, describe_role_budget
+from brigade.ledger.current_digests import CurrentDigests
+from brigade.ledger.describe_role_budget import RoleBudget, describe_role_budget
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.run_client_switched import RunClientSwitched
 from brigade.ledger.run_finished import RunFinished

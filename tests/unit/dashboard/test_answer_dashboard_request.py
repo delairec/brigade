@@ -583,7 +583,11 @@ class AnswerDashboardRequestOfTheLedgerViewTest(unittest.TestCase):
     def test_should_run_the_commands_of_the_sections_the_query_asks_for(self):
         # Arrange
         overview = ProcessAnswer(
-            stdout='{"schema_version": 1, "view": "overview", "first": null, "last": null, "waves_started": {}}'
+            stdout=(
+                '{"schema_version": 1, "view": "overview", "events": {}, "first": null, "last": null, "files": [],'
+                ' "runs": {"outcomes": {}, "error_classes": {}}, "segments": {"outcomes": {}, "error_classes": {}},'
+                ' "waves_started": {}, "failed_actions": {"by_day": {}, "by_action": {}}, "since": null, "skipped": []}'
+            )
         )
         budgets = ProcessAnswer(stdout='{"schema_version": 1, "last": 20, "procedures": {}, "roles": {}}')
         refused = ProcessAnswer(exit_code=1, stderr="refused\n")

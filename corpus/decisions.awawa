@@ -8332,3 +8332,17 @@ DECISION TheHaltOfAWaveListedIsNullOnceTheWaveEnded
 		+ "parked"
 	SOURCE "the build run of @TASK.B268 of 2026-11-19"
 		REF @TASK.B268
+
+DECISION TheLedgerCalloutCountsTheRunsFinishedBetweenTheFirstAndLastEventsOfTheLedger
+	TITLE "the callout of the Ledger view counts the runs finished in the overview of brigade"
+		+ "ledger, between its first and last events, and the lines of the ledger that overview"
+		+ "skipped"
+	STATUS active
+	DESC "the measures of the view rest on the runs the overview reads; its range is the first and"
+		+ "last events of the ledger, said as an empty ledger when it holds none"
+	REJECTED "the range of the runs whose turns were measured: no document of brigade ledger dates"
+		+ "them, and a new key for it is no SPEC of the task"
+	REJECTED "the sum of the lines skipped by the overview and by budgets: both read the same files"
+		+ "at once, so the sum would count each line twice"
+	SOURCE "@TASK.B271, its SPEC on the callout"
+		REF @TASK.B271
