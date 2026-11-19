@@ -20915,7 +20915,8 @@ TASK B275
 	TITLE "The awawa tab shows the corpus of a project at a ref as awawa-ui does, its tree, its"
 		+ "board, its dependencies and its health, with a detail panel and its state carried by the"
 		+ "address alone; the Corpus view is removed"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 459
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
