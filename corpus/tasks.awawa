@@ -19965,7 +19965,8 @@ TASK B265
 	TITLE "The Reports view says what a report is and, before one is opened, whether its delivery"
 		+ "went well; brigade report list --json carries the subject, the verdict, the statistics"
 		+ "and the date of each report"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 451
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
