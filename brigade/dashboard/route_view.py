@@ -165,6 +165,13 @@ def _route_ledger(query: dict) -> ViewRoute:
     return ViewRoute(routes=routes, render=render_ledger_fragment)
 
 
+def _route_waves() -> ViewRoute:
+    return ViewRoute(
+        routes={DOCUMENT: CommandRoute(arguments=WAVE_LISTING.arguments), OVERVIEW: LEDGER_OVERVIEW},
+        render=render_waves_view,
+    )
+
+
 def route_view(target: str, renderers: dict[str, Callable[[dict], str]]) -> ViewRoute | None:
     address = urlsplit(target)
     if address.path in REGION_ROUTES:
@@ -172,27 +179,30 @@ def route_view(target: str, renderers: dict[str, Callable[[dict], str]]) -> View
     if address.path == LEDGER_VIEW:
         return _route_ledger(parse_qs(address.query))
     if address.path == WAVES_VIEW:
-        return ViewRoute(
-            routes={DOCUMENT: CommandRoute(arguments=WAVE_LISTING.arguments), OVERVIEW: LEDGER_OVERVIEW},
-            render=render_waves_view,
-        )
+        return _route_waves()
     if address.path == HOME_VIEW:
         return ViewRoute(routes=HOME_ROUTES, render=_render_home)
     route = route_command(target)
     if route is None:
         return None
+    return _route_command_view(address.path, parse_qs(address.query), route, renderers)
+
+
+def _route_command_view(
+    path: str, query: dict, route: CommandRoute, renderers: dict[str, Callable[[dict], str]]
+) -> ViewRoute:
     if route.listing == WAVE_LISTING:
         shown = replace(route, arguments=(*WAVE_EVENTS, route.identifier))
         return ViewRoute(routes={DOCUMENT: shown}, render=_render_wave_page, follow=_follow_wave)
-    if address.path == RUNS_VIEW:
-        return _route_runs(route, parse_qs(address.query))
-    if address.path.startswith(f"{RUNS_VIEW}/"):
+    if path == RUNS_VIEW:
+        return _route_runs(route, query)
+    if path.startswith(f"{RUNS_VIEW}/"):
         return ViewRoute(routes={DOCUMENT: route}, render=_render_run, follow=_follow_run)
-    if address.path in renderers:
-        return ViewRoute(routes={DOCUMENT: route}, render=_render_with(renderers[address.path]))
-    if address.path == CORPUS_VIEW:
+    if path in renderers:
+        return ViewRoute(routes={DOCUMENT: route}, render=_render_with(renderers[path]))
+    if path == CORPUS_VIEW:
         return ViewRoute(routes={DOCUMENT: route}, render=_render_with(render_project_choice))
-    if address.path == REPORTS_VIEW:
+    if path == REPORTS_VIEW:
         return ViewRoute(routes={DOCUMENT: route}, render=_render_reports)
-    collection = address.path.split(PATH_SEPARATOR)[0]
+    collection = path.split(PATH_SEPARATOR)[0]
     return ViewRoute(routes={DOCUMENT: route}, render=RENDERERS_BY_COLLECTION[collection])
