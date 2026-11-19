@@ -7,7 +7,7 @@ from brigade.dashboard.render_stat_tile import StatTile, render_stat_tile
 from brigade.dashboard.render_status_sentence import render_status_sentence
 from brigade.inbox.inbox_locations import SHOWN_ID_LENGTH
 from brigade.inbox.render_age import render_age
-from brigade.triage.ratify_pattern import CONSTRAINT_ACTION, CONSTRAINT_KINDS, DISMISS_ACTION
+from brigade.triage.ratify_pattern import CONSTRAINT_ACTION, CONSTRAINT_KINDS, DISMISS_ACTION, ORDER_ACTION
 
 NO_PROJECT = "-"
 NO_SIGNAL_AGE = "-"
@@ -16,11 +16,12 @@ DISMISS_ADDRESS = "/api/inbox/dismiss/"
 WHAT_RATIFYING_STARTS = {
     "wave": "a request on {target}, planned into a wave",
     "constraint": "a constraint on {target} of the kind chosen, and a request delivering it",
-    "order": "an order of its recipe on {target}",
+    "order": "an order of the recipe {recipe} on {target}",
     "dismiss": "nothing: the pattern proposes its own dismissal",
     None: "nothing until the pattern names an action",
 }
 NOTHING_WITHOUT_TARGET = "nothing until the pattern names a target"
+NOTHING_WITHOUT_RECIPE = "nothing until the pattern names a recipe"
 STALE_MARK = ' <span class="stale">stale: its task merged since</span>'
 NO_STALE_MARK = ""
 NO_REPEATED_PATTERN = ""
@@ -82,7 +83,9 @@ def _describe_what_ratifying_starts(pattern: dict) -> str:
     action = pattern["action"]
     if action not in (None, DISMISS_ACTION) and pattern["target"] is None:
         return NOTHING_WITHOUT_TARGET
-    return WHAT_RATIFYING_STARTS[action].format(target=pattern["target"])
+    if action == ORDER_ACTION and pattern["recipe"] is None:
+        return NOTHING_WITHOUT_RECIPE
+    return WHAT_RATIFYING_STARTS[action].format(target=pattern["target"], recipe=pattern["recipe"])
 
 
 def _render_pattern(pattern: dict, repeats_of: dict[str, list[dict]], new_signals: set[str]) -> str:
