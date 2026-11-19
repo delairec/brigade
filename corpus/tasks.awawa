@@ -20140,7 +20140,8 @@ TASK B268
 	TITLE "The Waves view says the state of each wave in the user's words, what the waves delivered"
 		+ "and which tasks were served again and again; brigade wave list --json carries the dates,"
 		+ "the tasks, the halt, the rounds and the cost of each wave"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 452
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
