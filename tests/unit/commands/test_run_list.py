@@ -29,6 +29,7 @@ FIRST_LISTED = {
     "outcome": "done",
     "wave": "tidepool_w1",
     "task": "T1",
+    "started_at": "2026-10-07T09:00:00Z",
 }
 DEAD_LISTED = {
     "run": THIRD_RUN,
@@ -41,6 +42,7 @@ DEAD_LISTED = {
     "outcome": None,
     "wave": "tidepool_w2",
     "task": "T3",
+    "started_at": "2026-10-09T09:00:00Z",
 }
 SECOND_LISTED = {
     "run": SECOND_RUN,
@@ -53,6 +55,7 @@ SECOND_LISTED = {
     "outcome": "done",
     "wave": "tidepool_w2",
     "task": "T2",
+    "started_at": "2026-10-08T09:00:00Z",
 }
 
 
