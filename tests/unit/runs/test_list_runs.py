@@ -155,6 +155,7 @@ class ListRunsOfAnUnfinishedRunTest(ListRunsTestCase):
                         "outcome": None,
                         "wave": None,
                         "task": None,
+                        "started_at": "2026-10-07T09:00:00Z",
                     }
                 ],
                 "skipped": [],
@@ -195,6 +196,17 @@ class ListRunsOfAnUnfinishedRunTest(ListRunsTestCase):
 
 
 class ListRunsOfAFinishedRunTest(ListRunsTestCase):
+    def test_should_date_the_run_by_the_start_its_id_carries(self):
+        # Arrange
+        self.start_run()
+        (self.run_directory / "result.json").write_text(json.dumps(RUN_RESULT))
+
+        # Act
+        [listed] = list_runs(self.state_root)["runs"]
+
+        # Assert
+        self.assertEqual(listed["started_at"], "2026-10-07T09:00:00Z")
+
     def test_should_list_the_run_finished_with_the_outcome_of_its_result(self):
         # Arrange
         self.start_run()
@@ -217,6 +229,11 @@ class ListRunsOfARefusedDocumentTest(ListRunsTestCase):
                 "a record lacking its client",
                 json.dumps(RUN_RECORD_WITHOUT_CLIENT),
                 "is not a run record: lacks the key client",
+            ),
+            (
+                "a record naming a run whose id carries no start",
+                json.dumps({**RUN_RECORD, "run": "by-hand"}),
+                "is not a run record: the run by-hand carries no start in its id",
             ),
         ]
         for case, content, expected_problem in rows:

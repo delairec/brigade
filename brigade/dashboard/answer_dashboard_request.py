@@ -9,7 +9,6 @@ from brigade.dashboard.render_heartbeat import render_heartbeat
 from brigade.dashboard.render_inbox_view import render_inbox_view
 from brigade.dashboard.render_next_tick import render_next_tick
 from brigade.dashboard.render_project_selector import render_project_selector
-from brigade.dashboard.render_runs_fragment import render_runs_fragment
 from brigade.dashboard.route_action import route_action
 from brigade.dashboard.route_change import route_change
 from brigade.dashboard.route_command import CommandRoute, route_command
@@ -39,7 +38,7 @@ BAD_REQUEST = 400
 FORBIDDEN = 403
 NOT_FOUND = 404
 OK = 200
-VIEW_RENDERERS = {"inbox": render_inbox_view, "runs": render_runs_fragment, "next-tick": render_next_tick}
+VIEW_RENDERERS = {"inbox": render_inbox_view, "next-tick": render_next_tick}
 PROJECT_PARAMETER = "project"
 
 
@@ -116,7 +115,10 @@ def _answer_view(target: str, runtime: Runtime) -> DashboardResponse:
         name: _select_project_answer(run_routed_command(route, runtime), selected)
         for name, route in view.routes.items()
     }
-    answers |= {name: run_routed_command(route, runtime) for name, route in view.follow(answers).items()}
+    answers.update(
+        (name, _select_project_answer(run_routed_command(route, runtime), selected))
+        for name, route in view.follow(answers).items()
+    )
     status = next(iter(answers.values())).status
     return DashboardResponse(status=status, content_type=HTML, body=view.render(answers).encode())
 

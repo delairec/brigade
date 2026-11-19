@@ -41,13 +41,19 @@ class ShowRunTestCase(unittest.TestCase):
         self.state_root = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.state_root)
         self.run_directory = self.state_root / "runs" / RUN_ID
-        write_run_record(self.run_directory)
+        write_run_record(self.run_directory, {"task": "@TASK.B94", "base": "<main>"})
 
 
 class ShowRunOfAFinishedRunTest(ShowRunTestCase):
     def setUp(self):
         super().setUp()
-        write_run_result(self.run_directory / "segments" / "1" / "result.json", "handed_over", main_turns=30)
+        write_run_result(
+            self.run_directory / "segments" / "1" / "result.json",
+            "handed_over",
+            main_turns=30,
+            ts="2026-10-19T09:20:00Z",
+            cost_usd=1.25,
+        )
         write_run_result(self.run_directory / "segments" / "2" / "result.json", "done", main_turns=12)
         write_run_result(self.run_directory / "result.json", "done", message="delivered #160")
         (self.run_directory / "log.jsonl").write_text(JOURNAL_LINE)
@@ -73,10 +79,26 @@ class ShowRunOfAFinishedRunTest(ShowRunTestCase):
                     "wave": None,
                     "task": None,
                     "message": "delivered #160",
+                    "started_at": "2026-10-19T09:00:00Z",
                 },
+                "arguments": {"task": "@TASK.B94", "base": "<main>"},
                 "segments": [
-                    {"segment": 1, "outcome": "handed_over", "turns": 30, "duration_ms": 1000},
-                    {"segment": 2, "outcome": "done", "turns": 12, "duration_ms": 1000},
+                    {
+                        "segment": 1,
+                        "outcome": "handed_over",
+                        "turns": 30,
+                        "duration_ms": 1000,
+                        "started_at": "2026-10-19T09:19:59Z",
+                        "cost_usd": 1.25,
+                    },
+                    {
+                        "segment": 2,
+                        "outcome": "done",
+                        "turns": 12,
+                        "duration_ms": 1000,
+                        "started_at": None,
+                        "cost_usd": None,
+                    },
                 ],
                 "log": None,
             },
@@ -112,7 +134,25 @@ class ShowRunOfARunStillInItsFirstSegmentTest(ShowRunTestCase):
 
         # Assert
         self.assertEqual(document["run"]["message"], None)
-        self.assertEqual(document["segments"], [{"segment": 1, "outcome": None, "turns": None, "duration_ms": None}])
+        self.assertEqual(
+            document["segments"],
+            [{"segment": 1, "outcome": None, "turns": None, "duration_ms": None, "started_at": None, "cost_usd": None}],
+        )
+
+    def test_should_leave_the_start_of_a_segment_unknown_when_its_result_measures_no_duration(self):
+        # Arrange
+        write_run_result(
+            self.run_directory / "segments" / "1" / "result.json",
+            "stopped",
+            ts="2026-10-19T09:20:00Z",
+            duration_ms=None,
+        )
+
+        # Act
+        document = show_run(self.state_root, RUN_ID, with_journal=False)
+
+        # Assert
+        self.assertIsNone(document["segments"][0]["started_at"])
 
     def test_should_show_no_segment_before_the_first_starts(self):
         # Act

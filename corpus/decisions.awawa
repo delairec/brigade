@@ -8410,3 +8410,16 @@ DECISION BrigadeStatusCarriesEachNewStallSignalAndWhetherItsTaskMergedSince
 		+ "one more process for one boolean"
 	SOURCE "the build run of @TASK.B267 of 2026-11-19"
 		REF @TASK.B267
+
+DECISION TheStartOfARunIsTheInstantItsIdCarriesAndTheStartOfASegmentItsResultLessItsDuration
+	TITLE "brigade run list and run show date a run by the UTC instant its id carries, and a"
+		+ "segment by the ts of its result less its duration_ms"
+	STATUS active
+	REJECTED "a started_at written into run.json: the runs already recorded carry none, and the id"
+		+ "is written from the same clock at the same instant"
+	REJECTED "the first record of log.jsonl: a run whose client writes no record before its first"
+		+ "segment ends would carry no start"
+	DESC "a run.json naming a run whose id carries no instant is refused as a run record; a segment"
+		+ "whose result carries no ts or no duration_ms has a null started_at"
+	SOURCE "@TASK.B270, delivered by its pull request"
+		REF @TASK.B270
