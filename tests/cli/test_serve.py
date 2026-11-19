@@ -85,6 +85,14 @@ PARKED_WAVE_LEDGER = (
     '{"schema_version": 1, "ts": "2026-11-02T09:00:00Z", "event": "wave.parked", "wave": "oak_w4",'
     ' "reason": "forge_account"}\n'
 )
+REPORT_OF_M13 = (
+    "REPORT brigade_M13\n"
+    '\tMILESTONE "M13"\n'
+    '\tPROJECT "brigade"\n'
+    '\tSTATISTIC "tasks 4"\n'
+    '\tSTATISTIC "merged 3"\n'
+    '\tNARRATIVE "Verdict: M13 delivered three of its four tasks."\n'
+)
 
 
 def fetch_status(url: str) -> int:
@@ -256,6 +264,26 @@ class BrigadeServeTest(unittest.TestCase):
             r'^<section class="report-verdict"><h2>wave-report oak_w3</h2><p class="status-sentence">Verdict: delivered</p>',
         )
 
+
+    def test_should_answer_the_reports_view_with_its_explainer_closed_and_the_verdict_of_each_report(self):
+        # Arrange
+        self.machine.install_awawa(self)
+        self.machine.run_init()
+        (self.machine.corpus / "reports.awawa").write_text(REPORT_OF_M13)
+        url = self.start_serving().stdout.readline().strip()
+
+        # Act
+        status, body = fetch(url, "/views/reports")
+
+        # Assert
+        self.assertEqual(status, 200)
+        self.assertIn(
+            "<details><summary>A report is the account brigade writes once a delivery ends: a milestone"
+            " reached, a task of no milestone ready to merge, or, before the milestone reports, a wave"
+            " closed.</summary>",
+            body,
+        )
+        self.assertIn("<td>Verdict: M13 delivered three of its four tasks.</td>", body)
 
 ADDON_SCHEMA = (
     'SCHEMA TASK\n\tDESC "a task"\n\tFIELD TITLE string\n\t\tREQUIRED\n'

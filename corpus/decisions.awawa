@@ -8495,3 +8495,37 @@ DECISION TheViewDocumentCarriesTheRefsOfItsProjectAndTheAwawaTabLivesInItsAddres
 		REF @DECISION.ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand
 	SOURCE "@TASK.B275, delivered by the role ada on 2026-11-19"
 		REF @TASK.B275
+
+DECISION TheReportsViewListsTheResultsOfTheOrdersInABlockAfterItsThreeBlocksShownOnlyWhenOneExists
+	TITLE "the Reports view lists the RESULT of an order in a block Order results after its three"
+		+ "blocks, shown only when one exists, and its opening sentence counts them as answering an"
+		+ "order"
+	STATUS active
+	DESC "binds @TASK.B265: a row of an order result names its id where a report names its subject,"
+		+ "and a dash where a report names its tasks merged"
+		REF @TASK.B265
+	DESC "the result of an order stays with brigade reports, as"
+		+ "@DECISION.BrigadeReportsListsTheWaveReportsAndStudyAnswersTheOperationalCorpusKeeps"
+		+ "rules"
+		REF @DECISION.BrigadeReportsListsTheWaveReportsAndStudyAnswersTheOperationalCorpusKeeps
+	REJECTED "the three blocks alone: the result of an order stays with brigade reports, and the"
+		+ "dashboard would no longer show it"
+	REJECTED "a fourth block always shown, with its empty state: the view would open on four blocks"
+		+ "where the task draws three"
+	SOURCE "the build run of @TASK.B265"
+		REF @TASK.B265
+
+DECISION ReportListDatesAReportByTheLastLedgerEventNamingItsIdAndKeepsItsStatisticsVerbatim
+	TITLE "brigade report list dates a report by the last milestone.reported, task.reported or"
+		+ "wave.reported event naming it, read as <project>_<milestone>, <project>_<task> or the"
+		+ "wave, which is the name of its entity; its statistics keep the value of each STATISTIC"
+		+ "as written, a string"
+	STATUS active
+	DESC "binds @TASK.B265"
+		REF @TASK.B265
+	REJECTED "the first event recording it: a report written again replaces the entity, and its"
+		+ "date is that of the last writing"
+	REJECTED "the statistics read as integers: a value the CLI did not write as one would refuse"
+		+ "the whole list"
+	SOURCE "the build run of @TASK.B265"
+		REF @TASK.B265

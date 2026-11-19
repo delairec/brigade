@@ -575,8 +575,11 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
         response = answer_get("/views/reports", create_test_runtime(run_process=runner.run))
 
         # Assert
+        self.assertEqual(response.status, 200)
         self.assertEqual(
-            response, DashboardResponse(status=200, content_type="text/html; charset=utf-8", body=b"<p>no report</p>")
+            response.body.partition(b"</p>")[0],
+            b'<p class="status-sentence">0 reports: 0 on a milestone, 0 on a task of no milestone, 0 on a wave,'
+            b" 0 answering an order.",
         )
 
     def test_should_render_the_report_asked_with_the_measures_of_its_waves_and_the_forge_of_its_project(self):
