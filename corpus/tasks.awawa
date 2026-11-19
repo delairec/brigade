@@ -20330,7 +20330,8 @@ TASK B270
 	TITLE "The Runs view and the page of a run say what a run is, where each run stands and what it"
 		+ "left for its next segment; brigade run list --json dates each run, and brigade run show"
 		+ "--json carries its arguments and the date and the cost of each segment"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 455
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
