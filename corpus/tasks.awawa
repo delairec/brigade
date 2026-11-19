@@ -20570,7 +20570,8 @@ TASK B274
 	TITLE "brigade serve starts the awawa addon: one child process that answers over its pipes the"
 		+ "documents of brigade corpus --view for the projects holding a corpus, kept warm until"
 		+ "their .awawa files change, and whose crash leaves the dashboard up"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 450
 	TYPE feat
 	MILESTONE @MILESTONE.M18
 	COMPONENT "dashboard"
