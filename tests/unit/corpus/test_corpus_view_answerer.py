@@ -80,6 +80,13 @@ class CorpusViewAnswererTest(CorpusViewAnswererTestCase):
         self.assertEqual(document["awawa_web"], "http://127.0.0.1:7878/")
         self.assertEqual(document["columns"][0]["entities"][0]["code"], "B2")
 
+    def test_should_offer_the_refs_of_the_project_main_first_then_its_worktrees(self):
+        # Act
+        answer = self.answerer.answer(BOARD_MESSAGE)
+
+        # Assert
+        self.assertEqual(answer["document"]["refs"], ["main", "b42", "worktree:b42"])
+
     def test_should_answer_an_error_the_corpus_command_would_refuse(self):
         # Arrange
         message = {"project": "shop", "view": "board", "type": "TASK"}

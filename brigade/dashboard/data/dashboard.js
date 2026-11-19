@@ -28,6 +28,10 @@ function readOpenSummaries(region) {
   return new Set(Array.from(region.querySelectorAll("details[open] > summary"), (summary) => summary.textContent));
 }
 
+function readShownSummaries(region) {
+  return new Set(Array.from(region.querySelectorAll("details > summary"), (summary) => summary.textContent));
+}
+
 function readFocusedName(region) {
   const focused = document.activeElement;
   if (focused === null || !region.contains(focused)) {
@@ -51,11 +55,14 @@ function swapFragment(region, fragment) {
     return;
   }
   const openSummaries = readOpenSummaries(region);
+  const shownSummaries = readShownSummaries(region);
   const focusedName = readFocusedName(region);
   region.innerHTML = fragment;
   shownFragments.set(region, fragment);
   for (const summary of region.querySelectorAll("details > summary")) {
-    summary.parentElement.open = openSummaries.has(summary.textContent);
+    if (shownSummaries.has(summary.textContent)) {
+      summary.parentElement.open = openSummaries.has(summary.textContent);
+    }
   }
   restoreFocus(region, focusedName);
 }
