@@ -200,6 +200,20 @@ class RenderWaveOfAnOpenWaveTest(unittest.TestCase):
             fragment,
         )
 
+    def test_should_give_no_share_of_a_wave_that_cost_nothing(self):
+        # Arrange
+        free_tasks = [
+            {"task": "B27", "turns": 40, "partial": False, "duration_ms": 1800000, "cost_usd": 0.0},
+            {"task": "B28", "turns": 12, "partial": False, "duration_ms": 600000, "cost_usd": 0.0},
+        ]
+        ledger = {**LEDGER, "cost_usd": 0.0, "by_task": free_tasks}
+
+        # Act
+        fragment = render_wave(WavePage(shown={**SHOWN, "ledger": ledger}, project=ON_GITHUB))
+
+        # Assert
+        self.assertIn('<td><a href="#runs/r27">r27</a></td><td>-</td></tr>', fragment)
+
     def test_should_show_a_task_not_started_as_queued_with_no_run_and_no_share(self):
         # Act
         fragment = render_wave(WavePage(shown=SHOWN, project=ON_GITHUB))
@@ -220,6 +234,25 @@ class RenderWaveOfAnOpenWaveTest(unittest.TestCase):
         self.assertIn(
             '<ul class="failed-actions"><li>merge, failures: 2, the last at 2026-10-19T08:10:00Z: conflict;'
             " cleared by task.state at 2026-10-19T08:40:00Z</li></ul>",
+            fragment,
+        )
+
+    def test_should_never_count_the_failure_of_another_action_as_what_cleared_one(self):
+        # Arrange
+        push_failed = {
+            "at": "2026-10-19T08:20:00Z",
+            "event": "tick.action_failed",
+            "fields": {"action": "push", "task": "B27", "error": "rejected"},
+        }
+        ledger = {**LEDGER, "events": [STARTED, MERGE_FAILED, push_failed, B27_MERGED]}
+
+        # Act
+        fragment = render_wave(WavePage(shown={**SHOWN, "ledger": ledger}, project=ON_GITHUB))
+
+        # Assert
+        self.assertIn(
+            "<li>merge, failures: 1, the last at 2026-10-19T08:05:00Z: conflict;"
+            " cleared by task.state at 2026-10-19T08:40:00Z</li>",
             fragment,
         )
 

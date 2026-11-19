@@ -164,9 +164,10 @@ def _render_runs(task: dict, ledger: dict) -> str:
 
 def _render_share(task: str, ledger: dict) -> str:
     cost = next((entry["cost_usd"] for entry in ledger["by_task"] if entry["task"] == task), None)
-    if cost is None or not ledger["cost_usd"]:
+    total = ledger["cost_usd"]
+    if cost is None or not total:
         return ABSENT
-    return f"{cost / ledger['cost_usd']:.0%}"
+    return f"{cost / total:.0%}"
 
 
 def _render_state(task: dict, wave: str) -> str:
