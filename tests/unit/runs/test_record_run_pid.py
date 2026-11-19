@@ -103,6 +103,7 @@ class RecordRunPidTest(unittest.TestCase):
                             "outcome": None,
                             "wave": None,
                             "task": None,
+                            "started_at": "2026-10-06T12:00:00Z",
                         }
                     ],
                     "skipped": [],
