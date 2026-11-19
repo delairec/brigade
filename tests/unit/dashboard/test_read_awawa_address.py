@@ -23,6 +23,7 @@ class ReadAwawaAddressTest(unittest.TestCase):
         self.assertEqual(address, AwawaAddress(project="my oak"))
 
     def test_should_read_no_address_out_of_the_tab_of_one_project(self):
+        # Arrange
         rows = [
             ("the tab without a project", "awawa"),
             ("an empty project", "awawa/"),

@@ -30,6 +30,7 @@ class RenderAwawaTabTest(unittest.TestCase):
         self.assertIn('<div class="awawa-body"><div class="awawa-view"><div class="awawa-board">', fragment)
 
     def test_should_draw_the_view_named_by_the_document(self):
+        # Arrange
         rows = [
             ("tree", {"view": "tree", "domain": [], "schema": []}, '<div class="awawa-view"><div class="empty-state">'),
             ("dependencies", {"view": "dependencies", "field": "AFTER", "roots": [ROOT_B1]}, "awawa-dependencies"),
