@@ -8,7 +8,6 @@ from brigade.dashboard.render_answer import render_answer
 from brigade.dashboard.render_home import HomeDocuments, render_home
 from brigade.dashboard.render_inbox_item import render_inbox_item
 from brigade.dashboard.render_ledger_fragment import render_ledger_fragment
-from brigade.dashboard.render_project_choice import render_project_choice
 from brigade.dashboard.render_report_fragment import ReportReading, render_report_fragment
 from brigade.dashboard.render_reports_fragment import render_reports_fragment
 from brigade.dashboard.render_run_fragment import RunPage, render_run_fragment
