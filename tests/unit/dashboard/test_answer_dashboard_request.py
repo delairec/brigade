@@ -997,6 +997,7 @@ class AnswerDashboardRequestOfAViewOfOneProjectTest(unittest.TestCase):
             "tasks": 0,
             "started_at": "2026-11-02T08:00:00Z",
             "ended_at": None,
+            "ended_by": None,
             "task_states": [],
             "halt": None,
             "rounds": 0,

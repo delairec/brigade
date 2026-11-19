@@ -41,6 +41,7 @@ TIDES_ROW = {
     "tasks": 2,
     "started_at": "2026-09-30T22:00:00Z",
     "ended_at": "2026-10-01T22:00:00Z",
+    "ended_by": "wave.cancelled",
     "task_states": [{"task": "T7", "state": None}, {"task": "T8", "state": None}],
     "halt": None,
     "rounds": 0,
@@ -54,6 +55,7 @@ GAUGES_ROW = {
     "tasks": 1,
     "started_at": "2026-10-02T22:00:00Z",
     "ended_at": None,
+    "ended_by": None,
     "task_states": [{"task": "G1", "state": None}],
     "halt": None,
     "rounds": 0,
@@ -204,6 +206,20 @@ class WaveListOfTheDetailsOfAWaveTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(wave["halt"], expected_halt)
+
+    def test_should_carry_the_event_that_ended_a_wave_even_when_a_resume_follows_it(self):
+        # Arrange
+        events = [
+            oak_event("wave.parked", "2026-10-03T09:00:00Z", reason="forge_account"),
+            oak_event("wave.cancelled", "2026-10-03T10:00:00Z", reason="user"),
+            oak_event("wave.resumed", "2026-10-03T11:00:00Z", reason="user"),
+        ]
+
+        # Act
+        wave = list_oak_wave(self, events)
+
+        # Assert
+        self.assertEqual(wave["ended_by"], "wave.cancelled")
 
     def test_should_carry_the_most_review_rounds_one_of_its_pull_requests_took(self):
         # Arrange

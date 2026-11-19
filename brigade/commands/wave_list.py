@@ -31,9 +31,8 @@ def _of_wave(entries: tuple[LedgerEntry, ...], wave: str) -> list[LedgerEntry]:
     return [entry for entry in entries if getattr(entry.event, "wave", None) == wave]
 
 
-def _find_ended_at(entries: list[LedgerEntry]) -> str | None:
-    ended = [entry.instant for entry in entries if isinstance(entry.event, ENDING_EVENTS)]
-    return format_instant(ended[0]) if ended else None
+def _find_ending(entries: list[LedgerEntry]) -> LedgerEntry | None:
+    return next((entry for entry in entries if isinstance(entry.event, ENDING_EVENTS)), None)
 
 
 def _describe_halt(entries: list[LedgerEntry], summary: WaveSummary) -> dict | None:
@@ -48,6 +47,7 @@ def _describe(entries: tuple[LedgerEntry, ...], summary: WaveSummary) -> dict:
     of_wave = _of_wave(entries, started.wave)
     states = read_task_states(entries, started.wave)
     events = [entry.event for entry in of_wave]
+    ending = _find_ending(of_wave)
     return {
         "wave": started.wave,
         "project": started.project,
@@ -55,7 +55,8 @@ def _describe(entries: tuple[LedgerEntry, ...], summary: WaveSummary) -> dict:
         "last_event": summary.last_event,
         "tasks": len(started.tasks),
         "started_at": format_instant(summary.started_at),
-        "ended_at": _find_ended_at(of_wave),
+        "ended_at": None if ending is None else format_instant(ending.instant),
+        "ended_by": None if ending is None else ending.event.name,
         "task_states": [{"task": task, "state": states.get(task)} for task in started.tasks],
         "halt": _describe_halt(of_wave, summary),
         "rounds": max((event.rounds for event in events if isinstance(event, PrMerged)), default=NO_ROUND),

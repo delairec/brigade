@@ -13,6 +13,7 @@ OPEN_WAVE = {
     "tasks": 3,
     "started_at": "2026-11-02T08:00:00Z",
     "ended_at": None,
+    "ended_by": None,
     "task_states": [
         {"task": "B1", "state": "merged"},
         {"task": "B2", "state": "running"},
@@ -30,6 +31,7 @@ PARKED_WAVE = {
     "tasks": 1,
     "started_at": "2026-11-01T08:00:00Z",
     "ended_at": None,
+    "ended_by": None,
     "task_states": [{"task": "B4", "state": "parked"}],
     "halt": {"reason": "forge_account", "resume_at": None},
     "rounds": 0,
@@ -43,6 +45,7 @@ BLOCKED_WAVE = {
     "tasks": 1,
     "started_at": "2026-11-01T06:00:00Z",
     "ended_at": None,
+    "ended_by": None,
     "task_states": [{"task": "B4", "state": "blocked:quota"}],
     "halt": {"reason": "quota", "resume_at": "2026-11-01T14:00:00Z"},
     "rounds": 0,
@@ -56,6 +59,7 @@ CLOSED_WAVE = {
     "tasks": 1,
     "started_at": "2026-10-20T08:00:00Z",
     "ended_at": "2026-10-21T09:30:00Z",
+    "ended_by": "wave.closed",
     "task_states": [{"task": "B5", "state": "merged"}],
     "halt": None,
     "rounds": 1,
@@ -69,10 +73,16 @@ CANCELLED_WAVE = {
     "tasks": 1,
     "started_at": "2026-10-10T08:00:00Z",
     "ended_at": "2026-10-10T09:00:00Z",
+    "ended_by": "wave.cancelled",
     "task_states": [{"task": "B4", "state": None}],
     "halt": None,
     "rounds": 0,
     "cost_usd": None,
+}
+RESUMED_AFTER_CANCEL_WAVE = {
+    **CANCELLED_WAVE,
+    "wave": "oak_w0",
+    "last_event": "wave.resumed",
 }
 EVERY_WAVE = [OPEN_WAVE, PARKED_WAVE, BLOCKED_WAVE, CLOSED_WAVE, CANCELLED_WAVE]
 WAVES_STARTED = {"2026-10": ["oak_w1", "oak_w2"], "2026-11": ["oak_w3", "oak_w4", "oak_w5"]}
@@ -194,6 +204,7 @@ class RenderWavesViewTest(unittest.TestCase):
             ("blocked", BLOCKED_WAVE, "tone-you", "▲", "blocked"),
             ("closed", CLOSED_WAVE, "tone-done", "✓", "closed"),
             ("cancelled", CANCELLED_WAVE, "tone-off", "○", "cancelled"),
+            ("resumed after its cancel", RESUMED_AFTER_CANCEL_WAVE, "tone-off", "○", "cancelled"),
         ]
         for case, wave, tone, shape, word in rows:
             with self.subTest(wave=case):
@@ -209,6 +220,26 @@ class RenderWavesViewTest(unittest.TestCase):
                     f'<span class="tone-shape" aria-hidden="true">{shape}</span>{word}</span></span></td>',
                     fragment,
                 )
+
+    def test_should_count_a_wave_resumed_after_its_cancel_out_of_the_open_waves(self):
+        # Arrange
+        answers = create_answers([RESUMED_AFTER_CANCEL_WAVE], {"2026-10": ["oak_w0"]})
+
+        # Act
+        fragment = render_waves_view(answers)
+
+        # Assert
+        self.assertIn('<p class="status-sentence">Waves open: 0, parked: 0, blocked: 0.</p>', fragment)
+
+    def test_should_count_a_wave_resumed_after_its_cancel_among_the_cancelled(self):
+        # Arrange
+        answers = create_answers([RESUMED_AFTER_CANCEL_WAVE], {"2026-10": ["oak_w0"]})
+
+        # Act
+        fragment = render_waves_view(answers)
+
+        # Assert
+        self.assertIn('<span class="stat-label">closed</span><span class="stat-perimeter">1 cancelled</span>', fragment)
 
     def test_should_draw_the_tasks_of_a_wave_of_mixed_states_as_a_stacked_bar(self):
         # Arrange
