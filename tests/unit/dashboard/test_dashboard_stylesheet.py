@@ -125,7 +125,7 @@ class DashboardStylesheetTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             rule,
-            {"display": "flex", "flex-wrap": "wrap", "gap": "var(--space-3)", "margin": "0 0 var(--space-5)"},
+            {"display": "flex", "flex-wrap": "wrap", "gap": "var(--space-3)", "margin": "var(--space-4) 0"},
         )
 
     def test_should_draw_a_missing_verdict_and_a_missing_date_in_the_faint_neutral(self):
