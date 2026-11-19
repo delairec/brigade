@@ -13,7 +13,7 @@ from brigade.dashboard.render_runs_fragment import render_runs_fragment
 from brigade.dashboard.route_action import route_action
 from brigade.dashboard.route_change import route_change
 from brigade.dashboard.route_command import CommandRoute, route_command
-from brigade.dashboard.route_view import route_view
+from brigade.dashboard.route_view import REGION_ROUTES, route_view
 from brigade.dashboard.run_routed_command import CommandAnswer, run_routed_command
 from brigade.dashboard.select_project_rows import select_project_rows
 from brigade.runtime import Runtime
@@ -99,6 +99,7 @@ def _select_project_answer(answer: CommandAnswer, project: str | None) -> Comman
 
 def _answer_view(target: str, runtime: Runtime) -> DashboardResponse:
     project = _read_project(target)
+    selected = None if urlsplit(target.removeprefix(VIEWS_PREFIX)).path in REGION_ROUTES else project
     renderers = {
         **VIEW_RENDERERS,
         "heartbeat": lambda document: render_heartbeat(document, runtime.read_clock()),
@@ -108,7 +109,8 @@ def _answer_view(target: str, runtime: Runtime) -> DashboardResponse:
     if view is None:
         return _answer_error(NOT_FOUND, f"no view serves {target}")
     answers = {
-        name: _select_project_answer(run_routed_command(route, runtime), project) for name, route in view.routes.items()
+        name: _select_project_answer(run_routed_command(route, runtime), selected)
+        for name, route in view.routes.items()
     }
     status = next(iter(answers.values())).status
     return DashboardResponse(status=status, content_type=HTML, body=view.render(answers).encode())

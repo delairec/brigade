@@ -923,8 +923,43 @@ class AnswerDashboardRequestOfTheProjectSelectorTest(unittest.TestCase):
             b'<option value="oak" selected>oak</option></select></label><button>show</button>',
         )
 
+    def test_should_list_every_project_whichever_project_the_address_carries(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {
+                PROJECT_LIST: ProcessAnswer(
+                    stdout='{"schema_version": 1, "projects": [{"name": "oak"}, {"name": "elm"}]}\n'
+                )
+            }
+        )
+
+        # Act
+        response = answer_get("/views/selector?project=oak", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertIn(b'<option value="elm">elm</option>', response.body)
+
 
 class AnswerDashboardRequestOfAViewOfOneProjectTest(unittest.TestCase):
+    def test_should_leave_out_of_home_the_projects_and_the_blocked_waves_of_the_others(self):
+        # Arrange
+        home = json.loads(HOME)
+        home["projects"] = [{"name": "oak", "paused": False}, {"name": "elm", "paused": True}]
+        home["quota"]["blocked_waves"] = [
+            {"wave": "oak_w2", "project": "oak", "resume_at": "2026-10-19T10:00:00Z"},
+            {"wave": "elm_w1", "project": "elm", "resume_at": "2026-10-19T10:00:00Z"},
+        ]
+        runner = ScriptedProcessRunner(
+            {(PYTHON, ENTRY_POINT, "status", "--json"): ProcessAnswer(stdout=json.dumps(home))}
+        )
+
+        # Act
+        response = answer_get("/views/status?project=oak", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertNotIn(b"elm", response.body)
+        self.assertIn(b"oak_w2 blocked on quota", response.body)
+
     def test_should_render_the_rows_of_that_project_alone(self):
         # Arrange
         waves = '{"schema_version": 1, "waves": [{"wave": "w4", "project": "oak"}, {"wave": "w5", "project": "elm"}]}\n'

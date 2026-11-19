@@ -87,7 +87,7 @@ HOME = {
             "cache_read_input_tokens": 40,
         },
         "runs_without_usage": 1,
-        "blocked_waves": [{"wave": "oak_w2", "resume_at": "2026-10-19T10:00:00Z"}],
+        "blocked_waves": [{"wave": "oak_w2", "project": "oak", "resume_at": "2026-10-19T10:00:00Z"}],
     },
     "last_tick": {"ts": "2026-10-19T08:55:00Z", "duration_ms": 120, "actions_applied": 2},
     "studies": [
@@ -222,7 +222,10 @@ class StatusOfTheMachineTest(unittest.TestCase):
         document = COMMAND.run(Namespace(), runtime)
 
         # Assert
-        self.assertEqual(document["quota"]["blocked_waves"], [{"wave": "oak_w2", "resume_at": "2026-10-19T10:00:00Z"}])
+        self.assertEqual(
+            document["quota"]["blocked_waves"],
+            [{"wave": "oak_w2", "project": "oak", "resume_at": "2026-10-19T10:00:00Z"}],
+        )
 
     def test_should_list_due_a_study_parked_by_a_rate_limit_whose_reset_has_passed(self):
         # Arrange
