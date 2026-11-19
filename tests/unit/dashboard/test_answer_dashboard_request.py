@@ -1278,7 +1278,8 @@ class AnswerDashboardRequestOfTheAwawaTabTest(unittest.TestCase):
         response = self.answer("/views/awawa/app?view=board&type=TASK&project=app")
 
         # Assert
-        self.assertEqual((response.status, response.content_type), (200, "text/html; charset=utf-8"))
+        self.assertEqual(response.status, 200)
+        self.assertEqual(response.content_type, "text/html; charset=utf-8")
         self.assertIn(b'<div class="awawa-view"><div class="awawa-board">', response.body)
 
     def test_should_ask_the_addon_the_parameters_of_the_address_and_the_tree_when_it_names_no_view(self):
@@ -1306,7 +1307,8 @@ class AnswerDashboardRequestOfTheAwawaTabTest(unittest.TestCase):
         # Assert
         self.assertEqual(response.body, b'<a href="#awawa/app">awawa</a>')
 
-    def test_should_serve_the_corpus_view_no_more(self):
+    def test_should_answer_no_view_at_the_addresses_of_the_corpus_view(self):
+        # Arrange
         rows = [("the project choice", "/views/corpus"), ("the corpus of a project", "/views/corpus/oak?ref=main")]
         for case, target in rows:
             with self.subTest(case):

@@ -45,6 +45,7 @@ class RenderAwawaToolbarTest(unittest.TestCase):
         )
 
     def test_should_offer_the_field_of_the_board_on_the_board_alone(self):
+        # Arrange
         rows = [
             ("the board", BOARD, BOARD_OF_THE_TODO_TASKS, True),
             ("the tree", TREE, TREE_OF_OAK, False),
