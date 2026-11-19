@@ -1077,7 +1077,7 @@ DEFERRED_REBASES = (LaunchTask, RebaseTask, RebaseMilestone)
 def _describe_decided_action(
     runtime: Runtime, list_check_runs_of: Callable[[str], Callable[[str, str], list[dict]]], action
 ) -> dict:
-    decided = dataclasses.asdict(action)
+    decided = {"action": type(action).__name__, **dataclasses.asdict(action)}
     if not isinstance(action, DEFERRED_REBASES):
         return decided
     project = find_project(read_projects(runtime), action.project)
