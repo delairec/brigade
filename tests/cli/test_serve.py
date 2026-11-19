@@ -265,7 +265,7 @@ class BrigadeServeOfAWaveTest(WaveTickTestCase):
 class BrigadeServeHomeTest(BrigadeServeTestCase):
     def test_should_answer_home_opening_on_the_sentence_of_brigade(self):
         # Arrange
-        url = self.start_serving().stdout.readline().strip()
+        _, url = self.start_serving()
 
         # Act
         status, body = fetch(url, "/views/status")
@@ -279,7 +279,7 @@ class BrigadeServeHomeTest(BrigadeServeTestCase):
         ledger = self.machine.state_home / "brigade" / "ledger" / "2026-11.jsonl"
         ledger.parent.mkdir(parents=True, exist_ok=True)
         ledger.write_text(PARKED_WAVE)
-        url = self.start_serving().stdout.readline().strip()
+        _, url = self.start_serving()
 
         # Act
         status, body = fetch(url, "/views/status")
