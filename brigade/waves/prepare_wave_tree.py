@@ -1,16 +1,20 @@
 import argparse
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.prepare_tree import Tree
-from brigade.corpus.read_entities import read_entities
+from brigade.corpus.read_entities import Entity, read_entities
 from brigade.errors import BrigadeError
+from brigade.git.fetch_branches import REMOTE
+from brigade.git.resolve_commit import resolve_commit
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.milestone_branch_cut import MilestoneBranchCut
 from brigade.ledger.milestone_closed import MilestoneClosed
 from brigade.ledger.wave_started import WaveStarted
 from brigade.registry.find_project import find_project
+from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
@@ -21,16 +25,28 @@ from brigade.waves.locate_forge_branch import locate_forge_branch
 TASK_TYPE = "TASK"
 MAIN_FIELD = "MAIN"
 MILESTONE_PREFIX = "@MILESTONE."
+PATH_FIELD = "PATH"
 
 
 @dataclass(frozen=True)
 class WaveTreeReading:
     configuration: Configuration
     read_environment: Callable[[str], dict]
+    reaches_the_forge: bool = True
+
+
+def _locate_fetched_branch_ref(runtime: Runtime, entity: Entity, branch: str) -> str:
+    if not is_on_a_forge(entity):
+        return branch
+    fetched = f"{REMOTE}/{branch}"
+    repository = Path(read_project_field(entity, PATH_FIELD))
+    return branch if resolve_commit(runtime.run_process, repository, fetched) is None else fetched
 
 
 def _locate_branch_ref(runtime: Runtime, reading: WaveTreeReading, project: str, branch: str) -> str:
     entity = find_project(read_projects(runtime), project)
+    if not reading.reaches_the_forge:
+        return _locate_fetched_branch_ref(runtime, entity, branch)
     recorded = RecordedMilestoneBranch(project=entity, branch=branch, read_environment=reading.read_environment)
     if is_milestone_branch_off_the_forge(runtime.run_process, recorded):
         return branch

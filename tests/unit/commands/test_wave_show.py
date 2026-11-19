@@ -128,11 +128,7 @@ class WaveShowRequestTest(unittest.TestCase):
 class WaveShowOfTheLedgerTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        write_operational_corpus(self.root)
-        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
-        self.runtime = create_test_runtime(
-            create_test_paths(self.root), run_process=create_machine_double(CORPUS, MACHINE_OUTPUTS)
-        )
+        self.runtime = create_test_runtime(create_test_paths(self.root))
 
     def test_should_show_each_task_with_its_last_state_its_pull_request_and_its_run(self):
         # Arrange
@@ -152,8 +148,6 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
                 "started_at": "2026-09-30T22:00:00Z",
                 "last_event": "wave.started",
                 "pull_request": None,
-                "milestone": "M4",
-                "milestone_report": None,
                 "merge_command": None,
                 "task_merge_commands": [],
                 "tasks": [
@@ -369,7 +363,7 @@ class WaveShowOfAProjectWithoutAForgeTest(unittest.TestCase):
 
     def _show(self, events: list[dict]) -> dict:
         write_ledger(self.root, events)
-        return COMMAND.run(Namespace(wave="tidepool_w16", events=False), self.runtime)
+        return COMMAND.run(Namespace(wave="tidepool_w16", events=False, json=True), self.runtime)
 
     def test_should_print_the_command_merging_the_milestone_of_the_wave_once_its_report_is_committed(self):
         # Act
@@ -530,3 +524,47 @@ class WaveShowOfAProjectWithoutAForgeTest(unittest.TestCase):
         # Assert
         self.assertIsNone(document["merge_command"])
         self.assertNotIn("to merge", COMMAND.render_text(document))
+
+
+MILESTONE_LOOKUP = ("git", "ls-remote", "--quiet", "--exit-code", "--heads", "origin", "refs/heads/integration/tides")
+MILESTONE_FETCH = ("git", "fetch", "--quiet", "origin", "integration/tides")
+
+
+class WaveShowOfAProjectOnAForgeTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.argvs = []
+        run_machine = create_machine_double(CORPUS_ON_A_FORGE, MACHINE_OUTPUTS)
+
+        def run_process(request):
+            self.argvs.append(request.argv)
+            return run_machine(request)
+
+        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=run_process)
+
+    def _show_as_json(self) -> dict:
+        write_ledger(self.root, [CUT, FORGELESS_WAVE_STARTED])
+        return COMMAND.run(Namespace(wave="tidepool_w16", events=False, json=True), self.runtime)
+
+    def test_should_name_the_milestone_of_the_wave_its_tasks_name_on_the_forge(self):
+        # Act
+        document = self._show_as_json()
+
+        # Assert
+        self.assertEqual(document["milestone"], "M4")
+
+    def test_should_look_up_no_branch_of_the_forge_to_name_the_milestone(self):
+        # Act
+        self._show_as_json()
+
+        # Assert
+        self.assertNotIn(MILESTONE_LOOKUP, self.argvs)
+
+    def test_should_fetch_no_branch_of_the_forge_to_name_the_milestone(self):
+        # Act
+        self._show_as_json()
+
+        # Assert
+        self.assertNotIn(MILESTONE_FETCH, self.argvs)

@@ -20233,7 +20233,7 @@ TASK B269
 	ROLE ada
 	SPEC "brigade wave show --json carries milestone, the milestone the tasks of the wave name,"
 		+ "null for a wave of tasks naming none; the text output is unchanged"
-		IMPL "brigade/commands/wave_show.py::\"milestone\": tree.milestone,"
+		IMPL "brigade/commands/wave_show.py::def _name_milestone("
 		IMPL "tests/unit/commands/test_wave_show.py::def"
 			+ "test_should_name_the_milestone_the_tasks_of_the_wave_name(self):"
 	SPEC "the page opens on one sentence saying how the wave stands or how it ended, and five"
