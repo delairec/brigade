@@ -5,10 +5,11 @@ from pathlib import Path
 
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, RunTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
+from tests.cli.wave_tick_test_case import MILESTONE_BRANCH_CUT, WaveTickTestCase
 
 SHOWN_WAVE_EVENTS = (
     '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
-    ' "project": "shop", "branch": "integration/shop_w1", "tasks": ["S3", "S4", "S5"]}\n'
+    ' "project": "shop", "branch": "integration/M1-empty-cart", "tasks": ["S3", "S4", "S5"]}\n'
     '{"schema_version": 1, "ts": "2026-10-13T10:00:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
     ' "state": "queued"}\n'
     '{"schema_version": 1, "ts": "2026-10-13T11:00:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
@@ -63,36 +64,36 @@ CANCELLED_WAVE_EVENTS = (
 
 
 RECORDED_WAVE_EVENTS = (
-    '{"schema_version": 2, "ts": "2026-09-30T22:00:00Z", "event": "wave.started", "wave": "tidepool_w16",'
-    ' "project": "tidepool", "branch": "integration/M1", "tasks": ["T1"]}\n'
-    '{"schema_version": 3, "ts": "2026-09-30T22:10:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
-    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    '{"schema_version": 2, "ts": "2026-09-30T22:00:00Z", "event": "wave.started", "wave": "shop_w16",'
+    ' "project": "shop", "branch": "integration/M1-empty-cart", "tasks": ["T1"]}\n'
+    '{"schema_version": 3, "ts": "2026-09-30T22:10:00Z", "event": "run.finished", "wave": "shop_w16", "task": "TP146",'
+    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "shop", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "failed",'
     ' "error_class": "rate_limit", "main_turns": 50, "total_turns": null}\n'
-    '{"schema_version": 1, "ts": "2026-09-30T22:15:00Z", "event": "wave.parked", "wave": "tidepool_w16", "reason": "quota"}\n'
-    '{"schema_version": 1, "ts": "2026-10-01T00:15:00Z", "event": "wave.resumed", "wave": "tidepool_w16", "reason": "quota"}\n'
-    '{"schema_version": 3, "ts": "2026-10-01T00:40:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
-    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "tidepool", "session": null,'
+    '{"schema_version": 1, "ts": "2026-09-30T22:15:00Z", "event": "wave.parked", "wave": "shop_w16", "reason": "quota"}\n'
+    '{"schema_version": 1, "ts": "2026-10-01T00:15:00Z", "event": "wave.resumed", "wave": "shop_w16", "reason": "quota"}\n'
+    '{"schema_version": 3, "ts": "2026-10-01T00:40:00Z", "event": "run.finished", "wave": "shop_w16", "task": "TP146",'
+    ' "run": "20261001T000000Z-a00001", "client": "claude-code", "project": "shop", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 2, "outcome": "done",'
     ' "error_class": null, "main_turns": 30, "total_turns": null}\n'
-    '{"schema_version": 3, "ts": "2026-10-01T00:50:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP147",'
-    ' "run": "20261001T000000Z-a00002", "client": "claude-code", "project": "tidepool", "session": null,'
+    '{"schema_version": 3, "ts": "2026-10-01T00:50:00Z", "event": "run.finished", "wave": "shop_w16", "task": "TP147",'
+    ' "run": "20261001T000000Z-a00002", "client": "claude-code", "project": "shop", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "main_turns": null, "total_turns": null}\n'
-    '{"schema_version": 3, "ts": "2026-10-01T01:00:00Z", "event": "run.finished", "wave": "tidepool_w16", "task": "TP146",'
-    ' "run": "20261001T000000Z-a00003", "client": "claude-code", "project": "tidepool", "session": null,'
+    '{"schema_version": 3, "ts": "2026-10-01T01:00:00Z", "event": "run.finished", "wave": "shop_w16", "task": "TP146",'
+    ' "run": "20261001T000000Z-a00003", "client": "claude-code", "project": "shop", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-pr-review", "role": "remi", "slot": "review", "segment": 1, "outcome": "done",'
     ' "error_class": null, "main_turns": 12, "total_turns": null}\n'
-    '{"schema_version": 1, "ts": "2026-10-01T01:30:00Z", "event": "pr.merged", "project": "tidepool", "wave": "tidepool_w16",'
+    '{"schema_version": 1, "ts": "2026-10-01T01:30:00Z", "event": "pr.merged", "project": "shop", "wave": "shop_w16",'
     ' "task": "TP146", "pr": 291, "rounds": 1, "login": "tidepool-cli"}\n'
-    '{"schema_version": 1, "ts": "2026-10-01T01:40:00Z", "event": "task.parked", "wave": "tidepool_w16", "task": "TP147",'
+    '{"schema_version": 1, "ts": "2026-10-01T01:40:00Z", "event": "task.parked", "wave": "shop_w16", "task": "TP147",'
     ' "reason": "blocked", "blockers": ["OPEN_QUESTION.Undecided"]}\n'
-    '{"schema_version": 3, "ts": "2026-10-01T02:00:00Z", "event": "run.finished", "wave": "tidepool_w17", "task": "TP150",'
-    ' "run": "20261001T000000Z-a00004", "client": "claude-code", "project": "tidepool", "session": null,'
+    '{"schema_version": 3, "ts": "2026-10-01T02:00:00Z", "event": "run.finished", "wave": "shop_w17", "task": "TP150",'
+    ' "run": "20261001T000000Z-a00004", "client": "claude-code", "project": "shop", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
     ' "procedure": "awawa-task", "role": "builder", "slot": "build", "segment": 1, "outcome": "done",'
     ' "error_class": null, "main_turns": 20, "total_turns": null}\n'
@@ -116,14 +117,14 @@ class WaveTestCase(unittest.TestCase):
         return self.machine.run_brigade(CLONE_ENTRY_POINT, "wave", *arguments)
 
 
-class BrigadeWaveShowTest(WaveTestCase):
+class BrigadeWaveShowTest(WaveTickTestCase):
     def setUp(self):
         super().setUp()
-        self.write_ledger(SHOWN_WAVE_EVENTS)
+        (self.state / "ledger" / "2026-10.jsonl").write_text(MILESTONE_BRANCH_CUT + SHOWN_WAVE_EVENTS)
 
     def test_should_print_the_wave_and_each_task_with_its_state_its_pull_request_and_its_run(self):
         # Act
-        completed = self.run_wave("show", "shop_w1", "--json")
+        completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "wave", "show", "shop_w1", "--json")
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -133,7 +134,7 @@ class BrigadeWaveShowTest(WaveTestCase):
                 "schema_version": 1,
                 "wave": "shop_w1",
                 "project": "shop",
-                "branch": "integration/shop_w1",
+                "branch": "integration/M1-empty-cart",
                 "started_at": "2026-10-13T09:00:00Z",
                 "last_event": "wave.started",
                 "pull_request": None,
@@ -149,20 +150,21 @@ class BrigadeWaveShowTest(WaveTestCase):
                     {"task": "S5", "state": None, "pull_request": None, "run": None, "reason": None},
                 ],
                 "milestone": "M1",
+                "milestone_report": None,
                 "merge_command": None,
                 "task_merge_commands": [],
             },
         )
 
 
-class BrigadeWaveShowEventsTest(WaveTestCase):
+class BrigadeWaveShowEventsTest(WaveTickTestCase):
     def setUp(self):
         super().setUp()
-        self.write_ledger(RECORDED_WAVE_EVENTS)
+        (self.state / "ledger" / "2026-10.jsonl").write_text(MILESTONE_BRANCH_CUT + RECORDED_WAVE_EVENTS)
 
     def test_should_print_the_wave_its_measures_and_its_events_in_the_order_recorded(self):
         # Act
-        completed = self.run_wave("show", "tidepool_w16", "--events")
+        completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "wave", "show", "shop_w16", "--events")
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -170,12 +172,12 @@ class BrigadeWaveShowEventsTest(WaveTestCase):
             completed.stdout.splitlines(),
             [
                 (
-                    "wave tidepool_w16 of @PROJECT.tidepool on integration/M1, started 2026-09-30T22:00:00Z,"
+                    "wave shop_w16 of @PROJECT.shop on integration/M1-empty-cart, started 2026-09-30T22:00:00Z,"
                     " last event wave.resumed, pull request -"
                 ),
                 "task  state  pull request  run  reason",
                 "T1    -      -             -    -",
-                "wave tidepool_w16: 2026-09-30T22:00:00Z to 2026-10-01T01:40:00Z, wall time 3h40m",
+                "wave shop_w16: 2026-09-30T22:00:00Z to 2026-10-01T01:40:00Z, wall time 3h40m",
                 "cost: none",
                 "tokens: none",
                 "tasks:",
