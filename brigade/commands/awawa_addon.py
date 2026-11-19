@@ -9,6 +9,7 @@ from brigade.dashboard.answer_addon_lines import answer_addon_lines
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runtime import Runtime
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 
 DOCUMENT_SCHEMA_VERSION = 1
 
@@ -16,7 +17,8 @@ DOCUMENT_SCHEMA_VERSION = 1
 def awawa_addon(request: argparse.Namespace, runtime: Runtime) -> dict:
     version = read_awawa_version(runtime.run_process)
     require_operational_corpus(runtime.paths)
-    answerer = CorpusViewAnswerer(read_projects(runtime), runtime, runtime.run_process)
+    configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
+    answerer = CorpusViewAnswerer(read_projects(runtime), configuration, runtime, runtime.run_process)
     sys.stdout.write(f"{json.dumps({'awawa': version})}\n")
     sys.stdout.flush()
     answered = answer_addon_lines(request.standard_input, sys.stdout, answerer.answer)
