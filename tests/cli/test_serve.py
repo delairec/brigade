@@ -264,7 +264,6 @@ class BrigadeServeTest(unittest.TestCase):
             r'^<section class="report-verdict"><h2>wave-report oak_w3</h2><p class="status-sentence">Verdict: delivered</p>',
         )
 
-
     def test_should_answer_the_reports_view_with_its_explainer_closed_and_the_verdict_of_each_report(self):
         # Arrange
         self.machine.install_awawa(self)
