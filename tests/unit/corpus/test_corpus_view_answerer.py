@@ -5,6 +5,7 @@ from pathlib import Path
 
 from brigade.corpus.corpus_view_answerer import CorpusViewAnswerer
 from brigade.corpus.read_entities import Entity, EntityField
+from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
 from tests.unit.corpus.awawa_corpus_double import (
     STRING,
@@ -61,7 +62,8 @@ class CorpusViewAnswererTestCase(unittest.TestCase):
         )
         self.awawa = ScriptedProcessRunner({}, fallback=create_awawa_double(ANSWERED_CORPUS, self.worktree))
         runtime = create_test_runtime(create_test_paths(Path(root.name) / "machine"), run_process=self.git.run)
-        self.answerer = CorpusViewAnswerer(PROJECTS, runtime, self.awawa.run)
+        configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
+        self.answerer = CorpusViewAnswerer(PROJECTS, configuration, runtime, self.awawa.run)
 
 
 class CorpusViewAnswererTest(CorpusViewAnswererTestCase):
