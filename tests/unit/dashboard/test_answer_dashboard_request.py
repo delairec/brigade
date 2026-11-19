@@ -34,6 +34,8 @@ WAVE_W4_LISTED = (
     ' "last_event": "wave.started", "tasks": 2}]}\n'
 )
 NO_PROJECT = '{"schema_version": 1, "projects": []}\n'
+LEDGER_OVERVIEW = (PYTHON, ENTRY_POINT, "ledger", "--json")
+NO_WAVE_STARTED = '{"schema_version": 1, "view": "overview", "waves_started": {}}\n'
 
 
 def answer_get(target: str, runtime) -> DashboardResponse:
@@ -285,20 +287,33 @@ class AnswerDashboardRequestOfThePageTest(unittest.TestCase):
 
 
 class AnswerDashboardRequestOfAViewTest(unittest.TestCase):
-    def test_should_render_the_fragment_of_the_json_of_the_command(self):
+    def test_should_render_the_waves_view_from_the_list_of_the_waves_and_the_overview_of_the_ledger(self):
         # Arrange
-        runner = ScriptedProcessRunner({WAVE_LIST: ProcessAnswer(stdout='{"schema_version": 1, "waves": []}\n')})
+        runner = ScriptedProcessRunner(
+            {WAVE_LIST: ProcessAnswer(stdout=NO_WAVE), LEDGER_OVERVIEW: ProcessAnswer(stdout=NO_WAVE_STARTED)}
+        )
 
         # Act
         response = answer_get("/views/waves", create_test_runtime(run_process=runner.run))
 
         # Assert
+        self.assertEqual(runner.argvs, [WAVE_LIST, LEDGER_OVERVIEW])
         self.assertEqual(
             response,
             DashboardResponse(
                 status=200,
                 content_type="text/html; charset=utf-8",
-                body=b"<dl><dt>schema_version</dt><dd>1</dd><dt>waves</dt><dd><ol></ol></dd></dl>",
+                body=b'<p class="status-sentence">Waves open: 0, parked: 0, blocked: 0.</p><div class="stat-tiles">'
+                b'<div class="stat-tile"><span class="stat-value">0</span><span class="stat-label">open now</span>'
+                b'<span class="stat-perimeter">0 parked, 0 blocked</span></div>'
+                b'<div class="stat-tile"><span class="stat-value">0</span><span class="stat-label">started</span>'
+                b'<span class="stat-perimeter">by month: none</span></div>'
+                b'<div class="stat-tile"><span class="stat-value">0</span><span class="stat-label">closed</span>'
+                b'<span class="stat-perimeter">0 cancelled</span></div>'
+                b'<div class="stat-tile"><span class="stat-value">0 of 0</span>'
+                b'<span class="stat-label">tasks merged</span>'
+                b'<span class="stat-perimeter">over the last 12 waves, 0 merged nothing</span></div></div>'
+                b"<p>no wave started</p>",
             ),
         )
 
@@ -974,18 +989,31 @@ class AnswerDashboardRequestOfAViewOfOneProjectTest(unittest.TestCase):
 
     def test_should_render_the_rows_of_that_project_alone(self):
         # Arrange
-        waves = '{"schema_version": 1, "waves": [{"wave": "w4", "project": "oak"}, {"wave": "w5", "project": "elm"}]}\n'
-        runner = ScriptedProcessRunner({WAVE_LIST: ProcessAnswer(stdout=waves)})
+        oak_wave = {
+            "wave": "w4",
+            "project": "oak",
+            "branch": "integration/w4",
+            "last_event": "wave.started",
+            "tasks": 0,
+            "started_at": "2026-11-02T08:00:00Z",
+            "ended_at": None,
+            "task_states": [],
+            "halt": None,
+            "rounds": 0,
+            "cost_usd": None,
+        }
+        waves = json.dumps({"schema_version": 1, "waves": [oak_wave, {**oak_wave, "wave": "w5", "project": "elm"}]})
+        overview = '{"schema_version": 1, "view": "overview", "waves_started": {"2026-11": ["w4", "w5"]}}\n'
+        runner = ScriptedProcessRunner(
+            {WAVE_LIST: ProcessAnswer(stdout=waves), LEDGER_OVERVIEW: ProcessAnswer(stdout=overview)}
+        )
 
         # Act
         response = answer_get("/views/waves?project=oak", create_test_runtime(run_process=runner.run))
 
         # Assert
-        self.assertEqual(
-            response.body,
-            b"<dl><dt>schema_version</dt><dd>1</dd><dt>waves</dt><dd><ol><li><dl><dt>wave</dt><dd>w4</dd>"
-            b"<dt>project</dt><dd>oak</dd></dl></li></ol></dd></dl>",
-        )
+        self.assertIn(b'<a href="#waves/w4">w4</a>', response.body)
+        self.assertNotIn(b"w5", response.body)
 
 
 def create_dashboard_with_an_addon(test_case: unittest.TestCase, starter: ChildStarterDouble) -> Dashboard:

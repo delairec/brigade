@@ -59,8 +59,14 @@ Its seven views:
 - **Home**, the view shown first — the document of `brigade status`: the projects with their pause or resume button,
   the open waves with a resume button on a paused one, the inbox and its scans, the quota, the last tick, the studies
   and the parked orders.
-- **Waves** — the waves of `brigade wave list`; a wave opens its tasks grouped by state, a requeue button on each
-  parked task, and the timeline of its events.
+- **Waves** — the waves of `brigade wave list`, opening on one sentence counting the waves open, parked and blocked,
+  and four tiles: the waves open now with the parked and the blocked, the waves started with their count by month
+  from `brigade ledger`, the waves closed with the cancelled, and the tasks merged out of the tasks the last 12 waves
+  served, with the waves that merged nothing. Each row, the open waves first, shows the wave linking its page, its
+  state as a pill (running, parked, blocked, closed or cancelled), a bar of its tasks by state, a task no event served
+  yet counted queued, its dates, its review rounds and its cost, said as a floor. The tasks served by three waves or
+  more are named with that count under a heading of their own. A wave opens its tasks grouped by state, a requeue
+  button on each parked task, and the timeline of its events.
 - **Inbox** — the new signals by family, the proposed patterns with their ratify and dismiss buttons, and the study
   answers, each opening the answer rendered from its entity.
 - **Corpus** — choose a registered project, a ref, a type and a board field; it shows the tree of the type, the board
