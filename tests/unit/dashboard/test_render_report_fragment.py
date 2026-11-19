@@ -103,7 +103,46 @@ class RenderReportFragmentOfANarrativeOpeningOnNoLeadingWordTest(unittest.TestCa
         )
 
 
+class RenderReportFragmentDeliveryTest(unittest.TestCase):
+    def test_should_give_the_instant_alone_when_no_pull_request_is_recorded(self):
+        # Arrange
+        document = {**create_document([]), "pull_request": None}
+
+        # Act
+        fragment = render_report_fragment(ReportReading(document, NO_WAVE, NO_FORGE))
+
+        # Assert
+        self.assertEqual(
+            fragment,
+            '<section class="report-verdict"><h2>milestone-report oak_M4</h2>'
+            '<p class="report-delivery">reported 2026-10-03T08:00:00Z</p></section>',
+        )
+
+    def test_should_give_no_delivery_line_when_the_ledger_records_neither_the_instant_nor_the_pull_request(self):
+        # Arrange
+        document = {**create_document([]), "pull_request": None, "reported_at": None}
+
+        # Act
+        fragment = render_report_fragment(ReportReading(document, NO_WAVE, NO_FORGE))
+
+        # Assert
+        self.assertEqual(fragment, '<section class="report-verdict"><h2>milestone-report oak_M4</h2></section>')
+
+
 class RenderReportFragmentGroupingTest(unittest.TestCase):
+    def test_should_list_a_step_naming_no_task_under_no_task_heading(self):
+        # Arrange
+        fields = [("TESTER_STEP", "open the dashboard"), ("TESTER_STEP", "OK7: run oak bark")]
+
+        # Act
+        fragment = render(fields)
+
+        # Assert
+        self.assertIn(
+            "<h3>Test it by hand</h3><ol><li>open the dashboard</li></ol><h4>OK7</h4><ol><li>OK7: run oak bark</li></ol>",
+            fragment,
+        )
+
     def test_should_group_the_steps_to_test_by_hand_and_the_samples_by_the_task_they_name(self):
         # Arrange
         fields = [
