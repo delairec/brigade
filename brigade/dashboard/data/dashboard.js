@@ -4,7 +4,8 @@ const TOKEN_HEADER = "X-Brigade-Token";
 const HEARTBEAT_REGION = "/views/heartbeat";
 const PROJECT_PARAMETER = "project";
 const shownFragments = new Map();
-let lastTickSeen = null;
+const HEARTBEAT_UNREAD = Symbol("heartbeat unread");
+let lastTickSeen = HEARTBEAT_UNREAD;
 
 function selectView() {
   return window.location.hash.slice(1) || FIRST_VIEW;
@@ -72,7 +73,7 @@ function readNextTick() {
 function followTheTick(region) {
   const tick = region.querySelector("time");
   const seen = tick === null ? null : tick.dateTime;
-  if (lastTickSeen !== null && seen !== lastTickSeen) {
+  if (lastTickSeen !== HEARTBEAT_UNREAD && seen !== lastTickSeen) {
     readNextTick();
   }
   lastTickSeen = seen;

@@ -38,6 +38,23 @@ class DashboardScriptTest(unittest.TestCase):
         self.assertIn('event.target.closest("[data-refresh-next-tick]")', script)
         self.assertIn("readNextTick();\n", script)
 
+    def test_should_read_the_next_tick_once_the_tick_seen_in_the_heartbeat_changes_and_never_on_the_poll(self):
+        # Act
+        script = SCRIPT.read_text(encoding="utf-8")
+
+        # Assert
+        self.assertIn(
+            'const HEARTBEAT_UNREAD = Symbol("heartbeat unread");\nlet lastTickSeen = HEARTBEAT_UNREAD;\n', script
+        )
+        self.assertIn(
+            "  const seen = tick === null ? null : tick.dateTime;\n"
+            "  if (lastTickSeen !== HEARTBEAT_UNREAD && seen !== lastTickSeen) {\n"
+            "    readNextTick();\n"
+            "  }\n"
+            "  lastTickSeen = seen;\n",
+            script,
+        )
+
     def test_should_show_the_next_tick_on_home_alone(self):
         # Act
         script = SCRIPT.read_text(encoding="utf-8")
