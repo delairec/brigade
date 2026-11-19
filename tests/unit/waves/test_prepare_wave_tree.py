@@ -289,6 +289,57 @@ class PrepareWaveTreeOnTheForgeTest(WaveTreeOnTheForgeTestCase):
         self.assertNotIn(MILESTONE_FETCH, self.runner.list_argvs())
 
 
+READING_OFF_THE_FORGE = WaveTreeReading(
+    configuration=Configuration(), read_environment=lambda key: FORGE_ENVIRONMENT, reaches_the_forge=False
+)
+
+
+class PrepareWaveTreeOffTheForgeTest(WaveTreeOnTheForgeTestCase):
+    def test_should_read_the_tree_of_a_wave_at_the_branch_of_its_milestone_as_the_last_fetch_left_it(self):
+        # Arrange
+        runtime = self.create_forge_runtime()
+        started = WaveStarted(wave="shop_w2", project="shop", tasks=("B3",))
+
+        # Act
+        tree = prepare_wave_tree(runtime, READING_OFF_THE_FORGE, started)
+
+        # Assert
+        self.assertEqual(tree.root, self.forge_milestone_tree)
+
+    def test_should_look_up_no_branch_of_the_milestone_on_the_forge(self):
+        # Arrange
+        runtime = self.create_forge_runtime()
+        started = WaveStarted(wave="shop_w2", project="shop", tasks=("B3",))
+
+        # Act
+        prepare_wave_tree(runtime, READING_OFF_THE_FORGE, started)
+
+        # Assert
+        self.assertNotIn(MILESTONE_LOOKUP, self.runner.list_argvs())
+
+    def test_should_fetch_no_branch_of_the_milestone(self):
+        # Arrange
+        runtime = self.create_forge_runtime()
+        started = WaveStarted(wave="shop_w2", project="shop", tasks=("B3",))
+
+        # Act
+        prepare_wave_tree(runtime, READING_OFF_THE_FORGE, started)
+
+        # Assert
+        self.assertNotIn(MILESTONE_FETCH, self.runner.list_argvs())
+
+    def test_should_read_at_its_local_branch_a_milestone_no_fetch_left_on_the_clone(self):
+        # Arrange
+        runtime = self.create_runtime(answer_tree(MILESTONE_BRANCH, MILESTONE_SHA), self.milestone_tree, forge="github")
+        started = WaveStarted(wave="shop_w2", project="shop", tasks=("B3",))
+
+        # Act
+        tree = prepare_wave_tree(runtime, READING_OFF_THE_FORGE, started)
+
+        # Assert
+        self.assertEqual(tree.root, self.milestone_tree)
+
+
 class LocateWaveBranchBaseOnTheForgeTest(WaveTreeOnTheForgeTestCase):
     def test_should_locate_the_base_of_a_wave_branch_by_the_milestone_read_on_the_forge(self):
         # Arrange
