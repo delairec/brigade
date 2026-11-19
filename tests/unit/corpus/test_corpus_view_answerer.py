@@ -94,8 +94,8 @@ class CorpusViewAnswererTest(CorpusViewAnswererTestCase):
         answer = self.answerer.answer(BOARD_MESSAGE)
 
         # Assert
-        codes = [entity["code"] for column in answer["document"]["columns"] for entity in column["entities"]]
-        self.assertEqual(codes, ["B2"])
+        implemented = answer["document"]["columns"][1]
+        self.assertEqual(implemented, {"label": "implemented", "value": "implemented", "entities": []})
 
     def test_should_refuse_a_view_the_corpus_command_refuses(self):
         rows = [("an unknown view", {"view": "foo"}), ("no view", {})]

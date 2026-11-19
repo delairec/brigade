@@ -304,7 +304,8 @@ class AskAnAwawaAddonWhoseHoldersCouldNotBeListedTest(unittest.TestCase):
         answers = (supervisor.ask("app", BOARD_QUERY), supervisor.ask("app", BOARD_QUERY))
 
         # Assert
-        self.assertEqual([answer.status for answer in answers], [200, 200])
+        served = AddonAnswer(status=200, document={"asked": {"project": "app", "view": "board", "type": "TASK"}})
+        self.assertEqual(answers, (served, served))
         self.assertEqual(listing.calls, 2)
 
 
