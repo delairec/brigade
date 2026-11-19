@@ -344,6 +344,11 @@ h3 {
   fill: var(--tone);
 }
 
+.bar-cap {
+  stroke: var(--ink);
+  stroke-width: 1;
+}
+
 .step-path {
   fill: none;
   stroke: var(--tone);

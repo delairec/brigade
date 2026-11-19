@@ -16,6 +16,11 @@ Every view prints text or, with `--json`, a JSON document. `--since <n>d|<YYYY-M
 and `--project` to the events from that instant on. What happened in a wave, its cost, tokens, turns and events, is
 printed by `brigade wave show <wave> --events`, [Waves](Waves.md).
 
+The JSON of the overview carries `failed_actions`: the failed tick actions, `by_day` their count per day in UTC, and
+`by_action` for each action its `count` and its most frequent `error`. The JSON of `budgets` carries for each role
+`segment_p50` and `segment_p90`, the percentiles of the main turns of its measured segments at its latest digests,
+`null` when it has none. The text of both views prints neither.
+
 ## Comparing ranges
 
 A range is two days `YYYY-MM-DD` in UTC, the end day included; a run belongs to the range its last segment finished in.

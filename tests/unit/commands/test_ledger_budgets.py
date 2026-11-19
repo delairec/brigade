@@ -54,6 +54,8 @@ class LedgerBudgetsTest(unittest.TestCase):
                         "restarts": 0,
                         "growth": None,
                         "restart_tokens": None,
+                        "segment_p50": None,
+                        "segment_p90": None,
                     }
                 },
                 "skipped": [{"file": str(self.ledger_file), "line": 2, "reason": "not JSON"}],

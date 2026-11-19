@@ -1,6 +1,7 @@
 import unittest
 
-from brigade.ledger.describe_role_budget import CurrentDigests, RoleBudget, describe_role_budget
+from brigade.ledger.current_digests import CurrentDigests
+from brigade.ledger.describe_role_budget import RoleBudget, describe_role_budget
 from brigade.ledger.run_finished import RunFinished
 from brigade.system.token_usage import TokenUsage
 

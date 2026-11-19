@@ -132,6 +132,18 @@ class BrigadeServeTest(unittest.TestCase):
             body,
         )
 
+    def test_should_answer_the_ledger_view_with_its_callout_and_the_table_of_the_caps(self):
+        # Arrange
+        url = self.start_serving().stdout.readline().strip()
+
+        # Act
+        status, body = fetch(url, "/views/ledger")
+
+        # Assert
+        self.assertEqual(status, 200)
+        self.assertIn('<div class="callout tone-faint"><p>The measures cover 0 runs finished in an empty ledger;', body)
+        self.assertIn("<h3>Turn cap by role</h3>", body)
+
 
 ADDON_SCHEMA = (
     'SCHEMA TASK\n\tDESC "a task"\n\tFIELD TITLE string\n\t\tREQUIRED\n'
