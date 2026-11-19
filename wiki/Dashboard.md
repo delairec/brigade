@@ -12,8 +12,9 @@ of `config.toml`, else 8470. It prints the URL and runs in the foreground until 
 The page is a left rail and a view; under 900px of width the rail becomes a top bar. The rail holds, from the top:
 
 - **the project selector** — *All projects* or one registered project. The project chosen is carried in the address,
-  `/?project=<name>#<view>`, and every view then keeps the rows of its document that name that project; a row naming no
-  project is kept.
+  `/?project=<name>#<view>`, and every view then keeps the rows of its document that name that project, at any depth,
+  a row of `projects` naming it by its `name`; a row naming no project is kept. The selector and the heartbeat, which
+  stand on every page, keep every row.
 - **the heartbeat of the tick** — the last tick of `brigade scheduler status`, its age, and *stale* when the scheduler
   reports it, on every page.
 - **Operate** — Home, Waves, Runs and Inbox, the views to act from.

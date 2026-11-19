@@ -65,7 +65,7 @@ def _describe_quota(entries: tuple[LedgerEntry, ...], waves: list[dict], runtime
     return {
         **sum_quota_usage(entries, runtime.now, window_hours),
         "blocked_waves": [
-            {"wave": wave["wave"], "resume_at": wave["halt"]["resume_at"]}
+            {"wave": wave["wave"], "project": wave["project"], "resume_at": wave["halt"]["resume_at"]}
             for wave in waves
             if wave["halt"] is not None and wave["halt"]["reason"] == QUOTA_REASON
         ],
