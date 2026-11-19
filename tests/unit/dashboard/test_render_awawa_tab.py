@@ -3,6 +3,7 @@ import unittest
 from brigade.dashboard.awawa_addon_supervisor import AddonAnswer
 from brigade.dashboard.awawa_address import AwawaAddress
 from brigade.dashboard.render_awawa_tab import render_awawa_tab
+from tests.unit.dashboard.forms_collector import FormsCollector
 from tests.unit.dashboard.test_render_awawa_board import BOARD
 from tests.unit.dashboard.test_render_awawa_card import B1
 from tests.unit.dashboard.test_render_awawa_detail import DOCUMENT
@@ -69,11 +70,16 @@ class RenderAwawaTabTest(unittest.TestCase):
         self.assertIn('</div><nav class="chips">', fragment)
 
     def test_should_offer_no_action_writing_the_corpus(self):
+        # Arrange
+        forms = FormsCollector()
+
         # Act
         fragment = render_awawa_tab(AddonAnswer(status=200, document=BOARD_OF_OAK), BOARD_OF_THE_TASKS)
 
         # Assert
-        self.assertNotIn('method="post"', fragment)
+        forms.feed(fragment)
+        self.assertEqual(forms.methods, ["get", "get", "get"])
+        self.assertEqual(forms.writing_attributes, [])
         self.assertNotIn("data-post", fragment)
         self.assertNotIn("Clean", fragment)
         self.assertNotIn("Change Colour", fragment)
