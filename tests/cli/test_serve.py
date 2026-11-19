@@ -285,6 +285,7 @@ class BrigadeServeTest(unittest.TestCase):
         )
         self.assertIn("<td>Verdict: M13 delivered three of its four tasks.</td>", body)
 
+
 ADDON_SCHEMA = (
     'SCHEMA TASK\n\tDESC "a task"\n\tFIELD TITLE string\n\t\tREQUIRED\n'
     "\tFIELD STATUS draft|todo|implemented\n\t\tREQUIRED\n"
