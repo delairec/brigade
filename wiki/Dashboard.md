@@ -78,8 +78,8 @@ and `/views/selector` renders the projects of `brigade project list --json`.
 ## The awawa addon
 
 `brigade serve` starts the awawa addon, one child process `brigade awawa-addon`, when at least one registered project
-holds a corpus: `awawa status --json` of its `PATH` counts files. Where no project holds one, or the registry or awawa
-cannot be read, it starts none. Stopping `brigade serve` stops it.
+holds a corpus: `awawa status --json` of its `PATH` counts files, and a project whose status fails holds none. Where
+no project holds one, or no registry exists, it starts none. Stopping `brigade serve` stops it.
 
 - **Its route** — `GET /api/awawa/<project>?ref=<ref>&view=<view>`, with `type`, `field`, `search`, `entity` and
   `filter`, repeatable, answers the document `brigade corpus <project> --ref <ref> --view <view> ... --json` prints. It
@@ -93,8 +93,8 @@ cannot be read, it starts none. Stopping `brigade serve` stops it.
   addon is not asked. An addon that died, that answered nothing within 120 s or that answered no document answers
   503, `the awawa addon stopped; the next request starts it again`; the other views keep being served, and the next
   request of the tab starts it again, the tab waiting while the cache fills. A start that fails, awawa absent for
-  one, answers 503 with its error, `the awawa addon did not start: ...`, and each later request tries one start and
-  no more. An error of the view itself, an unknown ref for one, answers 500 with its message.
+  one, whether it fails listing the projects holding a corpus or starting the addon, answers 503 with its error,
+  `the awawa addon did not start: ...`, and each later request tries one start and no more. An error of the view itself, an unknown ref for one, answers 500 with its message.
 
 ## Routes
 
