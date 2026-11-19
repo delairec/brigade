@@ -27,7 +27,6 @@ def write_delivery(root: Path) -> None:
                 "wave": "oak_w5",
                 "project": "oak",
                 "tasks": ["OK7"],
-                "branch": "integration/roots",
             },
             {
                 "schema_version": 2,
@@ -45,7 +44,6 @@ def write_delivery(root: Path) -> None:
                 "wave": "oak_w6",
                 "project": "oak",
                 "tasks": ["OK8"],
-                "branch": "integration/roots",
             },
             {
                 "schema_version": 2,
@@ -123,7 +121,12 @@ class DescribeReportDeliveryOfAMilestoneReportTest(unittest.TestCase):
         write_delivery(root)
         report = {
             "project": "oak",
-            "fields": [{"name": "MILESTONE", "value": "M4"}, {"name": "PROJECT", "value": "oak"}],
+            "fields": [
+                {"name": "MILESTONE", "value": "M4"},
+                {"name": "PROJECT", "value": "oak"},
+                {"name": "TASK_ROW", "value": "OK7 merged #50"},
+                {"name": "TASK_ROW", "value": "OK8 merged #51"},
+            ],
         }
 
         # Act
@@ -185,8 +188,8 @@ class DescribeReportDeliveryOfAMilestoneReportTheLedgerDoesNotRecordTest(unittes
         self.assertEqual(delivery, {"waves": [], "pull_request": None, "reported_at": None})
 
 
-class DescribeReportDeliveryOfAMilestoneWhoseBranchIsNotCutTest(unittest.TestCase):
-    def test_should_name_none_of_the_waves_of_its_project_cut_from_no_branch(self):
+class DescribeReportDeliveryOfAMilestoneReportNamingNoTaskTest(unittest.TestCase):
+    def test_should_name_none_of_the_waves_of_its_project(self):
         # Arrange
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_ledger(

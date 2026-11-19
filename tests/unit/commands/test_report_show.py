@@ -11,6 +11,11 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.reports.document_plugin_double import DocumentPluginDouble
 
+MILESTONE_FIELDS = [
+    {"name": "MILESTONE", "value": "M4"},
+    {"name": "PROJECT", "value": "oak"},
+    {"name": "TASK_ROW", "value": "OK7 merged #50"},
+]
 WAVE_REPORT = {"type": "REPORT", "name": "oak_w3", "fields": [{"name": "PROJECT", "value": "oak"}]}
 
 
@@ -160,22 +165,12 @@ class ReportsShowOfADeliveredMilestoneReportTest(unittest.TestCase):
             root,
             [
                 {
-                    "schema_version": 1,
-                    "ts": "2026-10-01T08:00:00Z",
-                    "event": "milestone.branch_cut",
-                    "project": "oak",
-                    "milestone": "M4",
-                    "branch": "integration/roots",
-                    "login": None,
-                },
-                {
                     "schema_version": 2,
                     "ts": "2026-10-01T09:00:00Z",
                     "event": "wave.started",
                     "wave": "oak_w5",
                     "project": "oak",
                     "tasks": ["OK7"],
-                    "branch": "integration/roots",
                 },
                 {
                     "schema_version": 1,
@@ -200,7 +195,7 @@ class ReportsShowOfADeliveredMilestoneReportTest(unittest.TestCase):
         report = {
             "type": "REPORT",
             "name": "oak_M4",
-            "fields": [{"name": "MILESTONE", "value": "M4"}, {"name": "PROJECT", "value": "oak"}],
+            "fields": MILESTONE_FIELDS,
         }
 
         # Act
@@ -217,7 +212,7 @@ class ReportsShowOfADeliveredMilestoneReportTest(unittest.TestCase):
                     "project": "oak",
                     "pattern": None,
                     "type": "REPORT",
-                    "fields": [{"name": "MILESTONE", "value": "M4"}, {"name": "PROJECT", "value": "oak"}],
+                    "fields": MILESTONE_FIELDS,
                 },
                 "waves": ["oak_w5"],
                 "pull_request": 57,

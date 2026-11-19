@@ -7,9 +7,9 @@ from brigade.ledger.task_reported import TaskReported
 from brigade.ledger.wave_pr_opened import WavePrOpened
 from brigade.ledger.wave_reported import WaveReported
 from brigade.ledger.wave_started import WaveStarted
-from brigade.waves.find_milestone_branch import find_milestone_branch
 
 NOT_RECORDED = None
+TASK_ROW = "TASK_ROW"
 
 
 def _read_field(report: dict, name: str) -> str | None:
@@ -28,16 +28,21 @@ def _describe(waves: list[str], opened: LedgerEntry | None, reported: LedgerEntr
     }
 
 
-def _describe_milestone(entries: tuple[LedgerEntry, ...], project: str, milestone: str) -> dict:
-    branch = find_milestone_branch(entries, project, milestone)
+def _read_report_tasks(report: dict) -> set[str]:
+    return {field["value"].split(maxsplit=1)[0] for field in report["fields"] if field["name"] == TASK_ROW}
+
+
+def _describe_milestone(entries: tuple[LedgerEntry, ...], report: dict, milestone: str) -> dict:
+    project = report["project"]
+    tasks = _read_report_tasks(report)
     subject = (project, milestone)
     return _describe(
         [
             entry.event.wave
             for entry in entries
             if isinstance(entry.event, WaveStarted)
-            and branch is not None
-            and (entry.event.project, entry.event.branch) == (project, branch)
+            and entry.event.project == project
+            and tasks.intersection(entry.event.tasks)
         ],
         _read_last(
             entries, lambda event: isinstance(event, MilestonePrOpened) and (event.project, event.milestone) == subject
@@ -73,7 +78,7 @@ def describe_report_delivery(report: dict, entries: tuple[LedgerEntry, ...]) -> 
     project = report["project"]
     milestone = _read_field(report, "MILESTONE")
     if milestone is not None:
-        return _describe_milestone(entries, project, milestone)
+        return _describe_milestone(entries, report, milestone)
     task = _read_field(report, "TASK")
     if task is not None:
         return _describe_task(entries, project, task)
