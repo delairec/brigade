@@ -82,7 +82,7 @@ def _list_studies_to_watch(runtime: Runtime) -> list[dict]:
         facts = describe_study_facts(study, last_order, quota_resumes)
         due = is_study_due(facts, runtime.now)
         if due or facts.parked:
-            studies.append({**describe_study_row(study, last_order), "due": due})
+            studies.append({**describe_study_row(study, last_order), "project": study.project, "due": due})
     return studies
 
 
@@ -109,14 +109,14 @@ def _list_parked_orders(runtime: Runtime, entries: tuple[LedgerEntry, ...]) -> l
 
 
 def _list_scans(new_signals: list[Signal]) -> list[dict]:
-    ages_by_study: dict[str, list[int]] = {}
+    ages_by_scan: dict[tuple[str, str | None], list[int]] = {}
     for signal in new_signals:
         if signal.kind == SCAN_KIND:
             study = signal.fingerprint.partition(FINGERPRINT_SEPARATOR)[0]
-            ages_by_study.setdefault(study, []).append(signal.age_s)
+            ages_by_scan.setdefault((study, signal.project), []).append(signal.age_s)
     return [
-        {"study": study, "signals": len(ages), "oldest_age_s": max(ages)}
-        for study, ages in sorted(ages_by_study.items())
+        {"study": study, "project": project, "signals": len(ages), "oldest_age_s": max(ages)}
+        for (study, project), ages in sorted(ages_by_scan.items(), key=lambda item: item[0][0])
     ]
 
 

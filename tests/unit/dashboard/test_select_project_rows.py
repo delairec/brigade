@@ -62,3 +62,13 @@ class SelectProjectRowsTest(unittest.TestCase):
         self.assertEqual(
             selected, {"quota": {"window_hours": 5, "blocked_waves": [{"wave": "oak_w2", "project": "oak"}]}}
         )
+
+    def test_should_keep_a_row_whose_project_is_none(self):
+        # Arrange
+        studies = {"studies": [{"name": "triage", "project": None}, {"name": "worktrees_elm", "project": "elm"}]}
+
+        # Act
+        selected = select_project_rows(studies, "oak")
+
+        # Assert
+        self.assertEqual(selected, {"studies": [{"name": "triage", "project": None}]})
