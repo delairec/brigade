@@ -676,7 +676,8 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
         response = answer_get("/views/reports/oak_w9", create_test_runtime(run_process=runner.run))
 
         # Assert
-        self.assertEqual((response.status, runner.argvs), (404, [report_show, report_list]))
+        self.assertEqual(response.status, 404)
+        self.assertEqual(runner.argvs, [report_show, report_list])
 
     def test_should_run_no_project_show_for_a_report_of_no_project(self):
         # Arrange
@@ -692,15 +693,11 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            (response.body, runner.argvs),
-            (
-                (
-                    b'<section class="report-verdict"><h2>wave-report oak_w3</h2>'
-                    b'<p class="report-delivery">pull request #31</p></section>'
-                ),
-                [report_show],
-            ),
+            response.body,
+            b'<section class="report-verdict"><h2>wave-report oak_w3</h2>'
+            b'<p class="report-delivery">pull request #31</p></section>',
         )
+        self.assertEqual(runner.argvs, [report_show])
 
     def test_should_render_the_report_without_what_a_failing_wave_show_or_project_show_would_give(self):
         # Arrange

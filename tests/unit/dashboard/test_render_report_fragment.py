@@ -6,7 +6,7 @@ NO_FORGE = None
 NO_WAVE = []
 
 
-def create_document(fields: list[tuple[str, str]]) -> dict:
+def create_document(fields: list[dict]) -> dict:
     return {
         "schema_version": 1,
         "report": {
@@ -15,7 +15,7 @@ def create_document(fields: list[tuple[str, str]]) -> dict:
             "project": "oak",
             "pattern": None,
             "type": "REPORT",
-            "fields": [{"name": name, "value": value} for name, value in fields],
+            "fields": fields,
         },
         "waves": ["oak_w5"],
         "pull_request": 57,
@@ -48,7 +48,7 @@ def create_wave(unmeasured_runs: int = 0, states: tuple[str, str] = ("merged", "
     }
 
 
-def render(fields: list[tuple[str, str]], waves: list[dict] = NO_WAVE, address: str | None = NO_FORGE) -> str:
+def render(fields: list[dict], waves: list[dict] = NO_WAVE, address: str | None = NO_FORGE) -> str:
     return render_report_fragment(ReportReading(create_document(fields), waves, address))
 
 
@@ -56,16 +56,16 @@ class RenderReportFragmentOrderTest(unittest.TestCase):
     def test_should_open_on_the_verdict_and_order_the_blocks_by_use_whatever_the_order_written(self):
         # Arrange
         fields = [
-            ("MILESTONE", "M4"),
-            ("SAMPLING", "OK7, oak/bark.py: the guard"),
-            ("NARRATIVE", "next: split OK9 first"),
-            ("REASON", "OK9 waits for a ruling"),
-            ("NARRATIVE", "Went well: one round of review"),
-            ("TESTER_STEP", "OK7: run oak bark"),
-            ("NARRATIVE", "M4 delivered two tasks"),
-            ("TASK_ROW", "OK7 merged #52"),
-            ("NARRATIVE", "went wrong: a rebase conflicted"),
-            ("NARRATIVE", "VERDICT: delivered"),
+            {"name": "MILESTONE", "value": "M4"},
+            {"name": "SAMPLING", "value": "OK7, oak/bark.py: the guard"},
+            {"name": "NARRATIVE", "value": "next: split OK9 first"},
+            {"name": "REASON", "value": "OK9 waits for a ruling"},
+            {"name": "NARRATIVE", "value": "Went well: one round of review"},
+            {"name": "TESTER_STEP", "value": "OK7: run oak bark"},
+            {"name": "NARRATIVE", "value": "M4 delivered two tasks"},
+            {"name": "TASK_ROW", "value": "OK7 merged #52"},
+            {"name": "NARRATIVE", "value": "went wrong: a rebase conflicted"},
+            {"name": "NARRATIVE", "value": "VERDICT: delivered"},
         ]
 
         # Act
@@ -89,7 +89,10 @@ class RenderReportFragmentOrderTest(unittest.TestCase):
 class RenderReportFragmentOfANarrativeOpeningOnNoLeadingWordTest(unittest.TestCase):
     def test_should_show_the_narrative_as_one_list_in_the_order_written(self):
         # Arrange
-        fields = [("NARRATIVE", "M8 delivered three tasks"), ("NARRATIVE", "two waves were needed")]
+        fields = [
+            {"name": "NARRATIVE", "value": "M8 delivered three tasks"},
+            {"name": "NARRATIVE", "value": "two waves were needed"},
+        ]
 
         # Act
         fragment = render(fields)
@@ -132,7 +135,10 @@ class RenderReportFragmentDeliveryTest(unittest.TestCase):
 class RenderReportFragmentGroupingTest(unittest.TestCase):
     def test_should_list_a_step_naming_no_task_under_no_task_heading(self):
         # Arrange
-        fields = [("TESTER_STEP", "open the dashboard"), ("TESTER_STEP", "OK7: run oak bark")]
+        fields = [
+            {"name": "TESTER_STEP", "value": "open the dashboard"},
+            {"name": "TESTER_STEP", "value": "OK7: run oak bark"},
+        ]
 
         # Act
         fragment = render(fields)
@@ -146,11 +152,11 @@ class RenderReportFragmentGroupingTest(unittest.TestCase):
     def test_should_group_the_steps_to_test_by_hand_and_the_samples_by_the_task_they_name(self):
         # Arrange
         fields = [
-            ("TESTER_STEP", "OK8: open the page"),
-            ("MANUAL_TEST", "OK7: the bark is listed"),
-            ("TESTER_STEP", "OK7: run oak bark"),
-            ("TESTER_STEP", "OK8: close the page"),
-            ("SAMPLING", "OK8, oak/page.py: the swap"),
+            {"name": "TESTER_STEP", "value": "OK8: open the page"},
+            {"name": "MANUAL_TEST", "value": "OK7: the bark is listed"},
+            {"name": "TESTER_STEP", "value": "OK7: run oak bark"},
+            {"name": "TESTER_STEP", "value": "OK8: close the page"},
+            {"name": "SAMPLING", "value": "OK8, oak/page.py: the swap"},
         ]
 
         # Act
@@ -169,7 +175,11 @@ class RenderReportFragmentGroupingTest(unittest.TestCase):
 class RenderReportFragmentTablesTest(unittest.TestCase):
     def test_should_draw_the_task_rows_and_the_graph_as_tables(self):
         # Arrange
-        fields = [("TASK_ROW", "OK7 merged #52"), ("TASK_ROW", "OK8 parked"), ("GRAPH", "OK8 after OK7")]
+        fields = [
+            {"name": "TASK_ROW", "value": "OK7 merged #52"},
+            {"name": "TASK_ROW", "value": "OK8 parked"},
+            {"name": "GRAPH", "value": "OK8 after OK7"},
+        ]
 
         # Act
         fragment = render(fields)
@@ -188,7 +198,7 @@ class RenderReportFragmentTablesTest(unittest.TestCase):
 class RenderReportFragmentLinksTest(unittest.TestCase):
     def test_should_link_the_wave_of_a_task_the_pull_request_on_the_forge_and_the_page_of_a_run(self):
         # Arrange
-        fields = [("REASON", "OK8 #53 stopped in 20261001T100000Z-b2, M4 is open")]
+        fields = [{"name": "REASON", "value": "OK8 #53 stopped in 20261001T100000Z-b2, M4 is open"}]
 
         # Act
         fragment = render(fields, [create_wave()], "https://forge.example/oak/pull/")
@@ -202,7 +212,7 @@ class RenderReportFragmentLinksTest(unittest.TestCase):
 
     def test_should_leave_a_pull_request_unlinked_when_the_project_names_no_forge(self):
         # Arrange
-        fields = [("REASON", "#53 was closed")]
+        fields = [{"name": "REASON", "value": "#53 was closed"}]
 
         # Act
         fragment = render(fields, [create_wave()])
@@ -214,7 +224,7 @@ class RenderReportFragmentLinksTest(unittest.TestCase):
 class RenderReportFragmentTilesTest(unittest.TestCase):
     def test_should_give_the_measures_of_the_waves_named(self):
         # Arrange
-        fields = [("STATISTIC", "files 12")]
+        fields = [{"name": "STATISTIC", "value": "files 12"}]
 
         # Act
         fragment = render(fields, [create_wave()])
@@ -238,7 +248,7 @@ class RenderReportFragmentTilesTest(unittest.TestCase):
 
     def test_should_mark_the_cost_a_floor_when_a_run_records_none(self):
         # Arrange
-        fields = [("STATISTIC", "files 12")]
+        fields = [{"name": "STATISTIC", "value": "files 12"}]
 
         # Act
         fragment = render(fields, [create_wave(unmeasured_runs=2)])
@@ -252,7 +262,7 @@ class RenderReportFragmentTilesTest(unittest.TestCase):
 
     def test_should_question_no_file_changed_when_the_ledger_records_tasks_merged(self):
         # Arrange
-        fields = [("STATISTIC", "files 0")]
+        fields = [{"name": "STATISTIC", "value": "files 0"}]
 
         # Act
         fragment = render(fields, [create_wave()])
@@ -267,7 +277,7 @@ class RenderReportFragmentTilesTest(unittest.TestCase):
 
     def test_should_leave_no_file_changed_unquestioned_when_no_task_merged(self):
         # Arrange
-        fields = [("STATISTIC", "files 0")]
+        fields = [{"name": "STATISTIC", "value": "files 0"}]
 
         # Act
         fragment = render(fields, [create_wave(states=("parked", "parked"))])
@@ -282,7 +292,10 @@ class RenderReportFragmentTilesTest(unittest.TestCase):
 class RenderReportFragmentEscapingTest(unittest.TestCase):
     def test_should_escape_a_value_holding_markup(self):
         # Arrange
-        fields = [("NARRATIVE", "Verdict: <script>alert(1)</script>"), ("<i>WAVE</i>", "<b>oak_w3</b>")]
+        fields = [
+            {"name": "NARRATIVE", "value": "Verdict: <script>alert(1)</script>"},
+            {"name": "<i>WAVE</i>", "value": "<b>oak_w3</b>"},
+        ]
 
         # Act
         fragment = render(fields)
