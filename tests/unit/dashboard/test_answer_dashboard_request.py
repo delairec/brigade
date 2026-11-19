@@ -388,11 +388,19 @@ HOME = (
 )
 WAVE_W4_SHOWN = (
     '{"schema_version": 1, "wave": "w4", "project": "oak", "branch": "integration/w4", "started_at":'
-    ' "2026-10-19T07:00:00Z", "last_event": "task.parked", "pull_request": null, "tasks": [{"task": "B28",'
-    ' "state": "parked", "pull_request": null, "run": "r28", "reason": "blocked"}], "ledger": {"view": "wave",'
-    ' "wave": "w4", "rounds_by_task": {}, "turns_by_task": {"B28": 12}, "events":'
+    ' "2026-10-19T07:00:00Z", "last_event": "task.parked", "pull_request": null, "milestone": "M4",'
+    ' "milestone_report": null, "tasks": [{"task": "B28", "state": "parked", "pull_request": 235, "run": "r28",'
+    ' "reason": "blocked"}], "ledger": {"view": "wave", "wave": "w4", "first": "2026-10-19T07:00:00Z",'
+    ' "last": "2026-10-19T07:00:00Z", "wall_time_ms": 0, "tasks": [], "cost_usd": null, "by_task": [],'
+    ' "halts": [], "halted_ms": 0, "rounds_by_task": {}, "turns_by_task": {"B28": 12}, "events":'
     ' [{"at": "2026-10-19T07:00:00Z", "event": "wave.started", "fields": {"wave": "w4"}}]}}\n'
 )
+OAK_ON_GITHUB = (
+    '{"schema_version": 1, "project": {"name": "oak", "fields": [{"name": "FORGE", "value": "github"},'
+    ' {"name": "REMOTE", "value": "acme/oak"}]}}\n'
+)
+WAVE_W4_EVENTS = (PYTHON, ENTRY_POINT, "wave", "show", "--json", "--events", "w4")
+OAK_SHOW = (PYTHON, ENTRY_POINT, "project", "show", "--json", "oak")
 
 
 def answer_post(target: str, runtime) -> DashboardResponse:
@@ -737,10 +745,10 @@ class AnswerDashboardRequestOfTheHomeViewTest(unittest.TestCase):
 
 
 class AnswerDashboardRequestOfTheWaveViewTest(unittest.TestCase):
-    def test_should_render_the_wave_from_its_show_and_its_events(self):
+    def test_should_link_the_pull_requests_of_the_wave_on_the_forge_project_show_names(self):
         # Arrange
         runner = ScriptedProcessRunner(
-            {(PYTHON, ENTRY_POINT, "wave", "show", "--json", "--events", "w4"): ProcessAnswer(stdout=WAVE_W4_SHOWN)}
+            {WAVE_W4_EVENTS: ProcessAnswer(stdout=WAVE_W4_SHOWN), OAK_SHOW: ProcessAnswer(stdout=OAK_ON_GITHUB)}
         )
 
         # Act
@@ -748,8 +756,23 @@ class AnswerDashboardRequestOfTheWaveViewTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(response.status, 200)
-        self.assertIn(b"<li>B28, pull request -, run r28, 0 rounds, 12 turns, blocked", response.body)
-        self.assertIn(b"<li>2026-10-19T07:00:00Z wave.started</li>", response.body)
+        self.assertIn(b'<td><a href="https://github.com/acme/oak/pull/235">#235</a></td>', response.body)
+
+    def test_should_name_the_pull_requests_unlinked_when_project_show_fails(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {
+                WAVE_W4_EVENTS: ProcessAnswer(stdout=WAVE_W4_SHOWN),
+                OAK_SHOW: ProcessAnswer(exit_code=1, stderr="brigade project show: @PROJECT.oak is not registered\n"),
+            }
+        )
+
+        # Act
+        response = answer_get("/views/waves/w4", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(response.status, 200)
+        self.assertIn(b"<td>#235</td>", response.body)
 
 
 class AnswerDashboardRequestOfAMethodNeitherReadingNorChangingStateTest(unittest.TestCase):
