@@ -61,3 +61,10 @@ class DashboardScriptTest(unittest.TestCase):
 
         # Assert
         self.assertIn('document.querySelector(".next-tick").hidden = selectView() !== FIRST_VIEW;', script)
+
+    def test_should_keep_the_open_state_the_server_renders_for_a_details_the_replaced_fragment_did_not_show(self):
+        # Act
+        script = SCRIPT.read_text(encoding="utf-8")
+
+        # Assert
+        self.assertIn("if (shownSummaries.has(summary.textContent))", script)
