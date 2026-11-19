@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 from brigade.commands.awawa_addon import COMMAND, awawa_addon
-from brigade.errors import ToolNotFound
+from brigade.errors import BrigadeError, ToolNotFound
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -54,6 +54,25 @@ class AwawaAddonTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(str(raised.exception), "awawa not on PATH")
+        self.assertEqual(written.getvalue(), "")
+
+    def test_should_refuse_to_start_on_a_machine_without_a_registry(self):
+        # Arrange
+        self.paths.schema_file.unlink()
+        runner = ScriptedProcessRunner(
+            {
+                ("awawa", "--version"): ProcessAnswer(stdout="awawa 2.7.0\n"),
+                ("awawa", "status", "PROJECT"): ProcessAnswer(stdout=PROJECTS),
+            }
+        )
+        request = argparse.Namespace(standard_input=io.StringIO(""))
+
+        # Act
+        with contextlib.redirect_stdout(io.StringIO()) as written, self.assertRaises(BrigadeError) as raised:
+            awawa_addon(request, create_test_runtime(self.paths, run_process=runner.run))
+
+        # Assert
+        self.assertEqual(str(raised.exception), "the registry is missing; run brigade init first")
         self.assertEqual(written.getvalue(), "")
 
 
