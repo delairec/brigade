@@ -82,8 +82,11 @@ Its seven views:
   of the wave. How it went is a timeline of the states of each task over the time of the wave, its halts drawn as
   bands, followed by the failed tick actions by action, with their count and the event of the ledger that cleared
   them; the events of the ledger are folded under Events.
-- **Inbox** — the new signals by family, the proposed patterns with their ratify and dismiss buttons, and the study
-  answers, each opening the answer rendered from its entity.
+- **Inbox** — puts first what the user decides: one sentence and four tiles, then Decide first, each proposed pattern
+  under its title with what ratifying it starts, how many of the signals it cites are still new, its ratify button
+  before its dismiss button and its repeats folded under it; then the new signals grouped by what recorded them,
+  each opening its evidence, a stall whose task merged since marked stale; then the study answers, each opening the
+  answer rendered from its entity.
 - **Corpus** — choose a registered project, a ref, a type and a board field; it shows the tree of the type, the board
   and the dependencies of the entity clicked. It is read-only: its one form only changes the view shown, and
   awawa-web stays the editor.

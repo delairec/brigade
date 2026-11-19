@@ -111,6 +111,51 @@ class CheckPatternsTest(unittest.TestCase):
         # Assert
         self.assertIsNone(accepted)
 
+    def test_should_accept_a_new_pattern_repeating_a_pattern_the_registry_holds(self):
+        # Arrange
+        self.hold_patterns({"cli_is_slow": HELD_PATTERN})
+        self.answer_patterns(
+            {
+                "cli_is_slow_again": (
+                    ("TITLE", "the cli is slow again"),
+                    ("STATUS", "new"),
+                    ("EVIDENCE", "rt:101"),
+                    ("ACTION", "constraint"),
+                    ("REPEATS", "@PATTERN.cli_is_slow"),
+                )
+            }
+        )
+
+        # Act
+        accepted = check_patterns(self.runtime, self.answer, self.collected)
+
+        # Assert
+        self.assertIsNone(accepted)
+
+    def test_should_refuse_a_pattern_repeating_a_pattern_the_registry_does_not_hold(self):
+        # Arrange
+        self.answer_patterns(
+            {
+                "cli_is_slow_again": (
+                    ("TITLE", "the cli is slow again"),
+                    ("STATUS", "new"),
+                    ("EVIDENCE", "rt:101"),
+                    ("ACTION", "constraint"),
+                    ("REPEATS", "@PATTERN.cli_is_slow"),
+                )
+            }
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            check_patterns(self.runtime, self.answer, self.collected)
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception),
+            "@PATTERN.cli_is_slow_again repeats @PATTERN.cli_is_slow, a pattern the registry does not hold",
+        )
+
     def test_should_refuse_a_pattern_that_is_not_new(self):
         # Arrange
         self.answer_patterns(

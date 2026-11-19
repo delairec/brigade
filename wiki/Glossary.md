@@ -254,6 +254,7 @@ row names a word the code or the corpus carries.
 | `PATTERN.ACTION` | field | what its ratification does: a wave, a constraint, an order, or dismiss | [Inbox](Inbox.md) | M0 | B03 |
 | `PATTERN.RECIPE` | field | the recipe an order action places | [Inbox](Inbox.md) | M0 | B03 |
 | `PATTERN.TARGET` | field | where the action of the pattern lands | [Inbox](Inbox.md) | M0 | B03 |
+| `PATTERN.REPEATS` | field | the pattern this one repeats, named by the triage that proposed it | [Inbox](Inbox.md) | M18 | B272 |
 | `CONSTRAINT` | entity | what a ratified pattern becomes: a rule, a guard, a lint, a schema change, a skill or a script | [Inbox](Inbox.md) | M0 | B03 |
 | `CONSTRAINT.TITLE` | field | the constraint in one line | [Inbox](Inbox.md) | M0 | B03 |
 | `CONSTRAINT.KIND` | field | rule, guard, lint, schema, skill or script | [Inbox](Inbox.md) | M0 | B03 |

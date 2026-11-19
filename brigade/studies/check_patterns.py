@@ -10,6 +10,8 @@ from brigade.runtime import Runtime
 PATTERN_TYPE = "PATTERN"
 PROPOSED_STATUS = "new"
 EVIDENCE_FIELD = "EVIDENCE"
+REPEATS_FIELD = "REPEATS"
+PATTERN_REFERENCE_PREFIX = f"@{PATTERN_TYPE}."
 INBOX_FAMILIES = "inbox-families"
 TRANSCRIPT_FINDINGS = "transcript-findings"
 
@@ -62,12 +64,15 @@ def _check_evidence(target: str, pattern: Entity, citable: Citable) -> None:
             )
 
 
-def _check_new_pattern(target: str, pattern: Entity) -> None:
+def _check_new_pattern(target: str, pattern: Entity, held_names: frozenset[str]) -> None:
     [status] = _read_values(pattern, "STATUS")
     if status != PROPOSED_STATUS:
         raise BrigadeError(f"{target} is {status}: a triage proposes it {PROPOSED_STATUS}")
     if not _read_values(pattern, "ACTION"):
         raise BrigadeError(f"{target} names no ACTION")
+    for repeated in _read_values(pattern, REPEATS_FIELD):
+        if repeated.removeprefix(PATTERN_REFERENCE_PREFIX) not in held_names:
+            raise BrigadeError(f"{target} repeats {repeated}, a pattern the registry does not hold")
 
 
 def _check_evidence_added(target: str, pattern: Entity) -> None:
@@ -81,7 +86,7 @@ def _check_pattern(pattern: Entity, citable: Citable, held_names: frozenset[str]
     if pattern.name in held_names:
         _check_evidence_added(target, pattern)
     else:
-        _check_new_pattern(target, pattern)
+        _check_new_pattern(target, pattern, held_names)
     _check_evidence(target, pattern, citable)
 
 

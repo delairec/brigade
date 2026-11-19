@@ -247,6 +247,8 @@ SCHEMA PATTERN
 	FIELD RECIPE string
 		DESC "the recipe an order action places"
 	FIELD TARGET string
+	FIELD REPEATS @PATTERN
+		DESC "the pattern this one repeats, named by the triage that proposed it"
 	WHEN STATUS dismissed
 		GATE suppressed
 

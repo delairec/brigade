@@ -66,3 +66,30 @@ class RenderInboxItemTest(unittest.TestCase):
             "<dl><dt>schema_version</dt><dd>1</dd><dt>signal</dt>"
             "<dd><dl><dt>id</dt><dd>a4a5f464</dd><dt>kind</dt><dd>note</dd></dl></dd></dl>",
         )
+
+    def test_should_render_a_proposed_pattern_under_its_title_with_its_action_its_target_and_its_evidence(self):
+        # Arrange
+        no_target = None
+        document = {
+            "schema_version": 1,
+            "pattern": {
+                "name": "FlakyTests",
+                "title": "the tests <script>are</script> flaky",
+                "action": "constraint",
+                "target": no_target,
+                "evidence": ["note:474fa40ae4db fix the <b>flaky</b> test", "rt:PRRT_kwDO"],
+            },
+        }
+
+        # Act
+        fragment = render_inbox_item(document)
+
+        # Assert
+        self.assertEqual(
+            fragment,
+            "<h2>the tests &lt;script&gt;are&lt;/script&gt; flaky</h2>"
+            '<p class="pattern-name"><code>FlakyTests</code></p>'
+            "<dl><dt>action</dt><dd>constraint</dd><dt>target</dt><dd>-</dd></dl>"
+            "<h3>Evidence</h3><ul><li>note:474fa40ae4db fix the &lt;b&gt;flaky&lt;/b&gt; test</li>"
+            "<li>rt:PRRT_kwDO</li></ul>",
+        )

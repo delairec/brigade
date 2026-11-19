@@ -13,14 +13,10 @@ FIELD_DECLARATION = "FIELD"
 PACKAGE_SCHEMA_VERSION = 1
 
 
-def _list_prose_fields(runtime: Runtime, answer_type: str, fields_the_cli_fills: tuple[str, ...]) -> list[str]:
+def _list_declared_fields(runtime: Runtime, answer_type: str) -> tuple[str, ...]:
     root = runtime.paths.config_root
     shown = json.loads(run_awawa(runtime.run_process, root, ("show", answer_type, "--json", str(root))).stdout)
-    return [
-        field["atoms"][0]
-        for field in shown["fields"]
-        if field["name"] == FIELD_DECLARATION and field["atoms"][0] not in fields_the_cli_fills
-    ]
+    return tuple(field["atoms"][0] for field in shown["fields"] if field["name"] == FIELD_DECLARATION)
 
 
 def build_study_context(runtime: Runtime, run_id: str) -> dict:
@@ -29,14 +25,15 @@ def build_study_context(runtime: Runtime, run_id: str) -> dict:
     collected = read_collected(run_directory)
     form = choose_answer_form(study)
     root = runtime.paths.config_root
+    declared_fields = _list_declared_fields(runtime, study.answer_type)
     package = {
         "schema_version": PACKAGE_SCHEMA_VERSION,
         "study": study.name,
         "run": run_id,
-        "question": study.question,
+        "question": form.ask(study.question, declared_fields),
         "collected": collected,
         "answer": form.render(runtime, study, run_id, collected),
-        "prose_fields": _list_prose_fields(runtime, study.answer_type, form.fields_the_cli_fills),
+        "prose_fields": [field for field in declared_fields if field not in form.fields_the_cli_fills],
         "schema": run_awawa(runtime.run_process, root, ("show", study.answer_type, str(root))).stdout,
     }
     write_json_atomically(run_directory / CONTEXT_FILE, package)
