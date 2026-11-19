@@ -5,11 +5,14 @@ from pathlib import Path
 from brigade.command import Argument, Command, ExclusiveArguments
 from brigade.corpus.corpus_reader import CorpusReader
 from brigade.corpus.describe_corpus_view import CorpusView, describe_corpus_view
+from brigade.corpus.list_project_refs import list_project_refs
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_corpus_types import read_corpus_types
 from brigade.corpus.tree_view_describer import TreeViewDescriber, locate_awawa_web
 from brigade.corpus.view_request import VIEWS, ViewRequest
 from brigade.errors import BrigadeError
+from brigade.registry.find_project import find_project
+from brigade.registry.read_projects import read_projects
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 
@@ -74,7 +77,8 @@ def corpus(request: argparse.Namespace, runtime: Runtime) -> dict:
     if request.view is not None:
         reader = CorpusReader(runtime.run_process, tree.root, configuration.ide_link)
         describer = TreeViewDescriber(reader, locate_awawa_web(runtime.run_process))
-        return describer.describe(tree, _read_view_request(request))
+        refs = list_project_refs(runtime.run_process, find_project(read_projects(runtime), request.project))
+        return describer.describe(tree, _read_view_request(request), refs)
     document = {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "project": tree.project,

@@ -8475,3 +8475,23 @@ DECISION AStallIsStaleWhenTheLedgerLastRecordsItsTaskMerged
 		+ "at each listing, where the ledger already records the merge"
 	SOURCE "the build run of @TASK.B272 of 2026-11-19"
 		REF @TASK.B272
+
+DECISION TheViewDocumentCarriesTheRefsOfItsProjectAndTheAwawaTabLivesInItsAddress
+	TITLE "the document of brigade corpus --view carries refs, the refs the awawa tab offers, and"
+		+ "the tab lives at the address #awawa/<project> with the parameters of the addon"
+	STATUS active
+	DESC "binds @TASK.B275"
+		REF @TASK.B275
+	DESC "refs lists the local branches of the project, the branch of its MAIN field first, then"
+		+ "worktree:<branch> for each linked worktree holding a branch, so the command line and the"
+		+ "addon print one document"
+	DESC "the tab is the view /views/awawa/<project>, its parameters those of GET"
+		+ "/api/awawa/<project>, view defaulting to tree; the rail lists its links in the region"
+		+ "/views/addons"
+	REJECTED "the dashboard running git on the project for the refs: a view is rendered from the"
+		+ "JSON of a command"
+	RATIONALE "@DECISION.ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand renders every"
+		+ "view from the JSON of a command, so the refs travel in the document the view reads"
+		REF @DECISION.ADashboardViewIsRenderedByTheServerFromTheJsonOfACommand
+	SOURCE "@TASK.B275, delivered by the role ada on 2026-11-19"
+		REF @TASK.B275

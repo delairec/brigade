@@ -5,7 +5,6 @@ from urllib.parse import parse_qs, urlsplit
 
 from brigade.dashboard.locate_pull_request_pages import locate_pull_request_pages
 from brigade.dashboard.render_answer import render_answer
-from brigade.dashboard.render_corpus_view import render_corpus_view
 from brigade.dashboard.render_home import HomeDocuments, render_home
 from brigade.dashboard.render_inbox_item import render_inbox_item
 from brigade.dashboard.render_ledger_fragment import render_ledger_fragment
@@ -159,7 +158,6 @@ def _follow_run(answers: dict[str, CommandAnswer]) -> dict[str, CommandRoute]:
 
 
 RENDERERS_BY_COLLECTION = {
-    CORPUS_VIEW: _render_with(render_corpus_view),
     REPORTS_VIEW: _render_report,
     INBOX_VIEW: _render_with(render_inbox_item),
 }
@@ -206,6 +204,8 @@ def route_view(target: str, renderers: dict[str, Callable[[dict], str]]) -> View
         return _route_waves()
     if address.path == HOME_VIEW:
         return ViewRoute(routes=HOME_ROUTES, render=_render_home)
+    if address.path.partition(PATH_SEPARATOR)[0] == CORPUS_VIEW:
+        return None
     route = route_command(target)
     if route is None:
         return None
@@ -224,8 +224,6 @@ def _route_command_view(
         return ViewRoute(routes={DOCUMENT: route}, render=_render_run, follow=_follow_run)
     if path in renderers:
         return ViewRoute(routes={DOCUMENT: route}, render=_render_with(renderers[path]))
-    if path == CORPUS_VIEW:
-        return ViewRoute(routes={DOCUMENT: route}, render=_render_with(render_project_choice))
     if path == REPORTS_VIEW:
         return ViewRoute(routes={DOCUMENT: route}, render=_render_reports)
     collection = path.split(PATH_SEPARATOR)[0]

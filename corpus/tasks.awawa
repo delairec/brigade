@@ -2635,8 +2635,8 @@ TASK B27
 	SPEC "the page polls the view it shows every 5 seconds while the tab is visible and swaps in"
 		+ "the fragment the server renders"
 		IMPL "brigade/dashboard/data/dashboard.js::const POLL_INTERVAL_MS = 5000;"
-		IMPL "brigade/dashboard/answer_dashboard_request.py::def _answer_view(target: str, runtime:"
-			+ "Runtime) -> DashboardResponse:"
+		IMPL "brigade/dashboard/answer_dashboard_request.py::def _answer_view(target: str,"
+			+ "dashboard: Dashboard, runtime: Runtime) -> DashboardResponse:"
 		IMPL "tests/unit/dashboard/test_answer_dashboard_request.py::class"
 			+ "AnswerDashboardRequestOfAViewTest(unittest.TestCase):"
 	SPEC "a light and a dark theme, CSS custom properties chosen by prefers-color-scheme"
@@ -2850,7 +2850,10 @@ TASK B29
 
 TASK B30
 	TITLE "Corpus view with the branch selector"
-	STATUS implemented
+	STATUS archived
+	DESC "archived: @TASK.B275 removes the Corpus view this task delivered and serves its reading"
+		+ "of a corpus in the awawa tab"
+		REF @TASK.B275
 	DELIVERED_BY 240
 	TYPE feat
 	MILESTONE @MILESTONE.M3
@@ -2980,7 +2983,6 @@ TASK B32
 	DESC "a record kept for memory: the work is done in the repository of the IntelliJ plugin,"
 		+ "never in this one, and no wave of brigade delivers it"
 	SPEC "outside the POC: the plugin gains the ref selector as a thin client of the local API"
-	AFTER @TASK.B30
 	RATIONALE "the local JSON API is open to the plugin, as"
 		+ "@DECISION.TheDashboardIsBuiltThePluginAndAwawaWebAreKept sets"
 		REF @DECISION.TheDashboardIsBuiltThePluginAndAwawaWebAreKept
@@ -16380,7 +16382,10 @@ TASK B227
 TASK B228
 	TITLE "The Corpus view and /api/corpus read a project at its main branch when no ref is named,"
 		+ "and every reading lists the entity types of the corpus"
-	STATUS implemented
+	STATUS archived
+	DESC "archived: @TASK.B275 removes the Corpus view this task delivered and serves its reading"
+		+ "of a corpus in the awawa tab"
+		REF @TASK.B275
 	DELIVERED_BY 338
 	TYPE fix
 	MILESTONE @MILESTONE.M6
@@ -16419,7 +16424,6 @@ TASK B228
 			+ "BrigadeCorpusThroughTheDashboardWithoutARefTest(unittest.TestCase):"
 		IMPL "tests/cli/test_corpus.py::def"
 			+ "test_should_answer_the_document_of_the_main_branch_with_its_types(self):"
-	AFTER @TASK.B30
 	RATIONALE "observed on 2026-11-01 against brigade serve at 16737cd4: GET /views/corpus/brigade"
 		+ "answered 500 with the usage of brigade corpus, « one of the arguments --ref --worktree"
 		+ "is required »; GET /views/corpus/brigade?ref=main answered 200 with an empty type list"
@@ -20731,7 +20735,8 @@ TASK B273
 		+ "of that view of the corpus of the project at the ref read, beside project, ref, sha,"
 		+ "kind, root, types and awawa_web; without --view the command prints what it prints today,"
 		+ "which GET /api/corpus/<project> keeps serving"
-		IMPL "brigade/commands/corpus.py::describer.describe(tree, _read_view_request(request))"
+		IMPL "brigade/commands/corpus.py::describer.describe(tree, _read_view_request(request),"
+			+ "refs)"
 	SPEC "every entity of a view carries its code, its name as written; its label, the value of the"
 		+ "first field of its type that is required, single-valued and a string, else its name read"
 		+ "as a sentence; up to four facts, the fields it fills whose values are short, literals,"
@@ -20918,35 +20923,54 @@ TASK B275
 	SPEC "the rail shows awawa in its group Addons for a project holding a corpus and for no other;"
 		+ "the tab opened on a project holding none says the project has no awawa corpus, and with"
 		+ "the addon stopped it says the addon stopped"
+		IMPL "brigade/dashboard/render_addons_rail.py::def render_addons_rail("
+		IMPL "brigade/dashboard/render_awawa_tab.py::def _render_unanswered("
 	SPEC "a banner names the project, the ref and the commit read, and offers the ref: the local"
 		+ "branches of the project, the main one first, worktree:<branch> for each of its linked"
 		+ "worktrees, or a ref typed"
+		IMPL "brigade/dashboard/render_awawa_banner.py::def render_awawa_banner("
+		IMPL "brigade/corpus/list_project_refs.py::def list_project_refs("
 	SPEC "the tab draws four views from the documents of the addon, rendered by the server in"
 		+ "Python: Tree, Board, Dependencies and Health, each entity with its code, its label and"
 		+ "its facts, the dot of a reference in the tone of the status of its target, the waiting"
 		+ "mark, the groups in lifecycle order with the last one collapsed, the columns capped with"
 		+ "Others (k), the flags of a cycle, and the counts of the health"
+		IMPL "brigade/dashboard/render_awawa_tab.py::VIEW_RENDERERS = {"
+		IMPL "brigade/dashboard/render_awawa_card.py::def render_awawa_card("
 	SPEC "the view, the type, the field, the filters and the search are carried by the address and"
 		+ "by nothing else, neither a state of the script nor the storage of the browser; a filter"
 		+ "in force is a chip removed by a link, with Clear all; the colours and the order of the"
 		+ "columns are the defaults"
+		IMPL "brigade/dashboard/awawa_address.py::class AwawaAddress:"
+		IMPL "brigade/dashboard/render_awawa_chips.py::def render_awawa_chips("
 	SPEC "a click on an entity opens a detail panel beside the view, carried by the address: the"
 		+ "entity as awawa show answers it, its fields, the entities it refers to and those that"
 		+ "refer to it, each a link, and the links to awawa-web and to the IDE when the document"
 		+ "carries them"
+		IMPL "brigade/dashboard/render_awawa_detail.py::def render_awawa_detail("
+		IMPL "brigade/corpus/describe_entity_detail.py::reader.link(reader.row(target))"
 	SPEC "the tab is read-only: none of its forms posts, and it offers no Clean, no Change Colour"
 		+ "and no Arrange Columns"
+		IMPL "tests/unit/dashboard/test_render_awawa_tab.py::def"
+			+ "test_should_offer_no_action_writing_the_corpus(self):"
 	SPEC "the Corpus view is removed: brigade/dashboard/render_corpus_view.py,"
 		+ "render_corpus_selector.py and render_project_choice.py, their tests, their route and the"
 		+ "entry of the rail; GET /api/corpus and GET /api/corpus/<project> answer as today"
+		IMPL "brigade/dashboard/route_view.py::if address.path.partition(PATH_SEPARATOR)[0] =="
+			+ "CORPUS_VIEW:"
 	SPEC "tests/unit/dashboard proves the renderer of each of the four views, the banner, the"
 		+ "chips, the detail panel and the three states, running, addon stopped and project without"
 		+ "corpus, and that a field value holding markup is rendered escaped;"
 		+ "tests/cli/test_serve.py proves that GET"
 		+ "/views/awawa/<project>?view=board&type=TASK&field=STATUS answers 200 with one column per"
 		+ "status, and that GET /views/corpus no longer answers a view"
+		IMPL "tests/cli/test_serve.py::def"
+			+ "test_should_draw_one_column_per_status_on_the_board_of_the_awawa_tab(self):"
+		IMPL "tests/unit/dashboard/test_render_awawa_tab.py::def"
+			+ "test_should_say_that_the_addon_stopped_with_its_error(self):"
 	SPEC "wiki/Dashboard.md replaces its Corpus bullet by the awawa tab, what it shows and that it"
 		+ "is read-only, awawa-web staying the editor"
+		IMPL "wiki/Dashboard.md::- **awawa** — the corpus of a project at a ref"
 	AFTER @TASK.B264
 	AFTER @TASK.B274
 	RATIONALE "drawn in the mockup of the role max, the Artifact"

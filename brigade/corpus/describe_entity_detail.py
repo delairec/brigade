@@ -20,4 +20,5 @@ def describe_entity_detail(reader: CorpusReader, target: str) -> dict:
         "entity": reader.show(target),
         "references": [_describe_neighbour(reader, other) for other in references],
         "referenced_by": [_describe_neighbour(reader, other) for other in dict.fromkeys(referencing)],
+        "ide_link": reader.link(reader.row(target)),
     }

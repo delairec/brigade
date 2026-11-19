@@ -332,3 +332,30 @@ class StopAwawaAddonTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(starter.children, [])
+
+
+class ListTheProjectsOfTheAwawaAddonTest(unittest.TestCase):
+    def test_should_list_the_projects_holding_a_corpus_without_starting_the_child(self):
+        # Arrange
+        starter = ChildStarterDouble(functools.partial(PipedChildDouble, answer_with_the_message))
+        supervisor = create_supervisor(self, starter)
+
+        # Act
+        projects = supervisor.list_projects()
+
+        # Assert
+        self.assertEqual(projects, frozenset({"app"}))
+        self.assertEqual(starter.children, [])
+
+    def test_should_list_no_project_while_the_projects_holding_a_corpus_cannot_be_listed(self):
+        # Arrange
+        listing = HolderListingDouble(ToolNotFound("awawa not on PATH"), HOLDERS)
+        starter = ChildStarterDouble(functools.partial(PipedChildDouble, answer_with_the_message))
+        supervisor = AwawaAddonSupervisor(listing.list, starter.start, ANSWER_TIMEOUT_S)
+        self.addCleanup(supervisor.stop)
+
+        # Act
+        projects = (supervisor.list_projects(), supervisor.list_projects())
+
+        # Assert
+        self.assertEqual(projects, (frozenset(), frozenset({"app"})))

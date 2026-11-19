@@ -45,7 +45,7 @@ class DashboardPageTest(unittest.TestCase):
             [
                 ("Operate", ["#status", "#waves", "#runs", "#inbox"]),
                 ("Understand", ["#ledger", "#reports"]),
-                ("Addons", ["#corpus"]),
+                ("Addons", []),
             ],
         )
 
@@ -62,6 +62,7 @@ class DashboardPageTest(unittest.TestCase):
                     {"class": "project-selector", "method": "get", "action": "/", "data-region": "/views/selector"},
                 ),
                 ("div", {"class": "heartbeat-region", "data-region": "/views/heartbeat"}),
+                ("div", {"class": "addons-region", "data-region": "/views/addons"}),
             ],
         )
 

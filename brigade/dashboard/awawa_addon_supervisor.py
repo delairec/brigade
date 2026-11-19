@@ -76,6 +76,12 @@ class AwawaAddonSupervisor:
                 )
             return self._ask({"project": project, **query})
 
+    def list_projects(self) -> frozenset[str]:
+        with self.lock:
+            if self.holders is None:
+                self._list_holders()
+            return self.holders or frozenset()
+
     def stop(self) -> None:
         with self.lock:
             self._discard()

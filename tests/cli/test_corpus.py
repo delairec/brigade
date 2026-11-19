@@ -120,19 +120,6 @@ class BrigadeCorpusThroughTheDashboardWithoutARefTest(unittest.TestCase):
         self.addCleanup(process.kill)
         return process.stdout.readline().strip()
 
-    def test_should_open_the_view_with_the_main_branch_and_the_types_of_the_corpus(self):
-        # Act
-        status, page = fetch(self.url, "/views/corpus/app")
-
-        # Assert
-        self.assertEqual(status, 200, page)
-        self.assertIn('<label>ref <input name="ref" value="trunk"></label>', page)
-        self.assertIn(
-            '<datalist id="corpus-types"><option value="DECISION"></option>'
-            '<option value="SCHEMA"></option><option value="TASK"></option></datalist>',
-            page,
-        )
-
     def test_should_answer_the_document_of_the_main_branch_with_its_types(self):
         # Act
         status, body = fetch(self.url, "/api/corpus/app")
