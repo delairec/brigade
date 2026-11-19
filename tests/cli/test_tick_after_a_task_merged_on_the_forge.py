@@ -52,7 +52,7 @@ class TickOfAWaveWaitingOnATaskAnEarlierWaveMergedOnTheForgeTest(unittest.TestCa
         document = json.loads(self.dry_run.stdout)
 
         # Assert
-        self.assertIn({"project": "shop", "milestone": "M1"}, document["decisions"])
+        self.assertIn({"action": "StartWave", "project": "shop", "milestone": "M1"}, document["decisions"])
 
     def test_should_offer_the_task_as_the_candidate_of_that_wave_at_a_dry_run(self):
         # Act
