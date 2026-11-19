@@ -172,7 +172,34 @@ class RenderRunFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            '<p class="status-sentence">build-task by ada died in its segment 1 without a result.</p>', fragment
+            '<p class="status-sentence">build-task by ada died in its segment 1, without a result.</p>', fragment
+        )
+
+    def test_should_say_a_live_run_with_no_segment_yet_is_starting_its_first(self):
+        # Arrange
+        no_segment = []
+        shown = create_shown(LIVE_RUN, no_segment, None, NO_NOTE)
+
+        # Act
+        fragment = render_run_fragment(RunPage(shown=shown, budgets=BUDGETS, task_runs=TASK_RUNS, wave=WAVE))
+
+        # Assert
+        self.assertIn(
+            '<p class="status-sentence">build-task by ada is running, before its first segment started.</p>', fragment
+        )
+
+    def test_should_say_a_dead_run_with_no_segment_died_before_its_first(self):
+        # Arrange
+        no_segment = []
+        shown = create_shown({**LIVE_RUN, "state": "dead"}, no_segment, None, NO_NOTE)
+
+        # Act
+        fragment = render_run_fragment(RunPage(shown=shown, budgets=BUDGETS, task_runs=TASK_RUNS, wave=WAVE))
+
+        # Assert
+        self.assertIn(
+            '<p class="status-sentence">build-task by ada died before its first segment started, without a result.</p>',
+            fragment,
         )
 
     def test_should_say_where_a_run_a_limit_cut_stands_with_its_message(self):

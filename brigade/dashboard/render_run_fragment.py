@@ -22,6 +22,7 @@ PENDING_NOTE = "pending"
 NO_MESSAGE = "the run left no message"
 NO_WAVE_COST = "no cost of a wave to share"
 NO_SEGMENT = "no segment"
+BEFORE_ITS_FIRST_SEGMENT = "before its first segment started"
 NO_NOTE = "No note was handed to this run."
 WHAT_WOULD_NOTE = "brigade run note hands a note to the next segment of a run."
 NO_TURNS = 0
@@ -67,10 +68,11 @@ def _read_page(page: RunPage) -> PageReading:
 def _describe_standing(reading: PageReading) -> str:
     run = reading.run
     who = f"{run['procedure']} by {run['role']}"
+    where = f"in its segment {reading.segments[-1]['segment']}" if reading.segments else BEFORE_ITS_FIRST_SEGMENT
     if run["state"] == LIVE:
-        return f"{who} is running, in its segment {len(reading.segments)}."
+        return f"{who} is running, {where}."
     if run["state"] == DEAD:
-        return f"{who} died in its segment {len(reading.segments)} without a result."
+        return f"{who} died {where}, without a result."
     return f"{who} finished on {run['outcome']}."
 
 
