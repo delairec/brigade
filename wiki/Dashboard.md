@@ -65,15 +65,16 @@ Its seven views:
   served, with the waves that merged nothing. Each row, the open waves first, shows the wave linking its page, its
   state as a pill (running, parked, blocked, closed or cancelled), a bar of its tasks by state, a task no event served
   yet counted queued, its dates, its review rounds and its cost, said as a floor. The tasks served by three waves or
-  more are named with that count under a heading of their own. A wave opens on one sentence saying how it stands or
-  how it ended, with a resume button while it is halted, its milestone and the report of that milestone once one is
-  committed, and five tiles: the tasks merged out of its tasks with the parked, its wall time, its run time with its
-  turns and its runs, its cost, marked a floor when a run records none, and the time it spent halted with the count
-  and the reasons of its halts. Its tasks are a table: each with its state as a pill and a requeue button when parked,
-  its pull request, linked on the forge when `brigade project show` names one, its rounds, flagged at three, its runs,
-  each linking its page, and its share of the cost of the wave. How it went is a timeline of the states of each task
-  over the time of the wave, its halts drawn as bands, followed by the failed tick actions by action, with their count
-  and the event of the ledger that cleared them; the events of the ledger are folded under Events.
+  more are named with that count under a heading of their own. On its page,
+  a wave opens on one sentence saying how it stands or how it ended, with a resume button while it is halted, its
+  milestone and the report of that milestone once one is committed, and five tiles: the tasks merged out of its tasks
+  with the parked, its wall time, its run time with its turns and its runs, its cost, marked a floor when a run
+  records none, and the time it spent halted with the count and the reasons of its halts. Its tasks are a table: each
+  with its state as a pill and a requeue button when parked, its pull request, linked on the forge when `brigade
+  project show` names one, its rounds, flagged at three, its runs, each linking its page, and its share of the cost
+  of the wave. How it went is a timeline of the states of each task over the time of the wave, its halts drawn as
+  bands, followed by the failed tick actions by action, with their count and the event of the ledger that cleared
+  them; the events of the ledger are folded under Events.
 - **Inbox** — the new signals by family, the proposed patterns with their ratify and dismiss buttons, and the study
   answers, each opening the answer rendered from its entity.
 - **Corpus** — choose a registered project, a ref, a type and a board field; it shows the tree of the type, the board
