@@ -16,6 +16,8 @@ HELD = ("REASON", "PARKED_QUESTION")
 SAMPLING = "SAMPLING"
 STATISTIC_FILES = "files "
 MERGED = "merged"
+RUN_FINISHED = "run.finished"
+NOT_RECORDED = "not recorded"
 LEADING_TASK = re.compile(r"[A-Z][A-Z0-9]*\d+\b")
 LINKED_TOKEN = re.compile(
     r"#(?P<pull_request>\d+)\b|(?P<run>\b\d{8}T\d{6}Z-[0-9a-f]+\b)|(?P<task>\b[A-Z][A-Z0-9]*\d+\b)"
@@ -112,15 +114,23 @@ def _render_tiles(waves: list[dict], fields: list[dict]) -> str:
     runs = [slot["runs"] for wave in waves for slot in wave["ledger"]["turns"]["by_slot"].values()]
     unmeasured = sum(count["unmeasured"] for count in runs)
     turns = sum(sum(wave["ledger"]["turns_by_task"].values()) for wave in waves)
-    cost = sum(wave["ledger"]["cost_usd"] for wave in waves)
-    run_time = sum(task["duration_ms"] for wave in waves for task in wave["ledger"]["by_task"])
+    costs = [wave["ledger"]["cost_usd"] for wave in waves if wave["ledger"]["cost_usd"] is not None]
+    run_times = [
+        task["duration_ms"] for wave in waves for task in wave["ledger"]["by_task"] if task["duration_ms"] is not None
+    ]
+    costless = sum(
+        event["event"] == RUN_FINISHED and event["fields"].get("cost_usd") is None
+        for wave in waves
+        for event in wave["ledger"]["events"]
+    )
     wall_time = sum(wave["ledger"]["wall_time_ms"] for wave in waves)
-    cost_perimeter = perimeter if unmeasured == 0 else f"a floor: {unmeasured} runs record no cost"
+    cost_perimeter = perimeter if costless == 0 else f"a floor: {costless} runs record no cost"
+    run_time = f"{_format_duration(sum(run_times))} of run time" if run_times else f"run time {NOT_RECORDED}"
     tiles = [
         StatTile("tasks merged", f"{merged} of {len(tasks)}", perimeter),
         StatTile("runs", f"{sum(count['measured'] for count in runs) + unmeasured} runs, {turns} turns", perimeter),
-        StatTile("cost", f"{cost:.2f} USD", cost_perimeter),
-        StatTile("wall time", _format_duration(wall_time), f"{_format_duration(run_time)} of run time"),
+        StatTile("cost", f"{sum(costs):.2f} USD" if costs else NOT_RECORDED, cost_perimeter),
+        StatTile("wall time", _format_duration(wall_time), run_time),
     ]
     rendered = "".join(render_stat_tile(tile) for tile in tiles)
     return f'<div class="tiles">{rendered}{_render_files_tile(fields, merged)}</div>'

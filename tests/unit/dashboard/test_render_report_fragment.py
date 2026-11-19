@@ -23,7 +23,18 @@ def create_document(fields: list[dict]) -> dict:
     }
 
 
-def create_wave(unmeasured_runs: int = 0, states: tuple[str, str] = ("merged", "merged")) -> dict:
+def create_run_finished(task: str, cost_usd: float | None) -> dict:
+    recorded_cost = {} if cost_usd is None else {"cost_usd": cost_usd}
+    return {
+        "at": "2026-10-01T09:30:00Z",
+        "event": "run.finished",
+        "fields": {"slot": "build", "wave": "oak_w5", "task": task, "main_turns": 52, **recorded_cost},
+    }
+
+
+def create_wave(
+    costless_runs: int = 0, states: tuple[str, str] = ("merged", "merged"), unmeasured_runs: int = 0
+) -> dict:
     return {
         "wave": "oak_w5",
         "tasks": [
@@ -44,8 +55,27 @@ def create_wave(unmeasured_runs: int = 0, states: tuple[str, str] = ("merged", "
                 }
             },
             "turns_by_task": {"OK7": 104, "OK8": 23},
+            "events": [
+                create_run_finished("OK7", 6.85),
+                create_run_finished("OK8", 1.15),
+                *[create_run_finished("OK8", None) for _ in range(costless_runs)],
+            ],
         },
     }
+
+
+def create_unrecorded_wave() -> dict:
+    wave = create_wave()
+    by_task = [{**task, "turns": None, "duration_ms": None, "cost_usd": None} for task in wave["ledger"]["by_task"]]
+    ledger = {
+        **wave["ledger"],
+        "cost_usd": None,
+        "by_task": by_task,
+        "turns": {"by_slot": {}},
+        "turns_by_task": {},
+        "events": [],
+    }
+    return {**wave, "ledger": ledger}
 
 
 def render(fields: list[dict], waves: list[dict] = NO_WAVE, address: str | None = NO_FORGE) -> str:
@@ -251,12 +281,58 @@ class RenderReportFragmentTilesTest(unittest.TestCase):
         fields = [{"name": "STATISTIC", "value": "files 12"}]
 
         # Act
-        fragment = render(fields, [create_wave(unmeasured_runs=2)])
+        fragment = render(fields, [create_wave(costless_runs=2)])
 
         # Assert
         self.assertIn(
             '<span class="stat-value">41.28 USD</span><span class="stat-label">cost</span>'
             '<span class="stat-perimeter">a floor: 2 runs record no cost</span>',
+            fragment,
+        )
+
+    def test_should_leave_the_cost_unmarked_when_every_run_records_one_whatever_its_turns(self):
+        # Arrange
+        fields = [{"name": "STATISTIC", "value": "files 12"}]
+
+        # Act
+        fragment = render(fields, [create_wave(unmeasured_runs=2)])
+
+        # Assert
+        self.assertIn(
+            '<span class="stat-value">41.28 USD</span><span class="stat-label">cost</span>'
+            '<span class="stat-perimeter">the waves oak_w5</span>',
+            fragment,
+        )
+
+    def test_should_say_the_cost_and_the_run_time_not_recorded_when_no_run_records_them(self):
+        # Arrange
+        fields = [{"name": "STATISTIC", "value": "files 12"}]
+
+        # Act
+        fragment = render(fields, [create_unrecorded_wave()])
+
+        # Assert
+        self.assertIn(
+            '<span class="stat-value">not recorded</span><span class="stat-label">cost</span>'
+            '<span class="stat-perimeter">the waves oak_w5</span></div>'
+            '<div class="stat-tile"><span class="stat-value">4 h 50 min</span><span class="stat-label">wall time</span>'
+            '<span class="stat-perimeter">run time not recorded</span>',
+            fragment,
+        )
+
+    def test_should_sum_the_cost_and_the_run_time_of_the_waves_that_record_them(self):
+        # Arrange
+        fields = [{"name": "STATISTIC", "value": "files 12"}]
+
+        # Act
+        fragment = render(fields, [create_wave(), {**create_unrecorded_wave(), "wave": "oak_w6"}])
+
+        # Assert
+        self.assertIn(
+            '<span class="stat-value">41.28 USD</span><span class="stat-label">cost</span>'
+            '<span class="stat-perimeter">the waves oak_w5, oak_w6</span></div>'
+            '<div class="stat-tile"><span class="stat-value">9 h 40 min</span><span class="stat-label">wall time</span>'
+            '<span class="stat-perimeter">50 min of run time</span>',
             fragment,
         )
 
