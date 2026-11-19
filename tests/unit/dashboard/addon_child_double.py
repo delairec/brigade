@@ -16,7 +16,7 @@ class PipedChildDouble:
         self.output, child_output = os.pipe()
         self.writer = os.fdopen(self.input, "w", encoding="utf-8")
         self.receiver = LineReceiver(os.fdopen(self.output, "r", encoding="utf-8"))
-        self.running = True
+        self.stopped = False
         self.serving = threading.Thread(
             target=self._serve,
             args=(os.fdopen(child_input, "r", encoding="utf-8"), os.fdopen(child_output, "w", encoding="utf-8")),
@@ -42,17 +42,17 @@ class PipedChildDouble:
         return self.receiver.receive(timeout_s)
 
     def is_running(self) -> bool:
-        return self.running and not self.receiver.has_ended() and self.serving.is_alive()
+        return not self.stopped and not self.receiver.has_ended() and self.serving.is_alive()
 
     def describe_failure(self) -> str:
         return self.failure
 
     def stop(self) -> None:
-        self.running = False
+        self.stopped = True
         self.writer.close()
 
     def die(self) -> None:
-        self.stop()
+        self.writer.close()
         self.serving.join()
 
 
