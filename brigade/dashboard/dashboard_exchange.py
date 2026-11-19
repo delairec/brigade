@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from brigade.dashboard.awawa_addon_supervisor import AwawaAddonSupervisor
+
 LOOPBACK_HOST = "127.0.0.1"
 
 
@@ -7,6 +9,7 @@ LOOPBACK_HOST = "127.0.0.1"
 class Dashboard:
     port: int
     token: str
+    addon: AwawaAddonSupervisor
 
     @property
     def origin(self) -> str:

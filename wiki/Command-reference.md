@@ -67,6 +67,7 @@ Every command of brigade, what it does in one line, and the page that documents 
 | `brigade process list\|show` | list the subprocesses brigade started and show those of one run, tick or command | [Trails](Trails.md) |
 | `brigade corpus <project>` | read a registered project's tree at a branch, a SHA or a worktree; `-- <awawa args>` runs awawa there | [Project tree at a ref](Project-tree-at-a-ref.md) |
 | `brigade serve` | serve the dashboard on the loopback address until SIGINT or SIGTERM | [Dashboard](Dashboard.md) |
+| `brigade awawa-addon` | answer the documents of the awawa tab over standard input and output, one JSON line each; brigade serve starts it | [Dashboard](Dashboard.md) |
 
 <details><summary>Lines that depart from the help</summary>
 

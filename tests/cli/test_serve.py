@@ -1,4 +1,6 @@
 import http.client
+import json
+import os
 import signal
 import subprocess
 import sys
@@ -8,6 +10,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
+from tests.cli.temporary_project import TemporaryProject
 from tests.process_launcher import ProcessLauncher
 
 STOP_WAIT_S = 20.0
@@ -103,3 +106,89 @@ class BrigadeServeTest(unittest.TestCase):
         # Assert
         self.assertEqual(status, 200)
         self.assertIn('<time datetime="2026-10-06T12:00:00Z">2026-10-06T12:00:00Z</time>', body)
+
+
+ADDON_SCHEMA = (
+    'SCHEMA TASK\n\tDESC "a task"\n\tFIELD TITLE string\n\t\tREQUIRED\n'
+    "\tFIELD STATUS draft|todo|implemented\n\t\tREQUIRED\n"
+)
+ADDON_TASKS = 'TASK B1\n\tTITLE "Read the corpus"\n\tSTATUS todo\n'
+BOARD_OF_THE_TASKS = "/api/awawa/app?view=board&type=TASK"
+
+
+def list_children(process: subprocess.Popen) -> list[str]:
+    listed = ProcessLauncher.run(["pgrep", "-P", str(process.pid)], check=False, capture_output=True, text=True)
+    return listed.stdout.split()
+
+
+class BrigadeServeTestCase(unittest.TestCase):
+    def setUp(self):
+        root = tempfile.TemporaryDirectory()
+        self.addCleanup(root.cleanup)
+        self.root = Path(root.name).resolve()
+        self.machine = TemporaryMachine(self.root)
+        self.machine.install_awawa(self)
+        self.machine.run_init()
+
+    def start_serving(self) -> tuple[subprocess.Popen, str]:
+        process = ProcessLauncher.start(
+            [sys.executable, str(CLONE_ENTRY_POINT), "serve", "--port", "0"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=self.machine.describe_environment(),
+        )
+        self.addCleanup(process.communicate, timeout=STOP_WAIT_S)
+        self.addCleanup(process.terminate)
+        return process, process.stdout.readline().strip()
+
+
+class BrigadeServeWithAProjectHoldingACorpusTest(BrigadeServeTestCase):
+    def setUp(self):
+        super().setUp()
+        project = TemporaryProject(self.root / "projects" / "app", self.machine.describe_environment())
+        project.write("corpus/schema.awawa", ADDON_SCHEMA)
+        project.write("corpus/tasks.awawa", ADDON_TASKS)
+        project.track("corpus")
+        project.run_git("commit", "--quiet", "-m", "first")
+        self.machine.run_brigade(CLONE_ENTRY_POINT, "project", "add", str(project.path), "--corpus-mode", "control")
+
+    def test_should_answer_the_board_of_the_tasks_through_the_awawa_addon(self):
+        # Arrange
+        process, url = self.start_serving()
+
+        # Act
+        status, body = fetch(url, BOARD_OF_THE_TASKS)
+
+        # Assert
+        self.assertEqual(status, 200, body)
+        self.assertEqual(json.loads(body)["columns"][1]["entities"][0]["code"], "B1")
+        self.assertEqual(len(list_children(process)), 1)
+
+    def test_should_keep_serving_once_the_addon_died_and_start_it_again_at_the_next_request(self):
+        # Arrange
+        process, url = self.start_serving()
+        fetch(url, BOARD_OF_THE_TASKS)
+        os.kill(int(list_children(process)[0]), signal.SIGKILL)
+
+        # Act
+        home_status, home = fetch(url, "/views/status")
+        status, body = fetch(url, BOARD_OF_THE_TASKS)
+
+        # Assert
+        self.assertEqual(home_status, 200, home)
+        self.assertEqual(status, 200, body)
+        self.assertEqual(json.loads(body)["view"], "board")
+
+
+class BrigadeServeWithoutAProjectHoldingACorpusTest(BrigadeServeTestCase):
+    def test_should_start_no_child_process(self):
+        # Arrange
+        process, url = self.start_serving()
+
+        # Act
+        status, body = fetch(url, BOARD_OF_THE_TASKS)
+
+        # Assert
+        self.assertEqual(status, 404, body)
+        self.assertEqual(list_children(process), [])

@@ -75,6 +75,27 @@ Its seven views:
 `/views/heartbeat` renders `brigade scheduler status --json`, answering 200 when the scheduler exits 1 on a stale tick,
 and `/views/selector` renders the projects of `brigade project list --json`.
 
+## The awawa addon
+
+`brigade serve` starts the awawa addon, one child process `brigade awawa-addon`, when at least one registered project
+holds a corpus: `awawa status --json` of its `PATH` counts files. Where no project holds one, or the registry or awawa
+cannot be read, it starts none. Stopping `brigade serve` stops it.
+
+- **Its route** — `GET /api/awawa/<project>?ref=<ref>&view=<view>`, with `type`, `field`, `search`, `entity` and
+  `filter`, repeatable, answers the document `brigade corpus <project> --ref <ref> --view <view> ... --json` prints. It
+  is the one way to the addon, under the Host check of every route: the addon listens on no port and opens no socket
+  file; `brigade serve` writes each request as one JSON line on its standard input and reads its answer as one JSON
+  line on its standard output.
+- **What it caches** — what it read of the corpus of a project at a ref, until a `.awawa` file of the tree read
+  changes or the ref names another commit: a second request on an unchanged corpus runs awawa no more. It reads the
+  registry once, when it starts.
+- **When it stopped** — a project holding no corpus answers 404, `@PROJECT.<project> holds no awawa corpus`, and the
+  addon is not asked. An addon that died, that answered nothing within 120 s or that answered no document answers
+  503, `the awawa addon stopped; the next request starts it again`; the other views keep being served, and the next
+  request of the tab starts it again, the tab waiting while the cache fills. A start that fails, awawa absent for
+  one, answers 503 with its error, `the awawa addon did not start: ...`, and each later request tries one start and
+  no more. An error of the view itself, an unknown ref for one, answers 500 with its message.
+
 ## Routes
 
 | Route                                 | Command run, with `--json`         |

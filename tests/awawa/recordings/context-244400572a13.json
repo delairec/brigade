@@ -1,0 +1,29 @@
+{
+  "call": {
+    "arguments": [
+      "context",
+      "@TASK.B1",
+      "--depth",
+      "0",
+      "--with-schema",
+      "--json",
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>"
+    ],
+    "cwd": "<tmp:0>/cache/brigade/refs/app/<commit:1>",
+    "directories": [
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>"
+    ],
+    "inputs": {
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/schema.awawa": "SCHEMA TASK\n\tDESC \"a task\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS draft|todo|implemented\n\t\tREQUIRED\n",
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/tasks.awawa": "TASK B1\n\tTITLE \"Read the corpus\"\n\tSTATUS todo\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"root\": {\"type\": \"TASK\", \"name\": \"B1\"}, \"entities\": [{\"type\": \"TASK\", \"name\": \"B1\", \"file\": \"<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/tasks.awawa\", \"line\": 1, \"status\": \"todo\", \"depth\": 0, \"text\": \"TASK B1\\n\\tTITLE \\\"Read the corpus\\\"\\n\\tSTATUS todo\\n\", \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"Read the corpus\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"todo\"], \"fields\": []}]}], \"schema\": [{\"type\": \"SCHEMA\", \"name\": \"TASK\", \"file\": \"<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/schema.awawa\", \"line\": 1, \"status\": null, \"text\": \"SCHEMA TASK\\n\\tDESC \\\"a task\\\"\\n\\tFIELD TITLE string\\n\\t\\tREQUIRED\\n\\tFIELD STATUS draft|todo|implemented\\n\\t\\tREQUIRED\\n\", \"fields\": [{\"name\": \"DESC\", \"atoms\": [\"\\\"a task\\\"\"], \"fields\": []}, {\"name\": \"FIELD\", \"atoms\": [\"TITLE\", \"string\"], \"fields\": [{\"name\": \"REQUIRED\", \"atoms\": [], \"fields\": []}]}, {\"name\": \"FIELD\", \"atoms\": [\"STATUS\", \"draft|todo|implemented\"], \"fields\": [{\"name\": \"REQUIRED\", \"atoms\": [], \"fields\": []}]}]}], \"resolved\": {\"TASK\": {\"external\": false, \"declared\": true, \"fields\": [{\"name\": \"TITLE\", \"from\": null, \"required\": true, \"repeatable\": false, \"category\": null, \"default\": null, \"converse\": null, \"range\": null, \"desc\": [], \"slots\": [[{\"kind\": \"string\", \"label\": \"string\"}]], \"file\": \"<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/schema.awawa\", \"line\": 3, \"col\": 2, \"fields\": []}, {\"name\": \"STATUS\", \"from\": null, \"required\": true, \"repeatable\": false, \"category\": null, \"default\": null, \"converse\": null, \"range\": null, \"desc\": [], \"slots\": [[{\"kind\": \"literal\", \"label\": \"draft\", \"value\": \"draft\"}, {\"kind\": \"literal\", \"label\": \"todo\", \"value\": \"todo\"}, {\"kind\": \"literal\", \"label\": \"implemented\", \"value\": \"implemented\"}]], \"file\": \"<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/schema.awawa\", \"line\": 5, \"col\": 2, \"fields\": []}], \"when\": []}}, \"frontier\": [], \"skipped\": [], \"suppressed\": [], \"unresolved\": [], \"referenced_by\": [], \"skip_unmatched\": [], \"skipped_fields\": [], \"stats\": {\"entities\": 1, \"lines\": 9, \"depth\": 0}}\n"
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}

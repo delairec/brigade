@@ -1,0 +1,26 @@
+{
+  "call": {
+    "arguments": [
+      "show",
+      "@TASK.B1",
+      "--json",
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>"
+    ],
+    "cwd": "<tmp:0>/cache/brigade/refs/app/<commit:1>",
+    "directories": [
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>"
+    ],
+    "inputs": {
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/schema.awawa": "SCHEMA TASK\n\tDESC \"a task\"\n\tFIELD TITLE string\n\t\tREQUIRED\n\tFIELD STATUS draft|todo|implemented\n\t\tREQUIRED\n",
+      "<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/tasks.awawa": "TASK B1\n\tTITLE \"Read the corpus\"\n\tSTATUS todo\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"TASK\", \"name\": \"B1\", \"file\": \"<tmp:0>/cache/brigade/refs/app/<commit:1>/corpus/tasks.awawa\", \"line\": 1, \"status\": \"todo\", \"fields\": [{\"name\": \"TITLE\", \"atoms\": [\"\\\"Read the corpus\\\"\"], \"fields\": []}, {\"name\": \"STATUS\", \"atoms\": [\"todo\"], \"fields\": []}], \"duplicates\": []}\n"
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}
