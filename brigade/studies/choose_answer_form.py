@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.runtime import Runtime
+from brigade.studies.ask_for_repeats import ask_for_repeats
 from brigade.studies.check_patterns import check_patterns
 from brigade.studies.convert_study import Study
 from brigade.studies.fold_pattern_answer import FoldedAnswer, fold_pattern_answer
@@ -36,6 +37,7 @@ class AnswerForm:
     publish: Callable[[StudyRunContext], dict]
     check: Callable[[Runtime, Path, list[dict]], None]
     fold: Callable[[str, str], FoldedAnswer]
+    ask: Callable[[str, tuple[str, ...]], str]
 
 
 def _render_study_answer(runtime: Runtime, study: Study, run_id: str, collected: list[dict]) -> str:
@@ -52,6 +54,10 @@ def _publish_nothing(context: StudyRunContext) -> dict:
 
 def _check_nothing(runtime: Runtime, directory: Path, collected: list[dict]) -> None:
     pass
+
+
+def _ask_as_written(question: str, declared_fields: tuple[str, ...]) -> str:
+    return question
 
 
 def _fold_nothing(held: str, answer: str) -> FoldedAnswer:
@@ -73,6 +79,7 @@ STUDY_ANSWER_FORM = AnswerForm(
     publish=_publish_nothing,
     check=_check_nothing,
     fold=_fold_nothing,
+    ask=_ask_as_written,
 )
 REPORT_ANSWER_FORM = AnswerForm(
     name=_name_report,
@@ -81,6 +88,7 @@ REPORT_ANSWER_FORM = AnswerForm(
     publish=publish_milestone_report,
     check=_check_nothing,
     fold=_fold_nothing,
+    ask=_ask_as_written,
 )
 TASK_REPORT_ANSWER_FORM = AnswerForm(
     name=_name_task_report,
@@ -89,6 +97,7 @@ TASK_REPORT_ANSWER_FORM = AnswerForm(
     publish=publish_task_report,
     check=_check_nothing,
     fold=_fold_nothing,
+    ask=_ask_as_written,
 )
 PATTERN_ANSWER_FORM = AnswerForm(
     name=name_answer,
@@ -97,6 +106,7 @@ PATTERN_ANSWER_FORM = AnswerForm(
     publish=_publish_nothing,
     check=check_patterns,
     fold=fold_pattern_answer,
+    ask=ask_for_repeats,
 )
 
 

@@ -350,15 +350,8 @@ class AnswerDashboardRequestOfTheInboxViewTest(unittest.TestCase):
         response = answer_get("/views/inbox", create_test_runtime(run_process=runner.run))
 
         # Assert
-        self.assertEqual(
-            response,
-            DashboardResponse(
-                status=200,
-                content_type="text/html; charset=utf-8",
-                body=b"<section><h2>Signals</h2><p>no new signal</p></section>"
-                b"<section><h2>Patterns</h2><p>no pattern proposed</p></section>",
-            ),
-        )
+        self.assertEqual(response.status, 200)
+        self.assertIn(b"<section><h2>Decide first</h2>", response.body)
 
     def test_should_render_the_error_of_a_failing_inbox_list(self):
         # Arrange

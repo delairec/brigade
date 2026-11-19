@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
+from tests.cli.temporary_machine import CLONE_ENTRY_POINT, SHIPPED_SCHEMA, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
 from tests.cli.wave_tick_test_case import WaveTickTestCase
 from tests.process_launcher import ProcessLauncher
@@ -69,6 +69,14 @@ SEGMENT_RESULT = {
 REPORT = (
     'REPORT oak_w3\n\tWAVE "oak_w3"\n\tPROJECT "oak"\n\tSTATISTIC "tasks 1"\n'
     '\tNARRATIVE "the wave ran once"\n\tNARRATIVE "Verdict: delivered"\n'
+)
+PROPOSED_PATTERN = (
+    "PATTERN FlakyTests\n"
+    '\tTITLE "the tests are flaky"\n'
+    "\tSTATUS new\n"
+    '\tEVIDENCE "rt:PRRT_kwDO a thread on the flaky test"\n'
+    "\tACTION wave\n"
+    '\tTARGET "shop"\n'
 )
 LAST_TICK = '{"schema_version": 1, "ts": "2026-10-06T12:00:00Z", "duration_ms": 4, "actions_applied": 0}'
 PARKED_WAVE_LEDGER = (
@@ -389,3 +397,47 @@ class BrigadeServeHomeTest(BrigadeServeTestCase):
             '<span class="needs-you-reason">parked on forge_account</span>',
             body,
         )
+
+
+class BrigadeServeOfTheInboxTest(unittest.TestCase):
+    def setUp(self):
+        root = tempfile.TemporaryDirectory()
+        self.addCleanup(root.cleanup)
+        self.machine = TemporaryMachine(Path(root.name))
+        self.machine.install_awawa(self)
+        self.machine.corpus.mkdir(parents=True)
+        (self.machine.corpus / "_schema.awawa").write_bytes(SHIPPED_SCHEMA.read_bytes())
+        (self.machine.corpus / "patterns.awawa").write_text(PROPOSED_PATTERN)
+
+    def start_serving(self) -> str:
+        process = ProcessLauncher.start(
+            [sys.executable, str(CLONE_ENTRY_POINT), "serve", "--port", "0"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=self.machine.describe_environment(),
+        )
+        self.addCleanup(process.kill)
+        return process.stdout.readline().strip()
+
+    def test_should_answer_the_inbox_view_with_the_title_of_a_proposed_pattern(self):
+        # Arrange
+        url = self.start_serving()
+
+        # Act
+        status, body = fetch(url, "/views/inbox")
+
+        # Assert
+        self.assertEqual(status, 200)
+        self.assertIn("<h3>the tests are flaky</h3>", body)
+
+    def test_should_answer_the_page_of_a_proposed_pattern_with_its_evidence(self):
+        # Arrange
+        url = self.start_serving()
+
+        # Act
+        status, body = fetch(url, "/views/inbox/FlakyTests")
+
+        # Assert
+        self.assertEqual(status, 200)
+        self.assertIn("<li>rt:PRRT_kwDO a thread on the flaky test</li>", body)

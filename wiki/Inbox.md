@@ -7,6 +7,7 @@ dismissed, and how a note or the answer of a study becomes a signal.
 brigade note <text> [--project P]   # record a note as a signal
 brigade inbox list [--all]          # the new signals, --all adding the dismissed ones, the proposed patterns, the study answers
 brigade inbox show <id>             # a signal with its evidence, or a study answer
+brigade inbox show <pattern>        # a proposed pattern, its title, action, target and evidence lines
 brigade inbox dismiss <id>          # a signal, or a pattern with the signals it cites
 brigade inbox ratify <pattern> [--kind rule|guard|lint|schema|skill|script]
 ```
@@ -52,8 +53,13 @@ the fingerprint, the kind and the project.
 - A prefix that matches no signal, or several, exits 1 naming the candidates.
 - `inbox list` prints each proposed pattern with its action and the signals it cites, then each study answer with its
   study and its project. With `--json`, its document also groups the listed signals into the families of the triage,
-  by rule cited, file and check name.
-- `inbox show` takes the id of a study answer as well, and prints the answer rendered from its entity.
+  by rule cited, file and check name. Each pattern of `--json` carries `title` and `target`, its `TITLE` and its
+  `TARGET`, and `repeats`, the name of the pattern its `REPEATS` names, null when it records none; each signal
+  carries `stale`, true for a stall whose task the ledger last records merged.
+- `inbox show` takes the id of a study answer as well, and prints the answer rendered from its entity; given the
+  name of a proposed pattern, `inbox show <pattern>` prints its title, its action, its target and its evidence lines.
+- A triage proposing a pattern that repeats one the registry holds names it in `REPEATS`, where the installed
+  schema declares the field; its answer is refused when `REPEATS` names no pattern the registry holds.
 - `inbox dismiss` leaves a dismissed signal as it is. Given the name of a `PATTERN`, it sets the pattern `dismissed` and
   dismisses every signal the pattern cites.
 - `inbox ratify` ratifies a `new` pattern by its `ACTION`, for the registered project its `TARGET` names: `wave`
