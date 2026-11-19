@@ -146,3 +146,21 @@ class DescribeRoleBudgetsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(budgets["ada"]["segment_p90"], 10)
+
+    def test_should_leave_out_of_the_percentiles_a_segment_that_reported_no_main_turns(self):
+        # Arrange
+        no_main_turns = LedgerEntry(
+            instant=datetime(2026, 11, 1, 8, 0, tzinfo=UTC),
+            event=dataclasses.replace(_create_entry(0, "r1", "ada", shipped_budget=75).event, main_turns=None),
+        )
+        reading = LedgerReading(
+            entries=(no_main_turns, _create_entry(1, "r2", "ada", shipped_budget=75, main_turns=10)),
+            files=(),
+            skipped=(),
+        )
+
+        # Act
+        budgets = describe_role_budgets(reading)
+
+        # Assert
+        self.assertEqual(budgets["ada"]["segment_p50"], 10)
