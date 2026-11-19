@@ -7,7 +7,7 @@ from brigade.corpus.prepare_registered_tree import prepare_registered_tree
 from brigade.corpus.prepare_tree import Tree
 from brigade.corpus.read_entities import Entity
 from brigade.corpus.tree_view_describer import TreeViewDescriber, locate_awawa_web
-from brigade.corpus.view_request import ViewRequest
+from brigade.corpus.view_request import VIEWS, ViewRequest
 from brigade.errors import BrigadeError
 from brigade.registry.find_project import find_project
 from brigade.runtime import Runtime
@@ -28,6 +28,8 @@ def _list_awawa_files(root: Path) -> tuple[tuple[str, int, int], ...]:
 
 
 def _read_view_request(message: dict) -> ViewRequest:
+    if message.get("view") not in VIEWS:
+        raise BrigadeError(f"--view takes one of {', '.join(VIEWS)}")
     return ViewRequest(
         view=message.get("view"),
         entity_type=message.get("type"),
@@ -60,9 +62,10 @@ class CorpusViewAnswerer:
 
     def _describe(self, message: dict) -> dict:
         request = argparse.Namespace(project=message["project"], ref=message.get("ref"), worktree=None)
+        view_request = _read_view_request(message)
         project = find_project(self.projects, request.project)
         tree = prepare_registered_tree(project, request, self.configuration, self.runtime)
-        return self._read(tree).describe(tree, _read_view_request(message))
+        return self._read(tree).describe(tree, view_request)
 
     def _read(self, tree: Tree) -> TreeViewDescriber:
         key = (tree.project, tree.ref)

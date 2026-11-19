@@ -8,7 +8,7 @@ from brigade.corpus.describe_corpus_view import CorpusView, describe_corpus_view
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.read_corpus_types import read_corpus_types
 from brigade.corpus.tree_view_describer import TreeViewDescriber, locate_awawa_web
-from brigade.corpus.view_request import ViewRequest
+from brigade.corpus.view_request import VIEWS, ViewRequest
 from brigade.errors import BrigadeError
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
@@ -17,7 +17,6 @@ DOCUMENT_SCHEMA_VERSION = 1
 FIELD_NAME_WIDTH = 6
 TREE_FIELDS = ("ref", "sha", "kind", "root")
 NOTHING = "nothing"
-VIEWS = ("tree", "board", "dependencies", "health")
 JSON_INDENT = 2
 
 
