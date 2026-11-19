@@ -11,7 +11,6 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.reports.document_plugin_double import DocumentPluginDouble
 
-
 WAVE_REPORT = {"type": "REPORT", "name": "oak_w3", "fields": [{"name": "PROJECT", "value": "oak"}]}
 
 

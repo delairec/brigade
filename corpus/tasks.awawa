@@ -2937,7 +2937,7 @@ TASK B31
 		IMPL "tests/unit/reports/test_render_report_markdown.py::def"
 			+ "test_should_render_the_manual_tests_and_the_tester_steps_as_tables(self):"
 		IMPL "tests/unit/dashboard/test_render_report_fragment.py::def"
-			+ "test_should_render_the_fields_and_the_manual_tests_as_a_table_escaping_every_string(self):"
+			+ "test_should_group_the_steps_to_test_by_hand_and_the_samples_by_the_task_they_name(self):"
 	SPEC "/api/reports and /api/reports/<id> serve the standard output of brigade reports list"
 		+ "--json and brigade reports show <id> --json, which the Reports view renders"
 		IMPL "brigade/dashboard/route_command.py::def _route_report(report: str, query: dict) ->"

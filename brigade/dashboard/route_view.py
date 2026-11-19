@@ -3,13 +3,14 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from urllib.parse import parse_qs, urlsplit
 
+from brigade.dashboard.locate_pull_request_pages import locate_pull_request_pages
 from brigade.dashboard.render_answer import render_answer
 from brigade.dashboard.render_corpus_view import render_corpus_view
 from brigade.dashboard.render_home import HomeDocuments, render_home
 from brigade.dashboard.render_inbox_item import render_inbox_item
 from brigade.dashboard.render_ledger_fragment import render_ledger_fragment
 from brigade.dashboard.render_project_choice import render_project_choice
-from brigade.dashboard.render_report_fragment import render_report_fragment
+from brigade.dashboard.render_report_fragment import ReportReading, render_report_fragment
 from brigade.dashboard.render_reports_fragment import render_reports_fragment
 from brigade.dashboard.render_run_fragment import RunPage, render_run_fragment
 from brigade.dashboard.render_runs_fragment import RunFilters, render_runs_fragment
@@ -36,6 +37,7 @@ PROJECT = "project"
 BUDGETS = "budgets"
 TASK_RUNS = "task_runs"
 WAVE = "wave"
+WAVE_PREFIX = "wave "
 LEDGER_BUDGETS = CommandRoute(arguments=("ledger", "budgets", "--json"))
 WAVE_EVENTS = ("wave", "show", "--json", "--events")
 STALE_SCHEDULER_EXIT_CODE = 1
@@ -70,8 +72,28 @@ def _render_reports(answers: dict[str, CommandAnswer]) -> str:
     return render_answer(answers[DOCUMENT], render_reports_fragment)
 
 
+def _follow_report(answers: dict[str, CommandAnswer]) -> dict[str, CommandRoute]:
+    document = json.loads(answers[DOCUMENT].document)
+    routes = {f"{WAVE_PREFIX}{wave}": CommandRoute(arguments=(*WAVE_EVENTS, wave)) for wave in document["waves"]}
+    project = document["report"]["project"]
+    if project is not None:
+        routes[PROJECT] = CommandRoute(arguments=("project", "show", "--json", project))
+    return routes
+
+
+def _read_report(answers: dict[str, CommandAnswer]) -> Callable[[dict], str]:
+    waves = [
+        json.loads(answer.document)
+        for name, answer in answers.items()
+        if name.startswith(WAVE_PREFIX) and answer.status == OK
+    ]
+    project = answers.get(PROJECT)
+    pages = None if project is None or project.status != OK else locate_pull_request_pages(json.loads(project.document))
+    return lambda document: render_report_fragment(ReportReading(document, waves, pages))
+
+
 def _render_report(answers: dict[str, CommandAnswer]) -> str:
-    return render_answer(answers[DOCUMENT], render_report_fragment)
+    return render_answer(answers[DOCUMENT], _read_report(answers))
 
 
 def _render_home(answers: dict[str, CommandAnswer]) -> str:
@@ -205,4 +227,5 @@ def _route_command_view(
     if path == REPORTS_VIEW:
         return ViewRoute(routes={DOCUMENT: route}, render=_render_reports)
     collection = path.split(PATH_SEPARATOR)[0]
-    return ViewRoute(routes={DOCUMENT: route}, render=RENDERERS_BY_COLLECTION[collection])
+    follow = _follow_report if collection == REPORTS_VIEW else _follow_nothing
+    return ViewRoute(routes={DOCUMENT: route}, render=RENDERERS_BY_COLLECTION[collection], follow=follow)
