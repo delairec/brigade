@@ -53,8 +53,9 @@ the fingerprint, the kind and the project.
 - A prefix that matches no signal, or several, exits 1 naming the candidates.
 - `inbox list` prints each proposed pattern with its action and the signals it cites, then each study answer with its
   study and its project. With `--json`, its document also groups the listed signals into the families of the triage,
-  by rule cited, file and check name. Each pattern of `--json` carries `title` and `target`, its `TITLE` and its
-  `TARGET`, and `repeats`, the name of the pattern its `REPEATS` names, null when it records none; each signal
+  by rule cited, file and check name. Each pattern of `--json` carries `title`, `target` and `recipe`, its `TITLE`,
+  its `TARGET` and its `RECIPE`, null when it records none, and `repeats`, the name of the pattern its `REPEATS`
+  names, null when it records none; each signal
   carries `stale`, true for a stall whose task the ledger last records merged.
 - `inbox show` takes the id of a study answer as well, and prints the answer rendered from its entity; given the
   name of a proposed pattern, `inbox show <pattern>` prints its title, its action, its target and its evidence lines.
