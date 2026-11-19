@@ -164,6 +164,8 @@ def _render_volume(overview: dict) -> str:
 
 
 def _link_comparison(day: str, first_day: str, last_day: str) -> str:
+    if first_day >= day:
+        return ABSENT
     day_before = (date.fromisoformat(day) - PREVIOUS_DAY).isoformat()
     ranges = (f"{first_day}..{day_before}", f"{day}..{last_day}")
     address = "#ledger?" + "&".join(f"range={quote(day_range, safe='')}" for day_range in ranges)

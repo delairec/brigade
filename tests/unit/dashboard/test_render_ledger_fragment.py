@@ -263,8 +263,27 @@ class RenderLedgerFragmentTest(unittest.TestCase):
             "<table><thead><tr><th>month</th><th>waves</th><th>started</th><th>baseline</th></tr></thead>"
             "<tbody><tr><td>2026-11</td><td>2</td>"
             '<td><a href="#ledger?wave=w1">w1</a> <a href="#ledger?wave=%3Cb%3Ew2%3C%2Fb%3E">&lt;b&gt;w2&lt;/b&gt;</a>'
-            '</td><td><a href="#ledger?range=2026-11-17..2026-10-31&amp;range=2026-11-01..2026-11-18">'
-            "compare before 2026-11-01</a></td></tr></tbody></table></section>",
+            "</td><td>-</td></tr></tbody></table></section>",
+            fragment,
+        )
+
+    def test_should_link_a_month_after_the_first_day_of_the_ledger_to_its_comparison_with_the_days_before_it(self):
+        # Arrange
+        overview = {
+            **OVERVIEW,
+            "first": "2026-10-01T08:00:00Z",
+            "waves_started": {"2026-10": ["w1"], "2026-11": ["w2"]},
+        }
+
+        # Act
+        fragment = render_ledger_fragment({"overview": answer_with(overview), "budgets": answer_with(BUDGETS)})
+
+        # Assert
+        self.assertIn(
+            '<tbody><tr><td>2026-10</td><td>1</td><td><a href="#ledger?wave=w1">w1</a></td><td>-</td></tr>'
+            '<tr><td>2026-11</td><td>1</td><td><a href="#ledger?wave=w2">w2</a></td>'
+            '<td><a href="#ledger?range=2026-10-01..2026-10-31&amp;range=2026-11-01..2026-11-18">'
+            "compare before 2026-11-01</a></td></tr></tbody>",
             fragment,
         )
 
