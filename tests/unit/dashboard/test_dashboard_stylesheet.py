@@ -4,6 +4,7 @@ from tests.unit.dashboard.stylesheet_reader import (
     read_colour_literals_of_the_views,
     read_dark_properties,
     read_light_properties,
+    read_rule,
     read_stylesheet,
     read_tone_classes,
 )
@@ -116,6 +117,23 @@ class DashboardStylesheetTest(unittest.TestCase):
         self.assertNotIn("box-shadow", stylesheet)
         self.assertNotIn("@font-face", stylesheet)
         self.assertIn("font-variant-numeric: tabular-nums;", stylesheet)
+
+    def test_should_lay_the_stat_tiles_of_a_view_in_a_row_that_wraps_above_its_table(self):
+        # Act
+        rule = read_rule(".stat-tiles")
+
+        # Assert
+        self.assertEqual(
+            rule,
+            {"display": "flex", "flex-wrap": "wrap", "gap": "var(--space-3)", "margin": "0 0 var(--space-5)"},
+        )
+
+    def test_should_draw_a_missing_verdict_and_a_missing_date_in_the_faint_neutral(self):
+        # Act
+        rule = read_rule(".no-verdict,\n.no-date")
+
+        # Assert
+        self.assertEqual(rule, {"color": "var(--faint)"})
 
     def test_should_turn_the_rail_into_a_top_bar_under_900px(self):
         # Act

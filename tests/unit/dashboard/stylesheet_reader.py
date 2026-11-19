@@ -7,6 +7,7 @@ DARK_BLOCK = re.compile(
     r"^@media \(prefers-color-scheme: dark\) \{\n  :root \{\n(.*?)^  \}\n\}\n", re.DOTALL | re.MULTILINE
 )
 PROPERTY = re.compile(r"(--[\w-]+): ([^;]+);")
+DECLARATION = re.compile(r"^  ([\w-]+): ([^;]+);$", re.MULTILINE)
 TONE_CLASS = re.compile(r"^\.tone-([\w-]+) \{\n  --tone: var\(--([\w-]+)\);\n\}", re.MULTILINE)
 COLOUR_LITERAL = re.compile(r"#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(")
 
@@ -29,3 +30,8 @@ def read_colour_literals_of_the_views() -> list[str]:
 
 def read_stylesheet() -> str:
     return STYLESHEET
+
+
+def read_rule(selector: str) -> dict[str, str]:
+    block = re.search(rf"^{re.escape(selector)} \{{\n(.*?)^\}}\n", STYLESHEET, re.DOTALL | re.MULTILINE)
+    return dict(DECLARATION.findall(block.group(1))) if block else {}
