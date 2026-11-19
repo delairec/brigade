@@ -242,7 +242,8 @@ class BrigadeServeOfAWaveTest(WaveTickTestCase):
             text=True,
             env=self.describe_environment(),
         )
-        self.addCleanup(process.kill)
+        self.addCleanup(process.communicate, timeout=STOP_WAIT_S)
+        self.addCleanup(process.terminate)
         url = process.stdout.readline().strip()
 
         # Act
