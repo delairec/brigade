@@ -32,6 +32,7 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
                     {"task": "S2", "state": "merged", "pull_request": ANY, "run": ANY, "reason": None},
                     {"task": "S3", "state": "merged", "pull_request": ANY, "run": ANY, "reason": None},
                 ],
+                "milestone": "M1",
                 "merge_command": None,
                 "task_merge_commands": [],
             },

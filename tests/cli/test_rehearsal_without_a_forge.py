@@ -63,6 +63,7 @@ class BrigadeRehearsalOfAOneTaskWaveOfAProjectWithoutAForgeTest(unittest.TestCas
                 "last_event": "wave.closed",
                 "pull_request": None,
                 "tasks": [{"task": "S1", "state": "merged", "pull_request": None, "run": ANY, "reason": None}],
+                "milestone": "M1",
                 "merge_command": self.merge_command,
                 "task_merge_commands": [],
             },
