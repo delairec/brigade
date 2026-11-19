@@ -12,6 +12,7 @@ ECHO = "import sys\nfor line in sys.stdin:\n    sys.stdout.write(line.upper())\n
 SILENT = "import sys\nsys.stdin.read()\n"
 FAILING = "import sys\nsys.stderr.write('awawa is not on the PATH\\n')\nsys.exit(1)\n"
 QUIET_FAILURE = "import sys\nsys.exit(3)\n"
+CLOSING_ITS_OUTPUT = "import os\nimport sys\nos.close(1)\nsys.stdin.read()\n"
 
 
 def start_python(test_case: unittest.TestCase, program: str):
@@ -85,6 +86,17 @@ class StartPipedProcessTest(unittest.TestCase):
 
         # Assert
         self.assertFalse(process.is_running())
+
+    def test_should_take_a_process_whose_output_ended_as_a_process_that_stopped(self):
+        # Arrange
+        process = start_python(self, CLOSING_ITS_OUTPUT)
+        process.receive(LONG_WAIT_S)
+
+        # Act
+        running = process.is_running()
+
+        # Assert
+        self.assertFalse(running)
 
 
 class StartPipedProcessOfAMissingProgramTest(unittest.TestCase):

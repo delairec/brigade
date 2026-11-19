@@ -49,3 +49,26 @@ class LineReceiverTest(unittest.TestCase):
         # Assert
         self.assertIsNone(line)
         writer.close()
+
+    def test_should_tell_the_stream_ended_once_its_end_is_received(self):
+        # Arrange
+        receiver = LineReceiver(io.StringIO(""))
+        receiver.receive(LONG_WAIT_S)
+
+        # Act
+        ended = receiver.has_ended()
+
+        # Assert
+        self.assertTrue(ended)
+
+    def test_should_tell_an_open_stream_has_not_ended(self):
+        # Arrange
+        reader, writer = open_pipe(self)
+        receiver = LineReceiver(reader)
+
+        # Act
+        ended = receiver.has_ended()
+
+        # Assert
+        self.assertFalse(ended)
+        writer.close()

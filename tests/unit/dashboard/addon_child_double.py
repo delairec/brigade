@@ -1,3 +1,4 @@
+import contextlib
 import os
 import threading
 from collections.abc import Callable
@@ -26,7 +27,7 @@ class PipedChildDouble:
 
     @staticmethod
     def _serve(reader, writer, answer, ready_line) -> None:
-        with reader, writer:
+        with reader, writer, contextlib.suppress(SystemExit):
             if ready_line is None:
                 return
             writer.write(f"{ready_line}\n")
@@ -41,7 +42,7 @@ class PipedChildDouble:
         return self.receiver.receive(timeout_s)
 
     def is_running(self) -> bool:
-        return self.running and self.serving.is_alive()
+        return self.running and not self.receiver.has_ended() and self.serving.is_alive()
 
     def describe_failure(self) -> str:
         return self.failure
