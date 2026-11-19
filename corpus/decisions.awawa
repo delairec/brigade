@@ -8439,7 +8439,11 @@ DECISION TheViewOfAReportFollowsItsDocumentWithTheWavesItNamesAndTheProjectOfIts
 		REF @TASK.B266
 	REJECTED "adding the address of the pull request to brigade report show --json: the task names"
 		+ "the three keys it carries"
+	DESC "the waves of a milestone report are the waves of its project that started a task one of"
+		+ "its TASK_ROW values names, as the tick reads the waves of a milestone by its tasks"
 	REJECTED "reading the waves of a milestone from the run of its report: the ledger names them by"
-		+ "the branch of the milestone"
+		+ "the tasks they started"
+	REJECTED "reading the waves of a milestone from the branch of wave.started: the start of a wave"
+		+ "records none, so a milestone report would name no wave"
 	SOURCE "the build run of @TASK.B266 of 2026-11-19"
 		REF @TASK.B266
