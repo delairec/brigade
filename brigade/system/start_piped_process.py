@@ -36,7 +36,7 @@ class PipedProcess:
         return self.receiver.receive(timeout_s)
 
     def is_running(self) -> bool:
-        return self.process.poll() is None
+        return not self.receiver.has_ended() and self.process.poll() is None
 
     def describe_failure(self) -> str:
         exit_code = self.process.wait()
