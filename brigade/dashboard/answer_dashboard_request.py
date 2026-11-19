@@ -116,6 +116,7 @@ def _answer_view(target: str, runtime: Runtime) -> DashboardResponse:
         name: _select_project_answer(run_routed_command(route, runtime), selected)
         for name, route in view.routes.items()
     }
+    answers |= {name: run_routed_command(route, runtime) for name, route in view.follow(answers).items()}
     status = next(iter(answers.values())).status
     return DashboardResponse(status=status, content_type=HTML, body=view.render(answers).encode())
 

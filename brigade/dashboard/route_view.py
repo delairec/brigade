@@ -1,3 +1,4 @@
+import json
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from urllib.parse import parse_qs, urlsplit
@@ -10,7 +11,7 @@ from brigade.dashboard.render_project_choice import render_project_choice
 from brigade.dashboard.render_report_fragment import render_report_fragment
 from brigade.dashboard.render_reports_fragment import render_reports_fragment
 from brigade.dashboard.render_run_fragment import render_run_fragment
-from brigade.dashboard.render_wave import render_wave
+from brigade.dashboard.render_wave import WavePage, render_wave
 from brigade.dashboard.render_waves_view import OVERVIEW, render_waves_view
 from brigade.dashboard.route_command import (
     PATH_SEPARATOR,
@@ -19,7 +20,7 @@ from brigade.dashboard.route_command import (
     CommandRoute,
     route_command,
 )
-from brigade.dashboard.run_routed_command import CommandAnswer
+from brigade.dashboard.run_routed_command import OK, CommandAnswer
 
 LEDGER_VIEW = "ledger"
 WAVES_VIEW = "waves"
@@ -29,6 +30,7 @@ RUNS_VIEW = "runs"
 CORPUS_VIEW = "corpus"
 INBOX_VIEW = "inbox"
 DOCUMENT = "document"
+PROJECT = "project"
 WAVE_EVENTS = ("wave", "show", "--json", "--events")
 STALE_SCHEDULER_EXIT_CODE = 1
 REGION_ROUTES = {
@@ -39,10 +41,15 @@ REGION_ROUTES = {
 }
 
 
+def _follow_nothing(answers: dict[str, CommandAnswer]) -> dict[str, CommandRoute]:
+    return {}
+
+
 @dataclass(frozen=True)
 class ViewRoute:
     routes: dict[str, CommandRoute]
     render: Callable[[dict[str, CommandAnswer]], str]
+    follow: Callable[[dict[str, CommandAnswer]], dict[str, CommandRoute]] = _follow_nothing
 
 
 def _render_reports(answers: dict[str, CommandAnswer]) -> str:
@@ -55,6 +62,27 @@ def _render_report(answers: dict[str, CommandAnswer]) -> str:
 
 def _render_with(render: Callable[[dict], str]) -> Callable[[dict[str, CommandAnswer]], str]:
     return lambda answers: render_answer(answers[DOCUMENT], render)
+
+
+def _follow_wave(answers: dict[str, CommandAnswer]) -> dict[str, CommandRoute]:
+    shown = answers[DOCUMENT]
+    if shown.status != OK:
+        return {}
+    project = json.loads(shown.document)["project"]
+    return {PROJECT: CommandRoute(arguments=("project", "show", "--json", project))}
+
+
+def _read_project(answer: CommandAnswer) -> dict | None:
+    if answer.status != OK:
+        return None
+    return json.loads(answer.document)
+
+
+def _render_wave_page(answers: dict[str, CommandAnswer]) -> str:
+    return render_answer(
+        answers[DOCUMENT],
+        lambda shown: render_wave(WavePage(shown=shown, project=_read_project(answers[PROJECT]))),
+    )
 
 
 RENDERERS_BY_COLLECTION = {
@@ -97,7 +125,7 @@ def route_view(target: str, renderers: dict[str, Callable[[dict], str]]) -> View
         return None
     if route.listing == WAVE_LISTING:
         shown = replace(route, arguments=(*WAVE_EVENTS, route.identifier))
-        return ViewRoute(routes={DOCUMENT: shown}, render=_render_with(render_wave))
+        return ViewRoute(routes={DOCUMENT: shown}, render=_render_wave_page, follow=_follow_wave)
     if address.path in renderers:
         return ViewRoute(routes={DOCUMENT: route}, render=_render_with(renderers[address.path]))
     if address.path == CORPUS_VIEW:
