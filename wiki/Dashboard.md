@@ -96,7 +96,13 @@ Its seven views:
   tiles, with the waves started by month. A wave opens its turns by role and its halts, and *Compare two periods*
   sets two ranges of days side by side with `brigade ledger compare`, saying when a range under five runs is too
   small to compare.
-- **Reports** — the reports of `brigade report list`, each opening as `brigade report show` renders it.
+- **Reports** — the reports of `brigade report list`. The page of a report is ordered by use: its verdict, the
+  narrative line opening on Verdict, with its date and its pull request; the tiles of the waves it names, tasks merged,
+  runs and turns, cost, wall time with run time and files changed, a cost being a floor when a run records none and a
+  statistic the ledger contradicts marked as questioned; Went wrong, Went well and For the next wave, the narrative
+  lines opening on those words, case aside, the others following as one list; the tasks and their dependencies as
+  tables; Test it by hand and Worth reading in the code, grouped by the task they name; Why a task was held; then
+  every other field folded under The full account. A task, a pull request and a run met in a value link their page.
 - **Runs** — the runs of `brigade run list`: a sentence and an explainer saying what a run and a segment are, tiles
   counting the live runs, the finished ones by outcome and the dead ones, and how many run directories the list
   skipped; the filters state, wave and task are chips carried by the address, `#runs?state=dead&wave=<wave>`, passed

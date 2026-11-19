@@ -66,6 +66,10 @@ SEGMENT_RESULT = {
     "nulls": {},
     "cost_usd": 0.5,
 }
+REPORT = (
+    'REPORT oak_w3\n\tWAVE "oak_w3"\n\tPROJECT "oak"\n\tSTATISTIC "tasks 1"\n'
+    '\tNARRATIVE "the wave ran once"\n\tNARRATIVE "Verdict: delivered"\n'
+)
 LAST_TICK = '{"schema_version": 1, "ts": "2026-10-06T12:00:00Z", "duration_ms": 4, "actions_applied": 0}'
 PARKED_WAVE_LEDGER = (
     '{"schema_version": 2, "ts": "2026-11-02T08:00:00Z", "event": "wave.started", "wave": "oak_w4",'
@@ -226,6 +230,23 @@ class BrigadeServeTest(unittest.TestCase):
         # Assert
         self.assertEqual(status, 200)
         self.assertIn("<td>2026-11-18T10:15:00Z</td><td>5m00s</td><td>$0.50</td></tr>", body)
+
+    def test_should_answer_the_page_of_a_report_with_its_verdict_before_any_other_field(self):
+        # Arrange
+        self.machine.install_awawa(self)
+        self.machine.run_init()
+        (self.machine.corpus / "reports.awawa").write_text(REPORT)
+        url = self.start_serving().stdout.readline().strip()
+
+        # Act
+        status, body = fetch(url, "/views/reports/oak_w3")
+
+        # Assert
+        self.assertEqual(status, 200)
+        self.assertRegex(
+            body,
+            r'^<section class="report-verdict"><h2>wave-report oak_w3</h2><p class="status-sentence">Verdict: delivered</p>',
+        )
 
 
 ADDON_SCHEMA = (

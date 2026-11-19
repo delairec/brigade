@@ -1,0 +1,23 @@
+{
+  "call": {
+    "arguments": [
+      "show",
+      "@REPORT.oak_w3",
+      "--json",
+      "<tmp:0>/config/brigade/reports.awawa"
+    ],
+    "cwd": "<tmp:0>/config/brigade",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/config/brigade/reports.awawa": "REPORT oak_w3\n\tWAVE \"oak_w3\"\n\tPROJECT \"oak\"\n\tSTATISTIC \"tasks 1\"\n\tNARRATIVE \"the wave ran once\"\n\tNARRATIVE \"Verdict: delivered\"\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"REPORT\", \"name\": \"oak_w3\", \"file\": \"<tmp:0>/config/brigade/reports.awawa\", \"line\": 1, \"status\": null, \"fields\": [{\"name\": \"WAVE\", \"atoms\": [\"\\\"oak_w3\\\"\"], \"fields\": []}, {\"name\": \"PROJECT\", \"atoms\": [\"\\\"oak\\\"\"], \"fields\": []}, {\"name\": \"STATISTIC\", \"atoms\": [\"\\\"tasks 1\\\"\"], \"fields\": []}, {\"name\": \"NARRATIVE\", \"atoms\": [\"\\\"the wave ran once\\\"\"], \"fields\": []}, {\"name\": \"NARRATIVE\", \"atoms\": [\"\\\"Verdict: delivered\\\"\"], \"fields\": []}], \"duplicates\": []}\n"
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}
