@@ -26,7 +26,6 @@ NO_NOTE = "No note was handed to this run."
 WHAT_WOULD_NOTE = "brigade run note hands a note to the next segment of a run."
 NO_TURNS = 0
 NO_DURATION = 0
-NO_COST = 0.0
 LIVE = "running"
 DEAD = "dead"
 
