@@ -11,7 +11,6 @@ from brigade.triage.ratify_pattern import CONSTRAINT_ACTION, CONSTRAINT_KINDS, D
 
 NO_PROJECT = "-"
 NO_SIGNAL_AGE = "-"
-NEW_STATUS = "new"
 RATIFY_ADDRESS = "/api/inbox/ratify/"
 DISMISS_ADDRESS = "/api/inbox/dismiss/"
 WHAT_RATIFYING_STARTS = {
@@ -111,7 +110,7 @@ def _render_patterns(document: dict) -> str:
     for pattern in patterns:
         if pattern["repeats"] in repeats_of:
             repeats_of[pattern["repeats"]].append(pattern)
-    new_signals = {signal["id"] for signal in document["signals"] if signal["status"] == NEW_STATUS}
+    new_signals = {signal["id"] for signal in document["signals"]}
     standing = [pattern for pattern in patterns if pattern["repeats"] not in repeats_of]
     return "".join(_render_pattern(pattern, repeats_of, new_signals) for pattern in standing) or NO_PATTERN
 
