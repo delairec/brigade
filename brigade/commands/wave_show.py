@@ -142,8 +142,9 @@ class WaveTree:
 
 
 def _read_task_merge_commands(
-    runtime: Runtime, entries: tuple[LedgerEntry, ...], started: WaveStarted, tree: WaveTree, states: dict[str, str]
+    runtime: Runtime, entries: tuple[LedgerEntry, ...], started: WaveStarted, tree: WaveTree
 ) -> list[str]:
+    states = read_task_states(entries, started.wave)
     verified = [task for task in started.tasks if states.get(task) == VERIFIED_STATE]
     if not verified:
         return []
@@ -193,7 +194,7 @@ def wave_show(request: argparse.Namespace, runtime: Runtime) -> dict:
         "milestone": tree.milestone,
         "milestone_report": _name_milestone_report(entries, started, tree.milestone),
         "merge_command": _read_merge_command(runtime, entries, started, tree.milestone),
-        "task_merge_commands": _read_task_merge_commands(runtime, entries, started, tree, states),
+        "task_merge_commands": _read_task_merge_commands(runtime, entries, started, tree),
         **_describe_events(reading, request),
     }
 
