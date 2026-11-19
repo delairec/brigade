@@ -11,6 +11,7 @@ from urllib.parse import urlsplit
 
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
 from tests.cli.temporary_project import TemporaryProject
+from tests.cli.wave_tick_test_case import WaveTickTestCase
 from tests.process_launcher import ProcessLauncher
 
 STOP_WAIT_S = 20.0
@@ -229,3 +230,26 @@ class BrigadeServeWithoutAProjectHoldingACorpusTest(BrigadeServeTestCase):
         # Assert
         self.assertEqual(status, 404, body)
         self.assertEqual(list_children(process), [])
+
+
+class BrigadeServeOfAWaveTest(WaveTickTestCase):
+    def test_should_answer_the_page_of_a_wave_with_its_sentence_its_tiles_and_its_events_folded(self):
+        # Arrange
+        process = ProcessLauncher.start(
+            [sys.executable, str(CLONE_ENTRY_POINT), "serve", "--port", "0"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=self.describe_environment(),
+        )
+        self.addCleanup(process.kill)
+        url = process.stdout.readline().strip()
+
+        # Act
+        status, body = fetch(url, "/views/waves/shop_w1")
+
+        # Assert
+        self.assertEqual(status, 200, body)
+        self.assertIn('<p class="status-sentence">Wave shop_w1 of shop is running:', body)
+        self.assertIn('<div class="stat-tiles"><div class="stat-tile">', body)
+        self.assertIn("<details><summary>Events</summary><ol><li>", body)
