@@ -62,44 +62,46 @@ def _say_what_brigade_does(home: HomeDocuments) -> str:
     return IDLE_UNTIL_THE_TICK
 
 
-def _list_needs_you(home: HomeDocuments) -> list[NeedsYou]:
-    status = home.status
+def _list_inbox_rows(home: HomeDocuments) -> list[NeedsYou]:
     patterns = len(home.inbox["patterns"])
-    return [
-        *(
-            NeedsYou(wave["wave"], _describe_halt(wave["halt"]), f"brigade wave resume {wave['wave']}")
-            for wave in _halted_waves(status)
-        ),
-        *(
-            [NeedsYou(f"{patterns} proposed patterns", "the inbox proposes them for ratification", INBOX_COMMAND)]
-            if patterns
-            else []
-        ),
-        *(
-            NeedsYou(
-                scan["study"],
-                f"{scan['signals']} new signals, the oldest {render_age(scan['oldest_age_s'])}",
-                INBOX_COMMAND,
-            )
-            for scan in status["inbox"]["scans"]
-        ),
-        *(
-            NeedsYou(
-                f"{merge['milestone']} of {merge['project']}",
-                f"pull request {merge['pr']} waits for your merge",
-                f"gh pr merge {merge['pr']}",
-            )
-            for merge in status["awaiting_merge"]
-        ),
-        *(
-            NeedsYou(
-                f"{order['name']} of {order['project']}",
-                f"parked at {order['step']}: {order['reason']}",
-                f"brigade order resume {order['name']}",
-            )
-            for order in status["orders"]
-        ),
+    proposed = [NeedsYou(f"{patterns} proposed patterns", "the inbox proposes them for ratification", INBOX_COMMAND)]
+    scans = [
+        NeedsYou(
+            scan["study"],
+            f"{scan['signals']} new signals, the oldest {render_age(scan['oldest_age_s'])}",
+            INBOX_COMMAND,
+        )
+        for scan in home.status["inbox"]["scans"]
     ]
+    return [*(proposed if patterns else []), *scans]
+
+
+def _list_merges_and_orders(status: dict) -> list[NeedsYou]:
+    merges = [
+        NeedsYou(
+            f"{merge['milestone']} of {merge['project']}",
+            f"pull request {merge['pr']} waits for your merge",
+            f"gh pr merge {merge['pr']}",
+        )
+        for merge in status["awaiting_merge"]
+    ]
+    orders = [
+        NeedsYou(
+            f"{order['name']} of {order['project']}",
+            f"parked at {order['step']}: {order['reason']}",
+            f"brigade order resume {order['name']}",
+        )
+        for order in status["orders"]
+    ]
+    return [*merges, *orders]
+
+
+def _list_needs_you(home: HomeDocuments) -> list[NeedsYou]:
+    halted = [
+        NeedsYou(wave["wave"], _describe_halt(wave["halt"]), f"brigade wave resume {wave['wave']}")
+        for wave in _halted_waves(home.status)
+    ]
+    return [*halted, *_list_inbox_rows(home), *_list_merges_and_orders(home.status)]
 
 
 def _describe_oldest(status: dict) -> str:
