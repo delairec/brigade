@@ -113,6 +113,12 @@ Its seven views:
   lines opening on those words, case aside, the others following as one list; the tasks and their dependencies as
   tables; Test it by hand and Worth reading in the code, grouped by the task they name; Why a task was held; then
   every other field folded under The full account. A task, a pull request and a run met in a value link their page.
+  The list opens on a sentence counting them by kind, a tile each for the
+  milestone, task and wave reports, the last saying how many record a wave that merged nothing, and an explainer
+  closed on its line saying what a report is. The milestone reports, the task reports and the wave reports,
+  folded, follow in three blocks, then the results of the orders when one exists; each row names the subject, the
+  project, the verdict, the first narrative of the report or no verdict recorded, the tasks merged out of its
+  tasks and the date of the ledger event that recorded it.
 - **Runs** — the runs of `brigade run list`: a sentence and an explainer saying what a run and a segment are, tiles
   counting the live runs, the finished ones by outcome and the dead ones, and how many run directories the list
   skipped; the filters state, wave and task are chips carried by the address, `#runs?state=dead&wave=<wave>`, passed

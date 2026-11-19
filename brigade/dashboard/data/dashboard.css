@@ -240,6 +240,18 @@ h3 {
   font-size: var(--size-6);
 }
 
+.stat-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-5);
+}
+
+.no-verdict,
+.no-date {
+  color: var(--faint);
+}
+
 .tone {
   display: inline-flex;
   gap: var(--space-1);
