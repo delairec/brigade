@@ -355,6 +355,35 @@ h3 {
   stroke-width: 2;
 }
 
+.stat-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+}
+
+.timeline {
+  width: 100%;
+}
+
+.timeline-label {
+  fill: var(--muted);
+  font-size: 4px;
+  dominant-baseline: middle;
+}
+
+.timeline-mark {
+  fill: var(--tone);
+}
+
+.halt-band {
+  fill: var(--sunken);
+}
+
+.flagged {
+  color: var(--failed);
+}
+
 table {
   border-collapse: collapse;
   background: var(--surface);
