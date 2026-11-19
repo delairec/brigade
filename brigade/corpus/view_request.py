@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+VIEWS = ("tree", "board", "dependencies", "health")
+
 
 @dataclass(frozen=True)
 class ViewRequest:

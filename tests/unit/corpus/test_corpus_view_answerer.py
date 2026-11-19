@@ -89,6 +89,28 @@ class CorpusViewAnswererTest(CorpusViewAnswererTestCase):
         # Assert
         self.assertEqual(answer, {"error": "@PROJECT.shop is not registered"})
 
+    def test_should_keep_the_entities_the_filter_of_the_message_keeps(self):
+        # Act
+        answer = self.answerer.answer(BOARD_MESSAGE)
+
+        # Assert
+        codes = [entity["code"] for column in answer["document"]["columns"] for entity in column["entities"]]
+        self.assertEqual(codes, ["B2"])
+
+    def test_should_refuse_a_view_the_corpus_command_refuses(self):
+        rows = [("an unknown view", {"view": "foo"}), ("no view", {})]
+        for case, view in rows:
+            with self.subTest(case=case):
+                # Arrange
+                message = {"project": "app", "ref": "worktree:b42", "type": "TASK", **view}
+
+                # Act
+                answer = self.answerer.answer(message)
+
+                # Assert
+                self.assertEqual(answer, {"error": "--view takes one of tree, board, dependencies, health"})
+                self.assertEqual(self.awawa.argvs, [])
+
 
 class CorpusViewAnswererOfAnUnchangedCorpusTest(CorpusViewAnswererTestCase):
     def test_should_run_the_awawa_binary_no_more_at_a_second_request(self):
@@ -120,6 +142,20 @@ class CorpusViewAnswererOfAChangedCorpusTest(CorpusViewAnswererTestCase):
         self.awawa.argvs.clear()
         self.corpus_file.write_text('TASK B1\n\tTITLE "Read the corpus again"\n')
         os.utime(self.corpus_file, ns=(LATER_MTIME_NS, LATER_MTIME_NS))
+
+        # Act
+        self.answerer.answer(BOARD_MESSAGE)
+
+        # Assert
+        self.assertIn(("awawa", "status", "--json", str(self.worktree)), self.awawa.argvs)
+
+    def test_should_read_the_corpus_again_once_an_awawa_file_changed_within_the_same_mtime(self):
+        # Arrange
+        self.answerer.answer(BOARD_MESSAGE)
+        self.awawa.argvs.clear()
+        mtime_ns = self.corpus_file.stat().st_mtime_ns
+        self.corpus_file.write_text('TASK B1\n\tTITLE "Read the corpus once more"\n')
+        os.utime(self.corpus_file, ns=(mtime_ns, mtime_ns))
 
         # Act
         self.answerer.answer(BOARD_MESSAGE)
