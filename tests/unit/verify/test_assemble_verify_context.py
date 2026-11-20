@@ -333,3 +333,39 @@ class AssembleVerifyContextTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document["repair"]["command"], f"git range-diff 9999999..{JUDGED_HEAD} {BASE}..{HEAD}")
+
+    def test_should_print_the_goal_of_the_task_read_in_the_tree_of_the_head(self):
+        # Arrange
+        self.answers[("awawa", "show", "@TASK.B1", "--json", str(self.head_tree))] = ProcessAnswer(
+            stdout=json.dumps(
+                {
+                    "fields": [
+                        {"name": "TITLE", "atoms": ['"Empty the cart in one click"']},
+                        {"name": "MILESTONE", "atoms": ["@MILESTONE.M1"]},
+                    ]
+                }
+            )
+        )
+        self.answers[("awawa", "show", "@MILESTONE.M1", "--json", str(self.head_tree))] = ProcessAnswer(
+            stdout=json.dumps({"fields": [{"name": "TITLE", "atoms": ['"A cart a shopper empties at once"']}]})
+        )
+
+        # Act
+        document = self.assemble(Configuration())
+
+        # Assert
+        self.assertEqual(document["goal"]["milestone"]["title"], "A cart a shopper empties at once")
+
+    def test_should_print_the_reference_the_task_cites(self):
+        # Arrange
+        self.answers[("awawa", "show", "@TASK.B1", "--json", str(self.head_tree))] = ProcessAnswer(
+            stdout=json.dumps(
+                {"fields": [{"name": "RATIONALE", "atoms": ['"drawn from the mockup https://example.org/cart"']}]}
+            )
+        )
+
+        # Act
+        document = self.assemble(Configuration())
+
+        # Assert
+        self.assertEqual(document["references"][0]["url"], "https://example.org/cart")

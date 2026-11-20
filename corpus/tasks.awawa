@@ -14842,7 +14842,7 @@ TASK B209
 		IMPL "tests/unit/verify/test_assemble_verify_context.py::def"
 			+ "test_should_hold_neither_a_previous_verdict_nor_a_repair_diff_when_no_verdict_is_recorded(self):"
 		IMPL "brigade/runs/data/procedures/review-pr.md::It holds none: judge the whole pull"
-			+ "request, steps 2 and 3."
+			+ "request, steps 2 to 5."
 	SPEC "on a pull request with a task.verdict of its task recorded, brigade verify context <pr>"
 		+ "prints, besides those sections, a section previous verdict with the head the last"
 		+ "task.verdict judged, its verdict and each of its findings with its identifier, grade,"

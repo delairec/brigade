@@ -29,3 +29,11 @@ class BrigadeVerifyContextOfAPullRequestTest(VerifyContextTestCase):
         self.assertEqual(document["pr"], 42)
         self.assertEqual(document["task"], "S3")
         self.assertEqual(document["head"], self.read_head())
+
+    def test_should_print_the_goal_of_the_milestone_the_task_serves(self):
+        # Act
+        completed = self.run_review_context("42", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["goal"]["milestone"]["title"], "Empty cart")
