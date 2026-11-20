@@ -1661,6 +1661,16 @@ class RunSegmentWorktreeTest(unittest.TestCase):
         # Assert
         self.assertEqual(record.worktree, WorktreeWatch(sampled=False, changed_at=None))
 
+    def test_should_leave_unsampled_a_segment_whose_launch_sample_git_could_not_read(self):
+        # Arrange
+        worktree = WorktreeChangingDouble(self.clock, UNREADABLE, {FIRST_CALL_ON_THE_WORKTREE: TICK_TEST_CHANGED})
+
+        # Act
+        record = self._run(transcripts=SHELL_EDIT_TRANSCRIPTS, edit_tools=(), worktree=worktree, polls=3)
+
+        # Assert
+        self.assertEqual(record.worktree, WorktreeWatch(sampled=False, changed_at=None))
+
     def test_should_keep_the_instant_of_the_first_sample_differing_from_the_one_taken_at_launch(self):
         # Arrange
         worktree = WorktreeChangingDouble(
