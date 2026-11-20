@@ -7,7 +7,7 @@ minutes.
 ```
 brigade tick --once         # one tick, under the lock $XDG_STATE_HOME/brigade/locks/tick.lock
 brigade tick --once --log-file <file>   # the same, its stderr appended to <file>, its directory created, nothing printed
-brigade tick --dry-run      # the snapshot and the decisions, applied to nothing
+brigade tick --dry-run      # the snapshot, the decisions and why each task, wave and candidate waits, applied to nothing
 brigade tick --loop         # a tick at once, then one every five minutes, until SIGTERM or SIGINT
 brigade scheduler install   # install what fires brigade tick --once every five minutes
 brigade scheduler status    # the scheduler, the last tick, the parked and blocked waves and the parked tasks
@@ -350,6 +350,15 @@ dies before it records a `run.finished` does.
   atomically: `schema_version`, `ts`, `duration_ms`, `actions_applied` and `actions_failed`.
 - `--dry-run` takes no lock and writes neither the heartbeat nor a tick trail, its records going to the trail of a
   command.
+- `--dry-run` prints, after its decisions, the tasks not launched: each queued or parked task of an open wave that the
+  plan launches nothing for and that the tree of its wave does not hold implemented, with the first cause that holds,
+  in this order: its wave is blocked or parked, a wave the plan blocks or parks in the same round among them; the task
+  is parked, with its reason; an `AFTER` neither merged in the wave nor implemented at its tree; a live blocker; no
+  free build slot, with the slots used and `SLOTS`. The plan of the launches reads the same function, so a task it
+  names is one the tick does not launch. Then one line per blocked or parked wave, as `wave show` prints it, and each
+  candidate wave the plan starts no wave for, with its cause: the policy of its project asks before a wave start,
+  `WAVE_START`, or the branch of its milestone is rebased or cut in this round. `--json` carries them as
+  `tasks_not_launched`, `halted_waves` and `waves_not_started`.
 - `--loop` reports each tick on stderr; a signal lets the tick under way finish, then the loop exits 0 with the number
   of ticks attempted, stand-downs included.
 
