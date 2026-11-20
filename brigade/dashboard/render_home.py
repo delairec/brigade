@@ -78,11 +78,12 @@ def _judge_brigade(home: HomeDocuments) -> tuple[str, str]:
         return STOPPED, FAILED
     if status["live_runs"]:
         return WORKING, RUNNING
+    idle_tone = PARKED if _list_needs_you(home) else IDLE
     if not status["waves"]:
-        return IDLE_WITHOUT_WAVE, IDLE
+        return IDLE_WITHOUT_WAVE, idle_tone
     if len(_halted_waves(status)) == len(status["waves"]):
-        return IDLE_ON_HALTED_WAVES, PARKED
-    return IDLE_UNTIL_THE_TICK, IDLE
+        return IDLE_ON_HALTED_WAVES, idle_tone
+    return IDLE_UNTIL_THE_TICK, idle_tone
 
 
 def _explain_what_waits(needs_you: list[NeedsYou]) -> str:

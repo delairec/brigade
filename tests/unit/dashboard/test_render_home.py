@@ -101,6 +101,23 @@ class RenderHomeSentenceTest(unittest.TestCase):
                     )
                 )
 
+    def test_should_tone_an_idle_verdict_amber_whenever_something_waits_for_the_user(self):
+        # Arrange
+        home = HomeDocuments(
+            status={**STATUS, "waves": []},
+            scheduler=FRESH_SCHEDULER,
+            ledger=QUIET_DAY,
+            inbox={**EMPTY_INBOX, "patterns": [{"name": "p1"}]},
+        )
+
+        # Act
+        fragment = render_home(home)
+
+        # Assert
+        self.assertIn(
+            '<div class="verdict tone-you"><p class="status-sentence">brigade is idle: no wave is open.</p>', fragment
+        )
+
     def test_should_explain_the_sentence_by_what_waits_for_the_user(self):
         # Arrange
         rows = [
