@@ -14,9 +14,9 @@ from tests.cli.wave_tick_test_case import (
 from tests.value_matchers import DurationUnderMatcher, PatternMatcher
 
 SHA256_DIGEST = PatternMatcher("^[0-9a-f]{64}$")
-NO_EDIT_TOOL_NAMED = {
-    "turns_to_first_edit": "the client names no edit tool",
-    "tokens_to_first_edit": "the client names no edit tool",
+NO_EDIT_MADE = {
+    "turns_to_first_edit": "the segment made no edit outside the progress file",
+    "tokens_to_first_edit": "the segment made no edit outside the progress file",
 }
 
 RUN_ID_PATTERN = r"^\d{8}T\d{6}Z-[0-9a-f]{6}$"
@@ -125,7 +125,7 @@ class BrigadeWaveRequeueOfAParkedTaskTest(LaunchingTickTestCase):
                     "procedure_digest": SHA256_DIGEST,
                     "shipped_budget": 75,
                     "nulls": {
-                        **NO_EDIT_TOOL_NAMED,
+                        **NO_EDIT_MADE,
                         "total_turns": "the client reads no transcript",
                         "error_class": "the run did not fail",
                     },

@@ -13,9 +13,9 @@ from tests.list_entry_names import list_entry_names
 from tests.value_matchers import PatternMatcher
 
 SHA256_DIGEST = PatternMatcher("^[0-9a-f]{64}$")
-NO_EDIT_TOOL_NAMED = {
-    "turns_to_first_edit": "the client names no edit tool",
-    "tokens_to_first_edit": "the client names no edit tool",
+NO_EDIT_MADE = {
+    "turns_to_first_edit": "the segment made no edit outside the progress file",
+    "tokens_to_first_edit": "the segment made no edit outside the progress file",
 }
 
 PINNED_COMMIT_DATES = {"GIT_AUTHOR_DATE": "2026-10-12T09:00:00Z", "GIT_COMMITTER_DATE": "2026-10-12T09:00:00Z"}
@@ -265,7 +265,7 @@ class BrigadeStudyRunTest(StudyRunTestCase):
                     "procedure_digest": SHA256_DIGEST,
                     "shipped_budget": 40,
                     "nulls": {
-                        **NO_EDIT_TOOL_NAMED,
+                        **NO_EDIT_MADE,
                         "wave": "not launched by a wave",
                         "task": "not launched for a task",
                         "total_turns": "the client reads no transcript",
