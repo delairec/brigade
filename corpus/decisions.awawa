@@ -8581,3 +8581,17 @@ DECISION AnUndatedChangeToTheWorktreeOfASegmentNamesItsOwnReasonAndItsSamplesLea
 		+ "trail of the run, which the tests of tests/cli read whole"
 	SOURCE "the build run of @TASK.B239"
 		REF @TASK.B239
+
+DECISION ASampleOfTheWorktreeGitCannotReadIsNoChangeAndNoSample
+	TITLE "a sample of the worktree git cannot read, git failing or exceeding GIT_TIMEOUT_S, is no"
+		+ "change and stops no run: a segment whose launch sample or last sample git could not read"
+		+ "is not sampled and is measured by its calls of an edit tool alone, as a worktree that is"
+		+ "no git work tree"
+	STATUS active
+	DESC "binds @TASK.B239"
+		REF @TASK.B239
+	REJECTED "the failure raised out of the poll: a measurement would stop the client it measures"
+		+ "and leave its segment unrecorded"
+	REJECTED "an unreadable sample counted as differing from the launch sample: a git failure would"
+		+ "date a first edit no change made"
+	SOURCE "the review of #467"

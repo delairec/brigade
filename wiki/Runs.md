@@ -30,7 +30,8 @@ brigade run prune [--keep <n>] [--before <YYYY-MM-DD>] [--resumable] [--dry-run]
   progress file, whatever tool made it: brigade samples HEAD, the files `git status` lists and their size and mtime
   at launch, every `log_poll_s` and when the client exits, and dates the first differing sample at the last tool call
   of the main transcript at or before it; a call of an edit tool on a file of the worktree keeps its exact turn when
-  it comes earlier. A change of the applied cap is appended as `budget.applied`, and the brief states the cap in its
+  it comes earlier. A sample git cannot read, failing or out of time, is no change: a segment whose launch or last
+  sample git could not read is measured by its calls of an edit tool alone. A change of the applied cap is appended as `budget.applied`, and the brief states the cap in its
   Budget section.
 - **The slot** resolves to its role as [`brigade role show`](Roles.md) shows, unless the project of `--project` binds it
   otherwise.

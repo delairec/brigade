@@ -148,20 +148,24 @@ class WorktreeSampler:
         self._plan = plan
         self._runtime = runtime
         self._launch_state = self._read_state()
+        self._last_sample_read = self._launch_state is not None
         self._changed_at = None
 
     def _read_state(self):
         return self._runtime.read_worktree_state(self._plan.worktree, self._plan.progress_file)
 
     def sample(self) -> None:
-        if self._changed_at is not None:
+        if self._launch_state is None or self._changed_at is not None:
             return
         state = self._read_state()
-        if state != self._launch_state:
+        self._last_sample_read = state is not None
+        if self._last_sample_read and state != self._launch_state:
             self._changed_at = self._runtime.read_clock()
 
     def describe(self) -> WorktreeWatch:
-        return WorktreeWatch(sampled=self._launch_state is not None, changed_at=self._changed_at)
+        return WorktreeWatch(
+            sampled=self._changed_at is not None or self._last_sample_read, changed_at=self._changed_at
+        )
 
 
 @dataclass(frozen=True)

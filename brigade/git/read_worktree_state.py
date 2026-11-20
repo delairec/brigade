@@ -2,6 +2,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.errors import ToolFailure
 from brigade.git.list_changed_files import list_changed_files
 from brigade.git.timeouts import GIT_TIMEOUT_S
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRecord, ProcessRequest
@@ -31,6 +32,15 @@ def _describe_changed_file(toplevel: Path, path: str) -> ChangedFile:
 
 
 def read_worktree_state(
+    run_process: Callable[[ProcessRequest], ProcessRecord], worktree: Path, progress_file: Path
+) -> WorktreeState | None:
+    try:
+        return _read_state(run_process, worktree, progress_file)
+    except ToolFailure:
+        return None
+
+
+def _read_state(
     run_process: Callable[[ProcessRequest], ProcessRecord], worktree: Path, progress_file: Path
 ) -> WorktreeState | None:
     record = run_process(
