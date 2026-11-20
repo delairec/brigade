@@ -37,7 +37,7 @@ RUN_RECORD = {
     "capabilities": ["read"],
     "budget": 40,
     "wall_limit_s": 1500.0,
-    "arguments": {},
+    "arguments": {"pr": "56"},
     "wave": None,
     "task": None,
     "brief": None,
@@ -234,6 +234,23 @@ class BrigadeServeTest(unittest.TestCase):
         # Assert
         self.assertEqual(status, 200)
         self.assertIn('<aside class="explainer"><p class="explainer-what">A run is one procedure', body)
+
+    def test_should_answer_the_runs_view_with_the_strip_and_the_arguments_of_a_run(self):
+        # Arrange
+        self.write_finished_run()
+        url = self.start_serving().stdout.readline().strip()
+
+        # Act
+        status, body = fetch(url, "/views/runs")
+
+        # Assert
+        self.assertEqual(status, 200)
+        self.assertIn(
+            '<td><span class="segment-squares" role="img" aria-label="segments: done">'
+            '<span class="segment-square tone-done" title="done"></span></span></td>'
+            "<td>5m00s</td><td>$0.50</td><td>pr=56</td>",
+            body,
+        )
 
     def test_should_answer_the_page_of_a_run_with_its_segments(self):
         # Arrange
