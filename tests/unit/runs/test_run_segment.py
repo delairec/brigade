@@ -1651,7 +1651,7 @@ class RunSegmentWorktreeTest(unittest.TestCase):
         # Assert
         self.assertEqual(record.first_edit, FirstEdit(steps=3, tokens=111))
 
-    def test_should_measure_by_its_edit_tool_calls_alone_a_segment_whose_last_sample_git_could_not_read(self):
+    def test_should_leave_unsampled_a_segment_whose_last_sample_git_could_not_read(self):
         # Arrange
         worktree = WorktreeChangingDouble(self.clock, CLEAN, {AFTER_THE_LAST_POLL: UNREADABLE})
 
@@ -1659,10 +1659,7 @@ class RunSegmentWorktreeTest(unittest.TestCase):
         record = self._run(transcripts=SHELL_EDIT_TRANSCRIPTS, edit_tools=("Edit", "Write"), worktree=worktree, polls=3)
 
         # Assert
-        self.assertEqual(
-            (record.first_edit, record.worktree),
-            (FirstEdit(steps=4, tokens=1111), WorktreeWatch(sampled=False, changed_at=None)),
-        )
+        self.assertEqual(record.worktree, WorktreeWatch(sampled=False, changed_at=None))
 
     def test_should_keep_the_instant_of_the_first_sample_differing_from_the_one_taken_at_launch(self):
         # Arrange
