@@ -129,10 +129,10 @@ class FindLaunchHoldsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            [(task.name, hold) for task, hold in holds],
-            [
-                ("S4", "parked: its run ended blocked"),
-                ("S9", None),
-                ("S12", "no free build slot: 2 used of SLOTS 2"),
-            ],
+            holds,
+            (
+                (tasks[1], "parked: its run ended blocked"),
+                (tasks[2], None),
+                (tasks[0], "no free build slot: 2 used of SLOTS 2"),
+            ),
         )
