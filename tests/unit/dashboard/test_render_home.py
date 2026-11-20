@@ -47,12 +47,19 @@ FRESH_SCHEDULER = {"schema_version": 1, "stale": False, "last_tick": STATUS["las
 STALE_SCHEDULER = {**FRESH_SCHEDULER, "stale": True}
 QUIET_DAY = {"view": "overview", "events": {"wave.started": 1}}
 EMPTY_INBOX = {"schema_version": 1, "signals": [], "families": [], "patterns": [], "answers": []}
-HOME = HomeDocuments(status=STATUS, scheduler=FRESH_SCHEDULER, ledger=QUIET_DAY, inbox=EMPTY_INBOX)
+NO_TASK_WAITING = {"schema_version": 1, "mode": "dry-run", "tasks_not_launched": []}
+HOME = HomeDocuments(
+    status=STATUS, scheduler=FRESH_SCHEDULER, ledger=QUIET_DAY, inbox=EMPTY_INBOX, dry_run=NO_TASK_WAITING
+)
 
 
 def create_home(status_change: dict) -> HomeDocuments:
     return HomeDocuments(
-        status={**STATUS, **status_change}, scheduler=FRESH_SCHEDULER, ledger=QUIET_DAY, inbox=EMPTY_INBOX
+        status={**STATUS, **status_change},
+        scheduler=FRESH_SCHEDULER,
+        ledger=QUIET_DAY,
+        inbox=EMPTY_INBOX,
+        dry_run=NO_TASK_WAITING,
     )
 
 
@@ -74,7 +81,11 @@ class RenderHomeSentenceTest(unittest.TestCase):
         for name, scheduler, status_change, sentence in rows:
             with self.subTest(name):
                 home = HomeDocuments(
-                    status={**STATUS, **status_change}, scheduler=scheduler, ledger=QUIET_DAY, inbox=EMPTY_INBOX
+                    status={**STATUS, **status_change},
+                    scheduler=scheduler,
+                    ledger=QUIET_DAY,
+                    inbox=EMPTY_INBOX,
+                    dry_run=NO_TASK_WAITING,
                 )
 
                 # Act
@@ -211,6 +222,7 @@ class RenderHomeNeedsYouTest(unittest.TestCase):
             scheduler=FRESH_SCHEDULER,
             ledger=QUIET_DAY,
             inbox={**EMPTY_INBOX, "patterns": [{"name": "p1"}, {"name": "p2"}]},
+            dry_run=NO_TASK_WAITING,
         )
 
         # Act
@@ -294,6 +306,64 @@ class RenderHomeNeedsYouTest(unittest.TestCase):
         self.assertNotIn("<b>w</b>", fragment)
 
 
+class RenderHomeTasksWaitingTest(unittest.TestCase):
+    def test_should_list_each_task_the_next_tick_does_not_launch_with_its_cause(self):
+        # Arrange
+        dry_run = {
+            **NO_TASK_WAITING,
+            "tasks_not_launched": [
+                {"project": "elm", "wave": "elm_w1", "task": "E3", "cause": "after E2"},
+                {"project": "elm", "wave": "elm_w1", "task": "E4", "cause": "no free build slot: 1 used of SLOTS 1"},
+            ],
+        }
+        home = HomeDocuments(
+            status=STATUS, scheduler=FRESH_SCHEDULER, ledger=QUIET_DAY, inbox=EMPTY_INBOX, dry_run=dry_run
+        )
+
+        # Act
+        fragment = render_home(home)
+
+        # Assert
+        self.assertIn(
+            "<section><h2>Tasks waiting</h2><ul>"
+            '<li><a href="#waves/elm_w1">elm_w1</a> E3: after E2</li>'
+            '<li><a href="#waves/elm_w1">elm_w1</a> E4: no free build slot: 1 used of SLOTS 1</li>'
+            "</ul></section>",
+            fragment,
+        )
+
+    def test_should_say_no_task_waits(self):
+        # Act
+        fragment = render_home(HOME)
+
+        # Assert
+        self.assertIn(
+            '<section><h2>Tasks waiting</h2><div class="empty-state"><p class="empty-why">no task waits</p>'
+            '<p class="empty-fill">a queued or parked task the next tick does not launch would show here'
+            " with its cause</p></div></section>",
+            fragment,
+        )
+
+    def test_should_render_a_cause_holding_markup_escaped(self):
+        # Arrange
+        dry_run = {
+            **NO_TASK_WAITING,
+            "tasks_not_launched": [
+                {"project": "elm", "wave": "elm_w1", "task": "E3", "cause": "task E3 parked: <b>no</b>"}
+            ],
+        }
+        home = HomeDocuments(
+            status=STATUS, scheduler=FRESH_SCHEDULER, ledger=QUIET_DAY, inbox=EMPTY_INBOX, dry_run=dry_run
+        )
+
+        # Act
+        fragment = render_home(home)
+
+        # Assert
+        self.assertIn("E3: task E3 parked: &lt;b&gt;no&lt;/b&gt;</li>", fragment)
+        self.assertNotIn("<b>no</b>", fragment)
+
+
 class RenderHomeAtWorkTest(unittest.TestCase):
     def test_should_list_each_open_wave_with_its_tasks_by_state_and_its_live_runs(self):
         # Arrange
@@ -340,6 +410,7 @@ class RenderHomeAtWorkTest(unittest.TestCase):
             scheduler=FRESH_SCHEDULER,
             ledger={"view": "overview", "events": {"tick.action_failed": 3}},
             inbox=EMPTY_INBOX,
+            dry_run=NO_TASK_WAITING,
         )
 
         # Act

@@ -26,6 +26,7 @@ class HomeDocuments:
     scheduler: dict
     ledger: dict
     inbox: dict
+    dry_run: dict
 
 
 def _describe_halt(halt: dict) -> str:
@@ -178,6 +179,27 @@ def _render_at_work(status: dict) -> str:
     )
 
 
+def _render_task_waiting(held: dict) -> str:
+    wave = held["wave"]
+    return (
+        f'<a href="#waves/{escape(quote(wave, safe=""))}">{escape(wave)}</a>'
+        f" {escape(held['task'])}: {escape(held['cause'])}"
+    )
+
+
+def _render_tasks_waiting(dry_run: dict) -> str:
+    held = dry_run["tasks_not_launched"]
+    if not held:
+        return _render_section(
+            "Tasks waiting",
+            render_empty_state(
+                "no task waits",
+                "a queued or parked task the next tick does not launch would show here with its cause",
+            ),
+        )
+    return _render_section("Tasks waiting", _render_list([_render_task_waiting(task) for task in held]))
+
+
 def _render_project(project: dict) -> str:
     name = project["name"]
     if project["paused"]:
@@ -206,6 +228,7 @@ def render_home(home: HomeDocuments) -> str:
             _render_tiles(home, needs_you),
             _render_needs_you(status, needs_you),
             _render_at_work(status),
+            _render_tasks_waiting(home.dry_run),
             _render_section("Last 24 hours", f"<p>{failed} failed tick actions</p>"),
             _render_section("Projects", _render_list([_render_project(project) for project in status["projects"]])),
             _render_section("Studies", _render_list([_render_study(study) for study in status["studies"]])),

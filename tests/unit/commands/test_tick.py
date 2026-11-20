@@ -8046,7 +8046,8 @@ class TickDryRunOfAParkedWaveTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            document["tasks_not_launched"], [{"wave": "tidepool_w16", "task": "T7", "cause": PARKED_WAVE_LINE}]
+            document["tasks_not_launched"],
+            [{"project": "tidepool", "wave": "tidepool_w16", "task": "T7", "cause": PARKED_WAVE_LINE}],
         )
 
     def test_should_print_the_halt_of_the_parked_wave_on_a_dry_run(self):
