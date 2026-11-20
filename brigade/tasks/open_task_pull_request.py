@@ -9,17 +9,20 @@ from brigade.git.push_branch_with_lease import push_branch_with_lease
 from brigade.git.read_current_branch import read_current_branch
 from brigade.ledger.append_event import append_event
 from brigade.ledger.milestone_created import MilestoneCreated
+from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.tasks.compose_pull_request_title import PullRequestTitleParts, compose_pull_request_title
-from brigade.tasks.describe_pull_request_body import PullRequestBodyParts, describe_pull_request_body
+from brigade.tasks.describe_pull_request_body import Correction, PullRequestBodyParts, describe_pull_request_body
 from brigade.tasks.locate_task_corpus import locate_task_corpus
 from brigade.tasks.locate_task_worktree import TaskWorktree, locate_task_worktree
 from brigade.tasks.require_passing_check import require_passing_check
 
 DOCUMENT_SCHEMA_VERSION = 1
 MILESTONE_PREFIX = "@MILESTONE."
+FIX_TYPE = "fix"
+CORRECTS_FIELD = "CORRECTS"
 NO_MILESTONE = None
 
 
@@ -53,6 +56,22 @@ def _compose_title(task: Entity, subject: str | None) -> str:
     )
 
 
+def _read_corrects(task: Entity) -> tuple[int, ...]:
+    corrects = tuple(int(field.value) for field in task.fields if field.name == CORRECTS_FIELD)
+    if read_project_field(task, "TYPE") == FIX_TYPE and not corrects:
+        raise BrigadeError(f"@TASK.{task.name} is a fix carrying no CORRECTS, the pull request it corrects")
+    return corrects
+
+
+def _name_corrections(runtime: Runtime, project: str, corrects: tuple[int, ...]) -> tuple[Correction, ...]:
+    tasks_by_pull_request = {
+        entry.event.pr: entry.event.task
+        for entry in read_ledger(runtime.paths.state_root).entries
+        if isinstance(entry.event, TaskPrOpened) and entry.event.project == project
+    }
+    return tuple(Correction(pr=pr, task=tasks_by_pull_request.get(pr)) for pr in corrects)
+
+
 def _read_milestone_title(runtime: Runtime, worktree: TaskWorktree, task: Entity) -> str | None:
     milestone = read_project_field(task, "MILESTONE")
     if milestone is None:
@@ -81,15 +100,26 @@ class _TaskPullRequest:
     title: str
     body: str
     milestone: str | None
+    corrects: tuple[int, ...]
 
 
-def _compose_body(task: Entity, check: object, attribution: tuple[str, ...]) -> str:
+@dataclasses.dataclass(frozen=True)
+class _BodySources:
+    task: Entity
+    corrections: tuple[Correction, ...]
+    check: object
+    attribution: tuple[str, ...]
+
+
+def _compose_body(sources: _BodySources) -> str:
+    task = sources.task
     return describe_pull_request_body(
         PullRequestBodyParts(
+            corrections=sources.corrections,
             title=read_project_field(task, "TITLE"),
             specs=tuple(field.value for field in task.fields if field.name == "SPEC"),
-            check=check,
-            attribution=attribution,
+            check=sources.check,
+            attribution=sources.attribution,
         )
     )
 
@@ -109,7 +139,7 @@ def _open_on_forge(runtime: Runtime, session: ForgeSession, opened: _TaskPullReq
     )
 
 
-def _record_opening(runtime: Runtime, session: ForgeSession, branch: str, pr: int) -> None:
+def _record_opening(runtime: Runtime, session: ForgeSession, opened: _TaskPullRequest, pr: int) -> None:
     worktree = session.worktree
     append_event(
         runtime.paths,
@@ -118,9 +148,10 @@ def _record_opening(runtime: Runtime, session: ForgeSession, branch: str, pr: in
             project=worktree.project.name,
             task=worktree.task,
             wave=worktree.wave,
-            branch=branch,
+            branch=opened.branch,
             pr=pr,
             login=session.login,
+            corrects=opened.corrects,
         ),
     )
 
@@ -145,6 +176,7 @@ def open_task_pull_request(runtime: Runtime, demand: TaskPullRequestDemand) -> d
     check = require_passing_check(runtime, worktree)
     task = read_entity(runtime.run_process, locate_task_corpus(worktree), "TASK", worktree.task)
     title = _compose_title(task, demand.subject)
+    corrects = _read_corrects(task)
     session = ForgeSession(worktree=worktree, forge=demand.forge, environment=demand.environment, login=demand.login)
     branch = read_current_branch(runtime.run_process, worktree.path)
     milestone = _read_milestone_title(runtime, worktree, task)
@@ -153,9 +185,14 @@ def open_task_pull_request(runtime: Runtime, demand: TaskPullRequestDemand) -> d
     )
     if milestone is not NO_MILESTONE:
         _ensure_milestone(runtime, session, milestone)
+    corrections = _name_corrections(runtime, worktree.project.name, corrects)
     opened = _TaskPullRequest(
-        branch=branch, title=title, body=_compose_body(task, check, demand.attribution), milestone=milestone
+        branch=branch,
+        title=title,
+        body=_compose_body(_BodySources(task, corrections, check, demand.attribution)),
+        milestone=milestone,
+        corrects=corrects,
     )
     pull_request = _open_on_forge(runtime, session, opened)
-    _record_opening(runtime, session, branch, pull_request["number"])
+    _record_opening(runtime, session, opened, pull_request["number"])
     return _describe_opening(session, opened, pull_request)

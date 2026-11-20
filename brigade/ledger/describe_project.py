@@ -1,5 +1,6 @@
 from brigade.ledger.constraint_delivered import ConstraintDelivered
 from brigade.ledger.count_by_name import count_by_name
+from brigade.ledger.describe_gate_weeks import describe_gate_weeks
 from brigade.ledger.order_done import OrderDone
 from brigade.ledger.pattern_ratified import PatternRatified
 from brigade.ledger.pr_merged import PrMerged
@@ -17,10 +18,12 @@ COUNTED_EVENTS = {
 
 
 def describe_project(reading: LedgerReading, project: str) -> dict:
-    events = [entry.event for entry in reading.entries if getattr(entry.event, "project", None) == project]
+    entries = [entry for entry in reading.entries if getattr(entry.event, "project", None) == project]
+    events = [entry.event for entry in entries]
     return {
         "view": "project",
         "project": project,
         "orders_done": count_by_name(event.kind for event in events if isinstance(event, OrderDone)),
         **{key: sum(1 for event in events if isinstance(event, kind)) for key, kind in COUNTED_EVENTS.items()},
+        "gate": describe_gate_weeks(entries),
     }

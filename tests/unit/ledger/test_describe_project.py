@@ -9,9 +9,16 @@ from brigade.ledger.pattern_ratified import PatternRatified
 from brigade.ledger.pr_merged import PrMerged
 from brigade.ledger.read_ledger import LedgerReading
 from brigade.ledger.signal_recorded import SignalRecorded
+from brigade.ledger.task_verdict import TaskVerdict
 from brigade.ledger.wave_started import WaveStarted
 
 LATER = datetime(2026, 10, 6, 9, 0, tzinfo=UTC)
+
+
+def create_passing_verdict(project: str, pr: int) -> TaskVerdict:
+    return TaskVerdict(
+        project=project, wave="w1", task="B1", pr=pr, head="c0ffee", verdict="pass", findings=(), login=None
+    )
 
 
 def create_reading(*entries: LedgerEntry) -> LedgerReading:
@@ -55,5 +62,31 @@ class DescribeProjectTest(unittest.TestCase):
                 "signals_recorded": 1,
                 "patterns_ratified": 1,
                 "constraints_delivered": 1,
+                "gate": [],
             },
+        )
+
+    def test_should_present_the_weeks_of_the_gate_of_the_project_alone(self):
+        # Arrange
+        reading = create_reading(
+            LedgerEntry(instant=LATER, event=create_passing_verdict("shop", 12)),
+            LedgerEntry(instant=LATER, event=create_passing_verdict("tidepool", 30)),
+        )
+
+        # Act
+        gate = describe_project(reading, "shop")["gate"]
+
+        # Assert
+        self.assertEqual(
+            gate,
+            [
+                {
+                    "week": "2026-W41",
+                    "passed": 1,
+                    "escaped": 0,
+                    "escape_rate": "0/1",
+                    "median_rounds": 1,
+                    "tasks": [{"task": "B1", "rounds": 1}],
+                }
+            ],
         )
