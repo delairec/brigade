@@ -8610,3 +8610,30 @@ DECISION TheGateRowsOfAReportAppearOnceAPullRequestOfItsTasksPassedAndAVerdictWi
 		+ "not record which pull request it judged"
 	SOURCE "the build run of @TASK.B237"
 		REF @TASK.B237
+
+DECISION ARelaunchedRunningTaskIsHeldOnlyByTheHaltOfItsWaveOrTheBuildSlots
+	TITLE "a running task the tick launches again, rebased by its last run or stopped by a login,"
+		+ "is held only by the halt of its wave or by the build slots of its project, never by an"
+		+ "AFTER nor a live blocker, and is never listed among the tasks not launched"
+	STATUS active
+	DESC "binds @TASK.B178: find_launch_hold reads AFTER and the blockers for a queued task alone"
+		REF @TASK.B178
+	REJECTED "every cause for every task the plan considers: a running task already passed AFTER"
+		+ "and its blockers at its first launch, and holding it now would strand a run half done"
+	SOURCE "the build run of @TASK.B178"
+		REF @TASK.B178
+
+DECISION HomeListsTheTasksTheNextTickDoesNotLaunchInASectionOfTheirOwnWithTheirProject
+	TITLE "Home lists the tasks the next tick does not launch under Tasks waiting, a section of"
+		+ "their own after At work, read from the tasks_not_launched of brigade tick --dry-run"
+		+ "--json, each row carrying its project so that the view of one project leaves out the"
+		+ "others"
+	STATUS active
+	DESC "binds @TASK.B178: Needs you keeps the halted waves, which wait for the user"
+		REF @TASK.B178
+	REJECTED "the waiting tasks under Needs you: a task held by AFTER or by the slots waits for the"
+		+ "tick, not for the user, and would raise the tile counting what needs the user"
+	REJECTED "the waiting tasks narrowed by the waves Home lists: a row without its project would"
+		+ "show in the view of every project"
+	SOURCE "the build run of @TASK.B178"
+		REF @TASK.B178
