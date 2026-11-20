@@ -698,6 +698,23 @@ CORPUS_OF_ONE_BUILD_SLOT = {
     **CORPUS_OF_TWO_INDEPENDENT_TASKS,
     "PROJECT": {"tidepool": (("PATH", REPOSITORY), ("MAIN", "main"), ("FORGE", "none"), ("SLOTS", "1"))},
 }
+CORPUS_OF_TWO_BUILD_SLOTS = {
+    **CORPUS_OF_TWO_INDEPENDENT_TASKS,
+    "PROJECT": {"tidepool": (("PATH", REPOSITORY), ("MAIN", "main"), ("FORGE", "none"), ("SLOTS", "2"))},
+}
+CORPUS_OF_AN_EARLIER_TASK = {
+    **CORPUS_OF_ONE_BUILD_SLOT,
+    "TASK": {**CORPUS_OF_ONE_BUILD_SLOT["TASK"], "T5": TIDE_ALMANAC},
+}
+EARLIER_WAVE_STARTED = {**FORGELESS_WAVE_STARTED, "ts": "2026-10-18T08:30:00Z", "wave": "tidepool_w15", "tasks": ["T5"]}
+T5_RUNNING = {**T8_WAITING, "ts": "2026-10-18T08:35:00Z", "wave": "tidepool_w15", "task": "T5", "state": "running"}
+T5_STOPPED_BY_LOGIN = {
+    **create_run_result("20261018T083500Z-a1b2c3", "error", "2026-10-18T08:50:00Z"),
+    "error_class": "authentication",
+    "wave": "tidepool_w15",
+    "task": "T5",
+}
+BUILD_RUN_AFTER_THE_REBASE = "20261018T090000Z-d4e5f6"
 NOTHING_IMPLEMENTED = {
     ("awawa", "status", "TASK", "--where", "STATUS==implemented"): '{"entities": []}',
 }
@@ -837,17 +854,8 @@ class WaveShowOfAQueuedTaskTest(unittest.TestCase):
         )
 
     def test_should_name_the_build_slot_a_task_of_an_earlier_open_wave_takes_as_the_cause_a_queued_task_waits(self):
-        # Arrange
-        earlier_wave_started = {
-            **FORGELESS_WAVE_STARTED,
-            "ts": "2026-10-18T08:30:00Z",
-            "wave": "tidepool_w15",
-            "tasks": ["T5"],
-        }
-        corpus = {**CORPUS_OF_ONE_BUILD_SLOT, "TASK": {**CORPUS_OF_ONE_BUILD_SLOT["TASK"], "T5": TIDE_ALMANAC}}
-
         # Act
-        document = self._show(corpus, [earlier_wave_started, QUEUED_WAVE_STARTED, T8_WAITING])
+        document = self._show(CORPUS_OF_AN_EARLIER_TASK, [EARLIER_WAVE_STARTED, QUEUED_WAVE_STARTED, T8_WAITING])
 
         # Assert
         self.assertEqual(
@@ -931,6 +939,136 @@ class WaveShowOfAQueuedTaskTest(unittest.TestCase):
                     "reason": "no free build slot: 1 used of SLOTS 1",
                 },
             ],
+        )
+
+    def test_should_name_the_build_slot_a_task_of_an_earlier_wave_relaunched_after_a_lost_login_takes(self):
+        # Act
+        document = self._show(
+            CORPUS_OF_AN_EARLIER_TASK,
+            [EARLIER_WAVE_STARTED, T5_RUNNING, T5_STOPPED_BY_LOGIN, QUEUED_WAVE_STARTED, T8_WAITING],
+        )
+
+        # Assert
+        self.assertEqual(
+            document["tasks"],
+            [
+                {
+                    "task": "T7",
+                    "state": None,
+                    "pull_request": None,
+                    "run": None,
+                    "reason": "no free build slot: 1 used of SLOTS 1",
+                },
+                {
+                    "task": "T8",
+                    "state": "queued",
+                    "pull_request": None,
+                    "run": None,
+                    "reason": "no free build slot: 1 used of SLOTS 1",
+                },
+            ],
+        )
+
+    def test_should_take_no_build_slot_for_a_task_of_an_earlier_closed_wave(self):
+        # Arrange
+        earlier_wave_closed = {
+            "schema_version": 1,
+            "ts": "2026-10-18T08:40:00Z",
+            "event": "wave.closed",
+            "wave": "tidepool_w15",
+        }
+
+        # Act
+        document = self._show(
+            CORPUS_OF_AN_EARLIER_TASK, [EARLIER_WAVE_STARTED, earlier_wave_closed, QUEUED_WAVE_STARTED, T8_WAITING]
+        )
+
+        # Assert
+        self.assertEqual(
+            document["tasks"],
+            [
+                {"task": "T7", "state": None, "pull_request": None, "run": None, "reason": None},
+                {
+                    "task": "T8",
+                    "state": "queued",
+                    "pull_request": None,
+                    "run": None,
+                    "reason": "no free build slot: 1 used of SLOTS 1",
+                },
+            ],
+        )
+
+    def test_should_take_no_build_slot_for_a_running_task_of_an_earlier_open_wave(self):
+        # Act
+        document = self._show(
+            CORPUS_OF_AN_EARLIER_TASK, [EARLIER_WAVE_STARTED, T5_RUNNING, QUEUED_WAVE_STARTED, T8_WAITING]
+        )
+
+        # Assert
+        self.assertEqual(
+            document["tasks"],
+            [
+                {"task": "T7", "state": None, "pull_request": None, "run": None, "reason": None},
+                {
+                    "task": "T8",
+                    "state": "queued",
+                    "pull_request": None,
+                    "run": None,
+                    "reason": "no free build slot: 1 used of SLOTS 1",
+                },
+            ],
+        )
+
+    def test_should_take_no_second_build_slot_for_a_task_stopped_by_a_lost_login_already_running_live(self):
+        # Arrange
+        t7_stopped_by_login = {**T5_STOPPED_BY_LOGIN, "wave": "tidepool_w16", "task": "T7"}
+        record_run_pid(
+            write_run(self.root / "state", create_run_record(LIVE_BUILD_RUN, "tidepool_w16", "T7") | TIDEPOOL, None),
+            os.getpid(),
+        )
+
+        # Act
+        document = self._show(
+            CORPUS_OF_TWO_BUILD_SLOTS,
+            [QUEUED_WAVE_STARTED, T7_RUNNING_IN_THE_ROUND, t7_stopped_by_login, T8_WAITING],
+        )
+
+        # Assert
+        self.assertEqual(
+            document["tasks"][1], {"task": "T8", "state": "queued", "pull_request": None, "run": None, "reason": None}
+        )
+
+    def test_should_take_no_build_slot_for_a_running_task_whose_last_run_follows_its_rebase(self):
+        # Arrange
+        rebase = {"slot": "rebase"}
+        rebase_finished = {
+            **create_run_result(FINISHED_BUILD_RUN, "done", "2026-10-18T08:30:00Z"),
+            **rebase,
+            "wave": "tidepool_w16",
+            "task": "T7",
+        }
+        build_finished = {
+            **create_run_result(BUILD_RUN_AFTER_THE_REBASE, "done", "2026-10-18T09:05:00Z"),
+            "wave": "tidepool_w16",
+            "task": "T7",
+        }
+        state_root = self.root / "state"
+        write_run(
+            state_root, create_run_record(FINISHED_BUILD_RUN, "tidepool_w16", "T7") | TIDEPOOL | rebase, rebase_finished
+        )
+        write_run(
+            state_root, create_run_record(BUILD_RUN_AFTER_THE_REBASE, "tidepool_w16", "T7") | TIDEPOOL, build_finished
+        )
+
+        # Act
+        document = self._show(
+            CORPUS_OF_ONE_BUILD_SLOT,
+            [QUEUED_WAVE_STARTED, T7_RUNNING_IN_THE_ROUND, rebase_finished, build_finished, T8_WAITING],
+        )
+
+        # Assert
+        self.assertEqual(
+            document["tasks"][1], {"task": "T8", "state": "queued", "pull_request": None, "run": None, "reason": None}
         )
 
     def test_should_show_no_reason_for_a_task_queued_again_after_its_park(self):
