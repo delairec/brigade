@@ -94,6 +94,24 @@ class WikiLinksGuardTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(defects, expected)
 
+    def test_should_flag_a_relative_link_in_a_dated_page(self):
+        # Arrange
+        dated_runs_page_linking_a_page = (
+            "Taken on 2026-11-20; the page is dated and not refreshed. See [Home](Home.md).\n"
+        )
+
+        # Act
+        defects = self.inspect(
+            {
+                "Home.md": HOME_LINKING_RUNS,
+                "_Sidebar.md": SIDEBAR_LINKING_HOME_AND_RUNS,
+                "Runs.md": dated_runs_page_linking_a_page,
+            }
+        )
+
+        # Assert
+        self.assertEqual(defects, ["Runs.md is dated and links Home.md, a living page: quote it or pin it to a commit"])
+
     def test_should_accept_links_to_pages_to_anchors_and_to_absolute_addresses(self):
         # Arrange
         runs_page_with_every_accepted_link = "See [the trail](Runs.md#trail), [above](#runs) and [the handoff](https://github.com/delairec/brigade/blob/main/HANDOFF.md).\n"
