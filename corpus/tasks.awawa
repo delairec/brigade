@@ -17428,7 +17428,8 @@ TASK B235
 TASK B236
 	TITLE "M6 is proven after the fact on the closed waves of one range, at least ten tasks merged"
 		+ "after B37 reached main, against the baseline of the user's notes"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 470
 	TYPE docs
 	MILESTONE @MILESTONE.M14
 	COMPONENT "docs"
