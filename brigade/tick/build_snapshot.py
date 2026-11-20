@@ -43,6 +43,7 @@ from brigade.registry.find_project import find_project
 from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_policy_field import read_policy_field
 from brigade.registry.read_project_field import read_project_field
+from brigade.registry.read_project_slots import read_project_slots
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.roles.read_role_bindings import read_role_bindings
@@ -62,6 +63,7 @@ from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
 from brigade.system.remember_process_records import remember_process_records
 from brigade.system.reset_hour import ResetHour
 from brigade.system.run_process import ProcessRecord, ProcessRequest
+from brigade.tasks.read_task_after import read_task_after
 from brigade.tasks.read_task_field import read_task_field
 from brigade.tick.decide_resume_at import decide_resume_at
 from brigade.tick.describe_study_facts import describe_study_facts
@@ -101,17 +103,13 @@ DOCUMENT_SCHEMA_VERSION = 1
 TASK_TYPE = "TASK"
 ORDER_ENTITY_TYPE = "ORDER"
 LIVE_RUN_STATE = "running"
-SLOTS_FIELD = "SLOTS"
 CHECK_RUNS_FIELD = "CHECK_RUNS"
 NO_CHECK_RUNS = "none"
-AFTER_FIELD = "AFTER"
-TASK_PREFIX = "@TASK."
 MILESTONE_FIELD = "MILESTONE"
 TITLE_FIELD = "TITLE"
 MILESTONE_PREFIX = "@MILESTONE."
 MILESTONE_TYPE = "MILESTONE"
 NO_MILESTONE = None
-PROJECT_SLOTS = 4
 QUEUED_STATE = "queued"
 SETTLED_STATES = ("merged", "parked")
 PATH_FIELD = "PATH"
@@ -857,7 +855,7 @@ def _read_task_facts(runtime: Runtime, reading: WaveReading, open_wave: _OpenWav
     return TaskFacts(
         name=task.name,
         branch=read_branch_of_task(reading.events, open_wave.started.project, task),
-        after=tuple(field.value.removeprefix(TASK_PREFIX) for field in task.fields if field.name == AFTER_FIELD),
+        after=read_task_after(task),
         blocked_by=runtime.read_live_blockers(runtime.run_process, open_wave.tree_root, task.name),
         milestone=_read_milestone(task),
         parked_reason=read_parked_reason(reading.events, open_wave.started.wave, task.name),
@@ -997,12 +995,11 @@ def _read_fallback_facts(configuration: Configuration) -> FallbackFacts | None:
 
 
 def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity, runs: list[dict]) -> ProjectFacts:
-    slots = read_project_field(project, SLOTS_FIELD)
     policies = read_entities(runtime.run_process, runtime.paths.config_root, POLICY_TYPE)
     wave_making = _read_wave_making(runtime, reading, project)
     return ProjectFacts(
         name=project.name,
-        slots=PROJECT_SLOTS if slots is None else int(slots),
+        slots=read_project_slots(project),
         awaits_check_runs=read_project_field(project, CHECK_RUNS_FIELD) != NO_CHECK_RUNS,
         live_runs=tuple(
             LiveRun(run=run["run"], slot=run["slot"], worktree=run["worktree"], wave=run["wave"], task=run["task"])
