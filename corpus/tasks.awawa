@@ -16481,7 +16481,8 @@ TASK B228
 TASK B229
 	TITLE "The Ledger view of the dashboard draws, for each role, its applied turn cap as a step"
 		+ "line over its budget.applied events"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 463
 	TYPE feat
 	MILESTONE @MILESTONE.M14
 	COMPONENT "dashboard"
