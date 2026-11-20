@@ -19883,7 +19883,8 @@ TASK B501
 TASK B263
 	TITLE "brigade wave list --state narrows the list to the open, blocked, parked or ended waves,"
 		+ "and brigade wave show --plan prints the AFTER and the SPEC of each task"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 468
 	TYPE feat
 	MILESTONE @MILESTONE.M14
 	COMPONENT "waves"
