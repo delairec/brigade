@@ -67,6 +67,8 @@ BUDGETS = {
             "restart_tokens": None,
             "segment_p50": 60,
             "segment_p90": 80,
+            "history": [{"ts": "2026-11-10T08:00:00Z", "before": 60, "after": 75, "direction": "raised"}],
+            "stable": False,
         },
         "prudence": {
             "shipped": 40,
@@ -78,6 +80,8 @@ BUDGETS = {
             "restart_tokens": None,
             "segment_p50": None,
             "segment_p90": None,
+            "history": [],
+            "stable": True,
         },
         "rebaser": {
             "shipped": 30,
@@ -89,6 +93,8 @@ BUDGETS = {
             "restart_tokens": None,
             "segment_p50": 12,
             "segment_p90": 16,
+            "history": [],
+            "stable": True,
         },
         "remi": {
             "shipped": 50,
@@ -100,6 +106,8 @@ BUDGETS = {
             "restart_tokens": 21666.6,
             "segment_p50": 40,
             "segment_p90": 64,
+            "history": [{"ts": "2026-11-12T10:00:00Z", "before": 64, "after": 50, "direction": "lowered"}],
+            "stable": False,
         },
     },
     "skipped": [],
@@ -200,6 +208,35 @@ class RenderLedgerFragmentTest(unittest.TestCase):
             "<th>restarts</th><th>g</th><th>R</th></tr></thead>"
             "<tbody><tr><td>&lt;i&gt;ada&lt;/i&gt;</td><td>75</td><td>-</td><td>75</td><td>6</td><td>0</td>"
             "<td>-</td><td>-</td></tr>",
+            fragment,
+        )
+
+    def test_should_draw_under_the_table_of_the_turn_cap_by_role_the_cap_history_of_each_role(self):
+        # Act
+        fragment = render_overview_and_budgets()
+
+        # Assert
+        self.assertIn(
+            "<td>2500</td><td>21667</td></tr></tbody></table>"
+            '<svg class="cap-history" viewBox="0 0 400 78" role="img" aria-label="turn cap of &lt;i&gt;ada&lt;/i&gt;">'
+            '<text class="cap-role" x="0" y="12">&lt;i&gt;ada&lt;/i&gt;</text>'
+            '<path class="step-path tone-work" d="M0 28 H200 V20 H400"></path>'
+            '<circle class="cap-change tone-limit" cx="200" cy="20" r="3"></circle>'
+            '<text class="cap-label" x="0" y="74">raised at 2026-11-10T08:00:00Z: 60 to 75</text></svg>'
+            '<svg class="cap-history" viewBox="0 0 400 78" role="img" aria-label="turn cap of prudence">'
+            '<text class="cap-role" x="0" y="12">prudence</text>'
+            '<path class="step-path tone-work" d="M0 20 H400"></path>'
+            '<text class="cap-label" x="0" y="74">stable at 40</text></svg>'
+            '<svg class="cap-history" viewBox="0 0 400 78" role="img" aria-label="turn cap of rebaser">'
+            '<text class="cap-role" x="0" y="12">rebaser</text>'
+            '<path class="step-path tone-work" d="M0 20 H400"></path>'
+            '<text class="cap-label" x="0" y="74">stable at 30</text></svg>'
+            '<svg class="cap-history" viewBox="0 0 400 78" role="img" aria-label="turn cap of remi">'
+            '<text class="cap-role" x="0" y="12">remi</text>'
+            '<path class="step-path tone-work" d="M0 20 H200 V28.75 H400"></path>'
+            '<circle class="cap-change tone-done" cx="200" cy="28.75" r="3"></circle>'
+            '<text class="cap-label" x="0" y="74">lowered at 2026-11-12T10:00:00Z: 64 to 50</text></svg>'
+            "</section>",
             fragment,
         )
 

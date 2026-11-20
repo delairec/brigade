@@ -1,6 +1,7 @@
 import json
 import math
 import re
+from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.adapters.clients.describe_unreadable_output import describe_unreadable_output
@@ -32,6 +33,7 @@ BLOCKED_OUTCOME = "blocked"
 END_DECLARATIONS = {f"brigade-end: {outcome}": outcome for outcome in ("done", "handed_over", BLOCKED_OUTCOME)}
 UNDECLARED = "undeclared"
 NO_CACHE_CREATION = 0
+MS_PER_S = 1000
 
 
 def _bind_model(request: dict, level: str) -> str:
@@ -182,16 +184,29 @@ def _read_journal_file(path: Path) -> list[dict]:
         raise BrigadeError(f"unreadable journal at {path}: {error}") from None
 
 
+def _date_entry(created_at: int | None) -> str | None:
+    if created_at is None:
+        return None
+    return datetime.fromtimestamp(created_at / MS_PER_S, UTC).isoformat(timespec="milliseconds")
+
+
 def _describe_user_message(entry: dict) -> dict:
-    return {"role": "user", "timestamp": None, "content": entry["content"], "tool_calls": 0, "id": None, "usage": None}
+    return {
+        "role": "user",
+        "timestamp": _date_entry(entry.get("createdAt")),
+        "content": entry["content"],
+        "tool_calls": 0,
+        "id": None,
+        "usage": None,
+    }
 
 
-def _describe_model_turn(result: dict) -> dict:
+def _describe_model_turn(result: dict, next_entry_date: int | None) -> dict:
     parts = result["parts"]
     usage = result["usage"]
     return {
         "role": "assistant",
-        "timestamp": None,
+        "timestamp": _date_entry(next_entry_date),
         "content": _read_text(parts),
         "tool_calls": sum(1 for part in parts if part["type"] == "tool_call"),
         "id": None,
@@ -204,13 +219,29 @@ def _describe_model_turn(result: dict) -> dict:
     }
 
 
-def _describe_record(record: dict, completions: set[str]) -> list[dict]:
+def _list_entry_dates(record: dict) -> list[int]:
+    if record["type"] != "projection_delta":
+        return []
+    entries = (change.get("entry", {}) for change in record["payload"]["delta"])
+    return [entry["createdAt"] for entry in entries if "createdAt" in entry]
+
+
+def _list_next_entry_dates(records: list[dict]) -> list[int | None]:
+    next_entry_dates = []
+    next_entry_date = None
+    for record in reversed(records):
+        next_entry_dates.append(next_entry_date)
+        next_entry_date = next(iter(_list_entry_dates(record)), next_entry_date)
+    return next_entry_dates[::-1]
+
+
+def _describe_record(record: dict, completions: set[str], next_entry_date: int | None) -> list[dict]:
     payload = record["payload"]
     if record["type"] == "projection_delta":
         entries = (change.get("entry", {}) for change in payload["delta"])
         return [_describe_user_message(entry) for entry in entries if entry.get("role") == "user"]
     if record["type"] == "action_result" and payload["action_id"] in completions:
-        return [_describe_model_turn(payload["result"]["result"])]
+        return [_describe_model_turn(payload["result"]["result"], next_entry_date)]
     return []
 
 
@@ -227,7 +258,11 @@ def _read_transcripts(request: dict) -> dict:
     }
     return {
         "schema_version": SCHEMA_VERSION,
-        "messages": [message for record in records for message in _describe_record(record, completions)],
+        "messages": [
+            message
+            for record, next_entry_date in zip(records, _list_next_entry_dates(records), strict=True)
+            for message in _describe_record(record, completions, next_entry_date)
+        ],
         "subagents": [],
     }
 

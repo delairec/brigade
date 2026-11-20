@@ -7,7 +7,8 @@ how it is held on the clock, stopped and pruned, and how `brigade runs` lists, s
 brigade run start <procedure> --slot <slot> [--project <name>] [--cwd <dir>] [--brief <file>] [--wave <wave>] [--task <task>]
             [--detach] [key=value ...]
 brigade run list [--wave <wave>] [--task <task>] [--state running|finished|dead] [--json]
-                                                 # every run: id, procedure, slot, role, project, wave, task, state, outcome
+                                                 # every run: id, procedure, slot, role, project, wave, task, state, outcome,
+                                                 # segments, duration, cost, arguments
 brigade run show <id> [--log] [--json]          # the summary of a run, its segments and its progress; --log adds its log
 brigade run show <id> --follow                  # the same with --log, then each record as it is written
 brigade run note <id> <text>                    # hand a note to a run, carried by the brief of its next segment
@@ -25,8 +26,13 @@ brigade run prune [--keep <n>] [--before <YYYY-MM-DD>] [--resumable] [--dry-run]
 - **The turn cap** of a segment is its role's: the `budget` the role package ships, until the ledger holds 5 measured
   segments and 3 measured restarts of the role at its current digests; then √(2R/g) rounded, held within half and
   double the shipped budget, g the tokens a turn adds to the context of the next, R the tokens a restarted segment
-  spends up to its first edit. A change of the applied cap is appended as `budget.applied`, and the brief states the
-  cap in its Budget section.
+  spends up to its first edit. The first edit of a segment is its first change to the worktree of the run outside the
+  progress file, whatever tool made it: brigade samples HEAD, the files `git status` lists and their size and mtime
+  at launch, every `log_poll_s` and when the client exits, and dates the first differing sample at the last tool call
+  of the main transcript at or before it; a call of an edit tool on a file of the worktree keeps its exact turn when
+  it comes earlier. A sample git cannot read, failing or out of time, is no change: a segment whose launch or last
+  sample git could not read is measured by its calls of an edit tool alone. A change of the applied cap is appended as `budget.applied`, and the brief states the cap in its
+  Budget section.
 - **The slot** resolves to its role as [`brigade role show`](Roles.md) shows, unless the project of `--project` binds it
   otherwise.
 - **The client** is the one `[slot_clients]` binds to the slot, else the project's `CLIENT`, else the `client` key of
@@ -194,6 +200,18 @@ and the ledger as the foreground command does.
 - The adapter's `actions` operation turns the output into actions: `tool` (the tool and the path, command or pattern
   it acts on), `text` (its first line) and `result` (the outcome of the segment). A client whose probe declares no
   `actions` has one record of kind `raw` per line.
+- `run list` prints after the outcome of each run four columns read from its directory. `segments` holds the
+  outcome of each segment in the order of their numbers, joined by a comma, `wall_limit,done` for a run cut at the
+  wall-time limit and resumed; a running or a dead run ends on its state, `handed_over,running`. `duration` sums the
+  `duration_ms` of the segments that carry one, as `brigade ledger` prints a duration, and `cost` their `cost_usd`,
+  `0.42 USD`; each is followed by `partial` when a segment carries none, a segment with no result among them, and is
+  `-` when no segment carries one. `arguments` holds the arguments of `run.json` as `key=value`, sorted by key, never
+  cut, and tells apart two runs of one procedure outside a wave. With `--json` each run carries `arguments`,
+  `segments`, one `{segment, outcome, turns, duration_ms}` per segment, `duration_ms` and `cost_usd`, `null` when no
+  segment carries one, and `duration_partial` and `cost_partial`.
+- The Runs view of the dashboard shows the same measures, the segments as one square per segment in the tone of its
+  outcome, and totals the run time and the cost, the cost marked `at least` when a run records none, with the cost
+  of each procedure; the page of a run opens its segments on the same squares.
 - `runs show` prints the summary of a run and the outcome of each segment, then its progress, rendered by the document
   plugin of the file the run wrote, `progress.md` or `progress.awawa`, and with `--log` one line per record: its time,
   segment, kind and summary.

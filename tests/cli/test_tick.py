@@ -158,6 +158,9 @@ class BrigadeTickDryRunTest(TickTestCase):
                     "kept_branches": [],
                 },
                 "decisions": [],
+                "tasks_not_launched": [],
+                "halted_waves": [],
+                "waves_not_started": [],
             },
         )
 

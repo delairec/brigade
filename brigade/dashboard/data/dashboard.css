@@ -353,6 +353,27 @@ h3 {
   stroke-width: 2;
 }
 
+.cap-history {
+  display: block;
+  width: 100%;
+  max-width: 400px;
+  margin: var(--space-3) 0;
+}
+
+.cap-role {
+  fill: var(--text);
+  font-size: var(--size-5);
+}
+
+.cap-change {
+  fill: var(--tone);
+}
+
+.cap-label {
+  fill: var(--muted);
+  font-size: var(--size-6);
+}
+
 .stat-tiles {
   display: flex;
   flex-wrap: wrap;
@@ -569,4 +590,15 @@ dd {
   .page {
     padding: var(--space-4);
   }
+}
+
+.segment-squares {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.segment-square {
+  width: var(--space-2);
+  height: var(--space-2);
+  background: var(--tone);
 }

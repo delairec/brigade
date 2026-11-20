@@ -58,6 +58,14 @@ def _render_overview(document: dict) -> list[str]:
     return lines
 
 
+def _render_gate_week(week: dict) -> str:
+    tasks = "".join(f", {task['task']} {task['rounds']}" for task in week["tasks"])
+    return (
+        f"gate {week['week']}: passed {week['passed']}, escaped {week['escaped']},"
+        f" escape rate {week['escape_rate']}, median rounds to pass {week['median_rounds']:g}{tasks}"
+    )
+
+
 def _render_project(document: dict) -> list[str]:
     since = "" if document["since"] is None else f" since {document['since']}"
     orders = _join_counts(document["orders_done"]) or "0"
@@ -69,6 +77,7 @@ def _render_project(document: dict) -> list[str]:
         f"signals recorded: {document['signals_recorded']}",
         f"patterns ratified: {document['patterns_ratified']}",
         f"constraints delivered: {document['constraints_delivered']}",
+        *(_render_gate_week(week) for week in document["gate"]),
     ]
 
 

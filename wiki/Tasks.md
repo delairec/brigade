@@ -69,11 +69,13 @@ attribution reserved for it. A run reads a further entity with `awawa show` when
 
 <details><summary><code>task pr</code></summary>
 
-- It also refuses a task without `TYPE` and a missing subject.
+- It also refuses a task without `TYPE`, a task of `TYPE fix` without `CORRECTS`, the number of the pull request it
+  corrects, and a missing subject.
 - It creates the GitHub milestone named after the `TITLE` of the task's `MILESTONE` when the repository has none.
 - It opens the pull request as the login of `forge_accounts.build`, titled
   `TYPE(COMPONENT): <subject> (@TASK.<task>)`, its body the task, its criteria, the verdicts of the check and the
-  attribution.
+  attribution, opened by one line `Corrects #<n>` per `CORRECTS`, followed by `(@TASK.<task>)` when a
+  `task.pr_opened` of the ledger names that pull request; `task.pr_opened` carries them in `corrects`.
 
 </details>
 

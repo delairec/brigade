@@ -22,6 +22,7 @@ from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.run_finished import RunFinished
 from brigade.ledger.task_branch_cut import TaskBranchCut
+from brigade.ledger.task_parked import TaskParked
 from brigade.ledger.task_preflighted import TaskPreflighted
 from brigade.ledger.task_reported import TaskReported
 from brigade.ledger.task_state import TaskState
@@ -483,6 +484,17 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
                 ),
             ),
         )
+
+    def test_should_carry_the_reason_the_ledger_last_parked_a_task_on(self):
+        # Arrange
+        self.record(5, TaskParked(wave="w1", task="B4", reason="its run ended blocked", blockers=()))
+        self.record(4, TaskParked(wave="w1", task="B4", reason="its pull request is closed", blockers=()))
+
+        # Act
+        snapshot, _ = self.build()
+
+        # Assert
+        self.assertEqual(snapshot.waves[0].tasks[3].parked_reason, "its pull request is closed")
 
     def test_should_note_no_quota_stop_on_a_task_whose_run_was_resumed_since_it_hit_the_limit(self):
         # Arrange

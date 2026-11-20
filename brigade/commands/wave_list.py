@@ -14,9 +14,14 @@ from brigade.waves.read_wave_pause import read_wave_pause
 from brigade.waves.summarize_waves import ENDING_EVENTS, WaveSummary, summarize_waves
 
 DOCUMENT_SCHEMA_VERSION = 1
-HEADER = ("wave", "project", "branch", "last event", "tasks")
-COLUMNS = ("wave", "project", "branch", "last_event", "tasks")
+HEADER = ("wave", "project", "branch", "state", "last event", "tasks")
+COLUMNS = ("wave", "project", "branch", "state", "last_event", "tasks")
 NO_ROUND = 0
+OPEN = "open"
+BLOCKED = "blocked"
+PARKED = "parked"
+ENDED = "ended"
+WAVE_STATES = (OPEN, BLOCKED, PARKED, ENDED)
 
 
 def _render_text(document: dict) -> str:
@@ -42,23 +47,33 @@ def _describe_halt(entries: list[LedgerEntry], summary: WaveSummary) -> dict | N
     return pause.to_document()
 
 
+def _read_state(summary: WaveSummary, halt: dict | None) -> str:
+    if not summary.is_open:
+        return ENDED
+    if halt is None:
+        return OPEN
+    return PARKED if halt["resume_at"] is None else BLOCKED
+
+
 def _describe(entries: tuple[LedgerEntry, ...], summary: WaveSummary) -> dict:
     started = summary.started
     of_wave = _of_wave(entries, started.wave)
     states = read_task_states(entries, started.wave)
     events = [entry.event for entry in of_wave]
     ending = _find_ending(of_wave)
+    halt = _describe_halt(of_wave, summary)
     return {
         "wave": started.wave,
         "project": started.project,
         "branch": started.branch,
         "last_event": summary.last_event,
+        "state": _read_state(summary, halt),
         "tasks": len(started.tasks),
         "started_at": format_instant(summary.started_at),
         "ended_at": None if ending is None else format_instant(ending.instant),
         "ended_by": None if ending is None else ending.event.name,
         "task_states": [{"task": task, "state": states.get(task)} for task in started.tasks],
-        "halt": _describe_halt(of_wave, summary),
+        "halt": halt,
         "rounds": max((event.rounds for event in events if isinstance(event, PrMerged)), default=NO_ROUND),
         "cost_usd": sum_reported(event.cost_usd for event in events if isinstance(event, RunFinished)),
     }
@@ -67,18 +82,22 @@ def _describe(entries: tuple[LedgerEntry, ...], summary: WaveSummary) -> dict:
 def wave_list(request: argparse.Namespace, runtime: Runtime) -> dict:
     entries = read_ledger(runtime.paths.state_root).entries
     summaries = sorted(summarize_waves(entries), key=_is_ended)
+    described = [
+        _describe(entries, summary) for summary in summaries if request.project in (None, summary.started.project)
+    ]
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
-        "waves": [
-            _describe(entries, summary) for summary in summaries if request.project in (None, summary.started.project)
-        ],
+        "waves": [wave for wave in described if request.state in (None, wave["state"])],
     }
 
 
 COMMAND = Command(
     path=("wave", "list"),
     help="print one row per wave of the ledger, the open waves first",
-    arguments=(Argument(("--project",), {"help": "only the waves of this registered project"}),),
+    arguments=(
+        Argument(("--project",), {"help": "only the waves of this registered project"}),
+        Argument(("--state",), {"choices": WAVE_STATES, "help": "only the waves in this state"}),
+    ),
     run=wave_list,
     render_text=_render_text,
 )

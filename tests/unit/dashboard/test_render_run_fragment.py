@@ -120,13 +120,26 @@ class RenderRunFragmentTest(unittest.TestCase):
             fragment,
         )
 
+    def test_should_open_its_segments_on_their_strip(self):
+        # Act
+        fragment = render_run_fragment(create_live_page())
+
+        # Assert
+        self.assertIn(
+            '<section><h3>Segments</h3><span class="segment-squares" role="img"'
+            ' aria-label="segments: handed_over, running">'
+            '<span class="segment-square tone-faint" title="handed_over"></span>'
+            '<span class="segment-square tone-work" title="running"></span></span><table>',
+            fragment,
+        )
+
     def test_should_show_each_segment_with_its_turns_as_a_bar_against_the_cap_and_one_over_it_said(self):
         # Act
         fragment = render_run_fragment(create_live_page())
 
         # Assert
         self.assertIn(
-            "<section><h3>Segments</h3><table><thead><tr><th>segment</th><th>outcome</th><th>turns</th>"
+            "<table><thead><tr><th>segment</th><th>outcome</th><th>turns</th>"
             "<th>start</th><th>duration</th><th>cost</th></tr></thead><tbody>"
             '<tr><td>1</td><td><span class="pill"><span class="tone tone-faint"><span class="tone-shape"'
             ' aria-hidden="true">·</span>handed_over</span></span></td>'

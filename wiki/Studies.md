@@ -87,7 +87,9 @@ nothing.
 
 Two built-in studies of the slot `report` answer with a `REPORT` entity, which the CLI fills from the collectors
 (`TASK_ROW`, `STATISTIC`, `GRAPH`, `MANUAL_TEST`, `INSTRUCTIONS_CHANGE`, `PARKED_QUESTION`, `PATTERN_TASK`) and the
-judging run completes with its prose. A wave has no report of its own.
+judging run completes with its prose. A wave has no report of its own. Once a pull request of its tasks passed the
+gate, its `STATISTIC` rows add `rounds to pass <task> <n>` per task passed and `escapes <escaped> of <passed>`, read
+from the `ledger` collector as [Ledger](Ledger.md) counts them.
 
 | Study | Run by the tick | Collectors | Entity | Markdown | Where it goes |
 |---|---|---|---|---|---|
@@ -97,9 +99,9 @@ judging run completes with its prose. A wave has no report of its own.
 The commit is pushed without force as the login of the key `cli` of `[forge_accounts]`. `brigade report list` names
 the kind of each report, `milestone-report`, `task-report` or, for one written before them, `wave-report`; with
 `--json`, each report also carries its `subject`, the milestone, the task or the wave it reports, its `statistics`
-by name, its `verdict`, the first `NARRATIVE` value or null, the `counts` of its values by field name, and
-`reported_at`, the instant of the last `milestone.reported`, `task.reported` or `wave.reported` event recording it,
-or null.
+by name, `rounds to pass <task>` naming the rounds of each task, its `verdict`, the first `NARRATIVE` value or null,
+the `counts` of its values by field name, and `reported_at`, the instant of the last `milestone.reported`,
+`task.reported` or `wave.reported` event recording it, or null.
 
 <details><summary>Steps, ledger events and resumption</summary>
 

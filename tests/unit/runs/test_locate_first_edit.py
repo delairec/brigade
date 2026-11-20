@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 from brigade.runs.locate_first_edit import FirstEdit, locate_first_edit
 from brigade.system.token_usage import TokenUsage
@@ -6,6 +7,7 @@ from brigade.system.transcripts_answer import ToolTarget, TranscriptMessage
 
 EDIT_TOOLS = ("Edit", "Write", "NotebookEdit")
 PROGRESS_FILE = "/state/brigade/runs/r1/progress.awawa"
+WORKTREE = Path("/srv/b42")
 NO_TOOLS = ()
 NO_USAGE = None
 FIRST_USAGE = TokenUsage(
@@ -63,7 +65,7 @@ class LocateFirstEditTest(unittest.TestCase):
         )
 
         # Act
-        first_edit = locate_first_edit(messages, EDIT_TOOLS, PROGRESS_FILE)
+        first_edit = locate_first_edit(messages, EDIT_TOOLS, PROGRESS_FILE, WORKTREE)
 
         # Assert
         self.assertEqual(first_edit, FirstEdit(steps=3, tokens=3333))
@@ -76,7 +78,7 @@ class LocateFirstEditTest(unittest.TestCase):
         )
 
         # Act
-        first_edit = locate_first_edit(messages, EDIT_TOOLS, PROGRESS_FILE)
+        first_edit = locate_first_edit(messages, EDIT_TOOLS, PROGRESS_FILE, WORKTREE)
 
         # Assert
         self.assertEqual(first_edit, FirstEdit(steps=2, tokens=1111))
@@ -89,7 +91,7 @@ class LocateFirstEditTest(unittest.TestCase):
         )
 
         # Act
-        first_edit = locate_first_edit(messages, EDIT_TOOLS, PROGRESS_FILE)
+        first_edit = locate_first_edit(messages, EDIT_TOOLS, PROGRESS_FILE, WORKTREE)
 
         # Assert
         self.assertEqual(first_edit, FirstEdit(steps=2, tokens=3333))
@@ -107,8 +109,29 @@ class LocateFirstEditTest(unittest.TestCase):
             with self.subTest(case=case):
                 # Act
                 first_edit = locate_first_edit(
-                    (_create_message("msg_1", tools, FIRST_USAGE),), EDIT_TOOLS, PROGRESS_FILE
+                    (_create_message("msg_1", tools, FIRST_USAGE),), EDIT_TOOLS, PROGRESS_FILE, WORKTREE
                 )
 
                 # Assert
                 self.assertIsNone(first_edit)
+
+    def test_should_pass_over_an_edit_whose_target_lies_outside_the_worktree(self):
+        # Arrange
+        rows = [
+            ("a file of another worktree", ToolTarget(name="Write", target="/srv/b41/notes.md")),
+            ("no target", ToolTarget(name="NotebookEdit", target=None)),
+        ]
+        for case, outside in rows:
+            with self.subTest(case=case):
+                messages = (
+                    _create_message("msg_1", (outside,), FIRST_USAGE),
+                    _create_message(
+                        "msg_2", (ToolTarget(name="Edit", target="/srv/b42/brigade/cli.py"),), SECOND_USAGE
+                    ),
+                )
+
+                # Act
+                first_edit = locate_first_edit(messages, EDIT_TOOLS, PROGRESS_FILE, WORKTREE)
+
+                # Assert
+                self.assertEqual(first_edit, FirstEdit(steps=2, tokens=3333))

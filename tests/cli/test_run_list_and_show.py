@@ -22,8 +22,8 @@ class RunsTestCase(RunTestCase):
             "run", "start", str(self.procedure), "--slot", "build", "--cwd", str(self.workspace), *options
         )
 
-    def run_deliver_to_its_end(self) -> str:
-        completed = self.run_deliver("--json")
+    def run_deliver_to_its_end(self, *arguments: str) -> str:
+        completed = self.run_deliver("--json", *arguments)
         self.assertIn(completed.returncode, (0, 1, 3, 10, 12, 13), completed.stderr)
         return json.loads(completed.stdout)["run"]
 
@@ -34,9 +34,9 @@ class BrigadeRunsListOfAFinishedRunTest(RunsTestCase):
         self.configure_fake(COUNTING_CLIENT)
         self.record("builder", DONE_RESULT)
 
-    def test_should_list_the_run_with_its_state_and_outcome(self):
+    def test_should_list_the_run_with_its_state_its_outcome_its_segments_its_measures_and_its_arguments(self):
         # Arrange
-        run_id = self.run_deliver_to_its_end()
+        run_id = self.run_deliver_to_its_end("pr=56")
 
         # Act
         completed = self.run_brigade("run", "list", "--json")
@@ -60,10 +60,39 @@ class BrigadeRunsListOfAFinishedRunTest(RunsTestCase):
                         "wave": None,
                         "task": None,
                         "started_at": ANY,
+                        "arguments": {"pr": "56"},
+                        "segments": [{"segment": 1, "outcome": "done", "turns": 12, "duration_ms": ANY}],
+                        "duration_ms": ANY,
+                        "cost_usd": 0.42,
+                        "duration_partial": False,
+                        "cost_partial": False,
                     }
                 ],
                 "skipped": [],
             },
+        )
+
+    def test_should_print_the_segments_the_duration_the_cost_and_the_arguments_of_the_run(self):
+        # Arrange
+        run_id = self.run_deliver_to_its_end("pr=56")
+
+        # Act
+        completed = self.run_brigade("run", "list")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            completed.stdout.splitlines(),
+            [
+                (
+                    "run                      procedure  slot   role     project  wave  task  state     outcome  segments"
+                    "  duration  cost      arguments"
+                ),
+                (
+                    f"{run_id}  deliver    build  builder  -        -     -     finished  done     done    "
+                    "  0h00m     0.42 USD  pr=56"
+                ),
+            ],
         )
 
 
@@ -297,7 +326,13 @@ class BrigadeRunsListOfTheRunsOfAWaveOrOfATaskTest(RunsTestCase):
         self.assertEqual(
             completed.stdout.splitlines(),
             [
-                "run                      procedure  slot   role     project  wave     task  state     outcome",
-                f"{self.s3_of_cafe}  deliver    build  builder  -        cafe_w1  S3    finished  done",
+                (
+                    "run                      procedure  slot   role     project  wave     task  state     outcome"
+                    "  segments  duration  cost      arguments"
+                ),
+                (
+                    f"{self.s3_of_cafe}  deliver    build  builder  -        cafe_w1  S3    finished  done   "
+                    "  done      0h00m     0.42 USD  -"
+                ),
             ],
         )

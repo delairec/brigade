@@ -8,12 +8,20 @@ from brigade.dashboard.render_empty_state import render_empty_state
 from brigade.dashboard.render_explainer import render_explainer
 from brigade.dashboard.render_filter_chips import FilterChip, render_filter_chips
 from brigade.dashboard.render_html_table import render_html_table
+from brigade.dashboard.render_segment_squares import render_segment_squares
 from brigade.dashboard.render_stat_tile import StatTile, render_stat_tile
 from brigade.dashboard.render_status_pill import render_status_pill
 from brigade.dashboard.render_status_sentence import render_status_sentence
+from brigade.runs.format_duration import format_duration
+from brigade.runs.format_run_arguments import format_run_arguments
+from brigade.runs.list_segment_outcomes import list_segment_outcomes
 
 RUNS_VIEW = "runs"
-HEADER = ("run", "procedure", "task", "wave", "state", "start")
+HEADER = ("run", "procedure", "task", "wave", "state", "segments", "duration", "cost", "arguments", "start")
+COST_HEADER = ("procedure", "runs", "cost")
+FLOOR = "at least "
+NO_DURATION = 0
+NO_COST = 0
 ABSENT = "-"
 RUN_STATES = ("running", "finished", "dead")
 LIVE = "running"
@@ -79,6 +87,24 @@ def _show_state(run: dict) -> str:
     return run["outcome"] if run["state"] == FINISHED else run["state"]
 
 
+def _show_measure(shown: str | None, *, partial: bool) -> str:
+    if shown is None:
+        return ABSENT
+    return f"{FLOOR}{shown}" if partial else shown
+
+
+def _show_duration(run: dict) -> str:
+    duration_ms = run["duration_ms"]
+    shown = None if duration_ms is None else format_duration(duration_ms)
+    return _show_measure(shown, partial=run["duration_partial"])
+
+
+def _show_cost(run: dict) -> str:
+    cost_usd = run["cost_usd"]
+    shown = None if cost_usd is None else f"${cost_usd:.2f}"
+    return _show_measure(shown, partial=run["cost_partial"])
+
+
 def _render_row(run: dict) -> tuple[str, ...]:
     return (
         _render_link(f"{RUNS_VIEW}/{quote(run['run'], safe='')}", run["run"]),
@@ -86,6 +112,10 @@ def _render_row(run: dict) -> tuple[str, ...]:
         _render_task(run["task"]),
         _render_wave(run["wave"]),
         render_status_pill(_show_state(run)),
+        render_segment_squares(list_segment_outcomes(run["state"], run["segments"])),
+        _show_duration(run),
+        _show_cost(run),
+        escape(format_run_arguments(run["arguments"])),
         escape(run["started_at"]),
     )
 
@@ -114,6 +144,35 @@ def _render_sections(runs: list[dict]) -> str:
     )
 
 
+def _records_no_cost(run: dict) -> bool:
+    return run["cost_usd"] is None or run["cost_partial"]
+
+
+def _show_total_cost(runs: list[dict]) -> str:
+    total = sum(run["cost_usd"] or NO_COST for run in runs)
+    floor = FLOOR if any(_records_no_cost(run) for run in runs) else ""
+    return f"{floor}${total:.2f}"
+
+
+def _describe_total_cost(runs: list[dict]) -> StatTile:
+    uncosted = sum(_records_no_cost(run) for run in runs)
+    perimeter = f"over the runs listed; runs lacking a cost: {uncosted}"
+    return StatTile(label="cost", value=_show_total_cost(runs), perimeter=perimeter)
+
+
+def _render_procedure_cost(procedure: str, runs: list[dict]) -> tuple[str, ...]:
+    of_procedure = [run for run in runs if run["procedure"] == procedure]
+    return escape(procedure), str(len(of_procedure)), _show_total_cost(of_procedure)
+
+
+def _render_cost_by_procedure(runs: list[dict]) -> str:
+    if not runs:
+        return ""
+    rows = [_render_procedure_cost(procedure, runs) for procedure in sorted({run["procedure"] for run in runs})]
+    table = render_html_table(COST_HEADER, rows, NO_RUN_MATCHES)
+    return f"<section><h2>Cost by procedure</h2>{table}</section>"
+
+
 def _render_tiles(runs: list[dict]) -> str:
     states = Counter(run["state"] for run in runs)
     outcomes = Counter(run["outcome"] for run in runs if run["state"] == FINISHED)
@@ -124,6 +183,12 @@ def _render_tiles(runs: list[dict]) -> str:
             for outcome, count in sorted(outcomes.items())
         ),
         StatTile(label=DEAD, value=str(states[DEAD]), perimeter="runs whose process ended without a result"),
+        StatTile(
+            label="run time",
+            value=format_duration(sum(run["duration_ms"] or NO_DURATION for run in runs)),
+            perimeter="over the segments that ended",
+        ),
+        _describe_total_cost(runs),
     ]
     return f'<div class="stat-tiles">{"".join(render_stat_tile(tile) for tile in tiles)}</div>'
 
@@ -145,4 +210,5 @@ def render_runs_fragment(document: dict, filters: RunFilters) -> str:
         + _render_chips(filters, "wave", "every wave", _list_values(runs, "wave"))
         + _render_chips(filters, "task", "every task", _list_values(runs, "task"))
         + _render_sections(runs)
+        + _render_cost_by_procedure(runs)
     )

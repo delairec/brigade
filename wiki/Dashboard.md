@@ -63,21 +63,26 @@ Its seven views:
   with its reason, the proposed patterns of the inbox as one row with their count, the parked scans, a pull request of
   a milestone waiting for the user's merge and a parked order, or says nothing needs the user; a stall signal whose
   task merged since is listed apart as stale. **At work** lists the open waves with their tasks by state and their
-  live runs, **Last 24 hours** counts the failed tick actions, and the projects keep their pause and resume buttons.
+  live runs, **Tasks waiting** lists each queued or parked task the next tick does not launch with its cause, read
+  from the `tasks_not_launched` of `brigade tick --dry-run --json`, **Last 24 hours** counts the failed tick actions, and the projects keep their pause and resume buttons.
   **Next tick** shows the decisions of `brigade tick --dry-run --json` by action, read when the page loads, at each
   new tick and on its refresh button, never by the poll.
 - **Waves** — the waves of `brigade wave list`, opening on one sentence counting the waves open, parked and blocked,
   and four tiles: the waves open now with the parked and the blocked, the waves started with their count by month
   from `brigade ledger`, the waves closed with the cancelled, and the tasks merged out of the tasks the last 12 waves
   served, with the waves that merged nothing. Each row, the open waves first, shows the wave linking its page, its
-  state as a pill (running, parked, blocked, closed or cancelled), a bar of its tasks by state, a task no event served
+  state as a pill, the key `state` of the list (open, blocked, parked or ended), a bar of its tasks by state, a task no event served
   yet counted queued, its dates, its review rounds and its cost, said as a floor. The tasks served by three waves or
-  more are named with that count under a heading of their own. On its page,
+  more are named with that count under a heading of their own. One chip per state, open, blocked, parked and ended,
+  with one for every state, narrows the list through `brigade wave list --state`, the state chosen carried by the
+  address, `#waves?state=parked`; the sentence, the tiles and the tasks served again count every wave whatever
+  the chip. On its page,
   a wave opens on one sentence saying how it stands or how it ended, with a resume button while it is halted, its
   milestone and the report of that milestone once one is committed, and five tiles: the tasks merged out of its tasks
   with the parked, its wall time, its run time with its turns and its runs, its cost, marked a floor when a run
   records none, and the time it spent halted with the count and the reasons of its halts. Its tasks are a table: each
-  with its state as a pill and a requeue button when parked, its pull request, linked on the forge when `brigade
+  with its `AFTER` and its `SPEC` from `brigade wave show --plan` folded under its name, its state as a pill and a
+  requeue button when parked, its pull request, linked on the forge when `brigade
   project show` names one, its rounds, flagged at three, its runs, each linking its page, and its share of the cost
   of the wave. How it went is a timeline of the states of each task over the time of the wave, its halts drawn as
   bands, followed by the failed tick actions by action, with their count and the event of the ledger that cleared
@@ -100,7 +105,10 @@ Its seven views:
 - **Ledger** — whether brigade is well tuned. It opens on a callout saying what its measures cover: the runs finished,
   the range of the ledger they were read from and the lines of the ledger skipped. *Do the turn caps fit* sets the
   segment p90 of each role against its applied cap, the role overshooting most first, with a bar marking the cap and
-  `estimate` under five measured segments; the table *Turn cap by role* follows it. *What a run takes* gives the p50
+  `estimate` under five measured segments; the table *Turn cap by role* follows it, then a chart per role drawing its
+  applied cap as a step line over the `budget.applied` events of its `history`, each change marked raised or lowered
+  with its ts, its cap before and its cap after, and a flat line marked stable for a role whose cap never changed.
+  *What a run takes* gives the p50
   and p90 turns of each procedure, `estimate` under five runs; *What keeps failing* the failed tick actions by day,
   against the 288 ticks of a day, and by action with its most frequent error; *Volume* the counts of the overview as
   tiles, with the waves started by month. A wave opens its turns by role and its halts, and *Compare two periods*

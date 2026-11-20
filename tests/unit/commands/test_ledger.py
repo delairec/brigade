@@ -5,6 +5,8 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from brigade.commands.ledger import COMMAND, ledger
+from tests.unit.create_test_paths import create_test_paths
+from tests.unit.create_test_runtime import create_test_runtime
 
 WAVE_STARTED = (
     '{"schema_version": 2, "ts": "2026-09-30T22:00:00Z", "event": "wave.started", "wave": "tidepool_w16",'
@@ -22,8 +24,14 @@ TASK_RUN_LATER = (
     ' "session": null, "main_turns": 30, "total_turns": null, "duration_ms": 120000, "usage": null, "outcome": "done",'
     ' "error_class": null, "exit": 0, "wave": "tidepool_w16", "task": "TP1", "nulls": {}, "cost_usd": 2.5}\n'
 )
-from tests.unit.create_test_paths import create_test_paths
-from tests.unit.create_test_runtime import create_test_runtime
+VERDICT_PASSED_IN_WEEK_44 = (
+    '{"schema_version": 1, "ts": "2026-11-01T09:00:00Z", "event": "task.verdict", "project": "app",'
+    ' "wave": "app_w1", "task": "B1", "pr": 12, "head": "c0ffee", "verdict": "pass", "findings": [], "login": null}\n'
+)
+VERDICT_PASSED_IN_WEEK_46 = (
+    '{"schema_version": 1, "ts": "2026-11-09T09:00:00Z", "event": "task.verdict", "project": "app",'
+    ' "wave": "app_w1", "task": "B2", "pr": 13, "head": "bead", "verdict": "pass", "findings": [], "login": null}\n'
+)
 
 
 class LedgerTest(unittest.TestCase):
@@ -88,6 +96,29 @@ class LedgerTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(document["since"], expected)
+
+    def test_should_bound_the_weeks_of_the_gate_by_the_instant_since_names(self):
+        # Arrange
+        (self.ledger_directory / "2026-11.jsonl").write_text(VERDICT_PASSED_IN_WEEK_44 + VERDICT_PASSED_IN_WEEK_46)
+        request = argparse.Namespace(wave=None, task=None, project="app", since=date(2026, 11, 2))
+
+        # Act
+        document = ledger(request, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["gate"],
+            [
+                {
+                    "week": "2026-W46",
+                    "passed": 1,
+                    "escaped": 0,
+                    "escape_rate": "0/1",
+                    "median_rounds": 1,
+                    "tasks": [{"task": "B2", "rounds": 1}],
+                }
+            ],
+        )
 
 
 class LedgerSinceTest(unittest.TestCase):
@@ -342,6 +373,55 @@ class LedgerTaskTextTest(unittest.TestCase):
 
 
 class LedgerProjectTextTest(unittest.TestCase):
+    def test_should_present_each_week_of_the_gate_after_the_counts(self):
+        # Arrange
+        document = {
+            "view": "project",
+            "project": "app",
+            "since": None,
+            "orders_done": {},
+            "waves_started": 0,
+            "pull_requests_merged": 2,
+            "signals_recorded": 0,
+            "patterns_ratified": 0,
+            "constraints_delivered": 0,
+            "gate": [
+                {
+                    "week": "2026-W45",
+                    "passed": 2,
+                    "escaped": 1,
+                    "escape_rate": "1/2",
+                    "median_rounds": 2.5,
+                    "tasks": [{"task": "B2", "rounds": 1}, {"task": "B1", "rounds": 4}],
+                },
+                {
+                    "week": "2026-W46",
+                    "passed": 1,
+                    "escaped": 0,
+                    "escape_rate": "0/1",
+                    "median_rounds": 2,
+                    "tasks": [{"task": "B3", "rounds": 2}],
+                },
+            ],
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text,
+            "project app\n"
+            "waves started: 0\n"
+            "orders done: 0\n"
+            "pull requests merged: 2\n"
+            "signals recorded: 0\n"
+            "patterns ratified: 0\n"
+            "constraints delivered: 0\n"
+            "gate 2026-W45: passed 2, escaped 1, escape rate 1/2, median rounds to pass 2.5, B2 1, B1 4\n"
+            "gate 2026-W46: passed 1, escaped 0, escape rate 0/1, median rounds to pass 2, B3 2",
+        )
+
     def test_should_count_what_the_project_delivered_since_the_instant(self):
         # Arrange
         document = {
@@ -354,6 +434,7 @@ class LedgerProjectTextTest(unittest.TestCase):
             "signals_recorded": 0,
             "patterns_ratified": 0,
             "constraints_delivered": 0,
+            "gate": [],
         }
 
         # Act
@@ -383,6 +464,7 @@ class LedgerProjectTextTest(unittest.TestCase):
             "signals_recorded": 0,
             "patterns_ratified": 0,
             "constraints_delivered": 0,
+            "gate": [],
         }
 
         # Act
