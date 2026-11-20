@@ -75,7 +75,8 @@ Its seven views:
   yet counted queued, its dates, its review rounds and its cost, said as a floor. The tasks served by three waves or
   more are named with that count under a heading of their own. One chip per state, open, blocked, parked and ended,
   with one for every state, narrows the list through `brigade wave list --state`, the state chosen carried by the
-  address, `#waves?state=parked`. On its page,
+  address, `#waves?state=parked`; the sentence, the tiles and the tasks served again count every wave whatever
+  the chip. On its page,
   a wave opens on one sentence saying how it stands or how it ended, with a resume button while it is halted, its
   milestone and the report of that milestone once one is committed, and five tiles: the tasks merged out of its tasks
   with the parked, its wall time, its run time with its turns and its runs, its cost, marked a floor when a run

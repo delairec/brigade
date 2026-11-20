@@ -104,6 +104,12 @@ def create_answers(waves: list[dict], waves_started: dict) -> dict[str, CommandA
     }
 
 
+def create_narrowed_answers(narrowed: list[dict], waves: list[dict], waves_started: dict) -> dict[str, CommandAnswer]:
+    answers = create_answers(narrowed, waves_started)
+    every = {"schema_version": 1, "waves": waves}
+    return {**answers, "every": CommandAnswer(status=OK, document=json.dumps(every))}
+
+
 def create_closed_wave(wave: str, started_at: str, task_states: list[dict]) -> dict:
     return {**CLOSED_WAVE, "wave": wave, "started_at": started_at, "task_states": task_states}
 
@@ -345,6 +351,24 @@ class RenderWavesViewOfAStateTest(unittest.TestCase):
             '<a class="chip" href="#waves?state=ended">ended</a></nav>',
             fragment,
         )
+
+    def test_should_count_the_sentence_and_the_tiles_over_every_wave_while_a_state_narrows_the_list(self):
+        # Arrange
+        answers = create_narrowed_answers([CLOSED_WAVE, CANCELLED_WAVE], EVERY_WAVE, WAVES_STARTED)
+
+        # Act
+        fragment = render_waves_view(answers, "ended")
+
+        # Assert
+        self.assertIn('<p class="status-sentence">Waves open: 3, parked: 1, blocked: 1.</p>', fragment)
+        self.assertIn(
+            '<span class="stat-value">3</span><span class="stat-label">open now</span>'
+            '<span class="stat-perimeter">1 parked, 1 blocked</span>',
+            fragment,
+        )
+        self.assertIn('<span class="stat-perimeter">by month: 2026-10 2, 2026-11 3</span>', fragment)
+        self.assertIn('<a href="#waves/oak_w2">oak_w2</a>', fragment)
+        self.assertNotIn('<a href="#waves/oak_w5">oak_w5</a>', fragment)
 
     def test_should_mark_every_state_in_force_when_no_state_is_asked(self):
         # Arrange

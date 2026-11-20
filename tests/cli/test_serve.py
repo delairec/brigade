@@ -238,6 +238,7 @@ class BrigadeServeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(status, 200)
+        self.assertIn('<p class="status-sentence">Waves open: 2, parked: 1, blocked: 0.</p>', body)
         self.assertIn('<a href="#waves/oak_w4">oak_w4</a>', body)
         self.assertNotIn("oak_w5", body)
 
