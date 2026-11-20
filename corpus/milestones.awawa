@@ -227,14 +227,15 @@ MILESTONE M17
 		+ "comes first"
 		REF @MILESTONE.M8
 		REF @MILESTONE.M13
-	DESC "its five tasks, @TASK.B258 to @TASK.B262, are drafts with no AFTER between them, to"
-		+ "refine at the user's next session; @TASK.B262, the reopening by hand, was added by the"
-		+ "user the same day"
+	DESC "its tasks, @TASK.B258 to @TASK.B262 and @TASK.B276, are drafts with no AFTER between"
+		+ "them, to refine at the user's next session; @TASK.B262, the reopening by hand, was added"
+		+ "by the user the same day, and @TASK.B276, the signal of a parked study, on 2026-11-20"
 		REF @TASK.B258
 		REF @TASK.B259
 		REF @TASK.B260
 		REF @TASK.B261
 		REF @TASK.B262
+		REF @TASK.B276
 	SOURCE "the user's words of 2026-11-16: « je pense qu'on peut créer une milestone dédiée:"
 		+ "signals handling, qui sera à faire en prio et on la refine à la prochaine reprise »"
 	SOURCE "the user's ruling of 2026-11-16 on whether @MILESTONE.M13 waits for it: « M13 continue"
