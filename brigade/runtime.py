@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from brigade.git.read_worktree_state import WorktreeState, read_worktree_state
 from brigade.ledger.read_ledger import LedgerReading, read_ledger
 from brigade.mining.read_text_scrubber import read_text_scrubber
 from brigade.system.ask_on_terminal import ask_on_terminal
@@ -46,6 +47,7 @@ class Runtime:
     read_ledger: Callable[[Path], LedgerReading]
     read_live_blockers: Callable[[Callable[[ProcessRequest], ProcessRecord], Path, str], tuple[str, ...]]
     ask_on_terminal: Callable[[str], str | None]
+    read_worktree_state: Callable[[Path, Path], WorktreeState | None]
 
 
 def _report_nothing(trace: ProcessTrace) -> None:
@@ -83,4 +85,8 @@ def build_runtime(invocation: Invocation, environment: Mapping[str, str]) -> Run
         read_ledger=read_ledger,
         read_live_blockers=read_live_blockers,
         ask_on_terminal=functools.partial(ask_on_terminal, sys.stdin, sys.stderr),
+        read_worktree_state=functools.partial(
+            read_worktree_state,
+            functools.partial(run_process, record_trace=_report_nothing, environment=environment),
+        ),
     )
