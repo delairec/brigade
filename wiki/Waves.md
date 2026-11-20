@@ -57,8 +57,9 @@ A task joins the wave of its milestone when it:
 The tasks join in the order of their number; `--task` takes exactly the tasks named instead, in one wave, which takes
 the tasks of one milestone or tasks naming none.
 
-`wave show` prints each task of a wave with its state, its pull request, its last run and, for a parked task, its
-reason. `wave list` prints one row per wave, the open waves first.
+`wave show` prints each task of a wave with its state, its pull request, its last run and its reason: for a parked
+task the reason of its park, for a queued task of an open wave the cause the tick does not launch it. A blocked or
+parked wave reads a line naming its halt. `wave list` prints one row per wave, the open waves first.
 
 > **Watch out:** a task parked in a closed wave is `todo` again for the tick, which serves it in a new wave, unless
 > that wave parked it on the question of a run that ended `blocked`: such a task waits, named on stderr at each tick
@@ -72,8 +73,9 @@ reason. `wave list` prints one row per wave, the open waves first.
 
 <details><summary>Which commands need the registry</summary>
 
-Every command but `wave show`, `wave list`, `wave cancel` and `wave resume`, which read the ledger alone, `wave show
---json` reading besides the milestone of the wave from the corpus of its project, and
+Every command but `wave show`, `wave list`, `wave cancel` and `wave resume`, which read the ledger alone, `wave show`
+reading besides the corpus of the project of the wave for the milestone with `--json` and for the cause of a queued
+task of an open wave, and
 `wave requeue`, which reads the ledger until the task proves parked, exits 1 naming `brigade init` until the corpus
 exists.
 
@@ -132,7 +134,13 @@ exists.
 
 - `wave show` prints a wave, the branch its `wave.started` holds where a wave of an earlier brigade recorded one, the
   instant it started and its last wave event, then each task with its last `task.state`, its pull request, its last
-  run in the wave and, for a parked task, the reason of its `task.parked`, `-` when none. With `--events`, it adds what `brigade ledger` once printed for a wave: its cost and tokens, the
+  run in the wave and its reason: for a parked task the reason of its `task.parked`; for a queued task of an open wave
+  the cause the tick does not launch it, computed by the function the plan of the tick reads, from the tree of the
+  wave for its `AFTER`, its live blockers and the tasks implemented there, from the ledger for the halt of the wave,
+  and from the live runs and the `SLOTS` of its project for its build slots; `-` when none. A wave whose last
+  `wave.blocked` or `wave.parked` has no `wave.resumed` after it reads a line under its heading: blocked until its
+  `resume_at`, with its reason, or parked, with its reason and `brigade wave resume <wave>`; `--json` carries it as
+  `halt`, its `reason` and its `resume_at`, `null` for a parked wave, and `halt` is `null` for a wave not halted. With `--events`, it adds what `brigade ledger` once printed for a wave: its cost and tokens, the
   turns, duration and cost of each task, its merged pull requests, its turns by slot and by role, its halts, its
   handovers, its parked tasks, then every event the ledger holds for the wave, in the order recorded.
   With `--json`, it names the milestone the tasks of the wave name, `null` for tasks naming none, read at the
