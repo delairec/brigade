@@ -34,9 +34,10 @@ from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_confi
 from brigade.system.render_table import render_table
 from brigade.tasks.read_task_after import read_task_after
 from brigade.tick.build_snapshot import TaskFacts, WaveFacts
-from brigade.tick.find_launch_hold import LaunchRound, find_launch_holds
+from brigade.tick.plan_launches import ProjectRound, find_round_holds
 from brigade.tick.read_branch_of_task import read_branch_of_task
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
+from brigade.tick.read_relaunch_facts import is_rebased_by_last_run, is_stopped_by_login
 from brigade.waves.describe_halt_document import describe_halt_document
 from brigade.waves.describe_milestone_merge import describe_milestone_merge
 from brigade.waves.find_integration_pull_request import find_integration_pull_request
@@ -45,12 +46,12 @@ from brigade.waves.find_milestone_branch import find_milestone_branch
 from brigade.waves.is_milestone_report_committed import is_milestone_report_committed
 from brigade.waves.locate_merge_worktree import locate_merge_worktree
 from brigade.waves.prepare_wave_tree import WaveTreeReading, prepare_wave_tree
-from brigade.waves.read_task_state import PARKED_STATE, TASK_EVENTS
+from brigade.waves.read_task_state import TASK_EVENTS
 from brigade.waves.read_task_states import read_task_states
 from brigade.waves.read_wave_milestone import read_wave_milestone
 from brigade.waves.read_wave_pause import WavePause, read_wave_pause
 from brigade.waves.require_wave_summary import require_wave_summary
-from brigade.waves.summarize_waves import WaveSummary
+from brigade.waves.summarize_waves import WaveSummary, summarize_waves
 
 DOCUMENT_SCHEMA_VERSION = 1
 ABSENT = "-"
@@ -58,7 +59,6 @@ TASK_HEADER = ("task", "state", "pull request", "run", "reason")
 TASK_COLUMNS = ("task", "state", "pull_request", "run", "reason")
 FIXING_STATE = "fixing"
 WAITING_STATE = "queued"
-STARTING_STATES = (WAITING_STATE, PARKED_STATE)
 LIVE_RUN_STATE = "running"
 BUILD_SLOT = "build"
 TASK_TYPE = "TASK"
@@ -228,17 +228,10 @@ def _read_wave_tree(runtime: Runtime, started: WaveStarted) -> WaveTree:
     )
 
 
-def _count_used_build_slots(runtime: Runtime, project: str) -> int:
-    return sum(
-        1
-        for run in list_runs(runtime.paths.state_root)["runs"]
-        if run["project"] == project and run["state"] == LIVE_RUN_STATE and run["slot"] == BUILD_SLOT
-    )
-
-
 @dataclass(frozen=True)
 class _LaunchHoldSources:
     runtime: Runtime
+    entries: tuple[LedgerEntry, ...]
     started: WaveStarted
     events: tuple
     states: dict[str, str]
@@ -246,38 +239,61 @@ class _LaunchHoldSources:
     read_tree: Callable[[], WaveTree]
 
 
-def _read_task_facts(sources: _LaunchHoldSources, tree: WaveTree, task: str) -> TaskFacts:
+def _read_task_facts(
+    sources: _LaunchHoldSources, runs: tuple[dict, ...], started: WaveStarted, tree: WaveTree, task: str
+) -> TaskFacts:
     entity = tree.tasks[task]
     return TaskFacts(
         name=task,
-        branch=read_branch_of_task(sources.events, sources.started.project, entity),
+        branch=read_branch_of_task(sources.events, started.project, entity),
         after=read_task_after(entity),
         blocked_by=sources.runtime.read_live_blockers(sources.runtime.run_process, tree.root, task),
+        rebased_by_last_run=is_rebased_by_last_run(sources.events, runs, started.wave, task),
+        stopped_by_login=is_stopped_by_login(sources.events, started.wave, task),
     )
 
 
-def _is_starting(sources: _LaunchHoldSources, wave: WaveFacts, task: str) -> bool:
-    return sources.states.get(task, WAITING_STATE) in STARTING_STATES and task not in wave.implemented
+def _list_waves_of_the_round(sources: _LaunchHoldSources) -> list[WaveStarted]:
+    earlier = []
+    for summary in summarize_waves(sources.entries):
+        if summary.started.wave == sources.started.wave:
+            break
+        if summary.is_open and summary.started.project == sources.started.project:
+            earlier.append(summary.started)
+    return [*earlier, sources.started]
+
+
+def _read_wave_facts(sources: _LaunchHoldSources, runs: tuple[dict, ...], started: WaveStarted) -> WaveFacts:
+    is_shown = started.wave == sources.started.wave
+    tree = sources.read_tree() if is_shown else _read_wave_tree(sources.runtime, started)
+    return WaveFacts(
+        project=started.project,
+        wave=started.wave,
+        tasks=tuple(_read_task_facts(sources, runs, started, tree, task) for task in started.tasks),
+        states=sources.states if is_shown else read_task_states(sources.entries, started.wave),
+        implemented=read_implemented_tasks(sources.runtime.run_process, tree.root),
+    )
 
 
 def _find_launch_holds(sources: _LaunchHoldSources) -> dict[str, str | None]:
     runtime = sources.runtime
-    started = sources.started
-    tree = sources.read_tree()
-    project = find_project(read_projects(runtime), started.project)
-    wave = WaveFacts(
-        project=started.project,
-        wave=started.wave,
-        states=sources.states,
-        implemented=read_implemented_tasks(runtime.run_process, tree.root),
-    )
-    launch_round = LaunchRound(
-        halt=sources.halt,
-        used_slots=_count_used_build_slots(runtime, started.project),
-        slots=read_project_slots(project),
-    )
-    candidates = (_read_task_facts(sources, tree, task) for task in started.tasks if _is_starting(sources, wave, task))
-    return {task.name: hold for task, hold in find_launch_holds(candidates, wave, launch_round)}
+    project = sources.started.project
+    runs = tuple(list_runs(runtime.paths.state_root)["runs"])
+    live_runs = [run for run in runs if run["state"] == LIVE_RUN_STATE]
+    projects = {
+        project: ProjectRound(
+            slots=read_project_slots(find_project(read_projects(runtime), project)),
+            used_slots=sum(1 for run in live_runs if run["project"] == project and run["slot"] == BUILD_SLOT),
+        )
+    }
+    waves = [_read_wave_facts(sources, runs, started) for started in _list_waves_of_the_round(sources)]
+    halts = {wave.wave: halt for wave in waves if (halt := read_wave_pause(sources.events, wave.wave)) is not None}
+    live_tasks = frozenset((run["wave"], run["task"]) for run in live_runs)
+    return {
+        round_hold.task.name: round_hold.hold
+        for round_hold in find_round_holds(waves, projects, halts, live_tasks)
+        if round_hold.wave.wave == sources.started.wave
+    }
 
 
 def _create_wave_reading(sources: _LaunchHoldSources, summary: WaveSummary) -> _WaveReading:
@@ -304,6 +320,7 @@ def _read_launch_hold_sources(
     events = tuple(entry.event for entry in entries)
     return _LaunchHoldSources(
         runtime=runtime,
+        entries=entries,
         started=started,
         events=events,
         states=read_task_states(entries, started.wave),

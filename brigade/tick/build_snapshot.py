@@ -78,6 +78,7 @@ from brigade.tick.read_integration_branches import (
     read_integration_branches,
 )
 from brigade.tick.read_leftovers import LeftoverFacts, LeftoverReading, read_leftovers
+from brigade.tick.read_relaunch_facts import is_rebase_done, is_stopped_by_login
 from brigade.tick.study_facts import StudyFacts
 from brigade.waves.count_repair_rounds import count_repair_rounds
 from brigade.waves.describe_milestone_merge import describe_milestone_merge
@@ -598,12 +599,7 @@ def _is_client_login_lost(entries: tuple[LedgerEntry, ...], wave: str) -> bool:
 
 
 def _note_login(task: TaskFacts, reading: WaveReading, wave: str) -> TaskFacts:
-    finished = [
-        event
-        for event in reading.events
-        if isinstance(event, RunFinished) and event.wave == wave and event.task == task.name
-    ]
-    return dataclasses.replace(task, stopped_by_login=bool(finished) and finished[-1].error_class == AUTHENTICATION)
+    return dataclasses.replace(task, stopped_by_login=is_stopped_by_login(reading.events, wave, task.name))
 
 
 def _read_state_before_pause(reading: WaveReading, wave: str, task: str) -> str | None:
@@ -665,11 +661,6 @@ def _read_blocked_rebase(reading: WaveReading, wave: str) -> BlockedRun | None:
     return _read_blocked_run(reading, run)
 
 
-def _is_rebase_done(reading: WaveReading, run: dict) -> bool:
-    finished = [event for event in reading.events if isinstance(event, RunFinished) and event.run == run["run"]]
-    return run["slot"] == REBASE_SLOT and bool(finished) and finished[-1].outcome == DONE_OUTCOME
-
-
 def _note_last_run(task: TaskFacts, reading: WaveReading, wave: str) -> TaskFacts:
     naming = [run for run in reading.runs if run["wave"] == wave and run["task"] == task.name]
     if not naming:
@@ -679,7 +670,7 @@ def _note_last_run(task: TaskFacts, reading: WaveReading, wave: str) -> TaskFact
         last_run=naming[-1]["run"],
         blocked_run=_read_blocked_run(reading, naming[-1]["run"]),
         handed_over_run=_read_handed_over_run(reading, naming[-1]["run"]),
-        rebased_by_last_run=_is_rebase_done(reading, naming[-1]),
+        rebased_by_last_run=is_rebase_done(reading.events, naming[-1]),
         last_run_is_a_rebase=naming[-1]["slot"] == REBASE_SLOT,
     )
 

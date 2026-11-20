@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 from brigade.ledger.task_state import HANDOVER_RESUME_REASON
@@ -77,13 +78,28 @@ def _is_relaunched(task: TaskFacts, wave: WaveFacts, live_tasks: frozenset) -> b
     )
 
 
-def plan_launches(snapshot: Snapshot, halts: dict[str, WavePause]) -> LaunchPlan:
-    projects = {project.name: project for project in snapshot.projects}
-    used_slots = {project.name: _count_used_slots(project) for project in snapshot.projects}
-    live_tasks = frozenset((live.wave, live.task) for project in snapshot.projects for live in project.live_runs)
-    launches = []
-    held = []
-    for wave in snapshot.waves:
+@dataclass(frozen=True)
+class ProjectRound:
+    slots: int
+    used_slots: int
+
+
+@dataclass(frozen=True)
+class RoundHold:
+    wave: WaveFacts
+    task: TaskFacts
+    hold: str | None
+
+
+def find_round_holds(
+    waves: Iterable[WaveFacts],
+    projects: dict[str, ProjectRound],
+    halts: dict[str, WavePause],
+    live_tasks: frozenset,
+) -> tuple[RoundHold, ...]:
+    used_slots = {name: project.used_slots for name, project in projects.items()}
+    holds = []
+    for wave in waves:
         launch_round = LaunchRound(
             halt=halts.get(wave.wave), used_slots=used_slots[wave.project], slots=projects[wave.project].slots
         )
@@ -91,7 +107,22 @@ def plan_launches(snapshot: Snapshot, halts: dict[str, WavePause]) -> LaunchPlan
         for task, hold in find_launch_holds(candidates, wave, launch_round):
             if hold is None:
                 used_slots[wave.project] += 1
-                launches.append(_decide_launch(wave, task))
-            elif _is_starting(task, wave):
-                held.append(HeldTask(project=wave.project, wave=wave.wave, task=task.name, cause=hold))
+            holds.append(RoundHold(wave=wave, task=task, hold=hold))
+    return tuple(holds)
+
+
+def plan_launches(snapshot: Snapshot, halts: dict[str, WavePause]) -> LaunchPlan:
+    projects = {
+        project.name: ProjectRound(slots=project.slots, used_slots=_count_used_slots(project))
+        for project in snapshot.projects
+    }
+    live_tasks = frozenset((live.wave, live.task) for project in snapshot.projects for live in project.live_runs)
+    launches = []
+    held = []
+    for round_hold in find_round_holds(snapshot.waves, projects, halts, live_tasks):
+        wave, task = round_hold.wave, round_hold.task
+        if round_hold.hold is None:
+            launches.append(_decide_launch(wave, task))
+        elif _is_starting(task, wave):
+            held.append(HeldTask(project=wave.project, wave=wave.wave, task=task.name, cause=round_hold.hold))
     return LaunchPlan(launches=tuple(launches), held=tuple(held))
