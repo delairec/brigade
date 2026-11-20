@@ -541,7 +541,7 @@ class VibeTranscriptsTest(VibeHomeTestCase):
                 "messages": [
                     {
                         "role": "user",
-                        "timestamp": None,
+                        "timestamp": "2026-11-01T18:56:41.992+00:00",
                         "content": [
                             {
                                 "text": "Read the file notes.txt with read_file, then write its hour into hour.txt"
@@ -555,7 +555,7 @@ class VibeTranscriptsTest(VibeHomeTestCase):
                     },
                     {
                         "role": "assistant",
-                        "timestamp": None,
+                        "timestamp": "2026-11-01T18:56:44.608+00:00",
                         "content": "",
                         "tool_calls": 1,
                         "id": None,
@@ -584,7 +584,7 @@ class VibeTranscriptsTest(VibeHomeTestCase):
             [
                 {
                     "role": "user",
-                    "timestamp": None,
+                    "timestamp": "2026-11-01T22:10:36.257+00:00",
                     "content": [
                         {
                             "text": "Read the file notes.txt with read_file. Then answer in two lines: the hour the file"
@@ -598,7 +598,7 @@ class VibeTranscriptsTest(VibeHomeTestCase):
                 },
                 {
                     "role": "assistant",
-                    "timestamp": None,
+                    "timestamp": "2026-11-01T22:10:38.549+00:00",
                     "content": "",
                     "tool_calls": 1,
                     "id": None,
@@ -611,7 +611,7 @@ class VibeTranscriptsTest(VibeHomeTestCase):
                 },
                 {
                     "role": "assistant",
-                    "timestamp": None,
+                    "timestamp": "2026-11-01T22:10:39.568+00:00",
                     "content": "seven\nbrigade-end: done",
                     "tool_calls": 0,
                     "id": None,

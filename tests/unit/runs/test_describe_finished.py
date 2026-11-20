@@ -1,5 +1,6 @@
 import dataclasses
 import unittest
+from datetime import UTC, datetime
 from pathlib import Path
 
 from brigade.ledger.run_finished import RunFinished
@@ -10,6 +11,7 @@ from brigade.runs.locate_first_edit import FirstEdit
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
 from brigade.runs.run_segment import SegmentRecord
+from brigade.runs.worktree_watch import NOT_SAMPLED, WorktreeWatch
 from brigade.system.parse_configuration import Configuration
 from brigade.system.reset_hour import ResetHour
 from brigade.system.token_usage import TokenUsage
@@ -616,7 +618,17 @@ EDIT_TOOLS = ("Edit", "Write", "NotebookEdit")
 NO_EDIT_TOOL = ()
 
 
-def _create_counted_record(*, counted_steps: SessionSteps | None, uncounted: str | None, first_edit: FirstEdit | None):
+UNCHANGED = WorktreeWatch(sampled=True, changed_at=None)
+CHANGED = WorktreeWatch(sampled=True, changed_at=datetime(2026, 11, 7, 21, 59, 30, tzinfo=UTC))
+
+
+def _create_counted_record(
+    *,
+    counted_steps: SessionSteps | None,
+    uncounted: str | None,
+    first_edit: FirstEdit | None,
+    worktree: WorktreeWatch = NOT_SAMPLED,
+):
     return SegmentRecord(
         number=1,
         **_create_result(steps=None),
@@ -627,6 +639,7 @@ def _create_counted_record(*, counted_steps: SessionSteps | None, uncounted: str
         uncounted=uncounted,
         adapter_failure=None,
         first_edit=first_edit,
+        worktree=worktree,
     )
 
 
@@ -650,14 +663,26 @@ class DescribeFinishedFirstEditTest(unittest.TestCase):
     def test_should_name_the_reason_the_first_edit_is_left_unmeasured(self):
         # Arrange
         counted = SessionSteps(main_turns=42, total_turns=54)
+        no_transcript = "the client reads no transcript"
+        no_edit = "the segment made no edit outside the progress file"
+        no_edit_tool = "the client names no edit tool"
+        no_dated_call = "no dated tool call of the main transcript precedes the change to the worktree"
         rows = [
-            ("no edit tool", NO_EDIT_TOOL, counted, None, "the client names no edit tool"),
-            ("no transcript", EDIT_TOOLS, None, "the client reads no transcript", "the client reads no transcript"),
-            ("no edit", EDIT_TOOLS, counted, None, "the segment made no edit outside the progress file"),
+            ("no edit tool, worktree not sampled", NO_EDIT_TOOL, counted, None, NOT_SAMPLED, no_edit_tool),
+            ("no edit tool, change undated", NO_EDIT_TOOL, counted, None, CHANGED, no_edit_tool),
+            ("no edit tool, worktree unchanged", NO_EDIT_TOOL, counted, None, UNCHANGED, no_edit),
+            ("no transcript", EDIT_TOOLS, None, no_transcript, NOT_SAMPLED, no_transcript),
+            ("no transcript, worktree changed", EDIT_TOOLS, None, no_transcript, CHANGED, no_transcript),
+            ("no transcript, worktree unchanged", EDIT_TOOLS, None, no_transcript, UNCHANGED, no_edit),
+            ("no edit, worktree not sampled", EDIT_TOOLS, counted, None, NOT_SAMPLED, no_edit),
+            ("no edit, worktree unchanged", EDIT_TOOLS, counted, None, UNCHANGED, no_edit),
+            ("change undated", EDIT_TOOLS, counted, None, CHANGED, no_dated_call),
         ]
-        for case, edit_tools, counted_steps, uncounted, reason in rows:
+        for case, edit_tools, counted_steps, uncounted, worktree, reason in rows:
             with self.subTest(case=case):
-                record = _create_counted_record(counted_steps=counted_steps, uncounted=uncounted, first_edit=None)
+                record = _create_counted_record(
+                    counted_steps=counted_steps, uncounted=uncounted, first_edit=None, worktree=worktree
+                )
 
                 # Act
                 finished = describe_finished(_create_plan(edit_tools=edit_tools), record)
