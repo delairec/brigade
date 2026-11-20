@@ -851,8 +851,23 @@ class WaveShowOfAQueuedTaskTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            [(task["task"], task["reason"]) for task in document["tasks"]],
-            [("T7", "no free build slot: 1 used of SLOTS 1"), ("T8", "no free build slot: 1 used of SLOTS 1")],
+            document["tasks"],
+            [
+                {
+                    "task": "T7",
+                    "state": None,
+                    "pull_request": None,
+                    "run": None,
+                    "reason": "no free build slot: 1 used of SLOTS 1",
+                },
+                {
+                    "task": "T8",
+                    "state": "queued",
+                    "pull_request": None,
+                    "run": None,
+                    "reason": "no free build slot: 1 used of SLOTS 1",
+                },
+            ],
         )
 
     def test_should_take_no_build_slot_for_a_task_of_an_open_wave_of_another_project(self):
@@ -870,8 +885,17 @@ class WaveShowOfAQueuedTaskTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            [(task["task"], task["reason"]) for task in document["tasks"]],
-            [("T7", None), ("T8", "no free build slot: 1 used of SLOTS 1")],
+            document["tasks"],
+            [
+                {"task": "T7", "state": None, "pull_request": None, "run": None, "reason": None},
+                {
+                    "task": "T8",
+                    "state": "queued",
+                    "pull_request": None,
+                    "run": None,
+                    "reason": "no free build slot: 1 used of SLOTS 1",
+                },
+            ],
         )
 
     def test_should_name_the_build_slot_a_running_task_relaunched_after_its_rebase_takes_as_the_cause(self):
@@ -896,8 +920,17 @@ class WaveShowOfAQueuedTaskTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            [(task["task"], task["reason"]) for task in document["tasks"]],
-            [("T7", None), ("T8", "no free build slot: 1 used of SLOTS 1")],
+            document["tasks"],
+            [
+                {"task": "T7", "state": "running", "pull_request": None, "run": FINISHED_BUILD_RUN, "reason": None},
+                {
+                    "task": "T8",
+                    "state": "queued",
+                    "pull_request": None,
+                    "run": None,
+                    "reason": "no free build slot: 1 used of SLOTS 1",
+                },
+            ],
         )
 
     def test_should_show_no_reason_for_a_task_queued_again_after_its_park(self):
