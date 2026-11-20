@@ -150,10 +150,22 @@ class WaveShowRequestTest(unittest.TestCase):
         self.assertIs(request, options)
 
 
+def read_no_live_blocker(run_process, root: Path, task: str) -> tuple[str, ...]:
+    return ()
+
+
 class WaveShowOfTheLedgerTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        self.runtime = create_test_runtime(create_test_paths(self.root))
+        write_operational_corpus(self.root)
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_machine_double(
+                CORPUS_OF_TWO_INDEPENDENT_TASKS, {**MACHINE_OUTPUTS, **NOTHING_IMPLEMENTED}
+            ),
+            read_live_blockers=read_no_live_blocker,
+        )
 
     def test_should_show_each_task_with_its_last_state_its_pull_request_and_its_run(self):
         # Arrange
@@ -428,7 +440,9 @@ class WaveShowOfAProjectWithoutAForgeTest(unittest.TestCase):
         write_operational_corpus(self.root)
         (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
         self.runtime = create_test_runtime(
-            create_test_paths(self.root), run_process=create_machine_double(CORPUS, MACHINE_OUTPUTS)
+            create_test_paths(self.root),
+            run_process=create_machine_double(CORPUS, MACHINE_OUTPUTS),
+            read_live_blockers=read_no_live_blocker,
         )
 
     def _show(self, events: list[dict]) -> dict:
@@ -450,6 +464,7 @@ class WaveShowOfAProjectWithoutAForgeTest(unittest.TestCase):
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double(CORPUS_WITH_A_TASK_OF_ANOTHER_MILESTONE, MACHINE_OUTPUTS),
+            read_live_blockers=read_no_live_blocker,
         )
 
         # Act
@@ -553,6 +568,7 @@ class WaveShowOfAProjectWithoutAForgeTest(unittest.TestCase):
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double(CORPUS_OF_A_TASK_OF_NO_MILESTONE, MACHINE_OUTPUTS),
+            read_live_blockers=read_no_live_blocker,
         )
 
         # Act
@@ -612,7 +628,9 @@ class WaveShowOfAProjectOnAForgeTest(unittest.TestCase):
             self.argvs.append(request.argv)
             return run_machine(request)
 
-        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=run_process)
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root), run_process=run_process, read_live_blockers=read_no_live_blocker
+        )
 
     def _show_as_json(self) -> dict:
         write_ledger(self.root, [CUT, FORGELESS_WAVE_STARTED])
@@ -691,10 +709,6 @@ REVIEW = {"project": "tidepool", "slot": "review"}
 FINISHED = create_run_result(FINISHED_BUILD_RUN, "done", "2026-10-18T08:30:00Z")
 
 
-def read_no_live_blocker(run_process, root: Path, task: str) -> tuple[str, ...]:
-    return ()
-
-
 def read_an_undecided_question(run_process, root: Path, task: str) -> tuple[str, ...]:
     return {"T8": ("OPEN_QUESTION.Undecided",)}.get(task, ())
 
@@ -728,6 +742,16 @@ class WaveShowOfAQueuedTaskTest(unittest.TestCase):
         self.assertEqual(
             document["tasks"][1],
             {"task": "T8", "state": "queued", "pull_request": None, "run": None, "reason": "after T7"},
+        )
+
+    def test_should_name_the_earlier_task_a_task_never_launched_waits_after(self):
+        # Act
+        document = self._show(CORPUS_OF_A_TASK_AFTER_ANOTHER, [QUEUED_WAVE_STARTED])
+
+        # Assert
+        self.assertEqual(
+            document["tasks"][1],
+            {"task": "T8", "state": None, "pull_request": None, "run": None, "reason": "after T7"},
         )
 
     def test_should_name_no_cause_for_a_task_after_an_earlier_task_implemented_at_the_tree_of_its_wave(self):

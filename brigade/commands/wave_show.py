@@ -111,7 +111,7 @@ def _read_reason(reading: _WaveReading, task: str):
     last_state = find_last_task_event(reading.events, TASK_EVENTS, reading.summary.started.wave, task)
     if _is_explained(last_state):
         return last_state.reason
-    if reading.states.get(task) == WAITING_STATE and reading.summary.is_open:
+    if reading.states.get(task, WAITING_STATE) == WAITING_STATE and reading.summary.is_open:
         return reading.read_launch_hold(task)
     return None
 

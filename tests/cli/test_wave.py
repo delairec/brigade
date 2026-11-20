@@ -92,6 +92,7 @@ RECORDED_WAVE_EVENTS = (
     ' "task": "TP146", "pr": 291, "rounds": 1, "login": "tidepool-cli"}\n'
     '{"schema_version": 1, "ts": "2026-10-01T01:40:00Z", "event": "task.parked", "wave": "tidepool_w16", "task": "TP147",'
     ' "reason": "blocked", "blockers": ["OPEN_QUESTION.Undecided"]}\n'
+    '{"schema_version": 1, "ts": "2026-10-01T01:50:00Z", "event": "wave.closed", "wave": "tidepool_w16"}\n'
     '{"schema_version": 3, "ts": "2026-10-01T02:00:00Z", "event": "run.finished", "wave": "tidepool_w17", "task": "TP150",'
     ' "run": "20261001T000000Z-a00004", "client": "claude-code", "project": "tidepool", "session": null,'
     ' "duration_ms": 1000, "usage": null, "exit": 0, "nulls": {},'
@@ -161,7 +162,13 @@ class BrigadeWaveShowTest(WaveTickTestCase):
                         "reason": None,
                     },
                     {"task": "S4", "state": "pr_open", "pull_request": 12, "run": None, "reason": None},
-                    {"task": "S5", "state": None, "pull_request": None, "run": None, "reason": None},
+                    {
+                        "task": "S5",
+                        "state": None,
+                        "pull_request": None,
+                        "run": None,
+                        "reason": "blocked by OPEN_QUESTION.Undecided",
+                    },
                 ],
                 "milestone": "M1",
                 "milestone_report": None,
@@ -220,11 +227,11 @@ class BrigadeWaveShowEventsTest(WaveTestCase):
             [
                 (
                     "wave tidepool_w16 of @PROJECT.tidepool on integration/M1, started 2026-09-30T22:00:00Z,"
-                    " last event wave.resumed, pull request -"
+                    " last event wave.closed, pull request -"
                 ),
                 "task  state  pull request  run  reason",
                 "T1    -      -             -    -",
-                "wave tidepool_w16: 2026-09-30T22:00:00Z to 2026-10-01T01:40:00Z, wall time 3h40m",
+                "wave tidepool_w16: 2026-09-30T22:00:00Z to 2026-10-01T01:50:00Z, wall time 3h50m",
                 "cost: none",
                 "tokens: none",
                 "tasks:",
@@ -259,6 +266,7 @@ class BrigadeWaveShowEventsTest(WaveTestCase):
                 "  2026-10-01T01:00:00Z  run.finished  TP146",
                 "  2026-10-01T01:30:00Z  pr.merged  TP146",
                 "  2026-10-01T01:40:00Z  task.parked  TP147",
+                "  2026-10-01T01:50:00Z  wave.closed",
             ],
         )
 
