@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.corpus.prepare_project_tree import prepare_project_tree
+from brigade.corpus.read_entity import read_entity
 from brigade.corpus.run_awawa import run_awawa
 from brigade.git.count_changed_lines import count_changed_lines
 from brigade.git.read_diff import read_diff
@@ -10,11 +11,14 @@ from brigade.runtime import Runtime
 from brigade.system.parse_configuration import Configuration
 from brigade.tasks.describe_command import describe_command
 from brigade.tasks.list_trigger_rules import list_trigger_rules
+from brigade.verify.list_task_references import list_task_references
 from brigade.verify.read_previous_verdict import VerifiedPullRequest, read_previous_verdict
 from brigade.verify.read_repair_diff import RepairSpan, read_repair_diff
+from brigade.verify.read_task_goal import read_task_goal
 
 GRADES = ("critical", "high", "medium", "low")
 TREE_ROOT = "."
+TASK_TYPE = "TASK"
 
 
 @dataclass(frozen=True)
@@ -37,8 +41,7 @@ class TreeDemand:
     worktree: None = None
 
 
-def _read_task(runtime: Runtime, judged: JudgedTask) -> list[dict]:
-    tree = prepare_project_tree(TreeDemand(project=judged.project, ref=judged.head), judged.configuration, runtime).root
+def _read_task(runtime: Runtime, judged: JudgedTask, tree: Path) -> list[dict]:
     target = f"@TASK.{judged.task}"
     return [
         describe_command(run_awawa(runtime.run_process, tree, ("context", target, "--with-schema", TREE_ROOT))),
@@ -72,12 +75,16 @@ def describe_judged_task(runtime: Runtime, judged: JudgedTask) -> dict:
         [entry.event for entry in read_ledger(runtime.paths.state_root).entries],
         VerifiedPullRequest(project=judged.project, task=judged.task, pr=judged.pr),
     )
+    tree = prepare_project_tree(TreeDemand(project=judged.project, ref=judged.head), judged.configuration, runtime).root
+    task = read_entity(runtime.run_process, tree, TASK_TYPE, judged.task)
     return {
         "project": judged.project,
         "pr": judged.pr,
         "task": judged.task,
         "head": judged.head,
-        "context": _read_task(runtime, judged),
+        "context": _read_task(runtime, judged, tree),
+        "goal": read_task_goal(runtime.run_process, tree, task),
+        "references": list_task_references(task),
         "diff": describe_command(read_diff(runtime.run_process, judged.repository, judged.base, judged.head)),
         "previous": previous,
         "repair": _read_repair(runtime, judged, previous),

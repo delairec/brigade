@@ -8,6 +8,21 @@ brigade review verdict <pr> --file <verdict.json>  # validate and record the ver
 
 Both run from the worktree of the task whose pull request they judge.
 
+## What the review judges
+
+The review run judges three things, and its `SPEC` lines are never the whole of it:
+
+| Against | Asks |
+|---|---|
+| each `SPEC` line | does a test, a command or a line of code prove the criterion holds? |
+| the goal the task serves | does the delivery reach the goal of its milestone, the user's intent, beyond its `SPEC` lines? |
+| the reference the task cites | does the delivery keep the reference itself, a mockup, a page or a document, and not only what the task transcribed from it? |
+
+A delivery that meets every `SPEC` line and misses its goal, or departs from its reference without a reason a `SPEC`,
+a `RATIONALE` or a decision states, gets a finding that asks for changes; a `pass` states the goal reached. For a
+rendered output, the pull request carries screenshots of the result and of the reference side by side, and their
+absence is a finding.
+
 ## The verdict document
 
 ```
@@ -19,7 +34,7 @@ Both run from the worktree of the task whose pull request they judge.
 | `head` | the commit `review context` printed |
 | `verdict` | `pass` or `changes` |
 | `grade` | `critical`, `high`, `medium` or `low` |
-| `broken` | the `SPEC` or the rule the finding breaks |
+| `broken` | the `SPEC`, the milestone, the reference or the rule the finding breaks |
 | `summary` | what is wrong |
 
 `review verdict` records the ledger event `task.verdict` at that head.
@@ -34,6 +49,9 @@ Both run from the worktree of the task whose pull request they judge.
 
 - the head it judges;
 - the task with its `awawa context` and its closure;
+- a section `goal`: the title of the task, then the `TITLE`, `SUBJECT`, `DESC` and `SOURCE` of its milestone, read
+  in the tree of the head, or `no milestone: the title of the task is its goal`;
+- a section `reference`: each URL a `SPEC` or a `RATIONALE` of the task cites, with that line, or `none`;
 - the diff of the pull request against its base;
 - the findings of the preflight;
 - the rules of the path triggers of the files the diff touches, when `config.toml` names an instructions corpus;

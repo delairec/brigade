@@ -73,6 +73,22 @@ PREVIOUS_VERDICT = {
     ],
 }
 REPAIR = {"command": "git diff efd5ed1 8885daa", "exit_code": 0, "stderr": "", "output": "-read()\n+cached()\n"}
+GOAL = {
+    "task": "T7",
+    "title": "Print the tide table of the week",
+    "milestone": {
+        "name": "M4",
+        "title": "Tide tables",
+        "subject": "print the tide tables of a harbour",
+        "desc": ["a sailor reads the tides of the week at a glance"],
+        "source": ["the user's words: I want the tides of the week on one page"],
+    },
+}
+MOCKUP = {
+    "url": "https://example.org/harbour",
+    "field": "RATIONALE",
+    "line": "drawn from the harbour mockup https://example.org/harbour, its page Tides",
+}
 
 
 def create_document(rules: list[dict] | None, previous: dict | None = None, repair: dict | None = None) -> dict:
@@ -81,6 +97,8 @@ def create_document(rules: list[dict] | None, previous: dict | None = None, repa
         "task": "T7",
         "head": "8885daa",
         "context": [AWAWA_CONTEXT],
+        "goal": GOAL,
+        "references": [MOCKUP],
         "diff": DIFF,
         "previous": previous,
         "repair": repair,
@@ -103,6 +121,13 @@ class VerifyContextTextTest(unittest.TestCase):
             text,
             "# head\n8885daa\n\n"
             "# task\n$ awawa context @TASK.T7 --with-schema .\nexit 0\nTASK T7\n\n"
+            "# goal\ntask T7: Print the tide table of the week\n"
+            "milestone M4: Tide tables\n"
+            "  subject: print the tide tables of a harbour\n"
+            "  desc: a sailor reads the tides of the week at a glance\n"
+            "  source: the user's words: I want the tides of the week on one page\n\n"
+            "# reference\nhttps://example.org/harbour\n"
+            "  RATIONALE: drawn from the harbour mockup https://example.org/harbour, its page Tides\n\n"
             "# diff\n$ git diff 0000000 8885daa\nexit 0\n+def tide():\n\n"
             "# preflight\nfail  scope\n  brigade/cli.py is outside the task\n\n"
             "# rules\n$ awawa context @TRIGGER.python_file\nexit 0\nRULE pure\n\n"
@@ -131,6 +156,13 @@ class VerifyContextTextTest(unittest.TestCase):
             text,
             "# head\n8885daa\n\n"
             "# task\n$ awawa context @TASK.T7 --with-schema .\nexit 0\nTASK T7\n\n"
+            "# goal\ntask T7: Print the tide table of the week\n"
+            "milestone M4: Tide tables\n"
+            "  subject: print the tide tables of a harbour\n"
+            "  desc: a sailor reads the tides of the week at a glance\n"
+            "  source: the user's words: I want the tides of the week on one page\n\n"
+            "# reference\nhttps://example.org/harbour\n"
+            "  RATIONALE: drawn from the harbour mockup https://example.org/harbour, its page Tides\n\n"
             "# diff\n$ git diff 0000000 8885daa\nexit 0\n+def tide():\n\n"
             "# previous verdict\nhead efd5ed1\nverdict changes\n"
             "finding 1: high src/tides.py:12, broken SPEC 2 of @TASK.T7\n"
@@ -144,6 +176,43 @@ class VerifyContextTextTest(unittest.TestCase):
             "# rules\n$ awawa context @TRIGGER.python_file\nexit 0\nRULE pure\n\n"
             "# grades\ncritical\nhigh\nmedium\nlow",
         )
+
+    def test_should_say_that_a_task_of_no_milestone_serves_its_own_title(self):
+        # Arrange
+        document = {
+            **create_document(RULES),
+            "goal": {"task": "T9", "title": "Fix the harbour name", "milestone": None},
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertIn(
+            "# goal\ntask T9: Fix the harbour name\nno milestone: the title of the task is its goal\n\n", text
+        )
+
+    def test_should_print_none_where_the_milestone_states_no_subject(self):
+        # Arrange
+        milestone = {"name": "M4", "title": "Tide tables", "subject": None, "desc": [], "source": []}
+        document = {**create_document(RULES), "goal": {**GOAL, "milestone": milestone}}
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertIn("milestone M4: Tide tables\n  subject: none\n\n", text)
+
+    def test_should_print_none_under_the_reference_of_a_task_citing_none(self):
+        # Arrange
+        no_reference = []
+        document = {**create_document(RULES), "references": no_reference}
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertIn("# reference\nnone\n\n", text)
 
 
 class VerifyContextExitCodeTest(unittest.TestCase):

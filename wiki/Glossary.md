@@ -26,7 +26,7 @@ row names a word the code or the corpus carries.
 | check | concept | one deterministic judgment of a preflight, answering a result with its findings; a check run of the forge keeps the forge's sense | [Preflight](Preflight.md) | M8 | B255 |
 | result | concept | `ok` or `fail`, what a check of a preflight answers | [Preflight](Preflight.md) | M8 | B255 |
 | prerequisite | concept | one item `brigade doctor` inspects on the machine | [Install](Install.md) | M8 | B255 |
-| review | concept | the judgment of the pull request of a task, by a review run of brigade or on the forge | [Review](Review.md) | M8 | B255 |
+| review | concept | the judgment of the pull request of a task against its `SPEC` lines, its goal and its reference, by a review run of brigade or on the forge | [Review](Review.md) | M8 | B255 |
 | verdict | concept | `pass` or `changes`, the judgment of a review run, recorded as `task.verdict` | [Review](Review.md) | M8 | B255 |
 | finding | concept | one defect a review or a check names, which a remediation run answers | [Review answers](Review-answers.md) | M8 | B255 |
 | round | concept | one repair round of a task: a review and the remediation that answers it | [Review answers](Review-answers.md) | M8 | B255 |
