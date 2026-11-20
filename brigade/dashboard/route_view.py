@@ -13,7 +13,7 @@ from brigade.dashboard.render_reports_fragment import render_reports_fragment
 from brigade.dashboard.render_run_fragment import RunPage, render_run_fragment
 from brigade.dashboard.render_runs_fragment import RunFilters, render_runs_fragment
 from brigade.dashboard.render_wave import WavePage, render_wave
-from brigade.dashboard.render_waves_view import OVERVIEW, render_waves_view
+from brigade.dashboard.render_waves_view import EVERY_WAVE, OVERVIEW, render_waves_view
 from brigade.dashboard.route_command import (
     PATH_SEPARATOR,
     PROJECT_LISTING,
@@ -191,11 +191,17 @@ def _route_ledger(query: dict) -> ViewRoute:
 
 def _route_waves(query: dict) -> ViewRoute:
     state = query[STATE][0] if STATE in query else None
-    filters = () if state is None else (f"--{STATE}={state}",)
+    every = CommandRoute(arguments=WAVE_LISTING.arguments)
+    if state is None:
+        return ViewRoute(routes={DOCUMENT: every, OVERVIEW: LEDGER_OVERVIEW}, render=_render_waves_with(state))
+    narrowed = CommandRoute(arguments=(*WAVE_LISTING.arguments, f"--{STATE}={state}"))
     return ViewRoute(
-        routes={DOCUMENT: CommandRoute(arguments=(*WAVE_LISTING.arguments, *filters)), OVERVIEW: LEDGER_OVERVIEW},
-        render=lambda answers: render_waves_view(answers, state),
+        routes={DOCUMENT: narrowed, OVERVIEW: LEDGER_OVERVIEW, EVERY_WAVE: every}, render=_render_waves_with(state)
     )
+
+
+def _render_waves_with(state: str | None) -> Callable[[dict], str]:
+    return lambda answers: render_waves_view(answers, state)
 
 
 def route_view(target: str, renderers: dict[str, Callable[[dict], str]]) -> ViewRoute | None:

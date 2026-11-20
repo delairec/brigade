@@ -13,6 +13,7 @@ from brigade.dashboard.run_routed_command import CommandAnswer
 
 LISTING = "document"
 OVERVIEW = "overview"
+EVERY_WAVE = "every"
 HEADER = ("wave", "state", "tasks", "started", "ended", "rounds", "cost")
 NO_WAVE = "no wave started"
 ABSENT = "-"
@@ -124,12 +125,12 @@ def _render_state_chips(chosen: str | None) -> str:
     return render_filter_chips(chips)
 
 
-def _render_view(waves: list[dict], waves_started: dict, state: str | None) -> str:
+def _render_view(listed: list[dict], waves: list[dict], waves_started: dict, state: str | None) -> str:
     states = Counter(_read_wave_state(wave) for wave in waves)
     sentence = f"Waves open: {_count_open(waves)}, parked: {states[PARKED]}, blocked: {states[BLOCKED]}."
     return (
         f"{render_status_sentence(sentence)}{_render_tiles(waves, states, waves_started)}{_render_state_chips(state)}"
-        f"{render_html_table(HEADER, [_render_row(wave) for wave in waves], NO_WAVE)}{_render_served_again(waves)}"
+        f"{render_html_table(HEADER, [_render_row(wave) for wave in listed], NO_WAVE)}{_render_served_again(waves)}"
     )
 
 
@@ -137,6 +138,10 @@ def render_waves_view(answers: dict[str, CommandAnswer], state: str | None) -> s
     return render_answer(
         answers[OVERVIEW],
         lambda overview: render_answer(
-            answers[LISTING], lambda listing: _render_view(listing["waves"], overview["waves_started"], state)
+            answers[LISTING],
+            lambda listing: render_answer(
+                answers.get(EVERY_WAVE, answers[LISTING]),
+                lambda every: _render_view(listing["waves"], every["waves"], overview["waves_started"], state),
+            ),
         ),
     )

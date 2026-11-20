@@ -325,14 +325,18 @@ class AnswerDashboardRequestOfAViewTest(unittest.TestCase):
         # Arrange
         parked_list = (*WAVE_LIST, "--state=parked")
         runner = ScriptedProcessRunner(
-            {parked_list: ProcessAnswer(stdout=NO_WAVE), LEDGER_OVERVIEW: ProcessAnswer(stdout=NO_WAVE_STARTED)}
+            {
+                parked_list: ProcessAnswer(stdout=NO_WAVE),
+                WAVE_LIST: ProcessAnswer(stdout=NO_WAVE),
+                LEDGER_OVERVIEW: ProcessAnswer(stdout=NO_WAVE_STARTED),
+            }
         )
 
         # Act
         response = answer_get("/views/waves?state=parked", create_test_runtime(run_process=runner.run))
 
         # Assert
-        self.assertEqual(runner.argvs, [parked_list, LEDGER_OVERVIEW])
+        self.assertEqual(runner.argvs, [parked_list, LEDGER_OVERVIEW, WAVE_LIST])
         self.assertIn(b'<a class="chip" href="#waves?state=parked" aria-current="true">parked</a>', response.body)
 
     def test_should_render_the_error_of_a_failing_command_under_its_status(self):
