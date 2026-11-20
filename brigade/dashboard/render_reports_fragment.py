@@ -5,6 +5,7 @@ from brigade.dashboard.render_details import render_details
 from brigade.dashboard.render_empty_state import render_empty_state
 from brigade.dashboard.render_explainer import render_explainer
 from brigade.dashboard.render_html_table import render_html_table
+from brigade.dashboard.render_page_head import PageHead, render_page_head
 from brigade.dashboard.render_stat_tile import StatTile, render_stat_tile
 from brigade.dashboard.render_status_sentence import render_status_sentence
 
@@ -20,6 +21,11 @@ UNDATED = '<span class="no-date">not dated by the ledger</span>'
 MERGED_NOTHING = "0"
 DATE_LENGTH = len("YYYY-MM-DD")
 NO_ROW = ""
+HEAD = PageHead(
+    title="Reports",
+    lede="A report is the written account of a delivery: what was merged, what it cost, what went wrong,"
+    " and what to check by hand before you trust it.",
+)
 EXPLAINER_SUMMARY = (
     "A report is the account brigade writes once a delivery ends: a milestone reached, a task of no milestone"
     " ready to merge, or, before the milestone reports, a wave closed."
@@ -136,6 +142,7 @@ def render_reports_fragment(document: dict) -> str:
     reports = document["reports"]
     return "".join(
         [
+            render_page_head(HEAD),
             _render_sentence(reports),
             _render_tiles(reports),
             render_details(EXPLAINER_SUMMARY, render_explainer(EXPLAINER_WHAT, EXPLAINER_USE)),

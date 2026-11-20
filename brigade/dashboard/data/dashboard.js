@@ -2,6 +2,8 @@ const POLL_INTERVAL_MS = 5000;
 const FIRST_VIEW = "status";
 const TOKEN_HEADER = "X-Brigade-Token";
 const HEARTBEAT_REGION = "/views/heartbeat";
+const RAIL_REGION = "/views/rail";
+const MILLISECONDS_PER_SECOND = 1000;
 const PROJECT_PARAMETER = "project";
 const shownFragments = new Map();
 const HEARTBEAT_UNREAD = Symbol("heartbeat unread");
@@ -91,6 +93,46 @@ async function showHeartbeat(region, path) {
   followTheTick(region);
 }
 
+function markCurrentView() {
+  const current = `#${selectView().split(/[/?]/)[0]}`;
+  for (const link of document.querySelectorAll(".rail-group a")) {
+    if (link.getAttribute("href") === current) {
+      link.setAttribute("aria-current", "page");
+    } else {
+      link.removeAttribute("aria-current");
+    }
+  }
+}
+
+function stampReadTime(region) {
+  const fresh = region.querySelector("[data-fresh]");
+  if (fresh !== null) {
+    const readAt = new Date().toISOString().slice(11, 19);
+    fresh.textContent = `read ${readAt}Z · refreshes every ${POLL_INTERVAL_MS / MILLISECONDS_PER_SECOND} s`;
+  }
+}
+
+async function showView(region, path) {
+  await showRegion(region, path);
+  stampReadTime(region);
+  markCurrentView();
+}
+
+async function showRail(region, path) {
+  await showRegion(region, path);
+  markCurrentView();
+}
+
+function selectRegionShow(path) {
+  if (path === HEARTBEAT_REGION) {
+    return showHeartbeat;
+  }
+  if (path === RAIL_REGION) {
+    return showRail;
+  }
+  return showRegion;
+}
+
 function refreshNextTick(event) {
   if (event.target.closest("[data-refresh-next-tick]") !== null) {
     readNextTick();
@@ -102,10 +144,9 @@ function showRegions() {
     return;
   }
   document.querySelector(".next-tick").hidden = selectView() !== FIRST_VIEW;
-  showRegion(document.getElementById("view"), `/views/${selectView()}`);
+  showView(document.getElementById("view"), `/views/${selectView()}`);
   for (const region of document.querySelectorAll("[data-region]")) {
-    const show = region.dataset.region === HEARTBEAT_REGION ? showHeartbeat : showRegion;
-    show(region, region.dataset.region);
+    selectRegionShow(region.dataset.region)(region, region.dataset.region);
   }
 }
 
@@ -115,12 +156,22 @@ function showNotice(message) {
   notice.hidden = message === "";
 }
 
+function readActionAddress(button) {
+  const name = button.dataset.with;
+  if (name === undefined) {
+    return button.dataset.post;
+  }
+  const select = button.parentElement.querySelector(`select[name="${CSS.escape(name)}"]`);
+  const separator = button.dataset.post.includes("?") ? "&" : "?";
+  return `${button.dataset.post}${separator}${encodeURIComponent(name)}=${encodeURIComponent(select.value)}`;
+}
+
 async function postAction(event) {
   const button = event.target.closest("button[data-post]");
   if (button === null) {
     return;
   }
-  const response = await fetch(button.dataset.post, { method: "POST", headers: { [TOKEN_HEADER]: readToken() } });
+  const response = await fetch(readActionAddress(button), { method: "POST", headers: { [TOKEN_HEADER]: readToken() } });
   showNotice(response.ok ? "" : (await response.json()).error);
   showRegions();
 }
@@ -132,19 +183,37 @@ function pollRegions() {
   showRegions();
 }
 
+function readViewAddress(form) {
+  return `${form.dataset.view}?${new URLSearchParams(new FormData(form))}`;
+}
+
 function submitView(event) {
   if (event.target.dataset.view === undefined) {
     return;
   }
   event.preventDefault();
-  window.location.hash = `${event.target.dataset.view}?${new URLSearchParams(new FormData(event.target))}`;
+  window.location.hash = readViewAddress(event.target);
+}
+
+function applySelection(event) {
+  const form = event.target.closest("select")?.form;
+  if (!form) {
+    return;
+  }
+  if (form.dataset.view !== undefined) {
+    window.location.hash = readViewAddress(form);
+  } else if (form.classList.contains("project-selector")) {
+    form.requestSubmit();
+  }
 }
 
 window.addEventListener("hashchange", showRegions);
+window.addEventListener("hashchange", markCurrentView);
 document.addEventListener("visibilitychange", showRegions);
 document.addEventListener("click", postAction);
 document.addEventListener("click", refreshNextTick);
 document.addEventListener("submit", submitView);
+document.addEventListener("change", applySelection);
 window.setInterval(pollRegions, POLL_INTERVAL_MS);
 showRegions();
 readNextTick();

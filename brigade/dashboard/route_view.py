@@ -8,6 +8,7 @@ from brigade.dashboard.render_answer import render_answer
 from brigade.dashboard.render_home import HomeDocuments, render_home
 from brigade.dashboard.render_inbox_item import render_inbox_item
 from brigade.dashboard.render_ledger_fragment import render_ledger_fragment
+from brigade.dashboard.render_rail import RailDocuments, render_rail
 from brigade.dashboard.render_report_fragment import ReportReading, render_report_fragment
 from brigade.dashboard.render_reports_fragment import render_reports_fragment
 from brigade.dashboard.render_run_fragment import RunPage, render_run_fragment
@@ -52,6 +53,12 @@ HOME_ROUTES = {
     "scheduler": REGION_ROUTES["heartbeat"],
     "ledger": CommandRoute(arguments=("ledger", "--since", "1d", "--json")),
     "inbox": CommandRoute(arguments=("inbox", "list", "--json")),
+}
+RAIL_REGION = "rail"
+RAIL_ROUTES = {
+    DOCUMENT: HOME_ROUTES[DOCUMENT],
+    "inbox": HOME_ROUTES["inbox"],
+    "reports": CommandRoute(arguments=("report", "list", "--json")),
 }
 
 
@@ -100,6 +107,14 @@ def _render_home(answers: dict[str, CommandAnswer]) -> str:
     def render(status: dict) -> str:
         readings = {name: json.loads(answers[name].document) for name in ("scheduler", "ledger", "inbox")}
         return render_home(HomeDocuments(status=status, **readings))
+
+    return render_answer(answers[DOCUMENT], render)
+
+
+def _render_rail(answers: dict[str, CommandAnswer]) -> str:
+    def render(status: dict) -> str:
+        readings = {name: json.loads(answers[name].document) for name in ("inbox", "reports")}
+        return render_rail(RailDocuments(status=status, **readings))
 
     return render_answer(answers[DOCUMENT], render)
 
@@ -203,6 +218,8 @@ def route_view(target: str, renderers: dict[str, Callable[[dict], str]]) -> View
         return _route_waves()
     if address.path == HOME_VIEW:
         return ViewRoute(routes=HOME_ROUTES, render=_render_home)
+    if address.path == RAIL_REGION:
+        return ViewRoute(routes=RAIL_ROUTES, render=_render_rail)
     if address.path.partition(PATH_SEPARATOR)[0] == CORPUS_VIEW:
         return None
     route = route_command(target)

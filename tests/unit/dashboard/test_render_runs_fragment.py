@@ -59,7 +59,11 @@ class RenderRunsFragmentTest(unittest.TestCase):
         # Assert
         self.assertTrue(
             fragment.startswith(
-                '<p class="status-sentence">4 runs listed: 1 live, 2 finished, 1 dead.</p>'
+                '<header class="page-head"><div><h1>Runs</h1>'
+                '<p class="lede">A run is one agent at work: a procedure, such as a build or a review,'
+                " played by a role on a task.</p></div>"
+                '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
+                '<div class="verdict"><p class="status-sentence">4 runs listed: 1 live, 2 finished, 1 dead.</p></div>'
                 '<aside class="explainer"><p class="explainer-what">A run is one procedure a role carries out'
                 " through a client, for a task of a wave or on its own. It runs in segments: a segment is one"
                 " session of the client, and a segment that reaches the cap of its role hands over to the next"
@@ -172,7 +176,7 @@ class RenderRunsFragmentTest(unittest.TestCase):
         # Assert
         self.assertIn("<td>vibe</td><td>-</td><td>-</td>", fragment)
 
-    def test_should_offer_the_filters_as_chips_carried_by_the_address_keeping_the_others(self):
+    def test_should_offer_the_states_as_chips_and_the_wave_and_the_task_as_selectors_with_no_button(self):
         # Arrange
         listing = create_listing([LIVE_RUN, LIMIT_CUT_RUN], NOTHING_SKIPPED)
         filters = RunFilters(state="running", wave="oak_w4", task=None)
@@ -186,12 +190,13 @@ class RenderRunsFragmentTest(unittest.TestCase):
             '<a class="chip" href="#runs?state=running&amp;wave=oak_w4" aria-current="true">running</a>'
             '<a class="chip" href="#runs?state=finished&amp;wave=oak_w4">finished</a>'
             '<a class="chip" href="#runs?state=dead&amp;wave=oak_w4">dead</a></nav>'
-            '<nav class="chips"><a class="chip" href="#runs?state=running">every wave</a>'
-            '<a class="chip" href="#runs?state=running&amp;wave=oak_w4" aria-current="true">oak_w4</a></nav>'
-            '<nav class="chips"><a class="chip" href="#runs?state=running&amp;wave=oak_w4" aria-current="true">'
-            "every task</a>"
-            '<a class="chip" href="#runs?state=running&amp;wave=oak_w4&amp;task=B92">B92</a>'
-            '<a class="chip" href="#runs?state=running&amp;wave=oak_w4&amp;task=B94">B94</a></nav>',
+            '<form class="filters" method="get" data-view="runs">'
+            '<input type="hidden" name="state" value="running">'
+            '<span class="field"><label for="runs-wave">Wave</label><select id="runs-wave" name="wave">'
+            '<option value="">any</option><option value="oak_w4" selected>oak_w4</option></select></span>'
+            '<span class="field"><label for="runs-task">Task</label><select id="runs-task" name="task">'
+            '<option value="">any</option><option value="B92">B92</option><option value="B94">B94</option>'
+            "</select></span></form>",
             fragment,
         )
 
@@ -221,3 +226,19 @@ class RenderRunsFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertNotIn("<script>", fragment)
+
+
+class RenderRunsFragmentHeadTest(unittest.TestCase):
+    def test_should_open_on_the_page_head_naming_the_view_and_what_it_is_for(self):
+        # Act
+        fragment = render_runs_fragment(create_listing([LIVE_RUN], NOTHING_SKIPPED), NO_FILTER)
+
+        # Assert
+        self.assertTrue(
+            fragment.startswith(
+                '<header class="page-head"><div><h1>Runs</h1>'
+                '<p class="lede">A run is one agent at work: a procedure, such as a build or a review, played by a role on a task.</p></div>'
+                '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
+            ),
+            fragment[:300],
+        )

@@ -62,6 +62,36 @@ class DashboardScriptTest(unittest.TestCase):
         # Assert
         self.assertIn('document.querySelector(".next-tick").hidden = selectView() !== FIRST_VIEW;', script)
 
+    def test_should_apply_a_selector_on_change_with_no_button(self):
+        # Act
+        script = SCRIPT.read_text(encoding="utf-8")
+
+        # Assert
+        self.assertIn('document.addEventListener("change", applySelection);', script)
+        self.assertIn("form.requestSubmit();", script)
+
+    def test_should_mark_the_link_of_the_view_shown_as_the_current_page(self):
+        # Act
+        script = SCRIPT.read_text(encoding="utf-8")
+
+        # Assert
+        self.assertIn('link.setAttribute("aria-current", "page");', script)
+        self.assertIn('link.removeAttribute("aria-current");', script)
+
+    def test_should_stamp_the_read_time_of_a_view_in_its_page_head(self):
+        # Act
+        script = SCRIPT.read_text(encoding="utf-8")
+
+        # Assert
+        self.assertIn('region.querySelector("[data-fresh]")', script)
+
+    def test_should_post_with_the_value_of_the_selector_a_button_names(self):
+        # Act
+        script = SCRIPT.read_text(encoding="utf-8")
+
+        # Assert
+        self.assertIn("button.dataset.with", script)
+
     def test_should_keep_the_open_state_the_server_renders_for_a_details_the_replaced_fragment_did_not_show(self):
         # Act
         script = SCRIPT.read_text(encoding="utf-8")

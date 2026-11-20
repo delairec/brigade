@@ -1,9 +1,11 @@
 from collections import Counter
+from datetime import datetime
 from html import escape
 from urllib.parse import quote
 
 from brigade.dashboard.render_answer import render_answer
 from brigade.dashboard.render_html_table import render_html_table
+from brigade.dashboard.render_page_head import PageHead, render_page_head
 from brigade.dashboard.render_segment_strip import Segment, render_segment_strip
 from brigade.dashboard.render_stat_tile import StatTile, render_stat_tile
 from brigade.dashboard.render_status_pill import render_status_pill
@@ -12,7 +14,15 @@ from brigade.dashboard.run_routed_command import CommandAnswer
 
 LISTING = "document"
 OVERVIEW = "overview"
-HEADER = ("wave", "state", "tasks", "started", "ended", "rounds", "cost")
+HEADER = ("wave", "state", "started", "lasted", "tasks", "rounds", "cost")
+HEAD = PageHead(
+    title="Waves",
+    lede="A wave is a batch of ratified tasks brigade delivers unattended, one branch and one pull request per task.",
+)
+SHORT_DATE = "%m-%d %H:%MZ"
+SECONDS_PER_MINUTE = 60
+MINUTES_PER_HOUR = 60
+OPEN = "open"
 NO_WAVE = "no wave started"
 ABSENT = "-"
 NO_MONTH = "none"
@@ -44,7 +54,20 @@ def _render_link(name: str) -> str:
 def _render_tasks(wave: dict) -> str:
     counts = Counter(task["state"] or QUEUED for task in wave["task_states"])
     segments = [Segment(label=f"{count} {state}", state=state, length=count) for state, count in counts.items()]
-    return render_segment_strip(f"{len(wave['task_states'])} tasks", segments)
+    strip = render_segment_strip(f"{len(wave['task_states'])} tasks", segments)
+    return f'{strip} <span class="muted num">{counts[MERGED]} of {len(wave["task_states"])} merged</span>'
+
+
+def _show_start(wave: dict) -> str:
+    return datetime.fromisoformat(wave["started_at"]).strftime(SHORT_DATE)
+
+
+def _show_lasted(wave: dict) -> str:
+    if wave["ended_at"] is None:
+        return OPEN
+    lasted = datetime.fromisoformat(wave["ended_at"]) - datetime.fromisoformat(wave["started_at"])
+    hours, minutes = divmod(int(lasted.total_seconds()) // SECONDS_PER_MINUTE, MINUTES_PER_HOUR)
+    return f"{hours} h {minutes:02d} min"
 
 
 def _show_cost(cost_usd: float | None) -> str:
@@ -55,9 +78,9 @@ def _render_row(wave: dict) -> tuple[str, ...]:
     return (
         _render_link(wave["wave"]),
         render_status_pill(_read_wave_state(wave)),
+        _show_start(wave),
+        _show_lasted(wave),
         _render_tasks(wave),
-        escape(wave["started_at"]),
-        escape(wave["ended_at"] or ABSENT),
         str(wave["rounds"]),
         _show_cost(wave["cost_usd"]),
     )
@@ -113,9 +136,11 @@ def _render_served_again(waves: list[dict]) -> str:
 def _render_view(waves: list[dict], waves_started: dict) -> str:
     states = Counter(_read_wave_state(wave) for wave in waves)
     sentence = f"Waves open: {_count_open(waves)}, parked: {states[PARKED]}, blocked: {states[BLOCKED]}."
+    newest_first = sorted(waves, key=lambda wave: wave["started_at"], reverse=True)
     return (
-        f"{render_status_sentence(sentence)}{_render_tiles(waves, states, waves_started)}"
-        f"{render_html_table(HEADER, [_render_row(wave) for wave in waves], NO_WAVE)}{_render_served_again(waves)}"
+        f"{render_page_head(HEAD)}{render_status_sentence(sentence)}{_render_tiles(waves, states, waves_started)}"
+        f"{render_html_table(HEADER, [_render_row(wave) for wave in newest_first], NO_WAVE)}"
+        f"{_render_served_again(waves)}"
     )
 
 

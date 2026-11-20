@@ -102,7 +102,7 @@ class RenderWaveOfAnOpenWaveTest(unittest.TestCase):
         # Assert
         self.assertIn(
             '<p class="status-sentence">Wave w4 of oak is halted since 2026-10-19T08:00:00Z:'
-            " 1 of 3 tasks merged, 1 parked.</p>"
+            " 1 of 3 tasks merged, 1 parked.</p></div>"
             ' <button type="button" data-post="/api/waves/w4/resume">resume</button>',
             fragment,
         )
@@ -370,3 +370,13 @@ class RenderWaveOfAClosedWaveTest(unittest.TestCase):
             " 1 of 3 tasks merged, 1 parked, in 120m00s for 4.00 USD.</p>",
             fragment,
         )
+
+
+class RenderWaveHeadTest(unittest.TestCase):
+    def test_should_open_on_the_page_head_naming_the_wave_and_its_state(self):
+        # Act
+        fragment = render_wave(WavePage(shown=SHOWN, project=ON_GITHUB))
+
+        # Assert
+        self.assertTrue(fragment.startswith('<header class="page-head"><div><h1>Wave <span class="mono">w4</span> '))
+        self.assertIn('<p class="lede">The tasks of one wave, what they cost, and what halted the wave.</p>', fragment)

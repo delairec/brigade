@@ -74,10 +74,10 @@ class RenderReportsFragmentTest(unittest.TestCase):
         fragment = render_reports_fragment({"schema_version": 1, "reports": reports})
 
         # Assert
-        self.assertEqual(
-            fragment.partition("</p>")[0],
-            '<p class="status-sentence">5 reports: 1 on a milestone, 1 on a task of no milestone,'
-            " 2 on a wave, 1 answering an order.",
+        self.assertIn(
+            '<div class="verdict"><p class="status-sentence">5 reports: 1 on a milestone, 1 on a task of no milestone,'
+            " 2 on a wave, 1 answering an order.</p></div>",
+            fragment,
         )
 
     def test_should_count_the_reports_of_each_kind_in_a_tile_and_the_waves_that_merged_nothing(self):
@@ -211,4 +211,20 @@ class RenderReportsFragmentTest(unittest.TestCase):
             '<tr><td><a href="#reports/%3Ci%3Ex%3C%2Fi%3E">&lt;b&gt;M13&lt;/b&gt;</a></td><td>brigade</td>'
             "<td>&lt;script&gt;alert(1)&lt;/script&gt;</td>",
             fragment,
+        )
+
+
+class RenderReportsFragmentHeadTest(unittest.TestCase):
+    def test_should_open_on_the_page_head_naming_the_view_and_what_it_is_for(self):
+        # Act
+        fragment = render_reports_fragment({"schema_version": 1, "reports": []})
+
+        # Assert
+        self.assertTrue(
+            fragment.startswith(
+                '<header class="page-head"><div><h1>Reports</h1>'
+                '<p class="lede">A report is the written account of a delivery: what was merged, what it cost, what went wrong, and what to check by hand before you trust it.</p></div>'
+                '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
+            ),
+            fragment[:300],
         )

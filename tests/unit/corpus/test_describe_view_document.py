@@ -578,3 +578,19 @@ class ReadTheCorpusThroughAwawaTest(unittest.TestCase):
         self.assertIn(
             ("awawa", "context", "@TASK.B10", "--depth", "0", "--with-schema", "--json", str(ROOT)), runner.argvs
         )
+
+
+class DescribeViewDocumentFieldsTest(unittest.TestCase):
+    def test_should_name_the_fields_of_the_type_a_board_can_be_grouped_by(self):
+        # Act
+        document = describe(BOARD_CORPUS, "board", entity_type="TASK")
+
+        # Assert
+        self.assertEqual(document["fields"], ["TITLE", "STATUS", "MILESTONE", "ROLE", "COMPONENT", "AFTER"])
+
+    def test_should_name_the_fields_the_dependencies_of_a_type_can_follow(self):
+        # Act
+        document = describe(DEPENDENCIES_CORPUS, "dependencies", entity_type="TASK")
+
+        # Assert
+        self.assertEqual(document["fields"], ["AFTER"])

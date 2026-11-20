@@ -61,8 +61,12 @@ class RenderInboxViewTest(unittest.TestCase):
         # Assert
         self.assertTrue(
             fragment.startswith(
-                '<p class="status-sentence">2 proposed patterns to decide first,'
-                " then 2 new signals and 1 study answers to read.</p>"
+                '<header class="page-head"><div><h1>Inbox</h1>'
+                '<p class="lede">What brigade noticed and could not settle alone.'
+                " You decide: turn a finding into work, or dismiss it.</p></div>"
+                '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
+                '<div class="verdict"><p class="status-sentence">2 proposed patterns to decide first,'
+                " then 2 new signals and 1 study answers to read.</p></div>"
                 '<div class="stat-tiles">'
                 '<div class="stat-tile"><span class="stat-value">2</span>'
                 '<span class="stat-label">patterns to decide</span>'
@@ -115,7 +119,7 @@ class RenderInboxViewTest(unittest.TestCase):
         # Assert
         self.assertIn("<p>1 of the 2 signals it cites still new</p>", fragment)
 
-    def test_should_offer_a_ratification_by_kind_for_a_pattern_becoming_a_constraint(self):
+    def test_should_offer_the_kind_of_a_constraint_as_a_selector_before_one_ratify_button(self):
         # Arrange
         pattern = {**create_pattern("FlakyTests", None, []), "action": "constraint"}
         document = {**EMPTY_INBOX, "patterns": [pattern]}
@@ -127,12 +131,12 @@ class RenderInboxViewTest(unittest.TestCase):
         self.assertIn(
             "<p>If ratified: a constraint on oak of the kind chosen, and a request delivering it</p>"
             "<p>0 of the 0 signals it cites still new</p>"
-            '<button data-post="/api/inbox/ratify/FlakyTests?kind=rule">ratify as rule</button>'
-            '<button data-post="/api/inbox/ratify/FlakyTests?kind=guard">ratify as guard</button>'
-            '<button data-post="/api/inbox/ratify/FlakyTests?kind=lint">ratify as lint</button>'
-            '<button data-post="/api/inbox/ratify/FlakyTests?kind=schema">ratify as schema</button>'
-            '<button data-post="/api/inbox/ratify/FlakyTests?kind=skill">ratify as skill</button>'
-            '<button data-post="/api/inbox/ratify/FlakyTests?kind=script">ratify as script</button>'
+            '<span class="field"><label for="kind-FlakyTests">as</label>'
+            '<select id="kind-FlakyTests" name="kind"><option value="rule">rule</option>'
+            '<option value="guard">guard</option><option value="lint">lint</option>'
+            '<option value="schema">schema</option><option value="skill">skill</option>'
+            '<option value="script">script</option></select></span>'
+            '<button data-post="/api/inbox/ratify/FlakyTests" data-with="kind">ratify</button>'
             '<button data-post="/api/inbox/dismiss/FlakyTests">dismiss</button>',
             fragment,
         )
@@ -355,3 +359,19 @@ class RenderInboxViewOfStringsHoldingMarkupTest(unittest.TestCase):
         # Assert
         self.assertNotIn("<img", fragment)
         self.assertNotIn('"alert', fragment)
+
+
+class RenderInboxViewHeadTest(unittest.TestCase):
+    def test_should_open_on_the_page_head_naming_the_view_and_what_it_is_for(self):
+        # Act
+        fragment = render_inbox_view(EMPTY_INBOX)
+
+        # Assert
+        self.assertTrue(
+            fragment.startswith(
+                '<header class="page-head"><div><h1>Inbox</h1>'
+                '<p class="lede">What brigade noticed and could not settle alone. You decide: turn a finding into work, or dismiss it.</p></div>'
+                '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
+            ),
+            fragment[:300],
+        )

@@ -106,7 +106,10 @@ class RenderReportFragmentOrderTest(unittest.TestCase):
         # Assert
         self.assertRegex(
             fragment,
-            r"(?s)^<section class=\"report-verdict\"><h2>milestone-report oak_M4</h2>"
+            r"(?s)^<header class=\"page-head\"><div><h1>Report <span class=\"mono\">oak_M4</span></h1>"
+            r"<p class=\"lede\">The account of one delivery: what was merged, what it cost, what went wrong, and what to check by hand.</p></div>"
+            r"<p class=\"fresh num\" data-fresh>refreshes every 5 s</p></header>"
+            r"<section class=\"report-verdict\"><h2>milestone-report oak_M4</h2>"
             r"<p class=\"status-sentence\">VERDICT: delivered</p>.*"
             r"<div class=\"tiles\">.*<h3>Went wrong</h3><ul><li>went wrong: a rebase conflicted</li></ul>"
             r"<h3>Went well</h3><ul><li>Went well: one round of review</li></ul>"
@@ -132,6 +135,9 @@ class RenderReportFragmentOfANarrativeOpeningOnNoLeadingWordTest(unittest.TestCa
         # Assert
         self.assertEqual(
             fragment,
+            '<header class="page-head"><div><h1>Report <span class="mono">oak_M4</span></h1>'
+            '<p class="lede">The account of one delivery: what was merged, what it cost, what went wrong, and what to check by hand.</p></div>'
+            '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
             '<section class="report-verdict"><h2>milestone-report oak_M4</h2>'
             '<p class="report-delivery">reported 2026-10-03T08:00:00Z, pull request #57</p></section>'
             "<ul><li>M8 delivered three tasks</li><li>two waves were needed</li></ul>",
@@ -149,6 +155,9 @@ class RenderReportFragmentDeliveryTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             fragment,
+            '<header class="page-head"><div><h1>Report <span class="mono">oak_M4</span></h1>'
+            '<p class="lede">The account of one delivery: what was merged, what it cost, what went wrong, and what to check by hand.</p></div>'
+            '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
             '<section class="report-verdict"><h2>milestone-report oak_M4</h2>'
             '<p class="report-delivery">reported 2026-10-03T08:00:00Z</p></section>',
         )
@@ -161,7 +170,13 @@ class RenderReportFragmentDeliveryTest(unittest.TestCase):
         fragment = render_report_fragment(ReportReading(document, NO_WAVE, NO_FORGE))
 
         # Assert
-        self.assertEqual(fragment, '<section class="report-verdict"><h2>milestone-report oak_M4</h2></section>')
+        self.assertEqual(
+            fragment,
+            '<header class="page-head"><div><h1>Report <span class="mono">oak_M4</span></h1>'
+            '<p class="lede">The account of one delivery: what was merged, what it cost, what went wrong, and what to check by hand.</p></div>'
+            '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
+            '<section class="report-verdict"><h2>milestone-report oak_M4</h2></section>',
+        )
 
 
 class RenderReportFragmentGroupingTest(unittest.TestCase):
@@ -381,6 +396,9 @@ class RenderReportFragmentEscapingTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             fragment,
+            '<header class="page-head"><div><h1>Report <span class="mono">oak_M4</span></h1>'
+            '<p class="lede">The account of one delivery: what was merged, what it cost, what went wrong, and what to check by hand.</p></div>'
+            '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
             '<section class="report-verdict"><h2>milestone-report oak_M4</h2>'
             '<p class="status-sentence">Verdict: &lt;script&gt;alert(1)&lt;/script&gt;</p>'
             '<p class="report-delivery">reported 2026-10-03T08:00:00Z, pull request #57</p></section>'

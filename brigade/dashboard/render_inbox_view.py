@@ -3,6 +3,7 @@ from urllib.parse import quote
 
 from brigade.dashboard.render_details import render_details
 from brigade.dashboard.render_empty_state import render_empty_state
+from brigade.dashboard.render_page_head import PageHead, render_page_head
 from brigade.dashboard.render_stat_tile import StatTile, render_stat_tile
 from brigade.dashboard.render_status_sentence import render_status_sentence
 from brigade.inbox.inbox_locations import SHOWN_ID_LENGTH
@@ -13,6 +14,10 @@ NO_PROJECT = "-"
 NO_SIGNAL_AGE = "-"
 RATIFY_ADDRESS = "/api/inbox/ratify/"
 DISMISS_ADDRESS = "/api/inbox/dismiss/"
+HEAD = PageHead(
+    title="Inbox",
+    lede="What brigade noticed and could not settle alone. You decide: turn a finding into work, or dismiss it.",
+)
 WHAT_RATIFYING_STARTS = {
     "wave": "a request on {target}, planned into a wave",
     "constraint": "a constraint on {target} of the kind chosen, and a request delivering it",
@@ -70,7 +75,13 @@ def _render_ratification(pattern: dict) -> str:
     address = RATIFY_ADDRESS + quote(pattern["name"], safe="")
     if pattern["action"] != CONSTRAINT_ACTION:
         return _render_button(address, "ratify")
-    return "".join(_render_button(f"{address}?kind={kind}", f"ratify as {kind}") for kind in CONSTRAINT_KINDS)
+    selector = f"kind-{escape(pattern['name'])}"
+    options = "".join(f'<option value="{kind}">{kind}</option>' for kind in CONSTRAINT_KINDS)
+    return (
+        f'<span class="field"><label for="{selector}">as</label>'
+        f'<select id="{selector}" name="kind">{options}</select></span>'
+        f'<button data-post="{escape(address)}" data-with="kind">ratify</button>'
+    )
 
 
 def _render_repeated(pattern: dict, proposed: set[str]) -> str:
@@ -158,7 +169,7 @@ def render_inbox_view(document: dict) -> str:
         f" then {len(document['signals'])} new signals and {len(document['answers'])} study answers to read."
     )
     return (
-        f"{render_status_sentence(sentence)}{_render_tiles(document)}"
+        f"{render_page_head(HEAD)}{render_status_sentence(sentence)}{_render_tiles(document)}"
         f"{_render_section('Decide first', _render_patterns(document))}"
         f"{_render_section('New signals', _render_signals(document))}"
         f"{_render_section('Study answers', _render_answers(document))}"

@@ -1,19 +1,15 @@
 from html import escape
 
 from brigade.dashboard.awawa_address import AwawaAddress
-from brigade.dashboard.render_awawa_form import AwawaForm, render_awawa_form
+from brigade.dashboard.render_awawa_form import AwawaForm, AwawaSelector, render_awawa_form
 
 REF_PARAMETER = "ref"
 
 
 def render_awawa_banner(document: dict, address: AwawaAddress) -> str:
-    options = "".join(f'<option value="{escape(ref)}"></option>' for ref in document["refs"])
-    controls = (
-        f'<label>Ref <input name="ref" list="awawa-refs" value="{escape(document["ref"])}"></label>'
-        f'<datalist id="awawa-refs">{options}</datalist>'
-    )
+    selector = AwawaSelector(name=REF_PARAMETER, label="ref", options=tuple(document["refs"]), chosen=document["ref"])
     form = AwawaForm(
-        css_class="awawa-ref", address=address, controls=controls, replaced=(REF_PARAMETER,), button="Read"
+        css_class="awawa-ref", address=address, controls=selector.render(), replaced=(REF_PARAMETER,), button=None
     )
     return (
         f'<header class="awawa-banner"><p class="awawa-reading"><strong>{escape(document["project"])}</strong>'

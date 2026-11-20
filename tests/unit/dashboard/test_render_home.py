@@ -60,18 +60,31 @@ class RenderHomeSentenceTest(unittest.TestCase):
     def test_should_open_on_the_sentence_saying_whether_brigade_is_stopped_working_or_idle(self):
         # Arrange
         rows = [
-            ("a stale tick", STALE_SCHEDULER, {}, "brigade is stopped: the scheduler reports the tick stale."),
-            ("a live run", FRESH_SCHEDULER, {"live_runs": [LIVE_RUN_OF_E1]}, "brigade is working: a run is live."),
-            ("no open wave", FRESH_SCHEDULER, {"waves": []}, "brigade is idle: no wave is open."),
+            (
+                "a stale tick",
+                STALE_SCHEDULER,
+                {},
+                "failed",
+                "brigade is stopped: the scheduler reports the tick stale.",
+            ),
+            (
+                "a live run",
+                FRESH_SCHEDULER,
+                {"live_runs": [LIVE_RUN_OF_E1]},
+                "work",
+                "brigade is working: a run is live.",
+            ),
+            ("no open wave", FRESH_SCHEDULER, {"waves": []}, "faint", "brigade is idle: no wave is open."),
             (
                 "every wave halted",
                 FRESH_SCHEDULER,
                 {"waves": [OAK_W2_BLOCKED]},
+                "you",
                 "brigade is idle: every open wave is halted.",
             ),
-            ("waves waiting", FRESH_SCHEDULER, {}, "brigade is idle: the open waves wait for the next tick."),
+            ("waves waiting", FRESH_SCHEDULER, {}, "faint", "brigade is idle: the open waves wait for the next tick."),
         ]
-        for name, scheduler, status_change, sentence in rows:
+        for name, scheduler, status_change, tone, sentence in rows:
             with self.subTest(name):
                 home = HomeDocuments(
                     status={**STATUS, **status_change}, scheduler=scheduler, ledger=QUIET_DAY, inbox=EMPTY_INBOX
@@ -81,7 +94,26 @@ class RenderHomeSentenceTest(unittest.TestCase):
                 fragment = render_home(home)
 
                 # Assert
-                self.assertTrue(fragment.startswith(f'<p class="status-sentence">{sentence}</p>'))
+                self.assertTrue(
+                    fragment.startswith(
+                        '<header class="page-head"><div><h1>Home</h1><p class="lede">Whether brigade is working, what waits for you, and what it will do next.</p></div><p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
+                        f'<div class="verdict tone-{tone}"><p class="status-sentence">{sentence}</p>'
+                    )
+                )
+
+    def test_should_explain_the_sentence_by_what_waits_for_the_user(self):
+        # Arrange
+        rows = [
+            ("nothing waits", {}, "<p>Nothing waits for you.</p></div>"),
+            ("a halted wave", {"waves": [OAK_W2_BLOCKED]}, "<p>Waiting for you: 1, listed under Needs you.</p></div>"),
+        ]
+        for name, status_change, explanation in rows:
+            with self.subTest(name):
+                # Act
+                fragment = render_home(create_home(status_change))
+
+                # Assert
+                self.assertIn(explanation, fragment)
 
 
 class RenderHomeTilesTest(unittest.TestCase):
@@ -173,6 +205,17 @@ class RenderHomeTilesTest(unittest.TestCase):
             '<span class="stat-label">need you</span><span class="stat-perimeter">no age recorded</span>', fragment
         )
 
+    def test_should_write_the_tokens_of_the_quota_with_thousands_separators(self):
+        # Arrange
+        heavy_usage = {"input_tokens": 242, "output_tokens": 54126, "cache_read_input_tokens": 9935680}
+        home = create_home({"quota": {**STATUS["quota"], "usage": heavy_usage}})
+
+        # Act
+        fragment = render_home(home)
+
+        # Assert
+        self.assertIn('<span class="stat-value">9,990,048</span><span class="stat-label">quota tokens</span>', fragment)
+
     def test_should_say_the_quota_blocks_no_wave(self):
         # Act
         fragment = render_home(HOME)
@@ -219,21 +262,22 @@ class RenderHomeNeedsYouTest(unittest.TestCase):
         # Assert
         self.assertIn(
             '<section><h2>Needs you</h2><ul class="needs-you-list">'
-            '<li class="needs-you"><span class="needs-you-subject">oak_w2</span>'
-            '<span class="needs-you-reason">blocked on quota until 2026-10-19T10:00:00Z</span>'
-            '<code class="needs-you-action">brigade wave resume oak_w2</code></li>'
-            '<li class="needs-you"><span class="needs-you-subject">2 proposed patterns</span>'
-            '<span class="needs-you-reason">the inbox proposes them for ratification</span>'
-            '<code class="needs-you-action">brigade inbox list</code></li>'
-            '<li class="needs-you"><span class="needs-you-subject">corpus_lint_oak</span>'
-            '<span class="needs-you-reason">1 new signals, the oldest 15m</span>'
-            '<code class="needs-you-action">brigade inbox list</code></li>'
-            '<li class="needs-you"><span class="needs-you-subject">M2 of oak</span>'
-            '<span class="needs-you-reason">pull request 31 waits for your merge</span>'
-            '<code class="needs-you-action">cd /srv/oak &amp;&amp; gh pr merge 31</code></li>'
-            '<li class="needs-you"><span class="needs-you-subject">nightly of oak</span>'
-            '<span class="needs-you-reason">parked at 1-gate: the gate failed</span>'
-            '<code class="needs-you-action">brigade order resume nightly</code></li>'
+            '<li class="needs-you tone-you"><span class="mark">II</span>'
+            "<div><h3>Wave oak_w2 is halted</h3><p>blocked on quota until 2026-10-19T10:00:00Z</p></div>"
+            '<div class="act"><code class="cmd">brigade wave resume oak_w2</code></div></li>'
+            '<li class="needs-you tone-you"><span class="mark">?</span>'
+            "<div><h3>2 proposed patterns wait for a decision</h3>"
+            "<p>the inbox proposes them for ratification</p></div>"
+            '<div class="act"><a class="btn btn-primary" href="#inbox">Decide in the inbox</a></div></li>'
+            '<li class="needs-you tone-you"><span class="mark">?</span>'
+            "<div><h3>1 scans hold new signals: corpus_lint_oak</h3><p>1 new signals, the oldest 15m</p></div>"
+            '<div class="act"><a class="btn btn-primary" href="#inbox">Read the inbox</a></div></li>'
+            '<li class="needs-you tone-you"><span class="mark">?</span>'
+            "<div><h3>Milestone M2 of oak waits for your merge</h3><p>pull request 31 is open</p></div>"
+            '<div class="act"><code class="cmd">cd /srv/oak &amp;&amp; gh pr merge 31</code></div></li>'
+            '<li class="needs-you tone-you"><span class="mark">II</span>'
+            "<div><h3>Order nightly of oak is parked</h3><p>parked at 1-gate: the gate failed</p></div>"
+            '<div class="act"><code class="cmd">brigade order resume nightly</code></div></li>'
             "</ul></section>",
             fragment,
         )
@@ -247,7 +291,7 @@ class RenderHomeNeedsYouTest(unittest.TestCase):
         fragment = render_home(home)
 
         # Assert
-        self.assertIn('<span class="needs-you-reason">parked on a question</span>', fragment)
+        self.assertIn("<p>parked on a question</p>", fragment)
 
     def test_should_say_nothing_needs_the_user(self):
         # Act
@@ -261,7 +305,7 @@ class RenderHomeNeedsYouTest(unittest.TestCase):
             fragment,
         )
 
-    def test_should_list_apart_as_stale_a_stall_whose_task_merged_since(self):
+    def test_should_group_the_stalls_whose_task_merged_since_in_one_last_row(self):
         # Arrange
         stalls = [
             {"project": "elm", "wave": "elm_w1", "task": "E1", "merged": True},
@@ -274,10 +318,9 @@ class RenderHomeNeedsYouTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            '<h3>Stale</h3><ul class="needs-you-list">'
-            '<li class="needs-you"><span class="needs-you-subject">stall of E1 in elm_w1</span>'
-            '<span class="needs-you-reason">its task merged since</span>'
-            '<code class="needs-you-action">brigade inbox list</code></li></ul>',
+            '<li class="needs-you tone-faint"><span class="mark">~</span>'
+            "<div><h3>1 stall signals name tasks that merged since</h3><p>E1 of elm_w1</p></div>"
+            '<div class="act"><a class="btn btn-primary" href="#inbox">Review</a></div></li></ul></section>',
             fragment,
         )
 
@@ -290,12 +333,12 @@ class RenderHomeNeedsYouTest(unittest.TestCase):
         fragment = render_home(home)
 
         # Assert
-        self.assertIn('<span class="needs-you-subject">&lt;b&gt;w&lt;/b&gt;</span>', fragment)
+        self.assertIn("<h3>Wave &lt;b&gt;w&lt;/b&gt; is halted</h3>", fragment)
         self.assertNotIn("<b>w</b>", fragment)
 
 
 class RenderHomeAtWorkTest(unittest.TestCase):
-    def test_should_list_each_open_wave_with_its_tasks_by_state_and_its_live_runs(self):
+    def test_should_lay_each_open_wave_in_a_row_with_its_state_its_tasks_merged_and_its_live_run(self):
         # Arrange
         home = create_home({"live_runs": [LIVE_RUN_OF_E1]})
 
@@ -304,8 +347,15 @@ class RenderHomeAtWorkTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            '<section><h2>At work</h2><ul><li><a href="#waves/elm_w1">elm_w1</a> of elm: running 1, queued 2'
-            "<ul><li>20261019T080000Z-e1, build on E1</li></ul></li></ul></section>",
+            "<section><h2>At work</h2><table><thead><tr><th>wave</th><th>state</th><th>tasks</th><th>live run</th>"
+            '</tr></thead><tbody><tr><td><a href="#waves/elm_w1">elm_w1</a><br><span class="muted">elm</span></td>'
+            '<td><span class="pill"><span class="tone tone-work"><span class="tone-shape" aria-hidden="true">●</span>running</span></span></td><td><svg class="segment-strip"',
+            fragment,
+        )
+        self.assertIn(
+            '</svg> <span class="muted num">0 of 3 merged</span></td>'
+            '<td><a href="#runs/20261019T080000Z-e1">20261019T080000Z-e1</a><br><span class="muted">build · E1</span>'
+            "</td></tr></tbody></table></section>",
             fragment,
         )
 
@@ -317,7 +367,9 @@ class RenderHomeAtWorkTest(unittest.TestCase):
         fragment = render_home(home)
 
         # Assert
-        self.assertIn('<li><a href="#waves/oak_w2">oak_w2</a> of oak: blocked:quota 2</li></ul></section>', fragment)
+        self.assertIn(
+            '<span class="muted num">0 of 2 merged</span></td><td>\u2013</td></tr></tbody></table></section>', fragment
+        )
 
     def test_should_say_no_wave_is_open(self):
         # Arrange
@@ -333,7 +385,7 @@ class RenderHomeAtWorkTest(unittest.TestCase):
             fragment,
         )
 
-    def test_should_count_the_failed_tick_actions_of_the_last_24_hours(self):
+    def test_should_count_what_the_last_24_hours_did_one_line_per_kind_of_work(self):
         # Arrange
         home = HomeDocuments(
             status=STATUS,
@@ -346,22 +398,33 @@ class RenderHomeAtWorkTest(unittest.TestCase):
         fragment = render_home(home)
 
         # Assert
-        self.assertIn("<section><h2>Last 24 hours</h2><p>3 failed tick actions</p></section>", fragment)
+        self.assertIn(
+            '<section><h2>Last 24 hours</h2><ul class="lines">'
+            '<li><b class="num">0</b> waves started, <b class="num">0</b> closed</li>'
+            '<li><b class="num">0</b> pull requests opened, <b class="num">0</b> merged</li>'
+            '<li><b class="num">0</b> milestones reported</li>'
+            '<li><b class="num">0</b> run segments finished</li>'
+            '<li><b class="num">3</b> failed tick actions</li></ul></section>',
+            fragment,
+        )
 
-    def test_should_keep_the_pause_and_resume_buttons_of_the_projects(self):
+    def test_should_lay_the_projects_in_a_table_with_their_state_their_open_waves_and_their_button(self):
         # Act
         fragment = render_home(HOME)
 
         # Assert
         self.assertIn(
-            "<section><h2>Projects</h2><ul>"
-            '<li>oak, active <button type="button" data-post="/api/projects/oak/pause">pause</button></li>'
-            '<li>elm, paused <button type="button" data-post="/api/projects/elm/resume">resume</button></li>'
-            "</ul></section>",
+            "<section><h2>Projects</h2><table><thead><tr><th>project</th><th>state</th><th>open waves</th>"
+            "<th></th></tr></thead><tbody>"
+            '<tr><td>oak</td><td><span class="pill"><span class="tone tone-faint"><span class="tone-shape" aria-hidden="true">·</span>active</span></span></td><td>0</td>'
+            '<td> <button type="button" data-post="/api/projects/oak/pause">pause</button></td></tr>'
+            '<tr><td>elm</td><td><span class="pill"><span class="tone tone-you"><span class="tone-shape" aria-hidden="true">▲</span>paused</span></span></td><td>1</td>'
+            '<td> <button type="button" data-post="/api/projects/elm/resume">resume</button></td></tr>'
+            "</tbody></table></section>",
             fragment,
         )
 
-    def test_should_keep_the_lines_of_the_studies_and_the_parked_orders(self):
+    def test_should_lay_the_studies_in_a_routine_table_and_leave_the_parked_orders_to_needs_you(self):
         # Arrange
         home = create_home(
             {
@@ -402,8 +465,12 @@ class RenderHomeAtWorkTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            "<section><h2>Studies</h2><ul><li>triage, due</li><li>debt, parked</li></ul></section>"
-            "<section><h2>Orders</h2><ul><li>nightly of oak, parked at 1-gate: the gate &lt;step&gt; failed</li></ul>"
-            "</section>",
+            "<section><h2>Routine</h2><table><thead><tr><th>study</th><th>every</th><th>last run</th>"
+            "<th>outcome</th><th>now</th></tr></thead><tbody>"
+            "<tr><td>triage</td><td>24h</td><td>\u2013</td><td>\u2013</td><td>due, runs at the next tick</td></tr>"
+            '<tr><td>debt</td><td>1d</td><td>r1</td><td><span class="pill"><span class="tone tone-you"><span class="tone-shape" aria-hidden="true">▲</span>parked</span></span></td>'
+            '<td>waits for <code class="cmd">brigade study run debt</code></td></tr>'
+            "</tbody></table></section>",
             fragment,
         )
+        self.assertNotIn("<h2>Orders</h2>", fragment)

@@ -11,16 +11,22 @@ of `config.toml`, else 8470. It prints the URL and runs in the foreground until 
 
 The page is a left rail and a view; under 900px of width the rail becomes a top bar. The rail holds, from the top:
 
-- **the project selector** — *All projects* or one registered project. The project chosen is carried in the address,
+- **the brand mark**, linking Home.
+- **the project selector** — *All projects*, with their count, or one registered project, applied as soon as it is
+  chosen, with no button. The project chosen is carried in the address,
   `/?project=<name>#<view>`, and every view then keeps the rows of its document that name that project, at any depth,
   a row of `projects` naming it by its `name`; a row naming no project, or whose `project` is `null` as for a
   machine-wide study and its scans, is kept. The selector and the heartbeat, which
   stand on every page, keep every row.
-- **the heartbeat of the tick** — the last tick of `brigade scheduler status`, its age, and *stale* when the scheduler
-  reports it, on every page.
-- **Operate** — Home, Waves, Runs and Inbox, the views to act from.
-- **Understand** — Ledger and Reports, the views to read what happened.
+- **Operate** — Home, Waves with the waves open, Runs with the runs live, and Inbox with the proposed patterns,
+  marked when one waits: the views to act from.
+- **Understand** — Ledger, and Reports with their count: the views to read what happened.
 - **Addons** — the awawa tab of each project holding a corpus, listed for the project chosen alone when one is.
+- **the heartbeat of the tick**, at its foot — *Tick alive* or *Tick stale* with a dot in its tone, the time of the
+  last tick of `brigade scheduler status` and its age, its duration and the actions it applied, on every page.
+
+The link of the view shown is marked as the current page. Every view opens on its head: its title, one line saying
+what the page is for, and the time it was read.
 
 The page polls the view and each region of the rail every five seconds while its tab is visible, and swaps a fragment
 only when it changed, keeping the open `<details>` and the focus. A refused POST is shown in the notice above the view.
@@ -57,21 +63,28 @@ Every view of the dashboard keeps three rules:
 Its seven views:
 
 - **Home**, the view shown first — it opens on one sentence saying whether brigade is stopped (the scheduler reports
-  the tick stale), working (a run is live) or idle, and why nothing runs; then four tiles: the open waves and how many
-  are halted, the live runs, what waits for the user with the age of the oldest, and the quota of the window with the
-  waves it blocks. **Needs you** lists what waits for the user, one row each with the command to copy: a halted wave
-  with its reason, the proposed patterns of the inbox as one row with their count, the parked scans, a pull request of
-  a milestone waiting for the user's merge and a parked order, or says nothing needs the user; a stall signal whose
-  task merged since is listed apart as stale. **At work** lists the open waves with their tasks by state and their
-  live runs, **Last 24 hours** counts the failed tick actions, and the projects keep their pause and resume buttons.
+  the tick stale), working (a run is live) or idle, in the tone of that state, and a second sentence saying how many
+  things wait for the user; then four tiles: the open waves and how many are halted, the live runs, what waits for
+  the user with the age of the oldest, and the quota tokens of the window, with thousands separators, with the waves
+  it blocks. **Needs you** lists what waits for the user, one row each with a mark, a title, why, and one action, a
+  link to the view to act in or the command to copy: a halted wave with its reason, the proposed patterns of the
+  inbox as one row with their count, the scans holding new signals as one row, a pull request of a milestone waiting
+  for the user's merge and a parked order, or says nothing needs the user; the stall signals whose task merged since
+  close the list as one faint row. **At work** is a table of the open waves, each with its project, its state as a
+  pill, a strip of its tasks by state with how many merged, and its live run; **Last 24 hours** counts the waves
+  started and closed, the pull requests opened and merged, the milestones reported, the run segments finished and the
+  failed tick actions; **Routine** is a table of the studies, their period, their last run, its outcome and what
+  comes next; **Projects** is a table of the projects with their state, their open waves and their pause or resume
+  button; a parked order is a row of Needs you.
   **Next tick** shows the decisions of `brigade tick --dry-run --json` by action, read when the page loads, at each
   new tick and on its refresh button, never by the poll.
 - **Waves** — the waves of `brigade wave list`, opening on one sentence counting the waves open, parked and blocked,
   and four tiles: the waves open now with the parked and the blocked, the waves started with their count by month
   from `brigade ledger`, the waves closed with the cancelled, and the tasks merged out of the tasks the last 12 waves
-  served, with the waves that merged nothing. Each row, the open waves first, shows the wave linking its page, its
-  state as a pill (running, parked, blocked, closed or cancelled), a bar of its tasks by state, a task no event served
-  yet counted queued, its dates, its review rounds and its cost, said as a floor. The tasks served by three waves or
+  served, with the waves that merged nothing. Each row, the newest wave first, shows the wave linking its page, its
+  state as a pill (running, parked, blocked, closed or cancelled), its start as a short date, how long it lasted or
+  open, a bar of its tasks by state, a task no event served yet counted queued, with how many merged, its review
+  rounds and its cost, said as a floor. The tasks served by three waves or
   more are named with that count under a heading of their own. On its page,
   a wave opens on one sentence saying how it stands or how it ended, with a resume button while it is halted, its
   milestone and the report of that milestone once one is committed, and five tiles: the tasks merged out of its tasks
@@ -84,12 +97,15 @@ Its seven views:
   them; the events of the ledger are folded under Events.
 - **Inbox** — puts first what the user decides: one sentence and four tiles, then Decide first, each proposed pattern
   under its title with what ratifying it starts, how many of the signals it cites are still new, its ratify button
-  before its dismiss button and its repeats folded under it; then the new signals grouped by what recorded them,
+  before its dismiss button, a pattern becoming a constraint offering its kind as a selector before its one ratify
+  button, and its repeats folded under it; then the new signals grouped by what recorded them,
   each opening its evidence, a stall whose task merged since marked stale; then the study answers, each opening the
   answer rendered from its entity.
 - **awawa** — the corpus of a project at a ref, as the IntelliJ plugin awawa-ui shows it: a banner naming the
-  project, the ref and the commit read, offering the local branches, the main one first, `worktree:<branch>` for each
-  linked worktree, or a ref typed; the views Tree, Board, Dependencies and Health, each entity with its code, its label,
+  project, the ref and the commit read, offering in a selector the local branches, the main one first, and
+  `worktree:<branch>` for each linked worktree; the views Tree, Board, Dependencies and Health as tabs, the entity
+  type as a selector, the field the Board is grouped by and the field the Dependencies follow as selectors over the
+  fields of the type, each applied as soon as it is chosen, with no button; each entity with its code, its label,
   its facts and the dot of its status; the filters in force as chips with Clear all; and a detail panel, opened by a
   click on an entity, with its fields, the entities it refers to and those referring to it, and the links to the IDE and
   to awawa-web. The view, the type, the field, the filters, the search and the entity shown live in the address alone,
@@ -121,8 +137,8 @@ Its seven views:
   tasks and the date of the ledger event that recorded it.
 - **Runs** — the runs of `brigade run list`: a sentence and an explainer saying what a run and a segment are, tiles
   counting the live runs, the finished ones by outcome and the dead ones, and how many run directories the list
-  skipped; the filters state, wave and task are chips carried by the address, `#runs?state=dead&wave=<wave>`, passed
-  to `--state`, `--wave` and `--task`; each row shows the run, its procedure, its task and its wave, linked, its state
+  skipped; the filters, carried by the address, `#runs?state=dead&wave=<wave>` and passed to `--state`, `--wave` and
+  `--task`, are chips for the state and selectors for the wave and the task, applied as soon as one is chosen; each row shows the run, its procedure, its task and its wave, linked, its state
   as a pill and its start, the dead runs and the runs a limit cut under headings of their own. The page of a run,
   `#runs/<id>`, opens on where it stands and the last `NEXT` entry of an awawa progress, then five tiles: its
   outcome, its segments with the handovers, its turns against the cap of its role read from
@@ -132,9 +148,11 @@ Its seven views:
   text, the notes handed to the run, the other runs of its task read from `brigade ledger --task --json`, and its
   arguments.
 
-`/views/<route>` serves the HTML fragment of the document `/api/<route>` serves. Two fragments serve the rail:
+`/views/<route>` serves the HTML fragment of the document `/api/<route>` serves. Three fragments serve the rail:
 `/views/heartbeat` renders `brigade scheduler status --json`, answering 200 when the scheduler exits 1 on a stale tick,
-and `/views/selector` renders the projects of `brigade project list --json`.
+`/views/selector` renders the projects of `brigade project list --json`, and `/views/rail` renders the views of
+Operate and Understand with their counts from `brigade status --json`, `brigade inbox list --json` and
+`brigade report list --json`.
 
 ## The awawa addon
 

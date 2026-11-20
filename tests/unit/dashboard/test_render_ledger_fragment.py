@@ -134,6 +134,10 @@ class RenderLedgerFragmentTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             fragment.partition("<section>")[0],
+            '<header class="page-head"><div><h1>Ledger</h1>'
+            '<p class="lede">The ledger is the journal of everything brigade did. This page turns it into measures:'
+            " what a run takes, whether the turn caps fit, and what keeps failing.</p></div>"
+            '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
             '<div class="callout tone-faint"><p>The measures cover 5 runs finished from 2026-11-17T21:10:00Z'
             " to 2026-11-18T09:00:00Z; 2 lines of the ledger skipped, counted in no figure.</p></div>",
         )
@@ -148,6 +152,10 @@ class RenderLedgerFragmentTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             fragment.partition("<section>")[0],
+            '<header class="page-head"><div><h1>Ledger</h1>'
+            '<p class="lede">The ledger is the journal of everything brigade did. This page turns it into measures:'
+            " what a run takes, whether the turn caps fit, and what keeps failing.</p></div>"
+            '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
             '<div class="callout tone-faint"><p>The measures cover 0 runs finished in an empty ledger;'
             " 0 lines of the ledger skipped, counted in no figure.</p></div>",
         )
@@ -391,4 +399,20 @@ class RenderLedgerFragmentTest(unittest.TestCase):
             "<section><h2>Compare two periods</h2>"
             "<dl><dt>error</dt><dd>no run finished from 2026-09-30 to 2026-09-30\n</dd></dl></section>",
             fragment,
+        )
+
+
+class RenderLedgerFragmentHeadTest(unittest.TestCase):
+    def test_should_open_on_the_page_head_naming_the_view_and_what_it_is_for(self):
+        # Act
+        fragment = render_overview_and_budgets()
+
+        # Assert
+        self.assertTrue(
+            fragment.startswith(
+                '<header class="page-head"><div><h1>Ledger</h1>'
+                '<p class="lede">The ledger is the journal of everything brigade did. This page turns it into measures: what a run takes, whether the turn caps fit, and what keeps failing.</p></div>'
+                '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
+            ),
+            fragment[:300],
         )

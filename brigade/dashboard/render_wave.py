@@ -5,6 +5,7 @@ from urllib.parse import quote
 from brigade.dashboard.render_action import render_action
 from brigade.dashboard.render_details import render_details
 from brigade.dashboard.render_html_table import render_html_table
+from brigade.dashboard.render_page_head import PageHead, render_page_head
 from brigade.dashboard.render_stat_tile import StatTile, render_stat_tile
 from brigade.dashboard.render_status_pill import render_status_pill
 from brigade.dashboard.render_status_sentence import render_status_sentence
@@ -23,6 +24,10 @@ HALTING_EVENTS = ("wave.parked", "wave.blocked")
 ENDING_EVENTS = {"wave.closed": "closed", "wave.cancelled": "was cancelled"}
 TASK_HEADER = ("Task", "State", "Pull request", "Rounds", "Runs", "Share of cost")
 NO_COST = 0
+WAVE_LEDE = "The tasks of one wave, what they cost, and what halted the wave."
+ENDED_STATES = {"wave.closed": "closed", "wave.cancelled": "cancelled"}
+HALTED_STATES = {"wave.parked": "parked", "wave.blocked": "blocked"}
+RUNNING_STATE = "running"
 
 
 @dataclass(frozen=True)
@@ -114,6 +119,16 @@ def _describe_standing(shown: dict) -> str:
     if _is_halted(ledger):
         return f"{heading} is halted since {ledger['halts'][-1]['halted_at']}: {_count_tasks(shown)}."
     return f"{heading} is running: {_count_tasks(shown)}."
+
+
+def _read_state(ledger: dict) -> str:
+    ending = next((event for event in ledger["events"] if event["event"] in ENDED_STATES), None)
+    if ending is not None:
+        return ENDED_STATES[ending["event"]]
+    if _is_halted(ledger):
+        halts = [event["event"] for event in ledger["events"] if event["event"] in HALTED_STATES]
+        return HALTED_STATES[halts[-1]]
+    return RUNNING_STATE
 
 
 def _render_resume(shown: dict) -> str:
@@ -230,8 +245,9 @@ def render_wave(page: WavePage) -> str:
     shown = page.shown
     ledger = shown["ledger"]
     events = "".join(_render_event(event) for event in ledger["events"])
+    head = PageHead(title="Wave", lede=WAVE_LEDE, name=shown["wave"], state=_read_state(ledger))
     return (
-        f"<section><h2>Wave {escape(shown['wave'])} of {escape(shown['project'])}</h2>{_render_milestone(shown)}"
+        f"{render_page_head(head)}<section><h2>Wave {escape(shown['wave'])} of {escape(shown['project'])}</h2>{_render_milestone(shown)}"
         f"{render_status_sentence(_describe_standing(shown))}{_render_resume(shown)}{_render_tiles(shown)}</section>"
         f"<section><h2>Tasks</h2>{_render_tasks(page)}</section>"
         f"<section><h2>How it went</h2>{render_wave_timeline(ledger)}{_render_failures(ledger)}</section>"

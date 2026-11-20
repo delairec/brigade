@@ -5,6 +5,7 @@ from urllib.parse import quote
 
 from brigade.dashboard.render_details import render_details
 from brigade.dashboard.render_html_table import render_html_table
+from brigade.dashboard.render_page_head import PageHead, render_page_head
 from brigade.dashboard.render_stat_tile import StatTile, render_stat_tile
 
 NARRATIVE = "NARRATIVE"
@@ -17,6 +18,7 @@ SAMPLING = "SAMPLING"
 STATISTIC_FILES = "files "
 MERGED = "merged"
 RUN_FINISHED = "run.finished"
+LEDE = "The account of one delivery: what was merged, what it cost, what went wrong, and what to check by hand."
 NOT_RECORDED = "not recorded"
 LEADING_TASK = re.compile(r"[A-Z][A-Z0-9]*\d+\b")
 LINKED_TOKEN = re.compile(
@@ -213,8 +215,10 @@ def render_report_fragment(reading: ReportReading) -> str:
         _render_block(heading, _render_list(narrative.get(words, []), linker))
         for words, heading in NARRATIVE_BLOCKS.items()
     )
+    head = PageHead(title="Report", lede=LEDE, name=reading.document["report"]["id"])
     return (
-        _render_verdict(reading, narrative.get(VERDICT, []), linker)
+        render_page_head(head)
+        + _render_verdict(reading, narrative.get(VERDICT, []), linker)
         + _render_tiles(reading.waves, fields)
         + blocks
         + _render_list(narrative.get(None, []), linker)

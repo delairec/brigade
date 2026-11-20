@@ -253,7 +253,7 @@ class RenderWavesViewTest(unittest.TestCase):
             '<td><svg class="segment-strip" viewBox="0 0 100 8" role="img" aria-label="3 tasks">'
             '<rect class="segment tone-done" x="0" width="66.6667" height="8"><title>2 merged</title></rect>'
             '<rect class="segment tone-work" x="66.6667" width="33.3333" height="8"><title>1 running</title></rect>'
-            "</svg></td>",
+            '</svg> <span class="muted num">2 of 3 merged</span></td>',
             fragment,
         )
 
@@ -269,15 +269,15 @@ class RenderWavesViewTest(unittest.TestCase):
             '<rect class="segment tone-faint" x="0" width="100" height="8"><title>1 queued</title></rect>', fragment
         )
 
-    def test_should_link_the_page_of_the_wave_and_show_its_dates_its_rounds_and_its_cost_as_a_floor(self):
+    def test_should_link_the_page_of_the_wave_and_show_its_rounds_and_its_cost_as_a_floor(self):
         # Arrange
         rows = [
             (
                 "ended with a cost",
                 CLOSED_WAVE,
-                "<td>2026-10-20T08:00:00Z</td><td>2026-10-21T09:30:00Z</td><td>1</td><td>at least 2.40 USD</td>",
+                "<td>1</td><td>at least 2.40 USD</td>",
             ),
-            ("open without a cost", PARKED_WAVE, "<td>2026-11-01T08:00:00Z</td><td>-</td><td>0</td><td>-</td>"),
+            ("open without a cost", PARKED_WAVE, "<td>0</td><td>-</td>"),
         ]
         for case, wave, expected_cells in rows:
             with self.subTest(wave=case):
@@ -321,3 +321,62 @@ class RenderWavesViewTest(unittest.TestCase):
         # Assert
         self.assertIn('<a href="#waves/%3Cb%3Ew%3C%2Fb%3E">&lt;b&gt;w&lt;/b&gt;</a>', fragment)
         self.assertNotIn("<b>w</b>", fragment)
+
+
+class RenderWavesViewHeadTest(unittest.TestCase):
+    def test_should_open_on_the_page_head_naming_the_view_and_what_it_is_for(self):
+        # Act
+        fragment = render_waves_view(create_answers([OPEN_WAVE], {}))
+
+        # Assert
+        self.assertTrue(
+            fragment.startswith(
+                '<header class="page-head"><div><h1>Waves</h1>'
+                '<p class="lede">A wave is a batch of ratified tasks brigade delivers unattended, one branch and one pull request per task.</p></div>'
+                '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
+            ),
+            fragment[:300],
+        )
+
+
+SHORT_CLOSED_WAVE = {
+    **OPEN_WAVE,
+    "wave": "oak_w3",
+    "started_at": "2026-10-30T08:00:00Z",
+    "ended_at": "2026-10-30T12:50:00Z",
+    "ended_by": "wave.closed",
+}
+
+
+class RenderWavesViewTableTest(unittest.TestCase):
+    def test_should_list_the_newest_wave_first_under_the_columns_of_the_mockup(self):
+        # Act
+        fragment = render_waves_view(create_answers([SHORT_CLOSED_WAVE, OPEN_WAVE], {}))
+
+        # Assert
+        self.assertIn(
+            "<thead><tr><th>wave</th><th>state</th><th>started</th><th>lasted</th><th>tasks</th>"
+            '<th>rounds</th><th>cost</th></tr></thead><tbody><tr><td><a href="#waves/oak_w5">oak_w5</a></td>',
+            fragment,
+        )
+
+    def test_should_show_the_start_as_a_short_date_and_how_long_a_closed_wave_lasted(self):
+        # Act
+        fragment = render_waves_view(create_answers([SHORT_CLOSED_WAVE], {}))
+
+        # Assert
+        self.assertIn("<td>10-30 08:00Z</td><td>4 h 50 min</td>", fragment)
+
+    def test_should_say_an_open_wave_is_open_where_a_closed_one_says_how_long_it_lasted(self):
+        # Act
+        fragment = render_waves_view(create_answers([OPEN_WAVE], {}))
+
+        # Assert
+        self.assertIn("<td>11-02 08:00Z</td><td>open</td>", fragment)
+
+    def test_should_say_how_many_tasks_merged_beside_the_strip_of_their_states(self):
+        # Act
+        fragment = render_waves_view(create_answers([OPEN_WAVE], {}))
+
+        # Assert
+        self.assertIn('</svg> <span class="muted num">2 of 3 merged</span></td>', fragment)

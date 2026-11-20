@@ -90,12 +90,13 @@ class RenderRunFragmentTest(unittest.TestCase):
         fragment = render_run_fragment(create_live_page())
 
         # Assert
+        self.assertIn(
+            '<div class="verdict"><p class="status-sentence">build-task by ada is running, in its segment 2.</p></div>'
+            '<div class="callout tone-work"><p>Left for its next segment: 3. implement</p></div>',
+            fragment,
+        )
         self.assertTrue(
-            fragment.startswith(
-                f"<h2>Run {RUN_ID}</h2>"
-                '<p class="status-sentence">build-task by ada is running, in its segment 2.</p>'
-                '<div class="callout tone-work"><p>Left for its next segment: 3. implement</p></div>'
-            )
+            fragment.startswith(f'<header class="page-head"><div><h1>Run <span class="mono">{RUN_ID}</span>')
         )
 
     def test_should_show_five_tiles_outcome_segments_turns_run_time_and_cost(self):
@@ -350,5 +351,18 @@ class RenderRunFragmentTest(unittest.TestCase):
         # Assert
         self.assertIn(
             "<section><h3>Arguments</h3><dl><dt>base</dt><dd>&lt;script&gt;alert(1)&lt;/script&gt;</dd></dl></section>",
+            fragment,
+        )
+
+
+class RenderRunFragmentHeadTest(unittest.TestCase):
+    def test_should_open_on_the_page_head_naming_the_run_and_its_state(self):
+        # Act
+        fragment = render_run_fragment(create_live_page())
+
+        # Assert
+        self.assertTrue(fragment.startswith('<header class="page-head"><div><h1>Run <span class="mono">'))
+        self.assertIn(
+            '<p class="lede">One agent at work: its segments, its turns against the cap, and what it left for its next segment.</p>',
             fragment,
         )

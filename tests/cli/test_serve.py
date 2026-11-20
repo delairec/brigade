@@ -183,7 +183,20 @@ class BrigadeServeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(status, 200)
-        self.assertIn('<time datetime="2026-10-06T12:00:00Z">2026-10-06T12:00:00Z</time>', body)
+        self.assertIn('<time datetime="2026-10-06T12:00:00Z">12:00:00Z</time>', body)
+
+    def test_should_answer_the_views_of_the_rail_with_what_each_holds(self):
+        # Arrange
+        self.machine.install_awawa(self)
+        self.machine.run_init()
+        url = self.start_serving().stdout.readline().strip()
+
+        # Act
+        status, body = fetch(url, "/views/rail")
+
+        # Assert
+        self.assertEqual(status, 200)
+        self.assertIn('<a href="#waves">Waves <span class="count num">0 open</span></a>', body)
 
     def test_should_answer_the_waves_view_with_its_sentence_and_the_pill_of_a_parked_wave(self):
         # Arrange
@@ -261,7 +274,8 @@ class BrigadeServeTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertRegex(
             body,
-            r'^<section class="report-verdict"><h2>wave-report oak_w3</h2><p class="status-sentence">Verdict: delivered</p>',
+            r'^<header class="page-head">.*?</header>'
+            r'<section class="report-verdict"><h2>wave-report oak_w3</h2><p class="status-sentence">Verdict: delivered</p>',
         )
 
     def test_should_answer_the_reports_view_with_its_explainer_closed_and_the_verdict_of_each_report(self):
@@ -449,8 +463,8 @@ class BrigadeServeHomeTest(BrigadeServeTestCase):
         self.assertEqual(status, 200)
         self.assertIn(
             '<section><h2>Needs you</h2><ul class="needs-you-list">'
-            '<li class="needs-you"><span class="needs-you-subject">shop_w1</span>'
-            '<span class="needs-you-reason">parked on forge_account</span>',
+            '<li class="needs-you tone-you"><span class="mark">II</span>'
+            "<div><h3>Wave shop_w1 is halted</h3><p>parked on forge_account</p></div>",
             body,
         )
 

@@ -299,7 +299,12 @@ class AnswerDashboardRequestOfAViewTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(runner.argvs, [WAVE_LIST, LEDGER_OVERVIEW])
-        self.assertEqual(
+        self.assertEqual(response.status, 200)
+        self.assertIn(
+            b'<div class="verdict"><p class="status-sentence">Waves open: 0, parked: 0, blocked: 0.</p></div>',
+            response.body,
+        )
+        self.assertNotEqual(
             response,
             DashboardResponse(
                 status=200,
@@ -576,10 +581,10 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(response.status, 200)
-        self.assertEqual(
-            response.body.partition(b"</p>")[0],
-            b'<p class="status-sentence">0 reports: 0 on a milestone, 0 on a task of no milestone, 0 on a wave,'
-            b" 0 answering an order.",
+        self.assertIn(
+            b'<div class="verdict"><p class="status-sentence">0 reports: 0 on a milestone, 0 on a task of no milestone,'
+            b" 0 on a wave, 0 answering an order.</p></div>",
+            response.body,
         )
 
     def test_should_render_the_report_asked_with_the_measures_of_its_waves_and_the_forge_of_its_project(self):
@@ -618,7 +623,10 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
             DashboardResponse(
                 status=200,
                 content_type="text/html; charset=utf-8",
-                body=b'<section class="report-verdict"><h2>wave-report oak_w3</h2>'
+                body=b'<header class="page-head"><div><h1>Report <span class="mono">oak_w3</span></h1>'
+                b'<p class="lede">The account of one delivery: what was merged, what it cost, what went wrong, and what to check by hand.</p></div>'
+                b'<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
+                b'<section class="report-verdict"><h2>wave-report oak_w3</h2>'
                 b'<p class="status-sentence">Verdict: <a href="#waves/oak_w3">OK7</a> delivered</p>'
                 b'<p class="report-delivery">reported 2026-10-04T09:00:00Z, pull request'
                 b' <a href="https://github.com/alice/oak/pull/31">#31</a></p></section>'
@@ -655,6 +663,9 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             response.body,
+            b'<header class="page-head"><div><h1>Report <span class="mono">oak_w3</span></h1>'
+            b'<p class="lede">The account of one delivery: what was merged, what it cost, what went wrong, and what to check by hand.</p></div>'
+            b'<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
             b'<section class="report-verdict"><h2>wave-report oak_w3</h2>'
             b'<p class="report-delivery">pull request #31</p></section>',
         )
@@ -692,6 +703,9 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             response.body,
+            b'<header class="page-head"><div><h1>Report <span class="mono">oak_w3</span></h1>'
+            b'<p class="lede">The account of one delivery: what was merged, what it cost, what went wrong, and what to check by hand.</p></div>'
+            b'<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
             b'<section class="report-verdict"><h2>wave-report oak_w3</h2>'
             b'<p class="report-delivery">pull request #31</p></section>',
         )
@@ -718,6 +732,9 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             response.body,
+            b'<header class="page-head"><div><h1>Report <span class="mono">oak_w3</span></h1>'
+            b'<p class="lede">The account of one delivery: what was merged, what it cost, what went wrong, and what to check by hand.</p></div>'
+            b'<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
             b'<section class="report-verdict"><h2>wave-report oak_w3</h2>'
             b'<p class="report-delivery">pull request #31</p></section>',
         )
@@ -808,7 +825,7 @@ class AnswerDashboardRequestOfTheHomeViewTest(unittest.TestCase):
         # Assert
         self.assertEqual(response.status, 200)
         self.assertIn(
-            b'<li>oak, active <button type="button" data-post="/api/projects/oak/pause">pause</button></li>',
+            b'<td> <button type="button" data-post="/api/projects/oak/pause">pause</button></td></tr>',
             response.body,
         )
 
@@ -1099,8 +1116,9 @@ class AnswerDashboardRequestOfTheHeartbeatTest(unittest.TestCase):
             DashboardResponse(
                 status=200,
                 content_type="text/html; charset=utf-8",
-                body=b'<p class="heartbeat">Last tick <time datetime="2026-10-19T08:00:00Z">2026-10-19T08:00:00Z</time>,'
-                b' 60 min ago <strong class="heartbeat-stale">stale</strong></p>',
+                body=b'<p class="heartbeat"><span><span class="dot tone-failed"></span><b>Tick stale</b></span>'
+                b'<span class="num">last <time datetime="2026-10-19T08:00:00Z">08:00:00Z</time>, 60 min ago</span>'
+                b'<span class="num">0.0 s \xc2\xb7 0 actions</span></p>',
             ),
         )
 
@@ -1118,8 +1136,8 @@ class AnswerDashboardRequestOfTheProjectSelectorTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             response.body,
-            b'<label>Project <select name="project"><option value="">All projects</option>'
-            b'<option value="oak" selected>oak</option></select></label><button>show</button>',
+            b'<label for="project">Project</label><select id="project" name="project">'
+            b'<option value="">All projects (1)</option><option value="oak" selected>oak</option></select>',
         )
 
     def test_should_list_every_project_whichever_project_the_address_carries(self):

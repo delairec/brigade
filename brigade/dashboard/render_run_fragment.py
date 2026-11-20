@@ -5,6 +5,7 @@ from urllib.parse import quote
 from brigade.dashboard.render_callout import render_callout
 from brigade.dashboard.render_empty_state import render_empty_state
 from brigade.dashboard.render_html_table import render_html_table
+from brigade.dashboard.render_page_head import PageHead, render_page_head
 from brigade.dashboard.render_stat_tile import StatTile, render_stat_tile
 from brigade.dashboard.render_status_pill import render_status_pill
 from brigade.dashboard.render_status_sentence import render_status_sentence
@@ -29,6 +30,7 @@ NO_TURNS = 0
 NO_DURATION = 0
 LIVE = "running"
 DEAD = "dead"
+RUN_LEDE = "One agent at work: its segments, its turns against the cap, and what it left for its next segment."
 
 
 @dataclass(frozen=True)
@@ -225,8 +227,9 @@ def render_run_fragment(page: RunPage) -> str:
     reading = _read_page(page)
     shown = page.shown
     segments = [_render_segment(segment, reading) for segment in reading.segments]
+    head = PageHead(title="Run", lede=RUN_LEDE, name=reading.run["run"], state=_show_state(reading.run))
     return (
-        f"<h2>Run {escape(reading.run['run'])}</h2>"
+        render_page_head(head)
         + render_status_sentence(_describe_standing(reading))
         + _render_next(page)
         + _render_tiles(reading, page)

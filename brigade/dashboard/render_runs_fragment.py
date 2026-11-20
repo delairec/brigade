@@ -8,6 +8,7 @@ from brigade.dashboard.render_empty_state import render_empty_state
 from brigade.dashboard.render_explainer import render_explainer
 from brigade.dashboard.render_filter_chips import FilterChip, render_filter_chips
 from brigade.dashboard.render_html_table import render_html_table
+from brigade.dashboard.render_page_head import PageHead, render_page_head
 from brigade.dashboard.render_stat_tile import StatTile, render_stat_tile
 from brigade.dashboard.render_status_pill import render_status_pill
 from brigade.dashboard.render_status_sentence import render_status_sentence
@@ -31,6 +32,10 @@ WHAT_THE_LIST_IS_FOR = (
 )
 NO_RUN_MATCHES = "No run matches these filters."
 WHAT_WOULD_FILL = "A run appears here once the tick or brigade run starts a procedure."
+HEAD = PageHead(
+    title="Runs",
+    lede="A run is one agent at work: a procedure, such as a build or a review, played by a role on a task.",
+)
 
 
 @dataclass(frozen=True)
@@ -53,6 +58,28 @@ def _render_chips(filters: RunFilters, name: str, everything: str, values: list[
         for value in values
     ]
     return render_filter_chips(chips)
+
+
+def _render_select(filters: RunFilters, name: str, values: list[str]) -> str:
+    chosen = getattr(filters, name)
+    options = "".join(
+        f'<option value="{escape(value)}"{" selected" if value == chosen else ""}>{escape(value)}</option>'
+        for value in values
+    )
+    selector = f"{RUNS_VIEW}-{name}"
+    return (
+        f'<span class="field"><label for="{selector}">{name.capitalize()}</label>'
+        f'<select id="{selector}" name="{name}"><option value="">any</option>{options}</select></span>'
+    )
+
+
+def _render_selects(filters: RunFilters, runs: list[dict]) -> str:
+    return (
+        f'<form class="filters" method="get" data-view="{RUNS_VIEW}">'
+        f'<input type="hidden" name="state" value="{escape(filters.state or "")}">'
+        f"{_render_select(filters, 'wave', _list_values(runs, 'wave'))}"
+        f"{_render_select(filters, 'task', _list_values(runs, 'task'))}</form>"
+    )
 
 
 def _list_values(runs: list[dict], field: str) -> list[str]:
@@ -137,12 +164,12 @@ def render_runs_fragment(document: dict, filters: RunFilters) -> str:
     runs = document["runs"]
     skipped = len(document["skipped"])
     return (
-        render_status_sentence(_describe_listing(runs))
+        render_page_head(HEAD)
+        + render_status_sentence(_describe_listing(runs))
         + render_explainer(WHAT_A_RUN_IS, WHAT_THE_LIST_IS_FOR)
         + _render_tiles(runs)
         + f'<p class="skipped">The list skipped {skipped} run directories it could not read.</p>'
         + _render_chips(filters, "state", "every state", list(RUN_STATES))
-        + _render_chips(filters, "wave", "every wave", _list_values(runs, "wave"))
-        + _render_chips(filters, "task", "every task", _list_values(runs, "task"))
+        + _render_selects(filters, runs)
         + _render_sections(runs)
     )

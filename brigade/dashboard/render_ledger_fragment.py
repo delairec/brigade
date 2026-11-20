@@ -6,6 +6,7 @@ from brigade.dashboard.render_answer import render_answer
 from brigade.dashboard.render_callout import render_callout
 from brigade.dashboard.render_cap_bar import CapBar, render_cap_bar
 from brigade.dashboard.render_html_table import render_html_table
+from brigade.dashboard.render_page_head import PageHead, render_page_head
 from brigade.dashboard.render_stat_tile import StatTile, render_stat_tile
 from brigade.dashboard.render_svg_bar import SvgBar, render_svg_bar
 from brigade.dashboard.run_routed_command import CommandAnswer
@@ -33,6 +34,11 @@ COMPARED_MEASURES = {
 }
 DAY_LENGTH = len("YYYY-MM-DD")
 PREVIOUS_DAY = timedelta(days=1)
+HEAD = PageHead(
+    title="Ledger",
+    lede="The ledger is the journal of everything brigade did. This page turns it into measures:"
+    " what a run takes, whether the turn caps fit, and what keeps failing.",
+)
 
 
 def _show(value: object) -> str:
@@ -246,8 +252,12 @@ SECTIONS = (
 
 
 def render_ledger_fragment(answers: dict[str, CommandAnswer]) -> str:
-    return render_answer(answers["overview"], _render_coverage) + "".join(
-        f"<section><h2>{heading}</h2>{render_answer(answers[name], render)}</section>"
-        for name, heading, render in SECTIONS
-        if name in answers
+    return (
+        render_page_head(HEAD)
+        + render_answer(answers["overview"], _render_coverage)
+        + "".join(
+            f"<section><h2>{heading}</h2>{render_answer(answers[name], render)}</section>"
+            for name, heading, render in SECTIONS
+            if name in answers
+        )
     )
