@@ -6,12 +6,13 @@ import signal
 import subprocess
 import tempfile
 import unittest
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import ANY
 
 from brigade.adapters.documents import markdown
 from brigade.errors import BrigadeError, CannotWrite
+from brigade.git.read_worktree_state import ChangedFile, WorktreeState
 from brigade.ledger.describe_role_budget import RoleBudget
 from brigade.roles.resolve_role import ResolvedRole
 from brigade.runs.count_session_steps import SessionSteps
@@ -19,6 +20,7 @@ from brigade.runs.locate_first_edit import FirstEdit
 from brigade.runs.plan_run import RunPlan
 from brigade.runs.resolve_procedure import Procedure
 from brigade.runs.run_segment import run_segment
+from brigade.runs.worktree_watch import WorktreeWatch
 from brigade.runtime import Runtime
 from brigade.system.parse_configuration import Configuration
 from brigade.system.process_trace import ProcessTrace
@@ -536,7 +538,7 @@ class RunSegmentStepsTest(unittest.TestCase):
     def test_should_locate_the_first_edit_of_the_session_among_the_edit_tools_of_the_client(self):
         # Arrange
         plan = _create_plan(self.root, reads_transcripts=True)
-        plan = dataclasses.replace(plan, edit_tools=("Edit", "Write"))
+        plan = dataclasses.replace(plan, edit_tools=("Edit", "Write"), worktree=Path("/srv/b73"))
 
         # Act
         record = run_segment(plan, FIRST_SEGMENT, _create_runtime(self.root, SpawnDouble()), StopSignalReceiver())
@@ -1348,3 +1350,303 @@ class RunSegmentOfASlotBoundToALoginTest(unittest.TestCase):
 
         # Assert
         self.assertNotIn("ghp_builder_token", _read_every_file(self.root / "state"))
+
+
+SEGMENT_LAUNCH = datetime(2026, 11, 7, 21, 58, 0, tzinfo=UTC)
+FIRST_CALL_ON_THE_WORKTREE = datetime(2026, 11, 7, 21, 59, 8, tzinfo=UTC)
+SECOND_CALL_ON_THE_WORKTREE = datetime(2026, 11, 7, 22, 0, 8, tzinfo=UTC)
+POLL_INTERVAL = timedelta(minutes=1)
+RESUMED_SEGMENT = 2
+UNCHANGED_HEAD = "5ff69cd0a1b2c3d4e5f60718293a4b5c6d7e8f90"
+COMMITTED_HEAD = "48537f8a1b2c3d4e5f60718293a4b5c6d7e8f901"
+CLEAN = WorktreeState(head=UNCHANGED_HEAD, changed=frozenset())
+TICK_TEST_CHANGED = WorktreeState(
+    head=UNCHANGED_HEAD,
+    changed=frozenset({ChangedFile(path="tests/unit/commands/test_tick.py", size=4096, mtime_ns=1793570348000000000)}),
+)
+TICK_TEST_COMMITTED = WorktreeState(head=COMMITTED_HEAD, changed=frozenset())
+UNDATED = None
+
+
+def _create_dated_message(timestamp: str | None, tools: list[dict], tokens: int) -> dict:
+    return {
+        "role": "assistant",
+        "timestamp": timestamp,
+        "content": [],
+        "tool_calls": len(tools),
+        "tools": tools,
+        "id": None,
+        "usage": {
+            "input_tokens": tokens,
+            "output_tokens": 0,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 0,
+        },
+    }
+
+
+def _create_transcripts(*messages: dict) -> dict:
+    return {"schema_version": 1, "messages": list(messages), "subagents": []}
+
+
+SHELL_EDIT_TRANSCRIPTS = _create_transcripts(
+    _create_dated_message("2026-11-07T21:58:30Z", [{"name": "Read", "target": "/srv/b46/corpus/tasks.awawa"}], 1),
+    _create_dated_message(
+        "2026-11-07T21:59:08Z",
+        [{"name": "Bash", "target": "sed -i 's/hour/minute/' tests/unit/commands/test_tick.py"}],
+        10,
+    ),
+    _create_dated_message("2026-11-07T22:00:08Z", [{"name": "Bash", "target": "git commit -am 'test: minute'"}], 100),
+    _create_dated_message("2026-11-07T22:01:08Z", [{"name": "Edit", "target": "/srv/b46/brigade/cli.py"}], 1000),
+)
+
+
+class ClientAnsweringTranscriptsDouble(ClientDouble):
+    def __init__(self, transcripts: dict):
+        super().__init__()
+        self._transcripts = transcripts
+
+    def answer(self, operation: str, request: dict) -> dict:
+        if operation == "transcripts":
+            return self._transcripts
+        return super().answer(operation, request)
+
+
+class InstantClockDouble:
+    def __init__(self):
+        self.now = SEGMENT_LAUNCH
+
+    def read(self) -> datetime:
+        return self.now
+
+
+class ProcessPollingDouble:
+    pid = 4242
+
+    def __init__(self, clock: InstantClockDouble, polls: int):
+        self._clock = clock
+        self._answers = [*itertools.repeat(self._keep_running, polls), self._exit]
+
+    def wait(self, timeout: float) -> int:
+        self._clock.now += POLL_INTERVAL
+        return self._answers.pop(0)(timeout)
+
+    def _keep_running(self, timeout: float) -> int:
+        raise subprocess.TimeoutExpired("double-client", timeout)
+
+    def _exit(self, _timeout: float) -> int:
+        return 0
+
+
+class SpawnPollingDouble:
+    def __init__(self, clock: InstantClockDouble, polls: int):
+        self._process = ProcessPollingDouble(clock, polls)
+
+    def spawn(self, request):
+        request.stdout.write_text("the client finished the task", encoding="utf-8")
+        request.stderr.write_text("", encoding="utf-8")
+        return self._process
+
+
+class WorktreeChangingDouble:
+    def __init__(self, clock: InstantClockDouble, at_launch: WorktreeState, changes: dict[datetime, WorktreeState]):
+        self._clock = clock
+        self._states = {SEGMENT_LAUNCH: at_launch, **changes}
+
+    def read(self, worktree: Path, progress_file: Path) -> WorktreeState:
+        return self._states[max(instant for instant in self._states if instant <= self._clock.now)]
+
+
+class RunSegmentWorktreeTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.clock = InstantClockDouble()
+
+    def _run(
+        self, *, transcripts: dict, edit_tools: tuple[str, ...], worktree, polls: int, number: int = FIRST_SEGMENT
+    ):
+        plan = _create_plan(self.root, reads_transcripts=True)
+        plan = dataclasses.replace(
+            plan,
+            client_adapter=ClientAnsweringTranscriptsDouble(transcripts),
+            edit_tools=edit_tools,
+            worktree=Path("/srv/b46"),
+        )
+        plan.progress_file.parent.mkdir(parents=True, exist_ok=True)
+        plan.progress_file.write_text("- step 1 done\n", encoding="utf-8")
+        runtime = dataclasses.replace(
+            _create_runtime(self.root, SpawnPollingDouble(self.clock, polls)),
+            read_clock=self.clock.read,
+            read_worktree_state=worktree.read,
+        )
+        return run_segment(plan, number, runtime, StopSignalReceiver())
+
+    def test_should_measure_a_first_change_made_through_the_shell_at_the_call_dated_at_or_before_its_sample(self):
+        # Arrange
+        worktree = WorktreeChangingDouble(self.clock, CLEAN, {FIRST_CALL_ON_THE_WORKTREE: TICK_TEST_CHANGED})
+
+        # Act
+        record = self._run(transcripts=SHELL_EDIT_TRANSCRIPTS, edit_tools=("Edit", "Write"), worktree=worktree, polls=3)
+
+        # Assert
+        self.assertEqual(record.first_edit, FirstEdit(steps=2, tokens=11))
+
+    def test_should_measure_the_same_way_a_segment_of_a_client_naming_no_edit_tool(self):
+        # Arrange
+        worktree = WorktreeChangingDouble(self.clock, CLEAN, {FIRST_CALL_ON_THE_WORKTREE: TICK_TEST_CHANGED})
+        no_edit_tool = ()
+
+        # Act
+        record = self._run(transcripts=SHELL_EDIT_TRANSCRIPTS, edit_tools=no_edit_tool, worktree=worktree, polls=3)
+
+        # Assert
+        self.assertEqual(record.first_edit, FirstEdit(steps=2, tokens=11))
+
+    def test_should_measure_a_change_committed_between_two_polls_at_the_turn_of_the_commit(self):
+        # Arrange
+        worktree = WorktreeChangingDouble(self.clock, CLEAN, {SECOND_CALL_ON_THE_WORKTREE: TICK_TEST_COMMITTED})
+
+        # Act
+        record = self._run(transcripts=SHELL_EDIT_TRANSCRIPTS, edit_tools=(), worktree=worktree, polls=3)
+
+        # Assert
+        self.assertEqual(record.first_edit, FirstEdit(steps=3, tokens=111))
+
+    def test_should_measure_a_change_made_after_the_last_poll_at_the_sample_taken_when_the_client_exits(self):
+        # Arrange
+        worktree = WorktreeChangingDouble(self.clock, CLEAN, {FIRST_CALL_ON_THE_WORKTREE: TICK_TEST_CHANGED})
+
+        # Act
+        record = self._run(transcripts=SHELL_EDIT_TRANSCRIPTS, edit_tools=(), worktree=worktree, polls=1)
+
+        # Assert
+        self.assertEqual(record.first_edit, FirstEdit(steps=2, tokens=11))
+
+    def test_should_measure_a_resumed_segment_whose_worktree_held_a_change_at_its_own_first_change(self):
+        # Arrange
+        notes_changed = WorktreeState(
+            head=UNCHANGED_HEAD,
+            changed=frozenset({ChangedFile(path="notes.md", size=12, mtime_ns=1793570000000000000)}),
+        )
+        notes_and_tick_test_changed = WorktreeState(
+            head=UNCHANGED_HEAD,
+            changed=frozenset(
+                {
+                    ChangedFile(path="notes.md", size=12, mtime_ns=1793570000000000000),
+                    ChangedFile(path="tests/unit/commands/test_tick.py", size=4096, mtime_ns=1793570348000000000),
+                }
+            ),
+        )
+        worktree = WorktreeChangingDouble(
+            self.clock, notes_changed, {FIRST_CALL_ON_THE_WORKTREE: notes_and_tick_test_changed}
+        )
+
+        # Act
+        record = self._run(
+            transcripts=SHELL_EDIT_TRANSCRIPTS, edit_tools=(), worktree=worktree, polls=3, number=RESUMED_SEGMENT
+        )
+
+        # Assert
+        self.assertEqual(record.first_edit, FirstEdit(steps=2, tokens=11))
+
+    def test_should_measure_a_resumed_segment_changing_again_a_file_already_listed_at_its_launch(self):
+        # Arrange
+        tick_test_changed_again = WorktreeState(
+            head=UNCHANGED_HEAD,
+            changed=frozenset(
+                {ChangedFile(path="tests/unit/commands/test_tick.py", size=4120, mtime_ns=1793570348500000000)}
+            ),
+        )
+        worktree = WorktreeChangingDouble(
+            self.clock, TICK_TEST_CHANGED, {FIRST_CALL_ON_THE_WORKTREE: tick_test_changed_again}
+        )
+
+        # Act
+        record = self._run(
+            transcripts=SHELL_EDIT_TRANSCRIPTS, edit_tools=(), worktree=worktree, polls=3, number=RESUMED_SEGMENT
+        )
+
+        # Assert
+        self.assertEqual(record.first_edit, FirstEdit(steps=2, tokens=11))
+
+    def test_should_measure_at_the_edit_a_segment_writing_a_file_under_tmp_before_it(self):
+        # Arrange
+        transcripts = _create_transcripts(
+            _create_dated_message("2026-11-07T21:58:30Z", [{"name": "Bash", "target": "date > /tmp/hour.txt"}], 1),
+            _create_dated_message(
+                "2026-11-07T21:59:08Z",
+                [{"name": "Bash", "target": "sed -i 's/hour/minute/' tests/unit/commands/test_tick.py"}],
+                10,
+            ),
+        )
+        worktree = WorktreeChangingDouble(self.clock, CLEAN, {FIRST_CALL_ON_THE_WORKTREE: TICK_TEST_CHANGED})
+
+        # Act
+        record = self._run(transcripts=transcripts, edit_tools=(), worktree=worktree, polls=3)
+
+        # Assert
+        self.assertEqual(record.first_edit, FirstEdit(steps=2, tokens=11))
+
+    def test_should_measure_by_its_calls_of_an_edit_tool_alone_a_segment_whose_transcript_dates_no_message(self):
+        # Arrange
+        transcripts = _create_transcripts(
+            _create_dated_message(UNDATED, [{"name": "Bash", "target": "sed -i 's/hour/minute/' cli.py"}], 1),
+            _create_dated_message(UNDATED, [{"name": "Edit", "target": "/srv/b46/brigade/cli.py"}], 10),
+        )
+        worktree = WorktreeChangingDouble(self.clock, CLEAN, {FIRST_CALL_ON_THE_WORKTREE: TICK_TEST_CHANGED})
+
+        # Act
+        record = self._run(transcripts=transcripts, edit_tools=("Edit", "Write"), worktree=worktree, polls=3)
+
+        # Assert
+        self.assertEqual(record.first_edit, FirstEdit(steps=2, tokens=11))
+
+    def test_should_keep_the_exact_turn_of_an_edit_tool_earlier_than_the_sampled_change(self):
+        # Arrange
+        transcripts = _create_transcripts(
+            _create_dated_message("2026-11-07T21:58:30Z", [{"name": "Edit", "target": "/srv/b46/brigade/cli.py"}], 1),
+            _create_dated_message("2026-11-07T21:59:08Z", [{"name": "Bash", "target": "python3 -m unittest"}], 10),
+        )
+        worktree = WorktreeChangingDouble(self.clock, CLEAN, {FIRST_CALL_ON_THE_WORKTREE: TICK_TEST_CHANGED})
+
+        # Act
+        record = self._run(transcripts=transcripts, edit_tools=("Edit", "Write"), worktree=worktree, polls=3)
+
+        # Assert
+        self.assertEqual(record.first_edit, FirstEdit(steps=1, tokens=1))
+
+    def test_should_leave_unmeasured_a_segment_changing_its_progress_file_alone(self):
+        # Arrange
+        transcripts = _create_transcripts(
+            _create_dated_message(
+                "2026-11-07T21:58:30Z",
+                [{"name": "Write", "target": str(self.root / "state/runs/20261007T090000Z-b73a01/progress.md")}],
+                1,
+            ),
+        )
+        worktree = WorktreeChangingDouble(self.clock, CLEAN, {})
+
+        # Act
+        record = self._run(transcripts=transcripts, edit_tools=("Edit", "Write"), worktree=worktree, polls=3)
+
+        # Assert
+        self.assertIsNone(record.first_edit)
+        self.assertEqual(record.worktree, WorktreeWatch(sampled=True, changed_at=None))
+
+    def test_should_keep_the_instant_of_the_first_sample_differing_from_the_one_taken_at_launch(self):
+        # Arrange
+        worktree = WorktreeChangingDouble(
+            self.clock,
+            CLEAN,
+            {FIRST_CALL_ON_THE_WORKTREE: TICK_TEST_CHANGED, SECOND_CALL_ON_THE_WORKTREE: TICK_TEST_COMMITTED},
+        )
+
+        # Act
+        record = self._run(transcripts=SHELL_EDIT_TRANSCRIPTS, edit_tools=(), worktree=worktree, polls=3)
+
+        # Assert
+        self.assertEqual(
+            record.worktree, WorktreeWatch(sampled=True, changed_at=datetime(2026, 11, 7, 22, 0, 0, tzinfo=UTC))
+        )

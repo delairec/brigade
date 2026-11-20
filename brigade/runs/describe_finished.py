@@ -19,6 +19,7 @@ NOT_FOR_A_TASK = "not launched for a task"
 WALL_LIMIT_CUT = "cut at the wall-time limit"
 NO_EDIT_TOOL = "the client names no edit tool"
 NO_EDIT = "the segment made no edit outside the progress file"
+NO_DATED_CALL = "no dated tool call of the main transcript precedes the change to the worktree"
 FIRST_EDIT_FIELDS = ("turns_to_first_edit", "tokens_to_first_edit")
 NO_NULLS_EXPLAINED = {}
 ENDING_REASONS = {WALL_LIMIT_OUTCOME: WALL_LIMIT_CUT, STOPPED_OUTCOME: STOPPED_BY_A_SIGNAL}
@@ -63,10 +64,15 @@ def _choose_ending_reason(record: SegmentRecord, finished: RunFinished) -> str |
 def _explain_missing_first_edit(plan: RunPlan, record: SegmentRecord) -> dict:
     if record.first_edit is not None:
         return {}
-    if not plan.edit_tools:
+    worktree = record.worktree
+    if worktree.sampled and worktree.changed_at is None:
+        reason = NO_EDIT
+    elif not plan.edit_tools:
         reason = NO_EDIT_TOOL
     elif record.counted_steps is None:
         reason = record.uncounted
+    elif worktree.changed_at is not None:
+        reason = NO_DATED_CALL
     else:
         reason = NO_EDIT
     return dict.fromkeys(FIRST_EDIT_FIELDS, reason)

@@ -8,6 +8,7 @@ from brigade.processes.is_failed_record import SUCCEEDED_EXIT_CODE
 from brigade.runs.ask_progress import ask_progress
 from brigade.runs.compose_brief import BriefParts, compose_brief
 from brigade.runs.count_session_steps import SessionSteps, count_session_steps
+from brigade.runs.date_worktree_change import date_worktree_change
 from brigade.runs.decide_stop_at import decide_stop_at
 from brigade.runs.describe_stop_hook import describe_stop_hook
 from brigade.runs.locate_first_edit import FirstEdit, locate_first_edit
@@ -22,6 +23,7 @@ from brigade.runs.run_locations import (
 from brigade.runs.segment_journal_writer import SegmentJournalWriter
 from brigade.runs.sum_session_usage import sum_session_usage
 from brigade.runs.take_pending_notes import take_pending_notes
+from brigade.runs.worktree_watch import NOT_SAMPLED, WorktreeWatch
 from brigade.runtime import Runtime
 from brigade.system.ask_named_client import ask_named_client
 from brigade.system.client_command import ClientCommand
@@ -76,6 +78,7 @@ class SegmentRecord:
     uncounted: str | None
     adapter_failure: str | None
     first_edit: FirstEdit | None = None
+    worktree: WorktreeWatch = NOT_SAMPLED
 
 
 def _compose_segment_brief(plan: RunPlan, number: int, runtime: Runtime) -> str:
@@ -130,10 +133,35 @@ def _count_steps(transcripts: TranscriptsAnswer | None) -> SessionSteps | None:
     return None if transcripts is None else count_session_steps(transcripts)
 
 
-def _locate_first_edit(plan: RunPlan, transcripts: TranscriptsAnswer | None) -> FirstEdit | None:
+def _locate_first_edit(
+    plan: RunPlan, transcripts: TranscriptsAnswer | None, worktree: WorktreeWatch
+) -> FirstEdit | None:
     if transcripts is None:
         return None
-    return locate_first_edit(transcripts.messages, plan.edit_tools, str(plan.progress_file))
+    edited = locate_first_edit(transcripts.messages, plan.edit_tools, str(plan.progress_file), plan.worktree)
+    changed = None if worktree.changed_at is None else date_worktree_change(transcripts.messages, worktree.changed_at)
+    return min((edit for edit in (edited, changed) if edit is not None), key=lambda edit: edit.steps, default=None)
+
+
+class WorktreeSampler:
+    def __init__(self, plan: RunPlan, runtime: Runtime):
+        self._plan = plan
+        self._runtime = runtime
+        self._launch_state = self._read_state()
+        self._changed_at = None
+
+    def _read_state(self):
+        return self._runtime.read_worktree_state(self._plan.worktree, self._plan.progress_file)
+
+    def sample(self) -> None:
+        if self._changed_at is not None:
+            return
+        state = self._read_state()
+        if state != self._launch_state:
+            self._changed_at = self._runtime.read_clock()
+
+    def describe(self) -> WorktreeWatch:
+        return WorktreeWatch(sampled=self._launch_state is not None, changed_at=self._changed_at)
 
 
 @dataclass(frozen=True)
@@ -155,6 +183,7 @@ class ClientExit:
     exit_code: int | None
     outcome: str
     measured_ms: int
+    worktree: WorktreeWatch
 
 
 STOPPED_ENDING = Ending(outcome=STOPPED_OUTCOME, message=STOPPED_BY_A_SIGNAL)
@@ -179,14 +208,15 @@ def _describe_ending(number: int, ending: Ending, session_id: str | None, measur
     )
 
 
-def _measure_ending(plan: RunPlan, runtime: Runtime, ending: SegmentRecord) -> SegmentRecord:
+def _measure_ending(plan: RunPlan, runtime: Runtime, ending: SegmentRecord, worktree: WorktreeWatch) -> SegmentRecord:
     transcripts, uncounted = _read_transcripts(plan, runtime, ending.session_id, NO_SESSION_AT_LAUNCH)
     return dataclasses.replace(
         ending,
         usage=None if transcripts is None else sum_session_usage(transcripts),
         counted_steps=_count_steps(transcripts),
         uncounted=uncounted,
-        first_edit=_locate_first_edit(plan, transcripts),
+        first_edit=_locate_first_edit(plan, transcripts, worktree),
+        worktree=worktree,
     )
 
 
@@ -242,17 +272,24 @@ def _keep_failed_stderr(request: SpawnRequest, outcome: str, exit_code: int | No
     return request.stderr.read_text(encoding="utf-8", errors="replace")
 
 
+def _poll(journal: SegmentJournalWriter, sampler: WorktreeSampler) -> None:
+    journal.write_complete_lines()
+    sampler.sample()
+
+
 def _follow_client(context: SegmentContext, request: SpawnRequest, stop: StopSignalReceiver) -> ClientExit:
     plan = context.plan
     runtime = context.runtime
+    sampler = WorktreeSampler(plan, runtime)
     started = runtime.read_monotonic()
     process = runtime.spawn_process(request)
     journal = SegmentJournalWriter(plan, context.number, runtime, context.directory / STDOUT_FILE)
     limit = WallLimit(
         limit_s=plan.wall_limit_s, grace_before_kill_s=GRACE_BEFORE_KILL_S, poll_s=plan.configuration.log_poll_s
     )
-    exit_code, outcome = _wait_for_client(process, limit, journal.write_complete_lines, stop)
+    exit_code, outcome = _wait_for_client(process, limit, lambda: _poll(journal, sampler), stop)
     measured_ms = round((runtime.read_monotonic() - started) * 1000)
+    sampler.sample()
     journal.write_rest()
     runtime.trail.append(
         ProcessTrace(
@@ -264,7 +301,7 @@ def _follow_client(context: SegmentContext, request: SpawnRequest, stop: StopSig
             stderr=_keep_failed_stderr(request, outcome, exit_code),
         )
     )
-    return ClientExit(exit_code=exit_code, outcome=outcome, measured_ms=measured_ms)
+    return ClientExit(exit_code=exit_code, outcome=outcome, measured_ms=measured_ms, worktree=sampler.describe())
 
 
 def _describe_interruption(plan: RunPlan, outcome: str) -> Ending | None:
@@ -291,7 +328,7 @@ def _read_client_result(context: SegmentContext, launch: ClientCommand, client_e
     except BrigadeError as error:
         ending = Ending(outcome=FAILED_OUTCOME, message=str(error))
         described = _describe_ending(context.number, ending, launch.session_id, client_exit.measured_ms)
-        record = _measure_ending(plan, runtime, described)
+        record = _measure_ending(plan, runtime, described, client_exit.worktree)
         return dataclasses.replace(record, exit_code=client_exit.exit_code, adapter_failure=str(error))
     return _describe_answer(context, launch, client_exit, answer)
 
@@ -316,7 +353,8 @@ def _describe_answer(
         counted_steps=_count_steps(transcripts),
         uncounted=uncounted,
         adapter_failure=None,
-        first_edit=_locate_first_edit(context.plan, transcripts),
+        first_edit=_locate_first_edit(context.plan, transcripts, client_exit.worktree),
+        worktree=client_exit.worktree,
     )
 
 
@@ -338,7 +376,7 @@ def _run_process(context: SegmentContext, stop: StopSignalReceiver) -> SegmentRe
     interruption = _describe_interruption(plan, client_exit.outcome)
     if interruption is not None:
         ending = _describe_ending(context.number, interruption, launch.session_id, client_exit.measured_ms)
-        return _measure_ending(plan, runtime, ending)
+        return _measure_ending(plan, runtime, ending, client_exit.worktree)
     return _read_client_result(context, launch, client_exit)
 
 
