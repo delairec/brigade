@@ -5944,8 +5944,9 @@ DECISION AResumeAfterTheQuotaResetEndsTheStopOfItsTaskAndRunsListNamesTheWaveAnd
 		+ "inventory of each type of its schema alone, so the brief of the resumed segment opens on"
 		+ "an empty progress, as the markdown plugin's empty file does"
 	DESC "brigade runs list prints the columns run, procedure, slot, role, project, wave, task,"
-		+ "state and outcome; --state running|finished|dead keeps the runs in that state, alone or"
-		+ "with --wave and --task"
+		+ "state, outcome, segments, duration, cost and arguments, as @TASK.B92 amends it; --state"
+		+ "running|finished|dead keeps the runs in that state, alone or with --wave and --task"
+		REF @TASK.B92
 	DESC "narrows DESC 3 of @DECISION.ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset, the"
 		+ "move to paused:quota, and the SPEC of @TASK.B06 on brigade runs list"
 		REF @DECISION.ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset
@@ -8529,3 +8530,24 @@ DECISION ReportListDatesAReportByTheLastLedgerEventNamingItsIdAndKeepsItsStatist
 		+ "the whole list"
 	SOURCE "the build run of @TASK.B265"
 		REF @TASK.B265
+
+DECISION RunListReadsTheSegmentsOfEachRunThroughTheDescriberListRunsTakesAndTheDashboardMarksAPartialMeasureAtLeast
+	TITLE "brigade run list, and the Runs view it feeds, read the segments of each run through"
+		+ "summarize_run, the describer list_runs takes; the tick, status and wave cancel keep"
+		+ "describe_run; the dashboard marks a partial measure at least"
+	STATUS active
+	DESC "binds @TASK.B92"
+		REF @TASK.B92
+	DESC "a running or a dead run ends its segments on its state even when no folder of a segment"
+		+ "exists yet; a finished run without a segment prints -"
+	DESC "summarize_run reads the run before its segments, so a run whose result is refused is"
+		+ "skipped naming its result.json, as before"
+	DESC "the cost the Runs view totals, and each cost by procedure, is a floor once a run carries"
+		+ "no cost_usd or a segment of it carries none; a listing holding no run shows no cost by"
+		+ "procedure"
+	REJECTED "the segments read by describe_run: the tick reads every run at each tick through"
+		+ "list_runs, and would read the result of every segment of every run"
+	REJECTED "the word partial on the dashboard: the page of a run already marks a floor at least,"
+		+ "and the two pages would say it two ways"
+	SOURCE "the build run of @TASK.B92"
+		REF @TASK.B92

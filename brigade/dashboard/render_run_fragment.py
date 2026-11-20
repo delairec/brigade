@@ -5,11 +5,13 @@ from urllib.parse import quote
 from brigade.dashboard.render_callout import render_callout
 from brigade.dashboard.render_empty_state import render_empty_state
 from brigade.dashboard.render_html_table import render_html_table
+from brigade.dashboard.render_segment_squares import render_segment_squares
 from brigade.dashboard.render_stat_tile import StatTile, render_stat_tile
 from brigade.dashboard.render_status_pill import render_status_pill
 from brigade.dashboard.render_status_sentence import render_status_sentence
 from brigade.dashboard.render_svg_bar import SvgBar, render_svg_bar
 from brigade.runs.format_duration import format_duration
+from brigade.runs.list_segment_outcomes import list_segment_outcomes
 
 ABSENT = "-"
 HANDED_OVER = "handed_over"
@@ -230,7 +232,11 @@ def render_run_fragment(page: RunPage) -> str:
         + render_status_sentence(_describe_standing(reading))
         + _render_next(page)
         + _render_tiles(reading, page)
-        + _render_section("Segments", render_html_table(SEGMENT_HEADER, segments, NO_SEGMENT))
+        + _render_section(
+            "Segments",
+            render_segment_squares(list_segment_outcomes(reading.run["state"], reading.segments))
+            + render_html_table(SEGMENT_HEADER, segments, NO_SEGMENT),
+        )
         + _render_progress(shown["progress"])
         + _render_notes(shown["notes"])
         + _render_task_runs(reading.run, page.task_runs)
