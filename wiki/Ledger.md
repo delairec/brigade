@@ -19,7 +19,10 @@ printed by `brigade wave show <wave> --events`, [Waves](Waves.md).
 The JSON of the overview carries `failed_actions`: the failed tick actions, `by_day` their count per day in UTC, and
 `by_action` for each action its `count` and its most frequent `error`. The JSON of `budgets` carries for each role
 `segment_p50` and `segment_p90`, the percentiles of the main turns of its measured segments at its latest digests,
-`null` when it has none. The text of both views prints neither.
+`null` when it has none, then `history`, the `budget.applied` events of the role in the order of their `ts`, each
+`{ts, before, after, direction}`, `direction` `raised` when the cap went up and `lowered` when it went down, and
+`stable`, `true` when `history` is empty; `--last` and `--client` leave `history` whole. The text of both views prints
+none of them.
 
 ## Comparing ranges
 

@@ -8551,3 +8551,17 @@ DECISION RunListReadsTheSegmentsOfEachRunThroughTheDescriberListRunsTakesAndTheD
 		+ "and the two pages would say it two ways"
 	SOURCE "the build run of @TASK.B92"
 		REF @TASK.B92
+
+DECISION TheCapHistoryOfARolePlacesItsChangesAtEqualStepsEachLabelledByItsTs
+	TITLE "the chart of the turn cap of a role in the Ledger view places its changes at equal steps"
+		+ "across its width, each labelled by its ts on a line of its own under the line; a raised"
+		+ "change is marked in the tone limit, a lowered one in the tone done, the line in the tone"
+		+ "work"
+	STATUS active
+	DESC "binds @TASK.B229"
+		REF @TASK.B229
+	REJECTED "a horizontal axis proportional to time: changes a few minutes apart would overlap"
+		+ "while one far change would flatten the rest, and a single change would leave no span"
+	REJECTED "the labels written beside their marks: two close changes would write over each other"
+	SOURCE "the build run of @TASK.B229"
+		REF @TASK.B229
