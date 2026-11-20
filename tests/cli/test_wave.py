@@ -153,6 +153,7 @@ class BrigadeWaveShowTest(WaveTickTestCase):
                 "milestone_report": None,
                 "merge_command": None,
                 "task_merge_commands": [],
+                "halt": None,
             },
         )
 

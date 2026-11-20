@@ -67,6 +67,7 @@ class BrigadeRehearsalOfAOneTaskWaveOfAProjectWithoutAForgeTest(unittest.TestCas
                 "milestone_report": "shop_M1",
                 "merge_command": self.merge_command,
                 "task_merge_commands": [],
+                "halt": None,
             },
         )
 

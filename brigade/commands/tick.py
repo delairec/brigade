@@ -131,11 +131,14 @@ from brigade.tick.build_snapshot import CLIENT_LOGIN_REASON, ForgeReaders, Snaps
 from brigade.tick.decide import decide
 from brigade.tick.describe_holding_head import describe_holding_head
 from brigade.tick.find_holding_head import find_holding_head
+from brigade.tick.find_wave_start_hold import find_wave_start_hold
 from brigade.tick.head_proof import HoldingHead
 from brigade.tick.heartbeat import Heartbeat
 from brigade.tick.ledger_reading_keeper import LedgerReadingKeeper
 from brigade.tick.plan_connectors import plan_connectors
+from brigade.tick.plan_launches import plan_launches
 from brigade.tick.prepare_task_worktree import prepare_task_worktree
+from brigade.tick.read_planned_halts import read_planned_halts
 from brigade.tick.read_ruled_task import read_ruled_task
 from brigade.tick.rebase_task import rebase_task
 from brigade.tick.record_kept_branch import record_kept_branch
@@ -156,6 +159,7 @@ from brigade.verify.preflight_task_branch import BranchPreflightDemand, prefligh
 from brigade.verify.record_verdict import REVIEW_SLOT
 from brigade.waves.compose_milestone_title import MilestoneTitleDemand, compose_milestone_title
 from brigade.waves.cut_milestone_branch import MilestoneBranchDemand, cut_milestone_branch
+from brigade.waves.describe_wave_halt import describe_wave_halt
 from brigade.waves.locate_branch_worktree import locate_branch_worktree
 from brigade.waves.locate_forge_branch import locate_forge_branch
 from brigade.waves.locate_project_main import locate_project_main
@@ -1087,18 +1091,41 @@ def _describe_decided_action(
     return {**decided, "waits": describe_holding_head(held_by)}
 
 
+def _list_waves_not_started(snapshot: Snapshot) -> list[dict]:
+    holds = (
+        (project, candidate, find_wave_start_hold(snapshot, project, candidate))
+        for project in snapshot.projects
+        for candidate in project.candidates
+    )
+    return [
+        {"project": project.name, "milestone": candidate.milestone, "cause": cause}
+        for project, candidate, cause in holds
+        if cause is not None
+    ]
+
+
 def _plan_dry(runtime: Runtime) -> dict:
     configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
     snapshot = build_snapshot(runtime, configuration, _read_the_forge(runtime, configuration))
     list_check_runs_of = functools.cache(lambda forge_name: list_branch_check_runs(runtime, configuration, forge_name))
+    actions = decide(snapshot)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "mode": "dry-run",
         "snapshot": snapshot.to_document(),
         "decisions": [
             _describe_decided_action(runtime, list_check_runs_of, action)
-            for action in (*decide(snapshot), *_plan_registered_connectors(runtime))
+            for action in (*actions, *_plan_registered_connectors(runtime))
         ],
+        "tasks_not_launched": [
+            held.to_document() for held in plan_launches(snapshot, read_planned_halts(snapshot, actions)).held
+        ],
+        "halted_waves": [
+            {"wave": wave.wave, "halt": describe_wave_halt(wave.wave, wave.pause)}
+            for wave in snapshot.waves
+            if wave.pause is not None
+        ],
+        "waves_not_started": _list_waves_not_started(snapshot),
     }
 
 
@@ -1134,10 +1161,30 @@ def _render_once(document: dict) -> list[str]:
     ]
 
 
+def _render_section(title: str, lines: list[str]) -> list[str]:
+    if not lines:
+        return []
+    return [title, *(f"  {line}" for line in lines)]
+
+
 def _render_dry_run(document: dict) -> list[str]:
     snapshot_lines = [f"  {key}  {value}" for key, value in document["snapshot"].items() if key != "schema_version"]
     decision_lines = [f"  {action}" for action in document["decisions"]] or ["  no action"]
-    return ["snapshot", *snapshot_lines, "decisions", *decision_lines]
+    waiting_lines = [
+        *_render_section(
+            "tasks not launched",
+            [f"{held['wave']} {held['task']}  {held['cause']}" for held in document["tasks_not_launched"]],
+        ),
+        *_render_section("halted waves", [halted["halt"] for halted in document["halted_waves"]]),
+        *_render_section(
+            "waves not started",
+            [
+                f"@PROJECT.{wave['project']} {wave['milestone']}  {wave['cause']}"
+                for wave in document["waves_not_started"]
+            ],
+        ),
+    ]
+    return ["snapshot", *snapshot_lines, "decisions", *decision_lines, *waiting_lines]
 
 
 def _render_loop(document: dict) -> list[str]:

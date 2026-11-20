@@ -3,12 +3,11 @@ from datetime import datetime, timedelta
 
 from brigade.ledger.branch_kept import BranchKept
 from brigade.ledger.format_instant import format_instant
-from brigade.ledger.task_state import FALLBACK_RESUME_REASON, HANDOVER_RESUME_REASON, REBUILD_REASON
+from brigade.ledger.task_state import FALLBACK_RESUME_REASON, REBUILD_REASON
 from brigade.orders.is_order_due import is_order_due
 from brigade.studies.milestone_report_order import MilestoneReportOrder
 from brigade.studies.task_report_order import TaskReportOrder
 from brigade.system.pull_request_facts import PullRequestFacts
-from brigade.tasks.read_task_number import read_task_number
 from brigade.tick.actions import (
     CarryOpenedPullRequest,
     CloseMilestone,
@@ -56,10 +55,14 @@ from brigade.tick.build_snapshot import (
     WaveFacts,
 )
 from brigade.tick.decide_resume_at import decide_resume_at
-from brigade.tick.head_proof import ForgeCheck, HeadChecks
+from brigade.tick.find_wave_start_hold import find_wave_start_hold
+from brigade.tick.is_milestone_cut_due import is_milestone_cut_due
+from brigade.tick.is_rebase_due import is_rebase_due
 from brigade.tick.is_study_due import is_study_due
+from brigade.tick.plan_launches import plan_launches
 from brigade.tick.read_integration_branches import IntegrationBranchFacts
 from brigade.tick.read_leftovers import LeftoverFacts
+from brigade.tick.read_planned_halts import read_planned_halts
 from brigade.waves.read_parked_question import BLOCKED_RUN_REASON
 from brigade.waves.read_task_state import PARKED_STATE
 
@@ -92,7 +95,6 @@ SCAN_SLOT = "none"
 BLOCKED_ON_QUOTA_STATE = "blocked:quota"
 QUOTA_REASON = "quota"
 FORGE_ACCOUNT_REASON = "forge_account"
-AUTOMATIC_WAVE_START = "auto"
 BLOCKED_REASON = "blocked"
 APPROVAL_REVIEW = "approval"
 APPROVED_REVIEW = "approved"
@@ -183,9 +185,7 @@ def _move_launches_to_the_fallback(snapshot: Snapshot, actions: tuple) -> tuple:
 
 def _plan_every_action(snapshot: Snapshot) -> tuple:
     pauses = _plan_blocked_rebase_pauses(snapshot) + _plan_pauses(snapshot)
-    paused = {wave.wave for wave in snapshot.waves if wave.pause is not None} | {
-        pause.wave for pause in pauses if isinstance(pause, PauseWave)
-    }
+    halts = read_planned_halts(snapshot, pauses)
     actions = (
         pauses
         + _plan_resumes(snapshot)
@@ -203,7 +203,7 @@ def _plan_every_action(snapshot: Snapshot) -> tuple:
         + _plan_milestone_closes(snapshot)
         + _plan_milestone_merge_commands(snapshot)
         + _plan_milestone_describes(snapshot)
-        + _plan_launches(snapshot, paused)
+        + plan_launches(snapshot, halts).launches
         + _plan_milestone_cuts(snapshot)
         + _plan_milestone_rebases(snapshot)
         + _plan_wave_starts(snapshot)
@@ -279,57 +279,6 @@ def _plan_leftovers(snapshot: Snapshot, actions: tuple) -> tuple:
     removed_worktrees = {action.worktree for action in actions if isinstance(action, RemoveTaskWorktree)}
     return tuple(
         action for leftover in snapshot.leftovers for action in _decide_leftover(snapshot, leftover, removed_worktrees)
-    )
-
-
-def _plan_launches(snapshot: Snapshot, paused: set) -> tuple:
-    free_slots = {project.name: _count_free_slots(project) for project in snapshot.projects}
-    live_tasks = _read_occupancy(snapshot).tasks
-    launches = []
-    for wave in (wave for wave in snapshot.waves if wave.wave not in paused):
-        for task in sorted(
-            (
-                task
-                for task in wave.tasks
-                if _is_startable(task, wave)
-                or _is_rebased(task, wave, live_tasks)
-                or _is_stopped_by_login(task, wave, live_tasks)
-            ),
-            key=lambda task: read_task_number(task.name, wave.wave),
-        ):
-            if free_slots[wave.project] <= 0:
-                break
-            free_slots[wave.project] -= 1
-            launches.append(_decide_launch(wave, task))
-    return tuple(launches)
-
-
-def _decide_launch(wave: WaveFacts, task: TaskFacts) -> LaunchTask | ResumeTaskRun:
-    if task.handed_over_run is not None:
-        return ResumeTaskRun(
-            wave=wave.wave,
-            task=task.name,
-            run=task.handed_over_run.run,
-            state=RUNNING_STATE,
-            reason=HANDOVER_RESUME_REASON,
-            slot=task.handed_over_run.slot,
-        )
-    return LaunchTask(
-        project=wave.project,
-        wave=wave.wave,
-        branch=wave.base,
-        task=task.name,
-        task_branch=task.branch,
-        pull_request_checks=_read_open_pull_request_checks(task),
-    )
-
-
-def _read_open_pull_request_checks(task: TaskFacts) -> HeadChecks | None:
-    if task.pull_request is None or task.pull_request.state != OPEN_PULL_REQUEST:
-        return None
-    return HeadChecks(
-        head=task.pull_request.head,
-        checks=tuple(ForgeCheck(name=check.name, conclusion=check.conclusion) for check in task.pull_request.checks),
     )
 
 
@@ -1029,10 +978,6 @@ def _plan_milestone_describes(snapshot: Snapshot) -> tuple:
     )
 
 
-def _is_rebase_due(milestone: MilestoneFacts) -> bool:
-    return milestone.behind_main and not milestone.rebase_run_live and milestone.blocked_rebase is None
-
-
 def _plan_milestone_rebases(snapshot: Snapshot) -> tuple:
     return tuple(
         RebaseMilestone(
@@ -1041,7 +986,7 @@ def _plan_milestone_rebases(snapshot: Snapshot) -> tuple:
             branch=milestone.branch,
         )
         for milestone in snapshot.milestones
-        if _is_rebase_due(milestone)
+        if is_rebase_due(milestone)
     )
 
 
@@ -1050,50 +995,16 @@ def _plan_milestone_cuts(snapshot: Snapshot) -> tuple:
         CutMilestoneBranch(project=project.name, milestone=uncut.milestone, branch=uncut.branch)
         for project in snapshot.projects
         for uncut in project.uncut_milestones
-        if uncut.open_waves or uncut.todo
+        if is_milestone_cut_due(uncut)
     )
 
 
 def _plan_wave_starts(snapshot: Snapshot) -> tuple:
-    rebasing = {
-        (milestone.project, milestone.milestone) for milestone in snapshot.milestones if _is_rebase_due(milestone)
-    }
-    cutting = {(cut.project, cut.milestone) for cut in _plan_milestone_cuts(snapshot)}
     return tuple(
         StartWave(project=project.name, milestone=wave.milestone)
         for project in snapshot.projects
-        if project.wave_start == AUTOMATIC_WAVE_START
         for wave in project.candidates
-        if (project.name, wave.milestone) not in rebasing | cutting
-    )
-
-
-def _count_free_slots(project: ProjectFacts) -> int:
-    return project.slots - sum(1 for live in project.live_runs if live.slot == BUILD_SLOT)
-
-
-def _is_startable(task: TaskFacts, wave: WaveFacts) -> bool:
-    return (
-        wave.states.get(task.name, WAITING_STATE) == WAITING_STATE
-        and task.name not in wave.implemented
-        and all(wave.states.get(earlier) == MERGED_STATE or earlier in wave.implemented for earlier in task.after)
-        and not task.blocked_by
-    )
-
-
-def _is_rebased(task: TaskFacts, wave: WaveFacts, live_tasks: frozenset) -> bool:
-    return (
-        wave.states.get(task.name) == RUNNING_STATE
-        and task.rebased_by_last_run
-        and (wave.wave, task.name) not in live_tasks
-    )
-
-
-def _is_stopped_by_login(task: TaskFacts, wave: WaveFacts, live_tasks: frozenset) -> bool:
-    return (
-        wave.states.get(task.name) == RUNNING_STATE
-        and task.stopped_by_login
-        and (wave.wave, task.name) not in live_tasks
+        if find_wave_start_hold(snapshot, project, wave) is None
     )
 
 
