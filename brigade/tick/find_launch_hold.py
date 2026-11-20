@@ -1,5 +1,8 @@
+import dataclasses
+from collections.abc import Iterable
 from dataclasses import dataclass
 
+from brigade.tasks.read_task_number import read_task_number
 from brigade.tick.build_snapshot import TaskFacts, WaveFacts
 from brigade.waves.describe_wave_halt import describe_wave_halt
 from brigade.waves.read_task_state import PARKED_STATE
@@ -48,3 +51,16 @@ def find_launch_hold(task: TaskFacts, wave: WaveFacts, launch_round: LaunchRound
     if launch_round.used_slots >= launch_round.slots:
         return f"no free build slot: {launch_round.used_slots} used of SLOTS {launch_round.slots}"
     return None
+
+
+def find_launch_holds(
+    tasks: Iterable[TaskFacts], wave: WaveFacts, launch_round: LaunchRound
+) -> tuple[tuple[TaskFacts, str | None], ...]:
+    used_slots = launch_round.used_slots
+    holds = []
+    for task in sorted(tasks, key=lambda task: read_task_number(task.name, wave.wave)):
+        hold = find_launch_hold(task, wave, dataclasses.replace(launch_round, used_slots=used_slots))
+        if hold is None:
+            used_slots += 1
+        holds.append((task, hold))
+    return tuple(holds)

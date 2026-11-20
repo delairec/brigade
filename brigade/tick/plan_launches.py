@@ -1,10 +1,9 @@
 from dataclasses import dataclass
 
 from brigade.ledger.task_state import HANDOVER_RESUME_REASON
-from brigade.tasks.read_task_number import read_task_number
 from brigade.tick.actions import LaunchTask, ResumeTaskRun
 from brigade.tick.build_snapshot import ProjectFacts, Snapshot, TaskFacts, WaveFacts
-from brigade.tick.find_launch_hold import LaunchRound, find_launch_hold
+from brigade.tick.find_launch_hold import LaunchRound, find_launch_holds
 from brigade.tick.head_proof import ForgeCheck, HeadChecks
 from brigade.waves.read_task_state import PARKED_STATE
 from brigade.waves.read_wave_pause import WavePause
@@ -85,14 +84,11 @@ def plan_launches(snapshot: Snapshot, halts: dict[str, WavePause]) -> LaunchPlan
     launches = []
     held = []
     for wave in snapshot.waves:
-        for task in sorted(
-            (task for task in wave.tasks if _is_starting(task, wave) or _is_relaunched(task, wave, live_tasks)),
-            key=lambda task: read_task_number(task.name, wave.wave),
-        ):
-            launch_round = LaunchRound(
-                halt=halts.get(wave.wave), used_slots=used_slots[wave.project], slots=projects[wave.project].slots
-            )
-            hold = find_launch_hold(task, wave, launch_round)
+        launch_round = LaunchRound(
+            halt=halts.get(wave.wave), used_slots=used_slots[wave.project], slots=projects[wave.project].slots
+        )
+        candidates = (task for task in wave.tasks if _is_starting(task, wave) or _is_relaunched(task, wave, live_tasks))
+        for task, hold in find_launch_holds(candidates, wave, launch_round):
             if hold is None:
                 used_slots[wave.project] += 1
                 launches.append(_decide_launch(wave, task))

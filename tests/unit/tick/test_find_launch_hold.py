@@ -2,7 +2,7 @@ import unittest
 from datetime import UTC, datetime
 
 from brigade.tick.build_snapshot import TaskFacts, WaveFacts
-from brigade.tick.find_launch_hold import LaunchRound, find_launch_hold
+from brigade.tick.find_launch_hold import LaunchRound, find_launch_hold, find_launch_holds
 from brigade.waves.read_wave_pause import WavePause
 
 QUEUED = "queued"
@@ -106,3 +106,33 @@ class FindLaunchHoldTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FindLaunchHoldsTest(unittest.TestCase):
+    def test_should_hold_on_the_build_slot_the_tasks_launched_earlier_in_the_round_take(self):
+        # Arrange
+        tasks = (
+            TaskFacts(name="S12", branch="feature/S12-task"),
+            TaskFacts(name="S4", branch="feature/S4-task", parked_reason="its run ended blocked"),
+            TaskFacts(name="S9", branch="feature/S9-task"),
+        )
+        wave = WaveFacts(
+            project="shop",
+            wave="shop_w1",
+            tasks=tasks,
+            states={"S12": QUEUED, "S4": PARKED, "S9": QUEUED},
+            implemented=NOTHING_IMPLEMENTED,
+        )
+
+        # Act
+        holds = find_launch_holds(tasks, wave, FREE_SLOT)
+
+        # Assert
+        self.assertEqual(
+            [(task.name, hold) for task, hold in holds],
+            [
+                ("S4", "parked: its run ended blocked"),
+                ("S9", None),
+                ("S12", "no free build slot: 2 used of SLOTS 2"),
+            ],
+        )

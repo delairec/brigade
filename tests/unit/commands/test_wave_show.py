@@ -815,6 +815,16 @@ class WaveShowOfAQueuedTaskTest(unittest.TestCase):
         # Assert
         self.assertEqual(document["tasks"][1]["reason"], "no free build slot: 1 used of SLOTS 1")
 
+    def test_should_name_the_build_slot_an_earlier_task_takes_in_the_round_as_the_cause_a_queued_task_waits(self):
+        # Act
+        document = self._show(CORPUS_OF_ONE_BUILD_SLOT, [QUEUED_WAVE_STARTED, T8_WAITING])
+
+        # Assert
+        self.assertEqual(
+            [(task["task"], task["reason"]) for task in document["tasks"]],
+            [("T7", None), ("T8", "no free build slot: 1 used of SLOTS 1")],
+        )
+
     def test_should_show_no_reason_for_a_task_queued_again_after_its_park(self):
         # Act
         document = self._show(
