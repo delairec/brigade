@@ -240,16 +240,22 @@ class _LaunchHoldSources:
     read_tree: Callable[[], WaveTree]
 
 
-def _read_task_facts(
-    sources: _LaunchHoldSources, runs: tuple[dict, ...], started: WaveStarted, tree: WaveTree, task: str
-) -> TaskFacts:
-    entity = tree.tasks[task]
+@dataclass(frozen=True)
+class _WaveOfTheRound:
+    started: WaveStarted
+    tree: WaveTree
+    runs: tuple[dict, ...]
+
+
+def _read_task_facts(sources: _LaunchHoldSources, wave: _WaveOfTheRound, task: str) -> TaskFacts:
+    started = wave.started
+    entity = wave.tree.tasks[task]
     return TaskFacts(
         name=task,
         branch=read_branch_of_task(sources.events, started.project, entity),
         after=read_task_after(entity),
-        blocked_by=sources.runtime.read_live_blockers(sources.runtime.run_process, tree.root, task),
-        rebased_by_last_run=is_rebased_by_last_run(sources.events, runs, started.wave, task),
+        blocked_by=sources.runtime.read_live_blockers(sources.runtime.run_process, wave.tree.root, task),
+        rebased_by_last_run=is_rebased_by_last_run(sources.events, wave.runs, started.wave, task),
         stopped_by_login=is_stopped_by_login(sources.events, started.wave, task),
     )
 
@@ -266,10 +272,11 @@ def _list_waves_of_the_round(sources: _LaunchHoldSources) -> list[WaveStarted]:
 def _read_wave_facts(sources: _LaunchHoldSources, runs: tuple[dict, ...], started: WaveStarted) -> WaveFacts:
     is_shown = started.wave == sources.started.wave
     tree = sources.read_tree() if is_shown else _read_wave_tree(sources.runtime, started)
+    wave = _WaveOfTheRound(started=started, tree=tree, runs=runs)
     return WaveFacts(
         project=started.project,
         wave=started.wave,
-        tasks=tuple(_read_task_facts(sources, runs, started, tree, task) for task in started.tasks),
+        tasks=tuple(_read_task_facts(sources, wave, task) for task in started.tasks),
         states=sources.states if is_shown else read_task_states(sources.entries, started.wave),
         implemented=read_implemented_tasks(sources.runtime.run_process, tree.root),
     )
