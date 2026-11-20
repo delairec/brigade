@@ -241,40 +241,56 @@ class _HoldReading:
     launch_round: LaunchRound
 
 
-def _read_hold_reading(
-    runtime: Runtime,
-    started: WaveStarted,
-    read_tree: Callable[[], WaveTree],
-    states: dict[str, str],
-    halt: WavePause | None,
-) -> _HoldReading:
+@dataclass(frozen=True)
+class _LaunchHoldSources:
+    runtime: Runtime
+    started: WaveStarted
+    events: tuple
+    states: dict[str, str]
+    halt: WavePause | None
+    read_tree: Callable[[], WaveTree]
+
+
+def _read_hold_reading(sources: _LaunchHoldSources) -> _HoldReading:
+    runtime = sources.runtime
+    started = sources.started
     project = find_project(read_projects(runtime), started.project)
     return _HoldReading(
         wave=WaveFacts(
             project=started.project,
             wave=started.wave,
-            states=states,
-            implemented=read_implemented_tasks(runtime.run_process, read_tree().root),
+            states=sources.states,
+            implemented=read_implemented_tasks(runtime.run_process, sources.read_tree().root),
         ),
         launch_round=LaunchRound(
-            halt=halt, used_slots=_count_used_build_slots(runtime, started.project), slots=read_project_slots(project)
+            halt=sources.halt,
+            used_slots=_count_used_build_slots(runtime, started.project),
+            slots=read_project_slots(project),
         ),
     )
 
 
-def _find_launch_hold(
-    runtime: Runtime, events: tuple, read_tree: Callable[[], WaveTree], read_hold: Callable[[], _HoldReading], task: str
-) -> str | None:
-    tree = read_tree()
+def _find_launch_hold(sources: _LaunchHoldSources, read_hold: Callable[[], _HoldReading], task: str) -> str | None:
+    tree = sources.read_tree()
     entity = tree.tasks[task]
     reading = read_hold()
     facts = TaskFacts(
         name=task,
-        branch=read_branch_of_task(events, reading.wave.project, entity),
+        branch=read_branch_of_task(sources.events, reading.wave.project, entity),
         after=read_task_after(entity),
-        blocked_by=runtime.read_live_blockers(runtime.run_process, tree.root, task),
+        blocked_by=sources.runtime.read_live_blockers(sources.runtime.run_process, tree.root, task),
     )
     return find_launch_hold(facts, reading.wave, reading.launch_round)
+
+
+def _create_wave_reading(sources: _LaunchHoldSources, summary: WaveSummary) -> _WaveReading:
+    read_hold = functools.cache(lambda: _read_hold_reading(sources))
+    return _WaveReading(
+        events=sources.events,
+        states=sources.states,
+        summary=summary,
+        read_launch_hold=lambda task: _find_launch_hold(sources, read_hold, task),
+    )
 
 
 def _describe_events(reading: LedgerReading, request: argparse.Namespace) -> dict:
@@ -285,22 +301,28 @@ def _describe_halt(halt: WavePause | None) -> dict | None:
     return None if halt is None else halt.to_document()
 
 
+def _read_launch_hold_sources(
+    runtime: Runtime, entries: tuple[LedgerEntry, ...], started: WaveStarted
+) -> _LaunchHoldSources:
+    events = tuple(entry.event for entry in entries)
+    return _LaunchHoldSources(
+        runtime=runtime,
+        started=started,
+        events=events,
+        states=read_task_states(entries, started.wave),
+        halt=read_wave_pause(events, started.wave),
+        read_tree=functools.cache(lambda: _read_wave_tree(runtime, started)),
+    )
+
+
 def wave_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     reading = read_ledger(runtime.paths.state_root)
     entries = reading.entries
     summary = require_wave_summary(entries, request.wave)
-    events = tuple(entry.event for entry in entries)
     started = summary.started
-    states = read_task_states(entries, started.wave)
-    read_tree = functools.cache(lambda: _read_wave_tree(runtime, started))
-    halt = read_wave_pause(events, started.wave)
-    read_hold = functools.cache(lambda: _read_hold_reading(runtime, started, read_tree, states, halt))
-    wave_reading = _WaveReading(
-        events=events,
-        states=states,
-        summary=summary,
-        read_launch_hold=lambda task: _find_launch_hold(runtime, events, read_tree, read_hold, task),
-    )
+    sources = _read_launch_hold_sources(runtime, entries, started)
+    read_tree = sources.read_tree
+    wave_reading = _create_wave_reading(sources, summary)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "wave": started.wave,
@@ -308,12 +330,12 @@ def wave_show(request: argparse.Namespace, runtime: Runtime) -> dict:
         "branch": started.branch,
         "started_at": format_instant(summary.started_at),
         "last_event": summary.last_event,
-        "pull_request": find_integration_pull_request(events, started.wave),
+        "pull_request": find_integration_pull_request(sources.events, started.wave),
         "tasks": [_describe_task(wave_reading, task) for task in started.tasks],
         **_name_milestone(request, entries, started, read_tree),
         "merge_command": _read_merge_command(runtime, entries, started, read_tree),
         "task_merge_commands": _read_task_merge_commands(runtime, entries, started, read_tree),
-        "halt": _describe_halt(halt),
+        "halt": _describe_halt(sources.halt),
         **_describe_events(reading, request),
     }
 
