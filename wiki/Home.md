@@ -47,6 +47,8 @@ decide whether to read on. The pages are written in `wiki/` of the repository an
 - [Dashboard](Dashboard.md) — how `brigade serve` serves the local dashboard and which command each route runs.
 - [Project tree at a ref](Project-tree-at-a-ref.md) — how to read a project's tree at a branch, a SHA or a worktree,
   and run awawa there.
+- [Proof of M6](Proof-of-M6.md) — whether brigade delivers unattended and costs fewer turns than agents launched by
+  hand: the closed waves of 2026-11-18 to 2026-11-19 against the baseline of 2026-10-03.
 
 ## Contributing
 
