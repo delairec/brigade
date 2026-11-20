@@ -855,6 +855,25 @@ class WaveShowOfAQueuedTaskTest(unittest.TestCase):
             [("T7", "no free build slot: 1 used of SLOTS 1"), ("T8", "no free build slot: 1 used of SLOTS 1")],
         )
 
+    def test_should_take_no_build_slot_for_a_task_of_an_open_wave_of_another_project(self):
+        # Arrange
+        wave_elsewhere = {
+            **FORGELESS_WAVE_STARTED,
+            "ts": "2026-10-18T08:30:00Z",
+            "wave": "elsewhere_w3",
+            "project": "elsewhere",
+            "tasks": ["E1"],
+        }
+
+        # Act
+        document = self._show(CORPUS_OF_ONE_BUILD_SLOT, [wave_elsewhere, QUEUED_WAVE_STARTED, T8_WAITING])
+
+        # Assert
+        self.assertEqual(
+            [(task["task"], task["reason"]) for task in document["tasks"]],
+            [("T7", None), ("T8", "no free build slot: 1 used of SLOTS 1")],
+        )
+
     def test_should_name_the_build_slot_a_running_task_relaunched_after_its_rebase_takes_as_the_cause(self):
         # Arrange
         rebase = {"slot": "rebase"}
