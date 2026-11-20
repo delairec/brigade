@@ -26,12 +26,18 @@ from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_policy_field import read_policy_field
 from brigade.registry.read_project_field import read_project_field
 from brigade.registry.read_project_forge import read_project_forge
+from brigade.registry.read_project_slots import read_project_slots
 from brigade.registry.read_projects import read_projects
+from brigade.runs.list_runs import list_runs
 from brigade.runtime import Runtime
 from brigade.system.parse_configuration import Configuration
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.render_table import render_table
+from brigade.tasks.read_task_after import read_task_after
+from brigade.tick.build_snapshot import TaskFacts, WaveFacts
+from brigade.tick.find_launch_hold import LaunchRound, find_launch_hold
 from brigade.tick.read_branch_of_task import read_branch_of_task
+from brigade.tick.read_implemented_tasks import read_implemented_tasks
 from brigade.waves.describe_milestone_merge import describe_milestone_merge
 from brigade.waves.describe_wave_halt import describe_wave_halt
 from brigade.waves.find_integration_pull_request import find_integration_pull_request
@@ -45,12 +51,16 @@ from brigade.waves.read_task_states import read_task_states
 from brigade.waves.read_wave_milestone import read_wave_milestone
 from brigade.waves.read_wave_pause import WavePause, read_wave_pause
 from brigade.waves.require_wave_summary import require_wave_summary
+from brigade.waves.summarize_waves import WaveSummary
 
 DOCUMENT_SCHEMA_VERSION = 1
 ABSENT = "-"
 TASK_HEADER = ("task", "state", "pull request", "run", "reason")
 TASK_COLUMNS = ("task", "state", "pull_request", "run", "reason")
 FIXING_STATE = "fixing"
+WAITING_STATE = "queued"
+LIVE_RUN_STATE = "running"
+BUILD_SLOT = "build"
 TASK_TYPE = "TASK"
 POLICY_TYPE = "POLICY"
 PATH_FIELD = "PATH"
@@ -91,16 +101,33 @@ def _is_explained(event) -> bool:
     return isinstance(event, TaskParked) or (isinstance(event, TaskState) and event.state == FIXING_STATE)
 
 
-def _describe_task(events: tuple, states: dict[str, str], wave: str, task: str) -> dict:
-    opened = find_last_task_event(events, TaskPrOpened, wave, task)
-    finished = find_last_task_event(events, RunFinished, wave, task)
-    last_state = find_last_task_event(events, TASK_EVENTS, wave, task)
+@dataclass(frozen=True)
+class _WaveReading:
+    events: tuple
+    states: dict[str, str]
+    summary: WaveSummary
+    read_launch_hold: Callable[[str], str | None]
+
+
+def _read_reason(reading: _WaveReading, task: str):
+    last_state = find_last_task_event(reading.events, TASK_EVENTS, reading.summary.started.wave, task)
+    if _is_explained(last_state):
+        return last_state.reason
+    if reading.states.get(task) == WAITING_STATE and reading.summary.is_open:
+        return reading.read_launch_hold(task)
+    return None
+
+
+def _describe_task(reading: _WaveReading, task: str) -> dict:
+    wave = reading.summary.started.wave
+    opened = find_last_task_event(reading.events, TaskPrOpened, wave, task)
+    finished = find_last_task_event(reading.events, RunFinished, wave, task)
     return {
         "task": task,
-        "state": states.get(task),
+        "state": reading.states.get(task),
         "pull_request": None if opened is None else opened.pr,
         "run": None if finished is None else finished.run,
-        "reason": last_state.reason if _is_explained(last_state) else None,
+        "reason": _read_reason(reading, task),
     }
 
 
@@ -146,11 +173,6 @@ def _name_milestone(
     return {"milestone": milestone, "milestone_report": _name_milestone_report(entries, started, milestone)}
 
 
-def _read_wave_tasks(runtime: Runtime, configuration: Configuration, started: WaveStarted) -> dict[str, Entity]:
-    tasks = read_entities(runtime.run_process, _prepare_tree(runtime, configuration, started).root, TASK_TYPE)
-    return {task.name: task for task in tasks if task.name in started.tasks}
-
-
 def _leaves_the_milestone_merge_to_the_user(runtime: Runtime, project: Entity) -> bool:
     policies = read_entities(runtime.run_process, runtime.paths.config_root, POLICY_TYPE)
     return read_policy_field(policies, project.name, AUTO_MERGE_FIELD, NO_POLICY) == NO_AUTO_MERGE
@@ -166,6 +188,7 @@ def _locate_task_merge(runtime: Runtime, project: Entity, worktree_root: str | N
 @dataclass(frozen=True)
 class WaveTree:
     configuration: Configuration
+    root: Path
     tasks: dict[str, Entity]
     milestone: str | None
 
@@ -194,10 +217,66 @@ def _read_task_merge_commands(
 
 def _read_wave_tree(runtime: Runtime, started: WaveStarted) -> WaveTree:
     configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
-    tasks = _read_wave_tasks(runtime, configuration, started)
+    root = _prepare_tree(runtime, configuration, started).root
+    tasks = {
+        task.name: task for task in read_entities(runtime.run_process, root, TASK_TYPE) if task.name in started.tasks
+    }
     return WaveTree(
-        configuration=configuration, tasks=tasks, milestone=read_wave_milestone(started.wave, tasks.values())
+        configuration=configuration,
+        root=root,
+        tasks=tasks,
+        milestone=read_wave_milestone(started.wave, tasks.values()),
     )
+
+
+def _count_used_build_slots(runtime: Runtime, project: str) -> int:
+    return sum(
+        1
+        for run in list_runs(runtime.paths.state_root)["runs"]
+        if run["project"] == project and run["state"] == LIVE_RUN_STATE and run["slot"] == BUILD_SLOT
+    )
+
+
+@dataclass(frozen=True)
+class _HoldReading:
+    wave: WaveFacts
+    launch_round: LaunchRound
+
+
+def _read_hold_reading(
+    runtime: Runtime,
+    started: WaveStarted,
+    read_tree: Callable[[], WaveTree],
+    states: dict[str, str],
+    halt: WavePause | None,
+) -> _HoldReading:
+    project = find_project(read_projects(runtime), started.project)
+    return _HoldReading(
+        wave=WaveFacts(
+            project=started.project,
+            wave=started.wave,
+            states=states,
+            implemented=read_implemented_tasks(runtime.run_process, read_tree().root),
+        ),
+        launch_round=LaunchRound(
+            halt=halt, used_slots=_count_used_build_slots(runtime, started.project), slots=read_project_slots(project)
+        ),
+    )
+
+
+def _find_launch_hold(
+    runtime: Runtime, events: tuple, read_tree: Callable[[], WaveTree], read_hold: Callable[[], _HoldReading], task: str
+) -> str | None:
+    tree = read_tree()
+    entity = tree.tasks[task]
+    reading = read_hold()
+    facts = TaskFacts(
+        name=task,
+        branch=read_branch_of_task(events, reading.wave.project, entity),
+        after=read_task_after(entity),
+        blocked_by=runtime.read_live_blockers(runtime.run_process, tree.root, task),
+    )
+    return find_launch_hold(facts, reading.wave, reading.launch_round)
 
 
 def _describe_events(reading: LedgerReading, request: argparse.Namespace) -> dict:
@@ -216,6 +295,14 @@ def wave_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     started = summary.started
     states = read_task_states(entries, started.wave)
     read_tree = functools.cache(lambda: _read_wave_tree(runtime, started))
+    halt = read_wave_pause(events, started.wave)
+    read_hold = functools.cache(lambda: _read_hold_reading(runtime, started, read_tree, states, halt))
+    wave_reading = _WaveReading(
+        events=events,
+        states=states,
+        summary=summary,
+        read_launch_hold=lambda task: _find_launch_hold(runtime, events, read_tree, read_hold, task),
+    )
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "wave": started.wave,
@@ -224,11 +311,11 @@ def wave_show(request: argparse.Namespace, runtime: Runtime) -> dict:
         "started_at": format_instant(summary.started_at),
         "last_event": summary.last_event,
         "pull_request": find_integration_pull_request(events, started.wave),
-        "tasks": [_describe_task(events, states, started.wave, task) for task in started.tasks],
+        "tasks": [_describe_task(wave_reading, task) for task in started.tasks],
         **_name_milestone(request, entries, started, read_tree),
         "merge_command": _read_merge_command(runtime, entries, started, read_tree),
         "task_merge_commands": _read_task_merge_commands(runtime, entries, started, read_tree),
-        "halt": _describe_halt(read_wave_pause(events, started.wave)),
+        "halt": _describe_halt(halt),
         **_describe_events(reading, request),
     }
 
