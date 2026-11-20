@@ -8565,3 +8565,19 @@ DECISION TheCapHistoryOfARolePlacesItsChangesAtEqualStepsEachLabelledByItsTs
 	REJECTED "the labels written beside their marks: two close changes would write over each other"
 	SOURCE "the build run of @TASK.B229"
 		REF @TASK.B229
+
+DECISION AnUndatedChangeToTheWorktreeOfASegmentNamesItsOwnReasonAndItsSamplesLeaveNoTrace
+	TITLE "a segment whose worktree changed with no dated tool call of the main transcript before"
+		+ "the change and no call of an edit tool on the worktree, its client naming edit tools,"
+		+ "leaves its first edit null with the reason no dated tool call of the main transcript"
+		+ "precedes the change to the worktree; the samples of the worktree run git with a"
+		+ "run_process that records no trace in the trail of the run"
+	STATUS active
+	DESC "binds @TASK.B239"
+		REF @TASK.B239
+	REJECTED "the reason the segment made no edit outside the progress file, which the task writes"
+		+ "for no segment whose worktree changed"
+	REJECTED "the samples traced as every other git call: two git calls at each poll would fill the"
+		+ "trail of the run, which the tests of tests/cli read whole"
+	SOURCE "the build run of @TASK.B239"
+		REF @TASK.B239
