@@ -73,6 +73,90 @@ CHANGES = [
     {"path": "brigade/tick/plan.py", "insertions": 10, "deletions": 0},
 ]
 NO_REQUEST_FROM_A_PATTERN = []
+GATE_EVENTS = [
+    {
+        "ts": "2026-11-02T08:00:00Z",
+        "event": "wave.started",
+        "wave": "oak_w4",
+        "project": "oak",
+        "tasks": ["B17", "B21"],
+    },
+    {"ts": "2026-11-02T08:00:00Z", "event": "wave.started", "wave": "oak_w5", "project": "oak", "tasks": ["B22"]},
+    {"ts": "2026-11-02T08:05:00Z", "event": "task.state", "wave": "oak_w4", "task": "B17", "state": "merged"},
+    {"ts": "2026-11-02T08:05:00Z", "event": "task.state", "wave": "oak_w4", "task": "B21", "state": "merged"},
+    {"ts": "2026-11-02T08:05:00Z", "event": "task.state", "wave": "oak_w5", "task": "B22", "state": "running"},
+    {
+        "ts": "2026-11-02T09:00:00Z",
+        "event": "task.verdict",
+        "project": "oak",
+        "wave": "oak_w4",
+        "task": "B17",
+        "pr": 178,
+        "head": "c0ffee",
+        "verdict": "changes",
+        "findings": [],
+        "login": None,
+    },
+    {
+        "ts": "2026-11-02T10:00:00Z",
+        "event": "task.verdict",
+        "project": "oak",
+        "wave": "oak_w4",
+        "task": "B17",
+        "pr": 178,
+        "head": "c0ffee",
+        "verdict": "changes",
+        "findings": [],
+        "login": None,
+    },
+    {
+        "ts": "2026-11-02T11:00:00Z",
+        "event": "task.verdict",
+        "project": "oak",
+        "wave": "oak_w4",
+        "task": "B17",
+        "pr": 178,
+        "head": "c0ffee",
+        "verdict": "pass",
+        "findings": [],
+        "login": None,
+    },
+    {
+        "ts": "2026-11-02T11:00:00Z",
+        "event": "task.verdict",
+        "project": "oak",
+        "wave": "oak_w4",
+        "task": "B21",
+        "pr": 179,
+        "head": "bead",
+        "verdict": "pass",
+        "findings": [],
+        "login": None,
+    },
+    {
+        "ts": "2026-11-02T12:00:00Z",
+        "event": "task.verdict",
+        "project": "oak",
+        "wave": "oak_w5",
+        "task": "B22",
+        "pr": 181,
+        "head": "face",
+        "verdict": "changes",
+        "findings": [],
+        "login": None,
+    },
+    {
+        "ts": "2026-11-03T09:00:00Z",
+        "event": "task.pr_opened",
+        "project": "oak",
+        "task": "B22",
+        "wave": "oak_w5",
+        "branch": "fix/B22-the-merge",
+        "pr": 181,
+        "login": None,
+        "corrects": [179],
+    },
+]
 
 
 NO_EVENT = []
@@ -250,4 +334,42 @@ class RenderMilestoneReportTest(unittest.TestCase):
             '\tSTATISTIC "deletions 1"\n'
             '\tINSTRUCTIONS_CHANGE "corpus/tasks.awawa +3 -1"\n'
             '\tPARKED_QUESTION "B21 blocked by @OPEN_QUESTION.Q4"\n',
+        )
+
+    def test_should_state_the_rounds_to_pass_of_each_task_and_the_escapes_over_its_pull_requests(self):
+        # Arrange
+        evidence = ReportEvidence(
+            subject_field="MILESTONE",
+            subject="M4",
+            project="oak",
+            corpus_folder="corpus",
+            events=GATE_EVENTS,
+            pull_requests=NO_PULL_REQUEST,
+            tasks=NO_TASK,
+            changes=NO_CHANGE,
+            origins=NO_REQUEST_FROM_A_PATTERN,
+        )
+
+        # Act
+        report = render_milestone_report(evidence)
+
+        # Assert
+        self.assertEqual(
+            report,
+            "REPORT oak_M4\n"
+            '\tMILESTONE "M4"\n'
+            '\tPROJECT "oak"\n'
+            '\tTASK_ROW "B17 merged"\n'
+            '\tTASK_ROW "B21 merged"\n'
+            '\tTASK_ROW "B22 running"\n'
+            '\tSTATISTIC "tasks 3"\n'
+            '\tSTATISTIC "merged 2"\n'
+            '\tSTATISTIC "parked 0"\n'
+            '\tSTATISTIC "runs 0"\n'
+            '\tSTATISTIC "files 0"\n'
+            '\tSTATISTIC "insertions 0"\n'
+            '\tSTATISTIC "deletions 0"\n'
+            '\tSTATISTIC "rounds to pass B17 3"\n'
+            '\tSTATISTIC "rounds to pass B21 1"\n'
+            '\tSTATISTIC "escapes 1 of 2"\n',
         )

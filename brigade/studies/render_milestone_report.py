@@ -1,7 +1,12 @@
 from dataclasses import dataclass
+from datetime import datetime
 
 from brigade.corpus.decode_atom import decode_atom
 from brigade.corpus.quote_awawa_string import quote_awawa_string
+from brigade.ledger.ledger_entry import LedgerEntry
+from brigade.ledger.list_passed_pull_requests import list_passed_pull_requests
+from brigade.ledger.task_pr_opened import TaskPrOpened
+from brigade.ledger.task_verdict import TaskVerdict
 
 ANSWER_TYPE = "REPORT"
 WAVE_STARTED = "wave.started"
@@ -15,6 +20,7 @@ AFTER_FIELD = "AFTER"
 TASK_REFERENCE_PREFIX = "@TASK."
 MILESTONE_FIELD = "MILESTONE"
 MILESTONE_REFERENCE_PREFIX = "@MILESTONE."
+GATE_EVENTS = {TaskVerdict.name: TaskVerdict, TaskPrOpened.name: TaskPrOpened}
 
 
 @dataclass(frozen=True)
@@ -78,6 +84,25 @@ def _count_statistics(evidence: ReportEvidence, wave_tasks: list, states: dict, 
     }
 
 
+def _read_gate_entries(events: list[dict]) -> list[LedgerEntry]:
+    return [
+        LedgerEntry(instant=datetime.fromisoformat(event["ts"]), event=GATE_EVENTS[event["event"]].from_document(event))
+        for event in events
+        if event["event"] in GATE_EVENTS
+    ]
+
+
+def _render_gate(events: list[dict]) -> list[tuple[str, str]]:
+    passed = list_passed_pull_requests(_read_gate_entries(events))
+    if not passed:
+        return []
+    escaped = sum(pull_request.escaped for pull_request in passed)
+    return [
+        *[("STATISTIC", f"rounds to pass {pull_request.task} {pull_request.rounds}") for pull_request in passed],
+        ("STATISTIC", f"escapes {escaped} of {len(passed)}"),
+    ]
+
+
 def _render_findings(evidence: ReportEvidence, wave_tasks: list, merged: list) -> list[tuple[str, str]]:
     return [
         *[
@@ -126,6 +151,7 @@ def _render_rows(evidence: ReportEvidence) -> list[tuple[str, str]]:
         ("PROJECT", evidence.project),
         *[("TASK_ROW", _render_task_row(task, states[task], evidence.pull_requests)) for task in wave_tasks],
         *[("STATISTIC", f"{name} {value}") for name, value in statistics.items()],
+        *_render_gate(evidence.events),
         *_render_findings(evidence, wave_tasks, merged),
         *_render_origins(evidence),
     ]
