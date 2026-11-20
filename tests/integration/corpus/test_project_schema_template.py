@@ -16,7 +16,7 @@ EVERY_STATUS_AND_FIELD = (
     'TASK T1\n\tTITLE "A draft"\n\tSTATUS draft\n\tSPEC "drafted"\n\n'
     'TASK T2\n\tTITLE "Ratified"\n\tSTATUS todo\n\tTYPE feat\n\tMILESTONE @MILESTONE.M2\n\tSPEC "ratified"\n\n'
     'TASK T3\n\tTITLE "Delivered"\n\tSTATUS implemented\n\tTYPE fix\n\tMILESTONE @MILESTONE.M3\n'
-    '\tAFTER @TASK.T2\n\tDELIVERED_BY 12\n\tSPEC "delivered"\n\t\tIMPL "src/cart.py::def add_item"\n\n'
+    '\tAFTER @TASK.T2\n\tDELIVERED_BY 12\n\tCORRECTS 11\n\tSPEC "delivered"\n\t\tIMPL "src/cart.py::def add_item"\n\n'
     'TASK T4\n\tTITLE "Retired"\n\tSTATUS archived\n\tSPEC "retired"\n\n'
     'DECISION CartLivesInMemory\n\tTITLE "the cart lives in memory"\n\tSTATUS active\n\n'
     'OPEN_QUESTION WhereTheCartLives\n\tQUESTION "where does the cart live?"\n\tSTATUS open\n\tBLOCKS @TASK.T1\n'
