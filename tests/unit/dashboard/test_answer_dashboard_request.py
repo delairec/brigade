@@ -1339,3 +1339,24 @@ class AnswerDashboardRequestOfTheAwawaTabTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(response.status, 404)
                 self.assertEqual(json.loads(response.body), {"error": f"no view serves {target}"})
+
+
+class AnswerDashboardRequestOfTheRailTest(unittest.TestCase):
+    def test_should_count_beside_each_view_of_the_rail_what_it_holds(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {
+                (PYTHON, ENTRY_POINT, "status"): ProcessAnswer(
+                    stdout='{"schema_version": 1, "waves": [{"wave": "oak_w1"}], "live_runs": []}\n'
+                ),
+                (PYTHON, ENTRY_POINT, "inbox"): ProcessAnswer(stdout='{"schema_version": 1, "patterns": []}\n'),
+                (PYTHON, ENTRY_POINT, "report"): ProcessAnswer(stdout='{"schema_version": 1, "reports": []}\n'),
+            }
+        )
+
+        # Act
+        response = answer_get("/views/rail", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(response.status, 200)
+        self.assertIn(b'<a href="#waves">Waves <span class="count num">1 open</span></a>', response.body)
