@@ -18,6 +18,7 @@ from tests.unit.create_test_runtime import create_test_runtime
 ANY_WAVE = None
 ANY_TASK = None
 ANY_STATE = None
+NO_ARGUMENTS = {}
 FIRST_LISTED = {
     "run": FIRST_RUN,
     "procedure": "deliver",
@@ -30,6 +31,12 @@ FIRST_LISTED = {
     "wave": "tidepool_w1",
     "task": "T1",
     "started_at": "2026-10-07T09:00:00Z",
+    "arguments": NO_ARGUMENTS,
+    "segments": [{"segment": 1, "outcome": "done", "turns": 12, "duration_ms": 4200}],
+    "duration_ms": 4200,
+    "cost_usd": None,
+    "duration_partial": False,
+    "cost_partial": True,
 }
 DEAD_LISTED = {
     "run": THIRD_RUN,
@@ -43,6 +50,12 @@ DEAD_LISTED = {
     "wave": "tidepool_w2",
     "task": "T3",
     "started_at": "2026-10-09T09:00:00Z",
+    "arguments": NO_ARGUMENTS,
+    "segments": [],
+    "duration_ms": None,
+    "cost_usd": None,
+    "duration_partial": False,
+    "cost_partial": False,
 }
 SECOND_LISTED = {
     "run": SECOND_RUN,
@@ -56,6 +69,12 @@ SECOND_LISTED = {
     "wave": "tidepool_w2",
     "task": "T2",
     "started_at": "2026-10-08T09:00:00Z",
+    "arguments": NO_ARGUMENTS,
+    "segments": [{"segment": 1, "outcome": "done", "turns": 12, "duration_ms": 4200}],
+    "duration_ms": 4200,
+    "cost_usd": None,
+    "duration_partial": False,
+    "cost_partial": True,
 }
 
 
@@ -70,7 +89,7 @@ class RunListTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(text, "no runs")
 
-    def test_should_print_one_row_per_run_naming_its_wave_and_its_task_and_marking_what_is_absent(self):
+    def test_should_print_one_row_per_run_with_its_segments_its_measures_and_its_arguments_last(self):
         # Arrange
         document = {
             "schema_version": 1,
@@ -83,8 +102,17 @@ class RunListTextTest(unittest.TestCase):
                     "project": None,
                     "wave": "tidepool_w1",
                     "task": "T1",
-                    "state": "dead",
-                    "outcome": None,
+                    "state": "finished",
+                    "outcome": "done",
+                    "arguments": {"task": "@TASK.B82", "base": "integration/oak"},
+                    "segments": [
+                        {"segment": 1, "outcome": "wall_limit", "turns": 30, "duration_ms": 1500000},
+                        {"segment": 2, "outcome": "done", "turns": 12, "duration_ms": 600000},
+                    ],
+                    "duration_ms": 2100000,
+                    "cost_usd": 1.75,
+                    "duration_partial": False,
+                    "cost_partial": False,
                 },
                 {
                     "run": SECOND_RUN,
@@ -96,6 +124,15 @@ class RunListTextTest(unittest.TestCase):
                     "task": None,
                     "state": "running",
                     "outcome": None,
+                    "arguments": {"request": "add a cart"},
+                    "segments": [
+                        {"segment": 1, "outcome": "handed_over", "turns": 30, "duration_ms": 1500000},
+                        {"segment": 2, "outcome": None, "turns": None, "duration_ms": None},
+                    ],
+                    "duration_ms": 1500000,
+                    "cost_usd": None,
+                    "duration_partial": True,
+                    "cost_partial": True,
                 },
             ],
         }
@@ -106,9 +143,102 @@ class RunListTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             text,
-            "run                      procedure     slot   role     project  wave         task  state    outcome\n"
-            f"{FIRST_RUN}  deliver       build  builder  -        tidepool_w1  T1    dead     -\n"
-            f"{SECOND_RUN}  request-plan  plan   planner  -        -            -     running  -",
+            "run                      procedure     slot   role     project  wave         task  state     outcome"
+            "  segments             duration       cost      arguments\n"
+            f"{FIRST_RUN}  deliver       build  builder  -        tidepool_w1  T1    finished  done   "
+            "  wall_limit,done      0h35m          1.75 USD  base=integration/oak task=@TASK.B82\n"
+            f"{SECOND_RUN}  request-plan  plan   planner  -        -            -     running   -      "
+            "  handed_over,running  0h25m partial  -         request=add a cart",
+        )
+
+    def test_should_tell_two_runs_of_one_procedure_outside_a_wave_apart_by_their_arguments(self):
+        # Arrange
+        outside_a_wave = {
+            "procedure": "awawa-task",
+            "slot": "build",
+            "role": "ada",
+            "project": None,
+            "wave": None,
+            "task": None,
+            "state": "finished",
+            "outcome": "done",
+            "duration_partial": False,
+            "cost_partial": False,
+        }
+        document = {
+            "schema_version": 1,
+            "runs": [
+                {
+                    **outside_a_wave,
+                    "run": FIRST_RUN,
+                    "arguments": {"task": "@TASK.B71"},
+                    "segments": [{"segment": 1, "outcome": "done", "turns": 20, "duration_ms": 720000}],
+                    "duration_ms": 720000,
+                    "cost_usd": 0.8,
+                },
+                {
+                    **outside_a_wave,
+                    "run": SECOND_RUN,
+                    "arguments": {"task": "@TASK.B82"},
+                    "segments": [
+                        {"segment": 1, "outcome": "wall_limit", "turns": 30, "duration_ms": 1500000},
+                        {"segment": 2, "outcome": "done", "turns": 12, "duration_ms": 600000},
+                    ],
+                    "duration_ms": 2100000,
+                    "cost_usd": 1.75,
+                },
+            ],
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text,
+            "run                      procedure   slot   role  project  wave  task  state     outcome  segments"
+            "         duration  cost      arguments\n"
+            f"{FIRST_RUN}  awawa-task  build  ada   -        -     -     finished  done     done           "
+            "  0h12m     0.80 USD  task=@TASK.B71\n"
+            f"{SECOND_RUN}  awawa-task  build  ada   -        -     -     finished  done     wall_limit,done"
+            "  0h35m     1.75 USD  task=@TASK.B82",
+        )
+
+    def test_should_print_a_dash_for_the_segments_the_measures_and_the_arguments_of_a_run_without_segment(self):
+        # Arrange
+        document = {
+            "schema_version": 1,
+            "runs": [
+                {
+                    "run": FIRST_RUN,
+                    "procedure": "deliver",
+                    "slot": "build",
+                    "role": "builder",
+                    "project": None,
+                    "wave": None,
+                    "task": None,
+                    "state": "finished",
+                    "outcome": "done",
+                    "arguments": NO_ARGUMENTS,
+                    "segments": [],
+                    "duration_ms": None,
+                    "cost_usd": None,
+                    "duration_partial": False,
+                    "cost_partial": False,
+                }
+            ],
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text,
+            "run                      procedure  slot   role     project  wave  task  state     outcome  segments"
+            "  duration  cost  arguments\n"
+            f"{FIRST_RUN}  deliver    build  builder  -        -     -     finished  done     -         -       "
+            "  -     -",
         )
 
 
