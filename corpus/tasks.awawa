@@ -7982,7 +7982,8 @@ TASK B91
 TASK B92
 	TITLE "brigade run list says what each run worked on and how it went: the arguments of its"
 		+ "procedure, the outcome of each of its segments, its duration and its cost"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 465
 	TYPE feat
 	MILESTONE @MILESTONE.M14
 	COMPONENT "commands"
