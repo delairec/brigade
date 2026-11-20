@@ -5,7 +5,9 @@ existed. The figures were taken on 2026-11-20 by the run of TASK B236; the page 
 ## The range
 
 - TASK B37, #309, carries the measure of the turns to the first edit; it reached `main` with M6, #371, merged on
-  2026-11-07T17:51:30Z, and the tick runs from the main checkout, [Tick and scheduler](Tick-and-scheduler.md).
+  2026-11-07T17:51:30Z, and the tick runs from the main checkout: the `AGENTS.md` of the repository read on 2026-11-20,
+  "The tick runs from the main checkout through `bin/brigade`: a fix to brigade reaches the tick once `main` is pulled
+  there".
 - The range opens on 2026-11-18, ten days after, and closes on 2026-11-19: it holds three waves, every one closed, and
   no other wave of a registered project started or ended in it, `brigade wave list`.
 
@@ -21,7 +23,22 @@ existed. The figures were taken on 2026-11-20 by the run of TASK B236; the page 
 
 The baseline is the user's notes of 2026-10-03 on their largest project, 119 sessions and 217 launches by hand, which
 count the agent turns as steps: turns to first edit p50 23, turns per task run p50 47, 146 oversized output turns over
-67 launches, 2.18 per launch. [Ledger](Ledger.md) says what each measure reads.
+67 launches, 2.18 per launch. What each measure reads, quoted from the wiki page Ledger as it stood on 2026-11-20:
+
+| Measure                             | What the range gives                                                |
+|-------------------------------------|---------------------------------------------------------------------|
+| `turns_to_first_edit_p50`           | the p50 of the turns to the first edit of its runs                  |
+| `task_run_turns_p50`                | the p50 of the turns of its runs naming a task                      |
+| `oversized_output_turns_per_launch` | the oversized output turns per segment reporting them, two decimals |
+
+- "A run is measured by the sum of its measured segments, partial when one of them is not measured, and kept in the
+  percentiles; a run with no measured segment is unmeasured."
+- "The turns to the first edit of a run add the turns of the segments before the one that edited, and are partial only
+  when one of those is not measured."
+- "A range is two days `YYYY-MM-DD` in UTC, the end day included; a run belongs to the range its last segment finished
+  in."
+- From the wiki page Runs: "The first edit of a segment is its first change to the worktree of the run outside the
+  progress file, whatever tool made it".
 
 ```
 brigade ledger compare --range 2026-11-18..2026-11-19 --reference turns_to_first_edit_p50=23 --reference task_run_turns_p50=47 --reference oversized_output_turns_per_launch=2.18

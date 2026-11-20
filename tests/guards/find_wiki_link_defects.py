@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 
 _LINK_TARGET = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+_DATED_PAGE_MARK = "the page is dated and not refreshed"
 
 
 def _read_linked_pages(text: str) -> list[str]:
@@ -31,6 +32,12 @@ def find_wiki_link_defects(wiki_root: Path) -> list[str]:
             for name, text in texts.items()
             for linked in _read_linked_pages(text)
             if linked not in texts
+        ]
+        + [
+            f"{name} is dated and links {linked}, a living page: quote it or pin it to a commit"
+            for name, text in texts.items()
+            if _DATED_PAGE_MARK in " ".join(text.split())
+            for linked in _read_linked_pages(text)
         ]
         + _find_pages_unlinked_from("Home.md", texts)
         + _find_pages_unlinked_from("_Sidebar.md", texts)
