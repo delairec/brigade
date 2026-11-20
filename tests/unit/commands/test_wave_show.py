@@ -141,7 +141,7 @@ class WaveShowExitCodeTest(unittest.TestCase):
 class WaveShowRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = Namespace(wave="tidepool_w16", events=False)
+        options = Namespace(wave="tidepool_w16", events=False, plan=False)
 
         # Act
         request = COMMAND.read_request(options)
@@ -172,7 +172,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T7_RUNNING, T7_PR_OPENED, T7_RUN_FINISHED, T7_PR_OPEN])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False), self.runtime)
+        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -216,7 +216,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
                 write_ledger(self.root, events)
 
                 # Act
-                document = COMMAND.run(Namespace(wave="tidepool_w16", events=False), self.runtime)
+                document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), self.runtime)
 
                 # Assert
                 self.assertEqual(document["halt"], expected)
@@ -237,7 +237,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
             with self.subTest(case=case):
                 # Arrange
                 write_ledger(self.root, events)
-                document = COMMAND.run(Namespace(wave="tidepool_w16", events=False), self.runtime)
+                document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), self.runtime)
 
                 # Act
                 text = COMMAND.render_text(document)
@@ -250,7 +250,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T7_PR_OPEN, WAVE_PR_OPENED])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False), self.runtime)
+        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), self.runtime)
 
         # Assert
         self.assertEqual(document["pull_request"], 77)
@@ -260,7 +260,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T8_QUEUED, T8_PARKED])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False), self.runtime)
+        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -277,7 +277,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T8_QUEUED, closed])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False), self.runtime)
+        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -294,7 +294,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T7_PR_OPEN, rebuilt])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False), self.runtime)
+        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -314,7 +314,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T7_PR_OPEN, requeued])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False), self.runtime)
+        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -327,7 +327,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(Namespace(wave="tidepool_w17", events=False), self.runtime)
+            COMMAND.run(Namespace(wave="tidepool_w17", events=False, plan=False), self.runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "no wave.started names the wave tidepool_w17")
@@ -447,7 +447,7 @@ class WaveShowOfAProjectWithoutAForgeTest(unittest.TestCase):
 
     def _show(self, events: list[dict]) -> dict:
         write_ledger(self.root, events)
-        return COMMAND.run(Namespace(wave="tidepool_w16", events=False, json=True), self.runtime)
+        return COMMAND.run(Namespace(wave="tidepool_w16", events=False, json=True, plan=False), self.runtime)
 
     def test_should_print_the_command_merging_the_milestone_of_the_wave_once_its_report_is_committed(self):
         # Act
@@ -634,7 +634,7 @@ class WaveShowOfAProjectOnAForgeTest(unittest.TestCase):
 
     def _show_as_json(self) -> dict:
         write_ledger(self.root, [CUT, FORGELESS_WAVE_STARTED])
-        return COMMAND.run(Namespace(wave="tidepool_w16", events=False, json=True), self.runtime)
+        return COMMAND.run(Namespace(wave="tidepool_w16", events=False, json=True, plan=False), self.runtime)
 
     def test_should_name_the_milestone_of_the_wave_its_tasks_name_on_the_forge(self):
         # Act
@@ -751,7 +751,7 @@ class WaveShowOfAQueuedTaskTest(unittest.TestCase):
             run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **implemented}),
             read_live_blockers=read_live_blockers,
         )
-        return COMMAND.run(Namespace(wave="tidepool_w16", events=False), runtime)
+        return COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), runtime)
 
     def test_should_name_the_earlier_task_a_queued_task_waits_after(self):
         # Act
@@ -1080,4 +1080,136 @@ class WaveShowOfAQueuedTaskTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             document["tasks"][1], {"task": "T8", "state": "queued", "pull_request": None, "run": None, "reason": None}
+        )
+
+
+CORPUS_OF_A_PLAN = {
+    **CORPUS,
+    "TASK": {
+        "T7": (*TIDE_TABLE, ("SPEC", "the table lists the tides of the week"), ("SPEC", "the table names its port")),
+        "T8": (*TIDE_CLOCK, ("AFTER", "@TASK.T7"), ("AFTER", "@TASK.T5"), ("SPEC", "the clock shows the next tide")),
+    },
+}
+PLANNED_WAVE_STARTED = {**FORGELESS_WAVE_STARTED, "tasks": ["T7", "T8", "T9"]}
+PLANNED_WAVE_CLOSED = {
+    "schema_version": 1,
+    "ts": "2026-10-18T11:00:00Z",
+    "event": "wave.closed",
+    "wave": "tidepool_w16",
+}
+
+
+class WaveShowOfThePlanTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        write_ledger(self.root, [PLANNED_WAVE_STARTED, PLANNED_WAVE_CLOSED])
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root), run_process=create_machine_double(CORPUS_OF_A_PLAN, MACHINE_OUTPUTS)
+        )
+
+    def test_should_carry_the_after_and_the_spec_of_each_task_the_tree_of_its_wave_holds(self):
+        # Act
+        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=True), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["tasks"],
+            [
+                {
+                    "task": "T7",
+                    "state": None,
+                    "pull_request": None,
+                    "run": None,
+                    "reason": None,
+                    "after": [],
+                    "spec": ["the table lists the tides of the week", "the table names its port"],
+                },
+                {
+                    "task": "T8",
+                    "state": None,
+                    "pull_request": None,
+                    "run": None,
+                    "reason": None,
+                    "after": ["T7", "T5"],
+                    "spec": ["the clock shows the next tide"],
+                },
+                {
+                    "task": "T9",
+                    "state": None,
+                    "pull_request": None,
+                    "run": None,
+                    "reason": None,
+                    "after": [],
+                    "spec": [],
+                },
+            ],
+        )
+
+    def test_should_carry_no_plan_without_the_option(self):
+        # Act
+        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["tasks"],
+            [
+                {"task": "T7", "state": None, "pull_request": None, "run": None, "reason": None},
+                {"task": "T8", "state": None, "pull_request": None, "run": None, "reason": None},
+                {"task": "T9", "state": None, "pull_request": None, "run": None, "reason": None},
+            ],
+        )
+
+    def test_should_print_under_each_task_its_after_on_one_line_and_its_spec_one_line_each(self):
+        # Arrange
+        document = {
+            "schema_version": 1,
+            "wave": "tidepool_w16",
+            "project": "tidepool",
+            "branch": "integration/tides",
+            "started_at": "2026-10-18T09:00:00Z",
+            "last_event": "wave.closed",
+            "merge_command": None,
+            "task_merge_commands": [],
+            "pull_request": None,
+            "halt": None,
+            "tasks": [
+                {
+                    "task": "T7",
+                    "state": "merged",
+                    "pull_request": 42,
+                    "run": None,
+                    "reason": None,
+                    "after": [],
+                    "spec": ["the table lists the tides of the week", "the table names its port"],
+                },
+                {
+                    "task": "T8",
+                    "state": "merged",
+                    "pull_request": 43,
+                    "run": None,
+                    "reason": None,
+                    "after": ["T7", "T5"],
+                    "spec": ["the clock shows the next tide"],
+                },
+            ],
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text,
+            "wave tidepool_w16 of @PROJECT.tidepool on integration/tides,"
+            " started 2026-10-18T09:00:00Z, last event wave.closed, pull request -\n"
+            "task  state   pull request  run  reason\n"
+            "T7    merged  42            -    -\n"
+            "  after: -\n"
+            "  spec: the table lists the tides of the week\n"
+            "  spec: the table names its port\n"
+            "T8    merged  43            -    -\n"
+            "  after: T7, T5\n"
+            "  spec: the clock shows the next tide",
         )
