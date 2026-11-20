@@ -21,6 +21,7 @@ TASK_REFERENCE_PREFIX = "@TASK."
 MILESTONE_FIELD = "MILESTONE"
 MILESTONE_REFERENCE_PREFIX = "@MILESTONE."
 GATE_EVENTS = {TaskVerdict.name: TaskVerdict, TaskPrOpened.name: TaskPrOpened}
+ROUNDS_STATISTIC = "rounds to pass"
 
 
 @dataclass(frozen=True)
@@ -98,7 +99,7 @@ def _render_gate(events: list[dict]) -> list[tuple[str, str]]:
         return []
     escaped = sum(pull_request.escaped for pull_request in passed)
     return [
-        *[("STATISTIC", f"rounds to pass {pull_request.task} {pull_request.rounds}") for pull_request in passed],
+        *[("STATISTIC", f"{ROUNDS_STATISTIC} {pull_request.task} {pull_request.rounds}") for pull_request in passed],
         ("STATISTIC", f"escapes {escaped} of {len(passed)}"),
     ]
 
