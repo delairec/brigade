@@ -89,6 +89,7 @@ from brigade.waves.locate_merge_worktree import locate_merge_worktree
 from brigade.waves.name_milestone_branch import name_milestone_branch
 from brigade.waves.prepare_wave_tree import WaveTreeReading, locate_wave_branch_base, prepare_wave_tree
 from brigade.waves.read_active_milestones import read_active_milestones
+from brigade.waves.read_parked_reason import read_parked_reason
 from brigade.waves.read_project_tasks import ProjectTasks, ProjectTasksReading, read_project_tasks
 from brigade.waves.read_served_milestones import read_served_milestones
 from brigade.waves.read_task_states import read_task_states
@@ -226,6 +227,7 @@ class TaskFacts:
     merged_into_target: bool = False
     merge_worktree_to_open: str | None = None
     last_action: datetime | None = None
+    parked_reason: str | None = None
 
     def to_document(self) -> dict:
         return {
@@ -858,6 +860,7 @@ def _read_task_facts(runtime: Runtime, reading: WaveReading, open_wave: _OpenWav
         after=tuple(field.value.removeprefix(TASK_PREFIX) for field in task.fields if field.name == AFTER_FIELD),
         blocked_by=runtime.read_live_blockers(runtime.run_process, open_wave.tree_root, task.name),
         milestone=_read_milestone(task),
+        parked_reason=read_parked_reason(reading.events, open_wave.started.wave, task.name),
     )
 
 

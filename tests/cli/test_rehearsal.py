@@ -36,6 +36,7 @@ class BrigadeRehearsalOfAThreeTaskWaveOnTheFakeClientTest(unittest.TestCase):
                 "milestone_report": "shop_M1",
                 "merge_command": None,
                 "task_merge_commands": [],
+                "halt": None,
             },
         )
 
