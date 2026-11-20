@@ -3,7 +3,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.errors import ToolFailure
 from brigade.git.read_worktree_state import ChangedFile, WorktreeState, read_worktree_state
+from brigade.system.run_process import ProcessRecord, ProcessRequest
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
 TOPLEVEL_AND_HEAD = ("git", "rev-parse", "--show-toplevel", "HEAD")
@@ -75,6 +77,32 @@ class ReadWorktreeStateTest(unittest.TestCase):
 
         # Act
         state = read_worktree_state(git, self.worktree, Path("/state/runs/r1/progress.awawa"))
+
+        # Assert
+        self.assertIsNone(state)
+
+    def test_should_read_no_state_of_a_worktree_whose_git_status_fails(self):
+        # Arrange
+        git = RecordingProcessRunner(
+            {
+                TOPLEVEL_AND_HEAD: ProcessAnswer(stdout=f"{self.worktree}\n{HEAD}\n"),
+                STATUS: ProcessAnswer(exit_code=128, stderr="fatal: index file corrupt"),
+            }
+        )
+
+        # Act
+        state = read_worktree_state(git, self.worktree, Path("/state/runs/r1/progress.awawa"))
+
+        # Assert
+        self.assertIsNone(state)
+
+    def test_should_read_no_state_of_a_worktree_git_does_not_read_in_time(self):
+        # Arrange
+        def time_out(request: ProcessRequest) -> ProcessRecord:
+            raise ToolFailure(f"{' '.join(request.argv)} timed out after 30 s")
+
+        # Act
+        state = read_worktree_state(time_out, self.worktree, Path("/state/runs/r1/progress.awawa"))
 
         # Assert
         self.assertIsNone(state)

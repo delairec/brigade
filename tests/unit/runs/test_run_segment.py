@@ -1366,6 +1366,8 @@ TICK_TEST_CHANGED = WorktreeState(
 )
 TICK_TEST_COMMITTED = WorktreeState(head=COMMITTED_HEAD, changed=frozenset())
 UNDATED = None
+UNREADABLE = None
+AFTER_THE_LAST_POLL = datetime(2026, 11, 7, 22, 1, 30, tzinfo=UTC)
 
 
 def _create_dated_message(timestamp: str | None, tools: list[dict], tokens: int) -> dict:
@@ -1449,11 +1451,13 @@ class SpawnPollingDouble:
 
 
 class WorktreeChangingDouble:
-    def __init__(self, clock: InstantClockDouble, at_launch: WorktreeState, changes: dict[datetime, WorktreeState]):
+    def __init__(
+        self, clock: InstantClockDouble, at_launch: WorktreeState, changes: dict[datetime, WorktreeState | None]
+    ):
         self._clock = clock
         self._states = {SEGMENT_LAUNCH: at_launch, **changes}
 
-    def read(self, worktree: Path, progress_file: Path) -> WorktreeState:
+    def read(self, worktree: Path, progress_file: Path) -> WorktreeState | None:
         return self._states[max(instant for instant in self._states if instant <= self._clock.now)]
 
 
@@ -1634,6 +1638,31 @@ class RunSegmentWorktreeTest(unittest.TestCase):
         # Assert
         self.assertIsNone(record.first_edit)
         self.assertEqual(record.worktree, WorktreeWatch(sampled=True, changed_at=None))
+
+    def test_should_count_no_change_on_a_sample_git_could_not_read(self):
+        # Arrange
+        worktree = WorktreeChangingDouble(
+            self.clock, CLEAN, {FIRST_CALL_ON_THE_WORKTREE: UNREADABLE, SECOND_CALL_ON_THE_WORKTREE: TICK_TEST_CHANGED}
+        )
+
+        # Act
+        record = self._run(transcripts=SHELL_EDIT_TRANSCRIPTS, edit_tools=(), worktree=worktree, polls=3)
+
+        # Assert
+        self.assertEqual(record.first_edit, FirstEdit(steps=3, tokens=111))
+
+    def test_should_measure_by_its_edit_tool_calls_alone_a_segment_whose_last_sample_git_could_not_read(self):
+        # Arrange
+        worktree = WorktreeChangingDouble(self.clock, CLEAN, {AFTER_THE_LAST_POLL: UNREADABLE})
+
+        # Act
+        record = self._run(transcripts=SHELL_EDIT_TRANSCRIPTS, edit_tools=("Edit", "Write"), worktree=worktree, polls=3)
+
+        # Assert
+        self.assertEqual(
+            (record.first_edit, record.worktree),
+            (FirstEdit(steps=4, tokens=1111), WorktreeWatch(sampled=False, changed_at=None)),
+        )
 
     def test_should_keep_the_instant_of_the_first_sample_differing_from_the_one_taken_at_launch(self):
         # Arrange
