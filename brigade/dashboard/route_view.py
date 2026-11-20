@@ -52,6 +52,7 @@ HOME_ROUTES = {
     "scheduler": REGION_ROUTES["heartbeat"],
     "ledger": CommandRoute(arguments=("ledger", "--since", "1d", "--json")),
     "inbox": CommandRoute(arguments=("inbox", "list", "--json")),
+    "dry_run": REGION_ROUTES["next-tick"],
 }
 
 
@@ -98,7 +99,7 @@ def _render_report(answers: dict[str, CommandAnswer]) -> str:
 
 def _render_home(answers: dict[str, CommandAnswer]) -> str:
     def render(status: dict) -> str:
-        readings = {name: json.loads(answers[name].document) for name in ("scheduler", "ledger", "inbox")}
+        readings = {name: json.loads(answers[name].document) for name in ("scheduler", "ledger", "inbox", "dry_run")}
         return render_home(HomeDocuments(status=status, **readings))
 
     return render_answer(answers[DOCUMENT], render)

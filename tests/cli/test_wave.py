@@ -185,7 +185,8 @@ class BrigadeWaveOperatorPathTest(WaveTickTestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
-            json.loads(completed.stdout)["tasks_not_launched"], [{"wave": "shop_w2", "task": "S4", "cause": "after S3"}]
+            json.loads(completed.stdout)["tasks_not_launched"],
+            [{"project": "shop", "wave": "shop_w2", "task": "S4", "cause": "after S3"}],
         )
 
     def test_should_show_the_reason_of_a_parked_wave_and_the_command_resuming_it(self):

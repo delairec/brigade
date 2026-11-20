@@ -18,12 +18,13 @@ STARTING_STATES = (WAITING_STATE, PARKED_STATE)
 
 @dataclass(frozen=True)
 class HeldTask:
+    project: str
     wave: str
     task: str
     cause: str
 
     def to_document(self) -> dict:
-        return {"wave": self.wave, "task": self.task, "cause": self.cause}
+        return {"project": self.project, "wave": self.wave, "task": self.task, "cause": self.cause}
 
 
 @dataclass(frozen=True)
@@ -96,5 +97,5 @@ def plan_launches(snapshot: Snapshot, halts: dict[str, WavePause]) -> LaunchPlan
                 used_slots[wave.project] += 1
                 launches.append(_decide_launch(wave, task))
             elif _is_starting(task, wave):
-                held.append(HeldTask(wave=wave.wave, task=task.name, cause=hold))
+                held.append(HeldTask(project=wave.project, wave=wave.wave, task=task.name, cause=hold))
     return LaunchPlan(launches=tuple(launches), held=tuple(held))

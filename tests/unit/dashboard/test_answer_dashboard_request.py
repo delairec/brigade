@@ -389,15 +389,17 @@ HOME_SCHEDULER = (PYTHON, ENTRY_POINT, "scheduler", "status", "--json")
 HOME_LEDGER = (PYTHON, ENTRY_POINT, "ledger", "--since", "1d", "--json")
 HOME_INBOX = (PYTHON, ENTRY_POINT, "inbox", "list", "--json")
 NEXT_TICK = (PYTHON, ENTRY_POINT, "tick", "--dry-run", "--json")
+NO_TASK_WAITING = '{"schema_version": 1, "mode": "dry-run", "tasks_not_launched": []}\n'
 
 
-def create_home_runner(status: str) -> ScriptedProcessRunner:
+def create_home_runner(status: str, dry_run: str = NO_TASK_WAITING) -> ScriptedProcessRunner:
     return ScriptedProcessRunner(
         {
             HOME_STATUS: ProcessAnswer(stdout=status),
             HOME_SCHEDULER: ProcessAnswer(stdout=FRESH_SCHEDULER),
             HOME_LEDGER: ProcessAnswer(stdout=QUIET_DAY),
             HOME_INBOX: ProcessAnswer(stdout=EMPTY_INBOX),
+            NEXT_TICK: ProcessAnswer(stdout=dry_run),
         }
     )
 
@@ -1157,6 +1159,27 @@ class AnswerDashboardRequestOfAViewOfOneProjectTest(unittest.TestCase):
         # Assert
         self.assertNotIn(b"elm", response.body)
         self.assertIn(b"blocking oak_w2", response.body)
+
+    def test_should_leave_out_of_home_the_tasks_waiting_in_the_waves_of_the_others(self):
+        # Arrange
+        dry_run = json.dumps(
+            {
+                "schema_version": 1,
+                "mode": "dry-run",
+                "tasks_not_launched": [
+                    {"project": "oak", "wave": "oak_w2", "task": "O4", "cause": "after O3"},
+                    {"project": "elm", "wave": "elm_w1", "task": "E3", "cause": "after E2"},
+                ],
+            }
+        )
+        runner = create_home_runner(HOME, dry_run)
+
+        # Act
+        response = answer_get("/views/status?project=oak", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertIn(b"O4: after O3", response.body)
+        self.assertNotIn(b"E3", response.body)
 
     def test_should_render_the_rows_of_that_project_alone(self):
         # Arrange
