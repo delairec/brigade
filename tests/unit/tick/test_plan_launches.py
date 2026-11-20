@@ -27,7 +27,8 @@ class PlanLaunchesHeldTasksTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            plan.held, (HeldTask(wave="shop_w1", task="S9", cause="no free build slot: 1 used of SLOTS 1"),)
+            plan.held,
+            (HeldTask(project="shop", wave="shop_w1", task="S9", cause="no free build slot: 1 used of SLOTS 1"),),
         )
 
     def test_should_hold_each_queued_and_parked_task_of_a_wave_halted_in_the_round(self):
@@ -47,12 +48,14 @@ class PlanLaunchesHeldTasksTest(unittest.TestCase):
             plan.held,
             (
                 HeldTask(
+                    project="shop",
                     wave="shop_w1",
                     task="S3",
                     cause="wave shop_w1 parked: the forge account is unavailable;"
                     " it waits for brigade wave resume shop_w1",
                 ),
                 HeldTask(
+                    project="shop",
                     wave="shop_w1",
                     task="S4",
                     cause="wave shop_w1 parked: the forge account is unavailable;"

@@ -63,7 +63,8 @@ Its seven views:
   with its reason, the proposed patterns of the inbox as one row with their count, the parked scans, a pull request of
   a milestone waiting for the user's merge and a parked order, or says nothing needs the user; a stall signal whose
   task merged since is listed apart as stale. **At work** lists the open waves with their tasks by state and their
-  live runs, **Last 24 hours** counts the failed tick actions, and the projects keep their pause and resume buttons.
+  live runs, **Tasks waiting** lists each queued or parked task the next tick does not launch with its cause, read
+  from the `tasks_not_launched` of `brigade tick --dry-run --json`, **Last 24 hours** counts the failed tick actions, and the projects keep their pause and resume buttons.
   **Next tick** shows the decisions of `brigade tick --dry-run --json` by action, read when the page loads, at each
   new tick and on its refresh button, never by the poll.
 - **Waves** — the waves of `brigade wave list`, opening on one sentence counting the waves open, parked and blocked,
