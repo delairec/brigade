@@ -11,8 +11,8 @@ brigade request cancel <request>
 brigade request replan <request>         # launch the planner again on a planning request whose planner stopped
 brigade plan record <request> --file <plan>
 brigade wave start <project> [--task T ...]   # one wave per milestone served, one for the tasks naming none
-brigade wave show <wave> [--events]
-brigade wave list [--project P]
+brigade wave show <wave> [--events] [--plan]
+brigade wave list [--project P] [--state open|blocked|parked|ended]
 brigade wave cancel <wave>
 brigade wave resume [<wave>]
 brigade wave requeue <wave> <task>       # queue a parked task again for the next tick
@@ -59,7 +59,9 @@ the tasks of one milestone or tasks naming none.
 
 `wave show` prints each task of a wave with its state, its pull request, its last run and its reason: for a parked
 task the reason of its park, for a queued task of an open wave the cause the tick does not launch it. A blocked or
-parked wave reads a line naming its halt. `wave list` prints one row per wave, the open waves first.
+parked wave reads a line naming its halt; `--plan` adds under each task its `AFTER` and its `SPEC`. `wave list` prints
+one row per wave with its state, open, blocked, parked or ended, the open waves first; `--state` keeps the waves in
+one state.
 
 > **Watch out:** a task parked in a closed wave is `todo` again for the tick, which serves it in a new wave, unless
 > that wave parked it on the question of a run that ended `blocked`: such a task waits, named on stderr at each tick
@@ -143,10 +145,17 @@ exists.
   `halt`, its `reason` and its `resume_at`, `null` for a parked wave, and `halt` is `null` for a wave not halted. With `--events`, it adds what `brigade ledger` once printed for a wave: its cost and tokens, the
   turns, duration and cost of each task, its merged pull requests, its turns by slot and by role, its halts, its
   handovers, its parked tasks, then every event the ledger holds for the wave, in the order recorded.
+  With `--plan`, it prints under each task its `AFTER` on one line and its `SPEC`, one line each, read at the tree of
+  the wave as the cause of a queued task is; `--json` carries them on each task as `after` and `spec`, two lists,
+  empty for a task that tree does not hold. Without `--plan`, neither is printed nor carried.
   With `--json`, it names the milestone the tasks of the wave name, `null` for tasks naming none, read at the
   branch of that milestone as the last fetch of the tick left it: it reaches no forge.
-- `wave list` prints one row per wave of the ledger, its project, the branch recorded as in `wave show`, its last wave
-  event and its task count, the open waves first, those of one project with `--project`. With `--json`, each wave
+- `wave list` prints one row per wave of the ledger, its project, the branch recorded as in `wave show`, its state, its
+  last wave event and its task count, the open waves first, those of one project with `--project`. The state, the
+  column `state` and the key `state` of `--json`, is `ended` once the ledger holds its `wave.closed` or its
+  `wave.cancelled`; else `blocked` or `parked`, by the later of its `wave.blocked` and `wave.parked`, when no
+  `wave.resumed` follows it; else `open`. `--state <state>` keeps the waves in that state, alone or with `--project`;
+  a state other than the four is refused as a usage error naming them, exit 2. With `--json`, each wave
   also carries `started_at`; `ended_at`, the instant of its `wave.closed` or `wave.cancelled`, `null` while it is
   open; `ended_by`, the name of that event, `null` while it is open; `task_states`, each task with its last state, `null` for a task no event served yet; `halt`, the `reason` and
   the `resume_at` of the pause in force, `null` once resumed or ended; `rounds`, the most review rounds one of its
