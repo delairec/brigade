@@ -687,6 +687,8 @@ QUEUED_WAVE_BLOCKED = {
 }
 TIDE_TABLE = (("TITLE", "Tide table"), ("TYPE", "feat"), ("MILESTONE", "@MILESTONE.M4"))
 TIDE_CLOCK = (("TITLE", "Tide clock"), ("TYPE", "feat"), ("MILESTONE", "@MILESTONE.M4"))
+TIDE_ALMANAC = (("TITLE", "Tide almanac"), ("TYPE", "feat"), ("MILESTONE", "@MILESTONE.M4"))
+T7_RUNNING_IN_THE_ROUND = {**T8_WAITING, "ts": "2026-10-18T09:01:00Z", "task": "T7", "state": "running"}
 CORPUS_OF_A_TASK_AFTER_ANOTHER = {
     **CORPUS,
     "TASK": {"T7": TIDE_TABLE, "T8": (*TIDE_CLOCK, ("AFTER", "@TASK.T7"))},
@@ -832,6 +834,51 @@ class WaveShowOfAQueuedTaskTest(unittest.TestCase):
                     "reason": "no free build slot: 1 used of SLOTS 1",
                 },
             ],
+        )
+
+    def test_should_name_the_build_slot_a_task_of_an_earlier_open_wave_takes_as_the_cause_a_queued_task_waits(self):
+        # Arrange
+        earlier_wave_started = {
+            **FORGELESS_WAVE_STARTED,
+            "ts": "2026-10-18T08:30:00Z",
+            "wave": "tidepool_w15",
+            "tasks": ["T5"],
+        }
+        corpus = {**CORPUS_OF_ONE_BUILD_SLOT, "TASK": {**CORPUS_OF_ONE_BUILD_SLOT["TASK"], "T5": TIDE_ALMANAC}}
+
+        # Act
+        document = self._show(corpus, [earlier_wave_started, QUEUED_WAVE_STARTED, T8_WAITING])
+
+        # Assert
+        self.assertEqual(
+            [(task["task"], task["reason"]) for task in document["tasks"]],
+            [("T7", "no free build slot: 1 used of SLOTS 1"), ("T8", "no free build slot: 1 used of SLOTS 1")],
+        )
+
+    def test_should_name_the_build_slot_a_running_task_relaunched_after_its_rebase_takes_as_the_cause(self):
+        # Arrange
+        rebase = {"slot": "rebase"}
+        rebase_finished = {
+            **create_run_result(FINISHED_BUILD_RUN, "done", "2026-10-18T09:05:00Z"),
+            **rebase,
+            "wave": "tidepool_w16",
+            "task": "T7",
+        }
+        write_run(
+            self.root / "state",
+            create_run_record(FINISHED_BUILD_RUN, "tidepool_w16", "T7") | TIDEPOOL | rebase,
+            rebase_finished,
+        )
+
+        # Act
+        document = self._show(
+            CORPUS_OF_ONE_BUILD_SLOT, [QUEUED_WAVE_STARTED, T7_RUNNING_IN_THE_ROUND, rebase_finished, T8_WAITING]
+        )
+
+        # Assert
+        self.assertEqual(
+            [(task["task"], task["reason"]) for task in document["tasks"]],
+            [("T7", None), ("T8", "no free build slot: 1 used of SLOTS 1")],
         )
 
     def test_should_show_no_reason_for_a_task_queued_again_after_its_park(self):
