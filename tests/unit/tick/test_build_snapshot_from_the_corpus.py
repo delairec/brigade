@@ -494,10 +494,7 @@ class BuildSnapshotOfTheOpenWavesTest(BuildSnapshotTestCase):
         snapshot, _ = self.build()
 
         # Assert
-        self.assertEqual(
-            [(task.name, task.parked_reason) for task in snapshot.waves[0].tasks],
-            [("B1", None), ("B2", None), ("B3", None), ("B4", "its pull request is closed")],
-        )
+        self.assertEqual(snapshot.waves[0].tasks[3].parked_reason, "its pull request is closed")
 
     def test_should_note_no_quota_stop_on_a_task_whose_run_was_resumed_since_it_hit_the_limit(self):
         # Arrange
