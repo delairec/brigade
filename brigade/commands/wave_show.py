@@ -1,5 +1,6 @@
 import argparse
 import functools
+import itertools
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -254,13 +255,12 @@ def _read_task_facts(
 
 
 def _list_waves_of_the_round(sources: _LaunchHoldSources) -> list[WaveStarted]:
-    earlier = []
-    for summary in summarize_waves(sources.entries):
-        if summary.started.wave == sources.started.wave:
-            break
-        if summary.is_open and summary.started.project == sources.started.project:
-            earlier.append(summary.started)
-    return [*earlier, sources.started]
+    shown = sources.started
+    earlier = itertools.takewhile(lambda summary: summary.started.wave != shown.wave, summarize_waves(sources.entries))
+    return [
+        *(summary.started for summary in earlier if summary.is_open and summary.started.project == shown.project),
+        shown,
+    ]
 
 
 def _read_wave_facts(sources: _LaunchHoldSources, runs: tuple[dict, ...], started: WaveStarted) -> WaveFacts:
