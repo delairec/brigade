@@ -13405,7 +13405,8 @@ TASK B177
 TASK B178
 	TITLE "brigade tick --dry-run and brigade wave show say why a wave waits and why each of its"
 		+ "tasks is not launched"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 466
 	TYPE feat
 	MILESTONE @MILESTONE.M14
 	COMPONENT "waves"
