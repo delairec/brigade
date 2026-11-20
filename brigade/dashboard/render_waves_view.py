@@ -1,8 +1,9 @@
 from collections import Counter
 from html import escape
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from brigade.dashboard.render_answer import render_answer
+from brigade.dashboard.render_filter_chips import FilterChip, render_filter_chips
 from brigade.dashboard.render_html_table import render_html_table
 from brigade.dashboard.render_segment_strip import Segment, render_segment_strip
 from brigade.dashboard.render_stat_tile import StatTile, render_stat_tile
@@ -25,6 +26,9 @@ MERGED = "merged"
 QUEUED = "queued"
 ENDED_STATES = {"wave.closed": CLOSED, "wave.cancelled": CANCELLED}
 LAST_WAVES = 12
+WAVES_VIEW = "waves"
+WAVE_STATES = ("open", "blocked", "parked", "ended")
+EVERY_STATE = "every state"
 SERVED_AGAIN = 3
 
 
@@ -54,7 +58,7 @@ def _show_cost(cost_usd: float | None) -> str:
 def _render_row(wave: dict) -> tuple[str, ...]:
     return (
         _render_link(wave["wave"]),
-        render_status_pill(_read_wave_state(wave)),
+        render_status_pill(wave["state"]),
         _render_tasks(wave),
         escape(wave["started_at"]),
         escape(wave["ended_at"] or ABSENT),
@@ -110,19 +114,29 @@ def _render_served_again(waves: list[dict]) -> str:
     return f"<section><h2>Tasks served by three waves or more</h2><ul>{''.join(again)}</ul></section>"
 
 
-def _render_view(waves: list[dict], waves_started: dict) -> str:
+def _address(state: str | None) -> str:
+    return WAVES_VIEW if state is None else f"{WAVES_VIEW}?{urlencode({'state': state})}"
+
+
+def _render_state_chips(chosen: str | None) -> str:
+    chips = [FilterChip(label=EVERY_STATE, view=_address(None), chosen=chosen is None)]
+    chips += [FilterChip(label=state, view=_address(state), chosen=chosen == state) for state in WAVE_STATES]
+    return render_filter_chips(chips)
+
+
+def _render_view(waves: list[dict], waves_started: dict, state: str | None) -> str:
     states = Counter(_read_wave_state(wave) for wave in waves)
     sentence = f"Waves open: {_count_open(waves)}, parked: {states[PARKED]}, blocked: {states[BLOCKED]}."
     return (
-        f"{render_status_sentence(sentence)}{_render_tiles(waves, states, waves_started)}"
+        f"{render_status_sentence(sentence)}{_render_tiles(waves, states, waves_started)}{_render_state_chips(state)}"
         f"{render_html_table(HEADER, [_render_row(wave) for wave in waves], NO_WAVE)}{_render_served_again(waves)}"
     )
 
 
-def render_waves_view(answers: dict[str, CommandAnswer]) -> str:
+def render_waves_view(answers: dict[str, CommandAnswer], state: str | None) -> str:
     return render_answer(
         answers[OVERVIEW],
         lambda overview: render_answer(
-            answers[LISTING], lambda listing: _render_view(listing["waves"], overview["waves_started"])
+            answers[LISTING], lambda listing: _render_view(listing["waves"], overview["waves_started"], state)
         ),
     )

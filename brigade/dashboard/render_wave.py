@@ -189,13 +189,21 @@ def _render_halt(shown: dict) -> str:
     return render_callout(HALT_STATE, describe_halt_document(shown["wave"], halt))
 
 
+def _render_plan(task: dict) -> str:
+    if "after" not in task:
+        return ""
+    after = escape(", ".join(task["after"]) or ABSENT)
+    specs = "".join(f"<li>{escape(spec)}</li>" for spec in task["spec"])
+    return render_details("plan", f"<p>after: {after}</p><ul>{specs}</ul>")
+
+
 def _render_tasks(page: WavePage) -> str:
     shown = page.shown
     ledger = shown["ledger"]
     address = _read_pull_request_address(page.project)
     rows = [
         (
-            escape(task["task"]),
+            escape(task["task"]) + _render_plan(task),
             _render_state(task, shown["wave"]),
             _render_pull_request(task["pull_request"], address),
             _render_rounds(ledger["rounds_by_task"].get(task["task"], 0)),
