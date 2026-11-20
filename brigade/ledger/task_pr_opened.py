@@ -11,6 +11,7 @@ class TaskPrOpened:
     branch: str
     pr: int
     login: str
+    corrects: tuple[int, ...] = ()
 
     @classmethod
     def from_document(cls, document: dict) -> "TaskPrOpened":
@@ -21,9 +22,11 @@ class TaskPrOpened:
             branch=document["branch"],
             pr=document["pr"],
             login=document["login"],
+            corrects=tuple(document.get("corrects", ())),
         )
 
     def to_document(self) -> dict:
+        corrects = {"corrects": list(self.corrects)} if self.corrects else {}
         return {
             "project": self.project,
             "task": self.task,
@@ -31,4 +34,5 @@ class TaskPrOpened:
             "branch": self.branch,
             "pr": self.pr,
             "login": self.login,
+            **corrects,
         }

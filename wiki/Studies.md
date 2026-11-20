@@ -87,7 +87,9 @@ nothing.
 
 Two built-in studies of the slot `report` answer with a `REPORT` entity, which the CLI fills from the collectors
 (`TASK_ROW`, `STATISTIC`, `GRAPH`, `MANUAL_TEST`, `INSTRUCTIONS_CHANGE`, `PARKED_QUESTION`, `PATTERN_TASK`) and the
-judging run completes with its prose. A wave has no report of its own.
+judging run completes with its prose. A wave has no report of its own. Once a pull request of its tasks passed the
+gate, its `STATISTIC` rows add `rounds to pass <task> <n>` per task passed and `escapes <escaped> of <passed>`, read
+from the `ledger` collector as [Ledger](Ledger.md) counts them.
 
 | Study | Run by the tick | Collectors | Entity | Markdown | Where it goes |
 |---|---|---|---|---|---|

@@ -28,6 +28,20 @@ TASK_FIELDS = (
     ("SPEC", "parses a line"),
     ("MILESTONE", "@MILESTONE.F0"),
 )
+FIX_FIELDS = (
+    ("TYPE", "fix"),
+    ("CORRECTS", "7"),
+    ("CORRECTS", "9"),
+    ("TITLE", "The parser"),
+    ("SPEC", "parses a line"),
+    ("MILESTONE", "@MILESTONE.F0"),
+)
+CORRECTED_PULL_REQUEST_OPENED = TaskPrOpened(
+    project="oak", task="B3", wave="oak_w0", branch="feature/B3-the-lexer", pr=7, login="clauche-bot"
+)
+PULL_REQUEST_OF_ANOTHER_PROJECT_OPENED = TaskPrOpened(
+    project="elm", task="E4", wave="elm_w1", branch="feature/E4-the-tree", pr=7, login="clauche-bot"
+)
 PASSING_CHECK = (
     '{"schema_version": 1, "project": "oak", "task": "B12", "head": "c0ffee",'
     ' "checks": [{"command": "python3 -m unittest", "passed": true, "duration_ms": 1200, "tail": []}]}'
@@ -223,6 +237,58 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
             ),
         )
 
+    def test_should_open_the_body_on_each_pull_request_the_task_corrects(self):
+        # Arrange
+        append_event(self.runtime.paths, WAVE_START, CORRECTED_PULL_REQUEST_OPENED)
+        self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", FIX_FIELDS)
+        forge = create_forge(["Parser"])
+
+        # Act
+        open_task_pull_request(self.runtime, self.create_demand(forge))
+
+        # Assert
+        self.assertEqual(
+            forge.list_requests("open_pull_request")[0]["body"],
+            "Corrects #7 (@TASK.B3)\n"
+            "Corrects #9\n"
+            "\n"
+            "The parser\n"
+            "\n"
+            "## Acceptance criteria\n"
+            "\n"
+            "- parses a line\n"
+            "\n"
+            "## Checks of c0ffee\n"
+            "\n"
+            "- ok `python3 -m unittest` 1.2 s\n"
+            "\n"
+            "Co-Authored-By: Ada <ada@example.org>\n",
+        )
+
+    def test_should_name_no_task_for_a_pull_request_of_another_project_bearing_the_number_corrected(self):
+        # Arrange
+        append_event(self.runtime.paths, WAVE_START, PULL_REQUEST_OF_ANOTHER_PROJECT_OPENED)
+        self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", FIX_FIELDS)
+        forge = create_forge(["Parser"])
+
+        # Act
+        open_task_pull_request(self.runtime, self.create_demand(forge))
+
+        # Assert
+        self.assertEqual(
+            forge.list_requests("open_pull_request")[0]["body"].split("\n\n")[0], "Corrects #7\nCorrects #9"
+        )
+
+    def test_should_record_the_pull_requests_the_task_corrects_in_the_ledger(self):
+        # Arrange
+        self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", FIX_FIELDS)
+
+        # Act
+        open_task_pull_request(self.runtime, self.create_demand(create_forge(["Parser"])))
+
+        # Assert
+        self.assertEqual(read_ledger(self.root / "state").entries[-1].event.corrects, (7, 9))
+
     def test_should_create_the_milestone_the_forge_lacks(self):
         # Arrange
         self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", TASK_FIELDS)
@@ -256,7 +322,7 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
             Path("/srv/oak-b12"),
             "TASK",
             "B12",
-            (("TYPE", "fix"), ("TITLE", "The parser"), ("MILESTONE", "@MILESTONE.F0")),
+            (("TYPE", "fix"), ("CORRECTS", "7"), ("TITLE", "The parser"), ("MILESTONE", "@MILESTONE.F0")),
         )
 
         # Act
@@ -309,7 +375,10 @@ class OpenTaskPullRequestWithNoMilestoneTest(OpenTaskPullRequestTestCase):
         # Arrange
         self.record_check(PASSING_CHECK)
         self.processes.answer_entity(
-            Path("/srv/oak-b12"), "TASK", "B12", (("TYPE", "fix"), ("TITLE", "The parser"), ("SPEC", "parses a line"))
+            Path("/srv/oak-b12"),
+            "TASK",
+            "B12",
+            (("TYPE", "fix"), ("CORRECTS", "7"), ("TITLE", "The parser"), ("SPEC", "parses a line")),
         )
         forge = create_forge(["Parser"])
 
@@ -325,7 +394,9 @@ class OpenTaskPullRequestWithNoMilestoneTest(OpenTaskPullRequestTestCase):
                     "base": "main",
                     "branch": "feature/B12-the-parser",
                     "title": "fix: add the parser (@TASK.B12)",
-                    "body": "The parser\n"
+                    "body": "Corrects #7\n"
+                    "\n"
+                    "The parser\n"
                     "\n"
                     "## Acceptance criteria\n"
                     "\n"
@@ -345,7 +416,9 @@ class OpenTaskPullRequestWithNoMilestoneTest(OpenTaskPullRequestTestCase):
     def test_should_create_no_milestone_on_the_forge_for_a_task_naming_none(self):
         # Arrange
         self.record_check(PASSING_CHECK)
-        self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", (("TYPE", "fix"), ("TITLE", "The parser")))
+        self.processes.answer_entity(
+            Path("/srv/oak-b12"), "TASK", "B12", (("TYPE", "fix"), ("CORRECTS", "7"), ("TITLE", "The parser"))
+        )
         forge = create_forge(["Parser"])
 
         # Act
@@ -426,6 +499,20 @@ class OpenTaskPullRequestRefusalTest(OpenTaskPullRequestTestCase):
         # Assert
         self.assertEqual(
             str(refusal.exception), "the last check of @TASK.B12 failed on ruff check .; run brigade build check"
+        )
+
+    def test_should_refuse_a_fix_carrying_no_corrects(self):
+        # Arrange
+        self.record_check(PASSING_CHECK)
+        self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", (("TYPE", "fix"), ("TITLE", "The parser")))
+
+        # Act
+        with self.assertRaises(BrigadeError) as refusal:
+            open_task_pull_request(self.runtime, self.create_demand(create_forge(["Parser"])))
+
+        # Assert
+        self.assertEqual(
+            str(refusal.exception), "@TASK.B12 is a fix carrying no CORRECTS, the pull request it corrects"
         )
 
     def test_should_refuse_a_task_with_no_type(self):

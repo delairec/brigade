@@ -45,3 +45,42 @@ class TaskPrOpenedTest(unittest.TestCase):
                 "login": "octo-bot",
             },
         )
+
+    def test_should_write_back_the_pull_requests_a_task_corrects(self):
+        # Arrange
+        document = {
+            "project": "shop",
+            "task": "S3",
+            "wave": "M1",
+            "branch": "fix/S3-empty-cart",
+            "pr": 12,
+            "login": "octo-bot",
+            "corrects": [7, 9],
+        }
+
+        # Act
+        written = TaskPrOpened.from_document(document).to_document()
+
+        # Assert
+        self.assertEqual(
+            written,
+            {
+                "project": "shop",
+                "task": "S3",
+                "wave": "M1",
+                "branch": "fix/S3-empty-cart",
+                "pr": 12,
+                "login": "octo-bot",
+                "corrects": [7, 9],
+            },
+        )
+
+    def test_should_write_no_corrects_for_a_task_correcting_no_pull_request(self):
+        # Arrange
+        event = TaskPrOpened(project="shop", task="S3", wave="M1", branch="feature/S3-cart", pr=12, login="octo-bot")
+
+        # Act
+        document = event.to_document()
+
+        # Assert
+        self.assertNotIn("corrects", document)
