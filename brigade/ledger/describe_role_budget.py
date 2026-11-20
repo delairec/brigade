@@ -2,18 +2,15 @@ import math
 from dataclasses import dataclass
 from fractions import Fraction
 
+from brigade.ledger.current_digests import CurrentDigests
+from brigade.ledger.is_measured_segment import is_measured_segment
 from brigade.ledger.run_finished import RunFinished
+from brigade.ledger.select_current_segments import select_current_segments
 
 TURN_LIMIT_OUTCOME = "turn_limit"
 MEASURED_SEGMENTS_FOR_A_CAP = 5
 MEASURED_RESTARTS_FOR_A_CAP = 3
 USAGE_COUNTERS = ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
-
-
-@dataclass(frozen=True)
-class CurrentDigests:
-    role: str | None
-    procedures: dict
 
 
 @dataclass(frozen=True)
@@ -25,20 +22,6 @@ class RoleBudget:
     restarts: int
     growth: float | None
     restart_tokens: float | None
-
-
-def _choose_current(segments: tuple[RunFinished, ...], current: CurrentDigests) -> CurrentDigests:
-    latest_role = next((segment.role_digest for segment in reversed(segments)), None)
-    latest_procedures = {segment.procedure: segment.procedure_digest for segment in segments}
-    return CurrentDigests(role=current.role or latest_role, procedures={**latest_procedures, **current.procedures})
-
-
-def _is_current(segment: RunFinished, current: CurrentDigests) -> bool:
-    return (
-        segment.role_digest is not None
-        and segment.role_digest == current.role
-        and segment.procedure_digest == current.procedures.get(segment.procedure)
-    )
 
 
 def _list_restarts(segments: tuple[RunFinished, ...]) -> list[RunFinished]:
@@ -81,10 +64,9 @@ def _apply_cap(computed: int | None, shipped: int, segments: int, restarts: int)
 
 
 def describe_role_budget(segments: tuple[RunFinished, ...], shipped: int, current: CurrentDigests) -> RoleBudget:
-    chosen = _choose_current(segments, current)
     restarted = {id(segment) for segment in _list_restarts(segments)}
-    kept = [segment for segment in segments if _is_current(segment, chosen)]
-    measured = [segment for segment in kept if segment.main_turns and segment.usage is not None]
+    kept = select_current_segments(segments, current)
+    measured = [segment for segment in kept if is_measured_segment(segment)]
     restarts = [segment for segment in kept if id(segment) in restarted and segment.tokens_to_first_edit is not None]
     growth = _fit_growth(measured) if measured else None
     restart_tokens = sum(segment.tokens_to_first_edit for segment in restarts) / len(restarts) if restarts else None

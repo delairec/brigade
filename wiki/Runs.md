@@ -170,6 +170,9 @@ of its operation, naming the plugin and the operation when one breaks it.
 - A `run.json` without the keys `wave` and `task` is refused, naming the file and the key, and never upgraded:
   `runs list` leaves the run out, names it and the refusal on stderr and under `skipped` with `--json`, and exits 0;
   `runs show` of that run fails on the refusal.
+- With `--json`, `runs list` and `runs show` date each run with `started_at`, the UTC instant its id carries, the
+  instant its run directory was created; a `run.json` naming a run whose id carries no such instant is refused as a
+  run record, `runs list` leaving it out under `skipped`. The text outputs are unchanged.
 
 </details>
 
@@ -194,6 +197,9 @@ and the ledger as the foreground command does.
 - `runs show` prints the summary of a run and the outcome of each segment, then its progress, rendered by the document
   plugin of the file the run wrote, `progress.md` or `progress.awawa`, and with `--log` one line per record: its time,
   segment, kind and summary.
+- With `--json` the document of `runs show` carries `arguments`, the arguments of `run.json`, and for each segment
+  `started_at`, the `ts` of its `result.json` less its `duration_ms`, and `cost_usd`, both `null` where the result of
+  the segment carries none, as a segment still running does.
 - With `--json` the document carries `progress`, its `text` and its `entities`, `null` for a Markdown progress. A
   progress absent or holding no entry is `null` and prints nothing. A `progress.awawa` that `awawa lint --strict`
   refuses, a file caught in the middle of a write, is printed as its raw text with `entities` `null`.

@@ -1,0 +1,23 @@
+{
+  "call": {
+    "arguments": [
+      "show",
+      "@REPORT.brigade_M13",
+      "--json",
+      "<tmp:0>/config/brigade/reports.awawa"
+    ],
+    "cwd": "<tmp:0>/config/brigade",
+    "directories": [],
+    "inputs": {
+      "<tmp:0>/config/brigade/reports.awawa": "REPORT brigade_M13\n\tMILESTONE \"M13\"\n\tPROJECT \"brigade\"\n\tSTATISTIC \"tasks 4\"\n\tSTATISTIC \"merged 3\"\n\tNARRATIVE \"Verdict: M13 delivered three of its four tasks.\"\n"
+    }
+  },
+  "outcome": {
+    "exit_code": 0,
+    "rewritten": {},
+    "stderr": "",
+    "stdout": "{\"awawa\": \"2.7.0\", \"type\": \"REPORT\", \"name\": \"brigade_M13\", \"file\": \"<tmp:0>/config/brigade/reports.awawa\", \"line\": 1, \"status\": null, \"fields\": [{\"name\": \"MILESTONE\", \"atoms\": [\"\\\"M13\\\"\"], \"fields\": []}, {\"name\": \"PROJECT\", \"atoms\": [\"\\\"brigade\\\"\"], \"fields\": []}, {\"name\": \"STATISTIC\", \"atoms\": [\"\\\"tasks 4\\\"\"], \"fields\": []}, {\"name\": \"STATISTIC\", \"atoms\": [\"\\\"merged 3\\\"\"], \"fields\": []}, {\"name\": \"NARRATIVE\", \"atoms\": [\"\\\"Verdict: M13 delivered three of its four tasks.\\\"\"], \"fields\": []}], \"duplicates\": []}\n"
+  },
+  "run_order": [],
+  "version": "awawa 2.7.0"
+}

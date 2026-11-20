@@ -23,7 +23,7 @@ RUN_ID_PATTERN = r"^\d{8}T\d{6}Z-[0-9a-f]{6}$"
 
 S3_PARKED_ON_A_DEAD_RUN = (
     '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
-    f' "project": "shop", "branch": "{MILESTONE_BRANCH}", "tasks": ["S3"]}}\n'
+    ' "project": "shop", "tasks": ["S3"]}\n'
     '{"schema_version": 1, "ts": "2026-10-13T10:00:00Z", "event": "task.parked", "wave": "shop_w1", "task": "S3",'
     ' "reason": "run dead: 20261013T093000Z-a00001", "blockers": []}\n'
 )
@@ -59,7 +59,6 @@ class BrigadeWaveRequeueOfAParkedTaskTest(LaunchingTickTestCase):
                     "event": "wave.started",
                     "wave": "shop_w1",
                     "project": "shop",
-                    "branch": "integration/M1-empty-cart",
                     "tasks": ["S3"],
                 },
                 {
@@ -418,7 +417,7 @@ class BrigadeWaveRequeueOfATaskParkedAfterItsFirstVerdictTest(LaunchingTickTestC
 HANDED_OVER_RESULT = {**DONE_RESULT, "outcome": "handed_over"}
 S3_STARTED = (
     '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
-    f' "project": "shop", "branch": "{MILESTONE_BRANCH}", "tasks": ["S3"]}}\n'
+    ' "project": "shop", "tasks": ["S3"]}\n'
 )
 PROGRESS_OF_THE_HANDED_OVER_RUN = "- the failing test of the empty cart is written\n"
 S3_PARKED_AFTER_ITS_HANDOVER = (

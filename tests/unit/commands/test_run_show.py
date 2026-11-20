@@ -30,6 +30,7 @@ FINISHED_RUN = {
     "outcome": "done",
     "wave": None,
     "task": None,
+    "started_at": "2026-10-07T09:00:00Z",
     "message": "the task is delivered",
 }
 FOLLOWED_RUN = {
@@ -43,10 +44,19 @@ FOLLOWED_RUN = {
     "outcome": "done",
     "wave": None,
     "task": None,
+    "started_at": "2026-10-07T09:00:00Z",
 }
-FINISHED_SEGMENT = {"segment": 1, "outcome": "done", "turns": 12, "duration_ms": 4200}
+FINISHED_SEGMENT = {
+    "segment": 1,
+    "outcome": "done",
+    "turns": 12,
+    "duration_ms": 4200,
+    "started_at": "2026-10-07T09:11:55Z",
+    "cost_usd": None,
+}
 NO_PROGRESS = None
 NO_NOTES = []
+NO_ARGUMENTS = {}
 NO_EXECUTABLE_DIRECTORY = ""
 MARKDOWN_PROGRESS = "- read the task\n- wrote the tests\n"
 AWAWA_PROGRESS = (
@@ -384,6 +394,7 @@ class RunsShowOfAFinishedRunTest(unittest.TestCase):
             {
                 "schema_version": 1,
                 "run": FINISHED_RUN,
+                "arguments": NO_ARGUMENTS,
                 "segments": [FINISHED_SEGMENT],
                 "notes": NO_NOTES,
                 "progress": NO_PROGRESS,

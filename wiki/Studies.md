@@ -95,7 +95,11 @@ judging run completes with its prose. A wave has no report of its own.
 | `task-report` | for a task naming no milestone, once its pull request is ready to merge or the task is parked; `task.reported` | the same, narrowed to the wave of the task, the task and its branch | `<project>_<task>` | `<CORPUS>/tasks/<task>-report.md` | committed on the branch of the task, then the body of its pull request, replaced whole |
 
 The commit is pushed without force as the login of the key `cli` of `[forge_accounts]`. `brigade report list` names
-the kind of each report, `milestone-report`, `task-report` or, for one written before them, `wave-report`.
+the kind of each report, `milestone-report`, `task-report` or, for one written before them, `wave-report`; with
+`--json`, each report also carries its `subject`, the milestone, the task or the wave it reports, its `statistics`
+by name, its `verdict`, the first `NARRATIVE` value or null, the `counts` of its values by field name, and
+`reported_at`, the instant of the last `milestone.reported`, `task.reported` or `wave.reported` event recording it,
+or null.
 
 <details><summary>Steps, ledger events and resumption</summary>
 

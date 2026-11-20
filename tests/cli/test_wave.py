@@ -5,10 +5,11 @@ from pathlib import Path
 
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, RunTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
+from tests.cli.wave_tick_test_case import MILESTONE_BRANCH_CUT, WaveTickTestCase
 
 SHOWN_WAVE_EVENTS = (
     '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
-    ' "project": "shop", "branch": "integration/shop_w1", "tasks": ["S3", "S4", "S5"]}\n'
+    ' "project": "shop", "branch": "integration/M1-empty-cart", "tasks": ["S3", "S4", "S5"]}\n'
     '{"schema_version": 1, "ts": "2026-10-13T10:00:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
     ' "state": "queued"}\n'
     '{"schema_version": 1, "ts": "2026-10-13T11:00:00Z", "event": "task.state", "wave": "shop_w1", "task": "S3",'
@@ -116,14 +117,14 @@ class WaveTestCase(unittest.TestCase):
         return self.machine.run_brigade(CLONE_ENTRY_POINT, "wave", *arguments)
 
 
-class BrigadeWaveShowTest(WaveTestCase):
+class BrigadeWaveShowTest(WaveTickTestCase):
     def setUp(self):
         super().setUp()
-        self.write_ledger(SHOWN_WAVE_EVENTS)
+        (self.state / "ledger" / "2026-10.jsonl").write_text(MILESTONE_BRANCH_CUT + SHOWN_WAVE_EVENTS)
 
     def test_should_print_the_wave_and_each_task_with_its_state_its_pull_request_and_its_run(self):
         # Act
-        completed = self.run_wave("show", "shop_w1", "--json")
+        completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "wave", "show", "shop_w1", "--json")
 
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -133,7 +134,7 @@ class BrigadeWaveShowTest(WaveTestCase):
                 "schema_version": 1,
                 "wave": "shop_w1",
                 "project": "shop",
-                "branch": "integration/shop_w1",
+                "branch": "integration/M1-empty-cart",
                 "started_at": "2026-10-13T09:00:00Z",
                 "last_event": "wave.started",
                 "pull_request": None,
@@ -148,6 +149,8 @@ class BrigadeWaveShowTest(WaveTestCase):
                     {"task": "S4", "state": "pr_open", "pull_request": 12, "run": None, "reason": None},
                     {"task": "S5", "state": None, "pull_request": None, "run": None, "reason": None},
                 ],
+                "milestone": "M1",
+                "milestone_report": None,
                 "merge_command": None,
                 "task_merge_commands": [],
             },
@@ -235,6 +238,13 @@ class BrigadeWaveListTest(WaveTestCase):
                         "branch": "integration/cafe_w1",
                         "last_event": "wave.blocked",
                         "tasks": 1,
+                        "started_at": "2026-10-13T09:30:00Z",
+                        "ended_at": None,
+                        "ended_by": None,
+                        "task_states": [{"task": "C2", "state": None}],
+                        "halt": {"reason": "quota", "resume_at": "2026-10-13T16:00:00Z"},
+                        "rounds": 0,
+                        "cost_usd": None,
                     },
                     {
                         "wave": "shop_w2",
@@ -242,6 +252,13 @@ class BrigadeWaveListTest(WaveTestCase):
                         "branch": "integration/shop_w2",
                         "last_event": "wave.reported",
                         "tasks": 1,
+                        "started_at": "2026-10-13T11:00:00Z",
+                        "ended_at": None,
+                        "ended_by": None,
+                        "task_states": [{"task": "S5", "state": None}],
+                        "halt": None,
+                        "rounds": 0,
+                        "cost_usd": None,
                     },
                     {
                         "wave": "shop_w1",
@@ -249,6 +266,13 @@ class BrigadeWaveListTest(WaveTestCase):
                         "branch": "integration/shop_w1",
                         "last_event": "wave.closed",
                         "tasks": 2,
+                        "started_at": "2026-10-13T09:00:00Z",
+                        "ended_at": "2026-10-13T10:00:00Z",
+                        "ended_by": "wave.closed",
+                        "task_states": [{"task": "S3", "state": None}, {"task": "S4", "state": None}],
+                        "halt": None,
+                        "rounds": 0,
+                        "cost_usd": None,
                     },
                     {
                         "wave": "shop_w3",
@@ -256,6 +280,13 @@ class BrigadeWaveListTest(WaveTestCase):
                         "branch": "integration/shop_w3",
                         "last_event": "wave.cancelled",
                         "tasks": 2,
+                        "started_at": "2026-10-13T12:00:00Z",
+                        "ended_at": "2026-10-13T12:30:00Z",
+                        "ended_by": "wave.cancelled",
+                        "task_states": [{"task": "S6", "state": None}, {"task": "S7", "state": None}],
+                        "halt": None,
+                        "rounds": 0,
+                        "cost_usd": None,
                     },
                 ],
             },

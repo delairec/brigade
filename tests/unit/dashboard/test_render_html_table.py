@@ -18,6 +18,18 @@ class RenderHtmlTableTest(unittest.TestCase):
             '<tbody><tr><td>1</td><td><a href="#x">x</a></td></tr></tbody></table>',
         )
 
+    def test_should_escape_a_header_holding_markup(self):
+        # Arrange
+        rows = [("1",)]
+
+        # Act
+        table = render_html_table(("<#>",), rows, "nothing")
+
+        # Assert
+        self.assertEqual(
+            table, "<table><thead><tr><th>&lt;#&gt;</th></tr></thead><tbody><tr><td>1</td></tr></tbody></table>"
+        )
+
     def test_should_say_what_is_missing_when_there_is_no_row(self):
         # Arrange
         no_row = []

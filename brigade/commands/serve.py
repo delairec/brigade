@@ -4,6 +4,7 @@ import sys
 
 from brigade.command import Argument, Command
 from brigade.dashboard.choose_dashboard_port import choose_dashboard_port
+from brigade.dashboard.start_awawa_addon import start_awawa_addon
 from brigade.dashboard.start_dashboard import start_dashboard
 from brigade.runtime import Runtime
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
@@ -33,7 +34,10 @@ def _render_text(document: dict) -> str:
 
 def serve(request: argparse.Namespace, runtime: Runtime) -> dict:
     port = choose_dashboard_port(request.port, read_configuration(runtime, CONFIGURATION_OPTIONAL))
-    with start_dashboard(port, secrets.token_urlsafe(TOKEN_BYTES), runtime) as dashboard:
+    with (
+        start_awawa_addon(runtime) as addon,
+        start_dashboard(port, secrets.token_urlsafe(TOKEN_BYTES), runtime, addon) as dashboard,
+    ):
         runtime.poll_until_signalled(_UrlAnnouncer(dashboard.url).poll, POLL_INTERVAL_S)
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "url": dashboard.url}
 

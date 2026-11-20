@@ -3175,7 +3175,13 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            {"project": "tidepool", "wave": "tidepool_w16", "task": "T8", "last_action": "2026-10-18T09:00:00Z"},
+            {
+                "action": "SignalStall",
+                "project": "tidepool",
+                "wave": "tidepool_w16",
+                "task": "T8",
+                "last_action": "2026-10-18T09:00:00Z",
+            },
             json.loads(json.dumps(document["decisions"])),
         )
 
@@ -3188,6 +3194,7 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
             document["decisions"],
             [
                 {
+                    "action": "MergePullRequest",
                     "project": "tidepool",
                     "wave": "tidepool_w16",
                     "task": "T7",
@@ -3195,8 +3202,8 @@ class TickMergingAVerifiedTaskTest(unittest.TestCase):
                     "method": "rebase",
                     "head": "8885daa",
                 },
-                {"project": "tidepool"},
-                {"project": "tidepool"},
+                {"action": "CollectCheckRuns", "project": "tidepool"},
+                {"action": "CollectReviewThreads", "project": "tidepool"},
             ],
         )
 
@@ -3723,7 +3730,8 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            document["decisions"], [{"project": "tidepool", "milestone": "M4", "branch": "integration/tides"}]
+            document["decisions"],
+            [{"action": "CutMilestoneBranch", "project": "tidepool", "milestone": "M4", "branch": "integration/tides"}],
         )
 
     def test_should_name_on_stderr_the_milestone_whose_unrecorded_branch_it_refuses_to_cut(self):
@@ -4150,7 +4158,8 @@ class TickRebasingAMilestoneBranchMainHasOutrunTest(unittest.TestCase):
 
         # Assert
         self.assertNotIn(
-            {"project": "tidepool", "milestone": "M4", "branch": "integration/tides"}, document["decisions"]
+            {"action": "CutMilestoneBranch", "project": "tidepool", "milestone": "M4", "branch": "integration/tides"},
+            document["decisions"],
         )
 
     def test_should_launch_a_rebase_run_on_the_worktree_of_the_milestone_branch_stopped_on_a_conflict(self):
@@ -4808,6 +4817,7 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
         # Assert
         self.assertIn(
             {
+                "action": "LaunchTask",
                 "project": "tidepool",
                 "wave": "tidepool_w16",
                 "branch": "integration/M4",
@@ -4830,6 +4840,7 @@ class TickHoldingTheLaunchOfAGreenTaskOffARedWaveBranchTest(unittest.TestCase):
         # Assert
         self.assertIn(
             {
+                "action": "LaunchTask",
                 "project": "tidepool",
                 "wave": "tidepool_w16",
                 "branch": "integration/M4",
@@ -5338,6 +5349,7 @@ class TickRebasingATaskBehindTheWaveBranchTest(unittest.TestCase):
         # Assert
         self.assertIn(
             {
+                "action": "RebaseTask",
                 "project": "tidepool",
                 "wave": "tidepool_w16",
                 "branch": "integration/M4",
@@ -5883,6 +5895,7 @@ class TickReadingAsTheForgeAccountOfTheCliTest(unittest.TestCase):
             document["decisions"],
             [
                 {
+                    "action": "LaunchTask",
                     "project": "tidepool",
                     "wave": "tidepool_w16",
                     "branch": "integration/M4",
@@ -6153,7 +6166,13 @@ class TickRunningTheConnectorsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            document["decisions"], [{"project": "elm"}, {"project": "elm"}, {"project": "oak"}, {"project": "oak"}]
+            document["decisions"],
+            [
+                {"action": "CollectCheckRuns", "project": "elm"},
+                {"action": "CollectReviewThreads", "project": "elm"},
+                {"action": "CollectCheckRuns", "project": "oak"},
+                {"action": "CollectReviewThreads", "project": "oak"},
+            ],
         )
         self.assertFalse(self.root.joinpath("state", "inbox", "signals.jsonl").exists())
 
@@ -6868,6 +6887,7 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
             document["decisions"],
             [
                 {
+                    "action": "RebuildTask",
                     "project": "tidepool",
                     "wave": "tidepool_w16",
                     "base": "integration/M4",
@@ -6901,8 +6921,8 @@ class TickRebuildingATaskAmendedOnItsWaveBranchTest(unittest.TestCase):
                     },
                     "on_fallback": False,
                 },
-                {"project": "tidepool"},
-                {"project": "tidepool"},
+                {"action": "CollectCheckRuns", "project": "tidepool"},
+                {"action": "CollectReviewThreads", "project": "tidepool"},
             ],
         )
 
@@ -7257,6 +7277,7 @@ class TickRemovingTheBranchOfAClosedMilestoneTest(unittest.TestCase):
             document["decisions"],
             [
                 {
+                    "action": "KeepBranch",
                     "project": "tidepool",
                     "branch": "integration/tides",
                     "reason": "a commit outside the merged pull request",
@@ -7450,7 +7471,14 @@ class TickDescribingThePullRequestOfAMilestoneTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            {"project": "tidepool", "milestone": "M4", "branch": "integration/tides", "pr": 77, "head": "8885daa"},
+            {
+                "action": "DescribeMilestonePullRequest",
+                "project": "tidepool",
+                "milestone": "M4",
+                "branch": "integration/tides",
+                "pr": 77,
+                "head": "8885daa",
+            },
             document["decisions"],
         )
 

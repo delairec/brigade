@@ -4,6 +4,7 @@ import sys
 import unittest
 import warnings
 
+from brigade.dashboard.awawa_addon_supervisor import AwawaAddonSupervisor
 from brigade.dashboard.start_dashboard import start_dashboard
 from brigade.errors import BrigadeError
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
@@ -15,6 +16,14 @@ ANOTHER_LOOPBACK_ADDRESS = "127.0.0.2"
 WAVE_LIST = (sys.executable, "/srv/brigade/bin/brigade", "wave", "list", "--json")
 SECURITY_POLICY = b"\r\nContent-Security-Policy: default-src 'self'\r\n"
 CORS_HEADER_PREFIX = b"\r\naccess-control-"
+ANSWER_TIMEOUT_S = 1.0
+
+
+def refuse_to_start_the_addon():
+    raise AssertionError("the awawa addon should not be started")
+
+
+NO_ADDON = AwawaAddonSupervisor(lambda: frozenset(), refuse_to_start_the_addon, ANSWER_TIMEOUT_S)
 
 
 def exchange(port: int, request: bytes) -> bytes:
@@ -35,7 +44,9 @@ def occupy_a_loopback_port(test_case: unittest.TestCase) -> int:
 class StartDashboardTest(unittest.TestCase):
     def setUp(self):
         runner = ScriptedProcessRunner({WAVE_LIST: ProcessAnswer(stdout='{"schema_version": 1, "waves": []}\n')})
-        dashboard = start_dashboard(ANY_FREE_PORT, ISSUED_CREDENTIAL, create_test_runtime(run_process=runner.run))
+        dashboard = start_dashboard(
+            ANY_FREE_PORT, ISSUED_CREDENTIAL, create_test_runtime(run_process=runner.run), NO_ADDON
+        )
         self.dashboard = dashboard.__enter__()
         self.addCleanup(dashboard.__exit__, None, None, None)
 
@@ -100,7 +111,10 @@ class StartDashboardOnATakenPortTest(unittest.TestCase):
         port = occupy_a_loopback_port(self)
 
         # Act
-        with self.assertRaises(BrigadeError) as raised, start_dashboard(port, ISSUED_CREDENTIAL, create_test_runtime()):
+        with (
+            self.assertRaises(BrigadeError) as raised,
+            start_dashboard(port, ISSUED_CREDENTIAL, create_test_runtime(), NO_ADDON),
+        ):
             pass
 
         # Assert
@@ -114,7 +128,7 @@ class StartDashboardOnAPortOutOfRangeTest(unittest.TestCase):
                 # Act
                 with (
                     self.assertRaises(BrigadeError) as raised,
-                    start_dashboard(port, ISSUED_CREDENTIAL, create_test_runtime()),
+                    start_dashboard(port, ISSUED_CREDENTIAL, create_test_runtime(), NO_ADDON),
                 ):
                     pass
 
@@ -130,7 +144,7 @@ class StopDashboardTest(unittest.TestCase):
             warnings.simplefilter("always", ResourceWarning)
 
             # Act
-            with start_dashboard(ANY_FREE_PORT, ISSUED_CREDENTIAL, create_test_runtime()):
+            with start_dashboard(ANY_FREE_PORT, ISSUED_CREDENTIAL, create_test_runtime(), NO_ADDON):
                 pass
             gc.collect()
 

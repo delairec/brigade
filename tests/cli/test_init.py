@@ -1,8 +1,13 @@
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
 
-from tests.cli.temporary_machine import TemporaryMachine
+from tests.cli.temporary_machine import REPOSITORY_ROOT, TemporaryMachine
+from tests.process_launcher import ProcessLauncher
+
+EARLIER_SCHEMA = REPOSITORY_ROOT / "tests" / "cli" / "fixtures" / "registry" / "earlier_schema.awawa.tpl"
+REGISTERED_PROJECT = 'PROJECT ada\n\tPATH "/srv/ada"\n\tMAIN "main"\n\tFORGE "none"\n\tSTATUS active\n'
 
 
 class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
@@ -30,7 +35,7 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
                 f"created  .gitignore   {corpus / '.gitignore'}",
                 f"created  config.toml  {corpus / 'config.toml'}",
                 "",
-                "init: created 4 · present 0 · differs 0",
+                "init: created 4 · present 0 · upgraded 0 · differs 0",
                 "client: no supported client answers its probe; the client key is left commented",
                 "",
                 "next steps:",
@@ -62,3 +67,57 @@ class BrigadeInitOnAFreshMachineTest(unittest.TestCase):
         # Assert
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(self.machine.read_git("remote", "get-url", "origin"), f"{remote}\n")
+
+
+class BrigadeInitOverARegistryOfAnEarlierSchemaTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.machine = TemporaryMachine(Path(self.root.name))
+        self.machine.install_awawa(self)
+        self.machine.reduce_path_to("git", "awawa")
+        self.machine.run_init()
+        self.registry = self.machine.corpus / "projects.awawa"
+        shutil.copyfile(EARLIER_SCHEMA, self.machine.corpus / "_schema.awawa")
+        self.registry.write_text(REGISTERED_PROJECT)
+        self.machine.read_git("add", "_schema.awawa", "projects.awawa")
+        self.machine.read_git("commit", "--quiet", "-m", "a registry of an earlier schema")
+
+    def tearDown(self):
+        self.root.cleanup()
+
+    def test_should_print_the_schema_upgraded(self):
+        # Act
+        completed = self.machine.run_init()
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            completed.stdout.splitlines()[1], f"upgraded schema       {self.machine.corpus / '_schema.awawa'}"
+        )
+
+    def test_should_keep_the_entity_of_the_registry(self):
+        # Act
+        self.machine.run_init()
+
+        # Assert
+        self.assertEqual(
+            self.registry.read_text(),
+            'PROJECT ada\n\tPATH "/srv/ada"\n\tMAIN "main"\n\tFORGE "none"\n\tSTATUS active\n',
+        )
+
+    def test_should_leave_a_registry_awawa_lint_accepts(self):
+        # Arrange
+        self.machine.run_init()
+
+        # Act
+        linted = ProcessLauncher.run(
+            ["awawa", "lint", "--strict", str(self.machine.corpus)],
+            capture_output=True,
+            text=True,
+            check=False,
+            cwd=self.machine.corpus,
+            env=self.machine.describe_environment(),
+        )
+
+        # Assert
+        self.assertEqual(linted.returncode, 0, linted.stdout + linted.stderr)

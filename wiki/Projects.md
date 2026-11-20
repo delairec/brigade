@@ -82,8 +82,8 @@ or merge command, as `--init-corpus` does.
 A project whose `MODE` is `none` is refused by every command that reads its corpus, exit 1 naming the mode, and the tick
 skips it on stderr.
 
-> **Watch out:** `brigade init` leaves a schema it finds in place: a machine installed before `MODE` keeps the old
-> one, which refuses `area`, and `brigade doctor` reports that it differs from the shipped schema.
+> **Watch out:** a machine installed before `MODE` keeps a schema that refuses `area`, which `brigade doctor` reports
+> as differing from the shipped one, until `brigade init` upgrades it.
 
 ## A corpus for a project that has none
 

@@ -9,6 +9,7 @@ ACTIONS_RECORDING = (
     '{"schema_version": 1, "outcome": "done", "turns": 12, "usage": null, "session_id": "fake-session",'
     ' "duration_ms": 61000, "cost_usd": null, "error_class": null, "reset": null, "message": null}\n'
 )
+NO_ARGUMENTS = {}
 RESULT_OF_SCHEMA_1 = (
     '{"schema_version": 1, "outcome": "done", "turns": null, "usage": null, "session_id": "fake-session",'
     ' "duration_ms": 700183, "error_class": null, "reset": null, "message": "the client finished the task"}'
@@ -58,6 +59,7 @@ class BrigadeRunsListOfAFinishedRunTest(RunsTestCase):
                         "outcome": "done",
                         "wave": None,
                         "task": None,
+                        "started_at": ANY,
                     }
                 ],
                 "skipped": [],
@@ -95,9 +97,20 @@ class BrigadeRunsShowOfAFinishedRunTest(RunsTestCase):
                     "outcome": "done",
                     "wave": None,
                     "task": None,
+                    "started_at": ANY,
                     "message": None,
                 },
-                "segments": [{"segment": 1, "outcome": "done", "turns": 12, "duration_ms": ANY}],
+                "arguments": NO_ARGUMENTS,
+                "segments": [
+                    {
+                        "segment": 1,
+                        "outcome": "done",
+                        "turns": 12,
+                        "duration_ms": ANY,
+                        "started_at": ANY,
+                        "cost_usd": None,
+                    }
+                ],
                 "log": None,
                 "notes": [],
                 "progress": None,

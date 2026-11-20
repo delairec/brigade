@@ -10,6 +10,14 @@ from brigade.add_command_parsers import add_command_parsers
 from brigade.commands.corpus import COMMAND, corpus
 from brigade.errors import BrigadeError, ToolNotFound
 from tests.unit.commands.command_runtime import ProcessAnswer, ScriptedProcessRunner
+from tests.unit.corpus.awawa_corpus_double import (
+    STRING,
+    FakeCorpus,
+    FakeEntity,
+    create_awawa_double,
+    declare_field,
+    declare_literals,
+)
 
 PROJECTS = json.dumps({"entities": [{"type": "PROJECT", "name": "app"}]})
 APP = json.dumps({"fields": [{"name": "PATH", "atoms": ['"/srv/app"']}]})
@@ -20,7 +28,7 @@ WORKTREES = (
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
-NO_VIEW = {"type": None, "field": None, "entity": None}
+NO_VIEW = {"type": None, "field": None, "entity": None, "view": None, "filter": [], "search": None}
 TYPES_OF_THE_CORPUS = json.dumps({"types": [{"type": "DECISION"}, {"type": "TASK"}], "entities": []})
 TASKS_OF_THE_WORKTREE = json.dumps(
     {
@@ -116,7 +124,15 @@ class CorpusViewOfATypeTest(unittest.TestCase):
         self.runtime.paths.config_root.mkdir(parents=True)
         self.runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
         self.request = argparse.Namespace(
-            project="app", ref=None, worktree=Path("/srv/app-b42"), type="TASK", field=None, entity=None
+            project="app",
+            ref=None,
+            worktree=Path("/srv/app-b42"),
+            type="TASK",
+            field=None,
+            entity=None,
+            view=None,
+            filter=[],
+            search=None,
         )
 
     def test_should_link_each_entity_to_its_line_with_the_ide_link_of_the_configuration(self):
@@ -166,6 +182,98 @@ class CorpusViewOfATypeTest(unittest.TestCase):
                 self.assertEqual(str(raised.exception), "--field and --entity read the entities of --type")
 
 
+VIEW_CORPUS = FakeCorpus(
+    entities=(
+        FakeEntity("TASK", "B1", "implemented", (("TITLE", ('"Read the corpus"',)),)),
+        FakeEntity("TASK", "B2", "todo", (("TITLE", ('"Draw the board"',)),), line=8),
+        FakeEntity("TASK", "B3", "todo", (("TITLE", ('"Draw the tree"',)),), line=16),
+    ),
+    schemas={
+        "TASK": [
+            declare_field("TITLE", STRING, required=True),
+            declare_field("STATUS", *declare_literals("todo", "implemented"), required=True),
+        ]
+    },
+)
+
+
+class CorpusViewDocumentTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.addCleanup(self.root.cleanup)
+        runner = ScriptedProcessRunner(
+            {
+                ("awawa", "status", "PROJECT"): ProcessAnswer(stdout=PROJECTS),
+                ("awawa", "show", "@PROJECT.app"): ProcessAnswer(stdout=APP),
+                ("git", "worktree", "list"): ProcessAnswer(stdout=WORKTREES),
+                ("git", "for-each-ref"): ProcessAnswer(stdout="b42\nmain\n"),
+                ("awawa-web", "--help"): ProcessAnswer(),
+            },
+            fallback=create_awawa_double(VIEW_CORPUS, Path("/srv/app-b42")),
+        )
+        self.runtime = create_test_runtime(create_test_paths(Path(self.root.name)), run_process=runner.run)
+        self.runtime.paths.config_root.mkdir(parents=True)
+        self.runtime.paths.schema_file.write_text("SCHEMA PROJECT\n")
+
+    def test_should_print_the_board_of_the_tasks_filtered_and_searched_beside_the_tree_read(self):
+        # Arrange
+        request = argparse.Namespace(
+            **NO_VIEW
+            | {
+                "project": "app",
+                "ref": None,
+                "worktree": Path("/srv/app-b42"),
+                "view": "board",
+                "type": "TASK",
+                "filter": ["STATUS=todo"],
+                "search": "board",
+            }
+        )
+
+        # Act
+        document = corpus(request, self.runtime)
+
+        # Assert
+        self.assertEqual(document["view"], "board")
+        self.assertEqual(document["types"], ["TASK"])
+        self.assertEqual(document["awawa_web"], "http://127.0.0.1:7878/")
+        self.assertEqual(document["columns"][0]["entities"][0]["code"], "B2")
+        self.assertEqual(len(document["columns"][0]["entities"]), 1)
+        self.assertEqual(document["columns"][1]["entities"], [])
+
+    def test_should_print_the_tree_and_the_detail_of_an_entity_without_a_type(self):
+        # Arrange
+        request = argparse.Namespace(
+            **NO_VIEW
+            | {
+                "project": "app",
+                "ref": None,
+                "worktree": Path("/srv/app-b42"),
+                "view": "tree",
+                "entity": "@TASK.B3",
+            }
+        )
+
+        # Act
+        document = corpus(request, self.runtime)
+
+        # Assert
+        self.assertEqual(document["domain"][0]["groups"][0]["entities"][1]["code"], "B3")
+        self.assertEqual(document["detail"]["entity"]["name"], "B3")
+
+    def test_should_offer_the_refs_of_the_project_beside_the_view(self):
+        # Arrange
+        request = argparse.Namespace(
+            **NO_VIEW | {"project": "app", "ref": None, "worktree": Path("/srv/app-b42"), "view": "health"}
+        )
+
+        # Act
+        document = corpus(request, self.runtime)
+
+        # Assert
+        self.assertEqual(document["refs"], ["b42", "main", "worktree:b42"])
+
+
 class CorpusWithAConfigurationThatIsNotTomlTest(unittest.TestCase):
     def test_should_report_the_configuration_before_a_missing_operational_corpus(self):
         # Arrange
@@ -194,6 +302,26 @@ class CorpusArgumentsTest(unittest.TestCase):
     def test_should_refuse_a_ref_and_a_worktree_together(self):
         # Act
         exit_code = self.parse("--ref", "main", "--worktree", "/srv/app")
+
+        # Assert
+        self.assertEqual(exit_code, 2)
+
+    def test_should_take_the_filters_repeated(self):
+        # Arrange
+        parser = argparse.ArgumentParser(prog="brigade")
+        add_command_parsers(parser, [COMMAND], argparse.ArgumentParser(add_help=False))
+
+        # Act
+        options = parser.parse_args(
+            ["corpus", "app", "--view", "board", "--filter", "STATUS=todo", "--filter", "ROLE=ada"]
+        )
+
+        # Assert
+        self.assertEqual(options.filter, ["STATUS=todo", "ROLE=ada"])
+
+    def test_should_refuse_a_view_it_does_not_know(self):
+        # Act
+        exit_code = self.parse("--view", "clean")
 
         # Assert
         self.assertEqual(exit_code, 2)
@@ -236,6 +364,16 @@ class CorpusExitCodeTest(unittest.TestCase):
 
 
 class CorpusTextTest(unittest.TestCase):
+    def test_should_print_the_document_of_a_view_as_indented_json(self):
+        # Arrange
+        document = {"project": "app", "view": "health", "errors": 0}
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(text, '{\n  "project": "app",\n  "view": "health",\n  "errors": 0\n}')
+
     def test_should_print_the_fields_of_the_tree_it_knows(self):
         # Arrange
         document = {

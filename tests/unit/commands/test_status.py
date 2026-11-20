@@ -1,5 +1,6 @@
 import dataclasses
 import json
+import os
 import tempfile
 import unittest
 from argparse import Namespace
@@ -8,17 +9,22 @@ from pathlib import Path
 
 from brigade.commands.status import COMMAND
 from brigade.ledger.append_event import append_event
+from brigade.ledger.milestone_closed import MilestoneClosed
+from brigade.ledger.milestone_pr_opened import MilestonePrOpened
 from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.order_started import OrderStarted
+from brigade.ledger.task_parked import TaskParked
+from brigade.ledger.task_state import TaskState
 from brigade.ledger.wave_blocked import WaveBlocked
 from brigade.ledger.wave_closed import WaveClosed
 from brigade.ledger.wave_parked import WaveParked
 from brigade.ledger.wave_started import WaveStarted
+from brigade.runs.record_run_pid import record_run_pid
 from brigade.system.reset_hour import ResetHour
 from brigade.system.token_usage import TokenUsage
 from tests.unit.commands.command_runtime import create_corpus_double, write_operational_corpus
 from tests.unit.commands.inbox_lines import NOTE_ON_OAK_RECORDED, THREAD_DISMISSED, THREAD_RECORDED
-from tests.unit.commands.run_directories import create_run_record, write_run
+from tests.unit.commands.run_directories import FIRST_RUN, SECOND_RUN, create_run_record, write_run
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.ledger.create_run_finished import create_run_finished
@@ -55,6 +61,7 @@ PARKED_NIGHTLY = {
     "run": "20261019T081500Z-n1",
     "step": "1-gate",
     "reason": "the gate step failed",
+    "age_s": 2640,
 }
 HOME = {
     "schema_version": 1,
@@ -66,7 +73,8 @@ HOME = {
             "branch": "integration/oak_w2",
             "last_event": "wave.blocked",
             "tasks": 2,
-            "halt": {"reason": "quota", "resume_at": "2026-10-19T10:00:00Z"},
+            "task_states": {"queued": 2},
+            "halt": {"reason": "quota", "resume_at": "2026-10-19T10:00:00Z", "age_s": 6000},
         },
         {
             "wave": "elm_w1",
@@ -74,10 +82,13 @@ HOME = {
             "branch": "integration/elm_w1",
             "last_event": "wave.started",
             "tasks": 1,
+            "task_states": {"queued": 1},
             "halt": None,
         },
     ],
-    "inbox": {"new_signals": 1, "scans": []},
+    "live_runs": [],
+    "awaiting_merge": [],
+    "inbox": {"new_signals": 1, "scans": [], "stalls": []},
     "quota": {
         "window_hours": 5,
         "usage": {
@@ -87,49 +98,109 @@ HOME = {
             "cache_read_input_tokens": 40,
         },
         "runs_without_usage": 1,
-        "blocked_waves": [{"wave": "oak_w2", "resume_at": "2026-10-19T10:00:00Z"}],
+        "blocked_waves": [{"wave": "oak_w2", "project": "oak", "resume_at": "2026-10-19T10:00:00Z"}],
     },
     "last_tick": {"ts": "2026-10-19T08:55:00Z", "duration_ms": 120, "actions_applied": 2},
     "studies": [
         {
             "name": "debt",
+            "project": None,
             "status": "active",
             "every": "1d",
             "last_run": "20261019T080000Z-d1",
             "outcome": "parked",
             "due": False,
         },
-        {"name": "triage", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True},
+        {
+            "name": "triage",
+            "project": None,
+            "status": "active",
+            "every": "24h",
+            "last_run": None,
+            "outcome": None,
+            "due": True,
+        },
         {
             "name": "mine_transcripts",
+            "project": None,
             "status": "active",
             "every": "mon@09:00",
             "last_run": None,
             "outcome": None,
             "due": True,
         },
-        {"name": "corpus_lint_elm", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True},
-        {"name": "corpus_fmt_elm", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True},
+        {
+            "name": "corpus_lint_elm",
+            "project": "elm",
+            "status": "active",
+            "every": "24h",
+            "last_run": None,
+            "outcome": None,
+            "due": True,
+        },
+        {
+            "name": "corpus_fmt_elm",
+            "project": "elm",
+            "status": "active",
+            "every": "24h",
+            "last_run": None,
+            "outcome": None,
+            "due": True,
+        },
         {
             "name": "stale_branches_elm",
+            "project": "elm",
             "status": "active",
             "every": "24h",
             "last_run": None,
             "outcome": None,
             "due": True,
         },
-        {"name": "worktrees_elm", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True},
-        {"name": "corpus_lint_oak", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True},
-        {"name": "corpus_fmt_oak", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True},
+        {
+            "name": "worktrees_elm",
+            "project": "elm",
+            "status": "active",
+            "every": "24h",
+            "last_run": None,
+            "outcome": None,
+            "due": True,
+        },
+        {
+            "name": "corpus_lint_oak",
+            "project": "oak",
+            "status": "active",
+            "every": "24h",
+            "last_run": None,
+            "outcome": None,
+            "due": True,
+        },
+        {
+            "name": "corpus_fmt_oak",
+            "project": "oak",
+            "status": "active",
+            "every": "24h",
+            "last_run": None,
+            "outcome": None,
+            "due": True,
+        },
         {
             "name": "stale_branches_oak",
+            "project": "oak",
             "status": "active",
             "every": "24h",
             "last_run": None,
             "outcome": None,
             "due": True,
         },
-        {"name": "worktrees_oak", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True},
+        {
+            "name": "worktrees_oak",
+            "project": "oak",
+            "status": "active",
+            "every": "24h",
+            "last_run": None,
+            "outcome": None,
+            "due": True,
+        },
     ],
     "orders": [],
 }
@@ -158,6 +229,18 @@ WORKTREE_ON_OAK_RECORDED = (
 WORKTREE_ON_OAK_DISMISSED = (
     '{"schema_version": 1, "ts": "2026-10-19T06:30:00Z", "event": "dismissed",'
     ' "fingerprint": "worktrees_oak:oak:/srv/oak/.brigade/worktrees/B9"}\n'
+)
+
+
+STALL_OF_B2_RECORDED = (
+    '{"schema_version": 1, "ts": "2026-10-19T08:40:00Z", "event": "recorded", "kind": "stall", "project": "oak",'
+    ' "fingerprint": "stall:oak:oak_w2:B2",'
+    ' "evidence": {"wave": "oak_w2", "task": "B2", "last_action": "2026-10-19T07:00:00Z"}}\n'
+)
+STALL_OF_B3_RECORDED = (
+    '{"schema_version": 1, "ts": "2026-10-19T08:41:00Z", "event": "recorded", "kind": "stall", "project": "oak",'
+    ' "fingerprint": "stall:oak:oak_w2:B3",'
+    ' "evidence": {"wave": "oak_w2", "task": "B3", "last_action": "2026-10-19T07:00:00Z"}}\n'
 )
 
 
@@ -212,6 +295,75 @@ class StatusOfTheMachineTest(unittest.TestCase):
         # Assert
         self.assertEqual(document, HOME)
 
+    def test_should_count_the_tasks_of_each_open_wave_by_state(self):
+        # Arrange
+        self.write_machine()
+        append_event(self.paths, at(8, 20), TaskState(wave="oak_w2", task="B2", state="running", reason=None))
+        append_event(self.paths, at(8, 25), TaskParked(wave="oak_w2", task="B3", reason="a question", blockers=()))
+        runtime = create_test_runtime(self.paths, run_process=create_corpus_double(CORPUS))
+
+        # Act
+        document = COMMAND.run(Namespace(), runtime)
+
+        # Assert
+        self.assertEqual(document["waves"][0]["task_states"], {"running": 1, "parked": 1})
+
+    def test_should_list_each_live_run_with_its_slot_its_project_its_wave_and_its_task(self):
+        # Arrange
+        self.write_machine()
+        live = write_run(self.paths.state_root, create_run_record(FIRST_RUN, "oak_w2", "B2"), None)
+        record_run_pid(live, os.getpid())
+        write_run(self.paths.state_root, create_run_record(SECOND_RUN, "oak_w2", "B3"), None)
+        runtime = create_test_runtime(self.paths, run_process=create_corpus_double(CORPUS))
+
+        # Act
+        document = COMMAND.run(Namespace(), runtime)
+
+        # Assert
+        self.assertEqual(
+            document["live_runs"],
+            [{"run": FIRST_RUN, "slot": "build", "project": None, "wave": "oak_w2", "task": "B2"}],
+        )
+
+    def test_should_list_the_pull_request_of_a_milestone_waiting_for_the_merge_of_the_user(self):
+        # Arrange
+        self.write_machine()
+        append_event(self.paths, at(8, 20), MilestonePrOpened(project="oak", milestone="M1", pr=30, login=None))
+        append_event(self.paths, at(8, 25), MilestoneClosed(project="oak", milestone="M1", pr=30))
+        append_event(self.paths, at(8, 30), MilestonePrOpened(project="oak", milestone="M2", pr=31, login=None))
+        runtime = create_test_runtime(self.paths, run_process=create_corpus_double(CORPUS))
+
+        # Act
+        document = COMMAND.run(Namespace(), runtime)
+
+        # Assert
+        self.assertEqual(
+            document["awaiting_merge"],
+            [{"project": "oak", "repository": "/srv/oak", "milestone": "M2", "pr": 31, "age_s": 1800}],
+        )
+
+    def test_should_list_each_new_stall_signal_saying_whether_its_task_merged_since(self):
+        # Arrange
+        self.write_machine()
+        (self.root / "state" / "inbox" / "signals.jsonl").write_text(
+            STALL_OF_B2_RECORDED + STALL_OF_B3_RECORDED, encoding="utf-8"
+        )
+        append_event(self.paths, at(8, 50), TaskState(wave="oak_w2", task="B2", state="merged", reason=None))
+        append_event(self.paths, at(8, 52), TaskState(wave="oak_w2", task="B3", state="running", reason=None))
+        runtime = create_test_runtime(self.paths, run_process=create_corpus_double(CORPUS))
+
+        # Act
+        document = COMMAND.run(Namespace(), runtime)
+
+        # Assert
+        self.assertEqual(
+            document["inbox"]["stalls"],
+            [
+                {"project": "oak", "wave": "oak_w2", "task": "B2", "merged": True},
+                {"project": "oak", "wave": "oak_w2", "task": "B3", "merged": False},
+            ],
+        )
+
     def test_should_leave_out_of_the_quota_a_wave_parked_on_another_reason(self):
         # Arrange
         self.write_machine()
@@ -222,7 +374,10 @@ class StatusOfTheMachineTest(unittest.TestCase):
         document = COMMAND.run(Namespace(), runtime)
 
         # Assert
-        self.assertEqual(document["quota"]["blocked_waves"], [{"wave": "oak_w2", "resume_at": "2026-10-19T10:00:00Z"}])
+        self.assertEqual(
+            document["quota"]["blocked_waves"],
+            [{"wave": "oak_w2", "project": "oak", "resume_at": "2026-10-19T10:00:00Z"}],
+        )
 
     def test_should_list_due_a_study_parked_by_a_rate_limit_whose_reset_has_passed(self):
         # Arrange
@@ -263,6 +418,7 @@ class StatusOfTheMachineTest(unittest.TestCase):
             document["studies"][0],
             {
                 "name": "debt",
+                "project": None,
                 "status": "active",
                 "every": "1d",
                 "last_run": "20261019T080000Z-d1",
@@ -332,9 +488,10 @@ class StatusOfTheInboxTest(unittest.TestCase):
             {
                 "new_signals": 3,
                 "scans": [
-                    {"study": "corpus_lint_oak", "signals": 2, "oldest_age_s": 7200},
-                    {"study": "stale_branches_elm", "signals": 1, "oldest_age_s": 900},
+                    {"study": "corpus_lint_oak", "project": "oak", "signals": 2, "oldest_age_s": 7200},
+                    {"study": "stale_branches_elm", "project": "elm", "signals": 1, "oldest_age_s": 900},
                 ],
+                "stalls": [],
             },
         )
 
@@ -346,7 +503,7 @@ class StatusOfTheInboxTest(unittest.TestCase):
         inbox = self.read_inbox_section(lines)
 
         # Assert
-        self.assertEqual(inbox, {"new_signals": 1, "scans": []})
+        self.assertEqual(inbox, {"new_signals": 1, "scans": [], "stalls": []})
 
 
 class StatusTextTest(unittest.TestCase):
@@ -395,8 +552,8 @@ class StatusTextTest(unittest.TestCase):
             "inbox": {
                 "new_signals": 3,
                 "scans": [
-                    {"study": "corpus_lint_oak", "signals": 2, "oldest_age_s": 7200},
-                    {"study": "stale_branches_elm", "signals": 1, "oldest_age_s": 900},
+                    {"study": "corpus_lint_oak", "project": "oak", "signals": 2, "oldest_age_s": 7200},
+                    {"study": "stale_branches_elm", "project": "elm", "signals": 1, "oldest_age_s": 900},
                 ],
             },
         }

@@ -94,6 +94,44 @@ class BuildStudyContextTest(unittest.TestCase):
         # Assert
         self.assertEqual(package, PACKAGE)
 
+    def test_should_ask_a_pattern_study_for_the_pattern_a_repeat_names_where_the_installed_schema_declares_it(self):
+        # Arrange
+        config_root = self.runtime.paths.config_root
+        (self.run_directory / "order.json").write_text('{"order": {"name": "trees", "params": []}}', encoding="utf-8")
+        (self.run_directory / "steps" / "1-collect.json").write_text(COLLECTED, encoding="utf-8")
+        self.processes.answer_entity(
+            config_root,
+            "STUDY",
+            "trees",
+            (
+                ("QUESTION", "which trees fall?"),
+                ("SLOT", "triage"),
+                ("OUTPUT", "entity:PATTERN"),
+                ("ANSWER", "PATTERN"),
+                ("STATUS", "active"),
+            ),
+        )
+        self.processes.answer_json(
+            ("awawa", "show", "PATTERN", "--json", str(config_root)),
+            {
+                "fields": [
+                    {"name": "FIELD", "atoms": ["TITLE", "string"]},
+                    {"name": "FIELD", "atoms": ["REPEATS", "@PATTERN"]},
+                ]
+            },
+        )
+        self.processes.answer(("awawa", "show", "PATTERN", str(config_root)), stdout="SCHEMA PATTERN\n")
+
+        # Act
+        package = build_study_context(self.runtime, RUN_ID)
+
+        # Assert
+        self.assertEqual(
+            package["question"],
+            "which trees fall? A new PATTERN that repeats a PATTERN the registry holds all the same names it in"
+            " REPEATS, @PATTERN.<its name>.",
+        )
+
     def test_should_keep_the_package_in_the_run(self):
         # Arrange
         self.script_study_run()

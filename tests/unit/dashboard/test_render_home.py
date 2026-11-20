@@ -1,30 +1,33 @@
 import unittest
 
-from brigade.dashboard.render_home import render_home
+from brigade.dashboard.render_home import HomeDocuments, render_home
 
-NO_USAGE = {"input_tokens": 0, "output_tokens": 0, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0}
-HOME = {
+ELM_W1 = {
+    "wave": "elm_w1",
+    "project": "elm",
+    "branch": "integration/elm_w1",
+    "last_event": "wave.started",
+    "tasks": 3,
+    "task_states": {"running": 1, "queued": 2},
+    "halt": None,
+}
+OAK_W2_BLOCKED = {
+    "wave": "oak_w2",
+    "project": "oak",
+    "branch": "integration/oak_w2",
+    "last_event": "wave.blocked",
+    "tasks": 2,
+    "task_states": {"blocked:quota": 2},
+    "halt": {"reason": "quota", "resume_at": "2026-10-19T10:00:00Z", "age_s": 600},
+}
+LIVE_RUN_OF_E1 = {"run": "20261019T080000Z-e1", "slot": "build", "project": "elm", "wave": "elm_w1", "task": "E1"}
+STATUS = {
     "schema_version": 1,
     "projects": [{"name": "oak", "paused": False}, {"name": "elm", "paused": True}],
-    "waves": [
-        {
-            "wave": "oak_w2",
-            "project": "oak",
-            "branch": "integration/oak_w2",
-            "last_event": "wave.blocked",
-            "tasks": 2,
-            "halt": {"reason": "quota", "resume_at": "2026-10-19T10:00:00Z"},
-        },
-        {
-            "wave": "elm_w1",
-            "project": "elm",
-            "branch": "integration/elm_w1",
-            "last_event": "wave.started",
-            "tasks": 1,
-            "halt": None,
-        },
-    ],
-    "inbox": {"new_signals": 3, "scans": []},
+    "waves": [ELM_W1],
+    "live_runs": [],
+    "awaiting_merge": [],
+    "inbox": {"new_signals": 0, "scans": [], "stalls": []},
     "quota": {
         "window_hours": 5,
         "usage": {
@@ -34,150 +37,373 @@ HOME = {
             "cache_read_input_tokens": 40,
         },
         "runs_without_usage": 1,
-        "blocked_waves": [{"wave": "oak_w2", "resume_at": "2026-10-19T10:00:00Z"}],
+        "blocked_waves": [],
     },
-    "last_tick": None,
-    "studies": [{"name": "triage", "status": "active", "every": "24h", "last_run": None, "outcome": None, "due": True}],
+    "last_tick": {"ts": "2026-10-19T08:55:00Z", "duration_ms": 120, "actions_applied": 2},
+    "studies": [],
     "orders": [],
 }
+FRESH_SCHEDULER = {"schema_version": 1, "stale": False, "last_tick": STATUS["last_tick"]}
+STALE_SCHEDULER = {**FRESH_SCHEDULER, "stale": True}
+QUIET_DAY = {"view": "overview", "events": {"wave.started": 1}}
+EMPTY_INBOX = {"schema_version": 1, "signals": [], "families": [], "patterns": [], "answers": []}
+HOME = HomeDocuments(status=STATUS, scheduler=FRESH_SCHEDULER, ledger=QUIET_DAY, inbox=EMPTY_INBOX)
 
 
-class RenderHomeTest(unittest.TestCase):
-    def test_should_render_each_section_of_the_home_document_with_its_actions(self):
-        # Act
-        fragment = render_home(HOME)
+def create_home(status_change: dict) -> HomeDocuments:
+    return HomeDocuments(
+        status={**STATUS, **status_change}, scheduler=FRESH_SCHEDULER, ledger=QUIET_DAY, inbox=EMPTY_INBOX
+    )
 
-        # Assert
-        self.assertEqual(
-            fragment,
-            "<section><h2>Projects</h2><ul>"
-            '<li>oak, active <button type="button" data-post="/api/projects/oak/pause">pause</button></li>'
-            '<li>elm, paused <button type="button" data-post="/api/projects/elm/resume">resume</button></li>'
-            "</ul></section>"
-            "<section><h2>Waves</h2><ul>"
-            '<li><a href="#waves/oak_w2">oak_w2</a> of oak, wave.blocked,'
-            " blocked on quota until 2026-10-19T10:00:00Z"
-            ' <button type="button" data-post="/api/waves/oak_w2/resume">resume</button></li>'
-            '<li><a href="#waves/elm_w1">elm_w1</a> of elm, wave.started</li>'
-            "</ul></section>"
-            "<section><h2>Inbox</h2><p>3 new signals</p><ul></ul></section>"
-            "<section><h2>Quota</h2><p>over the last 5 hours, 1 runs without usage</p><dl>"
-            "<dt>input_tokens</dt><dd>10</dd><dt>output_tokens</dt><dd>20</dd>"
-            "<dt>cache_creation_input_tokens</dt><dd>30</dd><dt>cache_read_input_tokens</dt><dd>40</dd>"
-            "</dl><ul><li>oak_w2 blocked on quota until 2026-10-19T10:00:00Z</li></ul></section>"
-            "<section><h2>Last tick</h2><p>never</p></section>"
-            "<section><h2>Studies</h2><ul><li>triage, due</li></ul></section>"
-            "<section><h2>Orders</h2><ul></ul></section>",
+
+class RenderHomeSentenceTest(unittest.TestCase):
+    def test_should_open_on_the_sentence_saying_whether_brigade_is_stopped_working_or_idle(self):
+        # Arrange
+        rows = [
+            ("a stale tick", STALE_SCHEDULER, {}, "brigade is stopped: the scheduler reports the tick stale."),
+            ("a live run", FRESH_SCHEDULER, {"live_runs": [LIVE_RUN_OF_E1]}, "brigade is working: a run is live."),
+            ("no open wave", FRESH_SCHEDULER, {"waves": []}, "brigade is idle: no wave is open."),
+            (
+                "every wave halted",
+                FRESH_SCHEDULER,
+                {"waves": [OAK_W2_BLOCKED]},
+                "brigade is idle: every open wave is halted.",
+            ),
+            ("waves waiting", FRESH_SCHEDULER, {}, "brigade is idle: the open waves wait for the next tick."),
+        ]
+        for name, scheduler, status_change, sentence in rows:
+            with self.subTest(name):
+                home = HomeDocuments(
+                    status={**STATUS, **status_change}, scheduler=scheduler, ledger=QUIET_DAY, inbox=EMPTY_INBOX
+                )
+
+                # Act
+                fragment = render_home(home)
+
+                # Assert
+                self.assertTrue(fragment.startswith(f'<p class="status-sentence">{sentence}</p>'))
+
+
+class RenderHomeTilesTest(unittest.TestCase):
+    def test_should_show_the_waves_the_runs_what_waits_and_the_quota_as_four_tiles(self):
+        # Arrange
+        home = create_home(
+            {
+                "waves": [ELM_W1, OAK_W2_BLOCKED],
+                "live_runs": [LIVE_RUN_OF_E1],
+                "inbox": {
+                    "new_signals": 2,
+                    "scans": [{"study": "corpus_lint_oak", "project": "oak", "signals": 2, "oldest_age_s": 7200}],
+                    "stalls": [],
+                },
+                "quota": {
+                    **STATUS["quota"],
+                    "blocked_waves": [{"wave": "oak_w2", "project": "oak", "resume_at": None}],
+                },
+            }
         )
-
-    def test_should_render_the_last_tick_and_a_parked_study(self):
-        # Arrange
-        document = {
-            **HOME,
-            "last_tick": {"ts": "2026-10-19T08:55:00Z", "duration_ms": 120, "actions_applied": 2},
-            "studies": [
-                {"name": "debt", "status": "active", "every": "1d", "last_run": "r1", "outcome": "parked", "due": False}
-            ],
-        }
-
-        # Act
-        fragment = render_home(document)
-
-        # Assert
-        self.assertIn("<section><h2>Last tick</h2><p>2026-10-19T08:55:00Z, 2 actions applied in 120 ms</p>", fragment)
-        self.assertIn("<section><h2>Studies</h2><ul><li>debt, parked</li></ul></section>", fragment)
-
-    def test_should_render_a_parked_order_with_the_step_and_the_reason_that_parked_it(self):
-        # Arrange
-        home = {
-            **HOME,
-            "orders": [
-                {
-                    "name": "nightly",
-                    "recipe": "usage-report",
-                    "project": "oak",
-                    "run": "20261019T081500Z-n1",
-                    "step": "1-gate",
-                    "reason": "the gate <step> failed",
-                }
-            ],
-        }
 
         # Act
         fragment = render_home(home)
 
         # Assert
         self.assertIn(
-            "<section><h2>Orders</h2><ul><li>nightly of oak, parked at 1-gate: the gate &lt;step&gt; failed</li></ul>"
-            "</section>",
+            '<div class="stat-tiles">'
+            '<div class="stat-tile"><span class="stat-value">2</span><span class="stat-label">open waves</span>'
+            '<span class="stat-perimeter">1 halted</span></div>'
+            '<div class="stat-tile"><span class="stat-value">1</span><span class="stat-label">live runs</span>'
+            '<span class="stat-perimeter">now</span></div>'
+            '<div class="stat-tile"><span class="stat-value">2</span><span class="stat-label">need you</span>'
+            '<span class="stat-perimeter">the oldest 2h</span></div>'
+            '<div class="stat-tile"><span class="stat-value">100</span><span class="stat-label">quota tokens</span>'
+            '<span class="stat-perimeter">over 5 hours, blocking oak_w2</span></div>'
+            "</div>",
             fragment,
         )
 
-    def test_should_render_each_scan_holding_new_signals_with_their_count_and_the_age_of_the_oldest(self):
+    def test_should_take_the_age_of_the_oldest_from_every_thing_waiting_for_the_user(self):
         # Arrange
-        document = {
-            **HOME,
-            "inbox": {
-                "new_signals": 3,
-                "scans": [
-                    {"study": "corpus_lint_oak", "signals": 2, "oldest_age_s": 7200},
-                    {"study": "stale_branches_elm", "signals": 1, "oldest_age_s": 900},
-                ],
-            },
-        }
+        rows = [
+            ("a halted wave", {"waves": [{**OAK_W2_BLOCKED, "halt": {**OAK_W2_BLOCKED["halt"], "age_s": 172800}}]}),
+            (
+                "a milestone pull request",
+                {
+                    "awaiting_merge": [
+                        {"project": "oak", "repository": "/srv/oak", "milestone": "M2", "pr": 31, "age_s": 172800}
+                    ]
+                },
+            ),
+            (
+                "a parked order",
+                {
+                    "orders": [
+                        {
+                            "name": "nightly",
+                            "recipe": "usage-report",
+                            "project": "oak",
+                            "run": "20261019T081500Z-n1",
+                            "step": "1-gate",
+                            "reason": "the gate failed",
+                            "age_s": 172800,
+                        }
+                    ]
+                },
+            ),
+        ]
+        scan = {"study": "corpus_lint_oak", "project": "oak", "signals": 1, "oldest_age_s": 900}
+        for name, status_change in rows:
+            with self.subTest(name):
+                home = create_home({**status_change, "inbox": {"new_signals": 1, "scans": [scan], "stalls": []}})
 
+                # Act
+                fragment = render_home(home)
+
+                # Assert
+                self.assertIn(
+                    '<span class="stat-label">need you</span><span class="stat-perimeter">the oldest 2d</span>',
+                    fragment,
+                )
+
+    def test_should_say_no_age_is_recorded_when_nothing_waiting_carries_one(self):
         # Act
-        fragment = render_home(document)
+        fragment = render_home(HOME)
 
         # Assert
         self.assertIn(
-            "<section><h2>Inbox</h2><p>3 new signals</p><ul>"
-            "<li>corpus_lint_oak, 2 new signals, the oldest 2h</li>"
-            "<li>stale_branches_elm, 1 new signals, the oldest 15m</li>"
+            '<span class="stat-label">need you</span><span class="stat-perimeter">no age recorded</span>', fragment
+        )
+
+    def test_should_say_the_quota_blocks_no_wave(self):
+        # Act
+        fragment = render_home(HOME)
+
+        # Assert
+        self.assertIn('<span class="stat-perimeter">over 5 hours, blocking no wave</span>', fragment)
+
+
+class RenderHomeNeedsYouTest(unittest.TestCase):
+    def test_should_list_each_thing_waiting_for_the_user_with_the_command_to_copy(self):
+        # Arrange
+        home = HomeDocuments(
+            status={
+                **STATUS,
+                "waves": [OAK_W2_BLOCKED],
+                "awaiting_merge": [
+                    {"project": "oak", "repository": "/srv/oak", "milestone": "M2", "pr": 31, "age_s": 60}
+                ],
+                "inbox": {
+                    "new_signals": 1,
+                    "scans": [{"study": "corpus_lint_oak", "project": "oak", "signals": 1, "oldest_age_s": 900}],
+                    "stalls": [],
+                },
+                "orders": [
+                    {
+                        "name": "nightly",
+                        "recipe": "usage-report",
+                        "project": "oak",
+                        "run": "20261019T081500Z-n1",
+                        "step": "1-gate",
+                        "reason": "the gate failed",
+                        "age_s": 60,
+                    }
+                ],
+            },
+            scheduler=FRESH_SCHEDULER,
+            ledger=QUIET_DAY,
+            inbox={**EMPTY_INBOX, "patterns": [{"name": "p1"}, {"name": "p2"}]},
+        )
+
+        # Act
+        fragment = render_home(home)
+
+        # Assert
+        self.assertIn(
+            '<section><h2>Needs you</h2><ul class="needs-you-list">'
+            '<li class="needs-you"><span class="needs-you-subject">oak_w2</span>'
+            '<span class="needs-you-reason">blocked on quota until 2026-10-19T10:00:00Z</span>'
+            '<code class="needs-you-action">brigade wave resume oak_w2</code></li>'
+            '<li class="needs-you"><span class="needs-you-subject">2 proposed patterns</span>'
+            '<span class="needs-you-reason">the inbox proposes them for ratification</span>'
+            '<code class="needs-you-action">brigade inbox list</code></li>'
+            '<li class="needs-you"><span class="needs-you-subject">corpus_lint_oak</span>'
+            '<span class="needs-you-reason">1 new signals, the oldest 15m</span>'
+            '<code class="needs-you-action">brigade inbox list</code></li>'
+            '<li class="needs-you"><span class="needs-you-subject">M2 of oak</span>'
+            '<span class="needs-you-reason">pull request 31 waits for your merge</span>'
+            '<code class="needs-you-action">cd /srv/oak &amp;&amp; gh pr merge 31</code></li>'
+            '<li class="needs-you"><span class="needs-you-subject">nightly of oak</span>'
+            '<span class="needs-you-reason">parked at 1-gate: the gate failed</span>'
+            '<code class="needs-you-action">brigade order resume nightly</code></li>'
             "</ul></section>",
             fragment,
         )
 
-    def test_should_render_a_wave_parked_until_further_notice_without_a_resume_time(self):
+    def test_should_say_a_wave_parked_until_further_notice(self):
         # Arrange
-        document = {
-            **HOME,
-            "waves": [
-                {
-                    "wave": "elm_w1",
-                    "project": "elm",
-                    "branch": "integration/elm_w1",
-                    "last_event": "wave.parked",
-                    "tasks": 1,
-                    "halt": {"reason": "forge_account", "resume_at": None},
-                }
-            ],
-        }
+        parked = {**OAK_W2_BLOCKED, "halt": {"reason": "a question", "resume_at": None, "age_s": 60}}
+        home = create_home({"waves": [parked]})
 
         # Act
-        fragment = render_home(document)
+        fragment = render_home(home)
+
+        # Assert
+        self.assertIn('<span class="needs-you-reason">parked on a question</span>', fragment)
+
+    def test_should_say_nothing_needs_the_user(self):
+        # Act
+        fragment = render_home(HOME)
 
         # Assert
         self.assertIn(
-            '<li><a href="#waves/elm_w1">elm_w1</a> of elm, wave.parked, parked on forge_account'
-            ' <button type="button" data-post="/api/waves/elm_w1/resume">resume</button></li>',
+            '<section><h2>Needs you</h2><div class="empty-state"><p class="empty-why">nothing needs you</p>'
+            '<p class="empty-fill">a halted wave, a proposed pattern, a parked scan, a pull request to merge'
+            " or a parked order would show here</p></div></section>",
             fragment,
         )
 
-    def test_should_escape_every_string_of_the_document(self):
+    def test_should_list_apart_as_stale_a_stall_whose_task_merged_since(self):
         # Arrange
-        markup = "<script>alert(1)</script>"
-        document = {
-            **HOME,
-            "projects": [{"name": markup, "paused": False}],
-            "waves": [{**HOME["waves"][0], "wave": markup, "project": markup, "last_event": markup}],
-            "inbox": {"new_signals": 1, "scans": [{"study": markup, "signals": 1, "oldest_age_s": 60}]},
-            "quota": {**HOME["quota"], "usage": NO_USAGE, "blocked_waves": [{"wave": markup, "resume_at": markup}]},
-            "studies": [{**HOME["studies"][0], "name": markup}],
-        }
+        stalls = [
+            {"project": "elm", "wave": "elm_w1", "task": "E1", "merged": True},
+            {"project": "elm", "wave": "elm_w1", "task": "E2", "merged": False},
+        ]
+        home = create_home({"inbox": {"new_signals": 2, "scans": [], "stalls": stalls}})
 
         # Act
-        fragment = render_home(document)
+        fragment = render_home(home)
 
         # Assert
-        self.assertNotIn("<script>", fragment)
+        self.assertIn(
+            '<h3>Stale</h3><ul class="needs-you-list">'
+            '<li class="needs-you"><span class="needs-you-subject">stall of E1 in elm_w1</span>'
+            '<span class="needs-you-reason">its task merged since</span>'
+            '<code class="needs-you-action">brigade inbox list</code></li></ul>',
+            fragment,
+        )
+
+    def test_should_render_a_wave_name_holding_markup_escaped(self):
+        # Arrange
+        wave = {**OAK_W2_BLOCKED, "wave": "<b>w</b>"}
+        home = create_home({"waves": [wave]})
+
+        # Act
+        fragment = render_home(home)
+
+        # Assert
+        self.assertIn('<span class="needs-you-subject">&lt;b&gt;w&lt;/b&gt;</span>', fragment)
+        self.assertNotIn("<b>w</b>", fragment)
+
+
+class RenderHomeAtWorkTest(unittest.TestCase):
+    def test_should_list_each_open_wave_with_its_tasks_by_state_and_its_live_runs(self):
+        # Arrange
+        home = create_home({"live_runs": [LIVE_RUN_OF_E1]})
+
+        # Act
+        fragment = render_home(home)
+
+        # Assert
+        self.assertIn(
+            '<section><h2>At work</h2><ul><li><a href="#waves/elm_w1">elm_w1</a> of elm: running 1, queued 2'
+            "<ul><li>20261019T080000Z-e1, build on E1</li></ul></li></ul></section>",
+            fragment,
+        )
+
+    def test_should_list_under_a_wave_its_own_live_runs_alone(self):
+        # Arrange
+        home = create_home({"waves": [ELM_W1, OAK_W2_BLOCKED], "live_runs": [LIVE_RUN_OF_E1]})
+
+        # Act
+        fragment = render_home(home)
+
+        # Assert
+        self.assertIn('<li><a href="#waves/oak_w2">oak_w2</a> of oak: blocked:quota 2</li></ul></section>', fragment)
+
+    def test_should_say_no_wave_is_open(self):
+        # Arrange
+        home = create_home({"waves": []})
+
+        # Act
+        fragment = render_home(home)
+
+        # Assert
+        self.assertIn(
+            '<section><h2>At work</h2><div class="empty-state"><p class="empty-why">no wave is open</p>'
+            '<p class="empty-fill">the tick starts a wave once a milestone holds a ratified task</p></div></section>',
+            fragment,
+        )
+
+    def test_should_count_the_failed_tick_actions_of_the_last_24_hours(self):
+        # Arrange
+        home = HomeDocuments(
+            status=STATUS,
+            scheduler=FRESH_SCHEDULER,
+            ledger={"view": "overview", "events": {"tick.action_failed": 3}},
+            inbox=EMPTY_INBOX,
+        )
+
+        # Act
+        fragment = render_home(home)
+
+        # Assert
+        self.assertIn("<section><h2>Last 24 hours</h2><p>3 failed tick actions</p></section>", fragment)
+
+    def test_should_keep_the_pause_and_resume_buttons_of_the_projects(self):
+        # Act
+        fragment = render_home(HOME)
+
+        # Assert
+        self.assertIn(
+            "<section><h2>Projects</h2><ul>"
+            '<li>oak, active <button type="button" data-post="/api/projects/oak/pause">pause</button></li>'
+            '<li>elm, paused <button type="button" data-post="/api/projects/elm/resume">resume</button></li>'
+            "</ul></section>",
+            fragment,
+        )
+
+    def test_should_keep_the_lines_of_the_studies_and_the_parked_orders(self):
+        # Arrange
+        home = create_home(
+            {
+                "studies": [
+                    {
+                        "name": "triage",
+                        "status": "active",
+                        "every": "24h",
+                        "last_run": None,
+                        "outcome": None,
+                        "due": True,
+                    },
+                    {
+                        "name": "debt",
+                        "status": "active",
+                        "every": "1d",
+                        "last_run": "r1",
+                        "outcome": "parked",
+                        "due": False,
+                    },
+                ],
+                "orders": [
+                    {
+                        "name": "nightly",
+                        "recipe": "usage-report",
+                        "project": "oak",
+                        "run": "r2",
+                        "step": "1-gate",
+                        "reason": "the gate <step> failed",
+                        "age_s": 60,
+                    }
+                ],
+            }
+        )
+
+        # Act
+        fragment = render_home(home)
+
+        # Assert
+        self.assertIn(
+            "<section><h2>Studies</h2><ul><li>triage, due</li><li>debt, parked</li></ul></section>"
+            "<section><h2>Orders</h2><ul><li>nightly of oak, parked at 1-gate: the gate &lt;step&gt; failed</li></ul>"
+            "</section>",
+            fragment,
+        )

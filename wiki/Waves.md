@@ -72,7 +72,8 @@ reason. `wave list` prints one row per wave, the open waves first.
 
 <details><summary>Which commands need the registry</summary>
 
-Every command but `wave show`, `wave list`, `wave cancel` and `wave resume`, which read the ledger alone, and
+Every command but `wave show`, `wave list`, `wave cancel` and `wave resume`, which read the ledger alone, `wave show
+--json` reading besides the milestone of the wave from the corpus of its project, and
 `wave requeue`, which reads the ledger until the task proves parked, exits 1 naming `brigade init` until the corpus
 exists.
 
@@ -134,8 +135,15 @@ exists.
   run in the wave and, for a parked task, the reason of its `task.parked`, `-` when none. With `--events`, it adds what `brigade ledger` once printed for a wave: its cost and tokens, the
   turns, duration and cost of each task, its merged pull requests, its turns by slot and by role, its halts, its
   handovers, its parked tasks, then every event the ledger holds for the wave, in the order recorded.
+  With `--json`, it names the milestone the tasks of the wave name, `null` for tasks naming none, read at the
+  branch of that milestone as the last fetch of the tick left it: it reaches no forge.
 - `wave list` prints one row per wave of the ledger, its project, the branch recorded as in `wave show`, its last wave
-  event and its task count, the open waves first, those of one project with `--project`.
+  event and its task count, the open waves first, those of one project with `--project`. With `--json`, each wave
+  also carries `started_at`; `ended_at`, the instant of its `wave.closed` or `wave.cancelled`, `null` while it is
+  open; `ended_by`, the name of that event, `null` while it is open; `task_states`, each task with its last state, `null` for a task no event served yet; `halt`, the `reason` and
+  the `resume_at` of the pause in force, `null` once resumed or ended; `rounds`, the most review rounds one of its
+  merged pull requests took, `0` when none merged; and `cost_usd`, the sum of the costs its runs record, `null` when
+  none records one: a floor, since a run of a client that reports no cost adds nothing.
 
 </details>
 

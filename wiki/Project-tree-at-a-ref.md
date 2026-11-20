@@ -1,5 +1,5 @@
 How to read a registered project's tree at a branch, a SHA or a worktree with `brigade corpus`, run awawa there, list
-its entities, and how the cache of extracted trees is bounded.
+its entities, print one view of its corpus, and how the cache of extracted trees is bounded.
 
 ## Commands
 
@@ -9,6 +9,8 @@ brigade corpus <project> --ref <branch|sha> [--json] [-- <awawa args>]
 brigade corpus <project> --ref worktree:<branch> [--json] [-- <awawa args>]
 brigade corpus <project> --worktree <path> [--json] [-- <awawa args>]
 brigade corpus <project> [--ref <ref>] --type <TYPE> [--field <FIELD>] [--entity @TYPE.Name] [--json]
+brigade corpus <project> [--ref <ref>] --view tree|board|dependencies|health [--type <TYPE>] [--field <FIELD>]
+               [--filter <field>=<value> ...] [--search <text>] [--entity @TYPE.Name] [--json]
 ```
 
 | Option | Reads |
@@ -40,6 +42,39 @@ brigade corpus <project> --ref main -- status .
 | `--entity @TYPE.Name` | what that entity reaches and what references it |
 
 > **Watch out:** `--field` or `--entity` without `--type` exits 1.
+
+## Views of the corpus
+
+`--view` prints the document of one view of the corpus, by the rules of the IntelliJ plugin awawa-ui, beside `project`,
+`ref`, `sha`, `kind`, `root`, `types` and `awawa_web`; as text, the same document indented. Without `--view` the
+command prints what the sections above describe.
+
+| `--view` | The document holds |
+|---|---|
+| `tree` | `domain`, the types using the most statuses first, and `schema`, `SCHEMA`, `FIELDSET` and `SHAPE` apart; a type whose entities stand at a status for at least half of them holds `groups`, one per status in the order of its lifecycle, `null` for the entities at no status, the last value of the lifecycle `collapsed`; any other type holds its `entities` |
+| `board` | with `--type`, `field`, `STATUS` unless `--field` names another, and `columns`: for a field of literals one per value the schema admits, in schema order; for any other field one per each of its 5 most frequent values, then `Others (k)`, whose entities carry their `value`; `(none)` last for the entities leaving the field empty |
+| `dependencies` | with `--type`, `field`, the first field referring to entities of the type unless `--field` names one, and `roots`, the entities waiting on nothing, each with its `dependents`; `in_cycle` flags an entity in a cycle, `already_above` one met again along its own path, which goes no deeper; a cycle no root reaches gets a root of its own |
+| `health` | `errors`, `warnings` and `unresolved` as `awawa status` counts them, `entities`, the diagnostics of `awawa lint` gathered per entity, the most errors first, and `files`, the diagnostics on no entity under their file |
+
+Each entity of a view carries its `type`, its `target`, its `code`, the name as written, its `label`, the first
+required, single-valued string field of its type, else its name read as a sentence, up to four `facts`, the fields it
+fills whose values are literals, numbers, identifiers, references or shapes, a reference carrying the `status` of its
+target, its `status` and its `position` in the lifecycle of its type, `waiting` when it refers to an entity of its own
+type standing no further along that lifecycle, its `file`, its `line` and its `ide_link`.
+
+| Option | With `--view` |
+|---|---|
+| `--filter <field>=<value>` | keeps the entities of `--type` whose field holds one of the values given for it, repeatable; `<field>.<field>=<value>` reads one field of the entities a reference field refers to, one level deep; an entity whose prerequisites are all filtered out becomes a root; the health view leaves the filters aside |
+| `--search <text>` | keeps the entities whose label, code, facts, status or file carries the text, case aside, and in the health view the diagnostics whose rule or message carries it |
+| `--entity @TYPE.Name` | adds `detail`: the entity as `awawa show --json` answers it, `references`, the entities it refers to, and `referenced_by`, those that refer to it, each with its code, its label and its status |
+
+> **Watch out:** `--view board` or `--view dependencies` without `--type` exits 1, and so does a type with no field
+> referring to its own entities under `--view dependencies` without `--field`; under every view but health, a
+> `--type` the corpus holds no entity of exits 1, and so does `--filter` without `--type`.
+
+The command reads the corpus through awawa alone: one `awawa status --json`, one `awawa context --depth 0
+--with-schema --json` per type shown, one `awawa show --json` per entity, eight at a time, and `awawa lint --json` for
+the health view.
 
 ## Details and edge cases
 

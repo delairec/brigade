@@ -4,6 +4,7 @@ from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from brigade.dashboard.answer_dashboard_request import answer_dashboard_request
+from brigade.dashboard.awawa_addon_supervisor import AwawaAddonSupervisor
 from brigade.dashboard.dashboard_exchange import LOOPBACK_HOST, Dashboard, IncomingRequest
 from brigade.errors import BrigadeError
 from brigade.runtime import Runtime
@@ -59,9 +60,9 @@ def _listen(port: int) -> _DashboardServer:
 
 
 @contextlib.contextmanager
-def start_dashboard(port: int, token: str, runtime: Runtime) -> Iterator[Dashboard]:
+def start_dashboard(port: int, token: str, runtime: Runtime, addon: AwawaAddonSupervisor) -> Iterator[Dashboard]:
     server = _listen(port)
-    server.dashboard = Dashboard(port=server.server_address[1], token=token)
+    server.dashboard = Dashboard(port=server.server_address[1], token=token, addon=addon)
     server.runtime = runtime
     serving = threading.Thread(target=server.serve_forever)
     serving.start()

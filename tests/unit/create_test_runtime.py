@@ -19,6 +19,10 @@ def _refuse_to_spawn(request):
     raise AssertionError(f"{' '.join(request.argv)} should not be spawned")
 
 
+def _refuse_to_start_piped(request):
+    raise AssertionError(f"{' '.join(request.argv)} should not be started")
+
+
 def _refuse_to_signal(pid: int, sent: int):
     raise AssertionError(f"the process {pid} should not be signalled")
 
@@ -39,6 +43,7 @@ def create_test_runtime(
     paths: Paths = UNWRITTEN_PATHS,
     run_process=refuse_to_run,
     spawn_process=_refuse_to_spawn,
+    start_piped_process=_refuse_to_start_piped,
     signal_process=_refuse_to_signal,
     resolve_plugin=_refuse_to_resolve,
     now: datetime = FIXED_NOW,
@@ -51,6 +56,7 @@ def create_test_runtime(
     return Runtime(
         run_process=run_process,
         spawn_process=spawn_process,
+        start_piped_process=start_piped_process,
         signal_process=signal_process,
         paths=paths,
         now=now,

@@ -244,7 +244,7 @@ MILESTONE M17
 MILESTONE M18
 	TITLE "User-friendly dashboard"
 	SUBJECT "redesign the dashboard and add an awawa tab"
-	STATUS active
+	STATUS reached
 	AFTER @MILESTONE.M8
 	DESC "post-MVP: the dashboard tells its user where to look, with a real stylesheet and each"
 		+ "page reviewed for what it shows, which of it matters, what the information is for, which"

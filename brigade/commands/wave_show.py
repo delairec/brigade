@@ -1,4 +1,7 @@
 import argparse
+import functools
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.command import Argument, Command
@@ -32,6 +35,7 @@ from brigade.waves.describe_milestone_merge import describe_milestone_merge
 from brigade.waves.find_integration_pull_request import find_integration_pull_request
 from brigade.waves.find_last_task_event import find_last_task_event
 from brigade.waves.find_milestone_branch import find_milestone_branch
+from brigade.waves.is_milestone_report_committed import is_milestone_report_committed
 from brigade.waves.locate_merge_worktree import locate_merge_worktree
 from brigade.waves.prepare_wave_tree import WaveTreeReading, prepare_wave_tree
 from brigade.waves.read_task_state import TASK_EVENTS
@@ -52,6 +56,7 @@ NO_AUTO_MERGE = "none"
 NO_POLICY = None
 VERIFIED_STATE = "verified"
 EVENTS_KEY = "ledger"
+JSON_OPTION = "json"
 
 
 def _show(value) -> str:
@@ -95,19 +100,44 @@ def _prepare_tree(runtime: Runtime, configuration: Configuration, started: WaveS
         read_environment=lambda key: read_forge_environment(
             configuration, ForgeSlot(read_project_forge(project), key), runtime
         ),
+        reaches_the_forge=False,
     )
     return prepare_wave_tree(runtime, reading, started)
 
 
-def _read_merge_command(runtime: Runtime, entries: tuple[LedgerEntry, ...], started: WaveStarted) -> str | None:
+def _read_merge_command(
+    runtime: Runtime, entries: tuple[LedgerEntry, ...], started: WaveStarted, read_tree: Callable[[], "WaveTree"]
+) -> str | None:
     if not any(
         isinstance(entry.event, MilestoneReported) and entry.event.project == started.project for entry in entries
     ):
         return None
-    configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
+    return describe_milestone_merge(
+        entries, find_project(read_projects(runtime), started.project), read_tree().milestone
+    )
+
+
+def _name_milestone_report(entries: tuple[LedgerEntry, ...], started: WaveStarted, milestone: str | None) -> str | None:
+    if not is_milestone_report_committed(entries, started.project, milestone):
+        return None
+    return f"{started.project}_{milestone}"
+
+
+def _name_milestone(
+    request: argparse.Namespace,
+    entries: tuple[LedgerEntry, ...],
+    started: WaveStarted,
+    read_tree: Callable[[], "WaveTree"],
+) -> dict:
+    if not getattr(request, JSON_OPTION, False):
+        return {}
+    milestone = read_tree().milestone
+    return {"milestone": milestone, "milestone_report": _name_milestone_report(entries, started, milestone)}
+
+
+def _read_wave_tasks(runtime: Runtime, configuration: Configuration, started: WaveStarted) -> dict[str, Entity]:
     tasks = read_entities(runtime.run_process, _prepare_tree(runtime, configuration, started).root, TASK_TYPE)
-    milestone = read_wave_milestone(started.wave, (task for task in tasks if task.name in started.tasks))
-    return describe_milestone_merge(entries, find_project(read_projects(runtime), started.project), milestone)
+    return {task.name: task for task in tasks if task.name in started.tasks}
 
 
 def _leaves_the_milestone_merge_to_the_user(runtime: Runtime, project: Entity) -> bool:
@@ -122,27 +152,41 @@ def _locate_task_merge(runtime: Runtime, project: Entity, worktree_root: str | N
     return locate_merge_worktree(runtime.run_process, repository, worktree_root, branch).path
 
 
+@dataclass(frozen=True)
+class WaveTree:
+    configuration: Configuration
+    tasks: dict[str, Entity]
+    milestone: str | None
+
+
 def _read_task_merge_commands(
-    runtime: Runtime, entries: tuple[LedgerEntry, ...], started: WaveStarted, states: dict[str, str]
+    runtime: Runtime, entries: tuple[LedgerEntry, ...], started: WaveStarted, read_tree: Callable[[], WaveTree]
 ) -> list[str]:
+    states = read_task_states(entries, started.wave)
     verified = [task for task in started.tasks if states.get(task) == VERIFIED_STATE]
     if not verified:
         return []
     project = find_project(read_projects(runtime), started.project)
     if is_on_a_forge(project):
         return []
-    configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
-    tasks = read_entities(runtime.run_process, _prepare_tree(runtime, configuration, started).root, TASK_TYPE)
-    of_wave = {task.name: task for task in tasks if task.name in started.tasks}
-    milestone = read_wave_milestone(started.wave, of_wave.values())
-    if milestone is not None and not _leaves_the_milestone_merge_to_the_user(runtime, project):
+    tree = read_tree()
+    if tree.milestone is not None and not _leaves_the_milestone_merge_to_the_user(runtime, project):
         return []
-    branch = find_milestone_branch(entries, started.project, milestone)
-    target = _locate_task_merge(runtime, project, configuration.worktree_root, branch)
+    branch = find_milestone_branch(entries, started.project, tree.milestone)
+    target = _locate_task_merge(runtime, project, tree.configuration.worktree_root, branch)
     events = tuple(entry.event for entry in entries)
     return [
-        describe_merge_command(target, read_branch_of_task(events, started.project, of_wave[task])) for task in verified
+        describe_merge_command(target, read_branch_of_task(events, started.project, tree.tasks[task]))
+        for task in verified
     ]
+
+
+def _read_wave_tree(runtime: Runtime, started: WaveStarted) -> WaveTree:
+    configuration = read_configuration(runtime, CONFIGURATION_OPTIONAL)
+    tasks = _read_wave_tasks(runtime, configuration, started)
+    return WaveTree(
+        configuration=configuration, tasks=tasks, milestone=read_wave_milestone(started.wave, tasks.values())
+    )
 
 
 def _describe_events(reading: LedgerReading, request: argparse.Namespace) -> dict:
@@ -156,6 +200,7 @@ def wave_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     events = tuple(entry.event for entry in entries)
     started = summary.started
     states = read_task_states(entries, started.wave)
+    read_tree = functools.cache(lambda: _read_wave_tree(runtime, started))
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "wave": started.wave,
@@ -165,8 +210,9 @@ def wave_show(request: argparse.Namespace, runtime: Runtime) -> dict:
         "last_event": summary.last_event,
         "pull_request": find_integration_pull_request(events, started.wave),
         "tasks": [_describe_task(events, states, started.wave, task) for task in started.tasks],
-        "merge_command": _read_merge_command(runtime, entries, started),
-        "task_merge_commands": _read_task_merge_commands(runtime, entries, started, states),
+        **_name_milestone(request, entries, started, read_tree),
+        "merge_command": _read_merge_command(runtime, entries, started, read_tree),
+        "task_merge_commands": _read_task_merge_commands(runtime, entries, started, read_tree),
         **_describe_events(reading, request),
     }
 
