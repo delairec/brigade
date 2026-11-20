@@ -64,6 +64,7 @@ SHOWN = {
         {"task": "B29", "state": None, "pull_request": None, "run": None, "reason": None},
     ],
     "ledger": LEDGER,
+    "halt": None,
 }
 ON_GITHUB = {
     "project": {
@@ -223,6 +224,56 @@ class RenderWaveOfAnOpenWaveTest(unittest.TestCase):
             '<tr><td>B29</td><td><span class="pill"><span class="tone tone-faint">'
             '<span class="tone-shape" aria-hidden="true">·</span>queued</span></span></td>'
             "<td>-</td><td>0</td><td>-</td><td>-</td></tr>",
+            fragment,
+        )
+
+    def test_should_name_in_its_row_the_cause_a_queued_task_waits_for(self):
+        # Arrange
+        waiting = {"task": "B29", "state": "queued", "pull_request": None, "run": None, "reason": "after B28"}
+
+        # Act
+        fragment = render_wave(WavePage(shown={**SHOWN, "tasks": [waiting]}, project=ON_GITHUB))
+
+        # Assert
+        self.assertIn(
+            '<tr><td>B29</td><td><span class="pill"><span class="tone tone-faint">'
+            '<span class="tone-shape" aria-hidden="true">·</span>queued</span></span>'
+            ' <span class="cause">after B28</span></td>',
+            fragment,
+        )
+
+    def test_should_escape_the_cause_of_a_queued_task_holding_markup(self):
+        # Arrange
+        waiting = {"task": "B29", "state": "queued", "pull_request": None, "run": None, "reason": "blocked by <b>Q</b>"}
+
+        # Act
+        fragment = render_wave(WavePage(shown={**SHOWN, "tasks": [waiting]}, project=ON_GITHUB))
+
+        # Assert
+        self.assertIn('<span class="cause">blocked by &lt;b&gt;Q&lt;/b&gt;</span>', fragment)
+
+    def test_should_show_the_halt_of_a_blocked_wave_as_a_callout_with_its_reason_and_its_resume_at(self):
+        # Arrange
+        halt = {"reason": "quota", "resume_at": "2026-10-19T13:00:00Z"}
+
+        # Act
+        fragment = render_wave(WavePage(shown={**SHOWN, "halt": halt}, project=ON_GITHUB))
+
+        # Assert
+        self.assertIn(
+            '<div class="callout tone-you"><p>wave w4 blocked until 2026-10-19T13:00:00Z: quota</p></div>', fragment
+        )
+
+    def test_should_show_the_halt_of_a_parked_wave_as_a_callout_with_the_command_resuming_it(self):
+        # Arrange
+        halt = {"reason": "forge_account", "resume_at": None}
+
+        # Act
+        fragment = render_wave(WavePage(shown={**SHOWN, "halt": halt}, project=ON_GITHUB))
+
+        # Assert
+        self.assertIn(
+            '<div class="callout tone-you"><p>wave w4 parked: forge_account; it waits for brigade wave resume w4</p></div>',
             fragment,
         )
 
