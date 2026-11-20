@@ -405,7 +405,8 @@ def create_home_runner(status: str) -> ScriptedProcessRunner:
 WAVE_W4_SHOWN = (
     '{"schema_version": 1, "wave": "w4", "project": "oak", "branch": "integration/w4", "started_at":'
     ' "2026-10-19T07:00:00Z", "last_event": "task.parked", "pull_request": null, "milestone": "M4",'
-    ' "milestone_report": null, "tasks": [{"task": "B28", "state": "parked", "pull_request": 235, "run": "r28",'
+    ' "milestone_report": null, "halt": null, "tasks": [{"task": "B28", "state": "parked", "pull_request": 235,'
+    ' "run": "r28",'
     ' "reason": "blocked"}], "ledger": {"view": "wave", "wave": "w4", "first": "2026-10-19T07:00:00Z",'
     ' "last": "2026-10-19T07:00:00Z", "wall_time_ms": 0, "tasks": [], "cost_usd": null, "by_task": [],'
     ' "halts": [], "halted_ms": 0, "rounds_by_task": {}, "turns_by_task": {"B28": 12}, "events":'
