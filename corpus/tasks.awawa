@@ -17437,9 +17437,13 @@ TASK B236
 		+ "range of days that the tick delivered on a registered project, at least ten tasks merged"
 		+ "in total across those waves, the range opening after TASK B37, #309, reached main, which"
 		+ "the tick runs from"
+		IMPL "wiki/Proof-of-M6.md::<summary><code>brigade wave show brigade_w57"
+			+ "--events</code></summary>"
 	SPEC "the same page quotes brigade ledger compare of that range against the reference figures"
 		+ "of the user's notes of 2026-10-03, which count the agent turns as steps: turns to first"
 		+ "edit p50 23, turns per task run p50 47, 146 oversized output turns over 67 launches"
+		IMPL "wiki/Proof-of-M6.md::brigade ledger compare --range 2026-11-18..2026-11-19"
+			+ "--reference turns_to_first_edit_p50=23"
 	AFTER @TASK.B175
 	AFTER @TASK.B140
 	AFTER @TASK.B177
