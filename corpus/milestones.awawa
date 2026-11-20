@@ -173,7 +173,8 @@ MILESTONE M13
 
 MILESTONE M14
 	TITLE "Observability"
-	STATUS planned
+	STATUS active
+	SUBJECT "measure and show what the runs, the waves and the gate yield"
 	AFTER @MILESTONE.M18
 	DESC "post-MVP: brigade measures and shows what its runs and waves do and what its gate yields"
 	DESC "split out of the milestone post-mvp, ADD0, by"
