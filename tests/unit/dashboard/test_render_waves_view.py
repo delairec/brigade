@@ -5,11 +5,13 @@ from brigade.dashboard.render_waves_view import render_waves_view
 from brigade.dashboard.run_routed_command import CommandAnswer
 
 OK = 200
+EVERY_STATE = None
 OPEN_WAVE = {
     "wave": "oak_w5",
     "project": "oak",
     "branch": "integration/oak_w5",
     "last_event": "wave.started",
+    "state": "open",
     "tasks": 3,
     "started_at": "2026-11-02T08:00:00Z",
     "ended_at": None,
@@ -28,6 +30,7 @@ PARKED_WAVE = {
     "project": "oak",
     "branch": "integration/oak_w4",
     "last_event": "wave.parked",
+    "state": "parked",
     "tasks": 1,
     "started_at": "2026-11-01T08:00:00Z",
     "ended_at": None,
@@ -42,6 +45,7 @@ BLOCKED_WAVE = {
     "project": "oak",
     "branch": "integration/oak_w3",
     "last_event": "wave.blocked",
+    "state": "blocked",
     "tasks": 1,
     "started_at": "2026-11-01T06:00:00Z",
     "ended_at": None,
@@ -56,6 +60,7 @@ CLOSED_WAVE = {
     "project": "oak",
     "branch": "integration/oak_w2",
     "last_event": "wave.closed",
+    "state": "ended",
     "tasks": 1,
     "started_at": "2026-10-20T08:00:00Z",
     "ended_at": "2026-10-21T09:30:00Z",
@@ -70,6 +75,7 @@ CANCELLED_WAVE = {
     "project": "oak",
     "branch": "integration/oak_w1",
     "last_event": "wave.cancelled",
+    "state": "ended",
     "tasks": 1,
     "started_at": "2026-10-10T08:00:00Z",
     "ended_at": "2026-10-10T09:00:00Z",
@@ -108,7 +114,7 @@ class RenderWavesViewTest(unittest.TestCase):
         answers = create_answers(EVERY_WAVE, WAVES_STARTED)
 
         # Act
-        fragment = render_waves_view(answers)
+        fragment = render_waves_view(answers, EVERY_STATE)
 
         # Assert
         self.assertIn('<p class="status-sentence">Waves open: 3, parked: 1, blocked: 1.</p>', fragment)
@@ -150,7 +156,7 @@ class RenderWavesViewTest(unittest.TestCase):
         for case, expected_tile in rows:
             with self.subTest(tile=case):
                 # Act
-                fragment = render_waves_view(answers)
+                fragment = render_waves_view(answers, EVERY_STATE)
 
                 # Assert
                 self.assertIn(expected_tile, fragment)
@@ -160,7 +166,7 @@ class RenderWavesViewTest(unittest.TestCase):
         answers = create_answers([OPEN_WAVE], {"2026-11": ["elm_w9", "oak_w5"]})
 
         # Act
-        fragment = render_waves_view(answers)
+        fragment = render_waves_view(answers, EVERY_STATE)
 
         # Assert
         self.assertIn('<span class="stat-perimeter">by month: 2026-11 1</span>', fragment)
@@ -187,7 +193,7 @@ class RenderWavesViewTest(unittest.TestCase):
         answers = create_answers(waves, WAVES_STARTED)
 
         # Act
-        fragment = render_waves_view(answers)
+        fragment = render_waves_view(answers, EVERY_STATE)
 
         # Assert
         self.assertIn(
@@ -196,15 +202,14 @@ class RenderWavesViewTest(unittest.TestCase):
             fragment,
         )
 
-    def test_should_show_the_state_of_each_wave_as_a_pill_in_the_words_of_the_user(self):
+    def test_should_show_the_state_of_each_wave_its_list_names_as_a_pill(self):
         # Arrange
         rows = [
-            ("open", OPEN_WAVE, "tone-work", "●", "running"),
+            ("open", OPEN_WAVE, "tone-work", "●", "open"),
             ("parked", PARKED_WAVE, "tone-you", "▲", "parked"),
             ("blocked", BLOCKED_WAVE, "tone-you", "▲", "blocked"),
-            ("closed", CLOSED_WAVE, "tone-done", "✓", "closed"),
-            ("cancelled", CANCELLED_WAVE, "tone-off", "○", "cancelled"),
-            ("resumed after its cancel", RESUMED_AFTER_CANCEL_WAVE, "tone-off", "○", "cancelled"),
+            ("closed", CLOSED_WAVE, "tone-done", "✓", "ended"),
+            ("cancelled", CANCELLED_WAVE, "tone-done", "✓", "ended"),
         ]
         for case, wave, tone, shape, word in rows:
             with self.subTest(wave=case):
@@ -212,7 +217,7 @@ class RenderWavesViewTest(unittest.TestCase):
                 answers = create_answers([wave], WAVES_STARTED)
 
                 # Act
-                fragment = render_waves_view(answers)
+                fragment = render_waves_view(answers, EVERY_STATE)
 
                 # Assert
                 self.assertIn(
@@ -226,7 +231,7 @@ class RenderWavesViewTest(unittest.TestCase):
         answers = create_answers([RESUMED_AFTER_CANCEL_WAVE], {"2026-10": ["oak_w0"]})
 
         # Act
-        fragment = render_waves_view(answers)
+        fragment = render_waves_view(answers, EVERY_STATE)
 
         # Assert
         self.assertIn('<p class="status-sentence">Waves open: 0, parked: 0, blocked: 0.</p>', fragment)
@@ -236,7 +241,7 @@ class RenderWavesViewTest(unittest.TestCase):
         answers = create_answers([RESUMED_AFTER_CANCEL_WAVE], {"2026-10": ["oak_w0"]})
 
         # Act
-        fragment = render_waves_view(answers)
+        fragment = render_waves_view(answers, EVERY_STATE)
 
         # Assert
         self.assertIn('<span class="stat-label">closed</span><span class="stat-perimeter">1 cancelled</span>', fragment)
@@ -246,7 +251,7 @@ class RenderWavesViewTest(unittest.TestCase):
         answers = create_answers([OPEN_WAVE], WAVES_STARTED)
 
         # Act
-        fragment = render_waves_view(answers)
+        fragment = render_waves_view(answers, EVERY_STATE)
 
         # Assert
         self.assertIn(
@@ -262,7 +267,7 @@ class RenderWavesViewTest(unittest.TestCase):
         answers = create_answers([CANCELLED_WAVE], WAVES_STARTED)
 
         # Act
-        fragment = render_waves_view(answers)
+        fragment = render_waves_view(answers, EVERY_STATE)
 
         # Assert
         self.assertIn(
@@ -285,7 +290,7 @@ class RenderWavesViewTest(unittest.TestCase):
                 answers = create_answers([wave], WAVES_STARTED)
 
                 # Act
-                fragment = render_waves_view(answers)
+                fragment = render_waves_view(answers, EVERY_STATE)
 
                 # Assert
                 self.assertIn(f'<tr><td><a href="#waves/{wave["wave"]}">{wave["wave"]}</a></td>', fragment)
@@ -296,7 +301,7 @@ class RenderWavesViewTest(unittest.TestCase):
         answers = create_answers(EVERY_WAVE, WAVES_STARTED)
 
         # Act
-        fragment = render_waves_view(answers)
+        fragment = render_waves_view(answers, EVERY_STATE)
 
         # Assert
         self.assertIn(f"<section>{TASK_SERVED_THRICE_HEADING}<ul><li>B4 of oak, 3 waves</li></ul></section>", fragment)
@@ -306,7 +311,7 @@ class RenderWavesViewTest(unittest.TestCase):
         answers = create_answers([OPEN_WAVE, PARKED_WAVE, BLOCKED_WAVE], WAVES_STARTED)
 
         # Act
-        fragment = render_waves_view(answers)
+        fragment = render_waves_view(answers, EVERY_STATE)
 
         # Assert
         self.assertNotIn(TASK_SERVED_THRICE_HEADING, fragment)
@@ -316,8 +321,37 @@ class RenderWavesViewTest(unittest.TestCase):
         answers = create_answers([{**OPEN_WAVE, "wave": "<b>w</b>"}], WAVES_STARTED)
 
         # Act
-        fragment = render_waves_view(answers)
+        fragment = render_waves_view(answers, EVERY_STATE)
 
         # Assert
         self.assertIn('<a href="#waves/%3Cb%3Ew%3C%2Fb%3E">&lt;b&gt;w&lt;/b&gt;</a>', fragment)
         self.assertNotIn("<b>w</b>", fragment)
+
+
+class RenderWavesViewOfAStateTest(unittest.TestCase):
+    def test_should_offer_one_chip_per_state_and_mark_the_one_in_force(self):
+        # Arrange
+        answers = create_answers([PARKED_WAVE], WAVES_STARTED)
+
+        # Act
+        fragment = render_waves_view(answers, "parked")
+
+        # Assert
+        self.assertIn(
+            '<nav class="chips"><a class="chip" href="#waves">every state</a>'
+            '<a class="chip" href="#waves?state=open">open</a>'
+            '<a class="chip" href="#waves?state=blocked">blocked</a>'
+            '<a class="chip" href="#waves?state=parked" aria-current="true">parked</a>'
+            '<a class="chip" href="#waves?state=ended">ended</a></nav>',
+            fragment,
+        )
+
+    def test_should_mark_every_state_in_force_when_no_state_is_asked(self):
+        # Arrange
+        answers = create_answers([PARKED_WAVE], WAVES_STARTED)
+
+        # Act
+        fragment = render_waves_view(answers, EVERY_STATE)
+
+        # Assert
+        self.assertIn('<a class="chip" href="#waves" aria-current="true">every state</a>', fragment)

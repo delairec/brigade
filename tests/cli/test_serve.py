@@ -103,6 +103,10 @@ PARKED_WAVE_LEDGER = (
     '{"schema_version": 1, "ts": "2026-11-02T09:00:00Z", "event": "wave.parked", "wave": "oak_w4",'
     ' "reason": "forge_account"}\n'
 )
+OPEN_WAVE_LEDGER = (
+    '{"schema_version": 2, "ts": "2026-11-02T10:00:00Z", "event": "wave.started", "wave": "oak_w5",'
+    ' "project": "oak", "branch": "integration/oak_w5", "tasks": ["B5"]}\n'
+)
 REPORT_OF_M13 = (
     "REPORT brigade_M13\n"
     '\tMILESTONE "M13"\n'
@@ -221,6 +225,21 @@ class BrigadeServeTest(unittest.TestCase):
             "parked</span></span>",
             body,
         )
+
+    def test_should_answer_the_parked_waves_alone_in_the_waves_view_of_the_state_parked(self):
+        # Arrange
+        ledger = self.machine.state_home / "brigade" / "ledger" / "2026-11.jsonl"
+        ledger.parent.mkdir(parents=True, exist_ok=True)
+        ledger.write_text(PARKED_WAVE_LEDGER + OPEN_WAVE_LEDGER)
+        url = self.start_serving().stdout.readline().strip()
+
+        # Act
+        status, body = fetch(url, "/views/waves?state=parked")
+
+        # Assert
+        self.assertEqual(status, 200)
+        self.assertIn('<a href="#waves/oak_w4">oak_w4</a>', body)
+        self.assertNotIn("oak_w5", body)
 
     def test_should_answer_the_ledger_view_with_its_callout_and_the_table_of_the_caps(self):
         # Arrange

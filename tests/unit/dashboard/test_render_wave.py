@@ -421,3 +421,55 @@ class RenderWaveOfAClosedWaveTest(unittest.TestCase):
             " 1 of 3 tasks merged, 1 parked, in 120m00s for 4.00 USD.</p>",
             fragment,
         )
+
+
+class RenderWaveOfAPlanTest(unittest.TestCase):
+    def test_should_fold_under_each_task_its_after_and_its_spec(self):
+        # Arrange
+        shown = {
+            **SHOWN,
+            "tasks": [
+                {
+                    "task": "B28",
+                    "state": "merged",
+                    "pull_request": None,
+                    "run": None,
+                    "reason": None,
+                    "after": ["B27", "B26"],
+                    "spec": ["the list names the state", "the page folds the plan"],
+                },
+                {
+                    "task": "B29",
+                    "state": "merged",
+                    "pull_request": None,
+                    "run": None,
+                    "reason": None,
+                    "after": [],
+                    "spec": [],
+                },
+            ],
+        }
+
+        # Act
+        fragment = render_wave(WavePage(shown=shown, project=ON_GITHUB))
+
+        # Assert
+        self.assertIn(
+            "<td>B28<details><summary>plan</summary><p>after: B27, B26</p>"
+            "<ul><li>the list names the state</li><li>the page folds the plan</li></ul></details></td>",
+            fragment,
+        )
+        self.assertIn("<td>B29<details><summary>plan</summary><p>after: -</p><ul></ul></details></td>", fragment)
+
+    def test_should_escape_the_plan_of_a_task_holding_markup(self):
+        # Arrange
+        markup = "<script>alert(1)</script>"
+        task = {"task": "B28", "state": "merged", "pull_request": None, "run": None, "reason": None}
+        shown = {**SHOWN, "tasks": [{**task, "after": [markup], "spec": [markup]}]}
+
+        # Act
+        fragment = render_wave(WavePage(shown=shown, project=ON_GITHUB))
+
+        # Assert
+        self.assertNotIn("<script>", fragment)
+        self.assertIn("<p>after: &lt;script&gt;alert(1)&lt;/script&gt;</p>", fragment)
