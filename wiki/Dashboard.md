@@ -71,14 +71,17 @@ Its seven views:
   and four tiles: the waves open now with the parked and the blocked, the waves started with their count by month
   from `brigade ledger`, the waves closed with the cancelled, and the tasks merged out of the tasks the last 12 waves
   served, with the waves that merged nothing. Each row, the open waves first, shows the wave linking its page, its
-  state as a pill (running, parked, blocked, closed or cancelled), a bar of its tasks by state, a task no event served
+  state as a pill, the key `state` of the list (open, blocked, parked or ended), a bar of its tasks by state, a task no event served
   yet counted queued, its dates, its review rounds and its cost, said as a floor. The tasks served by three waves or
-  more are named with that count under a heading of their own. On its page,
+  more are named with that count under a heading of their own. One chip per state, open, blocked, parked and ended,
+  with one for every state, narrows the list through `brigade wave list --state`, the state chosen carried by the
+  address, `#waves?state=parked`. On its page,
   a wave opens on one sentence saying how it stands or how it ended, with a resume button while it is halted, its
   milestone and the report of that milestone once one is committed, and five tiles: the tasks merged out of its tasks
   with the parked, its wall time, its run time with its turns and its runs, its cost, marked a floor when a run
   records none, and the time it spent halted with the count and the reasons of its halts. Its tasks are a table: each
-  with its state as a pill and a requeue button when parked, its pull request, linked on the forge when `brigade
+  with its `AFTER` and its `SPEC` from `brigade wave show --plan` folded under its name, its state as a pill and a
+  requeue button when parked, its pull request, linked on the forge when `brigade
   project show` names one, its rounds, flagged at three, its runs, each linking its page, and its share of the cost
   of the wave. How it went is a timeline of the states of each task over the time of the wave, its halts drawn as
   bands, followed by the failed tick actions by action, with their count and the event of the ledger that cleared
