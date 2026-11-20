@@ -17360,7 +17360,6 @@ TASK B236
 	AFTER @TASK.B254
 	AFTER @TASK.B257
 	AFTER @TASK.B229
-	AFTER @TASK.B230
 	RATIONALE "the exit criterion of the plan is proof that brigade delivers unattended on a real"
 		+ "project and costs less than the agents launched by hand: a real wave of about ten tasks"
 		+ "and the comparison against the baseline of 26/09 to 03/10; the proof is taken after M6"
@@ -17418,6 +17417,14 @@ TASK B236
 		REF @TASK.B255
 		REF @TASK.B256
 		REF @TASK.B257
+	RATIONALE "updated on 2026-11-20, once wave brigade_w60 merged every other task of"
+		+ "@MILESTONE.M14: its AFTER no longer names @TASK.B230, a draft task outside M14 that"
+		+ "@OPEN_QUESTION.WhereTheMilestonesAndTasksOfAProjectWithoutAwawaLive blocks, which kept"
+		+ "this task from being served and M14 from reaching its report; the ten tasks the AFTER"
+		+ "holds to are reached without it, its eleven other tasks implemented"
+		REF @MILESTONE.M14
+		REF @TASK.B230
+		REF @OPEN_QUESTION.WhereTheMilestonesAndTasksOfAProjectWithoutAwawaLive
 	SOURCE "the Artifact Brigade Blueprint, plan, M6 and the measured figures of the user's notes"
 	SOURCE "the user's rulings of 2026-11-01 in the refinement of M6, on @TASK.B39: « c'est quoi"
 		+ "l'objectif de la tâche? », then « Oui, ces 3 SPEC »; the comparison moved to @TASK.B175,"
