@@ -8595,3 +8595,18 @@ DECISION ASampleOfTheWorktreeGitCannotReadIsNoChangeAndNoSample
 	REJECTED "an unreadable sample counted as differing from the launch sample: a git failure would"
 		+ "date a first edit no change made"
 	SOURCE "the review of #467"
+
+DECISION TheGateRowsOfAReportAppearOnceAPullRequestOfItsTasksPassedAndAVerdictWithoutItsPullRequestCountsTowardNone
+	TITLE "the rows rounds to pass and escapes of a milestone or task report are written only once"
+		+ "a pull request of its tasks passed the gate; a task.verdict recorded without its pr"
+		+ "counts toward no pull request; a pull request is keyed by its number within its project;"
+		+ "the Corrects lines are the first lines of the body, the title after them"
+	STATUS active
+	DESC "binds @TASK.B237"
+		REF @TASK.B237
+	REJECTED "escapes 0 of 0 on every report: a report with no passed pull request states no yield,"
+		+ "and the reports written before keep their rows"
+	REJECTED "a verdict with no pr attributed to the last pull request of its task: the ledger does"
+		+ "not record which pull request it judged"
+	SOURCE "the build run of @TASK.B237"
+		REF @TASK.B237

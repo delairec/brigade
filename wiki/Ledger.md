@@ -6,7 +6,7 @@ turn budgets and a comparison of two ranges of days, or of one range with refere
 ```
 brigade ledger                                        # events by name, first and last instant, runs and segments by outcome
 brigade ledger --task <id>                            # the runs of a task: outcome, turns, duration, cost
-brigade ledger --project <name>                       # waves, orders, pull requests, signals, patterns, constraints
+brigade ledger --project <name>                       # waves, orders, pull requests, signals, patterns, constraints, the gate by week
 brigade ledger budgets [--last N] [--client <name>]   # p50 and p90 turns per procedure, 20 runs by default, every client by default; turn cap per role
 brigade ledger compare --range <start>..<end> --range <start>..<end>
 brigade ledger compare --range <start>..<end> --reference <measure>=<value> ...
@@ -15,6 +15,12 @@ brigade ledger compare --range <start>..<end> --reference <measure>=<value> ...
 Every view prints text or, with `--json`, a JSON document. `--since <n>d|<YYYY-MM-DD>` narrows the overview, `--task`
 and `--project` to the events from that instant on. What happened in a wave, its cost, tokens, turns and events, is
 printed by `brigade wave show <wave> --events`, [Waves](Waves.md).
+
+`--project` prints, after its counts, one row per ISO week in UTC of the pass verdicts, oldest first: the pull
+requests the gate passed, those escaped, the escape rate, the median of the rounds to pass and each task with its
+rounds; the JSON carries the rows under `gate`. The rounds to pass of a pull request are its `task.verdict` events up
+to and including the first `pass`; a passed pull request is escaped once a later `task.pr_opened` carries its number
+in `corrects`, written for a task carrying `CORRECTS`, [Tasks](Tasks.md).
 
 The JSON of the overview carries `failed_actions`: the failed tick actions, `by_day` their count per day in UTC, and
 `by_action` for each action its `count` and its most frequent `error`. The JSON of `budgets` carries for each role
