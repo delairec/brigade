@@ -5,7 +5,7 @@ from pathlib import Path
 
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, RunTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
-from tests.cli.wave_tick_test_case import MILESTONE_BRANCH_CUT, WaveTickTestCase
+from tests.cli.wave_tick_test_case import MILESTONE_BRANCH, MILESTONE_BRANCH_CUT, WaveTickTestCase
 
 SHOWN_WAVE_EVENTS = (
     '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
@@ -99,6 +99,20 @@ RECORDED_WAVE_EVENTS = (
     ' "error_class": null, "main_turns": 20, "total_turns": null}\n'
 )
 
+TWO_TASK_WAVE_EVENTS = (
+    MILESTONE_BRANCH_CUT
+    + '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w2",'
+    f' "project": "shop", "branch": "{MILESTONE_BRANCH}", "tasks": ["S3", "S4"]}}\n'
+    '{"schema_version": 1, "ts": "2026-10-13T10:00:00Z", "event": "task.state", "wave": "shop_w2", "task": "S3",'
+    ' "state": "queued"}\n'
+    '{"schema_version": 1, "ts": "2026-10-13T10:00:00Z", "event": "task.state", "wave": "shop_w2", "task": "S4",'
+    ' "state": "queued"}\n'
+)
+TWO_TASK_WAVE_PARKED = (
+    '{"schema_version": 1, "ts": "2026-10-13T11:00:00Z", "event": "wave.parked", "wave": "shop_w2",'
+    ' "reason": "forge_account"}\n'
+)
+
 
 class WaveTestCase(unittest.TestCase):
     def setUp(self):
@@ -155,6 +169,37 @@ class BrigadeWaveShowTest(WaveTickTestCase):
                 "task_merge_commands": [],
                 "halt": None,
             },
+        )
+
+
+class BrigadeWaveOperatorPathTest(WaveTickTestCase):
+    def setUp(self):
+        super().setUp()
+        self.ledger_file = self.state / "ledger" / "2026-10.jsonl"
+        self.ledger_file.write_text(TWO_TASK_WAVE_EVENTS)
+
+    def test_should_name_in_a_dry_run_the_task_waiting_after_the_earlier_task_of_its_wave(self):
+        # Act
+        completed = self.run_tick("--dry-run", "--json")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            json.loads(completed.stdout)["tasks_not_launched"], [{"wave": "shop_w2", "task": "S4", "cause": "after S3"}]
+        )
+
+    def test_should_show_the_reason_of_a_parked_wave_and_the_command_resuming_it(self):
+        # Arrange
+        self.ledger_file.write_text(TWO_TASK_WAVE_EVENTS + TWO_TASK_WAVE_PARKED)
+
+        # Act
+        completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "wave", "show", "shop_w2")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn(
+            "wave shop_w2 parked: forge_account; it waits for brigade wave resume shop_w2",
+            completed.stdout.splitlines(),
         )
 
 
