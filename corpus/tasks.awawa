@@ -17887,7 +17887,8 @@ TASK B239
 		+ "progress file, whatever tool made it: brigade samples the worktree while the segment"
 		+ "runs, so a shell edit counts in turns_to_first_edit and tokens_to_first_edit as a call"
 		+ "of an edit tool does"
-	STATUS todo
+	STATUS implemented
+	DELIVERED_BY 467
 	TYPE fix
 	MILESTONE @MILESTONE.M14
 	COMPONENT "runs"
