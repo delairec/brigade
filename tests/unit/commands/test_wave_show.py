@@ -821,8 +821,17 @@ class WaveShowOfAQueuedTaskTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(
-            [(task["task"], task["reason"]) for task in document["tasks"]],
-            [("T7", None), ("T8", "no free build slot: 1 used of SLOTS 1")],
+            document["tasks"],
+            [
+                {"task": "T7", "state": None, "pull_request": None, "run": None, "reason": None},
+                {
+                    "task": "T8",
+                    "state": "queued",
+                    "pull_request": None,
+                    "run": None,
+                    "reason": "no free build slot: 1 used of SLOTS 1",
+                },
+            ],
         )
 
     def test_should_show_no_reason_for_a_task_queued_again_after_its_park(self):
