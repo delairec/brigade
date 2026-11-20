@@ -5,7 +5,13 @@ from pathlib import Path
 
 from tests.cli.run_test_case import COUNTING_CLIENT, DONE_RESULT, RunTestCase
 from tests.cli.temporary_machine import CLONE_ENTRY_POINT, TemporaryMachine
-from tests.cli.wave_tick_test_case import MILESTONE_BRANCH, MILESTONE_BRANCH_CUT, WaveTickTestCase
+from tests.cli.wave_tick_test_case import (
+    MILESTONE_BRANCH,
+    MILESTONE_BRANCH_CUT,
+    PROJECT_SCHEMA,
+    WAVE_TASKS,
+    WaveTickTestCase,
+)
 
 SHOWN_WAVE_EVENTS = (
     '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
@@ -114,6 +120,22 @@ TWO_TASK_WAVE_PARKED = (
     ' "reason": "forge_account"}\n'
 )
 
+SPECIFIED_SCHEMA = PROJECT_SCHEMA.replace(
+    "\tFIELD AFTER @TASK\n\t\tREPEATABLE\n",
+    "\tFIELD AFTER @TASK\n\t\tREPEATABLE\n\tFIELD SPEC string\n\t\tREPEATABLE\n",
+)
+PLANNED_TASK = (
+    '\nTASK S7\n\tTITLE "Confirm the emptying"\n\tSTATUS todo\n\tTYPE feat\n\tMILESTONE @MILESTONE.M1\n'
+    '\tAFTER @TASK.S4\n\tSPEC "the cart asks before it is emptied"\n'
+)
+PLANNED_WAVE_EVENTS = (
+    MILESTONE_BRANCH_CUT
+    + '{"schema_version": 2, "ts": "2026-10-13T09:00:00Z", "event": "wave.started", "wave": "shop_w3",'
+    f' "project": "shop", "branch": "{MILESTONE_BRANCH}", "tasks": ["S7"]}}\n'
+    '{"schema_version": 1, "ts": "2026-10-13T10:00:00Z", "event": "task.state", "wave": "shop_w3", "task": "S7",'
+    ' "state": "merged"}\n'
+)
+
 
 class WaveTestCase(unittest.TestCase):
     def setUp(self):
@@ -210,6 +232,64 @@ class BrigadeWaveOperatorPathTest(WaveTickTestCase):
             completed.stdout.splitlines(),
         )
 
+    def test_should_list_a_parked_wave_under_its_state_and_not_under_open(self):
+        # Arrange
+        self.ledger_file.write_text(TWO_TASK_WAVE_EVENTS + TWO_TASK_WAVE_PARKED)
+        rows = [
+            (
+                "parked",
+                [
+                    {
+                        "wave": "shop_w2",
+                        "project": "shop",
+                        "branch": "integration/M1-empty-cart",
+                        "last_event": "wave.parked",
+                        "state": "parked",
+                        "tasks": 2,
+                        "started_at": "2026-10-13T09:00:00Z",
+                        "ended_at": None,
+                        "ended_by": None,
+                        "task_states": [{"task": "S3", "state": "queued"}, {"task": "S4", "state": "queued"}],
+                        "halt": {"reason": "forge_account", "resume_at": None},
+                        "rounds": 0,
+                        "cost_usd": None,
+                    }
+                ],
+            ),
+            ("open", []),
+        ]
+        for state, expected_waves in rows:
+            with self.subTest(state=state):
+                # Act
+                completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "wave", "list", "--state", state, "--json")
+
+                # Assert
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                self.assertEqual(json.loads(completed.stdout), {"schema_version": 1, "waves": expected_waves})
+
+
+class BrigadeWavePlanTest(WaveTickTestCase):
+    def setUp(self):
+        super().setUp()
+        self.project.run_git("checkout", "--quiet", MILESTONE_BRANCH)
+        self.project.write("corpus/_schema.awawa", SPECIFIED_SCHEMA)
+        self.project.write("corpus/tasks.awawa", WAVE_TASKS + PLANNED_TASK)
+        self.project.track("corpus")
+        self.project.run_git("commit", "--quiet", "-m", "the specification of S7")
+        self.project.run_git("checkout", "--quiet", "main")
+        (self.state / "ledger" / "2026-10.jsonl").write_text(PLANNED_WAVE_EVENTS)
+
+    def test_should_print_the_after_and_the_spec_of_a_task_of_its_corpus_with_the_plan(self):
+        # Act
+        completed = self.machine.run_brigade(CLONE_ENTRY_POINT, "wave", "show", "shop_w3", "--plan")
+
+        # Assert
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn(
+            "S7    merged  -             -    -\n  after: S4\n  spec: the cart asks before it is emptied",
+            completed.stdout,
+        )
+
 
 class BrigadeWaveShowEventsTest(WaveTestCase):
     def setUp(self):
@@ -292,6 +372,7 @@ class BrigadeWaveListTest(WaveTestCase):
                         "project": "cafe",
                         "branch": "integration/cafe_w1",
                         "last_event": "wave.blocked",
+                        "state": "blocked",
                         "tasks": 1,
                         "started_at": "2026-10-13T09:30:00Z",
                         "ended_at": None,
@@ -306,6 +387,7 @@ class BrigadeWaveListTest(WaveTestCase):
                         "project": "shop",
                         "branch": "integration/shop_w2",
                         "last_event": "wave.reported",
+                        "state": "open",
                         "tasks": 1,
                         "started_at": "2026-10-13T11:00:00Z",
                         "ended_at": None,
@@ -320,6 +402,7 @@ class BrigadeWaveListTest(WaveTestCase):
                         "project": "shop",
                         "branch": "integration/shop_w1",
                         "last_event": "wave.closed",
+                        "state": "ended",
                         "tasks": 2,
                         "started_at": "2026-10-13T09:00:00Z",
                         "ended_at": "2026-10-13T10:00:00Z",
@@ -334,6 +417,7 @@ class BrigadeWaveListTest(WaveTestCase):
                         "project": "shop",
                         "branch": "integration/shop_w3",
                         "last_event": "wave.cancelled",
+                        "state": "ended",
                         "tasks": 2,
                         "started_at": "2026-10-13T12:00:00Z",
                         "ended_at": "2026-10-13T12:30:00Z",

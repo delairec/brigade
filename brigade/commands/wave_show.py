@@ -34,6 +34,7 @@ from brigade.system.parse_configuration import Configuration
 from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_configuration
 from brigade.system.render_table import render_table
 from brigade.tasks.read_task_after import read_task_after
+from brigade.tasks.read_task_field import read_task_field
 from brigade.tick.build_snapshot import TaskFacts, WaveFacts
 from brigade.tick.plan_launches import ProjectRound, find_round_holds
 from brigade.tick.read_branch_of_task import read_branch_of_task
@@ -71,6 +72,10 @@ NO_POLICY = None
 VERIFIED_STATE = "verified"
 EVENTS_KEY = "ledger"
 JSON_OPTION = "json"
+SPEC_FIELD = "SPEC"
+AFTER_KEY = "after"
+AFTER_SEPARATOR = ", "
+PLAN_INDENT = "  "
 
 
 def _show(value) -> str:
@@ -84,8 +89,22 @@ def _render_halt(document: dict) -> list[str]:
     return [describe_halt_document(document["wave"], halt)]
 
 
+def _render_plan(task: dict) -> list[str]:
+    if AFTER_KEY not in task:
+        return []
+    return [
+        f"{PLAN_INDENT}after: {AFTER_SEPARATOR.join(task[AFTER_KEY]) or ABSENT}",
+        *(f"{PLAN_INDENT}spec: {spec}" for spec in task["spec"]),
+    ]
+
+
+def _render_tasks(tasks: list[dict]) -> list[str]:
+    rows = [tuple(_show(task[column]) for column in TASK_COLUMNS) for task in tasks]
+    header, *task_lines = render_table(TASK_HEADER, rows).split("\n")
+    return [header, *(line for task, row in zip(tasks, task_lines, strict=True) for line in (row, *_render_plan(task)))]
+
+
 def _render_text(document: dict) -> str:
-    rows = [tuple(_show(task[column]) for column in TASK_COLUMNS) for task in document["tasks"]]
     heading = (
         f"wave {document['wave']} of @PROJECT.{document['project']} on {document['branch']},"
         f" started {document['started_at']}, last event {document['last_event']},"
@@ -94,7 +113,7 @@ def _render_text(document: dict) -> str:
     commands = (*document["task_merge_commands"], document["merge_command"])
     merges = [f"to merge: {command}" for command in commands if command is not None]
     ledger = render_wave_lines(document["ledger"]) if EVENTS_KEY in document else []
-    return "\n".join([heading, *_render_halt(document), render_table(TASK_HEADER, rows), *merges, *ledger])
+    return "\n".join([heading, *_render_halt(document), *_render_tasks(document["tasks"]), *merges, *ledger])
 
 
 def _is_explained(event) -> bool:
@@ -313,6 +332,15 @@ def _create_wave_reading(sources: _LaunchHoldSources, summary: WaveSummary) -> _
     )
 
 
+def _describe_plan(request: argparse.Namespace, read_tree: Callable[[], WaveTree], task: str) -> dict:
+    if not request.plan:
+        return {}
+    entity = read_tree().tasks.get(task)
+    if entity is None:
+        return {AFTER_KEY: [], "spec": []}
+    return {AFTER_KEY: list(read_task_after(entity)), "spec": list(read_task_field(entity, SPEC_FIELD))}
+
+
 def _describe_events(reading: LedgerReading, request: argparse.Namespace) -> dict:
     return {EVENTS_KEY: describe_wave(reading, request.wave)} if request.events else {}
 
@@ -352,7 +380,9 @@ def wave_show(request: argparse.Namespace, runtime: Runtime) -> dict:
         "started_at": format_instant(summary.started_at),
         "last_event": summary.last_event,
         "pull_request": find_integration_pull_request(sources.events, started.wave),
-        "tasks": [_describe_task(wave_reading, task) for task in started.tasks],
+        "tasks": [
+            _describe_task(wave_reading, task) | _describe_plan(request, read_tree, task) for task in started.tasks
+        ],
         **_name_milestone(request, entries, started, read_tree),
         "merge_command": _read_merge_command(runtime, entries, started, read_tree),
         "task_merge_commands": _read_task_merge_commands(runtime, entries, started, read_tree),
@@ -371,6 +401,13 @@ COMMAND = Command(
             {
                 "action": "store_true",
                 "help": "add its cost, tokens, turns, halts, handovers, parked tasks and events in the order recorded",
+            },
+        ),
+        Argument(
+            ("--plan",),
+            {
+                "action": "store_true",
+                "help": "add under each task its AFTER and its SPEC, read at the tree of the wave",
             },
         ),
     ),
