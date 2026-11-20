@@ -55,6 +55,28 @@ T8_PARKED = {
     "blockers": ["OPEN_QUESTION.Undecided"],
 }
 
+WAVE_BLOCKED = {
+    "schema_version": 1,
+    "ts": "2026-10-02T08:00:00Z",
+    "event": "wave.blocked",
+    "wave": "tidepool_w16",
+    "reason": "quota",
+    "resume_at": "2026-10-02T13:00:00Z",
+}
+WAVE_PARKED = {
+    "schema_version": 1,
+    "ts": "2026-10-02T08:30:00Z",
+    "event": "wave.parked",
+    "wave": "tidepool_w16",
+    "reason": "forge_account",
+}
+WAVE_RESUMED = {
+    "schema_version": 1,
+    "ts": "2026-10-02T08:40:00Z",
+    "event": "wave.resumed",
+    "wave": "tidepool_w16",
+    "reason": "forge_account",
+}
 WAVE_PR_OPENED = {
     "schema_version": 1,
     "ts": "2026-10-02T09:00:00Z",
@@ -78,6 +100,7 @@ class WaveShowTextTest(unittest.TestCase):
             "merge_command": None,
             "task_merge_commands": [],
             "pull_request": 77,
+            "halt": None,
             "tasks": [
                 {"task": "T7", "state": "pr_open", "pull_request": 42, "run": "20261001T090000Z-a1", "reason": None},
                 {
@@ -150,6 +173,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
                 "pull_request": None,
                 "merge_command": None,
                 "task_merge_commands": [],
+                "halt": None,
                 "tasks": [
                     {
                         "task": "T7",
@@ -162,6 +186,50 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
                 ],
             },
         )
+
+    def test_should_carry_the_halt_of_a_wave_blocked_or_parked_since_its_last_resume(self):
+        for case, events, expected in [
+            (
+                "blocked",
+                [WAVE_STARTED, WAVE_PARKED, WAVE_RESUMED, WAVE_BLOCKED],
+                {"reason": "quota", "resume_at": "2026-10-02T13:00:00Z"},
+            ),
+            ("parked", [WAVE_STARTED, WAVE_BLOCKED, WAVE_PARKED], {"reason": "forge_account", "resume_at": None}),
+            ("resumed", [WAVE_STARTED, WAVE_PARKED, WAVE_RESUMED], None),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                write_ledger(self.root, events)
+
+                # Act
+                document = COMMAND.run(Namespace(wave="tidepool_w16", events=False), self.runtime)
+
+                # Assert
+                self.assertEqual(document["halt"], expected)
+
+    def test_should_print_the_line_of_a_halted_wave(self):
+        for case, events, expected_line in [
+            (
+                "blocked",
+                [WAVE_STARTED, WAVE_BLOCKED],
+                "wave tidepool_w16 blocked until 2026-10-02T13:00:00Z: quota",
+            ),
+            (
+                "parked",
+                [WAVE_STARTED, WAVE_PARKED],
+                "wave tidepool_w16 parked: forge_account; it waits for brigade wave resume tidepool_w16",
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                write_ledger(self.root, events)
+                document = COMMAND.run(Namespace(wave="tidepool_w16", events=False), self.runtime)
+
+                # Act
+                text = COMMAND.render_text(document)
+
+                # Assert
+                self.assertEqual(text.splitlines()[1], expected_line)
 
     def test_should_show_the_integration_pull_request_the_tick_opened(self):
         # Arrange
