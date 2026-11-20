@@ -74,6 +74,18 @@ WAVE_REPORT_WITHOUT_NARRATIVE = {
         {"name": "STATISTIC", "value": "merged 0"},
     ],
 }
+MILESTONE_REPORT_WITH_GATE_ROWS = {
+    "type": "REPORT",
+    "name": "brigade_M14",
+    "fields": [
+        {"name": "MILESTONE", "value": "M14"},
+        {"name": "PROJECT", "value": "brigade"},
+        {"name": "STATISTIC", "value": "tasks 2"},
+        {"name": "STATISTIC", "value": "rounds to pass B21 1"},
+        {"name": "STATISTIC", "value": "rounds to pass B22 3"},
+        {"name": "STATISTIC", "value": "escapes 1 of 2"},
+    ],
+}
 TASK_REPORT = {
     "type": "REPORT",
     "name": "brigade_B231",
@@ -185,6 +197,16 @@ class ReportsListOfTheOperationalCorpusTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(reports[0]["statistics"], {"tasks": "1", "merged": "0"})
+
+    def test_should_carry_the_rounds_to_pass_of_each_task_and_the_escapes_of_a_milestone_report(self):
+        # Act
+        reports = self.list_reports([MILESTONE_REPORT_WITH_GATE_ROWS], NOTHING_REPORTED)
+
+        # Assert
+        self.assertEqual(
+            reports[0]["statistics"],
+            {"tasks": "2", "rounds to pass B21": "1", "rounds to pass B22": "3", "escapes": "1 of 2"},
+        )
 
     def test_should_give_no_verdict_to_a_report_holding_no_narrative(self):
         # Act
