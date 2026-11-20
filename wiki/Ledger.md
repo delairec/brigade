@@ -32,7 +32,7 @@ before the ledger existed:
 
 | Measure                             | What the range gives                                                |
 |-------------------------------------|---------------------------------------------------------------------|
-| `turns_to_first_edit_p50`           | the p50 of the turns to the first edit of its runs                  |
+| `turns_to_first_edit_p50`           | the p50 of the turns to the [first edit](Runs.md) of its runs       |
 | `task_run_turns_p50`                | the p50 of the turns of its runs naming a task                      |
 | `oversized_output_turns_per_launch` | the oversized output turns per segment reporting them, two decimals |
 
@@ -64,8 +64,8 @@ line on stderr and in the document, and the command still exits 0. Lines are app
 - A run is measured by the sum of its measured segments, partial when one of them is not measured, and kept in the
   percentiles; a run with no measured segment is unmeasured.
 - The turns of a task in `brigade wave show <wave> --events` sum those of its runs, partial when one of its runs is.
-- The turns to the first edit of a run add the turns of the segments before the one that edited, and are partial only
-  when one of those is not measured.
+- The turns to the [first edit](Runs.md) of a run add the turns of the segments before the one that edited, and are
+  partial only when one of those is not measured.
 - The cost and the tokens of a wave, and the duration and the cost of a task or a run, sum the `run.finished` events
   that carry them; none is printed when no event does.
 - Percentiles are taken by nearest rank, and a procedure with fewer than five measured runs is marked as an estimate.

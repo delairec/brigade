@@ -26,8 +26,12 @@ brigade run prune [--keep <n>] [--before <YYYY-MM-DD>] [--resumable] [--dry-run]
 - **The turn cap** of a segment is its role's: the `budget` the role package ships, until the ledger holds 5 measured
   segments and 3 measured restarts of the role at its current digests; then √(2R/g) rounded, held within half and
   double the shipped budget, g the tokens a turn adds to the context of the next, R the tokens a restarted segment
-  spends up to its first edit. A change of the applied cap is appended as `budget.applied`, and the brief states the
-  cap in its Budget section.
+  spends up to its first edit. The first edit of a segment is its first change to the worktree of the run outside the
+  progress file, whatever tool made it: brigade samples HEAD, the files `git status` lists and their size and mtime
+  at launch, every `log_poll_s` and when the client exits, and dates the first differing sample at the last tool call
+  of the main transcript at or before it; a call of an edit tool on a file of the worktree keeps its exact turn when
+  it comes earlier. A change of the applied cap is appended as `budget.applied`, and the brief states the cap in its
+  Budget section.
 - **The slot** resolves to its role as [`brigade role show`](Roles.md) shows, unless the project of `--project` binds it
   otherwise.
 - **The client** is the one `[slot_clients]` binds to the slot, else the project's `CLIENT`, else the `client` key of
