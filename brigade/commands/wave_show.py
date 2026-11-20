@@ -34,7 +34,7 @@ from brigade.system.read_configuration import CONFIGURATION_OPTIONAL, read_confi
 from brigade.system.render_table import render_table
 from brigade.tasks.read_task_after import read_task_after
 from brigade.tick.build_snapshot import TaskFacts, WaveFacts
-from brigade.tick.find_launch_hold import LaunchRound, find_launch_hold
+from brigade.tick.find_launch_hold import LaunchRound, find_launch_holds
 from brigade.tick.read_branch_of_task import read_branch_of_task
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
 from brigade.waves.describe_halt_document import describe_halt_document
@@ -45,7 +45,7 @@ from brigade.waves.find_milestone_branch import find_milestone_branch
 from brigade.waves.is_milestone_report_committed import is_milestone_report_committed
 from brigade.waves.locate_merge_worktree import locate_merge_worktree
 from brigade.waves.prepare_wave_tree import WaveTreeReading, prepare_wave_tree
-from brigade.waves.read_task_state import TASK_EVENTS
+from brigade.waves.read_task_state import PARKED_STATE, TASK_EVENTS
 from brigade.waves.read_task_states import read_task_states
 from brigade.waves.read_wave_milestone import read_wave_milestone
 from brigade.waves.read_wave_pause import WavePause, read_wave_pause
@@ -58,6 +58,7 @@ TASK_HEADER = ("task", "state", "pull request", "run", "reason")
 TASK_COLUMNS = ("task", "state", "pull_request", "run", "reason")
 FIXING_STATE = "fixing"
 WAITING_STATE = "queued"
+STARTING_STATES = (WAITING_STATE, PARKED_STATE)
 LIVE_RUN_STATE = "running"
 BUILD_SLOT = "build"
 TASK_TYPE = "TASK"
@@ -236,12 +237,6 @@ def _count_used_build_slots(runtime: Runtime, project: str) -> int:
 
 
 @dataclass(frozen=True)
-class _HoldReading:
-    wave: WaveFacts
-    launch_round: LaunchRound
-
-
-@dataclass(frozen=True)
 class _LaunchHoldSources:
     runtime: Runtime
     started: WaveStarted
@@ -251,45 +246,47 @@ class _LaunchHoldSources:
     read_tree: Callable[[], WaveTree]
 
 
-def _read_hold_reading(sources: _LaunchHoldSources) -> _HoldReading:
-    runtime = sources.runtime
-    started = sources.started
-    project = find_project(read_projects(runtime), started.project)
-    return _HoldReading(
-        wave=WaveFacts(
-            project=started.project,
-            wave=started.wave,
-            states=sources.states,
-            implemented=read_implemented_tasks(runtime.run_process, sources.read_tree().root),
-        ),
-        launch_round=LaunchRound(
-            halt=sources.halt,
-            used_slots=_count_used_build_slots(runtime, started.project),
-            slots=read_project_slots(project),
-        ),
-    )
-
-
-def _find_launch_hold(sources: _LaunchHoldSources, read_hold: Callable[[], _HoldReading], task: str) -> str | None:
-    tree = sources.read_tree()
+def _read_task_facts(sources: _LaunchHoldSources, tree: WaveTree, task: str) -> TaskFacts:
     entity = tree.tasks[task]
-    reading = read_hold()
-    facts = TaskFacts(
+    return TaskFacts(
         name=task,
-        branch=read_branch_of_task(sources.events, reading.wave.project, entity),
+        branch=read_branch_of_task(sources.events, sources.started.project, entity),
         after=read_task_after(entity),
         blocked_by=sources.runtime.read_live_blockers(sources.runtime.run_process, tree.root, task),
     )
-    return find_launch_hold(facts, reading.wave, reading.launch_round)
+
+
+def _is_starting(sources: _LaunchHoldSources, wave: WaveFacts, task: str) -> bool:
+    return sources.states.get(task, WAITING_STATE) in STARTING_STATES and task not in wave.implemented
+
+
+def _find_launch_holds(sources: _LaunchHoldSources) -> dict[str, str | None]:
+    runtime = sources.runtime
+    started = sources.started
+    tree = sources.read_tree()
+    project = find_project(read_projects(runtime), started.project)
+    wave = WaveFacts(
+        project=started.project,
+        wave=started.wave,
+        states=sources.states,
+        implemented=read_implemented_tasks(runtime.run_process, tree.root),
+    )
+    launch_round = LaunchRound(
+        halt=sources.halt,
+        used_slots=_count_used_build_slots(runtime, started.project),
+        slots=read_project_slots(project),
+    )
+    candidates = (_read_task_facts(sources, tree, task) for task in started.tasks if _is_starting(sources, wave, task))
+    return {task.name: hold for task, hold in find_launch_holds(candidates, wave, launch_round)}
 
 
 def _create_wave_reading(sources: _LaunchHoldSources, summary: WaveSummary) -> _WaveReading:
-    read_hold = functools.cache(lambda: _read_hold_reading(sources))
+    read_holds = functools.cache(lambda: _find_launch_holds(sources))
     return _WaveReading(
         events=sources.events,
         states=sources.states,
         summary=summary,
-        read_launch_hold=lambda task: _find_launch_hold(sources, read_hold, task),
+        read_launch_hold=lambda task: read_holds().get(task),
     )
 
 
