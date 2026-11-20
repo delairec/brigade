@@ -3329,7 +3329,11 @@ TASK B36
 TASK B37
 	TITLE "brigade fits the step cap of each role to the cost of its growing context and applies it"
 		+ "at launch"
-	STATUS implemented
+	STATUS archived
+	DESC "archived by @TASK.B239, which makes its SPEC on the first edit false: the first edit is"
+		+ "the first change to the worktree of the run, no longer the first call of an edit tool of"
+		+ "the client"
+		REF @TASK.B239
 	DELIVERED_BY 309
 	TYPE feat
 	MILESTONE @MILESTONE.M6
@@ -16523,7 +16527,6 @@ TASK B229
 		+ "and stable where it describes brigade ledger budgets"
 		IMPL "wiki/Dashboard.md::then a chart per role drawing its"
 		IMPL "wiki/Ledger.md::`stable`, `true` when `history` is empty"
-	AFTER @TASK.B37
 	RATIONALE "@TASK.B37 applies the cap brigade computes for each role; the curve shows whether"
 		+ "the caps settle"
 		REF @TASK.B37
@@ -17406,7 +17409,6 @@ TASK B236
 	SPEC "the same page quotes brigade ledger compare of that range against the reference figures"
 		+ "of the user's notes of 2026-10-03, which count the agent turns as steps: turns to first"
 		+ "edit p50 23, turns per task run p50 47, 146 oversized output turns over 67 launches"
-	AFTER @TASK.B37
 	AFTER @TASK.B175
 	AFTER @TASK.B140
 	AFTER @TASK.B177
@@ -17895,6 +17897,8 @@ TASK B239
 		+ "them, the progress file left out; the first edit of the segment is the first sample that"
 		+ "differs from the one taken at the launch of that segment, and brigade keeps the instant"
 		+ "of that sample"
+		IMPL "brigade/runs/run_segment.py::class WorktreeSampler:"
+		IMPL "brigade/git/read_worktree_state.py::def read_worktree_state("
 	SPEC "turns_to_first_edit of a segment is the turn of the tool call in flight at that instant:"
 		+ "the last tool call of the main transcript whose message the timestamp of the transcripts"
 		+ "answer dates at or before it, its turn the count of the tool calls of the main"
@@ -17903,29 +17907,38 @@ TASK B239
 		+ "command or a commit; tokens_to_first_edit sums the usage of the messages of the main"
 		+ "transcript up to and including that message, as today; the dating is the same for every"
 		+ "client, and reads no tool call from the output of the client"
+		IMPL "brigade/runs/date_worktree_change.py::def date_worktree_change("
 	SPEC "a call of an edit tool of the client whose target is a file of the worktree other than"
 		+ "the progress file keeps its exact turn, as brigade/runs/locate_first_edit.py:21-30 finds"
 		+ "it today: the segment records the earlier of that turn and the sampled one"
+		IMPL "brigade/runs/locate_first_edit.py::def _edits_the_worktree("
+		IMPL "brigade/runs/run_segment.py::key=lambda edit: edit.steps"
 	SPEC "the baseline is the state at the launch of each segment: a change an earlier segment of"
 		+ "the run left in the worktree, committed or not, is not the first edit of the next"
+		IMPL "brigade/runs/run_segment.py::self._launch_state = self._read_state()"
 	SPEC "a write outside the worktree of the run, a file under /tmp as much as the progress file,"
 		+ "is no edit, whatever tool wrote it; a segment whose samples never differ and that calls"
 		+ "no edit tool on a file of the worktree leaves both null with the reason the segment made"
 		+ "no edit outside the progress file, and that reason is written for no segment whose"
 		+ "worktree changed outside it"
+		IMPL "brigade/runs/describe_finished.py::if worktree.sampled and worktree.changed_at is"
+			+ "None:"
 	SPEC "the vibe adapter dates every message of its transcripts answer, timestamp in ISO 8601"
 		+ "UTC, from the createdAt of its journal: a user message from its entry, and a model turn,"
 		+ "whose action_result record carries no date, from the first entry the journal appends"
 		+ "after that record; tests/unit/adapters/clients/test_vibe.py proves both on the fixtures"
 		+ "of its session store, where timestamp is null today"
+		IMPL "brigade/adapters/clients/vibe.py::def _list_next_entry_dates("
 	SPEC "the sampling reads the worktree and no tool name: a segment of a client whose probe names"
 		+ "no edit tool, vibe today, is measured as any other; a segment whose worktree is no git"
 		+ "work tree is not sampled, and a differing sample that no dated tool call of the main"
 		+ "transcript precedes dates no edit: either is measured by its calls of an edit tool"
 		+ "alone, as today, and the reason the client names no edit tool is written for such a"
 		+ "segment alone"
+		IMPL "brigade/runs/describe_finished.py::reason = NO_DATED_CALL"
 	SPEC "the restarts brigade ledger budgets measures for the cost R of B37 include the segments"
 		+ "whose first edit was a shell edit, which today carry no tokens_to_first_edit"
+		IMPL "brigade/ledger/describe_role_budget.py::segment.tokens_to_first_edit is not None"
 	SPEC "tests/unit/runs/test_run_segment.py proves, on a state of the worktree and a clock faked"
 		+ "beside the client, a segment whose first change is a sed -i through the shell measured"
 		+ "at the turn of the call dated at or before the sample, a segment of a client naming no"
@@ -17939,11 +17952,17 @@ TASK B239
 		+ "of an edit tool in the worktree measured at its exact turn and one whose target lies"
 		+ "outside it passed over; tests/unit/runs/test_describe_finished.py proves the reasons of"
 		+ "the nulls"
+		IMPL "tests/unit/runs/test_run_segment.py::class RunSegmentWorktreeTest("
+		IMPL "tests/unit/runs/test_locate_first_edit.py::def"
+			+ "test_should_pass_over_an_edit_whose_target_lies_outside_the_worktree("
+		IMPL "tests/unit/runs/test_describe_finished.py::(\"change undated\""
 	SPEC "wiki/Runs.md, whose bullet on the turn cap says at f23e9bcd, lines 25 to 29, that R is"
 		+ "the tokens a restarted segment spends up to its first edit, says there that the first"
 		+ "edit of a segment is its first change to the worktree of the run outside the progress"
 		+ "file, whatever tool made it, sampled every log_poll_s; wiki/Ledger.md, which names the"
 		+ "turns to the first edit at its lines 27 and 59, links that bullet"
+		IMPL "wiki/Runs.md::first change to the worktree of the run outside the"
+		IMPL "wiki/Ledger.md::[first edit](Runs.md)"
 	RATIONALE "read on 2026-11-08 in the run 20261107T214056Z-3a93a5 of @TASK.B46 in brigade_w28, 5"
 		+ "segments each ended handed_over: segments 1, 3 and 4 record steps_to_first_edit 25, 17"
 		+ "and 19, the turns of their first Edit or Write; segments 2 and 5, main_turns 52 and 67,"
