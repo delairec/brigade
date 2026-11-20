@@ -100,7 +100,10 @@ Its seven views:
 - **Ledger** — whether brigade is well tuned. It opens on a callout saying what its measures cover: the runs finished,
   the range of the ledger they were read from and the lines of the ledger skipped. *Do the turn caps fit* sets the
   segment p90 of each role against its applied cap, the role overshooting most first, with a bar marking the cap and
-  `estimate` under five measured segments; the table *Turn cap by role* follows it. *What a run takes* gives the p50
+  `estimate` under five measured segments; the table *Turn cap by role* follows it, then a chart per role drawing its
+  applied cap as a step line over the `budget.applied` events of its `history`, each change marked raised or lowered
+  with its ts, its cap before and its cap after, and a flat line marked stable for a role whose cap never changed.
+  *What a run takes* gives the p50
   and p90 turns of each procedure, `estimate` under five runs; *What keeps failing* the failed tick actions by day,
   against the 288 ticks of a day, and by action with its most frequent error; *Volume* the counts of the overview as
   tiles, with the waves started by month. A wave opens its turns by role and its halts, and *Compare two periods*

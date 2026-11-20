@@ -21,6 +21,20 @@ PARKED_WAVE = (
     '{"schema_version": 1, "ts": "2026-11-18T10:00:00Z", "event": "wave.parked", "wave": "shop_w1",'
     ' "reason": "forge_account"}\n'
 )
+CAP_CHANGED_LEDGER = (
+    '{"schema_version": 3, "ts": "2026-11-18T09:00:00Z", "event": "run.finished", "run": "20261118T083000Z-0a1b2c",'
+    ' "segment": 1, "procedure": "build-task", "slot": "build", "role": "ada", "client": "fake", "project": null,'
+    ' "session": null, "main_turns": 42, "total_turns": 42, "duration_ms": 900000, "usage": null, "outcome": "done",'
+    ' "error_class": null, "exit": 0, "wave": null, "task": null, "nulls": {"usage": "the client reported no usage"},'
+    ' "cost_usd": null, "shipped_budget": 75}\n'
+    '{"schema_version": 3, "ts": "2026-11-18T09:10:00Z", "event": "run.finished", "run": "20261118T084000Z-3d4e5f",'
+    ' "segment": 1, "procedure": "review", "slot": "verify", "role": "prudence", "client": "fake", "project": null,'
+    ' "session": null, "main_turns": 20, "total_turns": 20, "duration_ms": 600000, "usage": null, "outcome": "done",'
+    ' "error_class": null, "exit": 0, "wave": null, "task": null, "nulls": {"usage": "the client reported no usage"},'
+    ' "cost_usd": null, "shipped_budget": 40}\n'
+    '{"schema_version": 1, "ts": "2026-11-18T09:20:00Z", "event": "budget.applied", "role": "ada", "before": 75,'
+    ' "after": 90, "segments": 6, "restarts": 3, "growth": 2500.0, "restart_tokens": 40500.0}\n'
+)
 RUN_ID = "20261118T101500Z-a1b2c3"
 RUN_RECORD = {
     "schema_version": 1,
@@ -215,6 +229,32 @@ class BrigadeServeTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn('<div class="callout tone-faint"><p>The measures cover 0 runs finished in an empty ledger;', body)
         self.assertIn("<h3>Turn cap by role</h3>", body)
+
+    def test_should_answer_the_ledger_view_with_the_cap_history_of_each_role(self):
+        # Arrange
+        ledger = self.machine.state_home / "brigade" / "ledger" / "2026-11.jsonl"
+        ledger.parent.mkdir(parents=True, exist_ok=True)
+        ledger.write_text(CAP_CHANGED_LEDGER)
+        url = self.start_serving().stdout.readline().strip()
+
+        # Act
+        status, body = fetch(url, "/views/ledger")
+
+        # Assert
+        self.assertEqual(status, 200)
+        self.assertIn(
+            '<svg class="cap-history" viewBox="0 0 400 78" role="img" aria-label="turn cap of ada">'
+            '<text class="cap-role" x="0" y="12">ada</text>',
+            body,
+        )
+        self.assertIn('<text class="cap-label" x="0" y="74">raised at 2026-11-18T09:20:00Z: 75 to 90</text>', body)
+        self.assertIn(
+            '<svg class="cap-history" viewBox="0 0 400 78" role="img" aria-label="turn cap of prudence">'
+            '<text class="cap-role" x="0" y="12">prudence</text>'
+            '<path class="step-path tone-work" d="M0 20 H400"></path>'
+            '<text class="cap-label" x="0" y="74">stable at 40</text></svg>',
+            body,
+        )
 
     def write_finished_run(self) -> None:
         run_directory = self.machine.state_home / "brigade" / "runs" / RUN_ID
