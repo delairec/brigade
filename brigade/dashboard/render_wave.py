@@ -3,6 +3,7 @@ from html import escape
 from urllib.parse import quote
 
 from brigade.dashboard.render_action import render_action
+from brigade.dashboard.render_callout import render_callout
 from brigade.dashboard.render_details import render_details
 from brigade.dashboard.render_html_table import render_html_table
 from brigade.dashboard.render_stat_tile import StatTile, render_stat_tile
@@ -10,10 +11,12 @@ from brigade.dashboard.render_status_pill import render_status_pill
 from brigade.dashboard.render_status_sentence import render_status_sentence
 from brigade.dashboard.render_wave_timeline import render_wave_timeline
 from brigade.runs.format_duration import format_duration
+from brigade.waves.describe_halt_document import describe_halt_document
 
 ABSENT = "-"
 QUEUED_STATE = "queued"
 PARKED_STATE = "parked"
+HALT_STATE = "blocked"
 MERGED_STATE = "merged"
 FLAGGED_ROUNDS = 3
 GITHUB_FORGE = "github"
@@ -174,7 +177,16 @@ def _render_state(task: dict, wave: str) -> str:
     state = task["state"] or QUEUED_STATE
     if state == PARKED_STATE:
         return render_status_pill(state) + render_action(("waves", wave, "tasks", task["task"], "requeue"), "requeue")
+    if task["reason"] is not None:
+        return f'{render_status_pill(state)} <span class="cause">{escape(task["reason"])}</span>'
     return render_status_pill(state)
+
+
+def _render_halt(shown: dict) -> str:
+    halt = shown["halt"]
+    if halt is None:
+        return ""
+    return render_callout(HALT_STATE, describe_halt_document(shown["wave"], halt))
 
 
 def _render_tasks(page: WavePage) -> str:
@@ -232,7 +244,8 @@ def render_wave(page: WavePage) -> str:
     events = "".join(_render_event(event) for event in ledger["events"])
     return (
         f"<section><h2>Wave {escape(shown['wave'])} of {escape(shown['project'])}</h2>{_render_milestone(shown)}"
-        f"{render_status_sentence(_describe_standing(shown))}{_render_resume(shown)}{_render_tiles(shown)}</section>"
+        f"{render_status_sentence(_describe_standing(shown))}{_render_halt(shown)}{_render_resume(shown)}"
+        f"{_render_tiles(shown)}</section>"
         f"<section><h2>Tasks</h2>{_render_tasks(page)}</section>"
         f"<section><h2>How it went</h2>{render_wave_timeline(ledger)}{_render_failures(ledger)}</section>"
         f"{render_details('Events', f'<ol>{events}</ol>')}"

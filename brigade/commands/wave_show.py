@@ -2,7 +2,6 @@ import argparse
 import functools
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 
 from brigade.command import Argument, Command
@@ -38,8 +37,8 @@ from brigade.tick.build_snapshot import TaskFacts, WaveFacts
 from brigade.tick.find_launch_hold import LaunchRound, find_launch_hold
 from brigade.tick.read_branch_of_task import read_branch_of_task
 from brigade.tick.read_implemented_tasks import read_implemented_tasks
+from brigade.waves.describe_halt_document import describe_halt_document
 from brigade.waves.describe_milestone_merge import describe_milestone_merge
-from brigade.waves.describe_wave_halt import describe_wave_halt
 from brigade.waves.find_integration_pull_request import find_integration_pull_request
 from brigade.waves.find_last_task_event import find_last_task_event
 from brigade.waves.find_milestone_branch import find_milestone_branch
@@ -80,8 +79,7 @@ def _render_halt(document: dict) -> list[str]:
     halt = document["halt"]
     if halt is None:
         return []
-    resume_at = None if halt["resume_at"] is None else datetime.fromisoformat(halt["resume_at"])
-    return [describe_wave_halt(document["wave"], WavePause(reason=halt["reason"], resume_at=resume_at))]
+    return [describe_halt_document(document["wave"], halt)]
 
 
 def _render_text(document: dict) -> str:
