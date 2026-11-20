@@ -15,6 +15,10 @@ from tests.cli.wave_tick_test_case import WaveTickTestCase
 from tests.process_launcher import ProcessLauncher
 
 STOP_WAIT_S = 20.0
+SHOP_W1_PARKED = (
+    '{"schema_version": 1, "ts": "2026-10-13T11:00:00Z", "event": "wave.parked", "wave": "shop_w1",'
+    ' "reason": "forge_account"}\n'
+)
 PARKED_WAVE = (
     '{"schema_version": 2, "ts": "2026-11-18T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
     ' "project": "shop", "branch": "integration/M1-empty-cart", "tasks": ["S3"]}\n'
@@ -457,8 +461,7 @@ class BrigadeServeWithoutAProjectHoldingACorpusTest(BrigadeServeTestCase):
 
 
 class BrigadeServeOfAWaveTest(WaveTickTestCase):
-    def test_should_answer_the_page_of_a_wave_with_its_sentence_its_tiles_and_its_events_folded(self):
-        # Arrange
+    def start_serving(self) -> str:
         process = ProcessLauncher.start(
             [sys.executable, str(CLONE_ENTRY_POINT), "serve", "--port", "0"],
             stdout=subprocess.PIPE,
@@ -468,7 +471,28 @@ class BrigadeServeOfAWaveTest(WaveTickTestCase):
         )
         self.addCleanup(process.communicate, timeout=STOP_WAIT_S)
         self.addCleanup(process.terminate)
-        url = process.stdout.readline().strip()
+        return process.stdout.readline().strip()
+
+    def test_should_answer_the_callout_of_a_parked_wave_on_its_page(self):
+        # Arrange
+        ledger = self.state / "ledger" / "2026-10.jsonl"
+        ledger.write_text(ledger.read_text() + SHOP_W1_PARKED)
+        url = self.start_serving()
+
+        # Act
+        status, body = fetch(url, "/views/waves/shop_w1")
+
+        # Assert
+        self.assertEqual(status, 200, body)
+        self.assertIn(
+            '<div class="callout tone-you"><p>wave shop_w1 parked: forge_account;'
+            " it waits for brigade wave resume shop_w1</p></div>",
+            body,
+        )
+
+    def test_should_answer_the_page_of_a_wave_with_its_sentence_its_tiles_and_its_events_folded(self):
+        # Arrange
+        url = self.start_serving()
 
         # Act
         status, body = fetch(url, "/views/waves/shop_w1")
