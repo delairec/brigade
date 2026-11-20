@@ -59,6 +59,8 @@ class DescribeRoleBudgetsTest(unittest.TestCase):
                     "restart_tokens": None,
                     "segment_p50": 12,
                     "segment_p90": 12,
+                    "history": [{"ts": "2026-11-01T09:02:00Z", "before": 75, "after": 60, "direction": "lowered"}],
+                    "stable": False,
                 },
                 "remi": {
                     "shipped": 50,
@@ -70,6 +72,70 @@ class DescribeRoleBudgetsTest(unittest.TestCase):
                     "restart_tokens": None,
                     "segment_p50": 12,
                     "segment_p90": 12,
+                    "history": [],
+                    "stable": True,
+                },
+            },
+        )
+
+    def test_should_give_the_cap_changes_of_a_role_in_the_order_of_their_ts_and_mark_stable_a_role_with_none(self):
+        # Arrange
+        reading = LedgerReading(
+            entries=(
+                _create_entry(0, "r1", "ada", shipped_budget=75),
+                _create_entry(1, "r2", "remi", shipped_budget=50),
+                LedgerEntry(
+                    instant=datetime(2026, 11, 3, 14, 0, tzinfo=UTC),
+                    event=BudgetApplied(
+                        role="ada", before=60, after=90, segments=6, restarts=3, growth=2500.0, restart_tokens=24300.0
+                    ),
+                ),
+                LedgerEntry(
+                    instant=datetime(2026, 11, 2, 8, 30, tzinfo=UTC),
+                    event=BudgetApplied(
+                        role="ada", before=75, after=60, segments=5, restarts=3, growth=3000.0, restart_tokens=18000.0
+                    ),
+                ),
+            ),
+            files=(),
+            skipped=(),
+        )
+
+        # Act
+        budgets = describe_role_budgets(reading)
+
+        # Assert
+        self.assertEqual(
+            budgets,
+            {
+                "ada": {
+                    "shipped": 75,
+                    "computed": None,
+                    "applied": 75,
+                    "segments": 1,
+                    "restarts": 0,
+                    "growth": None,
+                    "restart_tokens": None,
+                    "segment_p50": 12,
+                    "segment_p90": 12,
+                    "history": [
+                        {"ts": "2026-11-02T08:30:00Z", "before": 75, "after": 60, "direction": "lowered"},
+                        {"ts": "2026-11-03T14:00:00Z", "before": 60, "after": 90, "direction": "raised"},
+                    ],
+                    "stable": False,
+                },
+                "remi": {
+                    "shipped": 50,
+                    "computed": None,
+                    "applied": 50,
+                    "segments": 1,
+                    "restarts": 0,
+                    "growth": None,
+                    "restart_tokens": None,
+                    "segment_p50": 12,
+                    "segment_p90": 12,
+                    "history": [],
+                    "stable": True,
                 },
             },
         )

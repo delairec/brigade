@@ -12,6 +12,10 @@ RUN_FINISHED = (
     ' "usage": null, "outcome": "done", "error_class": null, "exit": 0, "wave": null, "task": null,'
     ' "nulls": {"usage": "the client reported no usage"}, "cost_usd": 3.63, "shipped_budget": 75}\n'
 )
+BUDGET_APPLIED = (
+    '{"schema_version": 1, "ts": "2026-10-09T11:00:00Z", "event": "budget.applied", "role": "ada", "before": 75,'
+    ' "after": 90, "segments": 6, "restarts": 3, "growth": 2500.0, "restart_tokens": 40500.0}\n'
+)
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
@@ -56,6 +60,8 @@ class LedgerBudgetsTest(unittest.TestCase):
                         "restart_tokens": None,
                         "segment_p50": None,
                         "segment_p90": None,
+                        "history": [],
+                        "stable": True,
                     }
                 },
                 "skipped": [{"file": str(self.ledger_file), "line": 2, "reason": "not JSON"}],
@@ -71,6 +77,41 @@ class LedgerBudgetsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document["procedures"], {})
+
+
+class LedgerBudgetsHistoryTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.addCleanup(self.root.cleanup)
+        self.runtime = create_test_runtime(create_test_paths(Path(self.root.name)))
+        ledger_file = self.runtime.paths.state_root / "ledger" / "2026-10.jsonl"
+        ledger_file.parent.mkdir(parents=True)
+        ledger_file.write_text(RUN_FINISHED + BUDGET_APPLIED)
+
+    def test_should_keep_the_whole_history_of_a_role_whatever_the_runs_and_the_client_asked(self):
+        # Arrange
+        one_run_of_another_client = argparse.Namespace(last=1, client="vibe")
+
+        # Act
+        document = ledger_budgets(one_run_of_another_client, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["roles"]["ada"],
+            {
+                "shipped": 75,
+                "computed": None,
+                "applied": 75,
+                "segments": 0,
+                "restarts": 0,
+                "growth": None,
+                "restart_tokens": None,
+                "segment_p50": None,
+                "segment_p90": None,
+                "history": [{"ts": "2026-10-09T11:00:00Z", "before": 75, "after": 90, "direction": "raised"}],
+                "stable": False,
+            },
+        )
 
 
 class LedgerBudgetsRequestTest(unittest.TestCase):
