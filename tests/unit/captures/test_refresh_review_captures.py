@@ -19,7 +19,22 @@ OLD_BODY = (
     "## Captures\n\nEach page at 0123abc.\n\n| Page | Delivered | Reference |\n|---|---|---|\n| tides | `d0` | `r0` |\n\n"
     "Co-Authored-By: Fake Client <fake@example.org>\n"
 )
-TIDES_TO_CAPTURE = {"reference": "artifact/index.html", "covers": "tides", "refusal": None, "captures": None}
+TIDES_TO_CAPTURE = {
+    "reference": "artifact/index.html",
+    "covers": "tides",
+    "revises": None,
+    "reads": None,
+    "refusal": None,
+    "captures": None,
+}
+FOUNDATION_READ = {
+    "reference": "artifact/index.html",
+    "covers": "foundation",
+    "revises": None,
+    "reads": "harbour/harbour.css",
+    "refusal": None,
+    "captures": None,
+}
 
 
 class RefreshReviewCapturesTest(unittest.TestCase):
@@ -70,6 +85,8 @@ class RefreshReviewCapturesTest(unittest.TestCase):
                 {
                     "reference": "artifact/index.html",
                     "covers": "tides",
+                    "revises": None,
+                    "reads": None,
                     "refusal": None,
                     "captures": {
                         "delivered": [str(self.published / "tides-delivered-01.png")],
@@ -130,3 +147,24 @@ class RefreshReviewCapturesTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(self.forge.requests, [])
+
+    def test_should_capture_nothing_for_a_section_its_task_judges_by_reading_a_file(self):
+        # Arrange
+        document = {"head": HEAD, "references": [FOUNDATION_READ]}
+
+        # Act
+        self.refresh(document)
+
+        # Assert
+        self.assertEqual(self.equipped, 0)
+
+    def test_should_leave_the_body_of_the_pull_request_alone_when_the_head_has_no_page_to_capture(self):
+        # Arrange
+        (self.published / "section.md").unlink()
+        self.processes.answer(("awawa", "show", "@TASK.T7", "--json", str(self.worktree)), stdout='{"fields": []}')
+
+        # Act
+        self.refresh({"head": HEAD, "references": [TIDES_TO_CAPTURE]})
+
+        # Assert
+        self.assertEqual(self.forge.list_requests("rewrite_pull_request_body"), [])

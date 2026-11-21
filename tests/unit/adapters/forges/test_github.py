@@ -1695,6 +1695,7 @@ class ReadRepositoryVisibilityTest(unittest.TestCase):
             ("a private repository", 0, "PRIVATE\n", False),
             ("an internal repository", 0, "INTERNAL\n", False),
             ("a visibility the forge does not answer", 1, "", False),
+            ("a failed answer that still prints public", 1, "PUBLIC\n", False),
         ]
         for case, exit_code, stdout, expected_public in rows:
             with self.subTest(case=case):
@@ -1751,3 +1752,46 @@ class HostImagesTwiceTest(unittest.TestCase):
 
         # Assert
         self.assertFalse((directory / "gist.git").exists())
+
+
+def _clone_then_answer(push_exit_code: int):
+    def answer(request: ProcessRequest, rank: int) -> tuple[int, str]:
+        if "clone" in request.argv:
+            Path(request.argv[-1]).mkdir()
+        if "push" in request.argv and push_exit_code not in request.acceptable_exit_codes:
+            raise CommandFailed(request.argv, push_exit_code, "the gist refused the push")
+        return 0, "https://gist.github.com/octo-bot/abc123\n"
+
+    return answer
+
+
+class HostImagesCloneTest(unittest.TestCase):
+    def setUp(self):
+        self.directory = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        self.request = {
+            "repository": "/projects/shop",
+            "environment": BOT_ENVIRONMENT,
+            "files": [str(self.directory / "cart-delivered.png")],
+            "description": "captures of @TASK.S3",
+        }
+
+    def test_should_remove_the_clone_of_the_gist_once_its_images_are_pushed(self):
+        # Arrange
+        runtime = create_test_runtime(run_process=GhDouble(_clone_then_answer(0)))
+
+        # Act
+        host_images(self.request, runtime)
+
+        # Assert
+        self.assertFalse((self.directory / "gist.git").exists())
+
+    def test_should_remove_the_clone_of_the_gist_when_its_push_fails(self):
+        # Arrange
+        runtime = create_test_runtime(run_process=GhDouble(_clone_then_answer(1)))
+
+        # Act
+        with self.assertRaises(CommandFailed):
+            host_images(self.request, runtime)
+
+        # Assert
+        self.assertFalse((self.directory / "gist.git").exists())

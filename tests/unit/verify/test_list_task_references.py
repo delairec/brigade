@@ -31,8 +31,13 @@ class ListTaskReferencesTest(unittest.TestCase):
         self.assertEqual(
             references,
             [
-                {"reference": MOCKUP, "covers": "version 2, its page Foundation"},
-                {"reference": "docs/harbour-mockup.html", "covers": "its section Tides"},
+                {"reference": MOCKUP, "covers": "version 2, its page Foundation", "revises": None, "reads": None},
+                {
+                    "reference": "docs/harbour-mockup.html",
+                    "covers": "its section Tides",
+                    "revises": None,
+                    "reads": None,
+                },
             ],
         )
 
@@ -44,7 +49,7 @@ class ListTaskReferencesTest(unittest.TestCase):
         references = list_task_references(task)
 
         # Assert
-        self.assertEqual(references, [{"reference": MOCKUP, "covers": None}])
+        self.assertEqual(references, [{"reference": MOCKUP, "covers": None, "revises": None, "reads": None}])
 
     def test_should_take_no_url_its_criteria_or_its_rationale_cite_for_a_reference(self):
         # Arrange
@@ -64,7 +69,7 @@ class ListTaskReferencesTest(unittest.TestCase):
 
 
 class ListTaskReferencesOfAReferenceItsTaskRevisesTest(unittest.TestCase):
-    def test_should_read_the_coverage_whatever_field_precedes_it(self):
+    def test_should_give_why_the_task_revises_its_reference_and_its_coverage_whatever_their_order(self):
         # Arrange
         task = {
             "fields": [
@@ -83,4 +88,45 @@ class ListTaskReferencesOfAReferenceItsTaskRevisesTest(unittest.TestCase):
         references = list_task_references(task)
 
         # Assert
-        self.assertEqual(references, [{"reference": "artifact/harbour/index.html", "covers": "tides"}])
+        self.assertEqual(
+            references,
+            [
+                {
+                    "reference": "artifact/harbour/index.html",
+                    "covers": "tides",
+                    "revises": "the task draws the harbour page itself",
+                    "reads": None,
+                }
+            ],
+        )
+
+    def test_should_give_the_file_a_section_no_page_renders_is_judged_by_reading(self):
+        # Arrange
+        task = {
+            "fields": [
+                {
+                    "name": "REFERENCE",
+                    "atoms": ['"artifact/harbour/index.html"'],
+                    "fields": [
+                        {"name": "COVERS", "atoms": ['"foundation"'], "fields": []},
+                        {"name": "READ", "atoms": ['"harbour/static/harbour.css"'], "fields": []},
+                    ],
+                }
+            ]
+        }
+
+        # Act
+        references = list_task_references(task)
+
+        # Assert
+        self.assertEqual(
+            references,
+            [
+                {
+                    "reference": "artifact/harbour/index.html",
+                    "covers": "foundation",
+                    "revises": None,
+                    "reads": "harbour/static/harbour.css",
+                }
+            ],
+        )

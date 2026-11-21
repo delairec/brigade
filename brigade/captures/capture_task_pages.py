@@ -58,6 +58,12 @@ def _find_section(page: str) -> re.Pattern:
     return re.compile(rf'<section\b[^>]*\bid="{re.escape(page)}"[^>]*>')
 
 
+def _skip_read(reference: dict) -> str | None:
+    if reference["reads"] is None:
+        return None
+    return f"{reference['reference']}: the section {reference['covers']} is judged by reading {reference['reads']}: no capture"
+
+
 def _refuse(worktree: Path, reference: str, page: str) -> str | None:
     if URL_MARK in reference:
         return f"{reference}: a REFERENCE is a repository path, a URL is not captured"
@@ -191,7 +197,8 @@ def capture_task_pages(runtime: Runtime, demand: CaptureDemand) -> dict:
         return _describe_captures(demand, [], [NO_RECIPE])
     rendering = _Rendering(demand=demand, commands=commands)
     outcomes = [
-        _refuse(demand.worktree, reference["reference"], reference["covers"])
+        _skip_read(reference)
+        or _refuse(demand.worktree, reference["reference"], reference["covers"])
         or _capture_page(runtime, rendering, reference)
         for reference in demand.references
     ]

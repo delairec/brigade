@@ -62,6 +62,7 @@ class PreflightTaskBranchTest(unittest.TestCase):
                     stdout="1\t0\tbrigade/cart.py\n"
                 ),
                 ("awawa", "show", "@TASK.B1", "--json", str(self.head_tree)): ProcessAnswer(stdout=json.dumps(task)),
+                ("awawa", "show", "@TASK.B1", "--json", str(self.base_tree)): ProcessAnswer(stdout=json.dumps(task)),
                 ("awawa", "diff", str(self.base_tree), str(self.head_tree), "--json"): ProcessAnswer(
                     stdout=json.dumps({"added": [], "changed": [], "removed": []})
                 ),
@@ -105,7 +106,7 @@ class PreflightTaskBranchTest(unittest.TestCase):
                 "findings": [
                     (
                         "brigade/cart.py is the REFERENCE @TASK.B1 is judged against, and its branch changes it:"
-                        " a task delivering its reference says so with REVISES"
+                        " a task delivering its reference says so with REVISES at the base of its branch"
                     )
                 ],
             },

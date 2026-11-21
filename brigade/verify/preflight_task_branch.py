@@ -62,6 +62,7 @@ def _run_corpus_checks(runtime: Runtime, demand: BranchPreflightDemand, compared
         check_promotion(
             run_process,
             PromotionFacts(
+                base_tree=base_tree,
                 head_tree=head_tree,
                 repository_tree=compared.checkout,
                 task=demand.task,

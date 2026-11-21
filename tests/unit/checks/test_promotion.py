@@ -28,6 +28,7 @@ class PromotionCheckTest(unittest.TestCase):
             "collected": {
                 "pull-request": {
                     "summary": {
+                        "base_tree": "/cache/shop/0f0f0f0",
                         "head_tree": "/cache/shop/1a2b3c4",
                         "checkout": "/srv/shop",
                         "task": "B1",
@@ -41,7 +42,10 @@ class PromotionCheckTest(unittest.TestCase):
             {
                 ("awawa", "show", "@TASK.B1", "--json", "/cache/shop/1a2b3c4"): ProcessAnswer(
                     stdout=json.dumps(TASK_CITING_THE_HARBOUR)
-                )
+                ),
+                ("awawa", "show", "@TASK.B1", "--json", "/cache/shop/0f0f0f0"): ProcessAnswer(
+                    stdout=json.dumps(TASK_CITING_THE_HARBOUR)
+                ),
             }
         )
 
@@ -58,7 +62,7 @@ class PromotionCheckTest(unittest.TestCase):
                 "findings": [
                     (
                         "artifact/harbour/index.html is the REFERENCE @TASK.B1 is judged against, and its branch changes"
-                        " it: a task delivering its reference says so with REVISES"
+                        " it: a task delivering its reference says so with REVISES at the base of its branch"
                     )
                 ],
             },

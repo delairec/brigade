@@ -94,6 +94,8 @@ GOAL = {
 MOCKUP = {
     "reference": "artifact/harbour/index.html",
     "covers": "tides",
+    "revises": None,
+    "reads": None,
     "refusal": None,
     "captures": {
         "delivered": [
@@ -149,6 +151,30 @@ class VerifyContextTextTest(unittest.TestCase):
             "# preflight\nfail  scope\n  brigade/cli.py is outside the task\n\n"
             "# rules\n$ awawa context @TRIGGER.python_file\nexit 0\nRULE pure\n\n"
             "# grades\ncritical\nhigh\nmedium\nlow",
+        )
+
+    def test_should_say_why_a_task_revises_its_reference_and_what_to_read_for_a_section_no_page_renders(self):
+        # Arrange
+        foundation = {
+            "reference": "artifact/harbour/index.html",
+            "covers": "foundation",
+            "revises": "the task draws the foundation itself",
+            "reads": "harbour/static/harbour.css",
+            "refusal": None,
+            "captures": None,
+        }
+        document = {**create_document(RULES), "references": [foundation]}
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertIn(
+            "# reference\nartifact/harbour/index.html\n"
+            "  covers: foundation\n"
+            "  revises: the task draws the foundation itself\n"
+            "  read: harbour/static/harbour.css, the section judged by reading this file, no PNG pair\n\n",
+            text,
         )
 
     def test_should_leave_the_rules_out_without_an_instructions_corpus(self):
@@ -236,7 +262,14 @@ class VerifyContextTextTest(unittest.TestCase):
 
     def test_should_print_none_where_a_reference_states_no_coverage(self):
         # Arrange
-        uncovered = {"reference": "artifact/harbour/index.html", "covers": None, "refusal": None, "captures": None}
+        uncovered = {
+            "reference": "artifact/harbour/index.html",
+            "covers": None,
+            "revises": None,
+            "reads": None,
+            "refusal": None,
+            "captures": None,
+        }
         document = {**create_document(RULES), "references": [uncovered]}
 
         # Act
@@ -455,6 +488,8 @@ class VerifyContextOfAReferenceTest(unittest.TestCase):
         refused = {
             "reference": "https://example.org/harbour",
             "covers": "tides",
+            "revises": None,
+            "reads": None,
             "refusal": "a REFERENCE is a repository path: the review cannot open a URL",
             "captures": None,
         }
@@ -472,7 +507,14 @@ class VerifyContextOfAReferenceTest(unittest.TestCase):
 
     def test_should_say_that_no_png_pair_was_captured_for_a_page(self):
         # Arrange
-        uncaptured = {"reference": "artifact/harbour/index.html", "covers": "tides", "refusal": None, "captures": None}
+        uncaptured = {
+            "reference": "artifact/harbour/index.html",
+            "covers": "tides",
+            "revises": None,
+            "reads": None,
+            "refusal": None,
+            "captures": None,
+        }
         document = {**create_document(RULES), "references": [uncaptured]}
 
         # Act
@@ -677,6 +719,8 @@ class VerifyContextOfATaskWithoutAForgeCitingAReferenceTest(unittest.TestCase):
                 {
                     "reference": "artifact/harbour/index.html",
                     "covers": "tides",
+                    "revises": None,
+                    "reads": None,
                     "refusal": None,
                     "captures": {
                         "delivered": [str(captures / "tides-delivered-01.png")],

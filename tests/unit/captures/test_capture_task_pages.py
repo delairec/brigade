@@ -21,7 +21,7 @@ REFERENCE_PAGE = (
     "</body></html>\n"
 )
 DELIVERED_PAGE = "<html><body>Tides of /home/sailor</body></html>"
-TIDES = {"reference": "artifact/harbour/index.html", "covers": "tides"}
+TIDES = {"reference": "artifact/harbour/index.html", "covers": "tides", "reads": None}
 
 
 def _time_out(request) -> tuple[int, str, str]:
@@ -157,12 +157,12 @@ class CaptureTaskPagesTest(unittest.TestCase):
             ("a task citing no reference", [], ["the task carries no REFERENCE: no capture"]),
             (
                 "a reference that is a URL",
-                [{"reference": "https://example.org/harbour", "covers": "tides"}],
+                [{"reference": "https://example.org/harbour", "covers": "tides", "reads": None}],
                 ["https://example.org/harbour: a REFERENCE is a repository path, a URL is not captured"],
             ),
             (
                 "a reference that is no HTML page",
-                [{"reference": "docs/harbour.pdf", "covers": "tides"}],
+                [{"reference": "docs/harbour.pdf", "covers": "tides", "reads": None}],
                 ["docs/harbour.pdf: brigade renders an HTML reference only"],
             ),
         ]
@@ -228,27 +228,27 @@ class CaptureTaskPagesTest(unittest.TestCase):
         rows = [
             (
                 "a coverage naming no section of the reference",
-                {"reference": "artifact/harbour/index.html", "covers": "docks"},
+                {"reference": "artifact/harbour/index.html", "covers": "docks", "reads": None},
                 "artifact/harbour/index.html: no section of the reference has the id docks",
             ),
             (
                 "a coverage that is no section id",
-                {"reference": "artifact/harbour/index.html", "covers": 'tides"],x'},
+                {"reference": "artifact/harbour/index.html", "covers": 'tides"],x', "reads": None},
                 'artifact/harbour/index.html: the COVERS tides"],x is not a section id',
             ),
             (
                 "a reference climbing out of the repository",
-                {"reference": "../outside.html", "covers": "tides"},
+                {"reference": "../outside.html", "covers": "tides", "reads": None},
                 "../outside.html: a REFERENCE is a path inside the repository",
             ),
             (
                 "an absolute reference",
-                {"reference": "/etc/harbour.html", "covers": "tides"},
+                {"reference": "/etc/harbour.html", "covers": "tides", "reads": None},
                 "/etc/harbour.html: a REFERENCE is a path inside the repository",
             ),
             (
                 "a reference absent from the repository",
-                {"reference": "artifact/missing.html", "covers": "tides"},
+                {"reference": "artifact/missing.html", "covers": "tides", "reads": None},
                 "artifact/missing.html: no such file in the repository",
             ),
         ]
@@ -340,3 +340,36 @@ class CaptureTaskPagesTest(unittest.TestCase):
 
         # Assert
         self.assertFalse((self.directory / "profile").exists())
+
+    def test_should_capture_no_section_its_task_judges_by_reading_a_file(self):
+        # Arrange
+        self.declare_the_recipe()
+        foundation = {"reference": "artifact/harbour/index.html", "covers": "tides", "reads": "harbour/harbour.css"}
+
+        # Act
+        captured = self.capture([foundation])
+
+        # Assert
+        self.assertEqual(
+            captured["skipped"],
+            ["artifact/harbour/index.html: the section tides is judged by reading harbour/harbour.css: no capture"],
+        )
+
+    def test_should_run_every_step_of_the_recipe_in_its_order(self):
+        # Arrange
+        self.places.project_directory.mkdir(parents=True)
+        (self.places.project_directory / "capture.toml").write_text(
+            'schema_version = 1\nname = "capture"\ndescription = "a page of the harbour as delivered"\n'
+            '[[steps]]\nkind = "command"\nargv = ["harbour", "build"]\n'
+            '[[steps]]\nkind = "command"\nargv = ["harbour", "render", "{page}"]\n'
+        )
+        self.processes.answer(("harbour", "build"), stdout="built")
+
+        # Act
+        self.capture([TIDES])
+
+        # Assert
+        self.assertEqual(
+            (self.processes.requests[0].argv, self.processes.requests[1].argv),
+            (("harbour", "build"), ("harbour", "render", "tides")),
+        )

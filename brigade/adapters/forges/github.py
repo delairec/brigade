@@ -174,6 +174,11 @@ def _create_gist(request: dict, runtime: Runtime, description: Path) -> list[str
     return urlsplit(record.stdout.strip()).path.strip(URL_SEPARATOR).split(URL_SEPARATOR)
 
 
+def _remove_clone(clone: Path) -> None:
+    if clone.exists():
+        delete_path(clone)
+
+
 def host_images(request: dict, runtime: Runtime) -> dict:
     images = [Path(file) for file in request["files"]]
     directory = images[0].parent
@@ -181,22 +186,24 @@ def host_images(request: dict, runtime: Runtime) -> dict:
     write_text_file(description, f"{request['description']}\n")
     login, gist = _create_gist(request, runtime, description)
     clone = directory / GIST_CLONE
-    if clone.exists():
-        delete_path(clone)
-    push_files_to_remote(
-        runtime.run_process,
-        FilesPush(
-            remote=f"{GIST_HOST}/{gist}.git",
-            clone=clone,
-            tree=directory,
-            files=(GIST_DESCRIPTION_FILE, *(image.name for image in images)),
-            message=request["description"],
-            author_name=login,
-            author_email=f"{login}@{NO_REPLY_EMAIL_DOMAIN}",
-            credential_helper=GH_CREDENTIAL_HELPER,
-            environment=request["environment"],
-        ),
-    )
+    _remove_clone(clone)
+    try:
+        push_files_to_remote(
+            runtime.run_process,
+            FilesPush(
+                remote=f"{GIST_HOST}/{gist}.git",
+                clone=clone,
+                tree=directory,
+                files=(GIST_DESCRIPTION_FILE, *(image.name for image in images)),
+                message=request["description"],
+                author_name=login,
+                author_email=f"{login}@{NO_REPLY_EMAIL_DOMAIN}",
+                credential_helper=GH_CREDENTIAL_HELPER,
+                environment=request["environment"],
+            ),
+        )
+    finally:
+        _remove_clone(clone)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "urls": [f"{RAW_GIST_HOST}/{login}/{gist}/raw/{image.name}" for image in images],

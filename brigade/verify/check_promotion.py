@@ -18,6 +18,7 @@ REVISES_FIELD = "REVISES"
 
 @dataclass(frozen=True)
 class PromotionFacts:
+    base_tree: Path
     head_tree: Path
     repository_tree: Path
     task: str
@@ -44,6 +45,17 @@ def _resolves(repository_tree: Path, anchor: str) -> bool:
     )
 
 
+def _is_revised(reference: dict) -> bool:
+    return any(field["name"] == REVISES_FIELD for field in reference["fields"])
+
+
+def _list_revised_references(run_process: Callable[[ProcessRequest], ProcessRecord], facts: PromotionFacts) -> set:
+    based = read_entity_document(run_process, facts.base_tree, f"@TASK.{facts.task}")
+    if based is None:
+        return set()
+    return {_read_atom(field) for field in based["fields"] if field["name"] == REFERENCE_FIELD and _is_revised(field)}
+
+
 def check_promotion(run_process: Callable[[ProcessRequest], ProcessRecord], facts: PromotionFacts) -> dict:
     target = f"@TASK.{facts.task}"
     shown = read_entity_document(run_process, facts.head_tree, target)
@@ -63,11 +75,14 @@ def check_promotion(run_process: Callable[[ProcessRequest], ProcessRecord], fact
     for rank, spec in enumerate(specs, start=1):
         if not any(_resolves(facts.repository_tree, anchor) for anchor in collect_anchors(spec["fields"])):
             findings.append(f"SPEC {rank} has no IMPL whose anchor resolves: {_read_atom(spec)}")
-    for reference in (field for field in fields if field["name"] == REFERENCE_FIELD):
-        path = _read_atom(reference)
-        if path in facts.changed and not any(field["name"] == REVISES_FIELD for field in reference["fields"]):
-            findings.append(
-                f"{path} is the REFERENCE {target} is judged against, and its branch changes it:"
-                " a task delivering its reference says so with REVISES"
-            )
+    changed = [_read_atom(field) for field in fields if field["name"] == REFERENCE_FIELD]
+    changed = [path for path in changed if path in facts.changed]
+    if changed:
+        revised = _list_revised_references(run_process, facts)
+        findings.extend(
+            f"{path} is the REFERENCE {target} is judged against, and its branch changes it:"
+            " a task delivering its reference says so with REVISES at the base of its branch"
+            for path in changed
+            if path not in revised
+        )
     return judge_findings(NAME, findings)

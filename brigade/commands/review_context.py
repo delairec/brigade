@@ -82,17 +82,26 @@ def _render_slices(side: str, slices: list[str]) -> str:
 def _render_captures(reference: dict) -> str:
     if reference["refusal"] is not None:
         return f"  refused: {reference['refusal']}\n"
+    if reference["reads"] is not None:
+        return f"  read: {reference['reads']}, the section judged by reading this file, no PNG pair\n"
     captures = reference["captures"]
     if captures is None:
         return "  captures: none at this head, brigade build capture wrote no PNG pair for this page\n"
     return _render_slices("delivered", captures["delivered"]) + _render_slices("reference page", captures["reference"])
 
 
+def _render_revises(reference: dict) -> str:
+    if reference["revises"] is None:
+        return ""
+    return f"  revises: {reference['revises']}\n"
+
+
 def _render_references(references: list[dict]) -> str:
     if not references:
         return f"{ABSENT}\n"
     return "".join(
-        f"{reference['reference']}\n  covers: {reference['covers'] or ABSENT}\n{_render_captures(reference)}"
+        f"{reference['reference']}\n  covers: {reference['covers'] or ABSENT}\n"
+        f"{_render_revises(reference)}{_render_captures(reference)}"
         for reference in references
     )
 

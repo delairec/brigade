@@ -19,7 +19,8 @@ class DescribeTaskReferencesTest(unittest.TestCase):
 
         # Act
         described = describe_task_references(
-            [{"reference": "artifact/harbour/index.html", "covers": "tides"}], self.captures
+            [{"reference": "artifact/harbour/index.html", "covers": "tides", "revises": None, "reads": None}],
+            self.captures,
         )
 
         # Assert
@@ -29,6 +30,8 @@ class DescribeTaskReferencesTest(unittest.TestCase):
                 {
                     "reference": "artifact/harbour/index.html",
                     "covers": "tides",
+                    "revises": None,
+                    "reads": None,
                     "refusal": None,
                     "captures": {
                         "delivered": [
@@ -47,7 +50,8 @@ class DescribeTaskReferencesTest(unittest.TestCase):
 
         # Act
         described = describe_task_references(
-            [{"reference": "artifact/harbour/index.html", "covers": "tides"}], self.captures
+            [{"reference": "artifact/harbour/index.html", "covers": "tides", "revises": None, "reads": None}],
+            self.captures,
         )
 
         # Assert
@@ -56,7 +60,8 @@ class DescribeTaskReferencesTest(unittest.TestCase):
     def test_should_refuse_a_reference_that_is_a_url_and_say_why(self):
         # Act
         described = describe_task_references(
-            [{"reference": "https://example.org/harbour", "covers": "tides"}], self.captures
+            [{"reference": "https://example.org/harbour", "covers": "tides", "revises": None, "reads": None}],
+            self.captures,
         )
 
         # Assert

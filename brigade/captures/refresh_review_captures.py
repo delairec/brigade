@@ -26,7 +26,7 @@ class ReviewCaptureRefresh:
 
 
 def _lacks_captures(reference: dict) -> bool:
-    return reference["refusal"] is None and reference["captures"] is None
+    return reference["refusal"] is None and reference["reads"] is None and reference["captures"] is None
 
 
 def _rewrite_body(runtime: Runtime, refresh: ReviewCaptureRefresh, section: str) -> None:
@@ -57,7 +57,4 @@ def refresh_review_captures(runtime: Runtime, document: dict, equip: Callable[[]
     section = publish_task_captures(runtime, publication)
     if refresh.pr is not None and section:
         _rewrite_body(runtime, refresh, section)
-    cited = [
-        {"reference": reference["reference"], "covers": reference["covers"]} for reference in document["references"]
-    ]
-    return {**document, "references": describe_task_references(cited, directory)}
+    return {**document, "references": describe_task_references(document["references"], directory)}
