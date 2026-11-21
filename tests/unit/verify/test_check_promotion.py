@@ -4,8 +4,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from brigade.errors import CommandFailed
 from brigade.verify.check_promotion import PromotionFacts, check_promotion
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
+
+NO_CHANGED_FILE = ()
 
 
 def create_spec(text: str, anchor: str) -> dict:
@@ -32,7 +35,10 @@ class CheckPromotionTest(unittest.TestCase):
             }
         )
         return check_promotion(
-            awawa, PromotionFacts(head_tree=self.head_tree, repository_tree=self.head_tree, task="B1", pr=160)
+            awawa,
+            PromotionFacts(
+                head_tree=self.head_tree, repository_tree=self.head_tree, task="B1", pr=160, changed=NO_CHANGED_FILE
+            ),
         )
 
     def test_should_pass_a_task_implemented_delivered_by_the_pull_request_and_anchored(self):
@@ -122,7 +128,13 @@ class CheckPromotionTest(unittest.TestCase):
                 )
             }
         )
-        facts = PromotionFacts(head_tree=self.head_tree, repository_tree=self.head_tree, task="B1", pr=no_pull_request)
+        facts = PromotionFacts(
+            head_tree=self.head_tree,
+            repository_tree=self.head_tree,
+            task="B1",
+            pr=no_pull_request,
+            changed=NO_CHANGED_FILE,
+        )
 
         # Act
         check = check_promotion(awawa, facts)
@@ -138,14 +150,15 @@ class CheckPromotionOfAHeadWithoutTheTaskTest(unittest.TestCase):
         awawa = RecordingProcessRunner(
             {
                 ("awawa", "show", "@TASK.B1", "--json", str(head_tree)): ProcessAnswer(
-                    exit_code=1, stderr="no entity @TASK.B1"
+                    exit_code=1, stderr="awawa show: @TASK.B1 is not defined in the workspace\n"
                 )
             }
         )
 
         # Act
         check = check_promotion(
-            awawa, PromotionFacts(head_tree=head_tree, repository_tree=head_tree, task="B1", pr=160)
+            awawa,
+            PromotionFacts(head_tree=head_tree, repository_tree=head_tree, task="B1", pr=160, changed=NO_CHANGED_FILE),
         )
 
         # Assert
@@ -181,7 +194,11 @@ class CheckPromotionOfAnAreaTest(unittest.TestCase):
         )
         no_pull_request = None
         facts = PromotionFacts(
-            head_tree=self.area_tree, repository_tree=self.repository_tree, task="B1", pr=no_pull_request
+            head_tree=self.area_tree,
+            repository_tree=self.repository_tree,
+            task="B1",
+            pr=no_pull_request,
+            changed=NO_CHANGED_FILE,
         )
         return check_promotion(awawa, facts)
 
@@ -238,6 +255,100 @@ class CheckPromotionOfAnAreaTest(unittest.TestCase):
 
         # Act
         check = self.check("src/alias.py::def add_item")
+
+        # Assert
+        self.assertEqual(check, {"name": "promotion", "result": "ok", "findings": []})
+
+
+class CheckPromotionOfAHeadAwawaCannotReadTest(unittest.TestCase):
+    def test_should_fail_the_check_rather_than_say_the_task_is_not_defined(self):
+        # Arrange
+        head_tree = Path("/srv/shop-head")
+        awawa = RecordingProcessRunner(
+            {
+                ("awawa", "show", "@TASK.B1", "--json", str(head_tree)): ProcessAnswer(
+                    exit_code=2, stderr="awawa: corpus/tasks.awawa is not UTF-8\n"
+                )
+            }
+        )
+        facts = PromotionFacts(
+            head_tree=head_tree, repository_tree=head_tree, task="B1", pr=160, changed=NO_CHANGED_FILE
+        )
+
+        # Act
+        with self.assertRaises(CommandFailed) as raised:
+            check_promotion(awawa, facts)
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception),
+            "awawa show @TASK.B1 --json /srv/shop-head exited 2: awawa: corpus/tasks.awawa is not UTF-8",
+        )
+
+
+IMPLEMENTED_AND_DELIVERED = [
+    {"name": "STATUS", "atoms": ["implemented"], "fields": []},
+    {"name": "DELIVERED_BY", "atoms": ['"160"'], "fields": []},
+]
+HARBOUR_COVERS_TIDES = {"name": "COVERS", "atoms": ['"tides"'], "fields": []}
+
+
+class CheckPromotionOfATaskCitingAReferenceTest(unittest.TestCase):
+    def check(self, reference: dict, changed: tuple[str, ...]) -> dict:
+        head_tree = Path("/srv/shop-head")
+        awawa = RecordingProcessRunner(
+            {
+                ("awawa", "show", "@TASK.B1", "--json", str(head_tree)): ProcessAnswer(
+                    stdout=json.dumps({"fields": [*IMPLEMENTED_AND_DELIVERED, reference]})
+                )
+            }
+        )
+        facts = PromotionFacts(head_tree=head_tree, repository_tree=head_tree, task="B1", pr=160, changed=changed)
+        return check_promotion(awawa, facts)
+
+    def test_should_fail_a_branch_that_changes_the_reference_its_task_is_judged_against(self):
+        # Arrange
+        reference = {"name": "REFERENCE", "atoms": ['"artifact/harbour/index.html"'], "fields": [HARBOUR_COVERS_TIDES]}
+
+        # Act
+        check = self.check(reference, ("brigade/tides.py", "artifact/harbour/index.html"))
+
+        # Assert
+        self.assertEqual(
+            check,
+            {
+                "name": "promotion",
+                "result": "fail",
+                "findings": [
+                    (
+                        "artifact/harbour/index.html is the REFERENCE @TASK.B1 is judged against, and its branch changes"
+                        " it: a task delivering its reference says so with REVISES"
+                    )
+                ],
+            },
+        )
+
+    def test_should_pass_a_branch_that_leaves_the_reference_of_its_task_unchanged(self):
+        # Arrange
+        reference = {"name": "REFERENCE", "atoms": ['"artifact/harbour/index.html"'], "fields": [HARBOUR_COVERS_TIDES]}
+
+        # Act
+        check = self.check(reference, ("brigade/tides.py",))
+
+        # Assert
+        self.assertEqual(check, {"name": "promotion", "result": "ok", "findings": []})
+
+    def test_should_pass_a_branch_delivering_the_reference_its_task_says_it_revises(self):
+        # Arrange
+        revises = {"name": "REVISES", "atoms": ['"the task draws the harbour page itself"'], "fields": []}
+        reference = {
+            "name": "REFERENCE",
+            "atoms": ['"artifact/harbour/index.html"'],
+            "fields": [revises, HARBOUR_COVERS_TIDES],
+        }
+
+        # Act
+        check = self.check(reference, ("artifact/harbour/index.html",))
 
         # Assert
         self.assertEqual(check, {"name": "promotion", "result": "ok", "findings": []})

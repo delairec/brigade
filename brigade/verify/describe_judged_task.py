@@ -1,10 +1,10 @@
-import json
 from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.captures.locate_task_captures import locate_task_captures
 from brigade.corpus.decode_entity import decode_entity
 from brigade.corpus.prepare_project_tree import prepare_project_tree
+from brigade.corpus.read_entity_document import read_entity_document
 from brigade.corpus.run_awawa import run_awawa
 from brigade.git.count_changed_lines import count_changed_lines
 from brigade.git.read_diff import read_diff
@@ -21,7 +21,6 @@ from brigade.verify.read_task_goal import read_task_goal
 
 GRADES = ("critical", "high", "medium", "low")
 TREE_ROOT = "."
-TASK_SHOWN = 0
 NO_INTENT = {"goal": None, "references": []}
 
 
@@ -75,10 +74,9 @@ def _read_repair(runtime: Runtime, judged: JudgedTask, previous: dict | None) ->
 
 
 def _describe_task_intent(runtime: Runtime, judged: JudgedTask, tree: Path) -> dict:
-    shown = run_awawa(runtime.run_process, tree, ("show", f"@TASK.{judged.task}", "--json", str(tree)))
-    if shown.exit_code != TASK_SHOWN:
+    shown_task = read_entity_document(runtime.run_process, tree, f"@TASK.{judged.task}")
+    if shown_task is None:
         return NO_INTENT
-    shown_task = json.loads(shown.stdout)
     captures = locate_task_captures(runtime.paths, judged.project, judged.task, judged.head)
     return {
         "goal": read_task_goal(runtime.run_process, tree, decode_entity(judged.task, shown_task)),

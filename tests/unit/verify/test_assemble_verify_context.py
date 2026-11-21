@@ -381,7 +381,7 @@ class AssembleVerifyContextTest(unittest.TestCase):
     def test_should_print_no_goal_and_no_reference_for_a_head_that_defines_no_task(self):
         # Arrange
         self.answers[("awawa", "show", "@TASK.B1", "--json", str(self.head_tree))] = ProcessAnswer(
-            exit_code=1, stderr="no entity @TASK.B1"
+            exit_code=1, stderr="awawa show: @TASK.B1 is not defined in the workspace\n"
         )
 
         # Act

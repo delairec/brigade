@@ -1,11 +1,10 @@
-import json
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.corpus.collect_anchors import collect_anchors
 from brigade.corpus.decode_atom import decode_atom
-from brigade.corpus.run_awawa import run_awawa
+from brigade.corpus.read_entity_document import read_entity_document
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 from brigade.verify.judge_findings import judge_findings
 
@@ -13,7 +12,8 @@ NAME = "promotion"
 IMPLEMENTED = "implemented"
 ANCHOR_SEPARATOR = "::"
 NO_PULL_REQUEST = "no pull request"
-TASK_SHOWN = 0
+REFERENCE_FIELD = "REFERENCE"
+REVISES_FIELD = "REVISES"
 
 
 @dataclass(frozen=True)
@@ -22,6 +22,7 @@ class PromotionFacts:
     repository_tree: Path
     task: str
     pr: int | None
+    changed: tuple[str, ...]
 
 
 def _read_atom(field: dict) -> str:
@@ -45,10 +46,10 @@ def _resolves(repository_tree: Path, anchor: str) -> bool:
 
 def check_promotion(run_process: Callable[[ProcessRequest], ProcessRecord], facts: PromotionFacts) -> dict:
     target = f"@TASK.{facts.task}"
-    shown = run_awawa(run_process, facts.head_tree, ("show", target, "--json", str(facts.head_tree)))
-    if shown.exit_code != TASK_SHOWN:
+    shown = read_entity_document(run_process, facts.head_tree, target)
+    if shown is None:
         return judge_findings(NAME, [f"{target} is not defined at the head"])
-    fields = json.loads(shown.stdout)["fields"]
+    fields = shown["fields"]
     findings = []
     status = _read_value(fields, "STATUS")
     if status != IMPLEMENTED:
@@ -62,4 +63,11 @@ def check_promotion(run_process: Callable[[ProcessRequest], ProcessRecord], fact
     for rank, spec in enumerate(specs, start=1):
         if not any(_resolves(facts.repository_tree, anchor) for anchor in collect_anchors(spec["fields"])):
             findings.append(f"SPEC {rank} has no IMPL whose anchor resolves: {_read_atom(spec)}")
+    for reference in (field for field in fields if field["name"] == REFERENCE_FIELD):
+        path = _read_atom(reference)
+        if path in facts.changed and not any(field["name"] == REVISES_FIELD for field in reference["fields"]):
+            findings.append(
+                f"{path} is the REFERENCE {target} is judged against, and its branch changes it:"
+                " a task delivering its reference says so with REVISES"
+            )
     return judge_findings(NAME, findings)

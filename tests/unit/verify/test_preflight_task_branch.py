@@ -37,7 +37,7 @@ class PreflightTaskBranchTest(unittest.TestCase):
         (self.head_tree / "brigade" / "cart.py").write_text("def empty_cart():\n")
         self.base_tree.mkdir(parents=True)
 
-    def create_runner(self, unit_tests: ProcessAnswer) -> RecordingProcessRunner:
+    def create_runner(self, unit_tests: ProcessAnswer, references: tuple[dict, ...] = ()) -> RecordingProcessRunner:
         task = {
             "fields": [
                 {"name": "STATUS", "atoms": ["implemented"], "fields": []},
@@ -46,6 +46,7 @@ class PreflightTaskBranchTest(unittest.TestCase):
                     "atoms": ['"empties the cart"'],
                     "fields": [{"name": "IMPL", "atoms": ['"brigade/cart.py::def empty_cart"'], "fields": []}],
                 },
+                *references,
             ]
         }
         return RecordingProcessRunner(
@@ -81,6 +82,34 @@ class PreflightTaskBranchTest(unittest.TestCase):
             task_branch=TASK_BRANCH,
             base_branch=MILESTONE_BRANCH,
             configuration=Configuration(),
+        )
+
+    def test_should_judge_the_task_against_the_files_its_branch_changes(self):
+        # Arrange
+        cart_reference = {
+            "name": "REFERENCE",
+            "atoms": ['"brigade/cart.py"'],
+            "fields": [{"name": "COVERS", "atoms": ['"cart"'], "fields": []}],
+        }
+        runner = self.create_runner(ProcessAnswer(), (cart_reference,))
+        runtime = create_test_runtime(self.paths, run_process=runner)
+
+        # Act
+        document = preflight_task_branch(runtime, self.create_demand())
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "promotion",
+                "result": "fail",
+                "findings": [
+                    (
+                        "brigade/cart.py is the REFERENCE @TASK.B1 is judged against, and its branch changes it:"
+                        " a task delivering its reference says so with REVISES"
+                    )
+                ],
+            },
+            document["checks"],
         )
 
     def test_should_run_the_acceptance_commands_on_the_head_of_the_task_branch_in_place_of_the_check_runs(self):

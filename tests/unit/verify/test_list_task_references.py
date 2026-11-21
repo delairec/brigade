@@ -61,3 +61,26 @@ class ListTaskReferencesTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(references, no_reference)
+
+
+class ListTaskReferencesOfAReferenceItsTaskRevisesTest(unittest.TestCase):
+    def test_should_read_the_coverage_whatever_field_precedes_it(self):
+        # Arrange
+        task = {
+            "fields": [
+                {
+                    "name": "REFERENCE",
+                    "atoms": ['"artifact/harbour/index.html"'],
+                    "fields": [
+                        {"name": "REVISES", "atoms": ['"the task draws the harbour page itself"'], "fields": []},
+                        {"name": "COVERS", "atoms": ['"tides"'], "fields": []},
+                    ],
+                }
+            ]
+        }
+
+        # Act
+        references = list_task_references(task)
+
+        # Assert
+        self.assertEqual(references, [{"reference": "artifact/harbour/index.html", "covers": "tides"}])

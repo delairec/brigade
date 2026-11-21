@@ -4,6 +4,7 @@ import shutil
 import sys
 from pathlib import Path
 
+from brigade.captures.capture_task_pages import CAPTURE_RECIPE, SCREENSHOT_PROGRAM
 from brigade.command import Command
 from brigade.corpus.lint_corpus import lint_corpus
 from brigade.corpus.read_awawa_version import read_awawa_version
@@ -71,7 +72,7 @@ REVIEW_FALLBACK = "GitHub refuses the approval of the review slot"
 POLICIES_FALLBACK = "the review mode of each project unchecked"
 AGENT_TYPE = "AGENT"
 UNLOCATED_ROLESETS = (None, BUILT_IN_ROLESET, CORPUS_ROLESET)
-PROJECT_RECIPES = ("setup", "acceptance", "heavy")
+PROJECT_RECIPES = ("setup", "acceptance", "heavy", CAPTURE_RECIPE)
 PATH_SEPARATOR = "/"
 STATE_WIDTH = 9
 NAME_WIDTH = 13
@@ -463,17 +464,27 @@ def _find_step_problems(recipe: str, argv: tuple[str, ...], checkout: Path, sear
     return []
 
 
+def _find_screenshot_problems(capture_steps: tuple[tuple[str, ...], ...], search_path: str) -> list[str]:
+    if not capture_steps or shutil.which(SCREENSHOT_PROGRAM, path=search_path) is not None:
+        return []
+    return [f"recipe {CAPTURE_RECIPE}, the screenshots: no executable {SCREENSHOT_PROGRAM}"]
+
+
 def _find_recipe_problems(project: Entity, checkout: Path, runtime: Runtime) -> list[str]:
     places = locate_recipes(checkout, project, runtime.paths)
     try:
         commands = {recipe: read_project_commands(places, recipe, runtime.run_process) for recipe in PROJECT_RECIPES}
     except (ToolFailure, DocumentInvalid) as error:
         return [f"recipes unreadable: {error}"]
+    search_path = runtime.paths.executable_search_path
     return [
-        problem
-        for recipe, argvs in commands.items()
-        for argv in argvs
-        for problem in _find_step_problems(recipe, argv, checkout, runtime.paths.executable_search_path)
+        *(
+            problem
+            for recipe, argvs in commands.items()
+            for argv in argvs
+            for problem in _find_step_problems(recipe, argv, checkout, search_path)
+        ),
+        *_find_screenshot_problems(commands[CAPTURE_RECIPE], search_path),
     ]
 
 

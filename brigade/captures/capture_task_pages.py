@@ -12,6 +12,7 @@ from brigade.system.write_text_file import write_text_file
 
 DOCUMENT_SCHEMA_VERSION = 1
 CAPTURE_RECIPE = "capture"
+SCREENSHOT_PROGRAM = "firefox"
 NO_REFERENCE = "the task carries no REFERENCE: no capture"
 NO_RECIPE = "the project declares no recipe capture: no capture"
 URL_MARK = "://"
@@ -112,7 +113,7 @@ def _screenshot(runtime: Runtime, directory: Path, html: Path, address: str) -> 
     runtime.run_process(
         ProcessRequest(
             argv=(
-                "firefox",
+                SCREENSHOT_PROGRAM,
                 "--headless",
                 "--no-remote",
                 "--profile",

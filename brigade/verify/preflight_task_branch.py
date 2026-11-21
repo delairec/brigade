@@ -62,7 +62,11 @@ def _run_corpus_checks(runtime: Runtime, demand: BranchPreflightDemand, compared
         check_promotion(
             run_process,
             PromotionFacts(
-                head_tree=head_tree, repository_tree=compared.checkout, task=demand.task, pr=NO_PULL_REQUEST
+                head_tree=head_tree,
+                repository_tree=compared.checkout,
+                task=demand.task,
+                pr=NO_PULL_REQUEST,
+                changed=tuple(changed_file.path for changed_file in compared.changed),
             ),
         ),
         check_untouched_files(

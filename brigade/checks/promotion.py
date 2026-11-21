@@ -13,5 +13,6 @@ def check(subject: dict, runtime: Runtime) -> dict:
         repository_tree=Path(facts["checkout"]),
         task=facts["task"],
         pr=facts["pr"],
+        changed=tuple(changed_file["path"] for changed_file in facts["changed"]),
     )
     return {"schema_version": CHECK_DOCUMENT_SCHEMA_VERSION, **check_promotion(runtime.run_process, promotion)}
