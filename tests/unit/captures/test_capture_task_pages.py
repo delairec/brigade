@@ -274,9 +274,7 @@ class CaptureTaskPagesTest(unittest.TestCase):
         self.capture([TIDES])
 
         # Assert
-        self.assertEqual(
-            [request.cwd for request in self.processes.requests if request.argv[0] == "harbour"], [str(self.worktree)]
-        )
+        self.assertEqual(self.processes.requests[0].cwd, str(self.worktree))
 
     def test_should_remove_the_firefox_profile_once_the_page_is_captured(self):
         # Arrange

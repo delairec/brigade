@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from brigade.command import Argument, Command
 from brigade.dashboard.answer_dashboard_request import answer_dashboard_request
-from brigade.dashboard.dashboard_exchange import LOOPBACK_HOST, Dashboard, IncomingRequest
+from brigade.dashboard.dashboard_exchange import LOOPBACK_HOST, Dashboard, DashboardResponse, IncomingRequest
 from brigade.dashboard.render_dashboard_page import render_dashboard_page
 from brigade.dashboard.start_awawa_addon import start_awawa_addon
 from brigade.errors import BrigadeError
@@ -91,7 +91,7 @@ def page(request: argparse.Namespace, runtime: Runtime) -> dict:
     with _open_addon(request.page, runtime) as addon:
         dashboard = Dashboard(port=IN_PROCESS_PORT, token=NO_TOKEN, addon=addon)
 
-        def respond(target: str):
+        def respond(target: str) -> DashboardResponse:
             incoming = IncomingRequest(method=READING_METHOD, target=target, host=f"{LOOPBACK_HOST}:{IN_PROCESS_PORT}")
             return answer_dashboard_request(incoming, dashboard, runtime)
 

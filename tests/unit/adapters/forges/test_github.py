@@ -1733,7 +1733,7 @@ class ReadRepositoryVisibilityTest(unittest.TestCase):
 
 
 class HostImagesTwiceTest(unittest.TestCase):
-    def test_should_leave_no_clone_of_the_gist_behind_even_when_an_earlier_one_was_left(self):
+    def test_should_remove_the_clone_of_the_gist_an_earlier_hosting_left(self):
         # Arrange
         directory = Path(self.enterContext(tempfile.TemporaryDirectory()))
         (directory / "gist.git").mkdir()

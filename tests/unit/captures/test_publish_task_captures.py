@@ -236,4 +236,6 @@ class PublishTaskCapturesTest(unittest.TestCase):
         second = self.publish()
 
         # Assert
-        self.assertEqual((second, self.processes.requests, self.forge.requests), (first, [], []))
+        self.assertEqual(second, first)
+        self.assertEqual(self.processes.requests, [])
+        self.assertEqual(self.forge.requests, [])

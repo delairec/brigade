@@ -1,6 +1,5 @@
 import json
 import re
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -8,6 +7,7 @@ from urllib.parse import urlsplit
 from brigade.errors import CommandFailed, PullRequestCompareFailed
 from brigade.git.push_files_to_remote import FilesPush, push_files_to_remote
 from brigade.runtime import Runtime
+from brigade.system.delete_path import delete_path
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRequest
 from brigade.system.write_text_file import write_text_file
 
@@ -181,7 +181,8 @@ def host_images(request: dict, runtime: Runtime) -> dict:
     write_text_file(description, f"{request['description']}\n")
     login, gist = _create_gist(request, runtime, description)
     clone = directory / GIST_CLONE
-    shutil.rmtree(clone, ignore_errors=True)
+    if clone.exists():
+        delete_path(clone)
     push_files_to_remote(
         runtime.run_process,
         FilesPush(
@@ -196,7 +197,6 @@ def host_images(request: dict, runtime: Runtime) -> dict:
             environment=request["environment"],
         ),
     )
-    shutil.rmtree(clone, ignore_errors=True)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "urls": [f"{RAW_GIST_HOST}/{login}/{gist}/raw/{image.name}" for image in images],

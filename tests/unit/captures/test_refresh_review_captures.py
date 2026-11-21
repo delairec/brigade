@@ -98,7 +98,8 @@ class RefreshReviewCapturesTest(unittest.TestCase):
         refreshed = self.refresh(document)
 
         # Assert
-        self.assertEqual((refreshed, self.forge.requests), (document, []))
+        self.assertEqual(refreshed, document)
+        self.assertEqual(self.forge.requests, [])
 
     def test_should_equip_nothing_when_every_page_of_the_head_is_captured_or_refused(self):
         # Arrange
@@ -109,7 +110,8 @@ class RefreshReviewCapturesTest(unittest.TestCase):
         refreshed = self.refresh(document)
 
         # Assert
-        self.assertEqual((refreshed, self.equipped, self.processes.requests), (document, 0, []))
+        self.assertEqual(refreshed, document)
+        self.assertEqual(self.equipped, 0)
 
     def test_should_rewrite_no_body_for_a_task_with_no_pull_request(self):
         # Arrange

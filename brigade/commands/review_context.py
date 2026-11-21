@@ -1,4 +1,5 @@
 import argparse
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from brigade.captures.refresh_review_captures import ReviewCaptureRefresh, refresh_review_captures
@@ -6,6 +7,7 @@ from brigade.command import Argument, Command
 from brigade.commands._equip_preflight import equip_preflight
 from brigade.commands._equip_registered_collector import equip_registered_collector
 from brigade.commands._read_forge_environment import BUILD_SLOT, ForgeSlot, read_forge_environment
+from brigade.corpus.read_entities import Entity
 from brigade.errors import BrigadeError
 from brigade.git.locate_main_checkout import locate_main_checkout
 from brigade.git.locate_worktree_root import locate_worktree_root
@@ -114,6 +116,25 @@ def _render_text(document: dict) -> str:
     return "\n".join(sections).removesuffix("\n")
 
 
+def _locate_refresh(runtime: Runtime, checkout: "_Checkout", task: str) -> ReviewCaptureRefresh:
+    return ReviewCaptureRefresh(
+        project=checkout.project.name,
+        task=task,
+        worktree=checkout.worktree,
+        places=locate_recipes(checkout.worktree, checkout.project, runtime.paths),
+        corpus=checkout.worktree / read_corpus_workspace(checkout.project),
+        pr=None,
+        forge=None,
+        environment={},
+    )
+
+
+@dataclass(frozen=True)
+class _Checkout:
+    worktree: Path
+    project: Entity
+
+
 def _assemble_task_branch_context(runtime: Runtime, configuration: Configuration, worktree: Path) -> dict:
     located = locate_task_worktree(runtime, locate_source_worktree(runtime.paths, worktree), NAMED_BY_THE_BRANCH)
     branch_demand = BranchPreflightDemand(
@@ -124,17 +145,37 @@ def _assemble_task_branch_context(runtime: Runtime, configuration: Configuration
         configuration=configuration,
     )
     document = assemble_local_verify_context(runtime, branch_demand)
-    refresh = ReviewCaptureRefresh(
-        project=located.project.name,
-        task=located.task,
-        worktree=located.path,
-        places=locate_recipes(located.path, located.project, runtime.paths),
-        corpus=located.path / read_corpus_workspace(located.project),
-        pr=None,
-        forge=None,
-        environment={},
-    )
+    refresh = _locate_refresh(runtime, _Checkout(located.path, located.project), located.task)
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, **refresh_review_captures(runtime, document, lambda: refresh)}
+
+
+def _assemble_pull_request_context(
+    runtime: Runtime, configuration: Configuration, checkout: _Checkout, pr: int
+) -> dict:
+    project = checkout.project
+    forge_name = read_project_forge(project)
+    found = find_opened_task(runtime, project.name, pr)
+    demand = PreflightDemand(
+        project=project,
+        task=found.opened.task,
+        base_branch=find_task_base(runtime, checkout.worktree, project, found.opened.task),
+        pr=pr,
+        equipment=equip_registered_collector(project, configuration, runtime),
+        plugins=equip_preflight(runtime),
+    )
+    return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
+        **refresh_review_captures(
+            runtime,
+            assemble_verify_context(runtime, demand),
+            lambda: replace(
+                _locate_refresh(runtime, checkout, found.opened.task),
+                pr=pr,
+                forge=runtime.resolve_plugin("forge", forge_name),
+                environment=read_forge_environment(configuration, ForgeSlot(forge_name, BUILD_SLOT), runtime),
+            ),
+        ),
+    }
 
 
 def review_context(request: argparse.Namespace, runtime: Runtime) -> dict:
@@ -149,32 +190,7 @@ def review_context(request: argparse.Namespace, runtime: Runtime) -> dict:
         raise BrigadeError(
             f"@PROJECT.{project.name} acts through the forge {forge_name}: the context names its pull request"
         )
-    found = find_opened_task(runtime, project.name, request.pr)
-    demand = PreflightDemand(
-        project=project,
-        task=found.opened.task,
-        base_branch=find_task_base(runtime, worktree, project, found.opened.task),
-        pr=request.pr,
-        equipment=equip_registered_collector(project, configuration, runtime),
-        plugins=equip_preflight(runtime),
-    )
-    return {
-        "schema_version": DOCUMENT_SCHEMA_VERSION,
-        **refresh_review_captures(
-            runtime,
-            assemble_verify_context(runtime, demand),
-            lambda: ReviewCaptureRefresh(
-                project=project.name,
-                task=found.opened.task,
-                worktree=worktree,
-                places=locate_recipes(worktree, project, runtime.paths),
-                corpus=worktree / read_corpus_workspace(project),
-                pr=request.pr,
-                forge=runtime.resolve_plugin("forge", forge_name),
-                environment=read_forge_environment(configuration, ForgeSlot(forge_name, BUILD_SLOT), runtime),
-            ),
-        ),
-    }
+    return _assemble_pull_request_context(runtime, configuration, _Checkout(worktree, project), request.pr)
 
 
 COMMAND = Command(

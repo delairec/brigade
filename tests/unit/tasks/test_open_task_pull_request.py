@@ -1,4 +1,3 @@
-import json
 import tempfile
 import unittest
 from datetime import UTC, datetime
@@ -218,7 +217,13 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
             "atoms": ['"artifact/parser.html"'],
             "fields": [{"name": "COVERS", "atoms": ['"parser"'], "fields": []}],
         }
-        fields = [{"name": name, "atoms": [json.dumps(value)], "fields": []} for name, value in TASK_FIELDS]
+        fields = [
+            {"name": "TYPE", "atoms": ['"feat"'], "fields": []},
+            {"name": "COMPONENT", "atoms": ['"the parser"'], "fields": []},
+            {"name": "TITLE", "atoms": ['"The parser"'], "fields": []},
+            {"name": "SPEC", "atoms": ['"parses a line"'], "fields": []},
+            {"name": "MILESTONE", "atoms": ['"@MILESTONE.F0"'], "fields": []},
+        ]
         self.processes.answer_json(
             ("awawa", "show", "@TASK.B12", "--json", "/srv/oak-b12"), {"fields": [*fields, reference]}
         )
