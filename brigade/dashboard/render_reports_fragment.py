@@ -130,9 +130,15 @@ def _render_inside(counts: dict) -> str:
     return " · ".join(_count(counts[name], noun) for name, noun in INSIDE if counts.get(name))
 
 
+def _render_title(report: dict) -> str:
+    if report["title"] is None:
+        return ""
+    return f'<br><span class="muted">{escape(report["title"])}</span>'
+
+
 def _render_milestone_row(report: dict) -> tuple[tuple[str, str], ...]:
     return (
-        ("", f'<a href="{_address(report)}"><b class="mono">{_name(report)}</b></a>'),
+        ("", f'<a href="{_address(report)}"><b class="mono">{_name(report)}</b></a>{_render_title(report)}'),
         ("", _render_verdict(report["verdict"])),
         _render_tasks(report["statistics"]),
         ("num", escape(report["statistics"].get("runs", NO_FIGURE))),

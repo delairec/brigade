@@ -21,12 +21,15 @@ class PageHead:
     crumbs: tuple[Crumb, ...] = ()
     fresh: str = ""
     pill: str = ""
+    caption: str = ""
 
 
 def _render_title(head: PageHead) -> str:
     if not head.name:
         return escape(head.title)
     named = f'{escape(head.title)} <span class="mono">{escape(head.name)}</span>'
+    if head.caption:
+        named = f"{named} · {escape(head.caption)}"
     if head.pill:
         return f"{named} {head.pill}"
     if not head.state:

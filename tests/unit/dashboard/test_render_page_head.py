@@ -35,6 +35,21 @@ class RenderPageHeadTest(unittest.TestCase):
             '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>',
         )
 
+    def test_should_follow_the_name_with_what_it_is_called(self):
+        # Arrange
+        head = PageHead(title="Milestone", lede="M13 delivered.", name="M13", caption="Run <resumption>")
+
+        # Act
+        rendered = render_page_head(head)
+
+        # Assert
+        self.assertEqual(
+            rendered,
+            '<header class="page-head"><div><h1>Milestone <span class="mono">M13</span> · Run &lt;resumption&gt;</h1>'
+            '<p class="lede">M13 delivered.</p></div>'
+            '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>',
+        )
+
     def test_should_set_the_name_of_what_a_detail_page_shows_in_mono_beside_the_pill_of_its_state(self):
         # Arrange
         head = PageHead(title="Wave", lede="All 4 tasks merged.", name="w<57>", state="parked")

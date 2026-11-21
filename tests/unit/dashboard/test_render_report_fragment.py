@@ -20,6 +20,7 @@ def create_document(fields: list[dict]) -> dict:
         "waves": ["oak_w5"],
         "pull_request": 57,
         "reported_at": "2026-10-03T08:00:00Z",
+        "title": None,
     }
 
 
@@ -252,6 +253,16 @@ class MockupTest(unittest.TestCase):
                 " reported 2026-10-03</p></header>"
             )
         )
+
+    def test_should_give_the_milestone_its_title_after_its_name(self):
+        # Arrange
+        document = {**create_document(REPORT_FIELDS), "title": "Checkout"}
+
+        # Act
+        fragment = render_report_fragment(ReportReading(document, [create_ledgered_wave()], NO_FORGE))
+
+        # Assert
+        self.assertIn(f'<h1>Milestone <span class="mono">M4</span> · Checkout {MERGED_2_OF_2}</h1>', fragment)
 
     def test_should_take_the_verdict_a_line_names_as_such_without_its_label(self):
         # Arrange

@@ -5,7 +5,12 @@ from pathlib import Path
 
 from brigade.commands.report_show import COMMAND
 from brigade.errors import BrigadeError
-from tests.unit.commands.command_runtime import create_corpus_double, write_ledger, write_operational_corpus
+from tests.unit.commands.command_runtime import (
+    create_corpora_double,
+    create_corpus_double,
+    write_ledger,
+    write_operational_corpus,
+)
 from tests.unit.commands.create_plugin_resolver import create_plugin_resolver
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -102,6 +107,7 @@ class ReportsShowOfAKnownReportTest(unittest.TestCase):
                 "waves": [],
                 "pull_request": None,
                 "reported_at": None,
+                "title": None,
             },
         )
 
@@ -153,6 +159,7 @@ class ReportsShowOfTheResultOfAnOrderFromAPatternTest(unittest.TestCase):
                 "waves": [],
                 "pull_request": None,
                 "reported_at": None,
+                "title": None,
             },
         )
 
@@ -217,8 +224,32 @@ class ReportsShowOfADeliveredMilestoneReportTest(unittest.TestCase):
                 "waves": ["oak_w5"],
                 "pull_request": 57,
                 "reported_at": "2026-10-03T08:00:00Z",
+                "title": None,
             },
         )
+
+
+class ReportsShowOfAMilestoneOfARegisteredProjectTest(unittest.TestCase):
+    def test_should_title_the_report_by_the_milestone_of_the_corpus_of_its_project(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(root)
+        (root / "config" / "reports.awawa").write_text("", encoding="utf-8")
+        report = {"type": "REPORT", "name": "oak_M4", "fields": MILESTONE_FIELDS}
+        plugin = DocumentPluginDouble({str(root / "config" / "reports.awawa"): [report]})
+        registry = {"PROJECT": {"oak": (("PATH", "/projects/oak"), ("MODE", "control"))}}
+        project_corpus = {"MILESTONE": {"M4": (("TITLE", "Checkout"),)}}
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_corpora_double({str(root / "config"): registry, "/projects/oak": project_corpus}),
+            resolve_plugin=create_plugin_resolver({("progress_form", "awawa"): plugin}),
+        )
+
+        # Act
+        document = COMMAND.run(Namespace(id="oak_M4"), runtime)
+
+        # Assert
+        self.assertEqual(document["title"], "Checkout")
 
 
 class ReportsShowOfAnUnknownReportTest(unittest.TestCase):

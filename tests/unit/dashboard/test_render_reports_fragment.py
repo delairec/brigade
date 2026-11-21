@@ -11,6 +11,7 @@ M13_REPORT = {
     "verdict": "Verdict: M13 delivered three of its four tasks.",
     "counts": {"MILESTONE": 1, "PROJECT": 1, "STATISTIC": 2, "NARRATIVE": 1},
     "reported_at": "2026-11-18T10:00:00Z",
+    "title": None,
 }
 B231_REPORT = {
     "id": "brigade_B231",
@@ -21,6 +22,7 @@ B231_REPORT = {
     "verdict": "B231 merged at its first review.",
     "counts": {"TASK": 1, "PROJECT": 1, "STATISTIC": 2, "NARRATIVE": 1},
     "reported_at": "2026-11-12T09:30:00Z",
+    "title": None,
 }
 OAK_W3_REPORT_WITHOUT_VERDICT = {
     "id": "oak_w3",
@@ -31,6 +33,7 @@ OAK_W3_REPORT_WITHOUT_VERDICT = {
     "verdict": None,
     "counts": {"WAVE": 1, "PROJECT": 1, "STATISTIC": 2},
     "reported_at": None,
+    "title": None,
 }
 OAK_W4_REPORT = {
     "id": "oak_w4",
@@ -41,6 +44,7 @@ OAK_W4_REPORT = {
     "verdict": "The wave merged both its tasks.",
     "counts": {"WAVE": 1, "PROJECT": 1, "STATISTIC": 2, "NARRATIVE": 1},
     "reported_at": "2026-10-05T07:15:00Z",
+    "title": None,
 }
 OAK_W5_REPORT_MERGING_NOTHING = {
     "id": "oak_w5",
@@ -51,6 +55,7 @@ OAK_W5_REPORT_MERGING_NOTHING = {
     "verdict": "The wave parked its three tasks.",
     "counts": {"WAVE": 1, "PROJECT": 1, "STATISTIC": 2, "NARRATIVE": 1},
     "reported_at": "2026-10-12T08:00:00Z",
+    "title": None,
 }
 DISK_ORDER_RESULT = {
     "id": "disk_r2",
@@ -61,6 +66,7 @@ DISK_ORDER_RESULT = {
     "verdict": "The disk holds 12 GB of runs.",
     "counts": {"ORDER": 1, "RUN": 1, "NARRATIVE": 1},
     "reported_at": None,
+    "title": None,
 }
 NO_REPORT = []
 
@@ -170,6 +176,7 @@ M8_REPORT = {
     "verdict": "M8 is delivered, all 12 tasks merged.",
     "counts": {"MILESTONE": 1, "REASON": 6, "TESTER_STEP": 24, "NARRATIVE": 9},
     "reported_at": "2026-11-17T10:00:00Z",
+    "title": None,
 }
 M13_FULL_REPORT = {
     "id": "brigade_M13",
@@ -180,6 +187,7 @@ M13_FULL_REPORT = {
     "verdict": "Verdict: M13 delivered three of its four tasks.",
     "counts": {"MILESTONE": 1, "REASON": 1, "TESTER_STEP": 1, "NARRATIVE": 3},
     "reported_at": "2026-11-18T10:00:00Z",
+    "title": None,
 }
 W3_EMPTY = {
     "id": "oak_w3",
@@ -190,6 +198,7 @@ W3_EMPTY = {
     "verdict": "oak_w3 delivered nothing.",
     "counts": {"WAVE": 1},
     "reported_at": "2026-10-01T10:00:00Z",
+    "title": None,
 }
 W4_DELIVERED = {
     "id": "oak_w4",
@@ -200,6 +209,7 @@ W4_DELIVERED = {
     "verdict": "oak_w4 delivered its two tasks.",
     "counts": {"WAVE": 1},
     "reported_at": "2026-10-02T10:00:00Z",
+    "title": None,
 }
 
 
@@ -241,6 +251,17 @@ class RenderReportsFragmentAsTheMockupTest(unittest.TestCase):
             f'<td>{_bar("12 of 12 merged", "done", "100")}<span class="muted num">12 of 12 merged</span></td>'
             '<td class="num">88</td><td class="num">6 reasons · 24 tester steps</td></tr>'
             "</tbody></table></div></section>",
+            fragment,
+        )
+
+    def test_should_give_a_milestone_its_title_under_its_name(self):
+        # Act
+        fragment = render_reports_fragment({"reports": [{**M13_FULL_REPORT, "title": "Run resumption"}]})
+
+        # Assert
+        self.assertIn(
+            '<tr><td><a href="#reports/brigade_M13"><b class="mono">M13</b></a>'
+            '<br><span class="muted">Run resumption</span></td>',
             fragment,
         )
 

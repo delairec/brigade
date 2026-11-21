@@ -19996,7 +19996,7 @@ TASK B265
 		+ "recorded it, milestone.reported for a milestone report, null when the ledger holds none;"
 		+ "the text output is unchanged"
 		IMPL "brigade/commands/report_list.py::def _describe(report: dict, reported_instants:"
-			+ "dict[tuple[str, str], str]) -> dict:"
+			+ "dict[tuple[str, str], str], title: str | None) -> dict:"
 		IMPL "brigade/commands/report_list.py::def _read_reported_instants(entries:"
 			+ "tuple[LedgerEntry, ...]) -> dict[tuple[str, str], str]:"
 		IMPL "tests/unit/commands/test_report_list.py::def"

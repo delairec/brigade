@@ -222,7 +222,15 @@ def _render_head(reading: ReportReading, lede: str, rows: list[tuple[str, str, l
     if not milestones:
         return render_page_head(PageHead(title="Report", lede=lede, name=report["id"], crumbs=crumbs, fresh=fresh))
     pill = _render_merged_pill(rows)
-    head = PageHead(title="Milestone", lede=lede, name=milestones[0], crumbs=crumbs, fresh=fresh, pill=pill)
+    head = PageHead(
+        title="Milestone",
+        lede=lede,
+        name=milestones[0],
+        crumbs=crumbs,
+        fresh=fresh,
+        pill=pill,
+        caption=reading.document["title"] or "",
+    )
     return render_page_head(head)
 
 
