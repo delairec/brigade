@@ -36,6 +36,7 @@ class ReadEntityDocumentTest(unittest.TestCase):
         self.assertIsNone(document)
 
     def test_should_fail_on_any_other_failure_of_awawa(self):
+        # Arrange
         cases = [
             (
                 ProcessAnswer(exit_code=1, stderr="awawa show: the schema declares no TASK\n"),
@@ -48,7 +49,6 @@ class ReadEntityDocumentTest(unittest.TestCase):
         ]
         for failure, message in cases:
             with self.subTest(message=message):
-                # Arrange
                 awawa = RecordingProcessRunner({SHOW_B1: failure})
 
                 # Act

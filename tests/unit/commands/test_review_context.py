@@ -10,12 +10,10 @@ from brigade.commands.review_context import COMMAND
 from brigade.errors import BrigadeError
 from brigade.system.run_process import ProcessRecord
 from tests.unit.commands.command_runtime import (
-    ProcessAnswer,
-    ScriptedProcessRunner,
     answer,
     answer_from_corpus,
-    create_corpus_double,
     create_machine_double,
+    create_outputs_double,
     create_worktrees_double,
     write_ledger,
     write_operational_corpus,
@@ -567,35 +565,28 @@ class VerifyContextOfAPullRequestCitingAReferenceTest(unittest.TestCase):
                 "rewrite_pull_request_body": lambda request: {"schema_version": 1},
             }
         )
-        self.runner = ScriptedProcessRunner(
-            {
-                prefix: ProcessAnswer(stdout=stdout)
-                for prefix, stdout in {
-                    **LOCAL_TASK_WORKTREE,
-                    ("git", "rev-parse", "--show-toplevel"): f"{self.worktree}\n",
-                    _resolve("HEAD"): f"{TASK_HEAD}\n",
-                    _resolve("refs/remotes/origin/integration/M4-tides"): f"{MILESTONE_HEAD}\n",
-                    ("git", "merge-base", "--end-of-options", MILESTONE_HEAD, TASK_HEAD): f"{MERGE_BASE}\n",
-                    ("awawa", "show", "@TASK.T7", "--json", str(self.worktree)): TASK_CITING_THE_HARBOUR,
-                    ("awawa", "show", "@TASK.T7", "--json", str(self.head_tree)): TASK_CITING_THE_HARBOUR,
-                    ("awawa", "status", "--json", str(self.worktree)): RECIPES_OF_THE_CORPUS,
-                    ("awawa", "show", "@RECIPE.capture", "--json", str(self.worktree)): CAPTURE_RECIPE,
-                    ("tidepool", "render", "tides"): "<html><body>the tides as delivered</body></html>",
-                    ("firefox",): "",
-                    ("git", "fetch"): "",
-                }.items()
-            },
-            fallback=create_corpus_double(
-                {
-                    "PROJECT": {"tidepool": GITHUB_PROJECT},
-                    "TASK": TIDEPOOL_TASKS,
-                    "MILESTONE": {"M4": (("TITLE", "Tide tables"),)},
-                }
-            ),
-        )
+        outputs = {
+            **LOCAL_TASK_WORKTREE,
+            ("git", "rev-parse", "--show-toplevel"): f"{self.worktree}\n",
+            _resolve("HEAD"): f"{TASK_HEAD}\n",
+            _resolve("refs/remotes/origin/integration/M4-tides"): f"{MILESTONE_HEAD}\n",
+            ("git", "merge-base", "--end-of-options", MILESTONE_HEAD, TASK_HEAD): f"{MERGE_BASE}\n",
+            ("awawa", "show", "@TASK.T7", "--json", str(self.worktree)): TASK_CITING_THE_HARBOUR,
+            ("awawa", "show", "@TASK.T7", "--json", str(self.head_tree)): TASK_CITING_THE_HARBOUR,
+            ("awawa", "status", "--json", str(self.worktree)): RECIPES_OF_THE_CORPUS,
+            ("awawa", "show", "@RECIPE.capture", "--json", str(self.worktree)): CAPTURE_RECIPE,
+            ("tidepool", "render", "tides"): "<html><body>the tides as delivered</body></html>",
+            ("firefox",): "",
+            ("git", "fetch"): "",
+        }
+        entities = {
+            "PROJECT": {"tidepool": GITHUB_PROJECT},
+            "TASK": TIDEPOOL_TASKS,
+            "MILESTONE": {"M4": (("TITLE", "Tide tables"),)},
+        }
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
-            run_process=self.runner.run,
+            run_process=create_machine_double(entities, outputs),
             resolve_plugin=resolve_preflight_kinds_or(lambda kind, name, **places: self.forge),
         )
 
@@ -642,31 +633,27 @@ class VerifyContextOfATaskWithoutAForgeCitingAReferenceTest(unittest.TestCase):
         self.worktree = self.root / "tidepool-T7"
         (self.worktree / "artifact" / "harbour").mkdir(parents=True)
         (self.worktree / "artifact" / "harbour" / "index.html").write_text(HARBOUR_REFERENCE)
-        self.runner = ScriptedProcessRunner(
-            {
-                prefix: ProcessAnswer(stdout=stdout)
-                for prefix, stdout in {
-                    **LOCAL_TASK_WORKTREE,
-                    ("git", "rev-parse", "--show-toplevel"): f"{self.worktree}\n",
-                    _resolve("HEAD"): f"{TASK_HEAD}\n",
-                    (
-                        "awawa",
-                        "show",
-                        "@TASK.T7",
-                        "--json",
-                        str(self.worktree),
-                    ): TASK_OF_NO_MILESTONE_CITING_THE_HARBOUR,
-                    ("awawa", "show", "@TASK.T7", "--json", str(head_tree)): TASK_OF_NO_MILESTONE_CITING_THE_HARBOUR,
-                    ("awawa", "status", "--json", str(self.worktree)): RECIPES_OF_THE_CORPUS,
-                    ("awawa", "show", "@RECIPE.capture", "--json", str(self.worktree)): CAPTURE_RECIPE,
-                    ("tidepool", "render", "tides"): f"<html><body>{self.root}/home/tides</body></html>",
-                }.items()
-            },
-            fallback=_answer_as_the_machine_taking_screenshots,
-        )
+        outputs = {
+            **LOCAL_TASK_WORKTREE,
+            ("git", "rev-parse", "--show-toplevel"): f"{self.worktree}\n",
+            _resolve("HEAD"): f"{TASK_HEAD}\n",
+            (
+                "awawa",
+                "show",
+                "@TASK.T7",
+                "--json",
+                str(self.worktree),
+            ): TASK_OF_NO_MILESTONE_CITING_THE_HARBOUR,
+            ("awawa", "show", "@TASK.T7", "--json", str(head_tree)): TASK_OF_NO_MILESTONE_CITING_THE_HARBOUR,
+            ("awawa", "status", "--json", str(self.worktree)): RECIPES_OF_THE_CORPUS,
+            ("awawa", "show", "@RECIPE.capture", "--json", str(self.worktree)): CAPTURE_RECIPE,
+            ("tidepool", "render", "tides"): f"<html><body>{self.root}/home/tides</body></html>",
+        }
         self.paths = create_test_paths(self.root)
         self.runtime = create_test_runtime(
-            self.paths, run_process=self.runner.run, resolve_plugin=RefusingForgeResolverDouble()
+            self.paths,
+            run_process=create_outputs_double(outputs, _answer_as_the_machine_taking_screenshots),
+            resolve_plugin=RefusingForgeResolverDouble(),
         )
         self.no_pull_request = None
 
