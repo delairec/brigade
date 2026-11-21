@@ -19324,7 +19324,7 @@ TASK B254
 	SPEC "no file under brigade/ or wiki/ names PROJECT.GRAPH, AUTO_RATIFY or POLICY.SAMPLING, and"
 		+ "python3 -m unittest passes, the recordings of tests/awawa that quote the schema recorded"
 		+ "again"
-		IMPL "tests/awawa/recordings/status-01c76fa4e98f.json::DEFAULT integration\\n\\nSCHEMA"
+		IMPL "tests/awawa/recordings/status-0370e267ce57.json::DEFAULT integration\\n\\nSCHEMA"
 			+ "STUDY"
 	RATIONALE "read on 2026-11-13 at f7d2deae: no code under brigade/ reads PROJECT.GRAPH,"
 		+ "POLICY.AUTO_RATIFY or POLICY.SAMPLING, and wiki/Concepts.md:10 names the last two; the"
