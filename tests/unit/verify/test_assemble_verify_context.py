@@ -377,3 +377,32 @@ class AssembleVerifyContextTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document["references"][0]["reference"], "https://example.org/cart")
+
+    def test_should_name_the_png_pair_captured_for_each_page_the_task_covers(self):
+        # Arrange
+        self.answers[("awawa", "show", "@TASK.B1", "--json", str(self.head_tree))] = ProcessAnswer(
+            stdout=json.dumps(
+                {
+                    "fields": [
+                        {
+                            "name": "REFERENCE",
+                            "atoms": ['"artifact/cart.html"'],
+                            "fields": [{"name": "COVERS", "atoms": ['"cart"'], "fields": []}],
+                        }
+                    ]
+                }
+            )
+        )
+        captures = self.paths.state_root / "captures" / "shop" / "B1"
+        captures.mkdir(parents=True)
+        (captures / "cart-delivered.png").write_bytes(b"png")
+        (captures / "cart-reference.png").write_bytes(b"png")
+
+        # Act
+        document = self.assemble(Configuration())
+
+        # Assert
+        self.assertEqual(
+            document["references"][0]["captures"],
+            {"delivered": str(captures / "cart-delivered.png"), "reference": str(captures / "cart-reference.png")},
+        )

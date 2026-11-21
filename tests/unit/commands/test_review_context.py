@@ -84,7 +84,15 @@ GOAL = {
         "source": ["the user's words: I want the tides of the week on one page"],
     },
 }
-MOCKUP = {"reference": "https://example.org/harbour", "covers": "its page Tides"}
+MOCKUP = {
+    "reference": "artifact/harbour/index.html",
+    "covers": "tides",
+    "refusal": None,
+    "captures": {
+        "delivered": "/state/captures/oak/T7/tides-delivered.png",
+        "reference": "/state/captures/oak/T7/tides-reference.png",
+    },
+}
 
 
 def create_document(rules: list[dict] | None, previous: dict | None = None, repair: dict | None = None) -> dict:
@@ -122,8 +130,10 @@ class VerifyContextTextTest(unittest.TestCase):
             "  subject: print the tide tables of a harbour\n"
             "  desc: a sailor reads the tides of the week at a glance\n"
             "  source: the user's words: I want the tides of the week on one page\n\n"
-            "# reference\nhttps://example.org/harbour\n"
-            "  covers: its page Tides\n\n"
+            "# reference\nartifact/harbour/index.html\n"
+            "  covers: tides\n"
+            "  delivered: /state/captures/oak/T7/tides-delivered.png\n"
+            "  reference page: /state/captures/oak/T7/tides-reference.png\n\n"
             "# diff\n$ git diff 0000000 8885daa\nexit 0\n+def tide():\n\n"
             "# preflight\nfail  scope\n  brigade/cli.py is outside the task\n\n"
             "# rules\n$ awawa context @TRIGGER.python_file\nexit 0\nRULE pure\n\n"
@@ -157,8 +167,10 @@ class VerifyContextTextTest(unittest.TestCase):
             "  subject: print the tide tables of a harbour\n"
             "  desc: a sailor reads the tides of the week at a glance\n"
             "  source: the user's words: I want the tides of the week on one page\n\n"
-            "# reference\nhttps://example.org/harbour\n"
-            "  covers: its page Tides\n\n"
+            "# reference\nartifact/harbour/index.html\n"
+            "  covers: tides\n"
+            "  delivered: /state/captures/oak/T7/tides-delivered.png\n"
+            "  reference page: /state/captures/oak/T7/tides-reference.png\n\n"
             "# diff\n$ git diff 0000000 8885daa\nexit 0\n+def tide():\n\n"
             "# previous verdict\nhead efd5ed1\nverdict changes\n"
             "finding 1: high src/tides.py:12, broken SPEC 2 of @TASK.T7\n"
@@ -212,14 +224,14 @@ class VerifyContextTextTest(unittest.TestCase):
 
     def test_should_print_none_where_a_reference_states_no_coverage(self):
         # Arrange
-        uncovered = {"reference": "https://example.org/harbour", "covers": None}
+        uncovered = {"reference": "artifact/harbour/index.html", "covers": None, "refusal": None, "captures": None}
         document = {**create_document(RULES), "references": [uncovered]}
 
         # Act
         text = COMMAND.render_text(document)
 
         # Assert
-        self.assertIn("# reference\nhttps://example.org/harbour\n  covers: none\n\n", text)
+        self.assertIn("# reference\nartifact/harbour/index.html\n  covers: none\n", text)
 
 
 class VerifyContextExitCodeTest(unittest.TestCase):
@@ -423,3 +435,40 @@ class VerifyContextFromTheDisposableWorktreeOfAReadingRunTest(unittest.TestCase)
 
         # Assert
         self.assertEqual(document["task"], "T7")
+
+
+class VerifyContextOfAReferenceTest(unittest.TestCase):
+    def test_should_print_a_reference_that_is_a_url_refused_with_why(self):
+        # Arrange
+        refused = {
+            "reference": "https://example.org/harbour",
+            "covers": "tides",
+            "refusal": "a REFERENCE is a repository path: the review cannot open a URL",
+            "captures": None,
+        }
+        document = {**create_document(RULES), "references": [refused]}
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertIn(
+            "# reference\nhttps://example.org/harbour\n  covers: tides\n"
+            "  refused: a REFERENCE is a repository path: the review cannot open a URL\n\n",
+            text,
+        )
+
+    def test_should_say_that_no_png_pair_was_captured_for_a_page(self):
+        # Arrange
+        uncaptured = {"reference": "artifact/harbour/index.html", "covers": "tides", "refusal": None, "captures": None}
+        document = {**create_document(RULES), "references": [uncaptured]}
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertIn(
+            "# reference\nartifact/harbour/index.html\n  covers: tides\n"
+            "  captures: none, brigade build capture wrote no PNG pair for this page\n\n",
+            text,
+        )

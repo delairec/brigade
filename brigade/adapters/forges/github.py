@@ -1,11 +1,14 @@
 import json
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from urllib.parse import urlsplit
 
 from brigade.errors import CommandFailed, PullRequestCompareFailed
+from brigade.git.push_files_to_remote import FilesPush, push_files_to_remote
 from brigade.runtime import Runtime
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRequest
+from brigade.system.write_text_file import write_text_file
 
 HOST = "github.com"
 PROBE_DIRECTORY = "/"
@@ -70,6 +73,12 @@ BRANCH_CHECK_RUNS_QUERY = f"""query($owner: String!, $name: String!, $branch: St
   }}
 }}"""
 BRANCH_REF_PREFIX = "refs/heads/"
+GIST_HOST = "https://gist.github.com"
+RAW_GIST_HOST = "https://gist.githubusercontent.com"
+GIST_DESCRIPTION_FILE = "captures.md"
+GIST_CLONE = "gist.git"
+NO_REPLY_EMAIL_DOMAIN = "users.noreply.github.com"
+GH_CREDENTIAL_HELPER = "!gh auth git-credential"
 THREAD_REPLY_MUTATION = """mutation($thread: ID!, $body: String!) {
   addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: $thread, body: $body}) { comment { id } }
 }"""
@@ -149,6 +158,44 @@ def open_pull_request(request: dict, runtime: Runtime) -> dict:
         request["environment"],
     )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "url": url, "number": int(url.rsplit(URL_SEPARATOR, 1)[1])}
+
+
+def _create_gist(request: dict, runtime: Runtime, description: Path) -> list[str]:
+    record = runtime.run_process(
+        ProcessRequest(
+            argv=("gh", "gist", "create", "--public", "--desc", request["description"], str(description)),
+            cwd=str(description.parent),
+            timeout_s=PUBLICATION_TIMEOUT_S,
+            environment=request["environment"],
+        )
+    )
+    return urlsplit(record.stdout.strip()).path.strip(URL_SEPARATOR).split(URL_SEPARATOR)
+
+
+def host_images(request: dict, runtime: Runtime) -> dict:
+    images = [Path(file) for file in request["files"]]
+    directory = images[0].parent
+    description = directory / GIST_DESCRIPTION_FILE
+    write_text_file(description, f"{request['description']}\n")
+    login, gist = _create_gist(request, runtime, description)
+    push_files_to_remote(
+        runtime.run_process,
+        FilesPush(
+            remote=f"{GIST_HOST}/{gist}.git",
+            clone=directory / GIST_CLONE,
+            tree=directory,
+            files=(GIST_DESCRIPTION_FILE, *(image.name for image in images)),
+            message=request["description"],
+            author_name=login,
+            author_email=f"{login}@{NO_REPLY_EMAIL_DOMAIN}",
+            credential_helper=GH_CREDENTIAL_HELPER,
+            environment=request["environment"],
+        ),
+    )
+    return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
+        "urls": [f"{RAW_GIST_HOST}/{login}/{gist}/raw/{image.name}" for image in images],
+    }
 
 
 def open_issue(request: dict, runtime: Runtime) -> dict:
