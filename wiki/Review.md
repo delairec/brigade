@@ -35,26 +35,48 @@ its version: `artifact/m18-dashboard/index.html` holds the mockup of M18, whose 
 `COVERS`. The planner reports a URL as a question, and `review context` prints it refused.
 
 ```
-brigade build capture <task>                      # the delivered page and the reference page, as PNG files
+brigade build capture <task>                      # the delivered page and the reference page of HEAD, as PNG files
 brigade build capture <task> --directory <dir>   # the same, written to <dir>
-brigade page <page>                               # one page of the dashboard as a standalone HTML document
+brigade page <page> --project <name>             # one page of the dashboard as a standalone HTML document
 ```
 
 `brigade build capture` writes, for each page a `REFERENCE` of the task covers, one headless Firefox capture of the
-delivered page and one of the reference page, one after the other, under `captures/<project>/<task>` of the state
-directory, where `review context` names them. The home directory is shown as `~` in each page.
+delivered page and one of the reference page, one after the other, under `captures/<project>/<task>/<head>` of the
+state directory. The home directory is shown as `~` in each page, and the Firefox profile is removed once the page is
+captured.
 
 | Page | How it renders |
 |---|---|
-| delivered | the recipe `capture` of the project, of command steps: each argv runs with `{page}` replaced by the page, and the output of the last step is the HTML of that page; brigade's own runs `brigade page {page}` |
+| delivered | the recipe `capture` of the project, of command steps run in the worktree: each argv runs with `{page}` replaced by the `COVERS`, and the output of the last step is the HTML of that page; brigade's own runs `brigade page {page} --project brigade` |
 | reference | an HTML reference with only its section whose id `COVERS` names shown |
 
-A project with no recipe `capture`, a task with no `REFERENCE`, a reference that is a URL or no HTML page: no capture,
-and the output says which. `brigade build pr` runs the capture for a task that carries a `REFERENCE` and shows each pair
-in the body of its pull request, delivered beside reference. GitHub takes no image through its API, so the images go to
-a public gist of the build account.
+`brigade page` serves `home`, `waves`, `runs`, `ledger`, `inbox`, `reports` and `awawa`, and `wave`, `run` and
+`report` as the newest of the project. It fails on any other page and on a view that answers an error, so the capture
+of that page fails too. `foundation`, the stylesheet specimen of the M18 mockup, is no page of the dashboard: the review
+judges it by reading `dashboard.css` against that section of the reference.
 
-> **Watch out:** the captures of a public repository are public: the gist is public, as the pull request is.
+A page is not captured, and the output says why, when the project has no recipe `capture`, the task no `REFERENCE`,
+the reference is a URL, no HTML page, outside the repository or absent from it, `COVERS` names no section of it, or a
+step of the recipe exits non-zero.
+
+### Each head has its captures
+
+- `brigade build pr` captures the checked head and shows each pair in the `## Captures` section of the body, which
+  names that head.
+- `brigade review context` names the pair of the head under review only. When that pair is missing and the worktree
+  stands at that head, it captures it, then rewrites the `## Captures` section of the body: a head repaired after a
+  review, or rebased, is judged against its own captures.
+- A head is captured and hosted once: the section published for it is reused.
+
+### Where the captures go
+
+| Repository | Captures |
+|---|---|
+| public, as the forge says | hosted in a public gist of the build account, shown as images in the body |
+| private, or its visibility unreadable | hosted nowhere: the body names the files in the state directory, where the review reads them |
+
+> **Watch out:** the captures of a public repository are public, as the pull request is. Nothing of a private project
+> leaves the machine.
 
 ## The verdict document
 

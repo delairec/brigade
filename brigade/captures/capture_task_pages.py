@@ -107,7 +107,7 @@ def _render_reference(demand: CaptureDemand, reference: str, page: str) -> str:
     return shown.replace(demand.home, HOME_SHOWN)
 
 
-def _screenshot(runtime: Runtime, directory: Path, html: Path) -> Path:
+def _screenshot(runtime: Runtime, directory: Path, html: Path, address: str) -> Path:
     png = html.with_suffix(".png")
     runtime.run_process(
         ProcessRequest(
@@ -121,7 +121,7 @@ def _screenshot(runtime: Runtime, directory: Path, html: Path) -> Path:
                 WINDOW_WIDTH,
                 "--screenshot",
                 str(png),
-                html.as_uri(),
+                address,
             ),
             cwd=str(directory),
             timeout_s=CAPTURE_TIMEOUT_S,
@@ -143,8 +143,8 @@ def _capture_page(runtime: Runtime, rendering: _Rendering, reference: dict) -> d
     write_text_file(shown, _render_reference(demand, reference["reference"], page))
     captured = {
         "page": page,
-        "delivered": str(_screenshot(runtime, demand.directory, delivered)),
-        "reference": str(_screenshot(runtime, demand.directory, shown)),
+        "delivered": str(_screenshot(runtime, demand.directory, delivered, delivered.as_uri())),
+        "reference": str(_screenshot(runtime, demand.directory, shown, f"{shown.as_uri()}#{page}")),
     }
     remove_directory(demand.directory / PROFILE_DIRECTORY)
     return captured

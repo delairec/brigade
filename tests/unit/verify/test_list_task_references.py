@@ -2,7 +2,7 @@ import unittest
 
 from brigade.verify.list_task_references import list_task_references
 
-MOCKUP = "https://claude.ai/artifact/QYoFsx8Kq7LnSQrnKUJ7Je"
+MOCKUP = "artifact/harbour/index.html"
 
 
 class ListTaskReferencesTest(unittest.TestCase):

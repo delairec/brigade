@@ -60,7 +60,7 @@ class CaptureTaskPagesTest(unittest.TestCase):
             "1440",
             "--screenshot",
             str(self.directory / "tides-reference.png"),
-            (self.directory / "tides-reference.html").as_uri(),
+            f"{(self.directory / 'tides-reference.html').as_uri()}#tides",
         )
         self.processes.answer_by(self.delivered_capture, self.run_firefox)
         self.processes.answer_by(self.reference_capture, self.run_firefox)

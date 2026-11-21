@@ -87,7 +87,7 @@ class PublishTaskCapturesTest(unittest.TestCase):
                 "1440",
                 "--screenshot",
                 str(self.directory / "tides-reference.png"),
-                (self.directory / "tides-reference.html").as_uri(),
+                f"{(self.directory / 'tides-reference.html').as_uri()}#tides",
             )
         )
 

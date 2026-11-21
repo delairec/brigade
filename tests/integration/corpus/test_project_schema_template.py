@@ -15,7 +15,7 @@ EVERY_STATUS_AND_FIELD = (
     'MILESTONE M3\n\tTITLE "Reached"\n\tSTATUS reached\n\n'
     'TASK T1\n\tTITLE "A draft"\n\tSTATUS draft\n\tSPEC "drafted"\n\n'
     'TASK T2\n\tTITLE "Ratified"\n\tSTATUS todo\n\tTYPE feat\n\tMILESTONE @MILESTONE.M2\n\tSPEC "ratified"\n'
-    '\tREFERENCE "https://example.org/cart-mockup"\n\t\tCOVERS "its page Cart"\n\n'
+    '\tREFERENCE "artifact/cart/index.html"\n\t\tCOVERS "cart"\n\n'
     'TASK T3\n\tTITLE "Delivered"\n\tSTATUS implemented\n\tTYPE fix\n\tMILESTONE @MILESTONE.M3\n'
     '\tAFTER @TASK.T2\n\tDELIVERED_BY 12\n\tCORRECTS 11\n\tSPEC "delivered"\n\t\tIMPL "src/cart.py::def add_item"\n\n'
     'TASK T4\n\tTITLE "Retired"\n\tSTATUS archived\n\tSPEC "retired"\n\n'

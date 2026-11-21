@@ -22,8 +22,8 @@ step needs and no command gives back (a finding and its evidence), and the next 
 judges the head of the task branch against the branch of its milestone. It prints the task with its awawa context and
 its closure; under `# goal`, the goal the task serves: its title, and the title, subject, description and source of
 its milestone, the user's own words, or that it has no milestone; under `# reference`, each `REFERENCE` of the
-task, a repository path, with the page it covers and the PNG files of that page captured by `brigade build capture`,
-the delivered page and the reference page, or none; a `REFERENCE` that is a URL is printed refused, with why; the diff of the pull request
+task, a repository path, with the page it covers and the PNG files of that page captured at the head under review, the delivered
+page and the reference page, which `review context` captures itself when they are missing, or none; a `REFERENCE` that is a URL is printed refused, with why; the diff of the pull request
 against its base,
 the findings of the preflight, the rules of the files the diff touches, and the grades a finding takes.
 
@@ -68,7 +68,7 @@ milestone, `@MILESTONE.<name>`, or the task, and the summary says what of the go
 ## 4. Judge the delivery against its reference
 
 The reference is each entry under `# reference`, the `REFERENCE` values of the task: a mockup, a page or a
-document, by its URL or its repository path. It is one of the criteria, never an example of a rule: compare the
+document, by its repository path. It is one of the criteria, never an example of a rule: compare the
 delivery with the reference itself, the page or the section its `COVERS` names, never only with what the `SPEC`
 lines transcribed from it, and its forms and interactions are kept, a selector staying a selector. A gap from it that no
 `SPEC`, `RATIONALE` or recorded decision justifies is a finding that asks for changes, `broken` naming the
@@ -83,7 +83,7 @@ with no `REFERENCE` skips this step.
 
 Wrong behaviour, missing cases, broken contracts, untested paths, and departures from the rules the package prints.
 Each finding carries a grade among those the package prints, the file and the line it concerns, and the `SPEC`, the
-goal, the reference or the rule it breaks, by its entity name or its URL.
+goal, the reference or the rule it breaks, by its entity name or its repository path.
 
 ## 6. Hand back the verdict
 

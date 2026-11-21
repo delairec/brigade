@@ -104,7 +104,7 @@ def page(request: argparse.Namespace, runtime: Runtime) -> dict:
         view = _select(f"{VIEWS_PREFIX}{_address(request.page, request.project, ask)}", request.project)
 
         def answer(target: str) -> str:
-            return ask(target) if target == view else respond(target).body.decode()
+            return ask(target) if target == view else respond(_select(target, request.project)).body.decode()
 
         html = render_dashboard_page(view.removeprefix(VIEWS_PREFIX), answer)
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "page": request.page, "html": html}
