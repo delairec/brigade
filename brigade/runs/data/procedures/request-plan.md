@@ -45,9 +45,10 @@ step needs and no command gives back (the path of the plan file, the ids you cho
 - The MILESTONE states the goal the request serves beyond its tasks, in the user's words where its schema declares a
   field for them: the review judges every task of it against that goal.
 - A request drawn from a reference, a mockup, an Artifact, a page or a document, names it: each task drafted from it
-  cites it in a `SPEC` line as its acceptance contract, its address down to the page or the section the task covers,
-  never in a `RATIONALE` alone, and its `SPEC` lines keep the forms and interactions of the reference, a selector
-  staying a selector. The review compares the delivery with the reference itself.
+  carries it in its `REFERENCE` field, the URL or the repository path, with the page or the section the task covers
+  in its `COVERS`, never in a `RATIONALE` alone, and its `SPEC` lines keep the forms and interactions of the
+  reference, a selector staying a selector. The review compares the delivery with the reference itself. A TASK schema
+  that declares no `REFERENCE` is a question for your report, not a reference left out.
 - What you cannot decide from the package and the corpus is not assumed: it is left out of the plan and named in
   your report as a question.
 

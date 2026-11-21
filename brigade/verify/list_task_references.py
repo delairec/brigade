@@ -1,16 +1,17 @@
-import re
+from brigade.corpus.decode_atom import decode_atom
 
-from brigade.corpus.read_entity import Entity
-
-CITING_FIELDS = ("SPEC", "RATIONALE")
-URL = re.compile(r"https?://\S+")
-CLOSING_PUNCTUATION = ".,;:)"
+REFERENCE_FIELD = "REFERENCE"
+COVERS_FIELD = "COVERS"
 
 
-def list_task_references(task: Entity) -> list[dict]:
+def _read_covers(reference: dict) -> str | None:
+    covers = [decode_atom(field["atoms"][0]) for field in reference["fields"] if field["name"] == COVERS_FIELD]
+    return covers[0] if covers else None
+
+
+def list_task_references(task: dict) -> list[dict]:
     return [
-        {"url": url.group().rstrip(CLOSING_PUNCTUATION), "field": field.name, "line": field.value}
-        for field in task.fields
-        if field.name in CITING_FIELDS
-        for url in URL.finditer(field.value)
+        {"reference": decode_atom(field["atoms"][0]), "covers": _read_covers(field)}
+        for field in task["fields"]
+        if field["name"] == REFERENCE_FIELD
     ]

@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.corpus.decode_entity import decode_entity
 from brigade.corpus.prepare_project_tree import prepare_project_tree
-from brigade.corpus.read_entity import read_entity
+from brigade.corpus.read_awawa_document import read_awawa_document
 from brigade.corpus.run_awawa import run_awawa
 from brigade.git.count_changed_lines import count_changed_lines
 from brigade.git.read_diff import read_diff
@@ -18,7 +19,6 @@ from brigade.verify.read_task_goal import read_task_goal
 
 GRADES = ("critical", "high", "medium", "low")
 TREE_ROOT = "."
-TASK_TYPE = "TASK"
 
 
 @dataclass(frozen=True)
@@ -76,15 +76,15 @@ def describe_judged_task(runtime: Runtime, judged: JudgedTask) -> dict:
         VerifiedPullRequest(project=judged.project, task=judged.task, pr=judged.pr),
     )
     tree = prepare_project_tree(TreeDemand(project=judged.project, ref=judged.head), judged.configuration, runtime).root
-    task = read_entity(runtime.run_process, tree, TASK_TYPE, judged.task)
+    shown_task = read_awawa_document(runtime.run_process, tree, ("show", f"@TASK.{judged.task}"))
     return {
         "project": judged.project,
         "pr": judged.pr,
         "task": judged.task,
         "head": judged.head,
         "context": _read_task(runtime, judged, tree),
-        "goal": read_task_goal(runtime.run_process, tree, task),
-        "references": list_task_references(task),
+        "goal": read_task_goal(runtime.run_process, tree, decode_entity(judged.task, shown_task)),
+        "references": list_task_references(shown_task),
         "diff": describe_command(read_diff(runtime.run_process, judged.repository, judged.base, judged.head)),
         "previous": previous,
         "repair": _read_repair(runtime, judged, previous),
