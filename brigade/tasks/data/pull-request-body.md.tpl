@@ -8,4 +8,4 @@ $specs
 
 $checks
 
-$attribution
+${captures}$attribution

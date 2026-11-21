@@ -66,10 +66,22 @@ def _render_goal(goal: dict) -> str:
     return f"task {goal['task']}: {goal['title']}\n{_render_milestone(goal['milestone'])}"
 
 
+def _render_captures(reference: dict) -> str:
+    if reference["refusal"] is not None:
+        return f"  refused: {reference['refusal']}\n"
+    captures = reference["captures"]
+    if captures is None:
+        return "  captures: none, brigade build capture wrote no PNG pair for this page\n"
+    return f"  delivered: {captures['delivered']}\n  reference page: {captures['reference']}\n"
+
+
 def _render_references(references: list[dict]) -> str:
     if not references:
         return f"{ABSENT}\n"
-    return "".join(f"{reference['reference']}\n  covers: {reference['covers'] or ABSENT}\n" for reference in references)
+    return "".join(
+        f"{reference['reference']}\n  covers: {reference['covers'] or ABSENT}\n{_render_captures(reference)}"
+        for reference in references
+    )
 
 
 def _render_re_verification(document: dict) -> list[str]:

@@ -1,11 +1,10 @@
 from brigade.corpus.decode_atom import decode_atom
 
 REFERENCE_FIELD = "REFERENCE"
-COVERS_FIELD = "COVERS"
 
 
 def _read_covers(reference: dict) -> str | None:
-    covers = [decode_atom(field["atoms"][0]) for field in reference["fields"] if field["name"] == COVERS_FIELD]
+    covers = [decode_atom(field["atoms"][0]) for field in reference["fields"]]
     return covers[0] if covers else None
 
 

@@ -21,6 +21,7 @@ class PullRequestBodyParts:
     specs: tuple[str, ...]
     check: dict
     attribution: tuple[str, ...]
+    captures: str
 
 
 def _describe_check(check: dict) -> str:
@@ -39,6 +40,12 @@ def _describe_corrections(corrections: tuple[Correction, ...]) -> str:
     return "".join(map(_describe_correction, corrections)) + "\n"
 
 
+def _describe_captures(captures: str) -> str:
+    if not captures:
+        return captures
+    return f"{captures}\n"
+
+
 def describe_pull_request_body(parts: PullRequestBodyParts) -> str:
     return Template(BODY_TEMPLATE.read_text(encoding="utf-8")).substitute(
         corrections=_describe_corrections(parts.corrections),
@@ -46,5 +53,6 @@ def describe_pull_request_body(parts: PullRequestBodyParts) -> str:
         specs="\n".join(f"- {spec}" for spec in parts.specs),
         head=parts.check["head"],
         checks="\n".join(_describe_check(check) for check in parts.check["checks"]),
+        captures=_describe_captures(parts.captures),
         attribution="\n".join(parts.attribution),
     )
