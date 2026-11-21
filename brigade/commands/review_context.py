@@ -62,7 +62,9 @@ def _render_milestone(milestone: dict | None) -> str:
     )
 
 
-def _render_goal(goal: dict) -> str:
+def _render_goal(goal: dict | None, task: str) -> str:
+    if goal is None:
+        return f"the head defines no @TASK.{task}: the preflight promotion says so\n"
     return f"task {goal['task']}: {goal['title']}\n{_render_milestone(goal['milestone'])}"
 
 
@@ -97,7 +99,7 @@ def _render_text(document: dict) -> str:
     sections = [
         f"# head\n{document['head']}\n",
         f"# task\n{_render_commands(document['context'])}",
-        f"# goal\n{_render_goal(document['goal'])}",
+        f"# goal\n{_render_goal(document['goal'], document['task'])}",
         f"# reference\n{_render_references(document['references'])}",
         f"# diff\n{_render_commands([document['diff']])}",
         *_render_re_verification(document),

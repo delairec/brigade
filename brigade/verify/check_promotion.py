@@ -1,10 +1,11 @@
+import json
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
 from brigade.corpus.collect_anchors import collect_anchors
 from brigade.corpus.decode_atom import decode_atom
-from brigade.corpus.read_awawa_document import read_awawa_document
+from brigade.corpus.run_awawa import run_awawa
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 from brigade.verify.judge_findings import judge_findings
 
@@ -12,6 +13,7 @@ NAME = "promotion"
 IMPLEMENTED = "implemented"
 ANCHOR_SEPARATOR = "::"
 NO_PULL_REQUEST = "no pull request"
+TASK_SHOWN = 0
 
 
 @dataclass(frozen=True)
@@ -43,7 +45,10 @@ def _resolves(repository_tree: Path, anchor: str) -> bool:
 
 def check_promotion(run_process: Callable[[ProcessRequest], ProcessRecord], facts: PromotionFacts) -> dict:
     target = f"@TASK.{facts.task}"
-    fields = read_awawa_document(run_process, facts.head_tree, ("show", target))["fields"]
+    shown = run_awawa(run_process, facts.head_tree, ("show", target, "--json", str(facts.head_tree)))
+    if shown.exit_code != TASK_SHOWN:
+        return judge_findings(NAME, [f"{target} is not defined at the head"])
+    fields = json.loads(shown.stdout)["fields"]
     findings = []
     status = _read_value(fields, "STATUS")
     if status != IMPLEMENTED:
