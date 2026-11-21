@@ -5,7 +5,7 @@ TAB = "#awawa/"
 
 
 def _render_link(project: str, label: str) -> str:
-    return f'<a href="{escape(TAB + quote(project, safe=""))}">{escape(label)}</a>'
+    return f'<a href="{escape(TAB + quote(project, safe=""))}" data-rail-view="awawa">{escape(label)}</a>'
 
 
 def render_addons_rail(holders: frozenset[str], project: str | None) -> str:

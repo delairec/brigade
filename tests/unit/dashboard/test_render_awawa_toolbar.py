@@ -12,10 +12,17 @@ BOARD = {
     "view": "board",
     "field": "STATUS",
     "fields": ["TITLE", "STATUS", "AFTER"],
+    "filter_values": {"STATUS": ["draft", "todo"]},
 }
 DEPENDENCIES_OF_THE_TASKS = AwawaAddress(project="oak", parameters=(("view", "dependencies"), ("type", "TASK")))
-DEPENDENCIES = {"types": ["SCHEMA", "MILESTONE", "TASK"], "view": "dependencies", "field": "AFTER", "fields": ["AFTER"]}
-TREE = {"types": ["SCHEMA", "MILESTONE", "TASK"], "view": "tree"}
+DEPENDENCIES = {
+    "types": ["SCHEMA", "MILESTONE", "TASK"],
+    "view": "dependencies",
+    "field": "AFTER",
+    "fields": ["AFTER"],
+    "filter_values": {},
+}
+TREE = {"types": ["SCHEMA", "MILESTONE", "TASK"], "view": "tree", "filter_values": {}}
 
 
 class RenderAwawaToolbarTest(unittest.TestCase):
@@ -97,16 +104,25 @@ class RenderAwawaToolbarTest(unittest.TestCase):
         # Assert
         self.assertNotIn('name="field"', fragment)
 
-    def test_should_offer_the_search_and_a_filter_to_add(self):
+    def test_should_offer_a_search_that_holds_the_polling_while_typed_in_with_no_button(self):
         # Act
         fragment = render_awawa_toolbar(BOARD, BOARD_OF_THE_TODO_TASKS)
 
         # Assert
         self.assertIn(
-            '<label>Search <input type="search" name="search" value=""></label>'
-            '<label>Filter <input name="filter" placeholder="FIELD=value"></label><button>Apply</button>',
+            '<span class="field"><label for="awawa-search" class="mono">search</label><input type="search"'
+            ' id="awawa-search" name="search" value="" placeholder="Search the label, the name or a fact"'
+            " data-pauses-poll></span></form>",
             fragment,
         )
+
+    def test_should_offer_a_filter_to_add_through_selectors_not_typed(self):
+        # Act
+        fragment = render_awawa_toolbar(BOARD, BOARD_OF_THE_TODO_TASKS)
+
+        # Assert
+        self.assertIn('<select id="awawa-pick" name="pick">', fragment)
+        self.assertNotIn('<input name="filter"', fragment)
 
 
 class RenderAwawaToolbarAsTheMockupTest(unittest.TestCase):

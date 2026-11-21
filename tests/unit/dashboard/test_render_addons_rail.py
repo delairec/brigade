@@ -12,7 +12,7 @@ class RenderAddonsRailTest(unittest.TestCase):
         fragment = render_addons_rail(HOLDERS, "oak")
 
         # Assert
-        self.assertEqual(fragment, '<a href="#awawa/oak">awawa</a>')
+        self.assertEqual(fragment, '<a href="#awawa/oak" data-rail-view="awawa">awawa</a>')
 
     def test_should_offer_no_awawa_tab_for_a_project_holding_no_corpus(self):
         # Act
@@ -26,11 +26,14 @@ class RenderAddonsRailTest(unittest.TestCase):
         fragment = render_addons_rail(HOLDERS, ALL_PROJECTS)
 
         # Assert
-        self.assertEqual(fragment, '<a href="#awawa/elm">awawa · elm</a><a href="#awawa/oak">awawa · oak</a>')
+        self.assertEqual(
+            fragment,
+            '<a href="#awawa/elm" data-rail-view="awawa">awawa · elm</a><a href="#awawa/oak" data-rail-view="awawa">awawa · oak</a>',
+        )
 
     def test_should_escape_a_project_holding_markup(self):
         # Act
         fragment = render_addons_rail(frozenset({"<b>"}), ALL_PROJECTS)
 
         # Assert
-        self.assertEqual(fragment, '<a href="#awawa/%3Cb%3E">awawa · &lt;b&gt;</a>')
+        self.assertEqual(fragment, '<a href="#awawa/%3Cb%3E" data-rail-view="awawa">awawa · &lt;b&gt;</a>')

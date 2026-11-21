@@ -97,9 +97,9 @@ function readFirstSegment(address) {
 }
 
 function markCurrentView() {
-  const current = `#${readFirstSegment(selectView())}`;
-  for (const link of document.querySelectorAll(".rail-group a")) {
-    if (readFirstSegment(link.getAttribute("href")) === current) {
+  const current = readFirstSegment(selectView());
+  for (const link of document.querySelectorAll("[data-rail-view]")) {
+    if (link.dataset.railView === current) {
       link.setAttribute("aria-current", "page");
     } else {
       link.removeAttribute("aria-current");
@@ -171,7 +171,7 @@ async function postAction(event) {
 }
 
 function pollRegions() {
-  if (document.activeElement && document.activeElement.matches("input")) {
+  if (document.activeElement?.closest("[data-pauses-poll]")) {
     return;
   }
   showRegions();

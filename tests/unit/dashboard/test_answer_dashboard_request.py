@@ -1330,7 +1330,7 @@ class AnswerDashboardRequestOfTheAwawaTabTest(unittest.TestCase):
         response = self.answer("/views/addons?project=app")
 
         # Assert
-        self.assertEqual(response.body, b'<a href="#awawa/app">awawa</a>')
+        self.assertEqual(response.body, b'<a href="#awawa/app" data-rail-view="awawa">awawa</a>')
 
     def test_should_answer_no_view_at_the_addresses_of_the_corpus_view(self):
         # Arrange
@@ -1363,4 +1363,6 @@ class AnswerDashboardRequestOfTheRailTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(response.status, 200)
-        self.assertIn(b'<a href="#waves">Waves <span class="count num">1 open</span></a>', response.body)
+        self.assertIn(
+            b'<a href="#waves" data-rail-view="waves">Waves <span class="count num">1 open</span></a>', response.body
+        )

@@ -1,9 +1,11 @@
-from brigade.corpus.corpus_reader import STATUS_FIELD, CorpusReader
+from brigade.corpus.corpus_reader import STATUS_FIELD, CorpusReader, read_atoms
 from brigade.corpus.describe_board_view import describe_board_view
 from brigade.corpus.describe_dependencies_view import describe_dependencies_view
+from brigade.corpus.describe_entity_card import FACT_KINDS
 from brigade.corpus.describe_entity_detail import describe_entity_detail
 from brigade.corpus.describe_health_view import describe_health_view
 from brigade.corpus.describe_tree_view import describe_tree_view
+from brigade.corpus.rank_naturally import rank_naturally
 from brigade.corpus.select_view_cards import select_view_cards
 from brigade.corpus.view_request import ViewRequest
 from brigade.errors import BrigadeError
@@ -46,8 +48,24 @@ def _describe_view(reader: CorpusReader, request: ViewRequest) -> dict:
     return describe_dependencies_view(reader, cards, field) | {"fields": fields}
 
 
+def _describe_filter_values(reader: CorpusReader, entity_type: str | None) -> dict[str, list[str]]:
+    if entity_type is None:
+        return {}
+    rows = reader.rows_of(entity_type)
+    written = {
+        field.name: {read_atoms(atoms) for row in rows for atoms in reader.values(row).get(field.name, [])}
+        for field in reader.fields(entity_type)
+        if FACT_KINDS.issuperset(field.kinds)
+    }
+    return {field: sorted(values, key=rank_naturally) for field, values in written.items() if values}
+
+
 def describe_view_document(reader: CorpusReader, request: ViewRequest) -> dict:
-    document = {"view": request.view, **_describe_view(reader, request)}
+    document = {
+        "view": request.view,
+        **_describe_view(reader, request),
+        "filter_values": _describe_filter_values(reader, request.entity_type),
+    }
     if request.entity is not None:
         document["detail"] = describe_entity_detail(reader, request.entity)
     return document

@@ -349,7 +349,7 @@ def _suggest_ranges(overview: CommandAnswer) -> tuple[str, str]:
 
 
 def _render_range_input(label: str, name: str, placeholder: str) -> str:
-    control = f'<input id="{name}" name="range" placeholder="{escape(placeholder)}">'
+    control = f'<input id="{name}" name="range" data-pauses-poll placeholder="{escape(placeholder)}">'
     return render_field(label, name, control)
 
 

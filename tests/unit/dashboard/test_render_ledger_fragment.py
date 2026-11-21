@@ -494,9 +494,9 @@ class RenderLedgerFragmentAsTheMockupTest(unittest.TestCase):
         self.assertIn(
             '<section class="block"><div class="block-head"><h2>Compare two periods</h2><p>Runs finished in each'
             ' range of days, UTC.</p></div><form class="filters" data-view="ledger">'
-            '<span class="field"><label for="ledger-before">Before</label><input id="ledger-before" name="range"'
+            '<span class="field"><label for="ledger-before">Before</label><input id="ledger-before" name="range" data-pauses-poll'
             ' placeholder="2026-11-15..2026-11-17"></span>'
-            '<span class="field"><label for="ledger-after">After</label><input id="ledger-after" name="range"'
+            '<span class="field"><label for="ledger-after">After</label><input id="ledger-after" name="range" data-pauses-poll'
             ' placeholder="2026-11-18..2026-11-18"></span><button class="btn" type="submit">Compare</button></form>',
             fragment,
         )

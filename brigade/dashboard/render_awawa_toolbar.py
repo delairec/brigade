@@ -1,6 +1,7 @@
 from html import escape
 
 from brigade.dashboard.awawa_address import AwawaAddress
+from brigade.dashboard.render_awawa_filter_picker import render_awawa_filter_picker
 from brigade.dashboard.render_awawa_form import AwawaForm, AwawaSelector, render_awawa_form
 
 VIEWS = (("tree", "Tree"), ("board", "Board"), ("dependencies", "Dependencies"), ("health", "Health"))
@@ -10,6 +11,7 @@ FIRST_VIEW = "tree"
 SELECTED = ' aria-selected="true"'
 FIELD_LABELS = {"board": "By", "dependencies": "Follow"}
 NO_SELECTOR = ""
+SEARCH_PROMPT = "Search the label, the name or a fact"
 
 
 def _render_tab(address: AwawaAddress, label: str, *, selected: bool) -> str:
@@ -61,16 +63,18 @@ def _render_field(document: dict, address: AwawaAddress) -> str:
 
 def _render_search(address: AwawaAddress) -> str:
     controls = (
-        f'<label>Search <input type="search" name="search" value="{escape(address.read("search") or "")}"></label>'
-        '<label>Filter <input name="filter" placeholder="FIELD=value"></label>'
+        '<span class="field"><label for="awawa-search" class="mono">search</label><input type="search"'
+        f' id="awawa-search" name="search" value="{escape(address.read("search") or "")}"'
+        f' placeholder="{SEARCH_PROMPT}" data-pauses-poll></span>'
     )
     return render_awawa_form(
-        AwawaForm(css_class="awawa-search", address=address, controls=controls, replaced=("search",), button="Apply")
+        AwawaForm(css_class="awawa-search", address=address, controls=controls, replaced=("search",), button=None)
     )
 
 
 def render_awawa_toolbar(document: dict, address: AwawaAddress) -> str:
     return (
         f'<div class="awawa-toolbar">{_render_views(document, address)}{_render_types(document, address)}'
-        f"{_render_field(document, address)}{_render_search(address)}</div>"
+        f"{_render_field(document, address)}{_render_search(address)}"
+        f"{render_awawa_filter_picker(document['filter_values'], address)}</div>"
     )

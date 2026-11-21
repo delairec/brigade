@@ -18,6 +18,7 @@ BOARD_OF_OAK = BOARD | {
     "refs": ["main"],
     "types": ["TASK"],
     "awawa_web": None,
+    "filter_values": {},
 }
 
 
@@ -34,11 +35,27 @@ class RenderAwawaTabTest(unittest.TestCase):
     def test_should_draw_the_view_named_by_the_document(self):
         # Arrange
         rows = [
-            ("tree", {"view": "tree", "domain": [], "schema": []}, '<div class="awawa-view"><div class="empty-state">'),
-            ("dependencies", {"view": "dependencies", "field": "AFTER", "roots": [ROOT_B1]}, "awawa-dependencies"),
+            (
+                "tree",
+                {"view": "tree", "filter_values": {}, "domain": [], "schema": []},
+                '<div class="awawa-view"><div class="empty-state">',
+            ),
+            (
+                "dependencies",
+                {"view": "dependencies", "filter_values": {}, "field": "AFTER", "roots": [ROOT_B1]},
+                "awawa-dependencies",
+            ),
             (
                 "health",
-                {"view": "health", "errors": 0, "warnings": 0, "unresolved": 0, "entities": [], "files": []},
+                {
+                    "view": "health",
+                    "filter_values": {},
+                    "errors": 0,
+                    "warnings": 0,
+                    "unresolved": 0,
+                    "entities": [],
+                    "files": [],
+                },
                 "awawa-health",
             ),
         ]
