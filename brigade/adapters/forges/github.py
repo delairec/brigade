@@ -1,5 +1,6 @@
 import json
 import re
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -17,6 +18,7 @@ DOCUMENT_SCHEMA_VERSION = 1
 AUTHENTICATION_VARIABLE = "GH_TOKEN"
 PUBLICATION_TIMEOUT_S = 60.0
 BODY_FROM_STDIN = "-"
+PUBLIC_VISIBILITY = "PUBLIC"
 URL_SEPARATOR = "/"
 MILESTONES_PATH = "repos/{owner}/{repo}/milestones"
 MILESTONES_OF_EVERY_STATE = f"{MILESTONES_PATH}?state=all"
@@ -178,11 +180,13 @@ def host_images(request: dict, runtime: Runtime) -> dict:
     description = directory / GIST_DESCRIPTION_FILE
     write_text_file(description, f"{request['description']}\n")
     login, gist = _create_gist(request, runtime, description)
+    clone = directory / GIST_CLONE
+    shutil.rmtree(clone, ignore_errors=True)
     push_files_to_remote(
         runtime.run_process,
         FilesPush(
             remote=f"{GIST_HOST}/{gist}.git",
-            clone=directory / GIST_CLONE,
+            clone=clone,
             tree=directory,
             files=(GIST_DESCRIPTION_FILE, *(image.name for image in images)),
             message=request["description"],
@@ -192,6 +196,7 @@ def host_images(request: dict, runtime: Runtime) -> dict:
             environment=request["environment"],
         ),
     )
+    shutil.rmtree(clone, ignore_errors=True)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "urls": [f"{RAW_GIST_HOST}/{login}/{gist}/raw/{image.name}" for image in images],
@@ -627,3 +632,17 @@ def read_job_steps(request: dict, runtime: Runtime) -> dict:
 def edit_pull_request(request: dict, runtime: Runtime) -> dict:
     _ask_gh(request, runtime, ("pr", "edit", str(request["number"]), "--title", request["title"]))
     return {"schema_version": DOCUMENT_SCHEMA_VERSION}
+
+
+def read_repository_visibility(request: dict, runtime: Runtime) -> dict:
+    record = runtime.run_process(
+        ProcessRequest(
+            argv=("gh", "repo", "view", "--json", "visibility", "--jq", ".visibility"),
+            cwd=request["repository"],
+            timeout_s=PUBLICATION_TIMEOUT_S,
+            acceptable_exit_codes=EVERY_EXIT_CODE,
+            environment=request["environment"],
+        )
+    )
+    public = record.exit_code == 0 and record.stdout.strip() == PUBLIC_VISIBILITY
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, "public": public}

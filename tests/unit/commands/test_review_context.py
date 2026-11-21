@@ -469,7 +469,7 @@ class VerifyContextOfAReferenceTest(unittest.TestCase):
         # Assert
         self.assertIn(
             "# reference\nartifact/harbour/index.html\n  covers: tides\n"
-            "  captures: none, brigade build capture wrote no PNG pair for this page\n\n",
+            "  captures: none at this head, brigade build capture wrote no PNG pair for this page\n\n",
             text,
         )
 

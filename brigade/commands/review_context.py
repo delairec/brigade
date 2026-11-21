@@ -1,13 +1,17 @@
 import argparse
 from pathlib import Path
 
+from brigade.captures.refresh_review_captures import ReviewCaptureRefresh, refresh_review_captures
 from brigade.command import Argument, Command
 from brigade.commands._equip_preflight import equip_preflight
 from brigade.commands._equip_registered_collector import equip_registered_collector
+from brigade.commands._read_forge_environment import BUILD_SLOT, ForgeSlot, read_forge_environment
 from brigade.errors import BrigadeError
 from brigade.git.locate_main_checkout import locate_main_checkout
 from brigade.git.locate_worktree_root import locate_worktree_root
 from brigade.git.read_current_branch import read_current_branch
+from brigade.recipes.locate_recipes import locate_recipes
+from brigade.registry.read_corpus_workspace import read_corpus_workspace
 from brigade.registry.read_project_forge import NO_FORGE, read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
@@ -73,7 +77,7 @@ def _render_captures(reference: dict) -> str:
         return f"  refused: {reference['refusal']}\n"
     captures = reference["captures"]
     if captures is None:
-        return "  captures: none, brigade build capture wrote no PNG pair for this page\n"
+        return "  captures: none at this head, brigade build capture wrote no PNG pair for this page\n"
     return f"  delivered: {captures['delivered']}\n  reference page: {captures['reference']}\n"
 
 
@@ -119,7 +123,18 @@ def _assemble_task_branch_context(runtime: Runtime, configuration: Configuration
         base_branch=located.base,
         configuration=configuration,
     )
-    return {"schema_version": DOCUMENT_SCHEMA_VERSION, **assemble_local_verify_context(runtime, branch_demand)}
+    document = assemble_local_verify_context(runtime, branch_demand)
+    refresh = ReviewCaptureRefresh(
+        project=located.project.name,
+        task=located.task,
+        worktree=located.path,
+        places=locate_recipes(located.path, located.project, runtime.paths),
+        corpus=located.path / read_corpus_workspace(located.project),
+        pr=None,
+        forge=None,
+        environment={},
+    )
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, **refresh_review_captures(runtime, document, lambda: refresh)}
 
 
 def review_context(request: argparse.Namespace, runtime: Runtime) -> dict:
@@ -143,7 +158,23 @@ def review_context(request: argparse.Namespace, runtime: Runtime) -> dict:
         equipment=equip_registered_collector(project, configuration, runtime),
         plugins=equip_preflight(runtime),
     )
-    return {"schema_version": DOCUMENT_SCHEMA_VERSION, **assemble_verify_context(runtime, demand)}
+    return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
+        **refresh_review_captures(
+            runtime,
+            assemble_verify_context(runtime, demand),
+            lambda: ReviewCaptureRefresh(
+                project=project.name,
+                task=found.opened.task,
+                worktree=worktree,
+                places=locate_recipes(worktree, project, runtime.paths),
+                corpus=worktree / read_corpus_workspace(project),
+                pr=request.pr,
+                forge=runtime.resolve_plugin("forge", forge_name),
+                environment=read_forge_environment(configuration, ForgeSlot(forge_name, BUILD_SLOT), runtime),
+            ),
+        ),
+    }
 
 
 COMMAND = Command(

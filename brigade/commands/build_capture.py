@@ -7,6 +7,7 @@ from brigade.command import Argument, Command
 from brigade.corpus.read_awawa_document import read_awawa_document
 from brigade.git.locate_main_checkout import locate_main_checkout
 from brigade.git.locate_worktree_root import locate_worktree_root
+from brigade.git.resolve_commit import resolve_commit
 from brigade.recipes.locate_recipes import locate_recipes
 from brigade.registry.read_corpus_workspace import read_corpus_workspace
 from brigade.registry.read_projects import read_projects
@@ -26,7 +27,8 @@ def build_capture(request: argparse.Namespace, runtime: Runtime) -> dict:
     project = require_project_at(read_projects(runtime), locate_main_checkout(run_process, worktree))
     corpus = worktree / read_corpus_workspace(project)
     shown = read_awawa_document(run_process, corpus, ("show", f"@TASK.{request.task}"))
-    default_directory = locate_task_captures(runtime.paths, project.name, request.task)
+    head = resolve_commit(run_process, worktree, "HEAD")
+    default_directory = locate_task_captures(runtime.paths, project.name, request.task, head)
     demand = CaptureDemand(
         worktree=worktree,
         places=locate_recipes(worktree, project, runtime.paths),

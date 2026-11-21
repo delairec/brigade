@@ -391,7 +391,7 @@ class AssembleVerifyContextTest(unittest.TestCase):
         self.assertIsNone(document["goal"])
         self.assertEqual(document["references"], [])
 
-    def test_should_name_the_png_pair_captured_for_each_page_the_task_covers(self):
+    def test_should_name_the_png_pair_captured_at_the_head_for_each_page_the_task_covers(self):
         # Arrange
         self.answers[("awawa", "show", "@TASK.B1", "--json", str(self.head_tree))] = ProcessAnswer(
             stdout=json.dumps(
@@ -406,7 +406,7 @@ class AssembleVerifyContextTest(unittest.TestCase):
                 }
             )
         )
-        captures = self.paths.state_root / "captures" / "shop" / "B1"
+        captures = self.paths.state_root / "captures" / "shop" / "B1" / HEAD
         captures.mkdir(parents=True)
         (captures / "cart-delivered.png").write_bytes(b"png")
         (captures / "cart-reference.png").write_bytes(b"png")

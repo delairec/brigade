@@ -129,7 +129,7 @@ def _compose_body(sources: _BodySources) -> str:
     )
 
 
-def _publish_captures(runtime: Runtime, worktree: TaskWorktree, demand: TaskPullRequestDemand) -> str:
+def _publish_captures(runtime: Runtime, worktree: TaskWorktree, demand: TaskPullRequestDemand, head: str) -> str:
     return publish_task_captures(
         runtime,
         CapturePublication(
@@ -137,10 +137,11 @@ def _publish_captures(runtime: Runtime, worktree: TaskWorktree, demand: TaskPull
             places=locate_recipes(worktree.path, worktree.project, runtime.paths),
             task=worktree.task,
             corpus=locate_task_corpus(worktree),
-            directory=locate_task_captures(runtime.paths, worktree.project.name, worktree.task),
+            directory=locate_task_captures(runtime.paths, worktree.project.name, worktree.task, head),
             forge=demand.forge,
             environment=demand.environment,
             home=str(runtime.paths.home),
+            head=head,
         ),
     )
 
@@ -195,7 +196,7 @@ def _describe_opening(session: ForgeSession, opened: _TaskPullRequest, pull_requ
 def open_task_pull_request(runtime: Runtime, demand: TaskPullRequestDemand) -> dict:
     worktree = locate_task_worktree(runtime, demand.path, demand.task)
     check = require_passing_check(runtime, worktree)
-    captures = _publish_captures(runtime, worktree, demand)
+    captures = _publish_captures(runtime, worktree, demand, check["head"])
     task = read_entity(runtime.run_process, locate_task_corpus(worktree), "TASK", worktree.task)
     title = _compose_title(task, demand.subject)
     corrects = _read_corrects(task)

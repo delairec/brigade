@@ -6,9 +6,12 @@ from brigade.captures.describe_captures_section import describe_captures_section
 from brigade.corpus.read_awawa_document import read_awawa_document
 from brigade.recipes.recipe_places import RecipePlaces
 from brigade.runtime import Runtime
+from brigade.system.write_text_file import write_text_file
 from brigade.verify.list_task_references import list_task_references
 
 NO_SECTION = ""
+SECTION_FILE = "section.md"
+NOT_HOSTED = None
 
 
 @dataclass(frozen=True)
@@ -21,6 +24,7 @@ class CapturePublication:
     forge: object
     environment: dict
     home: str
+    head: str
 
 
 def _host_captures(runtime: Runtime, publication: CapturePublication, pages: list[dict]) -> dict[str, str]:
@@ -37,7 +41,19 @@ def _host_captures(runtime: Runtime, publication: CapturePublication, pages: lis
     return dict(zip(files, hosted["urls"], strict=True))
 
 
+def _host_if_public(runtime: Runtime, publication: CapturePublication, pages: list[dict]) -> dict[str, str] | None:
+    if publication.forge is None:
+        return NOT_HOSTED
+    asked = {"repository": str(publication.worktree), "environment": publication.environment}
+    if not publication.forge.read_repository_visibility(asked, runtime)["public"]:
+        return NOT_HOSTED
+    return _host_captures(runtime, publication, pages)
+
+
 def publish_task_captures(runtime: Runtime, publication: CapturePublication) -> str:
+    published = publication.directory / SECTION_FILE
+    if published.is_file():
+        return published.read_text(encoding="utf-8")
     shown = read_awawa_document(runtime.run_process, publication.corpus, ("show", f"@TASK.{publication.task}"))
     references = list_task_references(shown)
     if not references:
@@ -54,4 +70,7 @@ def publish_task_captures(runtime: Runtime, publication: CapturePublication) -> 
     )
     if not captured["pages"]:
         return NO_SECTION
-    return describe_captures_section(captured["pages"], _host_captures(runtime, publication, captured["pages"]))
+    urls = _host_if_public(runtime, publication, captured["pages"])
+    section = describe_captures_section(captured["pages"], publication.head, urls)
+    write_text_file(published, section)
+    return section

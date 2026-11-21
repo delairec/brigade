@@ -27,6 +27,7 @@ from brigade.adapters.forges.github import (
     read_job_steps,
     read_login_environment,
     read_pull_request,
+    read_repository_visibility,
     reply_review_thread,
     rewrite_pull_request_body,
 )
@@ -1684,3 +1685,69 @@ class HostImagesTest(unittest.TestCase):
 
         # Assert
         self.assertEqual((self.directory / "captures.md").read_text(), "captures of @TASK.S3\n")
+
+
+class ReadRepositoryVisibilityTest(unittest.TestCase):
+    def test_should_say_a_repository_is_public_only_when_the_forge_says_so(self):
+        # Arrange
+        rows = [
+            ("a public repository", 0, "PUBLIC\n", True),
+            ("a private repository", 0, "PRIVATE\n", False),
+            ("an internal repository", 0, "INTERNAL\n", False),
+            ("a visibility the forge does not answer", 1, "", False),
+        ]
+        for case, exit_code, stdout, expected_public in rows:
+            with self.subTest(case=case):
+                runtime = create_test_runtime(run_process=create_gh(stdout, exit_code))
+
+                # Act
+                answer = read_repository_visibility({"repository": "/projects/shop", "environment": {}}, runtime)
+
+                # Assert
+                self.assertEqual(answer, {"schema_version": 1, "public": expected_public})
+
+    def test_should_ask_the_visibility_of_the_repository_as_the_forge_account(self):
+        # Arrange
+        asked = []
+
+        def record(request, rank):
+            asked.append((request.argv, request.cwd, request.environment))
+            return 0, "PUBLIC\n"
+
+        runtime = create_test_runtime(run_process=GhDouble(record))
+
+        # Act
+        read_repository_visibility({"repository": "/projects/shop", "environment": BOT_ENVIRONMENT}, runtime)
+
+        # Assert
+        self.assertEqual(
+            asked,
+            [
+                (
+                    ("gh", "repo", "view", "--json", "visibility", "--jq", ".visibility"),
+                    "/projects/shop",
+                    BOT_ENVIRONMENT,
+                )
+            ],
+        )
+
+
+class HostImagesTwiceTest(unittest.TestCase):
+    def test_should_leave_no_clone_of_the_gist_behind_even_when_an_earlier_one_was_left(self):
+        # Arrange
+        directory = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (directory / "gist.git").mkdir()
+        (directory / "gist.git" / "HEAD").write_text("ref: refs/heads/main\n")
+        request = {
+            "repository": "/projects/shop",
+            "environment": BOT_ENVIRONMENT,
+            "files": [str(directory / "cart-delivered.png")],
+            "description": "captures of @TASK.S3",
+        }
+        runtime = create_test_runtime(run_process=create_gh("https://gist.github.com/octo-bot/abc123\n"))
+
+        # Act
+        host_images(request, runtime)
+
+        # Assert
+        self.assertFalse((directory / "gist.git").exists())

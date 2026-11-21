@@ -15,6 +15,8 @@ CAPTURE_RECIPE = (
 )
 BOT_ENVIRONMENT = {"GH_TOKEN": "token-of-octo-bot"}
 NO_FIELD = []
+THE_FORGE_OF_THE_PROJECT = object()
+NO_FORGE = None
 
 
 def _host_at_the_gist(request: dict) -> dict:
@@ -22,6 +24,23 @@ def _host_at_the_gist(request: dict) -> dict:
         "schema_version": 1,
         "urls": ["https://gist.example/tides-delivered.png", "https://gist.example/tides-reference.png"],
     }
+
+
+def _say_public(request: dict) -> dict:
+    return {"schema_version": 1, "public": True}
+
+
+def _say_private(request: dict) -> dict:
+    return {"schema_version": 1, "public": False}
+
+
+TIDES_REFERENCE = [
+    {
+        "name": "REFERENCE",
+        "atoms": ['"artifact/index.html"'],
+        "fields": [{"name": "COVERS", "atoms": ['"tides"'], "fields": []}],
+    }
+]
 
 
 class PublishTaskCapturesTest(unittest.TestCase):
@@ -41,7 +60,7 @@ class PublishTaskCapturesTest(unittest.TestCase):
         )
         self.processes = ScriptedProcesses()
         self.processes.answer(("harbour", "render", "tides"), stdout="<html><body>Tides</body></html>")
-        self.forge = ForgeDouble({"host_images": _host_at_the_gist})
+        self.forge = ForgeDouble({"host_images": _host_at_the_gist, "read_repository_visibility": _say_public})
         profile = str(self.directory / "profile")
         self.processes.answer(
             (
@@ -77,16 +96,17 @@ class PublishTaskCapturesTest(unittest.TestCase):
             ("awawa", "show", "@TASK.T7", "--json", str(self.worktree)), stdout=json.dumps({"fields": fields})
         )
 
-    def publish(self) -> str:
+    def publish(self, forge: object = THE_FORGE_OF_THE_PROJECT) -> str:
         publication = CapturePublication(
             worktree=self.worktree,
             places=self.places,
             task="T7",
             corpus=self.worktree,
             directory=self.directory,
-            forge=self.forge,
+            forge=self.forge if forge is THE_FORGE_OF_THE_PROJECT else forge,
             environment=BOT_ENVIRONMENT,
             home="/home/sailor",
+            head="0123abc",
         )
         return publish_task_captures(create_test_runtime(run_process=self.processes), publication)
 
@@ -169,3 +189,51 @@ class PublishTaskCapturesTest(unittest.TestCase):
         # Assert
         self.assertEqual(section, "")
         self.assertEqual(self.forge.list_operations(), [])
+
+    def test_should_host_nothing_and_name_the_local_captures_for_a_private_repository(self):
+        # Arrange
+        self.show_the_task(TIDES_REFERENCE)
+        forge = ForgeDouble({"read_repository_visibility": _say_private})
+
+        # Act
+        section = self.publish(forge)
+
+        # Assert
+        self.assertIn(f"| tides | `{self.directory / 'tides-delivered.png'}` |", section)
+        self.assertEqual(forge.list_operations(), ["read_repository_visibility"])
+
+    def test_should_ask_the_visibility_of_the_repository_with_the_environment_of_the_forge_account(self):
+        # Arrange
+        self.show_the_task(TIDES_REFERENCE)
+
+        # Act
+        self.publish()
+
+        # Assert
+        self.assertEqual(
+            self.forge.list_requests("read_repository_visibility"),
+            [{"repository": str(self.worktree), "environment": BOT_ENVIRONMENT}],
+        )
+
+    def test_should_host_nothing_for_a_project_acting_through_no_forge(self):
+        # Arrange
+        self.show_the_task(TIDES_REFERENCE)
+
+        # Act
+        section = self.publish(NO_FORGE)
+
+        # Assert
+        self.assertIn("Nothing is hosted", section)
+
+    def test_should_answer_the_section_already_published_for_the_head_without_capturing_or_hosting_again(self):
+        # Arrange
+        self.show_the_task(TIDES_REFERENCE)
+        first = self.publish()
+        self.processes.requests.clear()
+        self.forge.requests.clear()
+
+        # Act
+        second = self.publish()
+
+        # Assert
+        self.assertEqual((second, self.processes.requests, self.forge.requests), (first, [], []))

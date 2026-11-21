@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from datetime import UTC, datetime
@@ -208,6 +209,31 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
                     "environment": {"GH_TOKEN": "t0ken"},
                 }
             ],
+        )
+
+    def test_should_show_the_captures_of_the_checked_head_in_the_body_of_the_pull_request(self):
+        # Arrange
+        reference = {
+            "name": "REFERENCE",
+            "atoms": ['"artifact/parser.html"'],
+            "fields": [{"name": "COVERS", "atoms": ['"parser"'], "fields": []}],
+        }
+        fields = [{"name": name, "atoms": [json.dumps(value)], "fields": []} for name, value in TASK_FIELDS]
+        self.processes.answer_json(
+            ("awawa", "show", "@TASK.B12", "--json", "/srv/oak-b12"), {"fields": [*fields, reference]}
+        )
+        published = self.runtime.paths.state_root / "captures" / "oak" / "B12" / "c0ffee"
+        published.mkdir(parents=True)
+        (published / "section.md").write_text("## Captures\n\nEach page the task covers at c0ffee.\n\n")
+        forge = create_forge(["Parser"])
+
+        # Act
+        open_task_pull_request(self.runtime, self.create_demand(forge))
+
+        # Assert
+        self.assertIn(
+            "## Checks of c0ffee\n\n- ok `python3 -m unittest` 1.2 s\n\n## Captures\n\nEach page the task covers at c0ffee.\n\n",
+            forge.list_requests("open_pull_request")[0]["body"],
         )
 
     def test_should_record_the_opened_pull_request_in_the_ledger(self):

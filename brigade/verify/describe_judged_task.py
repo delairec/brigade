@@ -79,7 +79,7 @@ def _describe_task_intent(runtime: Runtime, judged: JudgedTask, tree: Path) -> d
     if shown.exit_code != TASK_SHOWN:
         return NO_INTENT
     shown_task = json.loads(shown.stdout)
-    captures = locate_task_captures(runtime.paths, judged.project, judged.task)
+    captures = locate_task_captures(runtime.paths, judged.project, judged.task, judged.head)
     return {
         "goal": read_task_goal(runtime.run_process, tree, decode_entity(judged.task, shown_task)),
         "references": describe_task_references(list_task_references(shown_task), captures),

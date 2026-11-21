@@ -11,6 +11,7 @@ from tests.unit.create_test_runtime import create_test_runtime
 TASK_WORKTREE = {
     ("git", "rev-parse", "--show-toplevel"): "/srv/tidepool-T7\n",
     ("git", "rev-parse", "--path-format=absolute", "--git-common-dir"): "/srv/tidepool/.git\n",
+    ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "HEAD^{commit}"): "8885daa\n",
 }
 TIDEPOOL = {"PROJECT": {"tidepool": (("PATH", "/srv/tidepool"), ("MAIN", "main"))}, "TASK": {"T7": ()}}
 DEFAULT_DIRECTORY = None
@@ -48,10 +49,10 @@ class BuildCaptureTest(unittest.TestCase):
         # Assert
         self.assertEqual(document["skipped"], ["the task carries no REFERENCE: no capture"])
 
-    def test_should_write_the_captures_under_the_state_directory_unless_told_where(self):
+    def test_should_write_the_captures_of_the_head_under_the_state_directory_unless_told_where(self):
         # Arrange
         rows = [
-            ("by default", DEFAULT_DIRECTORY, str(self.paths.state_root / "captures" / "tidepool" / "T7")),
+            ("by default", DEFAULT_DIRECTORY, str(self.paths.state_root / "captures" / "tidepool" / "T7" / "8885daa")),
             ("told where", str(self.root / "elsewhere"), str(self.root / "elsewhere")),
         ]
         for case, directory, expected_directory in rows:
