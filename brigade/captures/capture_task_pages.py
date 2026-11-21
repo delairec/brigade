@@ -2,6 +2,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.captures.slice_capture import slice_capture
+from brigade.errors import ToolFailure
 from brigade.recipes.read_project_commands import read_project_commands
 from brigade.recipes.recipe_places import RecipePlaces
 from brigade.runtime import Runtime
@@ -25,6 +27,7 @@ SECTION_ID = re.compile(r"[A-Za-z0-9_-]+")
 PROFILE_DIRECTORY = "profile"
 WINDOW_WIDTH = "1440"
 CAPTURE_TIMEOUT_S = 300.0
+SLICE_HEIGHT = 2000
 
 
 @dataclass(frozen=True)
@@ -108,27 +111,52 @@ def _render_reference(demand: CaptureDemand, reference: str, page: str) -> str:
     return shown.replace(demand.home, HOME_SHOWN)
 
 
-def _screenshot(runtime: Runtime, directory: Path, html: Path, address: str) -> Path:
+class _ScreenshotFailed(Exception):
+    pass
+
+
+def _screenshot(runtime: Runtime, demand: CaptureDemand, html: Path, address: str) -> Path:
+    directory = demand.directory
     png = html.with_suffix(".png")
-    runtime.run_process(
-        ProcessRequest(
-            argv=(
-                SCREENSHOT_PROGRAM,
-                "--headless",
-                "--no-remote",
-                "--profile",
-                str(directory / PROFILE_DIRECTORY),
-                "--window-size",
-                WINDOW_WIDTH,
-                "--screenshot",
-                str(png),
-                address,
-            ),
-            cwd=str(directory),
-            timeout_s=CAPTURE_TIMEOUT_S,
+    try:
+        record = runtime.run_process(
+            ProcessRequest(
+                argv=(
+                    SCREENSHOT_PROGRAM,
+                    "--headless",
+                    "--no-remote",
+                    "--profile",
+                    str(directory / PROFILE_DIRECTORY),
+                    "--window-size",
+                    WINDOW_WIDTH,
+                    "--screenshot",
+                    str(png),
+                    address,
+                ),
+                cwd=str(directory),
+                timeout_s=CAPTURE_TIMEOUT_S,
+                acceptable_exit_codes=EVERY_EXIT_CODE,
+            )
         )
-    )
+    except ToolFailure as failure:
+        raise _ScreenshotFailed(str(failure)) from None
+    if record.exit_code != 0:
+        reason = record.stderr.strip().replace(demand.home, HOME_SHOWN)
+        raise _ScreenshotFailed(f"{SCREENSHOT_PROGRAM} failed with exit {record.exit_code} on {html.name}: {reason}")
+    if not png.is_file():
+        raise _ScreenshotFailed(f"{SCREENSHOT_PROGRAM} wrote no {png.name}")
     return png
+
+
+def _take_screenshots(runtime: Runtime, demand: CaptureDemand, delivered: Path, shown: Path, page: str) -> dict:
+    create_directory(demand.directory / PROFILE_DIRECTORY)
+    try:
+        return {
+            "delivered": _screenshot(runtime, demand, delivered, delivered.as_uri()),
+            "reference": _screenshot(runtime, demand, shown, f"{shown.as_uri()}#{page}"),
+        }
+    finally:
+        remove_directory(demand.directory / PROFILE_DIRECTORY)
 
 
 def _capture_page(runtime: Runtime, rendering: _Rendering, reference: dict) -> dict | str:
@@ -137,18 +165,22 @@ def _capture_page(runtime: Runtime, rendering: _Rendering, reference: dict) -> d
     rendered = _render_delivered(runtime, rendering, page)
     if rendered.failure is not None:
         return rendered.failure
-    create_directory(demand.directory / PROFILE_DIRECTORY)
+    create_directory(demand.directory)
     delivered = demand.directory / f"{page}-delivered.html"
     write_text_file(delivered, rendered.html)
     shown = demand.directory / f"{page}-reference.html"
     write_text_file(shown, _render_reference(demand, reference["reference"], page))
-    captured = {
+    try:
+        pngs = _take_screenshots(runtime, demand, delivered, shown, page)
+    except _ScreenshotFailed as failure:
+        return f"{page}: {failure}"
+    return {
         "page": page,
-        "delivered": str(_screenshot(runtime, demand.directory, delivered, delivered.as_uri())),
-        "reference": str(_screenshot(runtime, demand.directory, shown, f"{shown.as_uri()}#{page}")),
+        "delivered": str(pngs["delivered"]),
+        "reference": str(pngs["reference"]),
+        "delivered_slices": [str(sliced) for sliced in slice_capture(pngs["delivered"], SLICE_HEIGHT)],
+        "reference_slices": [str(sliced) for sliced in slice_capture(pngs["reference"], SLICE_HEIGHT)],
     }
-    remove_directory(demand.directory / PROFILE_DIRECTORY)
-    return captured
 
 
 def capture_task_pages(runtime: Runtime, demand: CaptureDemand) -> dict:

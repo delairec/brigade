@@ -5,6 +5,7 @@ from pathlib import Path
 
 from brigade.captures.publish_task_captures import CapturePublication, publish_task_captures
 from brigade.recipes.recipe_places import BUILT_IN_RECIPES, RecipePlaces
+from tests.unit.captures.take_screenshot import take_screenshot
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.forge_double import ForgeDouble
 from tests.unit.scripted_processes import ScriptedProcesses
@@ -62,7 +63,7 @@ class PublishTaskCapturesTest(unittest.TestCase):
         self.processes.answer(("harbour", "render", "tides"), stdout="<html><body>Tides</body></html>")
         self.forge = ForgeDouble({"host_images": _host_at_the_gist, "read_repository_visibility": _say_public})
         profile = str(self.directory / "profile")
-        self.processes.answer(
+        self.processes.answer_by(
             (
                 "firefox",
                 "--headless",
@@ -74,9 +75,10 @@ class PublishTaskCapturesTest(unittest.TestCase):
                 "--screenshot",
                 str(self.directory / "tides-delivered.png"),
                 (self.directory / "tides-delivered.html").as_uri(),
-            )
+            ),
+            take_screenshot,
         )
-        self.processes.answer(
+        self.processes.answer_by(
             (
                 "firefox",
                 "--headless",
@@ -88,7 +90,8 @@ class PublishTaskCapturesTest(unittest.TestCase):
                 "--screenshot",
                 str(self.directory / "tides-reference.png"),
                 f"{(self.directory / 'tides-reference.html').as_uri()}#tides",
-            )
+            ),
+            take_screenshot,
         )
 
     def show_the_task(self, fields: list[dict]) -> None:

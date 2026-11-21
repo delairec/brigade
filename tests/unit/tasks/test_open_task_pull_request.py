@@ -12,6 +12,7 @@ from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_pr_opened import TaskPrOpened
 from brigade.ledger.wave_started import WaveStarted
 from brigade.tasks.open_task_pull_request import TaskPullRequestDemand, open_task_pull_request
+from tests.unit.captures.take_screenshot import take_screenshot
 from tests.unit.commands.command_runtime import write_operational_corpus
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import FIXED_NOW, create_test_runtime
@@ -285,24 +286,36 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
         )
         self.processes.answer(("oak", "parser"), stdout=f"<html><body>{self.runtime.paths.home}/oak</body></html>")
         captures = self.runtime.paths.state_root / "captures" / "oak" / "B12" / "c0ffee"
-        for side, address in (
-            ("delivered", (captures / "parser-delivered.html").as_uri()),
-            ("reference", f"{(captures / 'parser-reference.html').as_uri()}#parser"),
-        ):
-            self.processes.answer(
-                (
-                    "firefox",
-                    "--headless",
-                    "--no-remote",
-                    "--profile",
-                    str(captures / "profile"),
-                    "--window-size",
-                    "1440",
-                    "--screenshot",
-                    str(captures / f"parser-{side}.png"),
-                    address,
-                )
-            )
+        self.processes.answer_by(
+            (
+                "firefox",
+                "--headless",
+                "--no-remote",
+                "--profile",
+                str(captures / "profile"),
+                "--window-size",
+                "1440",
+                "--screenshot",
+                str(captures / "parser-delivered.png"),
+                (captures / "parser-delivered.html").as_uri(),
+            ),
+            take_screenshot,
+        )
+        self.processes.answer_by(
+            (
+                "firefox",
+                "--headless",
+                "--no-remote",
+                "--profile",
+                str(captures / "profile"),
+                "--window-size",
+                "1440",
+                "--screenshot",
+                str(captures / "parser-reference.png"),
+                f"{(captures / 'parser-reference.html').as_uri()}#parser",
+            ),
+            take_screenshot,
+        )
         forge = ForgeDouble(
             {
                 "list_milestones": lambda request: {"titles": ["Parser"]},

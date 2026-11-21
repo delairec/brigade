@@ -73,8 +73,10 @@ delivery with the reference itself, the page or the section its `COVERS` names, 
 lines transcribed from it, and its forms and interactions are kept, a selector staying a selector. A gap from it that no
 `SPEC`, `RATIONALE` or recorded decision justifies is a finding that asks for changes, `broken` naming the
 reference; it is never dismissed as a difference from an example. For a rendered output, a page, a view or a
-document, read with your read capability the two PNG files the package names for each covered page, the delivered
-page and the reference page, and compare them; the pull request body shows the same pair side by side. A covered page
+document, read with your read capability every PNG slice the package names for each covered page, in the order it
+numbers them, the delivered page then the reference page, and compare them: a capture taller than 2000 px is cut into
+slices of 2000 px so that each reads legibly, and skipping one leaves part of the page unjudged. The pull request
+body shows the whole pair side by side. A covered page
 with no PNG pair is a finding: the delivery is not proven against it. A reference you cannot open, a URL among them, is
 a finding. A task
 with no `REFERENCE` skips this step.

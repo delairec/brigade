@@ -3,7 +3,9 @@ import unittest
 from pathlib import Path
 
 from brigade.captures.capture_task_pages import CaptureDemand, capture_task_pages
+from brigade.errors import ToolFailure
 from brigade.recipes.recipe_places import BUILT_IN_RECIPES, RecipePlaces
+from tests.unit.captures.take_screenshot import take_screenshot
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
 
@@ -20,6 +22,10 @@ REFERENCE_PAGE = (
 )
 DELIVERED_PAGE = "<html><body>Tides of /home/sailor</body></html>"
 TIDES = {"reference": "artifact/harbour/index.html", "covers": "tides"}
+
+
+def _time_out(request) -> tuple[int, str, str]:
+    raise ToolFailure("firefox --screenshot timed out after 300 s")
 
 
 class CaptureTaskPagesTest(unittest.TestCase):
@@ -67,7 +73,10 @@ class CaptureTaskPagesTest(unittest.TestCase):
 
     def run_firefox(self, request) -> tuple[int, str, str]:
         self.firefox_runs.append(request.argv)
-        return 0, "", ""
+        return take_screenshot(request)
+
+    def fail_the_reference_screenshot(self, respond) -> None:
+        self.processes.answer_by(self.reference_capture, respond)
 
     def declare_the_recipe(self) -> None:
         self.places.project_directory.mkdir(parents=True)
@@ -97,6 +106,8 @@ class CaptureTaskPagesTest(unittest.TestCase):
                         "page": "tides",
                         "delivered": str(self.directory / "tides-delivered.png"),
                         "reference": str(self.directory / "tides-reference.png"),
+                        "delivered_slices": [str(self.directory / "tides-delivered-01.png")],
+                        "reference_slices": [str(self.directory / "tides-reference-01.png")],
                     }
                 ],
                 "skipped": [],
@@ -279,6 +290,50 @@ class CaptureTaskPagesTest(unittest.TestCase):
     def test_should_remove_the_firefox_profile_once_the_page_is_captured(self):
         # Arrange
         self.declare_the_recipe()
+
+        # Act
+        self.capture([TIDES])
+
+        # Assert
+        self.assertFalse((self.directory / "profile").exists())
+
+    def test_should_say_why_a_page_whose_screenshot_fails_is_not_captured(self):
+        # Arrange
+        rows = [
+            (
+                "a screenshot exiting non-zero",
+                lambda request: (1, "", "no display in /home/sailor\n"),
+                "tides: firefox failed with exit 1 on tides-reference.html: no display in ~",
+            ),
+            (
+                "a screenshot timed out",
+                _time_out,
+                "tides: firefox --screenshot timed out after 300 s",
+            ),
+            (
+                "a screenshot writing no image",
+                lambda request: (0, "", ""),
+                "tides: firefox wrote no tides-reference.png",
+            ),
+        ]
+        self.declare_the_recipe()
+        for case, respond, expected_reason in rows:
+            with self.subTest(case=case):
+                self.fail_the_reference_screenshot(respond)
+
+                # Act
+                captured = self.capture([TIDES])
+
+                # Assert
+                self.assertEqual(
+                    captured,
+                    {"schema_version": 1, "directory": str(self.directory), "pages": [], "skipped": [expected_reason]},
+                )
+
+    def test_should_remove_the_firefox_profile_of_a_page_whose_screenshot_fails(self):
+        # Arrange
+        self.declare_the_recipe()
+        self.fail_the_reference_screenshot(lambda request: (1, "", "no display\n"))
 
         # Act
         self.capture([TIDES])

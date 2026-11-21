@@ -9,6 +9,8 @@ from brigade.add_command_parsers import add_command_parsers
 from brigade.commands.review_context import COMMAND
 from brigade.errors import BrigadeError
 from brigade.system.run_process import ProcessRecord
+from tests.unit.captures.take_screenshot import take_screenshot
+from tests.unit.captures.take_screenshots_or import take_screenshots_or
 from tests.unit.commands.command_runtime import (
     answer,
     answer_from_corpus,
@@ -94,8 +96,11 @@ MOCKUP = {
     "covers": "tides",
     "refusal": None,
     "captures": {
-        "delivered": "/state/captures/oak/T7/tides-delivered.png",
-        "reference": "/state/captures/oak/T7/tides-reference.png",
+        "delivered": [
+            "/state/captures/oak/T7/tides-delivered-01.png",
+            "/state/captures/oak/T7/tides-delivered-02.png",
+        ],
+        "reference": ["/state/captures/oak/T7/tides-reference-01.png"],
     },
 }
 
@@ -137,8 +142,9 @@ class VerifyContextTextTest(unittest.TestCase):
             "  source: the user's words: I want the tides of the week on one page\n\n"
             "# reference\nartifact/harbour/index.html\n"
             "  covers: tides\n"
-            "  delivered: /state/captures/oak/T7/tides-delivered.png\n"
-            "  reference page: /state/captures/oak/T7/tides-reference.png\n\n"
+            "  delivered 1/2: /state/captures/oak/T7/tides-delivered-01.png\n"
+            "  delivered 2/2: /state/captures/oak/T7/tides-delivered-02.png\n"
+            "  reference page 1/1: /state/captures/oak/T7/tides-reference-01.png\n\n"
             "# diff\n$ git diff 0000000 8885daa\nexit 0\n+def tide():\n\n"
             "# preflight\nfail  scope\n  brigade/cli.py is outside the task\n\n"
             "# rules\n$ awawa context @TRIGGER.python_file\nexit 0\nRULE pure\n\n"
@@ -174,8 +180,9 @@ class VerifyContextTextTest(unittest.TestCase):
             "  source: the user's words: I want the tides of the week on one page\n\n"
             "# reference\nartifact/harbour/index.html\n"
             "  covers: tides\n"
-            "  delivered: /state/captures/oak/T7/tides-delivered.png\n"
-            "  reference page: /state/captures/oak/T7/tides-reference.png\n\n"
+            "  delivered 1/2: /state/captures/oak/T7/tides-delivered-01.png\n"
+            "  delivered 2/2: /state/captures/oak/T7/tides-delivered-02.png\n"
+            "  reference page 1/1: /state/captures/oak/T7/tides-reference-01.png\n\n"
             "# diff\n$ git diff 0000000 8885daa\nexit 0\n+def tide():\n\n"
             "# previous verdict\nhead efd5ed1\nverdict changes\n"
             "finding 1: high src/tides.py:12, broken SPEC 2 of @TASK.T7\n"
@@ -576,7 +583,6 @@ class VerifyContextOfAPullRequestCitingAReferenceTest(unittest.TestCase):
             ("awawa", "status", "--json", str(self.worktree)): RECIPES_OF_THE_CORPUS,
             ("awawa", "show", "@RECIPE.capture", "--json", str(self.worktree)): CAPTURE_RECIPE,
             ("tidepool", "render", "tides"): "<html><body>the tides as delivered</body></html>",
-            ("firefox",): "",
             ("git", "fetch"): "",
         }
         entities = {
@@ -586,7 +592,7 @@ class VerifyContextOfAPullRequestCitingAReferenceTest(unittest.TestCase):
         }
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
-            run_process=create_machine_double(entities, outputs),
+            run_process=take_screenshots_or(create_machine_double(entities, outputs)),
             resolve_plugin=resolve_preflight_kinds_or(lambda kind, name, **places: self.forge),
         )
 
@@ -616,7 +622,7 @@ class VerifyContextOfAPullRequestCitingAReferenceTest(unittest.TestCase):
 
 def _answer_as_the_machine_taking_screenshots(request) -> ProcessRecord:
     if request.argv[0] == "firefox":
-        Path(request.argv[request.argv.index("--screenshot") + 1]).write_bytes(b"png")
+        take_screenshot(request)
         return answer(request, "")
     return answer_from_corpus({"PROJECT": {"tidepool": LOCAL_PROJECT}, "POLICY": {}}, request)
 
@@ -671,8 +677,8 @@ class VerifyContextOfATaskWithoutAForgeCitingAReferenceTest(unittest.TestCase):
                     "covers": "tides",
                     "refusal": None,
                     "captures": {
-                        "delivered": str(captures / "tides-delivered.png"),
-                        "reference": str(captures / "tides-reference.png"),
+                        "delivered": [str(captures / "tides-delivered-01.png")],
+                        "reference": [str(captures / "tides-reference-01.png")],
                     },
                 }
             ],

@@ -24,8 +24,8 @@ class RefreshReviewCapturesTest(unittest.TestCase):
         self.published = self.paths.state_root / "captures" / "harbour" / "T7" / HEAD
         self.published.mkdir(parents=True)
         (self.published / "section.md").write_text(PUBLISHED_SECTION)
-        (self.published / "tides-delivered.png").write_bytes(b"png")
-        (self.published / "tides-reference.png").write_bytes(b"png")
+        (self.published / "tides-delivered-01.png").write_bytes(b"png")
+        (self.published / "tides-reference-01.png").write_bytes(b"png")
         self.processes = ScriptedProcesses()
         self.processes.answer(RESOLVE_HEAD, stdout=f"{HEAD}\n")
         self.forge = ForgeDouble(
@@ -66,8 +66,8 @@ class RefreshReviewCapturesTest(unittest.TestCase):
                     "covers": "tides",
                     "refusal": None,
                     "captures": {
-                        "delivered": str(self.published / "tides-delivered.png"),
-                        "reference": str(self.published / "tides-reference.png"),
+                        "delivered": [str(self.published / "tides-delivered-01.png")],
+                        "reference": [str(self.published / "tides-reference-01.png")],
                     },
                 }
             ],

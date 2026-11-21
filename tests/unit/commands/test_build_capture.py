@@ -5,6 +5,7 @@ from argparse import Namespace
 from pathlib import Path
 
 from brigade.commands.build_capture import COMMAND
+from tests.unit.captures.take_screenshots_or import take_screenshots_or
 from tests.unit.commands.command_runtime import create_machine_double
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -105,9 +106,10 @@ class BuildCaptureOfATaskCitingAReferenceTest(unittest.TestCase):
             ),
             ("awawa", "show", "@RECIPE.capture", "--json", str(self.worktree)): json.dumps(recipe),
             ("tidepool", "tides"): f"<html><body>{self.paths.home}/tides</body></html>",
-            ("firefox",): "",
         }
-        self.runtime = create_test_runtime(self.paths, run_process=create_machine_double(TIDEPOOL, outputs))
+        self.runtime = create_test_runtime(
+            self.paths, run_process=take_screenshots_or(create_machine_double(TIDEPOOL, outputs))
+        )
 
     def test_should_capture_each_page_the_reference_of_the_task_covers(self):
         # Act
@@ -121,6 +123,8 @@ class BuildCaptureOfATaskCitingAReferenceTest(unittest.TestCase):
                     "page": "tides",
                     "delivered": str(self.captures / "tides-delivered.png"),
                     "reference": str(self.captures / "tides-reference.png"),
+                    "delivered_slices": [str(self.captures / "tides-delivered-01.png")],
+                    "reference_slices": [str(self.captures / "tides-reference-01.png")],
                 }
             ],
         )

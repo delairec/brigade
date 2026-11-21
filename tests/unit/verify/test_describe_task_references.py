@@ -9,10 +9,13 @@ class DescribeTaskReferencesTest(unittest.TestCase):
     def setUp(self):
         self.captures = Path(self.enterContext(tempfile.TemporaryDirectory()))
 
-    def test_should_name_the_png_pair_brigade_build_capture_wrote_for_a_covered_page(self):
+    def test_should_name_in_order_the_slices_brigade_build_capture_cut_for_a_covered_page(self):
         # Arrange
         (self.captures / "tides-delivered.png").write_bytes(b"png")
+        (self.captures / "tides-delivered-02.png").write_bytes(b"png")
+        (self.captures / "tides-delivered-01.png").write_bytes(b"png")
         (self.captures / "tides-reference.png").write_bytes(b"png")
+        (self.captures / "tides-reference-01.png").write_bytes(b"png")
 
         # Act
         described = describe_task_references(
@@ -28,8 +31,11 @@ class DescribeTaskReferencesTest(unittest.TestCase):
                     "covers": "tides",
                     "refusal": None,
                     "captures": {
-                        "delivered": str(self.captures / "tides-delivered.png"),
-                        "reference": str(self.captures / "tides-reference.png"),
+                        "delivered": [
+                            str(self.captures / "tides-delivered-01.png"),
+                            str(self.captures / "tides-delivered-02.png"),
+                        ],
+                        "reference": [str(self.captures / "tides-reference-01.png")],
                     },
                 }
             ],
@@ -37,7 +43,7 @@ class DescribeTaskReferencesTest(unittest.TestCase):
 
     def test_should_name_no_pair_for_a_page_brigade_build_capture_did_not_capture_whole(self):
         # Arrange
-        (self.captures / "tides-delivered.png").write_bytes(b"png")
+        (self.captures / "tides-delivered-01.png").write_bytes(b"png")
 
         # Act
         described = describe_task_references(

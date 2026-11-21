@@ -75,13 +75,17 @@ def _render_goal(goal: dict | None, task: str) -> str:
     return f"task {goal['task']}: {goal['title']}\n{_render_milestone(goal['milestone'])}"
 
 
+def _render_slices(side: str, slices: list[str]) -> str:
+    return "".join(f"  {side} {rank}/{len(slices)}: {sliced}\n" for rank, sliced in enumerate(slices, start=1))
+
+
 def _render_captures(reference: dict) -> str:
     if reference["refusal"] is not None:
         return f"  refused: {reference['refusal']}\n"
     captures = reference["captures"]
     if captures is None:
         return "  captures: none at this head, brigade build capture wrote no PNG pair for this page\n"
-    return f"  delivered: {captures['delivered']}\n  reference page: {captures['reference']}\n"
+    return _render_slices("delivered", captures["delivered"]) + _render_slices("reference page", captures["reference"])
 
 
 def _render_references(references: list[dict]) -> str:

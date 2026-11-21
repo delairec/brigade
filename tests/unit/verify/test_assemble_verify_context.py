@@ -408,8 +408,8 @@ class AssembleVerifyContextTest(unittest.TestCase):
         )
         captures = self.paths.state_root / "captures" / "shop" / "B1" / HEAD
         captures.mkdir(parents=True)
-        (captures / "cart-delivered.png").write_bytes(b"png")
-        (captures / "cart-reference.png").write_bytes(b"png")
+        (captures / "cart-delivered-01.png").write_bytes(b"png")
+        (captures / "cart-reference-01.png").write_bytes(b"png")
 
         # Act
         document = self.assemble(Configuration())
@@ -417,5 +417,8 @@ class AssembleVerifyContextTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             document["references"][0]["captures"],
-            {"delivered": str(captures / "cart-delivered.png"), "reference": str(captures / "cart-reference.png")},
+            {
+                "delivered": [str(captures / "cart-delivered-01.png")],
+                "reference": [str(captures / "cart-reference-01.png")],
+            },
         )

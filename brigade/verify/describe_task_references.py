@@ -10,12 +10,16 @@ def _refuse(reference: str) -> str | None:
     return None
 
 
+def _list_slices(captures: Path, covers: str | None, side: str) -> list[str]:
+    return [str(sliced) for sliced in sorted(captures.glob(f"{covers}-{side}-[0-9][0-9].png"))]
+
+
 def _find_captures(covers: str | None, captures: Path) -> dict | None:
-    delivered = captures / f"{covers}-delivered.png"
-    shown = captures / f"{covers}-reference.png"
-    if not (delivered.is_file() and shown.is_file()):
+    delivered = _list_slices(captures, covers, "delivered")
+    shown = _list_slices(captures, covers, "reference")
+    if not (delivered and shown):
         return None
-    return {"delivered": str(delivered), "reference": str(shown)}
+    return {"delivered": delivered, "reference": shown}
 
 
 def describe_task_references(references: list[dict], captures: Path) -> list[dict]:
