@@ -48,10 +48,10 @@ SCHEMA TASK
 			DESC "the test or the code where the criterion is proven; written at delivery"
 	FIELD REFERENCE string
 		REPEATABLE
-		DESC "the url or the repository path of what the task is drawn from, its acceptance contract"
+		DESC "the repository path of what the task is drawn from, its acceptance contract; never a url"
 		FIELD COVERS string
 			REQUIRED
-			DESC "the page or the section of the reference the task delivers"
+			DESC "the id of the section of the reference the task delivers, its page"
 	FIELD MILESTONE @MILESTONE
 		CONVERSE COMPRISES
 	FIELD COMPONENT string

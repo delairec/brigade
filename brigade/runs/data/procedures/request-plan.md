@@ -44,11 +44,17 @@ step needs and no command gives back (the path of the plan file, the ids you cho
   that goes second carries `AFTER` naming the first. No other order exists for the scheduler.
 - The MILESTONE states the goal the request serves beyond its tasks, in the user's words where its schema declares a
   field for them: the review judges every task of it against that goal.
-- A request drawn from a reference, a mockup, an Artifact, a page or a document, names it: each task drafted from it
-  carries it in its `REFERENCE` field, the URL or the repository path, with the page or the section the task covers
-  in its `COVERS`, never in a `RATIONALE` alone, and its `SPEC` lines keep the forms and interactions of the
-  reference, a selector staying a selector. The review compares the delivery with the reference itself. A TASK schema
-  that declares no `REFERENCE` is a question for your report, not a reference left out.
+- A request drawn from a reference, a mockup, a page or a document, names it: each task drafted from it carries it in
+  its `REFERENCE` field, a repository path you read with your read capability, with the id of the section the task
+  covers, its page, in its `COVERS`, never in a `RATIONALE` alone.
+- The reference is the acceptance contract, never an example: nothing of the page or the section cited is lost in the
+  transcription. Each element of it is a `SPEC` line, or a `RATIONALE` line saying why the task leaves it out.
+- Its forms and its interactions are kept as they are: a selector stays a selector, a form a form, a tab a tab, a
+  filter a filter. The review compares the delivery with the reference itself, page beside page.
+- A reference that is not a repository path, a URL, a private Artifact or a file outside the repository, is never
+  cited: the roles of the tick cannot open it. Name it in your report as a question, for the user to copy it into the
+  repository first, as `artifact/m18-dashboard/index.html` holds the mockup of M18. A TASK schema that declares no
+  `REFERENCE` is a question for your report too, not a reference left out.
 - What you cannot decide from the package and the corpus is not assumed: it is left out of the plan and named in
   your report as a question.
 

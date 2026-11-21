@@ -21,8 +21,11 @@ step needs and no command gives back (a ruling, a pull request number), and the 
 
 `brigade build context`, from the worktree. It prints the ancestry of the worktree and the output of its setup, the
 task whole, its `RATIONALE` included, its neighbours at depth 1 without their reasoning, and its closure, the rules of the files it touches, the project's `AGENTS.md`, the acceptance commands, the task
-number reserved for the run and the attribution lines. Its `TITLE` is what you deliver, its `SPEC` lines are your
-acceptance criteria, its `RATIONALE` the design already settled. A live `BLOCKED_BY` question means the task is not
+number reserved for the run and the attribution lines. Its `TITLE` is what you deliver. Your
+acceptance criteria are its `SPEC` lines, the goal it serves, printed with its milestone, and each `REFERENCE` it cites,
+a repository path whose page its `COVERS` names: the delivery matches that page, and `brigade build capture <task>` shows
+the delivered page beside the reference page, the pair `brigade build pr` attaches to the pull request. Its `RATIONALE`
+is the design already settled. A live `BLOCKED_BY` question means the task is not
 startable: stop and end blocked, naming it. Read a further entity with `awawa show @TYPE.Name .` when you need it.
 
 ## 2. Write the failing tests of each SPEC
