@@ -8,7 +8,13 @@ from pathlib import Path
 from brigade.add_command_parsers import add_command_parsers
 from brigade.commands.review_context import COMMAND
 from brigade.errors import BrigadeError
+from brigade.system.run_process import ProcessRecord
 from tests.unit.commands.command_runtime import (
+    ProcessAnswer,
+    ScriptedProcessRunner,
+    answer,
+    answer_from_corpus,
+    create_corpus_double,
     create_machine_double,
     create_worktrees_double,
     write_ledger,
@@ -27,6 +33,7 @@ from tests.unit.commands.test_preflight import (
 from tests.unit.create_preflight_plugins import resolve_preflight_kinds_or
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
+from tests.unit.forge_double import ForgeDouble
 
 AWAWA_CONTEXT = {
     "command": "awawa context @TASK.T7 --with-schema .",
@@ -482,3 +489,204 @@ class VerifyContextOfAReferenceTest(unittest.TestCase):
 
         # Assert
         self.assertIn("# goal\nthe head defines no @TASK.T7: the preflight promotion says so\n\n", text)
+
+
+TASK_BRANCH = "task/M4-tides/T7"
+MILESTONE_HEAD = "4c1d2e0"
+RECIPES_OF_THE_CORPUS = json.dumps({"entities": [{"type": "RECIPE", "name": "capture"}]})
+CAPTURE_RECIPE = json.dumps(
+    {
+        "name": "capture",
+        "fields": [
+            {"name": "SCHEMA_VERSION", "atoms": ['"1"'], "fields": []},
+            {"name": "DESC", "atoms": ['"a page of the harbour as delivered"'], "fields": []},
+            {
+                "name": "STEP",
+                "atoms": ['"command"'],
+                "fields": [
+                    {"name": "ARGV", "atoms": ['"tidepool"'], "fields": []},
+                    {"name": "ARGV", "atoms": ['"render"'], "fields": []},
+                    {"name": "ARGV", "atoms": ['"{page}"'], "fields": []},
+                ],
+            },
+        ],
+    }
+)
+HARBOUR_REFERENCE = '<html><head></head><body><section id="tides" hidden>tides</section></body></html>'
+HARBOUR_TIDES = {
+    "name": "REFERENCE",
+    "atoms": ['"artifact/harbour/index.html"'],
+    "fields": [{"name": "COVERS", "atoms": ['"tides"'], "fields": []}],
+}
+TASK_CITING_THE_HARBOUR = json.dumps(
+    {"fields": [{"name": "MILESTONE", "atoms": ['"@MILESTONE.M4"'], "fields": []}, HARBOUR_TIDES]}
+)
+TASK_OF_NO_MILESTONE_CITING_THE_HARBOUR = json.dumps({"fields": [HARBOUR_TIDES]})
+BODY_AT_THE_FIRST_HEAD = (
+    "Delivers @TASK.T7.\n\n## Captures\n\nEach page the task covers at efd5ed1.\n\n## Checks\n\nok\n"
+)
+
+
+def _host_in_a_gist(request: dict) -> dict:
+    return {"schema_version": 1, "urls": ["https://gist.example/delivered.png", "https://gist.example/reference.png"]}
+
+
+class VerifyContextOfAPullRequestCitingAReferenceTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(
+            '[forge_accounts]\ncli = "octo-cli"\nbuild = "octo-bot"\n', encoding="utf-8"
+        )
+        write_ledger(self.root, [M4_BRANCH_CUT, WAVE_STARTED, TASK_PR_OPENED])
+        for ref in (TASK_HEAD, MERGE_BASE):
+            (self.root / "cache" / "refs" / "tidepool" / ref).mkdir(parents=True)
+        self.head_tree = self.root / "cache" / "refs" / "tidepool" / TASK_HEAD
+        self.worktree = self.root / "tidepool-T7"
+        (self.worktree / "artifact" / "harbour").mkdir(parents=True)
+        (self.worktree / "artifact" / "harbour" / "index.html").write_text(HARBOUR_REFERENCE)
+        self.forge = ForgeDouble(
+            {
+                "read_login_environment": lambda request: {
+                    "schema_version": 1,
+                    "environment": {"GH_TOKEN": f"token-of-{request['login']}"},
+                },
+                "read_pull_request": lambda request: {
+                    "schema_version": 1,
+                    "pull_request": {
+                        "number": 42,
+                        "title": "feat(tides): print the tide table of the week",
+                        "body": BODY_AT_THE_FIRST_HEAD,
+                        "head": TASK_BRANCH,
+                        "head_sha": TASK_HEAD,
+                        "checks": [{"name": "unit", "conclusion": "success"}],
+                    },
+                },
+                "read_repository_visibility": lambda request: {"schema_version": 1, "public": True},
+                "host_images": _host_in_a_gist,
+                "rewrite_pull_request_body": lambda request: {"schema_version": 1},
+            }
+        )
+        self.runner = ScriptedProcessRunner(
+            {
+                prefix: ProcessAnswer(stdout=stdout)
+                for prefix, stdout in {
+                    **LOCAL_TASK_WORKTREE,
+                    ("git", "rev-parse", "--show-toplevel"): f"{self.worktree}\n",
+                    _resolve("HEAD"): f"{TASK_HEAD}\n",
+                    _resolve("refs/remotes/origin/integration/M4-tides"): f"{MILESTONE_HEAD}\n",
+                    ("git", "merge-base", "--end-of-options", MILESTONE_HEAD, TASK_HEAD): f"{MERGE_BASE}\n",
+                    ("awawa", "show", "@TASK.T7", "--json", str(self.worktree)): TASK_CITING_THE_HARBOUR,
+                    ("awawa", "show", "@TASK.T7", "--json", str(self.head_tree)): TASK_CITING_THE_HARBOUR,
+                    ("awawa", "status", "--json", str(self.worktree)): RECIPES_OF_THE_CORPUS,
+                    ("awawa", "show", "@RECIPE.capture", "--json", str(self.worktree)): CAPTURE_RECIPE,
+                    ("tidepool", "render", "tides"): "<html><body>the tides as delivered</body></html>",
+                    ("firefox",): "",
+                    ("git", "fetch"): "",
+                }.items()
+            },
+            fallback=create_corpus_double(
+                {
+                    "PROJECT": {"tidepool": GITHUB_PROJECT},
+                    "TASK": TIDEPOOL_TASKS,
+                    "MILESTONE": {"M4": (("TITLE", "Tide tables"),)},
+                }
+            ),
+        )
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=self.runner.run,
+            resolve_plugin=resolve_preflight_kinds_or(lambda kind, name, **places: self.forge),
+        )
+
+    def test_should_put_the_captures_of_the_head_in_the_body_as_the_build_account(self):
+        # Act
+        COMMAND.run(Namespace(pr=42), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            self.forge.list_requests("rewrite_pull_request_body"),
+            [
+                {
+                    "repository": str(self.worktree),
+                    "number": 42,
+                    "environment": {"GH_TOKEN": "token-of-octo-bot"},
+                    "body": "Delivers @TASK.T7.\n\n## Captures\n\n"
+                    f"Each page the task covers at {TASK_HEAD}, delivered beside its reference. "
+                    "The repository is public: the images are public too, in a gist of the machine account.\n\n"
+                    "| Page | Delivered | Reference |\n|---|---|---|\n"
+                    "| tides | ![tides delivered](https://gist.example/delivered.png)"
+                    " | ![tides reference](https://gist.example/reference.png) |\n"
+                    "\n## Checks\n\nok\n",
+                }
+            ],
+        )
+
+
+def _answer_as_the_machine_taking_screenshots(request) -> ProcessRecord:
+    if request.argv[0] == "firefox":
+        Path(request.argv[request.argv.index("--screenshot") + 1]).write_bytes(b"png")
+        return answer(request, "")
+    return answer_from_corpus({"PROJECT": {"tidepool": LOCAL_PROJECT}, "POLICY": {}}, request)
+
+
+class VerifyContextOfATaskWithoutAForgeCitingAReferenceTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
+        for ref in (TASK_HEAD, MERGE_BASE):
+            (self.root / "cache" / "refs" / "tidepool" / ref).mkdir(parents=True)
+        head_tree = self.root / "cache" / "refs" / "tidepool" / TASK_HEAD
+        write_ledger(self.root, [WAVE_STARTED])
+        self.worktree = self.root / "tidepool-T7"
+        (self.worktree / "artifact" / "harbour").mkdir(parents=True)
+        (self.worktree / "artifact" / "harbour" / "index.html").write_text(HARBOUR_REFERENCE)
+        self.runner = ScriptedProcessRunner(
+            {
+                prefix: ProcessAnswer(stdout=stdout)
+                for prefix, stdout in {
+                    **LOCAL_TASK_WORKTREE,
+                    ("git", "rev-parse", "--show-toplevel"): f"{self.worktree}\n",
+                    _resolve("HEAD"): f"{TASK_HEAD}\n",
+                    (
+                        "awawa",
+                        "show",
+                        "@TASK.T7",
+                        "--json",
+                        str(self.worktree),
+                    ): TASK_OF_NO_MILESTONE_CITING_THE_HARBOUR,
+                    ("awawa", "show", "@TASK.T7", "--json", str(head_tree)): TASK_OF_NO_MILESTONE_CITING_THE_HARBOUR,
+                    ("awawa", "status", "--json", str(self.worktree)): RECIPES_OF_THE_CORPUS,
+                    ("awawa", "show", "@RECIPE.capture", "--json", str(self.worktree)): CAPTURE_RECIPE,
+                    ("tidepool", "render", "tides"): "<html><body>the tides as delivered</body></html>",
+                }.items()
+            },
+            fallback=_answer_as_the_machine_taking_screenshots,
+        )
+        self.paths = create_test_paths(self.root)
+        self.runtime = create_test_runtime(
+            self.paths, run_process=self.runner.run, resolve_plugin=RefusingForgeResolverDouble()
+        )
+        self.no_pull_request = None
+
+    def test_should_name_the_png_pair_it_captured_at_the_head_of_the_task_branch(self):
+        # Act
+        document = COMMAND.run(Namespace(pr=self.no_pull_request), self.runtime)
+
+        # Assert
+        captures = self.paths.state_root / "captures" / "tidepool" / "T7" / TASK_HEAD
+        self.assertEqual(
+            document["references"],
+            [
+                {
+                    "reference": "artifact/harbour/index.html",
+                    "covers": "tides",
+                    "refusal": None,
+                    "captures": {
+                        "delivered": str(captures / "tides-delivered.png"),
+                        "reference": str(captures / "tides-reference.png"),
+                    },
+                }
+            ],
+        )

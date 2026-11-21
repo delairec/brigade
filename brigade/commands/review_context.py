@@ -1,4 +1,5 @@
 import argparse
+import functools
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -6,7 +7,7 @@ from brigade.captures.refresh_review_captures import ReviewCaptureRefresh, refre
 from brigade.command import Argument, Command
 from brigade.commands._equip_preflight import equip_preflight
 from brigade.commands._equip_registered_collector import equip_registered_collector
-from brigade.commands._read_forge_environment import BUILD_SLOT, ForgeSlot, read_forge_environment
+from brigade.commands._read_forge_environment import BUILD_SLOT, FORGE_KIND, ForgeSlot, read_forge_environment
 from brigade.corpus.read_entities import Entity
 from brigade.errors import BrigadeError
 from brigade.git.locate_main_checkout import locate_main_checkout
@@ -135,6 +136,26 @@ class _Checkout:
     project: Entity
 
 
+@dataclass(frozen=True)
+class _OpenedPullRequest:
+    checkout: _Checkout
+    task: str
+    pr: int
+    forge_name: str
+
+
+def _equip_pull_request_refresh(
+    runtime: Runtime, configuration: Configuration, opened: _OpenedPullRequest
+) -> ReviewCaptureRefresh:
+    forge_slot = ForgeSlot(opened.forge_name, BUILD_SLOT)
+    return replace(
+        _locate_refresh(runtime, opened.checkout, opened.task),
+        pr=opened.pr,
+        forge=runtime.resolve_plugin(FORGE_KIND, opened.forge_name),
+        environment=read_forge_environment(configuration, forge_slot, runtime),
+    )
+
+
 def _assemble_task_branch_context(runtime: Runtime, configuration: Configuration, worktree: Path) -> dict:
     located = locate_task_worktree(runtime, locate_source_worktree(runtime.paths, worktree), NAMED_BY_THE_BRANCH)
     branch_demand = BranchPreflightDemand(
@@ -163,19 +184,10 @@ def _assemble_pull_request_context(
         equipment=equip_registered_collector(project, configuration, runtime),
         plugins=equip_preflight(runtime),
     )
-    return {
-        "schema_version": DOCUMENT_SCHEMA_VERSION,
-        **refresh_review_captures(
-            runtime,
-            assemble_verify_context(runtime, demand),
-            lambda: replace(
-                _locate_refresh(runtime, checkout, found.opened.task),
-                pr=pr,
-                forge=runtime.resolve_plugin("forge", forge_name),
-                environment=read_forge_environment(configuration, ForgeSlot(forge_name, BUILD_SLOT), runtime),
-            ),
-        ),
-    }
+    opened = _OpenedPullRequest(checkout=checkout, task=found.opened.task, pr=pr, forge_name=forge_name)
+    equip = functools.partial(_equip_pull_request_refresh, runtime, configuration, opened)
+    document = refresh_review_captures(runtime, assemble_verify_context(runtime, demand), equip)
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, **document}
 
 
 def review_context(request: argparse.Namespace, runtime: Runtime) -> dict:
