@@ -3,7 +3,9 @@ import argparse
 from brigade.command import Argument, Command
 from brigade.errors import BrigadeError
 from brigade.ledger.read_ledger import read_ledger
+from brigade.registry.read_projects import read_projects
 from brigade.reports.describe_report_delivery import describe_report_delivery
+from brigade.reports.read_milestone_title import read_milestone_title
 from brigade.reports.read_reports import read_reports
 from brigade.reports.render_report_markdown import render_report_markdown
 from brigade.runtime import Runtime
@@ -34,7 +36,8 @@ def report_show(request: argparse.Namespace, runtime: Runtime) -> dict:
     if report is None:
         raise BrigadeError(f"no report {request.id}")
     delivery = describe_report_delivery(report, read_ledger(runtime.paths.state_root).entries)
-    return {"schema_version": DOCUMENT_SCHEMA_VERSION, "report": report, **delivery}
+    title = read_milestone_title(runtime.run_process, read_projects(runtime), report)
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, "report": report, **delivery, "title": title}
 
 
 COMMAND = Command(

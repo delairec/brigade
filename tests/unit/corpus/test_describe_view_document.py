@@ -197,6 +197,29 @@ BOARD_CORPUS = FakeCorpus(
 )
 
 
+class DescribeFilterValuesTest(unittest.TestCase):
+    def test_should_offer_the_values_the_entities_of_the_type_hold_in_each_field_but_free_text(self):
+        # Act
+        document = describe(BOARD_CORPUS, "board", entity_type="TASK", filters=("STATUS=todo",))
+
+        # Assert
+        self.assertEqual(
+            document["filter_values"],
+            {
+                "STATUS": ["draft", "implemented", "todo"],
+                "MILESTONE": ["@MILESTONE.M17", "@MILESTONE.M18", "@MILESTONE.M99"],
+                "ROLE": ["ada", "bilal", "lex"],
+            },
+        )
+
+    def test_should_offer_no_value_to_filter_by_when_no_type_is_read(self):
+        # Act
+        document = describe(TREE_CORPUS, "tree")
+
+        # Assert
+        self.assertEqual(document["filter_values"], {})
+
+
 class DescribeBoardViewTest(unittest.TestCase):
     def test_should_lay_one_column_per_status_the_schema_admits_in_schema_order(self):
         # Act
@@ -578,3 +601,19 @@ class ReadTheCorpusThroughAwawaTest(unittest.TestCase):
         self.assertIn(
             ("awawa", "context", "@TASK.B10", "--depth", "0", "--with-schema", "--json", str(ROOT)), runner.argvs
         )
+
+
+class DescribeViewDocumentFieldsTest(unittest.TestCase):
+    def test_should_name_the_fields_of_the_type_a_board_can_be_grouped_by(self):
+        # Act
+        document = describe(BOARD_CORPUS, "board", entity_type="TASK")
+
+        # Assert
+        self.assertEqual(document["fields"], ["TITLE", "STATUS", "MILESTONE", "ROLE", "COMPONENT", "AFTER"])
+
+    def test_should_name_the_fields_the_dependencies_of_a_type_can_follow(self):
+        # Act
+        document = describe(DEPENDENCIES_CORPUS, "dependencies", entity_type="TASK")
+
+        # Assert
+        self.assertEqual(document["fields"], ["AFTER"])

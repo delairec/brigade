@@ -29,7 +29,13 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.ledger.create_run_finished import create_run_finished
 
-OAK = (("PATH", "/srv/oak"), ("STATUS", "active"))
+OAK = (
+    ("PATH", "/srv/oak"),
+    ("STATUS", "active"),
+    ("FORGE", "github"),
+    ("REMOTE", "git@github.com:o/oak.git"),
+    ("CORPUS", "corpus"),
+)
 ELM = (("PATH", "/srv/elm"), ("STATUS", "paused"))
 DEBT_STUDY = (
     ("TITLE", "the debt of the code"),
@@ -65,7 +71,10 @@ PARKED_NIGHTLY = {
 }
 HOME = {
     "schema_version": 1,
-    "projects": [{"name": "elm", "paused": True}, {"name": "oak", "paused": False}],
+    "projects": [
+        {"name": "elm", "paused": True, "forge": "none", "remote": None, "corpus": False},
+        {"name": "oak", "paused": False, "forge": "github", "remote": "git@github.com:o/oak.git", "corpus": True},
+    ],
     "waves": [
         {
             "wave": "oak_w2",

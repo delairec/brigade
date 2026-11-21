@@ -105,16 +105,19 @@ BUDGETS = {
     "skipped": [],
 }
 CAPS_HEADER = (
-    "<section><h2>Do the turn caps fit</h2>"
-    "<table><thead><tr><th>role</th><th>segment p90</th><th>share of the applied cap</th>"
-    "<th>against the cap</th><th>measure</th></tr></thead><tbody>"
+    '<section class="block"><div class="block-head"><h2>Do the turn caps fit?</h2><p>The last 20 runs of each'
+    ' procedure. A cap fits when 9 segments in 10 end under it.</p></div><div class="panel scroll"><table><thead>'
+    '<tr><th>Role</th><th class="num">Shipped</th><th class="num">Computed</th><th class="num">Applied</th>'
+    '<th class="num">Segments</th><th class="num">Restarts</th><th>p90 of a segment, against the cap</th>'
+    "<th>Trend</th></tr></thead><tbody>"
 )
 REMI_ROW = (
-    "<tr><td>remi</td><td>64</td><td>128% of 50</td><td>"
+    '<tr><td class="mono">remi</td><td class="num">50</td><td class="num">64</td><td class="num">50</td>'
+    '<td class="num">7</td><td class="num">3</td><td>'
     '<svg class="bar" viewBox="0 0 100 8" role="img" aria-label="segment p90 64 of remi against its cap of 50">'
     '<rect class="bar-track" width="100" height="8"></rect>'
     '<rect class="bar-fill tone-limit" width="100" height="8"></rect>'
-    '<line class="bar-cap" x1="78.125" y1="0" x2="78.125" y2="8"></line></svg></td><td>measured</td></tr>'
+    '<line class="bar-cap" x1="78.125" y1="0" x2="78.125" y2="8"></line></svg>64 · 128 % of the cap</td><td>-</td></tr>'
 )
 
 
@@ -132,10 +135,10 @@ class RenderLedgerFragmentTest(unittest.TestCase):
         fragment = render_overview_and_budgets()
 
         # Assert
-        self.assertEqual(
-            fragment.partition("<section>")[0],
-            '<div class="callout tone-faint"><p>The measures cover 5 runs finished from 2026-11-17T21:10:00Z'
-            " to 2026-11-18T09:00:00Z; 2 lines of the ledger skipped, counted in no figure.</p></div>",
+        self.assertIn(
+            '</details><div class="callout tone-faint"><p>The measures cover 5 runs finished from 2026-11-17T21:10:00Z'
+            ' to 2026-11-18T09:00:00Z; 2 lines of the ledger skipped, counted in no figure.</p></div><section class="block">',
+            fragment,
         )
 
     def test_should_say_the_measures_cover_an_empty_ledger(self):
@@ -146,10 +149,10 @@ class RenderLedgerFragmentTest(unittest.TestCase):
         fragment = render_ledger_fragment(answers)
 
         # Assert
-        self.assertEqual(
-            fragment.partition("<section>")[0],
-            '<div class="callout tone-faint"><p>The measures cover 0 runs finished in an empty ledger;'
-            " 0 lines of the ledger skipped, counted in no figure.</p></div>",
+        self.assertIn(
+            '</details><div class="callout tone-faint"><p>The measures cover 0 runs finished in an empty ledger;'
+            ' 0 lines of the ledger skipped, counted in no figure.</p></div><section class="block">',
+            fragment,
         )
 
     def test_should_sort_first_the_role_whose_segment_p90_overshoots_its_cap_the_most(self):
@@ -165,12 +168,14 @@ class RenderLedgerFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            REMI_ROW + "<tr><td>&lt;i&gt;ada&lt;/i&gt;</td><td>80</td><td>107% of 75</td><td>"
+            REMI_ROW + '<tr><td class="mono">&lt;i&gt;ada&lt;/i&gt;</td><td class="num">75</td><td class="num">-</td>'
+            '<td class="num">75</td><td class="num">6</td><td class="num">0</td><td>'
             '<svg class="bar" viewBox="0 0 100 8" role="img"'
             ' aria-label="segment p90 80 of &lt;i&gt;ada&lt;/i&gt; against its cap of 75">'
             '<rect class="bar-track" width="100" height="8"></rect>'
             '<rect class="bar-fill tone-limit" width="100" height="8"></rect>'
-            '<line class="bar-cap" x1="93.75" y1="0" x2="93.75" y2="8"></line></svg></td><td>measured</td></tr>',
+            '<line class="bar-cap" x1="93.75" y1="0" x2="93.75" y2="8"></line></svg>80 · 107 % of the cap</td>'
+            "<td>-</td></tr>",
             fragment,
         )
 
@@ -180,11 +185,13 @@ class RenderLedgerFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            "<tr><td>rebaser</td><td>16</td><td>53% of 30</td><td>"
+            '<tr><td class="mono">rebaser</td><td class="num">30</td><td class="num">-</td><td class="num">30</td>'
+            '<td class="num">3</td><td class="num">0</td><td>'
             '<svg class="bar" viewBox="0 0 100 8" role="img" aria-label="segment p90 16 of rebaser against its cap of 30">'
             '<rect class="bar-track" width="100" height="8"></rect>'
             '<rect class="bar-fill tone-done" width="53.3333" height="8"></rect>'
-            '<line class="bar-cap" x1="100" y1="0" x2="100" y2="8"></line></svg></td><td>estimate</td></tr>',
+            '<line class="bar-cap" x1="100" y1="0" x2="100" y2="8"></line></svg>16 · 53 % of the cap · estimate</td>'
+            "<td>-</td></tr>",
             fragment,
         )
 
@@ -194,12 +201,9 @@ class RenderLedgerFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            "<tr><td>prudence</td><td>-</td><td>-</td><td>-</td><td>estimate</td></tr></tbody></table>"
-            "<h3>Turn cap by role</h3>"
-            "<table><thead><tr><th>role</th><th>shipped</th><th>computed</th><th>applied</th><th>segments</th>"
-            "<th>restarts</th><th>g</th><th>R</th></tr></thead>"
-            "<tbody><tr><td>&lt;i&gt;ada&lt;/i&gt;</td><td>75</td><td>-</td><td>75</td><td>6</td><td>0</td>"
-            "<td>-</td><td>-</td></tr>",
+            '<tr><td class="mono">prudence</td><td class="num">40</td><td class="num">-</td><td class="num">40</td>'
+            '<td class="num">0</td><td class="num">0</td><td>no segment measured</td><td>-</td></tr></tbody></table>'
+            "</div></section>",
             fragment,
         )
 
@@ -209,9 +213,8 @@ class RenderLedgerFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            "<section><h2>What a run takes</h2><p>Turns over the last 20 runs finished of each procedure.</p>"
-            "<table><thead><tr><th>procedure</th><th>runs</th><th>p50</th><th>p90</th><th>measure</th></tr></thead>"
-            "<tbody><tr><td>build-task</td><td>3</td><td>40</td><td>70</td><td>estimate</td></tr>"
+            "</figure><table><thead><tr><th>procedure</th><th>runs</th><th>p50</th><th>p90</th><th>measure</th></tr>"
+            "</thead><tbody><tr><td>build-task</td><td>3</td><td>40</td><td>70</td><td>estimate</td></tr>"
             "<tr><td>review</td><td>8</td><td>20</td><td>35</td><td>measured</td></tr></tbody></table></section>",
             fragment,
         )
@@ -235,9 +238,16 @@ class RenderLedgerFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            "<h3>By action</h3><table><thead><tr><th>action</th><th>failed</th><th>most frequent error</th></tr>"
-            "</thead><tbody><tr><td>&lt;i&gt;LaunchTask&lt;/i&gt;</td><td>3</td><td>quota &lt;reached&gt;</td></tr>"
-            "<tr><td>MergeWavePullRequest</td><td>1</td><td>not mergeable</td></tr></tbody></table></section>",
+            "<h3>By action</h3><table><thead><tr><th>action</th><th>failed</th><th>share</th>"
+            "<th>most frequent error</th></tr></thead><tbody><tr><td>&lt;i&gt;LaunchTask&lt;/i&gt;</td><td>3</td><td>"
+            '<svg class="bar" viewBox="0 0 100 8" role="img" aria-label="75 percent of the failed actions">'
+            '<rect class="bar-track" width="100" height="8"></rect>'
+            '<rect class="bar-fill tone-failed" width="75" height="8"></rect></svg></td><td>quota &lt;reached&gt;</td></tr>'
+            "<tr><td>MergeWavePullRequest</td><td>1</td><td>"
+            '<svg class="bar" viewBox="0 0 100 8" role="img" aria-label="25 percent of the failed actions">'
+            '<rect class="bar-track" width="100" height="8"></rect>'
+            '<rect class="bar-fill tone-failed" width="25" height="8"></rect></svg></td><td>not mergeable</td></tr>'
+            "</tbody></table></section>",
             fragment,
         )
 
@@ -247,7 +257,8 @@ class RenderLedgerFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            '<section><h2>Volume</h2><div class="stat-tile"><span class="stat-value">12</span>'
+            '<section class="block"><div class="block-head"><h2>Volume</h2><p>What the ledger counts since 2026-11-17.</p>'
+            '</div><div class="stat-tiles"><div class="stat-tile"><span class="stat-value">12</span>'
             '<span class="stat-label">events</span>'
             '<span class="stat-perimeter">from 2026-11-17T21:10:00Z to 2026-11-18T09:00:00Z</span></div>'
             '<div class="stat-tile"><span class="stat-value">5</span><span class="stat-label">runs finished</span>'
@@ -258,7 +269,7 @@ class RenderLedgerFragmentTest(unittest.TestCase):
             '<span class="stat-perimeter">from 2026-11-17T21:10:00Z to 2026-11-18T09:00:00Z</span></div>'
             '<div class="stat-tile"><span class="stat-value">4</span>'
             '<span class="stat-label">failed tick actions</span>'
-            '<span class="stat-perimeter">from 2026-11-17T21:10:00Z to 2026-11-18T09:00:00Z</span></div>'
+            '<span class="stat-perimeter">from 2026-11-17T21:10:00Z to 2026-11-18T09:00:00Z</span></div></div>'
             "<h3>Waves started by month</h3>"
             "<table><thead><tr><th>month</th><th>waves</th><th>started</th><th>baseline</th></tr></thead>"
             "<tbody><tr><td>2026-11</td><td>2</td>"
@@ -364,7 +375,7 @@ class RenderLedgerFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            "<section><h2>Compare two periods</h2>"
+            "</button></form>"
             "<p>&lt;i&gt;2026-09-01&lt;/i&gt; to 2026-09-30 holds 4 runs, too small to compare:"
             " a percentile over fewer than 5 runs is an estimate.</p>"
             "<p>4 runs from &lt;i&gt;2026-09-01&lt;/i&gt; to 2026-09-30, 6 runs from 2026-10-01 to 2026-10-31</p>"
@@ -388,7 +399,104 @@ class RenderLedgerFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            "<section><h2>Compare two periods</h2>"
-            "<dl><dt>error</dt><dd>no run finished from 2026-09-30 to 2026-09-30\n</dd></dl></section>",
+            "</button></form><dl><dt>error</dt><dd>no run finished from 2026-09-30 to 2026-09-30\n</dd></dl></section>",
+            fragment,
+        )
+
+
+class RenderLedgerFragmentHeadTest(unittest.TestCase):
+    def test_should_open_on_the_page_head_naming_the_view_and_what_it_is_for(self):
+        # Act
+        fragment = render_overview_and_budgets()
+
+        # Assert
+        self.assertTrue(
+            fragment.startswith(
+                '<header class="page-head"><div><h1>Ledger</h1>'
+                '<p class="lede">The ledger is the journal of everything brigade did. This page turns it into measures: what a run takes, whether the turn caps fit, and what keeps failing.</p></div>'
+                '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
+            ),
+            fragment[:300],
+        )
+
+
+class RenderLedgerFragmentAsTheMockupTest(unittest.TestCase):
+    def test_should_say_how_to_read_the_page_in_an_explainer(self):
+        # Act
+        fragment = render_overview_and_budgets()
+
+        # Assert
+        self.assertIn('<details class="explainer"><summary>How to read this page</summary>', fragment)
+
+    def test_should_answer_whether_the_caps_fit_in_one_table_whose_columns_are_named_in_words(self):
+        # Act
+        fragment = render_overview_and_budgets()
+
+        # Assert
+        self.assertIn(
+            '<section class="block"><div class="block-head"><h2>Do the turn caps fit?</h2>'
+            "<p>The last 20 runs of each procedure. A cap fits when 9 segments in 10 end under it.</p></div>",
+            fragment,
+        )
+        self.assertIn(
+            '<thead><tr><th>Role</th><th class="num">Shipped</th><th class="num">Computed</th><th class="num">Applied'
+            '</th><th class="num">Segments</th><th class="num">Restarts</th><th>p90 of a segment, against the cap</th>'
+            "<th>Trend</th></tr></thead>",
+            fragment,
+        )
+        self.assertEqual(fragment.count("<th>Role</th>"), 1)
+
+    def test_should_draw_what_a_run_takes_as_a_chart_of_its_median_and_its_90th_percentile(self):
+        # Act
+        fragment = render_overview_and_budgets()
+
+        # Assert
+        self.assertIn(
+            '<section class="block"><div class="block-head"><h2>What a run takes</h2><p>Turns of a whole run, by'
+            ' procedure: the median, and the 90th percentile.</p></div><figure class="panel pad chart"><svg',
+            fragment,
+        )
+        self.assertIn(
+            '<figcaption class="legend"><span class="tone-work">up to the median</span>'
+            '<span class="tone-work soft">up to the 90th percentile</span></figcaption></figure>',
+            fragment,
+        )
+        self.assertIn("<title>build-task: p50 40, p90 70 turns</title>", fragment)
+
+    def test_should_draw_the_share_of_each_failing_action_as_a_bar(self):
+        # Act
+        fragment = render_overview_and_budgets()
+
+        # Assert
+        self.assertIn(
+            '<svg class="bar" viewBox="0 0 100 8" role="img" aria-label="75 percent of the failed actions">'
+            '<rect class="bar-track" width="100" height="8"></rect>'
+            '<rect class="bar-fill tone-failed" width="75" height="8"></rect></svg>',
+            fragment,
+        )
+
+    def test_should_band_the_volume_tiles_under_what_the_ledger_counts(self):
+        # Act
+        fragment = render_overview_and_budgets()
+
+        # Assert
+        self.assertIn(
+            '<section class="block"><div class="block-head"><h2>Volume</h2><p>What the ledger counts since'
+            ' 2026-11-17.</p></div><div class="stat-tiles">',
+            fragment,
+        )
+
+    def test_should_offer_two_ranges_of_days_to_compare_with_a_compare_button(self):
+        # Act
+        fragment = render_overview_and_budgets()
+
+        # Assert
+        self.assertIn(
+            '<section class="block"><div class="block-head"><h2>Compare two periods</h2><p>Runs finished in each'
+            ' range of days, UTC.</p></div><form class="filters" data-view="ledger">'
+            '<span class="field"><label for="ledger-before">Before</label><input id="ledger-before" name="range" data-pauses-poll'
+            ' placeholder="2026-11-15..2026-11-17"></span>'
+            '<span class="field"><label for="ledger-after">After</label><input id="ledger-after" name="range" data-pauses-poll'
+            ' placeholder="2026-11-18..2026-11-18"></span><button class="btn" type="submit">Compare</button></form>',
             fragment,
         )

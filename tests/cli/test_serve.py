@@ -183,7 +183,20 @@ class BrigadeServeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(status, 200)
-        self.assertIn('<time datetime="2026-10-06T12:00:00Z">2026-10-06T12:00:00Z</time>', body)
+        self.assertIn('<time datetime="2026-10-06T12:00:00Z">12:00:00Z</time>', body)
+
+    def test_should_answer_the_views_of_the_rail_with_what_each_holds(self):
+        # Arrange
+        self.machine.install_awawa(self)
+        self.machine.run_init()
+        url = self.start_serving().stdout.readline().strip()
+
+        # Act
+        status, body = fetch(url, "/views/rail")
+
+        # Assert
+        self.assertEqual(status, 200)
+        self.assertIn('<a href="#waves" data-rail-view="waves">Waves <span class="count num">0 open</span></a>', body)
 
     def test_should_answer_the_waves_view_with_its_sentence_and_the_pill_of_a_parked_wave(self):
         # Arrange
@@ -214,7 +227,7 @@ class BrigadeServeTest(unittest.TestCase):
         # Assert
         self.assertEqual(status, 200)
         self.assertIn('<div class="callout tone-faint"><p>The measures cover 0 runs finished in an empty ledger;', body)
-        self.assertIn("<h3>Turn cap by role</h3>", body)
+        self.assertIn('<div class="block-head"><h2>Do the turn caps fit?</h2>', body)
 
     def write_finished_run(self) -> None:
         run_directory = self.machine.state_home / "brigade" / "runs" / RUN_ID
@@ -233,7 +246,9 @@ class BrigadeServeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(status, 200)
-        self.assertIn('<aside class="explainer"><p class="explainer-what">A run is one procedure', body)
+        self.assertIn(
+            '<details class="explainer"><summary>How to read this page</summary><div><p>A run is one procedure', body
+        )
 
     def test_should_answer_the_page_of_a_run_with_its_segments(self):
         # Arrange
@@ -259,12 +274,9 @@ class BrigadeServeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(status, 200)
-        self.assertRegex(
-            body,
-            r'^<section class="report-verdict"><h2>wave-report oak_w3</h2><p class="status-sentence">Verdict: delivered</p>',
-        )
+        self.assertIn('<p class="lede">delivered</p>', body)
 
-    def test_should_answer_the_reports_view_with_its_explainer_closed_and_the_verdict_of_each_report(self):
+    def test_should_answer_the_reports_view_with_its_explainer_open_and_the_verdict_of_each_report(self):
         # Arrange
         self.machine.install_awawa(self)
         self.machine.run_init()
@@ -276,13 +288,8 @@ class BrigadeServeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(status, 200)
-        self.assertIn(
-            "<details><summary>A report is the account brigade writes once a delivery ends: a milestone"
-            " reached, a task of no milestone ready to merge, or, before the milestone reports, a wave"
-            " closed.</summary>",
-            body,
-        )
-        self.assertIn("<td>Verdict: M13 delivered three of its four tasks.</td>", body)
+        self.assertIn('<details class="explainer" open><summary>What a report is, and when to read one</summary>', body)
+        self.assertIn("<td>M13 delivered three of its four tasks.</td>", body)
 
 
 ADDON_SCHEMA = (
@@ -418,9 +425,9 @@ class BrigadeServeOfAWaveTest(WaveTickTestCase):
 
         # Assert
         self.assertEqual(status, 200, body)
-        self.assertIn('<p class="status-sentence">Wave shop_w1 of shop is running:', body)
+        self.assertIn('<h1>Wave <span class="mono">shop_w1</span>', body)
         self.assertIn('<div class="stat-tiles"><div class="stat-tile">', body)
-        self.assertIn("<details><summary>Events</summary><ol><li>", body)
+        self.assertIn('<details class="fold"><summary>Show the events <span>', body)
 
 
 class BrigadeServeHomeTest(BrigadeServeTestCase):
@@ -449,8 +456,8 @@ class BrigadeServeHomeTest(BrigadeServeTestCase):
         self.assertEqual(status, 200)
         self.assertIn(
             '<section><h2>Needs you</h2><ul class="needs-you-list">'
-            '<li class="needs-you"><span class="needs-you-subject">shop_w1</span>'
-            '<span class="needs-you-reason">parked on forge_account</span>',
+            '<li class="needs-you tone-you"><span class="mark">II</span>'
+            "<div><h3>Wave shop_w1 is halted</h3><p>parked on forge_account</p></div>",
             body,
         )
 

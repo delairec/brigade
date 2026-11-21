@@ -13,7 +13,7 @@ READING_OF_OAK = {
 
 
 class RenderAwawaBannerTest(unittest.TestCase):
-    def test_should_name_the_reading_and_offer_the_refs_of_the_project_or_one_typed(self):
+    def test_should_name_the_reading_and_offer_the_refs_of_the_project_as_a_selector_with_no_button(self):
         # Act
         fragment = render_awawa_banner(READING_OF_OAK, BOARD_AT_MAIN)
 
@@ -23,9 +23,11 @@ class RenderAwawaBannerTest(unittest.TestCase):
             '<header class="awawa-banner"><p class="awawa-reading"><strong>oak</strong> at <code>main</code>,'
             ' commit <code>de446f3</code></p><form class="awawa-ref" method="get" data-view="awawa/oak">'
             '<input type="hidden" name="view" value="board"><input type="hidden" name="type" value="TASK">'
-            '<label>Ref <input name="ref" list="awawa-refs" value="main"></label><datalist id="awawa-refs">'
-            '<option value="main"></option><option value="feature/x"></option>'
-            '<option value="worktree:b42"></option></datalist><button>Read</button></form></header>',
+            '<span class="field"><label for="awawa-ref">ref</label><select id="awawa-ref" name="ref">'
+            '<option value="main" data-href="awawa/oak?view=board&amp;type=TASK&amp;ref=main" selected>main</option>'
+            '<option value="feature/x" data-href="awawa/oak?view=board&amp;type=TASK&amp;ref=feature%2Fx">feature/x'
+            '</option><option value="worktree:b42" data-href="awawa/oak?view=board&amp;type=TASK&amp;ref=worktree%3Ab42">'
+            "worktree:b42</option></select></span></form></header>",
         )
 
     def test_should_escape_a_ref_holding_markup(self):
@@ -37,3 +39,15 @@ class RenderAwawaBannerTest(unittest.TestCase):
 
         # Assert
         self.assertIn("at <code>&lt;b&gt;</code>, commit <code>de446f3</code></p>", fragment)
+
+
+class RenderAwawaBannerOfAFullShaTest(unittest.TestCase):
+    def test_should_shorten_the_commit_read_to_eight_characters(self):
+        # Arrange
+        reading = {**READING_OF_OAK, "sha": "f23e9bcd0123456789abcdef0123456789abcdef"}
+
+        # Act
+        banner = render_awawa_banner(reading, BOARD_AT_MAIN)
+
+        # Assert
+        self.assertIn('<code title="f23e9bcd0123456789abcdef0123456789abcdef">f23e9bcd</code>', banner)

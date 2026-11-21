@@ -8,6 +8,7 @@ from brigade.dashboard.render_answer import render_answer
 from brigade.dashboard.render_home import HomeDocuments, render_home
 from brigade.dashboard.render_inbox_item import render_inbox_item
 from brigade.dashboard.render_ledger_fragment import render_ledger_fragment
+from brigade.dashboard.render_rail import RailDocuments, render_rail
 from brigade.dashboard.render_report_fragment import ReportReading, render_report_fragment
 from brigade.dashboard.render_reports_fragment import render_reports_fragment
 from brigade.dashboard.render_run_fragment import RunPage, render_run_fragment
@@ -30,11 +31,13 @@ REPORTS_VIEW = "reports"
 RUNS_VIEW = "runs"
 CORPUS_VIEW = "corpus"
 INBOX_VIEW = "inbox"
+KIND_PREFIX = "kind-"
 DOCUMENT = "document"
 PROJECT = "project"
 BUDGETS = "budgets"
 TASK_RUNS = "task_runs"
 WAVE = "wave"
+WAVE_RUNS = "wave_runs"
 WAVE_PREFIX = "wave "
 LEDGER_BUDGETS = CommandRoute(arguments=("ledger", "budgets", "--json"))
 WAVE_EVENTS = ("wave", "show", "--json", "--events")
@@ -52,6 +55,12 @@ HOME_ROUTES = {
     "scheduler": REGION_ROUTES["heartbeat"],
     "ledger": CommandRoute(arguments=("ledger", "--since", "1d", "--json")),
     "inbox": CommandRoute(arguments=("inbox", "list", "--json")),
+}
+RAIL_REGION = "rail"
+RAIL_ROUTES = {
+    DOCUMENT: HOME_ROUTES[DOCUMENT],
+    "inbox": HOME_ROUTES["inbox"],
+    "reports": CommandRoute(arguments=("report", "list", "--json")),
 }
 
 
@@ -104,6 +113,14 @@ def _render_home(answers: dict[str, CommandAnswer]) -> str:
     return render_answer(answers[DOCUMENT], render)
 
 
+def _render_rail(answers: dict[str, CommandAnswer]) -> str:
+    def render(status: dict) -> str:
+        readings = {name: json.loads(answers[name].document) for name in ("inbox", "reports")}
+        return render_rail(RailDocuments(status=status, **readings))
+
+    return render_answer(answers[DOCUMENT], render)
+
+
 def _render_with(render: Callable[[dict], str]) -> Callable[[dict[str, CommandAnswer]], str]:
     return lambda answers: render_answer(answers[DOCUMENT], render)
 
@@ -112,8 +129,11 @@ def _follow_wave(answers: dict[str, CommandAnswer]) -> dict[str, CommandRoute]:
     shown = answers[DOCUMENT]
     if shown.status != OK:
         return {}
-    project = json.loads(shown.document)["project"]
-    return {PROJECT: CommandRoute(arguments=("project", "show", "--json", project))}
+    document = json.loads(shown.document)
+    return {
+        PROJECT: CommandRoute(arguments=("project", "show", "--json", document["project"])),
+        WAVE_RUNS: CommandRoute(arguments=("run", "list", "--json", f"--wave={document['wave']}")),
+    }
 
 
 def _read_answered(answers: dict[str, CommandAnswer], name: str) -> dict | None:
@@ -126,7 +146,9 @@ def _read_answered(answers: dict[str, CommandAnswer], name: str) -> dict | None:
 def _render_wave_page(answers: dict[str, CommandAnswer]) -> str:
     return render_answer(
         answers[DOCUMENT],
-        lambda shown: render_wave(WavePage(shown=shown, project=_read_answered(answers, PROJECT))),
+        lambda shown: render_wave(
+            WavePage(shown=shown, project=_read_answered(answers, PROJECT), runs=_read_answered(answers, WAVE_RUNS))
+        ),
     )
 
 
@@ -170,6 +192,13 @@ def _route_runs(route: CommandRoute, query: dict) -> ViewRoute:
     )
 
 
+def _route_inbox(route: CommandRoute, query: dict, render_inbox: Callable[[dict, dict], str]) -> ViewRoute:
+    kinds = {
+        name.removeprefix(KIND_PREFIX): values[0] for name, values in query.items() if name.startswith(KIND_PREFIX)
+    }
+    return ViewRoute(routes={DOCUMENT: route}, render=_render_with(lambda document: render_inbox(document, kinds)))
+
+
 def _route_ledger(query: dict) -> ViewRoute:
     routes = {
         OVERVIEW: LEDGER_OVERVIEW,
@@ -203,6 +232,8 @@ def route_view(target: str, renderers: dict[str, Callable[[dict], str]]) -> View
         return _route_waves()
     if address.path == HOME_VIEW:
         return ViewRoute(routes=HOME_ROUTES, render=_render_home)
+    if address.path == RAIL_REGION:
+        return ViewRoute(routes=RAIL_ROUTES, render=_render_rail)
     if address.path.partition(PATH_SEPARATOR)[0] == CORPUS_VIEW:
         return None
     route = route_command(target)
@@ -219,10 +250,10 @@ def _route_command_view(
         return ViewRoute(routes={DOCUMENT: shown}, render=_render_wave_page, follow=_follow_wave)
     if path == RUNS_VIEW:
         return _route_runs(route, query)
+    if path == INBOX_VIEW:
+        return _route_inbox(route, query, renderers[INBOX_VIEW])
     if path.startswith(f"{RUNS_VIEW}/"):
         return ViewRoute(routes={DOCUMENT: route}, render=_render_run, follow=_follow_run)
-    if path in renderers:
-        return ViewRoute(routes={DOCUMENT: route}, render=_render_with(renderers[path]))
     if path == REPORTS_VIEW:
         return ViewRoute(routes={DOCUMENT: route}, render=_render_reports)
     collection = path.split(PATH_SEPARATOR)[0]

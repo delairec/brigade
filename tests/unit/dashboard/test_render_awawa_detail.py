@@ -76,7 +76,7 @@ class RenderAwawaDetailTest(unittest.TestCase):
         # Assert
         self.assertIn(
             '<h3>Referred to by</h3><ul class="awawa-neighbours"><li>'
-            '<a href="#awawa/oak?view=tree&amp;entity=%40TASK.B2"><span class="dot tone-faint" title="draft"></span>',
+            '<a href="#awawa/oak?view=tree&amp;entity=%40TASK.B2"><span class="dot tone-you" title="draft"></span>',
             fragment,
         )
 

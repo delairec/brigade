@@ -8,6 +8,8 @@ from brigade.ledger.milestone_reported import MilestoneReported
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_reported import TaskReported
 from brigade.ledger.wave_reported import WaveReported
+from brigade.registry.read_projects import read_projects
+from brigade.reports.read_milestone_title import read_milestone_title
 from brigade.reports.read_reports import REPORT_KINDS_BY_FIELD, WAVE_REPORT_KIND, read_reports
 from brigade.runtime import Runtime
 from brigade.system.render_table import render_table
@@ -67,7 +69,7 @@ def _read_values(report: dict, names: tuple[str, ...]) -> list[str]:
     return [field["value"] for field in report["fields"] if field["name"] in names]
 
 
-def _describe(report: dict, reported_instants: dict[tuple[str, str], str]) -> dict:
+def _describe(report: dict, reported_instants: dict[tuple[str, str], str], title: str | None) -> dict:
     statistics = [value.partition(" ") for value in _read_values(report, (STATISTIC_FIELD,))]
     return {
         **{column: report[column] for column in HEADER},
@@ -76,15 +78,17 @@ def _describe(report: dict, reported_instants: dict[tuple[str, str], str]) -> di
         "verdict": next(iter(_read_values(report, (VERDICT_FIELD,))), NO_VERDICT),
         "counts": dict(Counter(field["name"] for field in report["fields"])),
         "reported_at": reported_instants.get((report["kind"], report["id"]), UNDATED),
+        "title": title,
     }
 
 
 def report_list(request: argparse.Namespace, runtime: Runtime) -> dict:
     reported_instants = _read_reported_instants(read_ledger(runtime.paths.state_root).entries)
+    projects = read_projects(runtime)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "reports": [
-            _describe(report, reported_instants)
+            _describe(report, reported_instants, read_milestone_title(runtime.run_process, projects, report))
             for report in read_reports(runtime, runtime.resolve_plugin(DOCUMENT_KIND, OPERATIONAL_CORPUS_DOCUMENT))
         ],
     }

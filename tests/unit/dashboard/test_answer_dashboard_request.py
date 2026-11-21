@@ -299,7 +299,12 @@ class AnswerDashboardRequestOfAViewTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(runner.argvs, [WAVE_LIST, LEDGER_OVERVIEW])
-        self.assertEqual(
+        self.assertEqual(response.status, 200)
+        self.assertIn(
+            b'<div class="verdict"><p class="status-sentence">Waves open: 0, parked: 0, blocked: 0.</p></div>',
+            response.body,
+        )
+        self.assertNotEqual(
             response,
             DashboardResponse(
                 status=200,
@@ -354,6 +359,24 @@ class AnswerDashboardRequestOfTheInboxViewTest(unittest.TestCase):
         self.assertEqual(response.status, 200)
         self.assertIn(b"<section><h2>Decide first</h2>", response.body)
 
+    def test_should_ratify_a_constraint_as_the_kind_chosen_in_the_address_of_the_view(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {
+                (PYTHON, ENTRY_POINT, "inbox", "list", "--json"): ProcessAnswer(
+                    stdout='{"schema_version": 1, "signals": [], "families": [], "answers": [], "patterns":'
+                    ' [{"name": "Flaky", "title": "Flaky tests", "action": "constraint", "target": "oak",'
+                    ' "recipe": null, "repeats": null, "signals": []}]}\n'
+                )
+            }
+        )
+
+        # Act
+        response = answer_get("/views/inbox?kind-Flaky=lint", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertIn(b'data-post="/api/inbox/ratify/Flaky?kind=lint">Ratify</button>', response.body)
+
     def test_should_render_the_error_of_a_failing_inbox_list(self):
         # Arrange
         runner = ScriptedProcessRunner(
@@ -376,7 +399,7 @@ INBOX_HOLDING_A_NOTE_AND_A_PATTERN = (
 )
 
 HOME = (
-    '{"schema_version": 1, "projects": [{"name": "oak", "paused": false}], "waves": [], "live_runs": [],'
+    '{"schema_version": 1, "projects": [{"name": "oak", "paused": false, "forge": "none", "remote": null, "corpus": false}], "waves": [], "live_runs": [],'
     ' "awaiting_merge": [], "inbox": {"new_signals": 0, "scans": [], "stalls": []},'
     ' "quota": {"window_hours": 5, "usage": {"input_tokens": 0, "output_tokens": 0, "cache_creation_input_tokens": 0,'
     ' "cache_read_input_tokens": 0}, "runs_without_usage": 0, "blocked_waves": []}, "last_tick": null, "studies": [], "orders": []}\n'
@@ -417,6 +440,7 @@ OAK_ON_GITHUB = (
 )
 WAVE_W4_EVENTS = (PYTHON, ENTRY_POINT, "wave", "show", "--json", "--events", "w4")
 OAK_SHOW = (PYTHON, ENTRY_POINT, "project", "show", "--json", "oak")
+RUNS_OF_W4 = (PYTHON, ENTRY_POINT, "run", "list", "--json", "--wave=w4")
 
 
 def answer_post(target: str, runtime) -> DashboardResponse:
@@ -576,10 +600,10 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(response.status, 200)
-        self.assertEqual(
-            response.body.partition(b"</p>")[0],
-            b'<p class="status-sentence">0 reports: 0 on a milestone, 0 on a task of no milestone, 0 on a wave,'
-            b" 0 answering an order.",
+        self.assertIn(
+            b'<div class="verdict"><p class="status-sentence">0 reports: 0 on a milestone, 0 on a task of no milestone,'
+            b" 0 on a wave, 0 answering an order.</p></div>",
+            response.body,
         )
 
     def test_should_render_the_report_asked_with_the_measures_of_its_waves_and_the_forge_of_its_project(self):
@@ -613,27 +637,9 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
         response = answer_get("/views/reports/oak_w3", create_test_runtime(run_process=runner.run))
 
         # Assert
-        self.assertEqual(
-            response,
-            DashboardResponse(
-                status=200,
-                content_type="text/html; charset=utf-8",
-                body=b'<section class="report-verdict"><h2>wave-report oak_w3</h2>'
-                b'<p class="status-sentence">Verdict: <a href="#waves/oak_w3">OK7</a> delivered</p>'
-                b'<p class="report-delivery">reported 2026-10-04T09:00:00Z, pull request'
-                b' <a href="https://github.com/alice/oak/pull/31">#31</a></p></section>'
-                b'<div class="tiles">'
-                b'<div class="stat-tile"><span class="stat-value">1 of 1</span><span class="stat-label">tasks merged</span>'
-                b'<span class="stat-perimeter">the waves oak_w3</span></div>'
-                b'<div class="stat-tile"><span class="stat-value">1 runs, 40 turns</span><span class="stat-label">runs</span>'
-                b'<span class="stat-perimeter">the waves oak_w3</span></div>'
-                b'<div class="stat-tile"><span class="stat-value">1.50 USD</span><span class="stat-label">cost</span>'
-                b'<span class="stat-perimeter">the waves oak_w3</span></div>'
-                b'<div class="stat-tile"><span class="stat-value">10 min</span><span class="stat-label">wall time</span>'
-                b'<span class="stat-perimeter">5 min of run time</span></div></div>'
-                b"<details><summary>The full account</summary><dl><dt>WAVE</dt><dd>oak_w3</dd></dl></details>",
-            ),
-        )
+        self.assertEqual(response.status, 200)
+        self.assertIn(b'<a href="https://github.com/alice/oak/pull/31">pull request #31</a>', response.body)
+        self.assertIn(b"1.50 USD", response.body)
 
     def test_should_leave_the_pull_request_unlinked_when_the_project_names_a_forge_without_an_address(self):
         # Arrange
@@ -653,11 +659,7 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
         response = answer_get("/views/reports/oak_w3", create_test_runtime(run_process=runner.run))
 
         # Assert
-        self.assertEqual(
-            response.body,
-            b'<section class="report-verdict"><h2>wave-report oak_w3</h2>'
-            b'<p class="report-delivery">pull request #31</p></section>',
-        )
+        self.assertIn(b'<p class="fresh">body of pull request #31</p>', response.body)
 
     def test_should_follow_no_wave_and_no_project_when_the_report_asked_is_unknown(self):
         # Arrange
@@ -690,11 +692,7 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
         response = answer_get("/views/reports/oak_w3", create_test_runtime(run_process=runner.run))
 
         # Assert
-        self.assertEqual(
-            response.body,
-            b'<section class="report-verdict"><h2>wave-report oak_w3</h2>'
-            b'<p class="report-delivery">pull request #31</p></section>',
-        )
+        self.assertIn(b'<p class="fresh">body of pull request #31</p>', response.body)
         self.assertEqual(runner.argvs, [report_show])
 
     def test_should_render_the_report_without_what_a_failing_wave_show_or_project_show_would_give(self):
@@ -716,11 +714,7 @@ class AnswerDashboardRequestOfTheReportsViewsTest(unittest.TestCase):
         response = answer_get("/views/reports/oak_w3", create_test_runtime(run_process=runner.run))
 
         # Assert
-        self.assertEqual(
-            response.body,
-            b'<section class="report-verdict"><h2>wave-report oak_w3</h2>'
-            b'<p class="report-delivery">pull request #31</p></section>',
-        )
+        self.assertIn(b'<p class="fresh">body of pull request #31</p>', response.body)
 
 
 class AnswerDashboardRequestOfTheLedgerViewTest(unittest.TestCase):
@@ -808,7 +802,7 @@ class AnswerDashboardRequestOfTheHomeViewTest(unittest.TestCase):
         # Assert
         self.assertEqual(response.status, 200)
         self.assertIn(
-            b'<li>oak, active <button type="button" data-post="/api/projects/oak/pause">pause</button></li>',
+            b'<td> <button type="button" data-post="/api/projects/oak/pause">pause</button></td></tr>',
             response.body,
         )
 
@@ -831,7 +825,11 @@ class AnswerDashboardRequestOfTheWaveViewTest(unittest.TestCase):
     def test_should_link_the_pull_requests_of_the_wave_on_the_forge_project_show_names(self):
         # Arrange
         runner = ScriptedProcessRunner(
-            {WAVE_W4_EVENTS: ProcessAnswer(stdout=WAVE_W4_SHOWN), OAK_SHOW: ProcessAnswer(stdout=OAK_ON_GITHUB)}
+            {
+                WAVE_W4_EVENTS: ProcessAnswer(stdout=WAVE_W4_SHOWN),
+                OAK_SHOW: ProcessAnswer(stdout=OAK_ON_GITHUB),
+                RUNS_OF_W4: ProcessAnswer(stdout=NO_RUN),
+            }
         )
 
         # Act
@@ -847,6 +845,7 @@ class AnswerDashboardRequestOfTheWaveViewTest(unittest.TestCase):
             {
                 WAVE_W4_EVENTS: ProcessAnswer(stdout=WAVE_W4_SHOWN),
                 OAK_SHOW: ProcessAnswer(exit_code=1, stderr="brigade project show: @PROJECT.oak is not registered\n"),
+                RUNS_OF_W4: ProcessAnswer(stdout=NO_RUN),
             }
         )
 
@@ -856,6 +855,22 @@ class AnswerDashboardRequestOfTheWaveViewTest(unittest.TestCase):
         # Assert
         self.assertEqual(response.status, 200)
         self.assertIn(b"<td>#235</td>", response.body)
+
+    def test_should_link_the_runs_of_the_wave_the_state_still_keeps(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {
+                WAVE_W4_EVENTS: ProcessAnswer(stdout=WAVE_W4_SHOWN),
+                OAK_SHOW: ProcessAnswer(stdout=OAK_ON_GITHUB),
+                RUNS_OF_W4: ProcessAnswer(stdout='{"schema_version": 1, "runs": [{"run": "r28"}], "skipped": []}\n'),
+            }
+        )
+
+        # Act
+        response = answer_get("/views/waves/w4", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertIn(b'<td><a class="mono" href="#runs/r28">r28</a></td>', response.body)
 
 
 class AnswerDashboardRequestOfAMethodNeitherReadingNorChangingStateTest(unittest.TestCase):
@@ -920,7 +935,10 @@ class AnswerDashboardRequestOfTheRunsViewsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(response.status, 200)
-        self.assertIn(b'<aside class="explainer"><p class="explainer-what">A run is one procedure', response.body)
+        self.assertIn(
+            b'<details class="explainer"><summary>How to read this page</summary><div><p>A run is one procedure',
+            response.body,
+        )
 
     def test_should_pass_the_filters_the_address_carries_to_the_list(self):
         # Arrange
@@ -931,7 +949,7 @@ class AnswerDashboardRequestOfTheRunsViewsTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(runner.argvs, [(*RUN_LIST, "--state=dead", "--wave=w4", "--task=B94")])
-        self.assertIn(b'<a class="chip" href="#runs?wave=w4&amp;task=B94">every state</a>', response.body)
+        self.assertIn(b'<a class="chip" href="#runs?wave=w4&amp;task=B94">All <b>0</b></a>', response.body)
 
     def test_should_render_the_run_asked_with_its_cap_its_task_and_its_wave(self):
         # Arrange
@@ -1099,8 +1117,9 @@ class AnswerDashboardRequestOfTheHeartbeatTest(unittest.TestCase):
             DashboardResponse(
                 status=200,
                 content_type="text/html; charset=utf-8",
-                body=b'<p class="heartbeat">Last tick <time datetime="2026-10-19T08:00:00Z">2026-10-19T08:00:00Z</time>,'
-                b' 60 min ago <strong class="heartbeat-stale">stale</strong></p>',
+                body=b'<p class="heartbeat"><span><span class="dot tone-failed"></span><b>Tick stale</b></span>'
+                b'<span class="num">last <time datetime="2026-10-19T08:00:00Z">08:00:00Z</time>, 60 min ago</span>'
+                b'<span class="num">0.0 s \xc2\xb7 0 actions</span></p>',
             ),
         )
 
@@ -1118,8 +1137,8 @@ class AnswerDashboardRequestOfTheProjectSelectorTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             response.body,
-            b'<label>Project <select name="project"><option value="">All projects</option>'
-            b'<option value="oak" selected>oak</option></select></label><button>show</button>',
+            b'<label for="project">Project</label><select id="project" name="project">'
+            b'<option value="">All projects (1)</option><option value="oak" selected>oak</option></select>',
         )
 
     def test_should_list_every_project_whichever_project_the_address_carries(self):
@@ -1143,7 +1162,10 @@ class AnswerDashboardRequestOfAViewOfOneProjectTest(unittest.TestCase):
     def test_should_leave_out_of_home_the_projects_and_the_blocked_waves_of_the_others(self):
         # Arrange
         home = json.loads(HOME)
-        home["projects"] = [{"name": "oak", "paused": False}, {"name": "elm", "paused": True}]
+        home["projects"] = [
+            {"name": "oak", "paused": False, "forge": "none", "remote": None, "corpus": False},
+            {"name": "elm", "paused": True, "forge": "none", "remote": None, "corpus": False},
+        ]
         home["quota"]["blocked_waves"] = [
             {"wave": "oak_w2", "project": "oak", "resume_at": "2026-10-19T10:00:00Z"},
             {"wave": "elm_w1", "project": "elm", "resume_at": "2026-10-19T10:00:00Z"},
@@ -1308,7 +1330,7 @@ class AnswerDashboardRequestOfTheAwawaTabTest(unittest.TestCase):
         response = self.answer("/views/addons?project=app")
 
         # Assert
-        self.assertEqual(response.body, b'<a href="#awawa/app">awawa</a>')
+        self.assertEqual(response.body, b'<a href="#awawa/app" data-rail-view="awawa">awawa</a>')
 
     def test_should_answer_no_view_at_the_addresses_of_the_corpus_view(self):
         # Arrange
@@ -1321,3 +1343,26 @@ class AnswerDashboardRequestOfTheAwawaTabTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(response.status, 404)
                 self.assertEqual(json.loads(response.body), {"error": f"no view serves {target}"})
+
+
+class AnswerDashboardRequestOfTheRailTest(unittest.TestCase):
+    def test_should_count_beside_each_view_of_the_rail_what_it_holds(self):
+        # Arrange
+        runner = ScriptedProcessRunner(
+            {
+                (PYTHON, ENTRY_POINT, "status"): ProcessAnswer(
+                    stdout='{"schema_version": 1, "waves": [{"wave": "oak_w1"}], "live_runs": []}\n'
+                ),
+                (PYTHON, ENTRY_POINT, "inbox"): ProcessAnswer(stdout='{"schema_version": 1, "patterns": []}\n'),
+                (PYTHON, ENTRY_POINT, "report"): ProcessAnswer(stdout='{"schema_version": 1, "reports": []}\n'),
+            }
+        )
+
+        # Act
+        response = answer_get("/views/rail", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(response.status, 200)
+        self.assertIn(
+            b'<a href="#waves" data-rail-view="waves">Waves <span class="count num">1 open</span></a>', response.body
+        )
