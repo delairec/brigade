@@ -34,6 +34,16 @@ reference held elsewhere, an Artifact or a page of a website, is copied into the
 its version: `artifact/m18-dashboard/index.html` holds the mockup of M18, whose `<section id>` each task names in its
 `COVERS`. The planner reports a URL as a question, and `review context` prints it refused.
 
+A task branch that changes the file its own `REFERENCE` names is a finding of the preflight `promotion`: the delivery
+would be judged against a reference it rewrote. A task whose purpose is to deliver the reference itself says so with a
+`REVISES` line under that `REFERENCE`, the reason in its words:
+
+```
+REFERENCE "artifact/harbour/index.html"
+	COVERS "tides"
+	REVISES "the task draws the tide page of the mockup"
+```
+
 ```
 brigade build capture <task>                      # the delivered page and the reference page of HEAD, as PNG files
 brigade build capture <task> --directory <dir>   # the same, written to <dir>

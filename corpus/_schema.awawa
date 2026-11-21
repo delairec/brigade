@@ -69,6 +69,8 @@ SCHEMA TASK
 		FIELD COVERS string
 			REQUIRED
 			DESC "the id of the section of the reference the task delivers, its page"
+		FIELD REVISES string
+			DESC "why the task changes the file it cites: it delivers the reference itself"
 	FIELD MILESTONE @MILESTONE
 		REQUIRED
 		CONVERSE COMPRISES
