@@ -196,7 +196,7 @@ class BrigadeServeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(status, 200)
-        self.assertIn('<a href="#waves">Waves <span class="count num">0 open</span></a>', body)
+        self.assertIn('<a href="#waves" data-rail-view="waves">Waves <span class="count num">0 open</span></a>', body)
 
     def test_should_answer_the_waves_view_with_its_sentence_and_the_pill_of_a_parked_wave(self):
         # Arrange

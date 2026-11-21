@@ -25,13 +25,22 @@ def _render_choice(choice: _Choice) -> str:
     return f'<option value="{escape(choice.value)}" data-href="{leads_to}"{chosen}>{escape(choice.label)}</option>'
 
 
-def _render_selector(control: str, label: str, prompt: str, choices: list[_Choice], name: str) -> str:
-    prompted = "" if any(choice.chosen for choice in choices) else CHOSEN
-    options = "".join(map(_render_choice, choices))
-    return (
-        f'<span class="field"><label for="{control}">{escape(label)}</label>'
-        f'<select id="{control}" name="{name}"><option value=""{prompted}>{prompt}</option>{options}</select></span>'
-    )
+@dataclass(frozen=True)
+class _Selector:
+    control: str
+    label: str
+    prompt: str
+    name: str
+    choices: list[_Choice]
+
+    def render(self) -> str:
+        prompted = "" if any(choice.chosen for choice in self.choices) else CHOSEN
+        options = "".join(map(_render_choice, self.choices))
+        return (
+            f'<span class="field"><label for="{self.control}">{escape(self.label)}</label>'
+            f'<select id="{self.control}" name="{self.name}"><option value=""{prompted}>{self.prompt}</option>'
+            f"{options}</select></span>"
+        )
 
 
 def _render_values(values: list[str], field: str, address: AwawaAddress) -> str:
@@ -42,7 +51,7 @@ def _render_values(values: list[str], field: str, address: AwawaAddress) -> str:
         for value in values
         if (written := f"{field}{VALUE_SEPARATOR}{value}") not in in_force
     ]
-    return _render_selector("awawa-value", field, "Choose a value", choices, FILTER_PARAMETER)
+    return _Selector("awawa-value", field, "Choose a value", FILTER_PARAMETER, choices).render()
 
 
 def render_awawa_filter_picker(values: dict[str, list[str]], address: AwawaAddress) -> str:
@@ -50,7 +59,7 @@ def render_awawa_filter_picker(values: dict[str, list[str]], address: AwawaAddre
         return ""
     picked = address.read(PICK_PARAMETER)
     fields = [_Choice(field, field, address.setting(PICK_PARAMETER, field), chosen=field == picked) for field in values]
-    controls = _render_selector("awawa-pick", "Filter", "Add a filter", fields, PICK_PARAMETER)
+    controls = _Selector("awawa-pick", "Filter", "Add a filter", PICK_PARAMETER, fields).render()
     if picked in values:
         controls += _render_values(values[picked], picked, address)
     form = AwawaForm(
