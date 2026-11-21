@@ -69,7 +69,7 @@ def _render_goal(goal: dict) -> str:
 def _render_references(references: list[dict]) -> str:
     if not references:
         return f"{ABSENT}\n"
-    return "".join(f"{reference['url']}\n  {reference['field']}: {reference['line']}\n" for reference in references)
+    return "".join(f"{reference['reference']}\n  covers: {reference['covers'] or ABSENT}\n" for reference in references)
 
 
 def _render_re_verification(document: dict) -> list[str]:

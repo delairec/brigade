@@ -21,8 +21,9 @@ step needs and no command gives back (a finding and its evidence), and the next 
 `brigade review context <pr>`, from the worktree, `<pr>` left out when the Arguments name none: the package then
 judges the head of the task branch against the branch of its milestone. It prints the task with its awawa context and
 its closure; under `# goal`, the goal the task serves: its title, and the title, subject, description and source of
-its milestone, the user's own words, or that it has no milestone; under `# reference`, each URL a `SPEC` or a
-`RATIONALE` of the task cites, with the line that says what it covers; the diff of the pull request against its base,
+its milestone, the user's own words, or that it has no milestone; under `# reference`, each `REFERENCE` of the
+task, a URL or a repository path, with the page or the section it covers, or none; the diff of the pull request
+against its base,
 the findings of the preflight, the rules of the files the diff touches, and the grades a finding takes.
 
 You judge three things: each `SPEC` line, an acceptance criterion; the delivery against the goal it serves; the
@@ -61,15 +62,15 @@ milestone, `@MILESTONE.<name>`, or the task, and the summary says what of the go
 
 ## 4. Judge the delivery against its reference
 
-The reference is each entry under `# reference`, and a file or a document a `RATIONALE` names as what the task was
-drawn from, a mockup, a page or a specification. It is one of the criteria, never an example of a rule: compare the
-delivery with the reference itself, the page or the section the task cites, never only with what the `SPEC` lines
-transcribed from it, and its forms and interactions are kept, a selector staying a selector. A gap from it that no
+The reference is each entry under `# reference`, the `REFERENCE` values of the task: a mockup, a page or a
+document, by its URL or its repository path. It is one of the criteria, never an example of a rule: compare the
+delivery with the reference itself, the page or the section its `COVERS` names, never only with what the `SPEC`
+lines transcribed from it, and its forms and interactions are kept, a selector staying a selector. A gap from it that no
 `SPEC`, `RATIONALE` or recorded decision justifies is a finding that asks for changes, `broken` naming the
 reference; it is never dismissed as a difference from an example. For a rendered output, a page, a view or a
 document, the pull request carries screenshots of the result and of the reference side by side: compare them, and
 their absence is a finding. A reference you cannot open is a finding: the delivery is not proven against it. A task
-citing no reference skips this step.
+with no `REFERENCE` skips this step.
 
 ## 5. Look for defects
 

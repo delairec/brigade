@@ -29,8 +29,8 @@ in their words, and the plan it receives.
    detached, and prints the request, the run and `brigade run show <run> --log`, the command that follows the planner.
 2. The planner hands its plan, one `MILESTONE` and its tasks, to `plan record`, which commits it on `plan/<request>`
    and delivers it to the main branch. Its `MILESTONE` states the goal of the request, which the review judges each
-   task against, and a task drafted from a reference the request names, a mockup, a page or a document, cites it in a
-   `SPEC` line as its acceptance contract.
+   task against, and a task drafted from a reference the request names, a mockup, a page or a document, carries it in its
+   `REFERENCE` field as its acceptance contract, down to the page or the section it covers.
 3. The request goes `planned` with its `MILESTONE` and, under `github`, its `PR`.
 
 | Forge and `POLICY` | How the plan reaches the main branch |

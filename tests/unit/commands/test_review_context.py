@@ -84,11 +84,7 @@ GOAL = {
         "source": ["the user's words: I want the tides of the week on one page"],
     },
 }
-MOCKUP = {
-    "url": "https://example.org/harbour",
-    "field": "RATIONALE",
-    "line": "drawn from the harbour mockup https://example.org/harbour, its page Tides",
-}
+MOCKUP = {"reference": "https://example.org/harbour", "covers": "its page Tides"}
 
 
 def create_document(rules: list[dict] | None, previous: dict | None = None, repair: dict | None = None) -> dict:
@@ -127,7 +123,7 @@ class VerifyContextTextTest(unittest.TestCase):
             "  desc: a sailor reads the tides of the week at a glance\n"
             "  source: the user's words: I want the tides of the week on one page\n\n"
             "# reference\nhttps://example.org/harbour\n"
-            "  RATIONALE: drawn from the harbour mockup https://example.org/harbour, its page Tides\n\n"
+            "  covers: its page Tides\n\n"
             "# diff\n$ git diff 0000000 8885daa\nexit 0\n+def tide():\n\n"
             "# preflight\nfail  scope\n  brigade/cli.py is outside the task\n\n"
             "# rules\n$ awawa context @TRIGGER.python_file\nexit 0\nRULE pure\n\n"
@@ -162,7 +158,7 @@ class VerifyContextTextTest(unittest.TestCase):
             "  desc: a sailor reads the tides of the week at a glance\n"
             "  source: the user's words: I want the tides of the week on one page\n\n"
             "# reference\nhttps://example.org/harbour\n"
-            "  RATIONALE: drawn from the harbour mockup https://example.org/harbour, its page Tides\n\n"
+            "  covers: its page Tides\n\n"
             "# diff\n$ git diff 0000000 8885daa\nexit 0\n+def tide():\n\n"
             "# previous verdict\nhead efd5ed1\nverdict changes\n"
             "finding 1: high src/tides.py:12, broken SPEC 2 of @TASK.T7\n"
@@ -213,6 +209,17 @@ class VerifyContextTextTest(unittest.TestCase):
 
         # Assert
         self.assertIn("# reference\nnone\n\n", text)
+
+    def test_should_print_none_where_a_reference_states_no_coverage(self):
+        # Arrange
+        uncovered = {"reference": "https://example.org/harbour", "covers": None}
+        document = {**create_document(RULES), "references": [uncovered]}
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertIn("# reference\nhttps://example.org/harbour\n  covers: none\n\n", text)
 
 
 class VerifyContextExitCodeTest(unittest.TestCase):

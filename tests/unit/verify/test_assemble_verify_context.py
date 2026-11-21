@@ -360,7 +360,15 @@ class AssembleVerifyContextTest(unittest.TestCase):
         # Arrange
         self.answers[("awawa", "show", "@TASK.B1", "--json", str(self.head_tree))] = ProcessAnswer(
             stdout=json.dumps(
-                {"fields": [{"name": "RATIONALE", "atoms": ['"drawn from the mockup https://example.org/cart"']}]}
+                {
+                    "fields": [
+                        {
+                            "name": "REFERENCE",
+                            "atoms": ['"https://example.org/cart"'],
+                            "fields": [{"name": "COVERS", "atoms": ['"its page Cart"'], "fields": []}],
+                        }
+                    ]
+                }
             )
         )
 
@@ -368,4 +376,4 @@ class AssembleVerifyContextTest(unittest.TestCase):
         document = self.assemble(Configuration())
 
         # Assert
-        self.assertEqual(document["references"][0]["url"], "https://example.org/cart")
+        self.assertEqual(document["references"][0]["reference"], "https://example.org/cart")
