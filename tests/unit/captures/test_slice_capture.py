@@ -48,14 +48,9 @@ class SliceCaptureTest(unittest.TestCase):
         slices = slice_capture(self.capture, TWO_ROWS)
 
         # Assert
-        self.assertEqual(
-            (_read_png(slices[0]), _read_png(slices[1]), _read_png(slices[2])),
-            (
-                ((2, 2, 8, 0, 0, 0, 0), b"\x00\x0a\x14\x02\x05\xfa"),
-                ((2, 2, 8, 0, 0, 0, 0), b"\x00\x10\x11\x01\x03\x04"),
-                ((2, 1, 8, 0, 0, 0, 0), b"\x00\x09\x11"),
-            ),
-        )
+        self.assertEqual(_read_png(slices[0]), ((2, 2, 8, 0, 0, 0, 0), b"\x00\x0a\x14\x02\x05\xfa"))
+        self.assertEqual(_read_png(slices[1]), ((2, 2, 8, 0, 0, 0, 0), b"\x00\x10\x11\x01\x03\x04"))
+        self.assertEqual(_read_png(slices[2]), ((2, 1, 8, 0, 0, 0, 0), b"\x00\x09\x11"))
 
     def test_should_predict_from_the_left_pixel_first_when_paeth_finds_its_neighbours_equally_close(self):
         # Arrange
@@ -76,7 +71,5 @@ class SliceCaptureTest(unittest.TestCase):
         slices = slice_capture(self.capture, TWO_ROWS)
 
         # Assert
-        self.assertEqual(
-            (slices, _read_png(slices[0])),
-            ([self.directory / "home-delivered-01.png"], ((2, 2, 8, 0, 0, 0, 0), b"\x00\x0a\x14\x02\x05\xfa")),
-        )
+        self.assertEqual(slices, [self.directory / "home-delivered-01.png"])
+        self.assertEqual(_read_png(slices[0]), ((2, 2, 8, 0, 0, 0, 0), b"\x00\x0a\x14\x02\x05\xfa"))

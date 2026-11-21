@@ -369,7 +369,4 @@ class CaptureTaskPagesTest(unittest.TestCase):
         self.capture([TIDES])
 
         # Assert
-        self.assertEqual(
-            (self.processes.requests[0].argv, self.processes.requests[1].argv),
-            (("harbour", "build"), ("harbour", "render", "tides")),
-        )
+        self.assertEqual(self.processes.list_argvs()[:2], [("harbour", "build"), ("harbour", "render", "tides")])

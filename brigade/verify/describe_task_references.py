@@ -1,3 +1,4 @@
+from itertools import count, takewhile
 from pathlib import Path
 
 URL_MARK = "://"
@@ -11,7 +12,8 @@ def _refuse(reference: str) -> str | None:
 
 
 def _list_slices(captures: Path, covers: str | None, side: str) -> list[str]:
-    return [str(sliced) for sliced in sorted(captures.glob(f"{covers}-{side}-[0-9][0-9].png"))]
+    probed = (captures / f"{covers}-{side}-{rank:02d}.png" for rank in count(1))
+    return [str(sliced) for sliced in takewhile(Path.is_file, probed)]
 
 
 def _find_captures(covers: str | None, captures: Path) -> dict | None:

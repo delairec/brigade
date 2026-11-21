@@ -121,29 +121,30 @@ class _ScreenshotFailed(Exception):
     pass
 
 
+def _request_screenshot(directory: Path, png: Path, address: str) -> ProcessRequest:
+    return ProcessRequest(
+        argv=(
+            SCREENSHOT_PROGRAM,
+            "--headless",
+            "--no-remote",
+            "--profile",
+            str(directory / PROFILE_DIRECTORY),
+            "--window-size",
+            WINDOW_WIDTH,
+            "--screenshot",
+            str(png),
+            address,
+        ),
+        cwd=str(directory),
+        timeout_s=CAPTURE_TIMEOUT_S,
+        acceptable_exit_codes=EVERY_EXIT_CODE,
+    )
+
+
 def _screenshot(runtime: Runtime, demand: CaptureDemand, html: Path, address: str) -> Path:
-    directory = demand.directory
     png = html.with_suffix(".png")
     try:
-        record = runtime.run_process(
-            ProcessRequest(
-                argv=(
-                    SCREENSHOT_PROGRAM,
-                    "--headless",
-                    "--no-remote",
-                    "--profile",
-                    str(directory / PROFILE_DIRECTORY),
-                    "--window-size",
-                    WINDOW_WIDTH,
-                    "--screenshot",
-                    str(png),
-                    address,
-                ),
-                cwd=str(directory),
-                timeout_s=CAPTURE_TIMEOUT_S,
-                acceptable_exit_codes=EVERY_EXIT_CODE,
-            )
-        )
+        record = runtime.run_process(_request_screenshot(demand.directory, png, address))
     except ToolFailure as failure:
         raise _ScreenshotFailed(str(failure)) from None
     if record.exit_code != 0:
@@ -154,12 +155,19 @@ def _screenshot(runtime: Runtime, demand: CaptureDemand, html: Path, address: st
     return png
 
 
-def _take_screenshots(runtime: Runtime, demand: CaptureDemand, delivered: Path, shown: Path, page: str) -> dict:
+@dataclass(frozen=True)
+class _PageFiles:
+    page: str
+    delivered: Path
+    shown: Path
+
+
+def _take_screenshots(runtime: Runtime, demand: CaptureDemand, files: _PageFiles) -> dict:
     create_directory(demand.directory / PROFILE_DIRECTORY)
     try:
         return {
-            "delivered": _screenshot(runtime, demand, delivered, delivered.as_uri()),
-            "reference": _screenshot(runtime, demand, shown, f"{shown.as_uri()}#{page}"),
+            "delivered": _screenshot(runtime, demand, files.delivered, files.delivered.as_uri()),
+            "reference": _screenshot(runtime, demand, files.shown, f"{files.shown.as_uri()}#{files.page}"),
         }
     finally:
         remove_directory(demand.directory / PROFILE_DIRECTORY)
@@ -177,7 +185,7 @@ def _capture_page(runtime: Runtime, rendering: _Rendering, reference: dict) -> d
     shown = demand.directory / f"{page}-reference.html"
     write_text_file(shown, _render_reference(demand, reference["reference"], page))
     try:
-        pngs = _take_screenshots(runtime, demand, delivered, shown, page)
+        pngs = _take_screenshots(runtime, demand, _PageFiles(page, delivered, shown))
     except _ScreenshotFailed as failure:
         return f"{page}: {failure}"
     return {

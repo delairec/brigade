@@ -2,6 +2,8 @@ import struct
 import zlib
 from pathlib import Path
 
+from brigade.system.write_bytes_file import write_bytes_file
+
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 CHUNK_HEAD = struct.Struct(">I4s")
 CHUNK_CHECKSUM = struct.Struct(">I")
@@ -73,11 +75,12 @@ def slice_capture(png: Path, bound: int) -> list[Path]:
         kept = [_open_slice(rows, start, pixel_bytes), *rows[start + 1 : start + bound]]
         header = HEADER.pack(width, len(kept), depth, colour, *methods)
         sliced = png.with_name(f"{png.stem}-{rank:02d}.png")
-        sliced.write_bytes(
+        write_bytes_file(
+            sliced,
             PNG_SIGNATURE
             + _write_chunk(HEADER_KIND, header)
             + _write_chunk(DATA_KIND, zlib.compress(b"".join(kept)))
-            + _write_chunk(END_KIND, b"")
+            + _write_chunk(END_KIND, b""),
         )
         slices.append(sliced)
     return slices
