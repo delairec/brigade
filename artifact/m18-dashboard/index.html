@@ -1,0 +1,2102 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Brigade Dashboard M18</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: a fixed left rail says where you are; every page opens on one sentence and what needs you, before any table.
+   Colour is reserved for state: the chrome is neutral, so a coloured mark is always something to look at. */
+:root {
+  /* surfaces and text, a slate biased towards blue */
+  --bg: #f4f6f8; --surface: #ffffff; --sunken: #eceff3; --line: #d9dee5; --line-strong: #b8c0cb;
+  --text: #171c22; --muted: #5a6573; --faint: #8893a1; --ink: #1d2733; --on-ink: #ffffff;
+  /* state tones: the six lifecycle positions of the awawa-ui palette, plus red */
+  --you: #b36b00; --work: #2f6fdb; --done: #2e8b3e; --off: #7a7a7a; --limit: #8a3fc7; --review: #138a8a; --failed: #c4372f;
+  /* type and rhythm */
+  --ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
+  --r: 3px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1216; --surface: #161b21; --sunken: #1c232b; --line: #29313b; --line-strong: #3b4653;
+    --text: #e7ebf0; --muted: #9ca8b6; --faint: #6f7b89; --ink: #e7ebf0; --on-ink: #10151a;
+    --you: #e0a04b; --work: #6fa3f7; --done: #6cc47a; --off: #8c8c8c; --limit: #b58cf0; --review: #4fc1c1; --failed: #f0796f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1216; --surface: #161b21; --sunken: #1c232b; --line: #29313b; --line-strong: #3b4653;
+  --text: #e7ebf0; --muted: #9ca8b6; --faint: #6f7b89; --ink: #e7ebf0; --on-ink: #10151a;
+  --you: #e0a04b; --work: #6fa3f7; --done: #6cc47a; --off: #8c8c8c; --limit: #b58cf0; --review: #4fc1c1; --failed: #f0796f;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font: 14px/1.5 var(--ui); }
+h1, h2, h3, h4, p, ul, ol, dl, dd, figure { margin: 0; }
+ul, ol { padding: 0; list-style: none; }
+a { color: inherit; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 2px; }
+a:hover { text-decoration-color: currentColor; }
+:focus-visible { outline: 2px solid var(--work); outline-offset: 2px; }
+code, .mono { font-family: var(--mono); font-size: 0.93em; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.faint { color: var(--faint); }
+
+/* ---- the mockup's own bar: not part of the dashboard ---- */
+.mock-bar { display: flex; flex-wrap: wrap; gap: var(--s3) var(--s5); align-items: center; padding-block: var(--s2);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--ink); color: var(--on-ink); font-size: 12.5px; }
+.mock-bar strong { font-weight: 650; letter-spacing: 0.01em; }
+.mock-bar .spacer { flex: 1 1 auto; }
+.mock-bar button { font: inherit; color: inherit; background: transparent; border: 1px solid currentColor; border-radius: var(--r); padding: 2px 10px; cursor: pointer; }
+.mock-bar button[aria-pressed="true"] { background: var(--on-ink); color: var(--ink); }
+.mock-only { border: 1px dashed var(--line-strong); border-radius: var(--r); padding: var(--s2) var(--s3); color: var(--muted); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: var(--s2) var(--s3); align-items: center; }
+.mock-only b { color: var(--text); font-weight: 600; }
+.mock-only button { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r); padding: 2px 10px; cursor: pointer; }
+.mock-only button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
+
+/* ---- shell ---- */
+.app { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 80vh; }
+.side { background: var(--surface); border-right: 1px solid var(--line); padding: var(--s4) var(--s3); display: flex; flex-direction: column; gap: var(--s4); }
+.brand { display: flex; align-items: center; gap: var(--s2); font: 650 17px/1 var(--mono); letter-spacing: -0.01em; padding: 0 var(--s2); }
+.brand svg { width: 20px; height: 20px; }
+.brand path { fill: none; stroke: var(--text); stroke-width: 2.2; stroke-linecap: square; }
+.project { display: grid; gap: var(--s1); padding: 0 var(--s2); }
+.project label, .nav h2, .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--faint); }
+.project select, .field select, .field input { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r); padding: 5px 8px; width: 100%; }
+.nav { display: grid; gap: 2px; }
+.nav h2 { padding: var(--s2) var(--s2) var(--s1); }
+.nav a { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); padding: 6px var(--s2); border-radius: var(--r); text-decoration: none; color: var(--muted); font-weight: 500; }
+.nav a:hover { background: var(--sunken); color: var(--text); }
+.nav a[aria-current="page"] { background: var(--ink); color: var(--on-ink); }
+.nav .count { font: 600 11.5px/1 var(--mono); padding: 3px 6px; border-radius: 999px; background: var(--sunken); color: var(--muted); }
+.nav a[aria-current="page"] .count { background: transparent; color: inherit; border: 1px solid currentColor; }
+.nav .count.hot { background: color-mix(in srgb, var(--you) 18%, var(--surface)); color: color-mix(in srgb, var(--you) 75%, var(--text)); }
+.nav-mock a { font-weight: 400; font-style: italic; }
+.beat { margin-top: auto; border-top: 1px solid var(--line); padding: var(--s3) var(--s2) 0; font-size: 12px; color: var(--muted); display: grid; gap: 2px; }
+.beat b { color: var(--text); font-weight: 600; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--tone, var(--off)); margin-right: 6px; }
+.main { min-width: 0; padding-block: var(--s5) var(--s7); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+@media (min-width: 900px) { .main { padding-left: max(32px, env(safe-area-inset-left, 0px)); padding-right: max(32px, env(safe-area-inset-right, 0px)); }
+  .side { padding-left: max(12px, env(safe-area-inset-left, 0px)); } }
+@media (max-width: 899px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .side { border-right: 0; border-bottom: 1px solid var(--line); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .nav { display: flex; flex-wrap: wrap; gap: 4px; }
+  .nav h2 { display: none; }
+  .beat { margin-top: 0; }
+}
+
+/* ---- page ---- */
+.page { display: grid; gap: var(--s5); }
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--s2) var(--s5); }
+.crumbs { font-size: 12.5px; color: var(--muted); margin-bottom: var(--s1); }
+h1 { font-size: 26px; line-height: 1.15; font-weight: 680; letter-spacing: -0.02em; text-wrap: balance; }
+h1 .mono { font-weight: 600; font-size: 0.86em; letter-spacing: -0.01em; }
+.lede { max-width: 68ch; color: var(--muted); font-size: 15px; margin-top: var(--s1); }
+.fresh { font-size: 12px; color: var(--faint); white-space: nowrap; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--s6); align-items: start; }
+.content { display: grid; gap: var(--s5); min-width: 0; }
+body[data-notes="off"] .cols { grid-template-columns: minmax(0, 1fr); }
+body[data-notes="off"] .notes { display: none; }
+@media (max-width: 1240px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+h2 { font-size: 16px; font-weight: 650; letter-spacing: -0.005em; }
+h3 { font-size: 13.5px; font-weight: 650; }
+.block { display: grid; gap: var(--s3); min-width: 0; }
+.block-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s1) var(--s4); }
+.block-head p { color: var(--muted); font-size: 13px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.pad { padding: var(--s4); }
+.scroll { overflow-x: auto; }
+
+/* explainer: what this is, when to use it */
+.explainer { border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+.explainer summary { cursor: pointer; padding: var(--s2) var(--s3); font-weight: 600; font-size: 13px; }
+.explainer div { padding: 0 var(--s3) var(--s3); display: grid; gap: var(--s2); max-width: 74ch; color: var(--muted); }
+.explainer b { color: var(--text); font-weight: 600; }
+
+/* status sentence */
+.verdict { display: grid; gap: var(--s1); padding: var(--s4) var(--s4) var(--s4) var(--s5); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); position: relative; }
+.verdict::before { content: ""; position: absolute; left: var(--s3); top: 21px; width: 10px; height: 10px; border-radius: 50%; background: var(--tone, var(--off)); }
+.verdict p:first-child { font-size: 19px; font-weight: 650; letter-spacing: -0.012em; line-height: 1.3; text-wrap: balance; }
+.verdict p + p { color: var(--muted); max-width: 80ch; }
+
+/* stat tiles */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.tile { background: var(--surface); padding: var(--s3) var(--s4); display: grid; gap: 2px; align-content: start; }
+.tile dt { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--faint); }
+.tile dd { font-size: 22px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.tile dd small { font-size: 12.5px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.tile .sub { font-size: 12px; color: var(--muted); }
+.tile .sub.warn { color: color-mix(in srgb, var(--you) 75%, var(--text)); }
+
+/* status pill */
+.pill { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px 1px 7px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap;
+  background: color-mix(in srgb, var(--tone) 14%, var(--surface)); color: color-mix(in srgb, var(--tone) 72%, var(--text)); }
+.pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--tone); }
+.t-wait { --tone: var(--faint); } .t-work { --tone: var(--work); } .t-review { --tone: var(--review); } .t-done { --tone: var(--done); }
+.t-you { --tone: var(--you); } .t-limit { --tone: var(--limit); } .t-failed { --tone: var(--failed); } .t-off { --tone: var(--off); }
+.pill.t-you::before { width: 7px; height: 7px; border-radius: 0; background: linear-gradient(90deg, var(--tone) 0 35%, transparent 35% 65%, var(--tone) 65%); }
+.pill.t-failed::before { border-radius: 0; transform: rotate(45deg); }
+.pill.t-off { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--tone) 60%, transparent); }
+
+/* things that need the user */
+.todo { display: grid; }
+.todo li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s2) var(--s3); align-items: start; padding: var(--s3) var(--s4); border-top: 1px solid var(--line); }
+.todo li:first-child { border-top: 0; }
+.todo .mark { width: 22px; height: 22px; border-radius: var(--r); background: color-mix(in srgb, var(--tone) 16%, var(--surface)); color: color-mix(in srgb, var(--tone) 75%, var(--text)); display: grid; place-items: center; font: 700 12px/1 var(--mono); margin-top: 1px; }
+.todo h3 { font-size: 14px; }
+.todo p { color: var(--muted); font-size: 13px; max-width: 78ch; }
+.todo .act { display: flex; flex-wrap: wrap; gap: var(--s2); justify-content: flex-end; }
+@media (max-width: 620px) { .todo li { grid-template-columns: auto minmax(0, 1fr); } .todo .act { grid-column: 2; justify-content: flex-start; } }
+.btn { font: 600 12.5px/1 var(--ui); padding: 7px 12px; border-radius: var(--r); border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); cursor: pointer; text-decoration: none; white-space: nowrap; }
+.btn:hover { border-color: var(--text); }
+.btn-primary { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+.cmd { font: 12px/1.4 var(--mono); background: var(--sunken); border: 1px solid var(--line); border-radius: var(--r); padding: 3px 7px; white-space: nowrap; user-select: all; }
+
+/* tables */
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); padding: var(--s2) var(--s3); border-bottom: 1px solid var(--line-strong); white-space: nowrap; }
+.tbl td { padding: 7px var(--s3); border-bottom: 1px solid var(--line); vertical-align: top; }
+.tbl tr:last-child td { border-bottom: 0; }
+.tbl tbody tr:hover td { background: color-mix(in srgb, var(--sunken) 60%, var(--surface)); }
+.tbl .num, .tbl th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tbl .wide { min-width: 220px; }
+.tbl .flag { color: color-mix(in srgb, var(--you) 75%, var(--text)); font-weight: 600; }
+.tbl tr.attn td:first-child { box-shadow: inset 2px 0 0 var(--failed); }
+.cap { font-size: 12px; color: var(--muted); padding: var(--s2) var(--s3); border-top: 1px solid var(--line); }
+
+/* empty state */
+.empty { border: 1px dashed var(--line-strong); border-radius: var(--r); padding: var(--s5) var(--s4); display: grid; gap: var(--s1); justify-items: start; }
+.empty h3 { font-size: 14px; }
+.empty p { color: var(--muted); max-width: 66ch; font-size: 13px; }
+
+/* callouts */
+.callout { border: 1px solid color-mix(in srgb, var(--tone) 40%, var(--line)); background: color-mix(in srgb, var(--tone) 7%, var(--surface)); border-radius: var(--r); padding: var(--s3) var(--s4); display: grid; gap: var(--s1); }
+.callout h3 { color: color-mix(in srgb, var(--tone) 70%, var(--text)); }
+.callout p { max-width: 86ch; }
+
+/* filter chips */
+.chips { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; }
+.chip { font: 500 12.5px/1 var(--ui); padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--muted); text-decoration: none; white-space: nowrap; }
+.chip[aria-current="true"] { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+.chip b { font-weight: 650; font-variant-numeric: tabular-nums; }
+
+/* marks drawn by the server as inline SVG: geometry in attributes, colour by class, no inline style */
+svg.bar { display: block; width: 100%; height: 8px; }
+svg.bar.tall { height: 14px; }
+.g-track { fill: var(--sunken); } .g-wait { fill: var(--faint); } .g-work { fill: var(--work); } .g-review { fill: var(--review); } .g-done { fill: var(--done); }
+.g-you { fill: var(--you); } .g-limit { fill: var(--limit); } .g-failed { fill: var(--failed); } .g-off { fill: var(--off); } .g-ink { fill: var(--text); }
+.g-line { stroke: var(--line-strong); stroke-width: 1; fill: none; } .g-grid { stroke: var(--line); stroke-width: 1; fill: none; }
+.g-text { fill: var(--muted); font: 11px var(--ui); } .g-label { fill: var(--text); font: 600 11.5px var(--mono); }
+.s-work { stroke: var(--work); } .s-you { stroke: var(--you); } .s-done { stroke: var(--done); } .s-limit { stroke: var(--limit); } .s-muted { stroke: var(--faint); }
+.s-2 { stroke-width: 2; fill: none; } .s-dash { stroke-dasharray: 3 3; stroke-width: 1; fill: none; }
+figure.chart { display: grid; gap: var(--s2); }
+figure.chart svg { width: 100%; height: auto; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s4); font-size: 12px; color: var(--muted); }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--tone); margin-right: 6px; vertical-align: -1px; }
+.legend .soft::before { opacity: 0.45; }
+
+/* segment strip of a run */
+.segs { display: inline-flex; gap: 2px; vertical-align: middle; }
+.segs i { width: 14px; height: 10px; border-radius: 2px; background: var(--tone); display: block; }
+.segs i.t-wait { opacity: 0.55; }
+
+/* key/value header of a detail page */
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--s3) var(--s5); }
+.kv dt { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--faint); }
+.kv dd { overflow-wrap: anywhere; }
+
+/* prose lists of a report or a progress file */
+.lines { display: grid; }
+.lines li { padding: var(--s2) var(--s4); border-top: 1px solid var(--line); max-width: 100%; }
+.lines li:first-child { border-top: 0; }
+.lines li p { max-width: 92ch; }
+.lines .tag { font: 600 11px/1 var(--mono); color: var(--faint); letter-spacing: 0.03em; text-transform: uppercase; margin-right: var(--s2); }
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--s4); }
+.steps { counter-reset: step; display: grid; }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: var(--s2); padding: var(--s2) var(--s4); border-top: 1px solid var(--line); }
+.steps li:first-child { border-top: 0; }
+.steps li::before { content: counter(step); font: 600 12px/1.7 var(--mono); color: var(--faint); text-align: right; }
+details.fold > summary { cursor: pointer; padding: var(--s2) var(--s4); font-weight: 600; font-size: 13px; }
+details.fold > summary span { font-weight: 400; color: var(--muted); }
+details.fold { border-top: 1px solid var(--line); }
+details.fold:first-child { border-top: 0; }
+
+/* awawa tab */
+.toolbar { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s3); align-items: center; }
+.tabs { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--r); overflow: hidden; }
+.tabs button { font: 600 12.5px/1 var(--ui); padding: 7px 12px; border: 0; border-left: 1px solid var(--line-strong); background: var(--surface); color: var(--muted); cursor: pointer; }
+.tabs button:first-child { border-left: 0; }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--on-ink); }
+.field { display: inline-flex; align-items: center; gap: var(--s2); font-size: 12.5px; color: var(--muted); }
+.field select, .field input { width: auto; padding: 4px 8px; }
+.field input[type="search"] { min-width: 0; width: 240px; max-width: 100%; }
+.banner { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s3); align-items: baseline; padding: var(--s2) var(--s3); background: var(--sunken); border-radius: var(--r); font-size: 12.5px; color: var(--muted); }
+.banner b { color: var(--text); }
+.tree { font-size: 13px; }
+.tree details > summary { cursor: pointer; padding: 4px var(--s3); display: flex; gap: var(--s2); align-items: baseline; }
+.tree details > summary:hover { background: var(--sunken); }
+.tree .type > summary { font-weight: 650; }
+.tree .type > summary small, .tree .group > summary small { font-weight: 400; color: var(--faint); font-variant-numeric: tabular-nums; }
+.tree .group { margin-left: var(--s4); }
+.tree .group > summary { font-weight: 600; color: color-mix(in srgb, var(--tone, var(--muted)) 78%, var(--text)); }
+.ent { display: flex; flex-wrap: wrap; gap: 2px var(--s3); align-items: baseline; padding: 3px var(--s3) 3px 34px; }
+.tree .ent:hover, .ent[aria-selected="true"] { background: var(--sunken); }
+.ent .code { font: 500 12px var(--mono); color: var(--faint); min-width: 38px; }
+.ent .label { flex: 0 1 62ch; min-width: 0; text-decoration: none; }
+.ent .facts { color: var(--muted); font-size: 12.5px; }
+.ent .facts i { font-style: normal; color: var(--faint); }
+.ent .wait { font: 700 9px/1 var(--mono); color: var(--faint); letter-spacing: 1px; margin-left: -16px; width: 12px; }
+.ref::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--tone, transparent); margin-right: 4px; }
+.life-1 { --tone: var(--you); } .life-2 { --tone: var(--work); } .life-3 { --tone: var(--done); } .life-4 { --tone: var(--off); } .life-5 { --tone: var(--limit); } .life-6 { --tone: var(--review); }
+.board { display: flex; gap: var(--s3); overflow-x: auto; padding-bottom: var(--s2); align-items: flex-start; }
+.lane { flex: 0 0 240px; background: var(--sunken); border-radius: var(--r); padding: var(--s2); display: grid; gap: var(--s2); }
+.lane h3 { color: color-mix(in srgb, var(--tone, var(--muted)) 78%, var(--text)); padding: 2px var(--s1); }
+.lane h3 small { color: var(--faint); font-weight: 500; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: var(--s2); display: grid; gap: 2px; font-size: 12.5px; }
+.card .code { font: 500 11.5px var(--mono); color: var(--faint); }
+.card .facts { color: var(--muted); font-size: 12px; }
+.lane .more { font-size: 12px; color: var(--faint); padding: 0 var(--s1); }
+.deps { font-size: 13px; }
+.deps ul ul { margin-left: var(--s4); border-left: 1px solid var(--line); }
+.deps .ent { padding-left: var(--s3); }
+.deps .ent .wait { margin-left: 0; }
+.drawer { display: grid; gap: var(--s3); }
+.drawer dl { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 2px var(--s3); font-size: 12.5px; }
+.drawer dt { font: 600 11px/1.9 var(--mono); color: var(--faint); }
+.drawer dd { overflow-wrap: anywhere; }
+.two { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: var(--s4); align-items: start; }
+@media (max-width: 1000px) { .two { grid-template-columns: minmax(0, 1fr); } }
+
+/* design notes: the mockup's annotations, toggled from the top bar */
+.notes { border: 1px dashed var(--line-strong); border-radius: var(--r); padding: var(--s4); display: grid; gap: var(--s3); font-size: 12.5px; background: color-mix(in srgb, var(--surface) 55%, var(--bg)); }
+.notes > h2 { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); font-weight: 650; }
+.notes h3 { font-size: 12.5px; }
+.notes ul { display: grid; gap: 3px; }
+.notes li { padding-left: 12px; position: relative; color: var(--muted); }
+.notes li::before { content: ""; position: absolute; left: 1px; top: 8px; width: 4px; height: 4px; background: var(--faint); }
+.notes p { color: var(--muted); }
+.notes b { color: var(--text); font-weight: 600; }
+.notes .new { color: color-mix(in srgb, var(--limit) 72%, var(--text)); font-weight: 600; }
+.new-tag { font: 600 10px/1 var(--mono); letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 5px; border-radius: 2px; border: 1px dashed var(--limit); color: color-mix(in srgb, var(--limit) 72%, var(--text)); vertical-align: 1px; white-space: nowrap; }
+
+/* foundation specimens */
+.swatches { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--s3); }
+.swatch { display: grid; gap: var(--s1); font-size: 12px; }
+.swatch i { height: 34px; border-radius: var(--r); background: var(--tone); border: 1px solid var(--line); display: block; }
+.swatch b { font-weight: 600; }
+.row { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s3); align-items: center; }
+.scale p { margin-bottom: var(--s1); }
+.t26 { font-size: 26px; font-weight: 680; letter-spacing: -0.02em; line-height: 1.15; } .t19 { font-size: 19px; font-weight: 650; letter-spacing: -0.012em; }
+.t16 { font-size: 16px; font-weight: 650; } .t14 { font-size: 14px; } .t13 { font-size: 13px; } .t11 { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--faint); }
+.spacebar { display: flex; gap: var(--s3); align-items: flex-end; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
+.spacebar span { display: grid; gap: 4px; justify-items: center; }
+.spacebar i { display: block; background: var(--text); height: 10px; }
+.w4 { width: 4px; } .w8 { width: 8px; } .w12 { width: 12px; } .w16 { width: 16px; } .w24 { width: 24px; } .w32 { width: 32px; } .w48 { width: 48px; }
+.multiples { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--s3) var(--s5); }
+.multiples svg { width: 100%; height: auto; display: block; }
+.steps li > div { display: grid; gap: var(--s1); max-width: 96ch; }
+@media (prefers-reduced-motion: no-preference) { .nav a, .btn, .chip { transition: background-color 0.12s, border-color 0.12s, color 0.12s; } }
+</style>
+
+<div class="mock-bar">
+  <strong>Brigade dashboard · mockup for milestone M18</strong>
+  <span>Real data of this machine, read 2026-11-18 around 20:42Z</span>
+  <span class="spacer"></span>
+  <button type="button" id="notes-toggle" aria-pressed="true">Design notes</button>
+</div>
+
+<div class="app">
+  <nav class="side" aria-label="Dashboard">
+    <a class="brand" href="#home" aria-label="brigade, home">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6l7-3 7 3M3 11l7-3 7 3M3 16l7-3 7 3"/></svg>
+      brigade
+    </a>
+    <div class="project">
+      <label for="project">Project</label>
+      <select id="project">
+        <option>All projects (1)</option>
+        <option selected>brigade</option>
+      </select>
+    </div>
+    <div class="nav">
+      <h2>Operate</h2>
+      <a href="#home" data-nav="home">Home</a>
+      <a href="#waves" data-nav="waves wave">Waves <span class="count num">0 open</span></a>
+      <a href="#runs" data-nav="runs run">Runs <span class="count num">0 live</span></a>
+      <a href="#inbox" data-nav="inbox">Inbox <span class="count hot num">32</span></a>
+      <h2>Understand</h2>
+      <a href="#ledger" data-nav="ledger">Ledger</a>
+      <a href="#reports" data-nav="reports report">Reports <span class="count num">29</span></a>
+      <h2 id="addon-head">Addons</h2>
+      <a href="#awawa" data-nav="awawa" id="addon-link">awawa <span class="count num">499</span></a>
+    </div>
+    <div class="nav nav-mock">
+      <h2>Mockup only</h2>
+      <a href="#foundation" data-nav="foundation">Foundation</a>
+      <a href="#plan" data-nav="plan">Plan and rulings</a>
+    </div>
+    <div class="beat">
+      <span><span class="dot t-done"></span><b>Tick alive</b></span>
+      <span class="num">last 20:40:17Z · 28.6 s · 2 actions</span>
+      <span>systemd timer, every 5 min</span>
+    </div>
+  </nav>
+
+  <main class="main">
+
+<!-- ============================== HOME ============================== -->
+<section class="page" id="home" data-page>
+  <header class="page-head">
+    <div>
+      <h1>Home</h1>
+      <p class="lede">Whether brigade is working, what waits for you, and what it will do next.</p>
+    </div>
+    <p class="fresh num">read 20:42:29Z · refreshes every 5 s</p>
+  </header>
+  <div class="cols">
+    <div class="content">
+      <div class="mock-only">
+        <b>Mockup state</b>
+        <button type="button" data-home="now" aria-pressed="true">Now · idle</button>
+        <button type="button" data-home="parked" aria-pressed="false">Replay 01:07Z · wave parked</button>
+        <button type="button" data-home="work" aria-pressed="false">Replay 03:30Z · wave at work</button>
+        <span>The replays rebuild the top of the page from the ledger events of brigade_w57.</span>
+      </div>
+
+      <!-- now -->
+      <div class="content" data-home-state="now">
+        <div class="verdict t-you">
+          <p>Brigade is idle, and three things wait for you.</p>
+          <p>No wave is open and no run is live. The last wave, <a class="mono" href="#wave">brigade_w57</a>, closed today at 05:50Z with its 4 tasks merged, and milestone M13 reached main. The tick is healthy.</p>
+        </div>
+        <dl class="tiles">
+          <div class="tile"><dt>Open waves</dt><dd>0</dd><span class="sub">last closed 05:50Z</span></div>
+          <div class="tile"><dt>Live runs</dt><dd>0</dd><span class="sub">1 dead run kept</span></div>
+          <div class="tile"><dt>Waiting for you</dt><dd>3</dd><span class="sub warn">oldest since 17 d</span></div>
+          <div class="tile"><dt>Quota, last 5 h</dt><dd>0 <small>tokens</small></dd><span class="sub">no wave blocked</span></div>
+        </dl>
+
+        <section class="block">
+          <div class="block-head"><h2>Needs you</h2><p>What stays stopped until you act, most blocking first.</p></div>
+          <ul class="panel todo">
+            <li class="t-you"><span class="mark">?</span>
+              <div><h3>32 proposed patterns wait for a decision</h3>
+                <p>They cover 32 of the 34 new signals; the oldest signal is 17 days old. One finding, branches left behind after a merge, is proposed 6 times because the first proposal was never decided.</p></div>
+              <div class="act"><a class="btn btn-primary" href="#inbox">Decide in the inbox</a></div></li>
+            <li class="t-you"><span class="mark">II</span>
+              <div><h3>2 scans are parked: <span class="mono">stale_branches_brigade</span>, <span class="mono">worktrees_brigade</span></h3>
+                <p>Their last run, on 2026-11-12, stopped at a failed step. A parked study is never due again until that run is resumed.</p></div>
+              <div class="act"><code class="cmd">brigade study run stale_branches_brigade</code></div></li>
+            <li class="t-wait"><span class="mark">~</span>
+              <div><h3>2 stall signals name tasks that merged since</h3>
+                <p>B91 and B144 of brigade_w57 were signalled stalled on their last action of 01:00:01Z; both merged before the wave closed at 05:50:29Z.</p></div>
+              <div class="act"><a class="btn" href="#inbox">Review</a></div></li>
+          </ul>
+        </section>
+
+        <section class="block">
+          <div class="block-head"><h2>At work</h2><p>Open waves and live runs.</p></div>
+          <div class="empty">
+            <h3>No wave is open</h3>
+            <p>A wave starts by itself at a tick once a ratified task is ready: its milestone is active and everything it comes after is delivered. The next tick has no candidate wave and no milestone branch to cut.</p>
+          </div>
+        </section>
+
+        <section class="block">
+          <div class="block-head"><h2>Last 24 hours</h2><p>Since 2026-11-17 20:55Z.</p></div>
+          <ul class="panel lines">
+            <li><p><b class="num">1</b> wave started and closed: <a class="mono" href="#wave">brigade_w57</a>, parked twice on the forge account for 8 min 22 s in all.</p></li>
+            <li><p><b class="num">4</b> pull requests opened, <b class="num">4</b> merged, after <b class="num">9</b> review verdicts.</p></li>
+            <li><p><b class="num">1</b> milestone reported and its pull request opened: <a href="#report">the report of M13</a>.</p></li>
+            <li><p><b class="num">24</b> run segments finished: 19 done, 3 handed over, 2 cut at the wall-time limit. <a href="#runs">See the runs</a>.</p></li>
+            <li><p><span class="pill t-failed">31 tick actions failed</span> where the days before held 1 or 2. <a href="#ledger">See the ledger</a>.</p></li>
+          </ul>
+        </section>
+
+        <section class="block">
+          <div class="block-head"><h2>Routine</h2><p>The studies that are due or stopped, and the scans holding new signals.</p></div>
+          <div class="panel scroll">
+            <table class="tbl">
+              <thead><tr><th>Study</th><th>Every</th><th>Last run</th><th>Outcome</th><th>Now</th><th class="num">New signals</th></tr></thead>
+              <tbody>
+                <tr><td class="mono">mine_transcripts</td><td class="mono">mon@09:00</td><td class="num">2026-11-16 08:00Z</td><td><span class="pill t-done">done</span></td><td>due, runs at the next tick</td><td class="num">–</td></tr>
+                <tr><td class="mono">stale_branches_brigade</td><td class="mono">24h</td><td class="num">2026-11-12 16:35Z</td><td><span class="pill t-you">parked</span></td><td>waits for <code class="cmd">brigade study run</code></td><td class="num">23 · oldest 17 d</td></tr>
+                <tr><td class="mono">worktrees_brigade</td><td class="mono">24h</td><td class="num">2026-11-12 16:35Z</td><td><span class="pill t-you">parked</span></td><td>waits for <code class="cmd">brigade study run</code></td><td class="num">8 · oldest 15 d</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="block">
+          <div class="block-head"><h2>Projects</h2></div>
+          <div class="panel scroll">
+            <table class="tbl">
+              <thead><tr><th>Project</th><th>State</th><th>Forge</th><th class="num">Open waves</th><th>Corpus</th><th></th></tr></thead>
+              <tbody>
+                <tr><td class="mono">brigade</td><td><span class="pill t-done">active</span></td><td>github · <span class="mono">delairec/brigade</span></td><td class="num">0</td><td><a href="#awawa">awawa · 499 entities</a></td><td class="num"><button class="btn" type="button">Pause</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- replay: parked -->
+      <div class="content" data-home-state="parked" hidden>
+        <div class="verdict t-you">
+          <p>Brigade is stopped: wave brigade_w57 is parked and waits for you.</p>
+          <p>The forge account could not be reached. Nothing of this wave runs until it is resumed; a parked wave never resumes by itself.</p>
+        </div>
+        <dl class="tiles">
+          <div class="tile"><dt>Open waves</dt><dd>1</dd><span class="sub warn">1 parked</span></div>
+          <div class="tile"><dt>Live runs</dt><dd>0</dd><span class="sub">4 tasks queued</span></div>
+          <div class="tile"><dt>Waiting for you</dt><dd>1</dd><span class="sub warn">it stops a wave</span></div>
+          <div class="tile"><dt>Parked since</dt><dd>01:05:29Z</dd><span class="sub">1 min 31 s ago</span></div>
+        </dl>
+        <section class="block">
+          <div class="block-head"><h2>Needs you</h2><p>What stays stopped until you act, most blocking first.</p></div>
+          <ul class="panel todo">
+            <li class="t-you"><span class="mark">II</span>
+              <div><h3>Wave <a class="mono" href="#wave">brigade_w57</a> is parked on <span class="mono">forge_account</span></h3>
+                <p>Parked at 01:05:29Z, for the second time since it started at 01:00:01Z. Check that the machine account answers on the forge, then resume: the next tick launches its 4 queued tasks.</p></div>
+              <div class="act"><button class="btn btn-primary" type="button">Resume the wave</button></div></li>
+          </ul>
+          <p class="muted">The inbox and study items of today are left out of this replay.</p>
+        </section>
+        <section class="block">
+          <div class="block-head"><h2>At work</h2><p>Open waves and live runs.</p></div>
+          <div class="panel scroll">
+            <table class="tbl">
+              <thead><tr><th>Wave</th><th>State</th><th class="wide">Tasks</th><th>Why nothing runs <span class="new-tag">B178</span></th></tr></thead>
+              <tbody>
+                <tr><td><a class="mono" href="#wave">brigade_w57</a><br><span class="muted">brigade · started 01:00:01Z</span></td>
+                  <td><span class="pill t-you">parked</span></td>
+                  <td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="4 tasks queued"><rect class="g-track" width="100" height="8"/></svg>
+                    <span class="muted num">0 of 4 merged · 4 queued</span></td>
+                  <td>B91, B144, B231, B241: their wave is parked, <span class="mono">forge_account</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- replay: at work -->
+      <div class="content" data-home-state="work" hidden>
+        <div class="verdict t-work">
+          <p>Brigade is working: wave brigade_w57 is half done and one run is live.</p>
+          <p>2 of its 4 tasks are merged, the other 2 are in review. Nothing stops it.</p>
+        </div>
+        <dl class="tiles">
+          <div class="tile"><dt>Open waves</dt><dd>1</dd><span class="sub">running for 2 h 30 min</span></div>
+          <div class="tile"><dt>Live runs</dt><dd>1</dd><span class="sub">rebase of B144</span></div>
+          <div class="tile"><dt>Waiting for you</dt><dd>0</dd><span class="sub">in this wave</span></div>
+          <div class="tile"><dt>Merged in this wave</dt><dd>2 <small>of 4</small></dd><span class="sub">#441, #442</span></div>
+        </dl>
+        <section class="block">
+          <div class="block-head"><h2>At work</h2><p>Open waves and live runs.</p></div>
+          <div class="panel scroll">
+            <table class="tbl">
+              <thead><tr><th>Wave</th><th>State</th><th class="wide">Tasks</th><th>Live run</th></tr></thead>
+              <tbody>
+                <tr><td><a class="mono" href="#wave">brigade_w57</a><br><span class="muted">brigade · started 01:00:01Z</span></td>
+                  <td><span class="pill t-work">running</span></td>
+                  <td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="2 merged, 2 in review"><rect class="g-track" width="100" height="8"/><rect class="g-done" width="49" height="8"/><rect class="g-review" x="50" width="50" height="8"/></svg>
+                    <span class="muted num">2 merged · 2 in review (B91 round 2, B144 round 1)</span></td>
+                  <td><a class="mono" href="#run">…032529Z-44ec15</a><br><span class="muted">rebase-on-base · rebaser · B144 · 4 min 31 s</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section class="block">
+          <div class="block-head"><h2>Needs you</h2></div>
+          <div class="empty">
+            <h3>Nothing needs you</h3>
+            <p>Brigade asks here when a wave or a task is parked, when a milestone waits for your merge, or when a pattern is proposed. The inbox and study items of today are left out of this replay.</p>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <aside class="notes">
+      <h2>Design notes · Home</h2>
+      <h3>1. What it is for</h3>
+      <p>One look tells whether brigade works, whether it waits for the user, and what comes next. Today the page lists seven sections of equal weight and the user must read them all to learn that nothing is wrong.</p>
+      <h3>2. Questions, in order</h3>
+      <ul>
+        <li><b>Is it alive?</b> The tick heartbeat, in the rail on every page.</li>
+        <li><b>Does anything wait for me?</b> One list, sorted by what it stops: a parked wave, a parked task, a milestone to merge, a parked study or order, patterns to decide.</li>
+        <li><b>What is it doing?</b> Open waves with their tasks by state, live runs.</li>
+        <li><b>What happened while I was away?</b> The last 24 hours.</li>
+        <li><b>Is the quota a problem?</b> One tile; a blocked wave shows its resume time.</li>
+      </ul>
+      <h3>3. Analysis computed</h3>
+      <ul>
+        <li>The status sentence: stopped, working or idle, from open waves, halts and live runs.</li>
+        <li>The count and the age of what waits; a stall signal whose task merged since is named stale.</li>
+        <li>The day's failed tick actions against the days before.</li>
+      </ul>
+      <h3>4. Highlight</h3>
+      <ul>
+        <li>Sentence first, four tiles, then the list with one call to action per row. Amber means "your move" and appears nowhere else.</li>
+        <li>An idle page says why nothing runs, instead of showing empty lists.</li>
+      </ul>
+      <h3>5. Navigation</h3>
+      <ul><li>Wave name → wave. Run → run. Inbox items → inbox. Milestone → its report. Project → awawa tab.</li></ul>
+      <h3>Reads</h3>
+      <ul>
+        <li><code>brigade status --json</code>: projects, open waves with <code>halt</code>, inbox, quota, last tick, studies, orders.</li>
+        <li><code>brigade scheduler status --json</code>: the timer, <code>stale</code>, halted waves, parked tasks.</li>
+        <li><code>brigade ledger --since 1d --json</code>: the last 24 hours.</li>
+        <li><code>brigade inbox list --json</code>: patterns and stall signals.</li>
+      </ul>
+      <h3>Needs</h3>
+      <ul>
+        <li><span class="new">status --json</span>: the tasks by state of each open wave, the live runs, and the milestone pull requests waiting for the user's merge.</li>
+        <li><span class="new">tick --dry-run --json</span>: the name of each decision. Today the two decisions read <code>{"project": "brigade"}</code>, so "next tick" cannot be told.</li>
+        <li>B178 gives the cause of each task not launched.</li>
+      </ul>
+    </aside>
+  </div>
+</section>
+
+<!-- ============================== WAVES ============================== -->
+<section class="page" id="waves" data-page hidden>
+  <header class="page-head">
+    <div>
+      <h1>Waves</h1>
+      <p class="lede">A wave is a batch of ratified tasks brigade delivers unattended, one branch and one pull request per task.</p>
+    </div>
+    <p class="fresh num">read 20:42:29Z · refreshes every 5 s</p>
+  </header>
+  <div class="cols">
+    <div class="content">
+      <details class="explainer">
+        <summary>How to read this page</summary>
+        <div>
+          <p>The tick composes a wave by itself from the tasks that are ready, runs each task through build, checks and review, and merges it. A wave is <b>open</b> until each of its tasks is merged or parked.</p>
+          <p>A wave that stops is either <b>blocked</b>, on the quota, and resumes by itself at the time shown, or <b>parked</b>, and waits for you. A task parked in a closed wave is served again by a later wave.</p>
+          <p>Come here to see what is open, why a wave waits, and how the last ones ended.</p>
+        </div>
+      </details>
+      <dl class="tiles">
+        <div class="tile"><dt>Open now</dt><dd>0</dd><span class="sub">0 parked · 0 blocked</span></div>
+        <div class="tile"><dt>Started since 2026-10-07</dt><dd>57</dd><span class="sub">11 in October · 46 in November</span></div>
+        <div class="tile"><dt>Closed</dt><dd>53</dd><span class="sub">4 cancelled</span></div>
+        <div class="tile"><dt>Last 12 waves</dt><dd>25 <small>of 44 tasks merged</small></dd><span class="sub warn">6 waves merged nothing</span></div>
+      </dl>
+      <div class="chips" aria-label="Filter by state">
+        <a class="chip" href="#waves" aria-current="true">All <b>57</b></a>
+        <a class="chip" href="#waves">Open <b>0</b></a>
+        <a class="chip" href="#waves">Blocked <b>0</b></a>
+        <a class="chip" href="#waves">Parked <b>0</b></a>
+        <a class="chip" href="#waves">Ended <b>57</b></a>
+        <span class="new-tag">B263 · wave list --state</span>
+      </div>
+      <div class="panel scroll">
+        <table class="tbl">
+          <thead><tr><th>Wave</th><th>State</th><th>Started</th><th class="num">Lasted</th><th class="wide">Tasks</th><th class="num">Most rounds</th><th class="num">Cost</th></tr></thead>
+          <tbody>
+            <tr><td><a class="mono" href="#wave">brigade_w57</a></td><td><span class="pill t-done">closed</span></td><td class="num">11-18 01:00Z</td><td class="num">4 h 50 min</td>
+              <td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="4 of 4 merged"><rect class="g-done" width="100" height="8"/></svg><span class="muted num">4 of 4 merged</span></td><td class="num flag">3</td><td class="num">41.28 USD</td></tr>
+            <tr><td><span class="mono">brigade_w56</span></td><td><span class="pill t-done">closed</span></td><td class="num">11-16 01:30Z</td><td class="num flag">39 h 09 min</td>
+              <td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="12 of 12 merged"><rect class="g-done" width="100" height="8"/></svg><span class="muted num">12 of 12 merged · 5 parks on the way</span></td><td class="num flag">4</td><td class="num muted">not recorded</td></tr>
+            <tr><td><span class="mono">brigade_w55</span></td><td><span class="pill t-off">cancelled</span></td><td class="num">11-15 22:10Z</td><td class="num">1 h 53 min</td>
+              <td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="1 merged, 1 parked, 11 never started"><rect class="g-track" width="100" height="8"/><rect class="g-done" width="7" height="8"/><rect class="g-you" x="8" width="7" height="8"/></svg><span class="muted num">1 of 13 merged · 1 parked · 11 never started</span></td><td class="num">1</td><td class="num muted">not recorded</td></tr>
+            <tr><td><span class="mono">brigade_w54</span></td><td><span class="pill t-done">closed</span></td><td class="num">11-15 16:40Z</td><td class="num">1 h 15 min</td>
+              <td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="1 of 1 merged"><rect class="g-done" width="100" height="8"/></svg><span class="muted num">1 of 1 merged · B248, 4th wave</span></td><td class="num">2</td><td class="num muted">not recorded</td></tr>
+            <tr><td><span class="mono">brigade_w53</span></td><td><span class="pill t-off">cancelled</span></td><td class="num">11-14 17:35Z</td><td class="num">23 h 03 min</td>
+              <td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="1 task left in review"><rect class="g-review" width="100" height="8"/></svg><span class="muted num">0 of 1 merged · B248 left verifying</span></td><td class="num">–</td><td class="num muted">not recorded</td></tr>
+            <tr><td><span class="mono">brigade_w52</span></td><td><span class="pill t-done">closed</span></td><td class="num">11-14 15:20Z</td><td class="num">24 h 59 min</td>
+              <td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="1 task left with its pull request open"><rect class="g-review" width="100" height="8"/></svg><span class="muted num">0 of 1 merged · B248 left pr_open</span></td><td class="num">–</td><td class="num muted">not recorded</td></tr>
+            <tr><td><span class="mono">brigade_w51</span></td><td><span class="pill t-done">closed</span></td><td class="num">11-14 10:30Z</td><td class="num">4 h 50 min</td>
+              <td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="6 merged, 1 parked"><rect class="g-done" width="85" height="8"/><rect class="g-you" x="86" width="14" height="8"/></svg><span class="muted num">6 of 7 merged · B248 parked</span></td><td class="num flag">3</td><td class="num muted">not recorded</td></tr>
+            <tr><td><span class="mono">brigade_w50</span></td><td><span class="pill t-done">closed</span></td><td class="num">11-11 18:40Z</td><td class="num">1 h 44 min</td>
+              <td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="1 of 1 merged"><rect class="g-done" width="100" height="8"/></svg><span class="muted num">1 of 1 merged · B177, 5th wave</span></td><td class="num">1</td><td class="num muted">not recorded</td></tr>
+            <tr><td><span class="mono">brigade_w49</span></td><td><span class="pill t-done">closed</span></td><td class="num">11-10 16:32Z</td><td class="num">8 min</td>
+              <td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="1 parked"><rect class="g-you" width="100" height="8"/></svg><span class="muted num">0 of 1 merged · B177 parked</span></td><td class="num">–</td><td class="num muted">not recorded</td></tr>
+            <tr><td><span class="mono">brigade_w48</span></td><td><span class="pill t-done">closed</span></td><td class="num">11-09 01:35Z</td><td class="num flag">38 h 58 min</td>
+              <td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="1 parked"><rect class="g-you" width="100" height="8"/></svg><span class="muted num">0 of 1 merged · B177 parked</span></td><td class="num">–</td><td class="num muted">not recorded</td></tr>
+            <tr><td><span class="mono">brigade_w47</span></td><td><span class="pill t-done">closed</span></td><td class="num">11-09 01:30Z</td><td class="num">4 min</td>
+              <td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="1 parked"><rect class="g-you" width="100" height="8"/></svg><span class="muted num">0 of 1 merged · B177 parked</span></td><td class="num">–</td><td class="num muted">not recorded</td></tr>
+            <tr><td><span class="mono">brigade_w46</span></td><td><span class="pill t-done">closed</span></td><td class="num">11-09 01:25Z</td><td class="num">6 min</td>
+              <td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="1 parked"><rect class="g-you" width="100" height="8"/></svg><span class="muted num">0 of 1 merged · B177 parked</span></td><td class="num">–</td><td class="num muted">not recorded</td></tr>
+          </tbody>
+        </table>
+        <p class="cap">12 of 57 waves shown in the mockup, the newest first. "Closed" says the wave ended, not that it delivered: the task bar does.</p>
+      </div>
+      <div class="callout t-you">
+        <h3>Two tasks were served again and again</h3>
+        <p>B177 went through 5 waves in a row, brigade_w46 to brigade_w50, parked four times before it merged; B248 through 4, brigade_w51 to brigade_w54. A task that comes back in three waves is named here with the reason of its last park.</p>
+      </div>
+    </div>
+    <aside class="notes">
+      <h2>Design notes · Waves</h2>
+      <h3>1. What it is for</h3>
+      <p>Which waves are open, why one waits, and how the past ones ended. The current table gives a name, a branch and a raw event name.</p>
+      <h3>2. Questions, in order</h3>
+      <ul>
+        <li><b>Is a wave open, and is it stopped?</b> Open and halted waves come first with the reason and the resume time (B178).</li>
+        <li><b>Did the last waves deliver?</b> The task bar: merged, parked, left in review, never started.</li>
+        <li><b>How long and how much?</b> Wall time, most review rounds, cost.</li>
+      </ul>
+      <h3>3. Analysis computed</h3>
+      <ul>
+        <li>The state of a wave from its last event and its halt, in the user's words: open, blocked, parked, closed, cancelled.</li>
+        <li>Delivery rate over the waves shown; the waves that merged nothing.</li>
+        <li>Tasks served by three waves or more: the sign of a task brigade cannot finish alone.</li>
+        <li>Outliers flagged: a wall time over a day, three review rounds or more.</li>
+      </ul>
+      <h3>4. Highlight</h3>
+      <ul>
+        <li>State pill plus a stacked task bar per row; a closed wave of parked tasks reads amber at a glance.</li>
+        <li>Empty state of the open filter: why no wave is open, as on Home.</li>
+      </ul>
+      <h3>5. Navigation</h3>
+      <ul><li>Row → wave. Task named in a row → its entity in the awawa tab. Home and Ledger link here.</li></ul>
+      <h3>Reads</h3>
+      <ul><li><code>brigade wave list --json</code>, and <code>--state</code> once B263 lands.</li><li><code>brigade ledger --json</code>: waves started by month.</li></ul>
+      <h3>Needs</h3>
+      <ul><li><span class="new">wave list --json</span> carries for each wave <code>started_at</code>, <code>ended_at</code>, its tasks with their last state, <code>halt</code> as B178 shapes it, the most rounds and <code>cost_usd</code>. The mockup read them with one <code>wave show --events</code> per wave, too slow for a poll.</li></ul>
+    </aside>
+  </div>
+</section>
+
+<!-- ============================== WAVE ============================== -->
+<section class="page" id="wave" data-page hidden>
+  <header class="page-head">
+    <div>
+      <p class="crumbs"><a href="#waves">Waves</a> / brigade</p>
+      <h1>Wave <span class="mono">brigade_w57</span> <span class="pill t-done">closed</span></h1>
+      <p class="lede">All 4 tasks merged in 4 h 50 min, for 41.28 USD at least. B144 took half of the cost and three review rounds.</p>
+    </div>
+    <p class="fresh num">read 20:42:29Z</p>
+  </header>
+  <div class="cols">
+    <div class="content">
+      <dl class="tiles">
+        <div class="tile"><dt>Tasks merged</dt><dd>4 <small>of 4</small></dd><span class="sub">0 parked</span></div>
+        <div class="tile"><dt>Wall time</dt><dd>4 h 50 min</dd><span class="sub">01:00:01Z → 05:50:29Z</span></div>
+        <div class="tile"><dt>Run time</dt><dd>4 h 41 min</dd><span class="sub">769 turns · 19 runs</span></div>
+        <div class="tile"><dt>Cost</dt><dd>41.28 <small>USD</small></dd><span class="sub warn">a floor: 2 runs record none</span></div>
+        <div class="tile"><dt>Halted</dt><dd>8 min 22 s</dd><span class="sub">2 parks, forge_account</span></div>
+      </dl>
+
+      <section class="block">
+        <div class="block-head"><h2>Why it waited <span class="new-tag">B178</span></h2><p>The halts of the wave. An open wave shows its current halt here, with the way out.</p></div>
+        <div class="panel scroll">
+          <table class="tbl">
+            <thead><tr><th>Halt</th><th>Reason</th><th>From</th><th>Until</th><th class="num">Lasted</th><th>Way out</th></tr></thead>
+            <tbody>
+              <tr><td><span class="pill t-you">parked</span></td><td class="mono">forge_account</td><td class="num">01:00:01Z</td><td class="num">01:02:38Z</td><td class="num">2 min 37 s</td><td>resumed</td></tr>
+              <tr><td><span class="pill t-you">parked</span></td><td class="mono">forge_account</td><td class="num">01:05:29Z</td><td class="num">01:11:14Z</td><td class="num">5 min 45 s</td><td>resumed</td></tr>
+            </tbody>
+          </table>
+          <p class="cap">While a wave is parked, this row carries a Resume button. A wave blocked on the quota reads <span class="pill t-limit">blocked</span> with its resume time and no action: it resumes by itself.</p>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h2>Tasks</h2><p>Each task with what it cost and where it stands.</p></div>
+        <div class="panel scroll">
+          <table class="tbl">
+            <thead><tr><th>Task</th><th>State</th><th>Pull request</th><th class="num">Rounds</th><th class="num">Turns</th><th class="num">Run time</th><th class="wide num">Cost, share of the wave</th><th>Last run</th></tr></thead>
+            <tbody>
+              <tr><td><a class="mono" href="#awawa">B144</a></td><td><span class="pill t-done">merged</span></td><td><a href="https://github.com/delairec/brigade/pull/444">#444</a></td><td class="num flag">3</td><td class="num">415</td><td class="num">2 h 22 min</td>
+                <td class="num"><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="50 percent of the cost"><rect class="g-track" width="100" height="8"/><rect class="g-ink" width="50.4" height="8"/></svg>20.82 USD · 50 %</td><td><a class="mono" href="#run">…054529Z-71abc4</a></td></tr>
+              <tr><td><a class="mono" href="#awawa">B91</a></td><td><span class="pill t-done">merged</span></td><td><a href="https://github.com/delairec/brigade/pull/443">#443</a></td><td class="num flag">3</td><td class="num">127</td><td class="num">47 min</td>
+                <td class="num"><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="17 percent of the cost"><rect class="g-track" width="100" height="8"/><rect class="g-ink" width="17.4" height="8"/></svg>7.17 USD · 17 %</td><td><span class="mono">…040503Z-a4c940</span></td></tr>
+              <tr><td><a class="mono" href="#awawa">B231</a></td><td><span class="pill t-done">merged</span></td><td><a href="https://github.com/delairec/brigade/pull/441">#441</a></td><td class="num">1</td><td class="num">104</td><td class="num">35 min</td>
+                <td class="num"><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="17 percent of the cost"><rect class="g-track" width="100" height="8"/><rect class="g-ink" width="16.6" height="8"/></svg>6.85 USD · 17 %</td><td><span class="mono">…020001Z-a8f913</span></td></tr>
+              <tr><td><a class="mono" href="#awawa">B241</a></td><td><span class="pill t-done">merged</span></td><td><a href="https://github.com/delairec/brigade/pull/442">#442</a></td><td class="num">2</td><td class="num">123</td><td class="num">57 min</td>
+                <td class="num"><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="16 percent of the cost"><rect class="g-track" width="100" height="8"/><rect class="g-ink" width="15.6" height="8"/></svg>6.44 USD · 16 %</td><td><span class="mono">…025529Z-c3b8d7</span></td></tr>
+            </tbody>
+          </table>
+          <p class="cap">A queued task of an open wave shows here why it is not launched <span class="new-tag">B178</span>, and a parked task its reason with a Requeue button.</p>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h2>How it went</h2><p>Each task from its first run to its merge.</p></div>
+        <figure class="panel pad chart">
+          <svg viewBox="0 0 800 150" role="img" aria-label="Timeline of the four tasks of brigade_w57 from 01:00Z to 05:50Z">
+            <line class="g-grid" x1="60" y1="8" x2="60" y2="128"/><line class="g-grid" x1="208.4" y1="8" x2="208.4" y2="128"/><line class="g-grid" x1="356.9" y1="8" x2="356.9" y2="128"/><line class="g-grid" x1="505.3" y1="8" x2="505.3" y2="128"/><line class="g-grid" x1="653.8" y1="8" x2="653.8" y2="128"/>
+            <rect class="g-you" x="60" y="8" width="6.5" height="120" fill-opacity="0.35"/><rect class="g-you" x="73.5" y="8" width="14.3" height="120" fill-opacity="0.35"/>
+            <text class="g-label" x="0" y="31">B231</text>
+            <rect class="g-work" x="98.3" y="20" width="73" height="16"/><rect class="g-review" x="171.3" y="20" width="37.1" height="16" fill-opacity="0.45"/><rect class="g-review" x="208.4" y="20" width="26" height="16"/><rect class="g-done" x="234.4" y="17" width="4" height="22"/>
+            <text class="g-label" x="0" y="59">B241</text>
+            <rect class="g-work" x="98.3" y="48" width="86.6" height="16"/><rect class="g-review" x="184.9" y="48" width="23.5" height="16" fill-opacity="0.45"/><rect class="g-review" x="208.4" y="48" width="26" height="16"/><rect class="g-work" x="234.4" y="48" width="73" height="16" fill-opacity="0.45"/><rect class="g-review" x="307.4" y="48" width="38.3" height="16" fill-opacity="0.45"/><rect class="g-review" x="345.7" y="48" width="11.2" height="16"/><rect class="g-done" x="356.9" y="45" width="4" height="22"/>
+            <text class="g-label" x="0" y="87">B91</text>
+            <rect class="g-work" x="234.4" y="76" width="86.6" height="16"/><rect class="g-review" x="321" y="76" width="24.7" height="16" fill-opacity="0.45"/><rect class="g-review" x="345.7" y="76" width="11.2" height="16"/><rect class="g-work" x="356.9" y="76" width="50.7" height="16" fill-opacity="0.45"/><rect class="g-review" x="407.6" y="76" width="36.9" height="16" fill-opacity="0.45"/><rect class="g-review" x="444.5" y="76" width="11.3" height="16"/><rect class="g-work" x="455.8" y="76" width="24.8" height="16" fill-opacity="0.45"/><rect class="g-review" x="480.6" y="76" width="37.1" height="16" fill-opacity="0.45"/><rect class="g-review" x="517.7" y="76" width="12.4" height="16"/><rect class="g-done" x="530.1" y="73" width="4" height="22"/>
+            <text class="g-label" x="0" y="115">B144</text>
+            <rect class="g-work" x="234.4" y="104" width="185.6" height="16"/><rect class="g-review" x="420" y="104" width="85.3" height="16" fill-opacity="0.45"/><rect class="g-review" x="505.3" y="104" width="38.4" height="16"/><rect class="g-work" x="543.7" y="104" width="74.2" height="16" fill-opacity="0.45"/><rect class="g-review" x="617.9" y="104" width="24.7" height="16" fill-opacity="0.45"/><rect class="g-review" x="642.6" y="104" width="24.8" height="16"/><rect class="g-work" x="667.4" y="104" width="61.8" height="16" fill-opacity="0.45"/><rect class="g-review" x="729.2" y="104" width="37.1" height="16" fill-opacity="0.45"/><rect class="g-review" x="766.3" y="104" width="12.4" height="16"/><rect class="g-done" x="778.7" y="101" width="4" height="22"/>
+            <text class="g-text" x="60" y="144">01:00Z</text><text class="g-text" x="208.4" y="144" text-anchor="middle">02:00</text><text class="g-text" x="356.9" y="144" text-anchor="middle">03:00</text><text class="g-text" x="505.3" y="144" text-anchor="middle">04:00</text><text class="g-text" x="653.8" y="144" text-anchor="middle">05:00</text><text class="g-text" x="783" y="144" text-anchor="end">05:50</text>
+          </svg>
+          <figcaption class="legend">
+            <span class="t-work">building</span><span class="t-work soft">fixing or rebasing</span><span class="t-review soft">pull request open, waiting</span><span class="t-review">verifying</span><span class="t-done">merged</span><span class="t-you soft">wave parked</span>
+          </figcaption>
+        </figure>
+        <ul class="panel lines">
+          <li><p><span class="tag">Read</span>B144 built for 1 h 15 min over 4 segments, 3 of them handed over, then needed two rebases and one remediation: 7 runs, 10 segments.</p></li>
+          <li><p><span class="tag">Read</span>B91 and B144 each went through a review of a rebase-only diff that repeated the findings of the round before.</p></li>
+          <li><p><span class="tag">Failed</span>1 tick action: the merge of #442 at 02:10:29Z, refused for conflicts once #441 had merged; the rebase of 02:40:00Z cleared it.</p></li>
+        </ul>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h2>Events</h2><p>The 100 events the ledger holds for the wave, in the order recorded.</p></div>
+        <div class="panel">
+          <details class="fold"><summary>Show the events <span>· 41 task.state · 22 run.finished · 10 task.preflighted · 9 task.verdict · 18 others</span></summary>
+            <div class="scroll"><table class="tbl">
+              <thead><tr><th>At</th><th>Event</th><th>Task</th><th>What</th></tr></thead>
+              <tbody>
+                <tr><td class="num">01:00:01Z</td><td class="mono">wave.started</td><td>–</td><td>B91, B144, B231, B241</td></tr>
+                <tr><td class="num">01:00:01Z</td><td class="mono">wave.parked</td><td>–</td><td>forge_account</td></tr>
+                <tr><td class="num">01:02:38Z</td><td class="mono">wave.resumed</td><td>–</td><td>forge_account</td></tr>
+                <tr><td class="num">01:15:29Z</td><td class="mono">task.state</td><td class="mono">B231</td><td><span class="pill t-work">running</span></td></tr>
+                <tr><td class="num">01:44:44Z</td><td class="mono">task.pr_opened</td><td class="mono">B231</td><td>#441 · fix/B231-the-tick-parks-the-task-of-a-run-that</td></tr>
+                <tr><td class="num">02:10:29Z</td><td class="mono">tick.action_failed</td><td class="mono">B241</td><td>MergePullRequest: Pull Request has merge conflicts</td></tr>
+              </tbody>
+            </table></div>
+            <p class="cap">6 of 100 shown in the mockup.</p>
+          </details>
+        </div>
+      </section>
+    </div>
+    <aside class="notes">
+      <h2>Design notes · Wave</h2>
+      <h3>1. What it is for</h3>
+      <p>The story of one wave: where each task stands, what stops it, what it cost. Today: tasks as comma-joined lines and a raw list of events.</p>
+      <h3>2. Questions, in order</h3>
+      <ul>
+        <li><b>Is it stopped, and what do I do?</b> The halt banner with Resume, or the resume time of a block.</li>
+        <li><b>Where is each task?</b> State, pull request, rounds; for a queued task, why it is not launched; for a parked one, its reason and Requeue.</li>
+        <li><b>Where did the time and the money go?</b> Turns, run time, cost share.</li>
+        <li><b>What exactly happened?</b> The timeline, then the events on demand.</li>
+      </ul>
+      <h3>3. Analysis computed</h3>
+      <ul>
+        <li>The one-sentence summary under the title.</li>
+        <li>Cost share per task; rounds of three or more flagged.</li>
+        <li>The timeline: each <code>task.state</code> becomes a bar, each halt a band.</li>
+        <li>Failed tick actions of the wave, each with the event that cleared it.</li>
+      </ul>
+      <h3>4. Highlight</h3>
+      <ul>
+        <li>Open wave: the halt is a callout above the tiles. Closed wave: it folds into the table shown here.</li>
+        <li>The cost is marked a floor when a run records none.</li>
+      </ul>
+      <h3>5. Navigation</h3>
+      <ul><li>Task → awawa entity. #n → the forge. Last run → run. Up → waves. A milestone wave links its report.</li></ul>
+      <h3>Reads</h3>
+      <ul><li><code>brigade wave show --json --events &lt;wave&gt;</code>: tasks, <code>by_task</code>, <code>pull_requests</code>, <code>halts</code>, <code>handovers</code>, <code>events</code>.</li><li><code>brigade project show --json</code>: <code>REMOTE</code> and <code>FORGE</code>, for the pull request links.</li></ul>
+      <h3>Needs</h3>
+      <ul><li>B178: <code>halt</code> with its reason and <code>resume_at</code>, and the cause in <code>reason</code> of a queued task.</li><li><span class="new">wave show --json</span> names the milestone of the wave, to link its report.</li></ul>
+    </aside>
+  </div>
+</section>
+
+<!-- ============================== RUNS ============================== -->
+<section class="page" id="runs" data-page hidden>
+  <header class="page-head">
+    <div>
+      <h1>Runs</h1>
+      <p class="lede">A run is one agent at work: a procedure, such as a build or a review, played by a role on a task.</p>
+    </div>
+    <p class="fresh num">read 20:42:29Z · refreshes every 5 s</p>
+  </header>
+  <div class="cols">
+    <div class="content">
+      <details class="explainer">
+        <summary>How to read this page</summary>
+        <div>
+          <p>Brigade starts a run each time a task needs an agent: to <b>build</b> it, <b>review</b> its pull request, <b>remediate</b> the findings, <b>rebase</b> it, or to run a <b>study</b>. A long run is cut in <b>segments</b>: a segment that reaches its turn cap hands over to the next, which starts from the progress file.</p>
+          <p>A run is <b>running</b> while its process lives, <b>finished</b> once it has a result, <b>dead</b> when the process is gone without one. Come here to follow a live run, or to find which run of a task went wrong.</p>
+        </div>
+      </details>
+      <dl class="tiles">
+        <div class="tile"><dt>Live</dt><dd>0</dd><span class="sub">of 22 runs kept</span></div>
+        <div class="tile"><dt>Finished</dt><dd>21</dd><span class="sub">19 done · 2 cut at the wall limit</span></div>
+        <div class="tile"><dt>Dead</dt><dd>1</dd><span class="sub warn">since 2026-11-15</span></div>
+        <div class="tile"><dt>Run time</dt><dd>4 h 43 min</dd><span class="sub">25 segments</span></div>
+        <div class="tile"><dt>Cost</dt><dd>42.68 <small>USD</small></dd><span class="sub warn">a floor: 3 runs record none</span></div>
+      </dl>
+
+      <section class="block">
+        <div class="block-head"><h2>Where the cost went</h2><p>The 22 runs listed, by procedure.</p></div>
+        <figure class="panel pad chart">
+          <svg class="bar tall" viewBox="0 0 100 14" preserveAspectRatio="none" role="img" aria-label="Cost by procedure: build 66 percent, review 23, remediate 7, study 3, rebase 1">
+            <rect class="g-work" width="65.7" height="14"/><rect class="g-review" x="66" width="22.2" height="14"/><rect class="g-limit" x="88.5" width="6.9" height="14"/><rect class="g-off" x="95.7" width="3" height="14"/><rect class="g-you" x="99" width="1" height="14"/>
+          </svg>
+          <figcaption class="legend num">
+            <span class="t-work">build-task 28.15 USD · 66 %</span><span class="t-review">review-pr 9.61 · 23 %</span><span class="t-limit">remediate-pr 3.08 · 7 %</span><span class="t-off">study 1.40 · 3 %</span><span class="t-you">rebase-on-base 0.44 · 1 %</span>
+          </figcaption>
+        </figure>
+      </section>
+
+      <div class="split">
+        <div class="callout t-limit">
+          <h3>2 rebase runs were cut at the wall-time limit</h3>
+          <p>Both stopped after 19 minutes with 11 and 16 turns, far under the cap of 30. A run that spends its time without spending its turns is waiting on something.</p>
+        </div>
+        <div class="callout t-failed">
+          <h3>1 run is dead</h3>
+          <p>The remediation of B248 started on 2026-11-15 at 17:15Z; its process is gone and it left no result. Its task B248 merged all the same, when brigade_w54 closed at 17:55Z.</p>
+        </div>
+      </div>
+
+      <div class="chips" aria-label="Filter by state">
+        <a class="chip" href="#runs" aria-current="true">All <b>22</b></a>
+        <a class="chip" href="#runs">Running <b>0</b></a>
+        <a class="chip" href="#runs">Finished <b>21</b></a>
+        <a class="chip" href="#runs">Dead <b>1</b></a>
+        <span class="field"><label for="runs-wave">Wave</label><select id="runs-wave"><option>any</option><option>brigade_w57</option><option>brigade_w54</option></select></span>
+        <span class="field"><label for="runs-task">Task</label><select id="runs-task"><option>any</option><option>B91</option><option>B144</option><option>B231</option><option>B241</option><option>B248</option></select></span>
+      </div>
+
+      <div class="panel scroll">
+        <table class="tbl">
+          <thead><tr><th>Started</th><th>Run</th><th>Procedure</th><th>Role</th><th>Task</th><th>Outcome</th><th>Segments <span class="new-tag">B92</span></th><th class="num">Duration <span class="new-tag">B92</span></th><th class="num">Cost <span class="new-tag">B92</span></th><th>Arguments <span class="new-tag">B92</span></th></tr></thead>
+          <tbody>
+            <tr><td class="num">11-18 05:52Z</td><td><span class="mono">…0e55b9</span></td><td>study</td><td>reporter</td><td class="muted">–</td><td><span class="pill t-done">done</span></td><td><span class="segs"><i class="t-done"></i></span></td><td class="num">2 min 10 s</td><td class="num">0.97</td><td class="mono">run=20261118T055029Z-fea275 study=milestone-report</td></tr>
+            <tr><td class="num">11-18 05:45Z</td><td><span class="mono">…71abc4</span></td><td>review-pr</td><td>prudence</td><td><a class="mono" href="#wave">B144</a></td><td><span class="pill t-done">done</span></td><td><span class="segs"><i class="t-done"></i></span></td><td class="num">2 min 42 s</td><td class="num">0.73</td><td class="mono">pr=444 task=@TASK.B144</td></tr>
+            <tr><td class="num">11-18 05:05Z</td><td><span class="mono">…82abca</span></td><td>remediate-pr</td><td>remediator</td><td><a class="mono" href="#wave">B144</a></td><td><span class="pill t-done">done</span></td><td><span class="segs"><i class="t-done"></i></span></td><td class="num">24 min 00 s</td><td class="num">2.50</td><td class="mono">pr=444 task=@TASK.B144</td></tr>
+            <tr><td class="num">11-18 04:15Z</td><td><span class="mono">…e7f051</span></td><td>rebase-on-base</td><td>rebaser</td><td><a class="mono" href="#wave">B144</a></td><td><span class="pill t-done">done</span></td><td><span class="segs"><i class="t-done"></i></span></td><td class="num">17 min 02 s</td><td class="num">0.27</td><td class="mono">pr=444 task=@TASK.B144</td></tr>
+            <tr><td class="num">11-18 03:25Z</td><td><span class="mono">…44ec15</span></td><td>rebase-on-base</td><td>rebaser</td><td><a class="mono" href="#wave">B144</a></td><td><span class="pill t-limit">wall_limit</span></td><td><span class="segs"><i class="t-limit"></i></span></td><td class="num">19 min 00 s</td><td class="num muted">– partial</td><td class="mono">pr=444 task=@TASK.B144</td></tr>
+            <tr><td class="num">11-18 02:10Z</td><td><a class="mono" href="#run">…fa06b9</a></td><td>build-task</td><td>ada</td><td><a class="mono" href="#wave">B144</a></td><td><span class="pill t-done">done</span></td><td><span class="segs" title="handed_over, handed_over, handed_over, done"><i class="t-wait"></i><i class="t-wait"></i><i class="t-wait"></i><i class="t-done"></i></span> <span class="muted num">3 handovers</span></td><td class="num flag">1 h 01 min 49 s</td><td class="num flag">14.45</td><td class="mono">base=integration/run-resumption task=@TASK.B144</td></tr>
+            <tr><td class="num">11-18 02:10Z</td><td><span class="mono">…cabdcf</span></td><td>rebase-on-base</td><td>rebaser</td><td><a class="mono" href="#wave">B241</a></td><td><span class="pill t-limit">wall_limit</span></td><td><span class="segs"><i class="t-limit"></i></span></td><td class="num">19 min 01 s</td><td class="num muted">– partial</td><td class="mono">pr=442 task=@TASK.B241</td></tr>
+            <tr><td class="num">11-18 02:10Z</td><td><span class="mono">…95c6bc</span></td><td>build-task</td><td>ada</td><td><a class="mono" href="#wave">B91</a></td><td><span class="pill t-done">done</span></td><td><span class="segs"><i class="t-done"></i></span></td><td class="num">24 min 06 s</td><td class="num">4.21</td><td class="mono">base=integration/run-resumption task=@TASK.B91</td></tr>
+            <tr><td class="num">11-18 02:00Z</td><td><span class="mono">…a8f913</span></td><td>review-pr</td><td>prudence</td><td><a class="mono" href="#wave">B231</a></td><td><span class="pill t-done">done</span></td><td><span class="segs"><i class="t-done"></i></span></td><td class="num">5 min 42 s</td><td class="num">1.75</td><td class="mono">pr=441 task=@TASK.B231</td></tr>
+            <tr><td class="num">11-18 01:15Z</td><td><span class="mono">…4853f1</span></td><td>build-task</td><td>ada</td><td><a class="mono" href="#wave">B231</a></td><td><span class="pill t-done">done</span></td><td><span class="segs"><i class="t-done"></i></span></td><td class="num">29 min 16 s</td><td class="num">5.10</td><td class="mono">base=integration/run-resumption task=@TASK.B231</td></tr>
+            <tr><td class="num">11-17 21:10Z</td><td><span class="mono">…63e9cf</span></td><td>study</td><td>triager</td><td class="muted">–</td><td><span class="pill t-done">done</span></td><td><span class="segs"><i class="t-done"></i></span></td><td class="num">43 s</td><td class="num">0.43</td><td class="mono">run=20261117T211007Z-e5294b study=triage</td></tr>
+            <tr class="attn"><td class="num">11-15 17:15Z</td><td><span class="mono">…b29f2d</span></td><td>remediate-pr</td><td>remediator</td><td><span class="mono">B248</span></td><td><span class="pill t-failed">dead</span></td><td><span class="segs"><i class="t-failed"></i></span></td><td class="num muted">–</td><td class="num muted">–</td><td class="mono">pr=410 task=@TASK.B248</td></tr>
+          </tbody>
+        </table>
+        <p class="cap">12 of 22 runs shown in the mockup. 114 older runs are skipped: their result was written under an earlier schema.</p>
+      </div>
+    </div>
+    <aside class="notes">
+      <h2>Design notes · Runs</h2>
+      <h3>1. What it is for</h3>
+      <p>What each run worked on and how it went. Today two runs of one procedure read alike, and a run cut and resumed reads "done".</p>
+      <h3>2. Questions, in order</h3>
+      <ul>
+        <li><b>Is a run live, and on what?</b> Live runs first.</li>
+        <li><b>Which run went wrong?</b> Dead runs and limit outcomes, flagged.</li>
+        <li><b>What did this run work on?</b> Its task, and its arguments (B92).</li>
+        <li><b>What did it take?</b> Segments, duration, cost (B92).</li>
+      </ul>
+      <h3>3. Analysis computed</h3>
+      <ul>
+        <li>Totals of run time and cost, marked a floor when a run records none.</li>
+        <li>Cost by procedure.</li>
+        <li>A run cut at a limit with few turns; a dead run whose task ended since.</li>
+        <li>The longest and the costliest run, flagged in the table.</li>
+      </ul>
+      <h3>4. Highlight</h3>
+      <ul>
+        <li>One square per segment, in the tone of its outcome: three grey squares then a green one says "handed over three times, then done".</li>
+        <li>Violet marks a limit reached; red, a run that left no result.</li>
+        <li>Empty state under a filter: "No run is live. A run starts when a tick launches a task, a review or a study."</li>
+      </ul>
+      <h3>5. Navigation</h3>
+      <ul><li>Run → run. Task → its wave. Filters by state, wave and task map to the options of the command.</li></ul>
+      <h3>Reads</h3>
+      <ul><li><code>brigade run list --json</code> with <code>--state</code>, <code>--wave</code>, <code>--task</code>.</li></ul>
+      <h3>Needs</h3>
+      <ul><li>B92: <code>arguments</code>, <code>segments</code>, <code>duration_ms</code>, <code>cost_usd</code> and their <code>partial</code> marks. The mockup read them from the run directories, as B92 specifies.</li><li><span class="new">run list --json</span>: <code>started_at</code>, where the page now parses the run id.</li></ul>
+    </aside>
+  </div>
+</section>
+
+<!-- ============================== RUN ============================== -->
+<section class="page" id="run" data-page hidden>
+  <header class="page-head">
+    <div>
+      <p class="crumbs"><a href="#runs">Runs</a> / <a href="#wave">brigade_w57</a> / B144</p>
+      <h1>Build of B144 <span class="pill t-done">done</span></h1>
+      <p class="lede">Finished in 4 segments and 253 turns: three segments handed over at or near the cap of 75 turns before the fourth delivered pull request #444.</p>
+    </div>
+    <p class="fresh mono">20261118T021029Z-fa06b9</p>
+  </header>
+  <div class="cols">
+    <div class="content">
+      <dl class="tiles">
+        <div class="tile"><dt>Outcome</dt><dd>done</dd><span class="sub">finished 03:22:07Z</span></div>
+        <div class="tile"><dt>Segments</dt><dd>4</dd><span class="sub">3 handed over</span></div>
+        <div class="tile"><dt>Turns</dt><dd>253</dd><span class="sub">cap 75 a segment</span></div>
+        <div class="tile"><dt>Run time</dt><dd>1 h 01 min 49 s</dd><span class="sub">of 1 h 12 min elapsed</span></div>
+        <div class="tile"><dt>Cost</dt><dd>14.45 <small>USD</small></dd><span class="sub">35 % of its wave</span></div>
+      </dl>
+      <dl class="panel pad kv">
+        <div><dt>Procedure</dt><dd class="mono">build-task</dd></div>
+        <div><dt>Role, slot</dt><dd>ada, build</dd></div>
+        <div><dt>Task</dt><dd><a class="mono" href="#awawa">B144</a> of <a class="mono" href="#wave">brigade_w57</a></dd></div>
+        <div><dt>Arguments</dt><dd class="mono">base=integration/run-resumption task=@TASK.B144</dd></div>
+        <div><dt>Worktree</dt><dd class="mono">~/Web/brigade/.brigade/worktrees/B144</dd></div>
+        <div><dt>Follow its log</dt><dd><code class="cmd">brigade run show …fa06b9 --log</code></dd></div>
+      </dl>
+
+      <section class="block">
+        <div class="block-head"><h2>Segments</h2><p>Turns used against the cap of the role, 75 for ada.</p></div>
+        <div class="panel scroll">
+          <table class="tbl">
+            <thead><tr><th class="num">#</th><th>Outcome</th><th class="wide">Turns of 75</th><th class="num">Turns</th><th class="num">Duration</th><th>Ended on</th></tr></thead>
+            <tbody>
+              <tr><td class="num">1</td><td><span class="pill t-wait">handed_over</span></td><td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="65 of 75 turns"><rect class="g-track" width="100" height="8"/><rect class="g-wait" width="86.7" height="8"/></svg></td><td class="num">65</td><td class="num">8 min 42 s</td><td>handover h1 · 7 items remaining</td></tr>
+              <tr><td class="num">2</td><td><span class="pill t-wait">handed_over</span></td><td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="54 of 75 turns"><rect class="g-track" width="100" height="8"/><rect class="g-wait" width="72" height="8"/></svg></td><td class="num">54</td><td class="num">7 min 25 s</td><td>handover h2 · 4 items remaining</td></tr>
+              <tr><td class="num">3</td><td><span class="pill t-wait">handed_over</span></td><td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="75 of 75 turns"><rect class="g-track" width="100" height="8"/><rect class="g-limit" width="100" height="8"/></svg></td><td class="num flag">75</td><td class="num">10 min 03 s</td><td>handover h3 · 4 items remaining</td></tr>
+              <tr><td class="num">4</td><td><span class="pill t-done">done</span></td><td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="59 of 75 turns"><rect class="g-track" width="100" height="8"/><rect class="g-done" width="78.7" height="8"/></svg></td><td class="num">59</td><td class="num">35 min 39 s</td><td>"none: the task is delivered"</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h2>Progress</h2><p>What the run wrote in its progress file, by segment. The last line is where it stands.</p></div>
+        <div class="callout t-done"><h3>Where it stands</h3><p>Next: none, the task is delivered. Last done: report written; @TASK.B144 delivered by #444.</p></div>
+        <div class="panel">
+          <details class="fold"><summary>Segment 1 <span>· 3 entries · read the package, wrote the failing tests, implemented the reading of [fallback], the snapshot facts and decide</span></summary></details>
+          <details class="fold"><summary>Segment 2 <span>· 2 entries · run start on the fallback, run_segments back to the client at the reset</span></summary></details>
+          <details class="fold"><summary>Segment 3 <span>· 3 entries · the fake-fallback adapter and its tests/cli test, the DECISION and the IMPL lines</span></summary></details>
+          <details class="fold" open><summary>Segment 4 <span>· 6 entries</span></summary>
+            <ol class="steps">
+              <li><p>The guards pass: RunSettingQuery, _read_check_logs, answer_as_client, discriminant assertions in test_run_segments; committed 78d35da6.</p></li>
+              <li><p>42 branch removals run on tests/unit: 39 failed a test; commits 5b514d28 and 322368da.</p></li>
+              <li><p>brigade build check passed on c66970c0, after the zipapp listing took the fake-fallback row.</p></li>
+              <li><p>Branch pushed at c66970c0, pull request #444 opened into integration/run-resumption.</p></li>
+              <li><p>@TASK.B144 promoted implemented, delivered by #444, in e1ae72ac; PR title fixed of its doubled type prefix.</p></li>
+              <li><p>Report written; @TASK.B144 delivered by #444.</p></li>
+            </ol>
+          </details>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h2>Notes</h2></div>
+        <div class="empty"><h3>No note was handed to this run</h3><p>A note reaches the brief of the next segment of a running run: <code class="cmd">brigade run note &lt;run&gt; &lt;text&gt;</code>. Each note shows here with the segment that carried it, or "pending".</p></div>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h2>The 7 runs of B144</h2><p>From its build to its merge: 415 turns, 20.82 USD.</p></div>
+        <div class="panel scroll">
+          <table class="tbl">
+            <thead><tr><th>Finished</th><th>Slot</th><th>Run</th><th>Outcome</th><th class="num">Turns</th><th class="num">Duration</th><th class="num">Cost</th></tr></thead>
+            <tbody>
+              <tr><td class="num">03:22:07Z</td><td>build</td><td><b class="mono">…fa06b9</b> · this run</td><td><span class="pill t-done">done</span></td><td class="num">253</td><td class="num">1 h 01 min 49 s</td><td class="num">14.45</td></tr>
+              <tr><td class="num">03:45:36Z</td><td>rebase</td><td><span class="mono">…44ec15</span></td><td><span class="pill t-limit">wall_limit</span></td><td class="num">16</td><td class="num">19 min 00 s</td><td class="num muted">–</td></tr>
+              <tr><td class="num">04:14:08Z</td><td>review</td><td><span class="mono">…7fe6e2</span></td><td><span class="pill t-done">done</span></td><td class="num">40</td><td class="num">13 min 02 s</td><td class="num">2.28</td></tr>
+              <tr><td class="num">04:41:14Z</td><td>rebase</td><td><span class="mono">…e7f051</span></td><td><span class="pill t-done">done</span></td><td class="num">14</td><td class="num">17 min 02 s</td><td class="num">0.27</td></tr>
+              <tr><td class="num">05:00:41Z</td><td>review</td><td><span class="mono">…63eb39</span></td><td><span class="pill t-done">done</span></td><td class="num">13</td><td class="num">4 min 11 s</td><td class="num">0.61</td></tr>
+              <tr><td class="num">05:30:28Z</td><td>remediate</td><td><span class="mono">…82abca</span></td><td><span class="pill t-done">done</span></td><td class="num">64</td><td class="num">24 min 00 s</td><td class="num">2.50</td></tr>
+              <tr><td class="num">05:49:14Z</td><td>review</td><td><span class="mono">…71abc4</span></td><td><span class="pill t-done">done</span></td><td class="num">15</td><td class="num">2 min 42 s</td><td class="num">0.73</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+    <aside class="notes">
+      <h2>Design notes · Run</h2>
+      <h3>1. What it is for</h3>
+      <p>Follow one run: where it stands, what it consumed, what it left for the next segment. Today: ten raw fields and the progress file as preformatted text.</p>
+      <h3>2. Questions, in order</h3>
+      <ul>
+        <li><b>Where does it stand?</b> The last NEXT of its progress, on top.</li>
+        <li><b>Is it short of turns?</b> Each segment against the cap of its role.</li>
+        <li><b>What has it done?</b> The DONE lines, by segment; FACT and REMAINING lines fold under each entry.</li>
+        <li><b>What else ran on this task?</b> The chain of runs of the task.</li>
+      </ul>
+      <h3>3. Analysis computed</h3>
+      <ul>
+        <li>The summary sentence; elapsed time against run time.</li>
+        <li>A segment at its cap, flagged; the handovers counted.</li>
+        <li>The progress cut by segment: a HANDOVER entity closes one.</li>
+        <li>The share of the run in the cost of its wave.</li>
+      </ul>
+      <h3>4. Highlight</h3>
+      <ul><li>A live run shows a blue "running" pill and its last DONE line; a dead run, a red callout with its last entry and the command to prune or requeue.</li></ul>
+      <h3>5. Navigation</h3>
+      <ul><li>Up → runs, wave. Task → awawa entity. Each run of the chain → its page. #444 → the forge.</li></ul>
+      <h3>Reads</h3>
+      <ul>
+        <li><code>brigade run show --json &lt;run&gt;</code>: <code>run</code>, <code>segments</code>, <code>progress.entities</code>, <code>notes</code>.</li>
+        <li><code>brigade ledger budgets --json</code>: the applied cap of the role.</li>
+        <li><code>brigade ledger --task &lt;task&gt; --json</code>: the runs of the task.</li>
+      </ul>
+      <h3>Needs</h3>
+      <ul><li>B92 gives the cost and the arguments in the list; <span class="new">run show --json</span> should carry the same <code>arguments</code>, <code>cost_usd</code> and the <code>started_at</code> of each segment.</li></ul>
+    </aside>
+  </div>
+</section>
+
+<!-- ============================== LEDGER ============================== -->
+<section class="page" id="ledger" data-page hidden>
+  <header class="page-head">
+    <div>
+      <h1>Ledger</h1>
+      <p class="lede">The ledger is the journal of everything brigade did. This page turns it into measures: what a run takes, whether the turn caps fit, and what keeps failing.</p>
+    </div>
+    <p class="fresh num">read 20:42:29Z</p>
+  </header>
+  <div class="cols">
+    <div class="content">
+      <details class="explainer">
+        <summary>How to read this page</summary>
+        <div>
+          <p>Every event, a wave started, a pull request merged, a run finished, is one line appended to the ledger. Nothing is rewritten, so the measures here can always be recomputed.</p>
+          <p>A <b>turn</b> is one step of an agent. Each role has a <b>turn cap</b> per segment: too low and runs hand over again and again, too high and a lost run burns tokens. Brigade recomputes the cap of a role once it has measured enough segments.</p>
+          <p>Come here after a few waves, to tune a cap, to compare two periods, or to find an action that fails at every tick.</p>
+        </div>
+      </details>
+      <div class="callout t-wait">
+        <h3>What these measures cover</h3>
+        <p>Events from 2026-10-07 10:34Z to 2026-11-18 16:55Z. The turn and cost measures cover the 21 runs finished since 2026-11-17 21:10Z only: 1,507 older lines were written under an earlier schema and are skipped.</p>
+      </div>
+
+      <section class="block">
+        <div class="block-head"><h2>Do the turn caps fit?</h2><p>The last 20 runs of each procedure. A cap fits when 9 segments in 10 end under it.</p></div>
+        <div class="panel scroll">
+          <table class="tbl">
+            <thead><tr><th>Role</th><th class="num">Shipped</th><th class="num">Computed</th><th class="num">Applied</th><th class="num">Segments</th><th class="num">Restarts</th><th class="wide">p90 of a segment, against the cap</th><th>Trend</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">remediator</td><td class="num">50</td><td class="num muted">–</td><td class="num">50</td><td class="num">2</td><td class="num">0</td>
+                <td><svg class="bar" viewBox="0 0 150 8" preserveAspectRatio="none" role="img" aria-label="p90 64 turns for a cap of 50"><rect class="g-track" width="150" height="8"/><rect class="g-you" width="128" height="8"/><rect class="g-ink" x="99.5" width="1.5" height="8"/></svg><span class="flag num">64 · 128 % of the cap</span></td>
+                <td class="muted">stable</td></tr>
+              <tr><td class="mono">ada</td><td class="num">75</td><td class="num muted">–</td><td class="num">75</td><td class="num">7</td><td class="num">0</td>
+                <td><svg class="bar" viewBox="0 0 150 8" preserveAspectRatio="none" role="img" aria-label="p90 80 turns for a cap of 75"><rect class="g-track" width="150" height="8"/><rect class="g-you" width="106.7" height="8"/><rect class="g-ink" x="99.5" width="1.5" height="8"/></svg><span class="flag num">80 · 107 % of the cap</span></td>
+                <td class="muted">stable</td></tr>
+              <tr><td class="mono">prudence</td><td class="num">40</td><td class="num muted">–</td><td class="num">40</td><td class="num">9</td><td class="num">0</td>
+                <td><svg class="bar" viewBox="0 0 150 8" preserveAspectRatio="none" role="img" aria-label="p90 40 turns for a cap of 40"><rect class="g-track" width="150" height="8"/><rect class="g-work" width="100" height="8"/><rect class="g-ink" x="99.5" width="1.5" height="8"/></svg><span class="num">40 · at the cap</span></td>
+                <td class="muted">stable</td></tr>
+              <tr><td class="mono">rebaser</td><td class="num">30</td><td class="num muted">–</td><td class="num">30</td><td class="num">4</td><td class="num">0</td>
+                <td><svg class="bar" viewBox="0 0 150 8" preserveAspectRatio="none" role="img" aria-label="p90 16 turns for a cap of 30"><rect class="g-track" width="150" height="8"/><rect class="g-work" width="53.3" height="8"/><rect class="g-ink" x="99.5" width="1.5" height="8"/></svg><span class="num">16 · 53 % of the cap</span></td>
+                <td class="muted">stable</td></tr>
+              <tr><td class="mono">reporter</td><td class="num">40</td><td class="num muted">–</td><td class="num">40</td><td class="num">1</td><td class="num">0</td><td class="muted">1 segment: too few to say</td>
+                <td class="muted">stable</td></tr>
+              <tr><td class="mono">triager</td><td class="num">30</td><td class="num muted">–</td><td class="num">30</td><td class="num">1</td><td class="num">0</td><td class="muted">1 segment: too few to say</td>
+                <td class="muted">stable</td></tr>
+            </tbody>
+          </table>
+          <p class="cap">No cap is computed yet: a role needs 5 measured segments and 3 measured restarts at its current digests, and no role has a restart. The black tick is the cap.</p>
+        </div>
+        <div class="block-head"><h3>Applied cap over time <span class="new-tag">B229</span></h3><p>One step line per role, under the table as B229 specifies.</p></div>
+        <figure class="panel pad chart"><div class="multiples"><svg viewBox="0 0 220 60" role="img" aria-label="remediator: cap 50, stable"><text class="g-label" x="0" y="12">remediator</text><line class="s-muted s-2" x1="2" y1="32" x2="218" y2="32"/><text class="g-text" x="2" y="52">50 · stable</text></svg><svg viewBox="0 0 220 60" role="img" aria-label="ada: cap 75, stable"><text class="g-label" x="0" y="12">ada</text><line class="s-muted s-2" x1="2" y1="32" x2="218" y2="32"/><text class="g-text" x="2" y="52">75 · stable</text></svg><svg viewBox="0 0 220 60" role="img" aria-label="prudence: cap 40, stable"><text class="g-label" x="0" y="12">prudence</text><line class="s-muted s-2" x1="2" y1="32" x2="218" y2="32"/><text class="g-text" x="2" y="52">40 · stable</text></svg><svg viewBox="0 0 220 60" role="img" aria-label="rebaser: cap 30, stable"><text class="g-label" x="0" y="12">rebaser</text><line class="s-muted s-2" x1="2" y1="32" x2="218" y2="32"/><text class="g-text" x="2" y="52">30 · stable</text></svg><svg viewBox="0 0 220 60" role="img" aria-label="reporter: cap 40, stable"><text class="g-label" x="0" y="12">reporter</text><line class="s-muted s-2" x1="2" y1="32" x2="218" y2="32"/><text class="g-text" x="2" y="52">40 · stable</text></svg><svg viewBox="0 0 220 60" role="img" aria-label="triager: cap 30, stable"><text class="g-label" x="0" y="12">triager</text><line class="s-muted s-2" x1="2" y1="32" x2="218" y2="32"/><text class="g-text" x="2" y="52">30 · stable</text></svg></div>
+          <figcaption class="muted">No <code>budget.applied</code> event exists on this machine, so every role reads stable. The Foundation page shows a cap raised, then lowered.</figcaption></figure>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h2>What a run takes</h2><p>Turns of a whole run, by procedure: the median, and the 90th percentile.</p></div>
+        <figure class="panel pad chart">
+          <svg viewBox="0 0 720 168" role="img" aria-label="Turns by procedure, p50 and p90">
+            <line class="g-grid" x1="150" y1="6" x2="150" y2="140"/><line class="g-grid" x1="250" y1="6" x2="250" y2="140"/><line class="g-grid" x1="350" y1="6" x2="350" y2="140"/><line class="g-grid" x1="450" y1="6" x2="450" y2="140"/><line class="g-grid" x1="550" y1="6" x2="550" y2="140"/><line class="g-grid" x1="650" y1="6" x2="650" y2="140"/>
+            <text class="g-label" x="0" y="24">build-task</text><rect class="g-work" x="150" y="14" width="506" height="12" fill-opacity="0.35"/><rect class="g-work" x="150" y="14" width="146" height="12"/><text class="g-text" x="662" y="24">253</text>
+            <text class="g-label" x="0" y="52">remediate-pr</text><rect class="g-work" x="150" y="42" width="128" height="12" fill-opacity="0.35"/><rect class="g-work" x="150" y="42" width="34" height="12"/><text class="g-text" x="284" y="52">64</text>
+            <text class="g-label" x="0" y="80">review-pr</text><rect class="g-work" x="150" y="70" width="80" height="12" fill-opacity="0.35"/><rect class="g-work" x="150" y="70" width="32" height="12"/><text class="g-text" x="236" y="80">40</text>
+            <text class="g-label" x="0" y="108">rebase-on-base</text><rect class="g-work" x="150" y="98" width="32" height="12" fill-opacity="0.35"/><rect class="g-work" x="150" y="98" width="22" height="12"/><text class="g-text" x="188" y="108">16</text>
+            <text class="g-label" x="0" y="136">study</text><rect class="g-work" x="150" y="126" width="28" height="12" fill-opacity="0.35"/><rect class="g-work" x="150" y="126" width="16" height="12"/><text class="g-text" x="184" y="136">14</text>
+            <text class="g-text" x="150" y="158" text-anchor="middle">0</text><text class="g-text" x="250" y="158" text-anchor="middle">50</text><text class="g-text" x="350" y="158" text-anchor="middle">100</text><text class="g-text" x="450" y="158" text-anchor="middle">150</text><text class="g-text" x="550" y="158" text-anchor="middle">200</text><text class="g-text" x="650" y="158" text-anchor="middle">250 turns</text>
+          </svg>
+          <figcaption class="legend"><span class="t-work">up to the median</span><span class="t-work soft">up to the 90th percentile</span></figcaption>
+        </figure>
+        <div class="panel scroll">
+          <table class="tbl">
+            <thead><tr><th>Procedure</th><th class="num">Runs measured</th><th class="num">p50</th><th class="num">p90</th><th class="num">Segments</th><th class="num">Segment p90</th><th>Confidence</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">build-task</td><td class="num">4</td><td class="num">73</td><td class="num">253</td><td class="num">7</td><td class="num">80</td><td class="flag">estimate: under 5 runs</td></tr>
+              <tr><td class="mono">review-pr</td><td class="num">9</td><td class="num">16</td><td class="num">40</td><td class="num">9</td><td class="num">40</td><td>measured</td></tr>
+              <tr><td class="mono">remediate-pr</td><td class="num">2</td><td class="num">17</td><td class="num">64</td><td class="num">2</td><td class="num">64</td><td class="flag">estimate: under 5 runs</td></tr>
+              <tr><td class="mono">rebase-on-base</td><td class="num">4</td><td class="num">11</td><td class="num">16</td><td class="num">4</td><td class="num">16</td><td class="flag">estimate: under 5 runs</td></tr>
+              <tr><td class="mono">study</td><td class="num">2</td><td class="num">8</td><td class="num">14</td><td class="num">2</td><td class="num">14</td><td class="flag">estimate: under 5 runs</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h2>What keeps failing</h2><p>The 1,298 tick actions that failed, by day and by action.</p></div>
+        <figure class="panel pad chart">
+          <svg viewBox="0 0 720 124" role="img" aria-label="Failed tick actions by day from 2026-10-26 to 2026-11-18">
+            <line class="g-grid" x1="40" y1="20" x2="712" y2="20"/><line class="g-grid" x1="40" y1="60" x2="712" y2="60"/><line class="g-line" x1="40" y1="100" x2="712" y2="100"/>
+            <text class="g-text" x="34" y="24" text-anchor="end">305</text><text class="g-text" x="34" y="64" text-anchor="end">150</text><text class="g-text" x="34" y="104" text-anchor="end">0</text>
+            <rect class="g-failed" x="44" y="50.2" width="20" height="49.8"/><rect class="g-failed" x="100" y="98.7" width="20" height="1.3"/><rect class="g-failed" x="128" y="99" width="20" height="1"/><rect class="g-failed" x="156" y="99" width="20" height="1"/>
+            <rect class="g-failed" x="184" y="20" width="20" height="80"/><rect class="g-failed" x="212" y="32.3" width="20" height="67.7"/><rect class="g-failed" x="240" y="31.8" width="20" height="68.2"/><rect class="g-failed" x="268" y="57" width="20" height="43"/>
+            <rect class="g-failed" x="296" y="99" width="20" height="1"/><rect class="g-failed" x="324" y="99" width="20" height="1"/><rect class="g-failed" x="352" y="99" width="20" height="1"/><rect class="g-failed" x="408" y="99" width="20" height="1"/>
+            <rect class="g-failed" x="576" y="99" width="20" height="1"/><rect class="g-failed" x="604" y="99" width="20" height="1"/><rect class="g-failed" x="660" y="99" width="20" height="1"/><rect class="g-failed" x="688" y="91.9" width="20" height="8.1"/>
+            <text class="g-text" x="54" y="116" text-anchor="middle">10-26</text><text class="g-text" x="194" y="116" text-anchor="middle">10-31</text><text class="g-text" x="278" y="116" text-anchor="middle">11-03</text><text class="g-text" x="418" y="116" text-anchor="middle">11-08</text><text class="g-text" x="586" y="116" text-anchor="middle">11-14</text><text class="g-text" x="698" y="116" text-anchor="middle">11-18</text>
+            <text class="g-text" x="194" y="14" text-anchor="middle">305</text><text class="g-text" x="698" y="86" text-anchor="middle">31</text>
+          </svg>
+          <figcaption class="muted">A day holds 288 ticks: over 250 failures in a day is one action refused at nearly every tick. It happened three days running, 2026-10-31 to 2026-11-02, and 2026-11-03 still held 164.</figcaption>
+        </figure>
+        <div class="panel scroll">
+          <table class="tbl">
+            <thead><tr><th>Action</th><th class="num">Failures</th><th class="wide">Share</th><th>Most frequent error</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">LaunchTask</td><td class="num">655</td><td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="50 percent"><rect class="g-track" width="100" height="8"/><rect class="g-failed" width="50.5" height="8"/></svg></td><td>648 × <span class="mono">git worktree add</span> refused</td></tr>
+              <tr><td class="mono">MergeWavePullRequest</td><td class="num">307</td><td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="24 percent"><rect class="g-track" width="100" height="8"/><rect class="g-failed" width="23.7" height="8"/></svg></td><td>304 × <span class="mono">gh pr merge --rebase</span> refused, on #237 and #239</td></tr>
+              <tr><td class="mono">LaunchCheckRepair</td><td class="num">144</td><td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="11 percent"><rect class="g-track" width="100" height="8"/><rect class="g-failed" width="11.1" height="8"/></svg></td><td>115 × the logs of one check job could not be read</td></tr>
+              <tr><td class="mono">OpenIntegrationPullRequest</td><td class="num">117</td><td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="9 percent"><rect class="g-track" width="100" height="8"/><rect class="g-failed" width="9" height="8"/></svg></td><td>117 × <span class="mono">gh pr create</span> for integration/brigade_w1</td></tr>
+              <tr><td class="mono">CollectCheckRuns, CollectReviewThreads</td><td class="num">69</td><td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="5 percent"><rect class="g-track" width="100" height="8"/><rect class="g-failed" width="5.3" height="8"/></svg></td><td>the collector exited 1</td></tr>
+              <tr><td class="mono">RebaseMilestone, MergePullRequest</td><td class="num">6</td><td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="under 1 percent"><rect class="g-track" width="100" height="8"/><rect class="g-failed" width="0.5" height="8"/></svg></td><td>among them the merge of #442, refused for conflicts</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h2>Volume</h2><p>What the ledger counts since 2026-10-07.</p></div>
+        <dl class="tiles">
+          <div class="tile"><dt>Waves started</dt><dd>57</dd><span class="sub">53 closed · 4 cancelled</span></div>
+          <div class="tile"><dt>Pull requests merged</dt><dd>84</dd><span class="sub">of 89 opened by tasks</span></div>
+          <div class="tile"><dt>Review verdicts</dt><dd>193</dd><span class="sub">2.3 per merged pull request</span></div>
+          <div class="tile"><dt>Tasks parked</dt><dd>73</dd><span class="sub warn">1.3 per wave</span></div>
+          <div class="tile"><dt>Orders started</dt><dd>106</dd><span class="sub">92 done · 17 parked</span></div>
+          <div class="tile"><dt>Signals recorded</dt><dd>337</dd><span class="sub">225 dismissals</span></div>
+        </dl>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h2>Compare two periods</h2><p>Runs finished in each range of days, UTC.</p></div>
+        <div class="panel pad toolbar">
+          <span class="field"><label for="cmp-a">Before</label><input id="cmp-a" value="2026-11-15..2026-11-17"></span>
+          <span class="field"><label for="cmp-b">After</label><input id="cmp-b" value="2026-11-18..2026-11-18"></span>
+          <button class="btn" type="button">Compare</button>
+        </div>
+        <div class="panel scroll">
+          <table class="tbl">
+            <thead><tr><th>Measure</th><th class="num">11-15 to 11-17 · 1 run</th><th class="num">11-18 · 20 runs</th><th>Reading</th></tr></thead>
+            <tbody>
+              <tr><td>Turns of a run, p50</td><td class="num">8</td><td class="num">16</td><td class="flag" rowspan="2">The first range holds 1 run: too few to compare.</td></tr>
+              <tr><td>Turns of a run, p90</td><td class="num">8</td><td class="num">73</td></tr>
+              <tr><td>Turns to the first edit, p50</td><td class="num muted">–</td><td class="num">56</td><td>3 of 20 runs measured; p90 225</td></tr>
+              <tr><td>Oversized output turns</td><td class="num muted">–</td><td class="num muted">–</td><td class="muted">no segment reports any</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+    <aside class="notes">
+      <h2>Design notes · Ledger</h2>
+      <h3>1. What it is for</h3>
+      <p>The place to step back: is brigade well tuned, is it getting better, what fails in a loop. Today: five tables of bare numbers under headings that name their columns.</p>
+      <h3>2. Questions, in order</h3>
+      <ul>
+        <li><b>What do these numbers cover?</b> The perimeter, first.</li>
+        <li><b>Do the caps fit each role?</b> p90 against the cap, and the cap over time (B229).</li>
+        <li><b>What does a run take?</b> Turns by procedure, with the confidence.</li>
+        <li><b>What keeps failing?</b> Failed tick actions by day and by action.</li>
+        <li><b>Is it better than before?</b> Two ranges compared.</li>
+      </ul>
+      <h3>3. Analysis computed</h3>
+      <ul>
+        <li>p90 of a segment as a share of the cap: over, at, under.</li>
+        <li>"Estimate" spelled out: under 5 measured runs.</li>
+        <li>Failures per day against the 288 ticks of a day: a loop is visible at once.</li>
+        <li>Ratios: verdicts per merged pull request, parks per wave.</li>
+        <li>A range of fewer than 5 runs is named too small to compare.</li>
+      </ul>
+      <h3>4. Highlight</h3>
+      <ul>
+        <li>Roles sorted by how far their p90 passes the cap; amber for over.</li>
+        <li>B229: one step line per role under the caps table, marked raised, lowered or stable, drawn by the server as inline SVG with the classes of the stylesheet.</li>
+      </ul>
+      <h3>5. Navigation</h3>
+      <ul><li>A month or a day → the waves started then. A failing action → the wave it names. Home links here from its failed actions.</li></ul>
+      <h3>Reads</h3>
+      <ul>
+        <li><code>brigade ledger --json</code>: events by name, runs and segments by outcome, <code>skipped</code>.</li>
+        <li><code>brigade ledger budgets --json</code>: procedures, roles; <code>history</code> and <code>stable</code> with B229.</li>
+        <li><code>brigade ledger compare --range A --range B --json</code>.</li>
+      </ul>
+      <h3>Needs</h3>
+      <ul>
+        <li><span class="new">ledger budgets --json</span>: the segment p50 and p90 of each role. The mockup took them from <code>turns.by_role</code> of brigade_w57.</li>
+        <li><span class="new">ledger --json</span>: the failed tick actions by day and by action, with the most frequent error of each. The mockup counted them in the ledger files.</li>
+        <li>B237 will add the yield of the gate by week: a block of this page, after "What keeps failing".</li>
+      </ul>
+    </aside>
+  </div>
+</section>
+
+<!-- ============================== INBOX ============================== -->
+<section class="page" id="inbox" data-page hidden>
+  <header class="page-head">
+    <div>
+      <h1>Inbox</h1>
+      <p class="lede">What brigade noticed and could not settle alone. You decide: turn a finding into work, or dismiss it.</p>
+    </div>
+    <p class="fresh num">read 20:42:29Z · refreshes every 5 s</p>
+  </header>
+  <div class="cols">
+    <div class="content">
+      <details class="explainer">
+        <summary>How to read this page</summary>
+        <div>
+          <p>A <b>signal</b> is one fact brigade saw: a branch left behind, a task that stalled, a failing check, a note you wrote. The same fact seen again raises the count of its signal.</p>
+          <p>A <b>pattern</b> is a proposal of the triage: several signals, one cause, one action. <b>Ratify</b> it and brigade acts: a <b>wave</b> pattern records a request and launches its planner, a <b>constraint</b> pattern proposes a rule, guard, lint, schema, skill or script, an <b>order</b> pattern runs a recipe. <b>Dismiss</b> it and its signals are dismissed with it.</p>
+          <p>Start with the patterns: one decision clears many signals.</p>
+        </div>
+      </details>
+      <dl class="tiles">
+        <div class="tile"><dt>Patterns to decide</dt><dd>32</dd><span class="sub warn">15 findings, 17 repeats</span></div>
+        <div class="tile"><dt>New signals</dt><dd>34</dd><span class="sub">32 covered by a pattern</span></div>
+        <div class="tile"><dt>Oldest signal</dt><dd>17 d</dd><span class="sub">seen up to 10 times</span></div>
+        <div class="tile"><dt>Study answers</dt><dd>0</dd><span class="sub">none to read</span></div>
+      </dl>
+
+      <section class="block">
+        <div class="block-head"><h2>Decide first</h2><p>The patterns that still hold new signals, the most covered first.</p></div>
+        <div class="panel">
+          <ul class="todo">
+            <li class="t-you"><span class="mark">6×</span>
+              <div><h3>The merge of a pull request leaves its branch, and at times its worktree, behind</h3>
+                <p><span class="mono">merge_leaves_branch_and_worktree_behind</span> · proposed 6 times, 5 of them while the first was still undecided · cites 170 signals, 28 of them new.</p>
+                <p><b>If ratified:</b> a constraint on the merge step of a task, an integration and a docs pull request: the merge removes the worktree of the head branch, then deletes the branch.</p></div>
+              <div class="act"><span class="field"><label for="kind-1">as</label><select id="kind-1"><option>guard</option><option>rule</option><option>lint</option><option>schema</option><option>skill</option><option>script</option></select></span><button class="btn btn-primary" type="button">Ratify</button><button class="btn" type="button">Dismiss all 6</button></div></li>
+            <li class="t-you"><span class="mark">2×</span>
+              <div><h3>The branch of a pull request closed unmerged is kept, with the agent worktree that holds it</h3>
+                <p><span class="mono">closed_pull_request_branch_kept_with_worktree</span> · proposed 2 times · cites 3 signals, 2 of them new.</p>
+                <p><b>If ratified:</b> an order: the branches of PR 274 and PR 364 are removed only once you rule their work abandoned.</p></div>
+              <div class="act"><button class="btn btn-primary" type="button">Ratify</button><button class="btn" type="button">Dismiss</button></div></li>
+            <li class="t-you"><span class="mark">1×</span>
+              <div><h3>Two agent worktrees are left detached, on no branch, with no live run to own them</h3>
+                <p><span class="mono">agent_worktree_left_detached_after_its_run</span> · cites 3 signals, 1 of them new.</p>
+                <p><b>If ratified:</b> an order: removed once their heads are proven reachable from a branch or from origin.</p></div>
+              <div class="act"><button class="btn btn-primary" type="button">Ratify</button><button class="btn" type="button">Dismiss</button></div></li>
+            <li class="t-you"><span class="mark">1×</span>
+              <div><h3>A task larger than one build-task segment: B255 handed over 5 times until its run died</h3>
+                <p><span class="mono">task_outgrows_the_step_budget_of_build_task</span> · cites 1 signal, new.</p>
+                <p><b>If ratified:</b> a wave: a request is recorded and its planner launched, to deliver the remaining SPECs of B255 by segments that fit the budget.</p></div>
+              <div class="act"><button class="btn btn-primary" type="button">Ratify</button><button class="btn" type="button">Dismiss</button></div></li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h2>Other proposals</h2><p>22 patterns whose signals are all dismissed, or that cite none. Each repeat names the first as "still new".</p></div>
+        <div class="panel scroll">
+          <table class="tbl">
+            <thead><tr><th>Finding</th><th class="num">Proposed</th><th>Action</th><th class="num">Signals cited</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>The pytest step of the CI fails on both Python legs across pull requests<br><span class="mono muted">pytest_suite_fails_on_both_python_legs_across_pull_requests</span></td><td class="num">3 times</td><td>wave</td><td class="num">35</td><td class="num"><button class="btn" type="button">Open</button></td></tr>
+              <tr><td>Every task of a wave is signalled stalled at the same last action<br><span class="mono muted">wave_tasks_signalled_stalled_together_at_one_instant</span></td><td class="num">once</td><td>wave</td><td class="num">22</td><td class="num"><button class="btn" type="button">Open</button></td></tr>
+              <tr><td>Branches pushed without ruff format<br><span class="mono muted">ruff_format_unchecked_before_push</span></td><td class="num">2 times</td><td>constraint</td><td class="num">8</td><td class="num"><button class="btn" type="button">Open</button></td></tr>
+              <tr><td>A branch pushed without the dead code check<br><span class="mono muted">vulture_unchecked_before_push</span></td><td class="num">4 times</td><td>wave, then constraint</td><td class="num">6</td><td class="num"><button class="btn" type="button">Open</button></td></tr>
+              <tr><td>The user corrects a run in mid-course<br><span class="mono muted">user_corrects_runs</span></td><td class="num">3 times</td><td>wave</td><td class="num">0 · evidence in the pattern</td><td class="num"><button class="btn" type="button">Open</button></td></tr>
+              <tr><td>Runs re-read an oversized output they already hold<br><span class="mono muted">oversized_output_re_read_in_runs</span></td><td class="num">3 times</td><td>constraint</td><td class="num">0 · evidence in the pattern</td><td class="num"><button class="btn" type="button">Open</button></td></tr>
+              <tr><td>One refusal in one run of 104 sessions: not recurring<br><span class="mono muted">single_refusal_in_runs</span></td><td class="num">once</td><td>dismiss</td><td class="num">0</td><td class="num"><button class="btn" type="button">Dismiss</button></td></tr>
+            </tbody>
+          </table>
+          <p class="cap">7 of 11 findings shown in the mockup. A pattern whose action is "dismiss" offers no Ratify.</p>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h2>New signals</h2><p>34 signals, by what recorded them.</p></div>
+        <div class="panel">
+          <details class="fold" open><summary>Stalls <span>· 2 signals · not covered by any pattern</span></summary>
+            <div class="scroll"><table class="tbl">
+              <thead><tr><th>Signal</th><th>What</th><th class="num">Seen</th><th class="num">First seen</th><th>Reading</th><th></th></tr></thead>
+              <tbody>
+                <tr><td class="mono">67f4c7d</td><td>B91 of <a class="mono" href="#wave">brigade_w57</a> · last action 01:00:01Z</td><td class="num">2 times</td><td class="num">19 h ago</td><td class="muted">B91 merged at 04:10:00Z: stale</td><td class="num"><button class="btn" type="button">Dismiss</button></td></tr>
+                <tr><td class="mono">a018610</td><td>B144 of <a class="mono" href="#wave">brigade_w57</a> · last action 01:00:01Z</td><td class="num">2 times</td><td class="num">19 h ago</td><td class="muted">B144 merged at 05:50:29Z: stale</td><td class="num"><button class="btn" type="button">Dismiss</button></td></tr>
+              </tbody>
+            </table></div>
+          </details>
+          <details class="fold"><summary>Scan <span class="mono">stale_branches_brigade</span> <span>· 23 signals · oldest 17 d · all covered by a pattern</span></summary>
+            <div class="scroll"><table class="tbl">
+              <thead><tr><th>Signal</th><th>What</th><th class="num">Seen</th><th class="num">First seen</th><th></th></tr></thead>
+              <tbody>
+                <tr><td class="mono">b8f3275</td><td class="mono">fix/tests-ledger-across-months</td><td class="num">3 times</td><td class="num">17 d ago</td><td class="num"><button class="btn" type="button">Dismiss</button></td></tr>
+                <tr><td class="mono">f6eaaaf</td><td class="mono">integration/brigade_w10</td><td class="num">6 times</td><td class="num">17 d ago</td><td class="num"><button class="btn" type="button">Dismiss</button></td></tr>
+                <tr><td class="mono">8999a3d</td><td class="mono">integration/brigade_w11</td><td class="num">6 times</td><td class="num">17 d ago</td><td class="num"><button class="btn" type="button">Dismiss</button></td></tr>
+              </tbody>
+            </table></div>
+          </details>
+          <details class="fold"><summary>Scan <span class="mono">worktrees_brigade</span> <span>· 8 signals · oldest 15 d · all covered by a pattern</span></summary></details>
+          <details class="fold"><summary>Notes <span>· 1 signal · 1.8 d · covered by a pattern</span></summary></details>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h2>Study answers</h2></div>
+        <div class="empty"><h3>No study answer to read</h3><p>A study whose output is an entity leaves its answer here, rendered like a report. The scans of this machine answer with signals instead.</p></div>
+      </section>
+    </div>
+    <aside class="notes">
+      <h2>Design notes · Inbox</h2>
+      <h3>1. What it is for</h3>
+      <p>The one page where the user steers: each decision turns findings into work or silences them. Today the page lists 34 "families" of one signal each and 32 patterns by identifier, with no word on what a ratification starts.</p>
+      <h3>2. Questions, in order</h3>
+      <ul>
+        <li><b>What should I decide first?</b> Patterns that still hold new signals.</li>
+        <li><b>What happens if I ratify?</b> The action of the pattern in a sentence, from its ACTION and TARGET.</li>
+        <li><b>Is this new or a repeat?</b> Repeats fold under their first proposal.</li>
+        <li><b>Which signals has no one explained?</b> The signals no pattern cites.</li>
+      </ul>
+      <h3>3. Analysis computed</h3>
+      <ul>
+        <li>Repeats: patterns are folded by their name cut at <code>_recurs</code>. 32 proposals become 15 findings.</li>
+        <li>For each pattern, how many of its signals are still new.</li>
+        <li>Signals grouped by what recorded them, where today each is alone in its family.</li>
+        <li>A stall whose task merged or parked since is read "stale".</li>
+      </ul>
+      <h3>4. Highlight</h3>
+      <ul>
+        <li>The title of the pattern is the headline, its identifier secondary. The primary button is Ratify; the kind of a constraint is one select, not six buttons.</li>
+        <li>Empty inbox: "Nothing to decide. Scans run every 24 h; a finding shows here when it recurs."</li>
+      </ul>
+      <h3>5. Navigation</h3>
+      <ul><li>A signal naming a wave or a task links to it. "Open" shows the pattern with its evidence. Home links here.</li></ul>
+      <h3>Reads</h3>
+      <ul><li><code>brigade inbox list --json</code>: signals, patterns, answers.</li><li><code>brigade inbox show --json &lt;id&gt;</code>: the evidence of a signal.</li><li>POST <code>/api/inbox/ratify/&lt;pattern&gt;?kind=</code>, <code>/api/inbox/dismiss/&lt;id&gt;</code>: unchanged.</li></ul>
+      <h3>Needs</h3>
+      <ul>
+        <li><span class="new">inbox list --json</span>: the <code>title</code> and the <code>target</code> of each pattern. Today a pattern is its name, its action and the ids it cites; the mockup read TITLE and TARGET in the registry.</li>
+        <li><span class="new">inbox show --json &lt;pattern&gt;</span>: a pattern with its evidence lines.</li>
+        <li>The fold by name is a reading of the identifiers; a field naming the pattern a repeat follows would make it exact.</li>
+        <li>M17, signals handling, changes when a signal reopens: this page shows what it records.</li>
+      </ul>
+    </aside>
+  </div>
+</section>
+
+<!-- ============================== REPORTS ============================== -->
+<section class="page" id="reports" data-page hidden>
+  <header class="page-head">
+    <div>
+      <h1>Reports</h1>
+      <p class="lede">A report is the written account of a delivery: what was merged, what it cost, what went wrong, and what to check by hand before you trust it.</p>
+    </div>
+    <p class="fresh num">read 20:42:29Z</p>
+  </header>
+  <div class="cols">
+    <div class="content">
+      <details class="explainer" open>
+        <summary>What a report is, and when to read one</summary>
+        <div>
+          <p>When every task of a milestone is merged or parked, brigade writes its report. The <b>CLI fills the facts</b>: the tasks and their pull requests, the statistics, the SPEC lines to test. A <b>reporting agent writes the judgment</b>: the verdict, why a task was parked, what went well and wrong, the steps a tester follows, the code worth reading by sampling.</p>
+          <p>The report is committed on the branch of the milestone and becomes the body of the pull request you merge. <b>Read it before that merge</b>, and after any wave you did not watch. If you read three things: the verdict, what went wrong, the tester steps.</p>
+          <p>A task that names no milestone gets a task report. Reports named after a wave were written before milestone reports existed.</p>
+        </div>
+      </details>
+      <dl class="tiles">
+        <div class="tile"><dt>Milestone reports</dt><dd>5</dd><span class="sub">30 tasks, all merged · 247 runs</span></div>
+        <div class="tile"><dt>Task reports</dt><dd>0</dd><span class="sub">none yet</span></div>
+        <div class="tile"><dt>Wave reports</dt><dd>24</dd><span class="sub warn">6 record a wave that merged nothing</span></div>
+      </dl>
+
+      <section class="block">
+        <div class="block-head"><h2>Milestones</h2><p>The newest first.</p></div>
+        <div class="panel scroll">
+          <table class="tbl">
+            <thead><tr><th>Milestone</th><th>Verdict</th><th class="wide">Tasks</th><th class="num">Runs</th><th>Inside</th></tr></thead>
+            <tbody>
+              <tr><td><a href="#report"><b class="mono">M13</b></a><br><span class="muted">Run resumption</span></td>
+                <td>M13 delivered its four tasks, B231, B241, B91 and B144, in the single wave brigade_w57, none parked: 4 h 50 min from start to close on 2026-11-18.</td>
+                <td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="4 of 4 merged"><rect class="g-done" width="100" height="8"/></svg><span class="muted num">4 of 4 merged</span></td><td class="num">22</td>
+                <td class="num">3 went wrong · 16 tester steps</td></tr>
+              <tr><td><b class="mono">M8</b><br><span class="muted">Recipes</span></td>
+                <td>M8 is delivered, all 12 tasks of wave brigade_w56 merged and none left parked, <span class="flag">but at a high price: 206.31 USD over 88 runs, and 39 h 09 min of wall clock</span>.</td>
+                <td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="12 of 12 merged"><rect class="g-done" width="100" height="8"/></svg><span class="muted num">12 of 12 merged</span></td><td class="num">88</td>
+                <td class="num">6 reasons · 24 tester steps</td></tr>
+              <tr><td><b class="mono">M12</b><br><span class="muted">Inbox signals and milestone order</span></td>
+                <td>M12 is delivered whole: its seven tasks merged in three waves, from 2026-11-14 10:30 to 2026-11-15 17:55.</td>
+                <td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="7 of 7 merged"><rect class="g-done" width="100" height="8"/></svg><span class="muted num">7 of 7 merged</span></td><td class="num">47</td>
+                <td class="num">3 reasons · 23 tester steps</td></tr>
+              <tr><td><b class="mono">M7</b><br><span class="muted">Portability</span></td>
+                <td>M7 is delivered: its six tasks are merged into integration/portability <span class="flag">through 22 waves</span>, brigade_w28 to brigade_w50, and none stays parked.</td>
+                <td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="6 of 6 merged"><rect class="g-done" width="100" height="8"/></svg><span class="muted num">6 of 6 merged</span></td><td class="num">81</td>
+                <td class="num">7 reasons · 41 tester steps</td></tr>
+              <tr><td><b class="mono">M11</b><br><span class="muted">Waves read at the forge branch</span></td>
+                <td>M11 delivered its one task, B242 merged by pull request 385 on 2026-11-08, 0 tasks parked and 0 failed.</td>
+                <td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="1 of 1 merged"><rect class="g-done" width="100" height="8"/></svg><span class="muted num">1 of 1 merged</span></td><td class="num">9</td>
+                <td class="num">6 tester steps</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h2>Waves, before milestone reports</h2><p>24 reports, brigade_w2 to brigade_w27.</p></div>
+        <div class="panel">
+          <details class="fold"><summary>Show the wave reports <span>· 18 delivered at least one task · 6 delivered nothing: w3, w5, w18, w21, w22, w27</span></summary>
+            <div class="scroll"><table class="tbl">
+              <thead><tr><th>Wave</th><th>Verdict</th><th class="wide">Tasks</th><th class="num">Runs</th></tr></thead>
+              <tbody>
+                <tr><td class="mono">brigade_w27</td><td>brigade_w27 delivered nothing to origin: 0 of 1 task merged, 0 pull request opened, 2 of 2 runs blocked, and two rulings of the user are pending.</td><td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="0 of 1 merged"><rect class="g-you" width="100" height="8"/></svg><span class="muted num">0 of 1 merged</span></td><td class="num">2</td></tr>
+                <tr><td class="mono">brigade_w26</td><td>Two of the three tasks merged, B233 by PR 363 after 2 verifications and B234 by PR 362 after 4; B227, PR 364, stopped blocked on a ruling.</td><td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="2 of 3 merged"><rect class="g-done" width="66" height="8"/><rect class="g-you" x="67" width="33" height="8"/></svg><span class="muted num">2 of 3 merged</span></td><td class="num">20</td></tr>
+                <tr><td class="mono">brigade_w24</td><td>brigade_w24 delivered its four tasks, all merged and none parked, but it took 13h35 of wall clock for 145 min of run time summed over its 49 runs.</td><td><svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="4 of 4 merged"><rect class="g-done" width="100" height="8"/></svg><span class="muted num">4 of 4 merged</span></td><td class="num">49</td></tr>
+              </tbody>
+            </table></div>
+            <p class="cap">3 of 24 shown in the mockup.</p>
+          </details>
+        </div>
+      </section>
+    </div>
+    <aside class="notes">
+      <h2>Design notes · Reports</h2>
+      <h3>1. What it is for</h3>
+      <p>Find the account of a delivery and know, before opening it, whether it went well. Today: a table of id, kind and project, with no word on what a report is.</p>
+      <h3>2. Questions, in order</h3>
+      <ul>
+        <li><b>What is a report, and why would I read one?</b> The explainer, open on the first visit.</li>
+        <li><b>Which one matters now?</b> Milestone reports first, the newest on top; the one whose pull request waits for the merge is pinned.</li>
+        <li><b>Did it go well?</b> The verdict sentence and the merged bar, in the row.</li>
+      </ul>
+      <h3>3. Analysis computed</h3>
+      <ul>
+        <li>The verdict: the first NARRATIVE line, its leading "Verdict:" dropped.</li>
+        <li>Merged against tasks, from the STATISTIC lines; the reports of a delivery that merged nothing.</li>
+        <li>What each report holds: reasons, lines that went wrong, tester steps.</li>
+        <li>Totals over the milestone reports.</li>
+      </ul>
+      <h3>4. Highlight</h3>
+      <ul>
+        <li>Three kinds, three blocks; the legacy wave reports fold away.</li>
+        <li>A verdict that carries a "but" keeps it: the reader should see the price before the detail.</li>
+        <li>Empty state: "No report yet. Brigade writes one when every task of a milestone is merged or parked."</li>
+      </ul>
+      <h3>5. Navigation</h3>
+      <ul><li>Row → report. Home links the report of the last delivery. A milestone links to its entity in the awawa tab.</li></ul>
+      <h3>Reads</h3>
+      <ul><li><code>brigade report list --json</code>: id, kind, project.</li></ul>
+      <h3>Needs</h3>
+      <ul><li><span class="new">report list --json</span> carries for each report its subject (milestone, task or wave), its statistics, its first NARRATIVE line, the count of its lines by field and <code>reported_at</code>, read from <code>milestone.reported</code>. The mockup ran <code>report show</code> 29 times.</li></ul>
+    </aside>
+  </div>
+</section>
+
+<!-- ============================== REPORT ============================== -->
+<section class="page" id="report" data-page hidden>
+  <header class="page-head">
+    <div>
+      <p class="crumbs"><a href="#reports">Reports</a> / brigade / milestone report</p>
+      <h1>Milestone <span class="mono">M13</span> · Run resumption <span class="pill t-done">4 of 4 merged</span></h1>
+      <p class="lede">M13 delivered its four tasks, B231, B241, B91 and B144, in the single wave brigade_w57, none parked: 4 h 50 min from wave.started at 01:00:01Z to wave.closed at 05:50:29Z on 2026-11-18.</p>
+    </div>
+    <p class="fresh">body of <a href="https://github.com/delairec/brigade/pull/445">pull request #445</a>, merged</p>
+  </header>
+  <div class="cols">
+    <div class="content">
+      <dl class="tiles">
+        <div class="tile"><dt>Merged</dt><dd>4 <small>of 4</small></dd><span class="sub">0 parked</span></div>
+        <div class="tile"><dt>Runs</dt><dd>22</dd><span class="sub">769 turns</span></div>
+        <div class="tile"><dt>Cost</dt><dd>41.28 <small>USD</small></dd><span class="sub warn">a floor: 2 runs record none</span></div>
+        <div class="tile"><dt>Wall time</dt><dd>4 h 50 min</dd><span class="sub">4 h 41 min of run time</span></div>
+        <div class="tile"><dt>Files changed</dt><dd>0 <small>?</small></dd><span class="sub warn">4 tasks merged: questioned below</span></div>
+      </dl>
+
+      <div class="split">
+        <section class="block">
+          <div class="block-head"><h2>Went wrong</h2><p>3 lines</p></div>
+          <ul class="panel lines">
+            <li><p>Twice, after changes_requested on a base that had moved, the tick ran the rebase and then a review of the rebase-only diff before any remediation (<a href="#wave">B91</a> round 2, <a href="#wave">B144</a> round 2), spending a review run and about 35 minutes each for findings already known.</p></li>
+            <li><p>Both rebases of a conflicting branch (B241, B144) were cut at the wall-time limit of 1140 s after only 11 and 16 turns, though each rebase landed; the collection does not say what the rebaser waited on.</p></li>
+            <li><p>The git-diff-stat collector reports 0 files, 0 insertions and 0 deletions for the milestone, where the preflight size checks of the ledger give 14, 26, 23 and 50 files for B231, B241, B91 and B144: the statistics files, insertions and deletions of this report are wrong, not zero.</p></li>
+          </ul>
+        </section>
+        <div class="block">
+          <section class="block">
+            <div class="block-head"><h2>Went well</h2><p>1 line</p></div>
+            <ul class="panel lines">
+              <li><p>Every task merged with no park and no human intervention; the review caught a high defect of B144 that its tests missed, and every finding the remediator answered was fixed with a test that fails without the fix.</p></li>
+            </ul>
+          </section>
+          <section class="block">
+            <div class="block-head"><h2>For the next wave</h2><p>1 line</p></div>
+            <ul class="panel lines">
+              <li><p>Send a task whose review asked for changes to the remediator, rebasing within that run, instead of a separate rebase followed by a review; find why rebase-on-base runs reach the wall-time limit in under 20 turns; split a task the size of B144 or cut the reading its build does before its first edit; fix the base the git-diff-stat collector measures against.</p></li>
+            </ul>
+          </section>
+        </div>
+      </div>
+
+      <section class="block">
+        <div class="block-head"><h2>Tasks</h2><p>What the milestone delivered, and in what order.</p></div>
+        <div class="panel scroll">
+          <table class="tbl">
+            <thead><tr><th>Task</th><th>State</th><th>Pull requests</th><th>Comes after</th><th class="num">Review rounds</th><th class="num">Cost</th></tr></thead>
+            <tbody>
+              <tr><td><a class="mono" href="#awawa">B231</a></td><td><span class="pill t-done">merged</span></td><td><a href="https://github.com/delairec/brigade/pull/441">#441</a> <span class="muted">· #426</span></td><td class="muted">–</td><td class="num">1</td><td class="num">6.85</td></tr>
+              <tr><td><a class="mono" href="#awawa">B241</a></td><td><span class="pill t-done">merged</span></td><td><a href="https://github.com/delairec/brigade/pull/442">#442</a> <span class="muted">· #378</span></td><td class="muted">–</td><td class="num">2</td><td class="num">6.44</td></tr>
+              <tr><td><a class="mono" href="#awawa">B91</a></td><td><span class="pill t-done">merged</span></td><td><a href="https://github.com/delairec/brigade/pull/443">#443</a></td><td class="mono">B231</td><td class="num flag">3</td><td class="num">7.17</td></tr>
+              <tr><td><a class="mono" href="#awawa">B144</a></td><td><span class="pill t-done">merged</span></td><td><a href="https://github.com/delairec/brigade/pull/444">#444</a></td><td class="mono">B231</td><td class="num flag">3</td><td class="num flag">20.82</td></tr>
+            </tbody>
+          </table>
+          <p class="cap">Rounds and cost come from the ledger of <a class="mono" href="#wave">brigade_w57</a>, the one wave of the milestone.</p>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h2>Test it by hand</h2><p>16 steps in a tester's words, by task. Do these before you trust the merge.</p></div>
+        <div class="panel">
+          <details class="fold"><summary>B144 <span>· 6 steps · the fallback client</span></summary></details>
+          <details class="fold"><summary>B231 <span>· 3 steps · a run that handed over is parked, then resumed</span></summary></details>
+          <details class="fold"><summary>B241 <span>· 3 steps · a task keeps its first branch after a retitle</span></summary></details>
+          <details class="fold" open><summary>B91 <span>· 3 steps · a note handed to a run</span></summary>
+            <ol class="steps">
+              <li><p>Run <code>brigade run note &lt;run&gt; &lt;text&gt;</code> on a running run: runs/&lt;id&gt;/notes.jsonl gains one line with the text and a timestamp, the ledger gains run.noted, and the output says the note waits for the next segment; the same command on an unknown run id or a finished run exits 1 naming the run.</p></li>
+              <li><p>Let the noted run reach its next segment (a handover, a resume after the quota or a requeue): its brief carries the note in a section after the progress so far, and the note does not appear in the segment that was already running nor again in a later one.</p></li>
+              <li><p><code>brigade run show &lt;run&gt;</code> lists each note with the segment whose brief carried it, or pending before a segment has carried it.</p></li>
+            </ol>
+          </details>
+          <details class="fold"><summary>Every task <span>· 1 step · python3 -m unittest on the milestone branch</span></summary></details>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h2>Why a task was held</h2><p>2 reasons. No task of M13 was parked or failed.</p></div>
+        <ul class="panel lines">
+          <li><p>The only failed tick action is the MergePullRequest of B241 (#442) at 02:10:29Z, refused by GitHub for merge conflicts once B231 had merged, cleared by the rebase recorded at 02:40:00Z (6cec3ab9 to fa345bcb).</p></li>
+          <li><p>B144 was held from review at 03:25:29Z by a failed ancestry preflight, head e1ae72ac not descending from integration/run-resumption at 263034c5; the rebase that followed cleared it, the next preflight passing at 04:00:01Z on c4efd92e.</p></li>
+        </ul>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h2>Worth reading in the code</h2><p>4 places the reporter picked for a review by sampling.</p></div>
+        <ul class="panel lines">
+          <li><p><span class="tag">B144</span><span class="mono">brigade/tick/decide.py</span>, _move_launches_to_the_fallback and its callers (598bc454): the high defect of review round 1 sat here; check that only task launches move to the fallback and that studies, reports, orders and milestone rebases are held until the reset.</p></li>
+          <li><p><span class="tag">B231</span><span class="mono">brigade/runs/run_segments.py</span> _run_with_handovers and <span class="mono">brigade/runs/plan_run.py</span> _plan_resumption: the handover count and the session resumed only after a non-handover segment are off-by-one-prone logic that passed review in one round.</p></li>
+        </ul>
+        <p class="muted">2 of 4 shown in the mockup.</p>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h2>The full account</h2><p>Everything else the report holds, as written.</p></div>
+        <div class="panel">
+          <details class="fold"><summary>What happened <span>· 8 narrative lines · cost, each task round by round</span></summary>
+            <ul class="lines">
+              <li><p>Cost of the wave, summed from the 22 run.finished events of the ledger collection: 769 turns, 280.5 min of run time, 41.28 USD; the two runs cut at the wall-time limit record no cost, so the figure is a floor.</p></li>
+              <li><p>The wave parked twice on forge_account between 01:00:01Z and 01:11:14Z; the first runs, the builds of B231 and B241, started at 01:15:29Z, 15 minutes after the wave started.</p></li>
+            </ul>
+          </details>
+          <details class="fold"><summary>The SPEC lines to test <span>· 27 lines · B144 8 · B231 7 · B241 6 · B91 6</span></summary></details>
+          <details class="fold"><summary>Statistics as the CLI filled them <span>· tasks 4 · merged 4 · parked 0 · runs 22 · files 0 · insertions 0 · deletions 0</span></summary></details>
+        </div>
+      </section>
+    </div>
+    <aside class="notes">
+      <h2>Design notes · Report</h2>
+      <h3>1. What it is for</h3>
+      <p>Decide whether to merge and what to verify, in two minutes. Today the page prints 35 name/value pairs in the order of the entity, then two tables of 27 and 16 rows: the verdict sits at line 16 and the tester steps come last, after the 27 SPEC lines.</p>
+      <h3>2. Questions, in order</h3>
+      <ul>
+        <li><b>Was it delivered?</b> The verdict is the lede; merged against tasks is the pill.</li>
+        <li><b>What should worry me?</b> "Went wrong" comes first and takes the wide column.</li>
+        <li><b>What do I check by hand?</b> The tester steps, by task, before the SPEC lines they come from.</li>
+        <li><b>Where do I look in the code?</b> The sampling list.</li>
+        <li><b>What exactly happened?</b> The rest, folded.</li>
+      </ul>
+      <h3>3. Analysis computed</h3>
+      <ul>
+        <li>NARRATIVE lines sorted by their leading words: "went well", "went wrong", "next wave"; the first line is the verdict; the others are "what happened".</li>
+        <li>TESTER_STEP, MANUAL_TEST and SAMPLING grouped by the task that opens the line.</li>
+        <li>TASK_ROW split into task, state and pull requests; GRAPH read as "comes after".</li>
+        <li>Cost, turns, wall time and rounds joined from the ledger of the waves of the milestone.</li>
+        <li>A statistic that contradicts another is marked: 0 files changed for 4 merged tasks.</li>
+        <li>Task names, #numbers and run ids in the prose become links.</li>
+      </ul>
+      <h3>4. Highlight</h3>
+      <ul>
+        <li>Order by use, not by field: verdict, tiles, wrong/well/next, tasks, tester steps, reasons, sampling, the rest.</li>
+        <li>A report with parked tasks opens "Why a task was held" in an amber callout above the tiles, with each PARKED_QUESTION.</li>
+      </ul>
+      <h3>5. Navigation</h3>
+      <ul><li>Task → awawa entity. #n → the forge. Wave → wave. Up → reports. The pull request whose body it is → the forge.</li></ul>
+      <h3>Reads</h3>
+      <ul><li><code>brigade report show --json &lt;id&gt;</code>: the fields of the REPORT entity.</li><li><code>brigade wave show --json --events &lt;wave&gt;</code> for each wave of the milestone.</li></ul>
+      <h3>Needs</h3>
+      <ul>
+        <li><span class="new">report show --json</span> names the <code>waves</code> of the milestone, its <code>pull_request</code> and <code>reported_at</code>.</li>
+        <li>The sort of the narrative reads the first words of each line, written by habit and not by schema: 19 of the 29 reports carry both "went well" and "went wrong", the report of M8 neither. See the rulings.</li>
+      </ul>
+    </aside>
+  </div>
+</section>
+
+<!-- ============================== AWAWA ============================== -->
+<section class="page" id="awawa" data-page hidden>
+  <header class="page-head">
+    <div>
+      <p class="crumbs">Addon · runs in a process of its own</p>
+      <h1>awawa</h1>
+      <p class="lede">The specification of the project, read-only: its entities as a tree, a board and a dependency tree, and what awawa lint finds.</p>
+    </div>
+    <p class="fresh num">read 20:42:31Z · follows the .awawa files</p>
+  </header>
+  <div class="cols">
+    <div class="content">
+      <div class="mock-only">
+        <b>Mockup state</b>
+        <button type="button" data-addon="up" aria-pressed="true">Addon running</button>
+        <button type="button" data-addon="down" aria-pressed="false">Addon stopped</button>
+        <button type="button" data-addon="none" aria-pressed="false">Project without a corpus</button>
+      </div>
+
+      <div class="content" data-addon-state="down" hidden>
+        <div class="callout t-failed">
+          <h3>The awawa addon stopped</h3>
+          <p>Its process exited with code 1. The rest of the dashboard is unaffected: waves, runs, ledger, inbox and reports are served by brigade itself.</p>
+          <p>Brigade starts the addon again at the next request to this tab. After 3 failures in a row it stops trying until <code class="cmd">brigade serve</code> is started again, and shows here the last lines the addon wrote on its standard error.</p>
+        </div>
+      </div>
+      <div class="content" data-addon-state="none" hidden>
+        <div class="empty">
+          <h3>This project has no awawa corpus</h3>
+          <p>awawa found no .awawa file under the path of the project, so brigade started no addon for it and the tab leaves the rail. Waves, runs, ledger, inbox and reports work the same.</p>
+        </div>
+      </div>
+
+      <div class="content" data-addon-state="up">
+        <div class="banner">
+          <span><b>brigade</b> at</span>
+          <span class="field"><label for="aw-ref" class="mono">ref</label><select id="aw-ref"><option selected>main</option><option>worktree:worktree-refine-m14</option></select></span>
+          <span class="mono">f23e9bcd</span>
+          <span>a snapshot of the commit · 499 entities in 7 files · awawa 2.7.0</span>
+        </div>
+        <div class="toolbar">
+          <div class="tabs" role="tablist" aria-label="View">
+            <button type="button" role="tab" data-aw="tree" aria-selected="true">Tree</button>
+            <button type="button" role="tab" data-aw="board" aria-selected="false">Board</button>
+            <button type="button" role="tab" data-aw="deps" aria-selected="false">Dependencies</button>
+            <button type="button" role="tab" data-aw="health" aria-selected="false">Health <span class="num">0</span></button>
+          </div>
+          <span class="field"><label for="aw-q" class="mono">search</label><input type="search" id="aw-q" placeholder="Search the label, the name or a fact"></span>
+          <button class="btn" type="button">Filter</button>
+        </div>
+
+        <!-- tree -->
+        <div class="content" data-aw-view="tree">
+          <div class="chips"><a class="chip" href="#awawa" title="Remove this filter">Task · Status: draft, todo ✕</a><a href="#awawa" class="muted">Clear all</a></div>
+          <div class="two">
+            <div class="panel tree">
+              <details class="type" open><summary>Task <small>28 of 226</small></summary>
+                <details class="group life-1" open><summary>draft <small>26</small></summary>
+                  <div class="ent"><span class="code">B40</span><a class="label" href="#awawa">Evaluate rtk as a candidate filter of shell output</a><span class="facts"><i>Role</i> dora, prudence</span></div>
+                  <div class="ent"><span class="code">B76</span><a class="label" href="#awawa">The forge and the scheduler kinds resolve an executable brigade-&lt;kind&gt;-&lt;name&gt; on PATH as the client kind does</a><span class="facts"><i>Role</i> ada · <i>After</i> <span class="ref life-3">B73</span>, <span class="ref life-3">B74</span>, <span class="ref life-3">B75</span></span></div>
+                  <div class="ent"><span class="code">B92</span><a class="label" href="#awawa">brigade run list says what each run worked on and how it went: the arguments of its procedure, its segments…</a><span class="facts"><i>Milestone</i> <span class="ref life-1">M14</span> · <i>Role</i> ada · <i>After</i> <span class="ref life-3">B82</span></span></div>
+                  <div class="ent"><span class="code">B100</span><a class="label" href="#awawa">POLICY.REVIEW local: the tasks of a wave merged into integration on the machine, and one pull request…</a><span class="facts"><i>Role</i> ada · <i>After</i> <span class="ref life-3">B99</span>, <span class="ref life-3">B17</span></span></div>
+                  <div class="ent"><span class="code">B104</span><a class="label" href="#awawa">A milestone and its draft tasks plan brigade clean: what brigade leaves behind removed by kind…</a><span class="facts"><i>Milestone</i> <span class="ref life-1">M16</span> · <i>Role</i> lex</span></div>
+                  <div class="ent"><span class="code">B178</span><a class="label" href="#awawa">The wave views: wave show --plan, wave reject, the pause shown, wave list --status, and the cause of each task…</a><span class="facts"><i>Milestone</i> <span class="ref life-1">M14</span> · <i>Role</i> ada</span></div>
+                  <div class="ent" aria-selected="true"><span class="code">B229</span><a class="label" href="#awawa">The dashboard draws the applied turn cap of each role over time</a><span class="facts"><i>Milestone</i> <span class="ref life-1">M14</span> · <i>Role</i> ada · <i>After</i> <span class="ref life-3">B37</span></span></div>
+                  <div class="ent"><span class="code">B230</span><a class="label" href="#awawa">A project in MODE none: its waves and tasks run without awawa on its repository</a><span class="facts"><i>Role</i> ada · <i>After</i> <span class="ref life-3">B140</span></span></div>
+                  <div class="ent"><span class="facts">18 more drafts in the real view</span></div>
+                </details>
+                <details class="group life-2" open><summary>todo <small>2</small></summary>
+                  <div class="ent" title="Waits on an entity of its own type that is not further along its lifecycle"><span class="wait" aria-label="waits">II</span><span class="code">B236</span><a class="label" href="#awawa">M6 is proven after the fact on the closed waves of one range, at least ten tasks merged after B37 reached main…</a><span class="facts"><i>Type</i> docs · <i>Milestone</i> <span class="ref life-1">M14</span> · <i>Role</i> ada · <i>After</i> <span class="ref life-3">B37</span>, <span class="ref life-3">B175</span>, 8 more, <span class="ref life-1">B229</span>, <span class="ref life-1">B230</span></span></div>
+                  <div class="ent"><span class="code">B237</span><a class="label" href="#awawa">Brigade surfaces the yield of its own gate: the escape rate and the rounds to pass of its pull requests, by week…</a><span class="facts"><i>Type</i> feat · <i>Milestone</i> <span class="ref life-1">M14</span> · <i>Role</i> ada · <i>After</i> <span class="ref life-3">B232</span></span></div>
+                </details>
+              </details>
+              <details class="type"><summary>Decision <small>233</small></summary></details>
+              <details class="type"><summary>Milestone <small>19</small></summary></details>
+              <details class="type"><summary>Open question <small>12</small></summary></details>
+              <details class="type"><summary>Project <small>1</small></summary></details>
+              <details class="type"><summary>Recipe <small>1</small></summary></details>
+              <details class="type"><summary>Schema <small>7</small></summary></details>
+            </div>
+            <div class="panel pad drawer">
+              <div><p class="eyebrow">Task · <span class="ref life-1">draft</span></p><h3><span class="mono">B229</span> The dashboard draws the applied turn cap of each role over time</h3></div>
+              <dl>
+                <dt>MILESTONE</dt><dd><span class="ref life-1">M14</span> Observability</dd>
+                <dt>COMPONENT</dt><dd>dashboard</dd>
+                <dt>ROLE</dt><dd>ada</dd>
+                <dt>AFTER</dt><dd><span class="ref life-3">B37</span></dd>
+                <dt>BEFORE</dt><dd><span class="ref life-2">B236</span> <span class="muted">names it in After</span></dd>
+                <dt>written at</dt><dd class="mono">corpus/tasks.awawa:16219</dd>
+              </dl>
+              <details class="fold"><summary>SPEC, RATIONALE, SOURCE <span>· the text fields</span></summary></details>
+              <div class="row"><a class="btn" href="http://127.0.0.1:7878/">Edit in awawa-web</a><span class="muted">An IDE link shows here when <code>ide_link</code> is set in config.toml.</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- board -->
+        <div class="content" data-aw-view="board" hidden>
+          <div class="toolbar">
+            <span class="field"><label for="aw-type">Type:</label><select id="aw-type"><option>Task</option><option>Decision</option><option selected>Milestone</option><option>Open question</option></select></span>
+            <span class="field"><label for="aw-by">By:</label><select id="aw-by"><option>Title</option><option>Subject</option><option selected>Status</option><option>After</option></select></span>
+            <span class="field"><label for="aw-cols">Columns:</label><input id="aw-cols" type="number" value="5" min="1" max="50" disabled></span>
+            <span class="muted">Status enumerates its values: one column each, in schema order.</span>
+          </div>
+          <div class="board">
+            <section class="lane life-1"><h3>planned <small>4</small></h3>
+              <div class="card"><div><span class="code">M14</span> Observability</div><div class="facts"><i>After</i> <span class="ref life-3">M8</span></div></div>
+              <div class="card"><div><span class="code">M15</span> Admin console</div><div class="facts"><i>After</i> <span class="ref life-3">M8</span></div></div>
+              <div class="card"><div><span class="code">M16</span> Maintenance</div><div class="facts"><i>After</i> <span class="ref life-3">M8</span></div></div>
+              <div class="card"><div><span class="code">M17</span> Signals handling</div><div class="facts"><i>After</i> <span class="ref life-3">M8</span></div></div>
+            </section>
+            <section class="lane life-2"><h3>active <small>0</small></h3><p class="more">No entity</p></section>
+            <section class="lane life-3"><h3>reached <small>15</small></h3>
+              <div class="card"><div><span class="code">F0</span> fix-foundations</div></div>
+              <div class="card"><div><span class="code">M0</span> Foundations</div></div>
+              <div class="card"><div><span class="code">M1</span> Wave engine</div></div>
+              <div class="card"><div><span class="code">M2</span> Intake and triage</div></div>
+              <div class="card"><div><span class="code">M3</span> Dashboard</div></div>
+              <div class="card"><div><span class="code">M8</span> Recipes</div><div class="facts"><i>After</i> <span class="ref life-3">M12</span></div></div>
+              <div class="card"><div><span class="code">M13</span> Run resumption</div><div class="facts"><i>After</i> <span class="ref life-3">M8</span></div></div>
+              <p class="more">8 more cards in the real view</p>
+            </section>
+          </div>
+        </div>
+
+        <!-- dependencies -->
+        <div class="content" data-aw-view="deps" hidden>
+          <div class="toolbar">
+            <span class="field"><label for="aw-dtype">Type:</label><select id="aw-dtype"><option>Task</option><option selected>Milestone</option></select></span>
+            <span class="field"><label for="aw-follow">Follow:</label><select id="aw-follow"><option selected>After ↔ Before</option></select></span>
+            <span class="muted">Roots wait on nothing; under each entity, those naming it in After.</span>
+          </div>
+          <div class="panel deps pad">
+            <ul>
+              <li><div class="ent"><span class="code">F0</span><span class="label">fix-foundations</span><span class="facts"><span class="ref life-3">reached</span></span></div></li>
+              <li><div class="ent"><span class="code">M0</span><span class="label">Foundations</span><span class="facts"><span class="ref life-3">reached</span></span></div></li>
+              <li><div class="ent"><span class="facts">M1 to M7, M9, M10, M11: 10 more roots, each reached and followed by nothing</span></div></li>
+              <li><div class="ent"><span class="code">M12</span><span class="label">Inbox signals and milestone order</span><span class="facts"><span class="ref life-3">reached</span></span></div>
+                <ul>
+                  <li><div class="ent" title="Waits on an entity of its own type that is not further along its lifecycle"><span class="wait" aria-label="waits">II</span><span class="code">M8</span><span class="label">Recipes</span><span class="facts"><span class="ref life-3">reached</span> · <i>After</i> <span class="ref life-3">M12</span></span></div>
+                    <ul>
+                      <li><div class="ent" title="Waits on an entity of its own type that is not further along its lifecycle"><span class="wait" aria-label="waits">II</span><span class="code">M13</span><span class="label">Run resumption</span><span class="facts"><span class="ref life-3">reached</span> · <i>After</i> <span class="ref life-3">M8</span></span></div></li>
+                      <li><div class="ent"><span class="code">M14</span><span class="label">Observability</span><span class="facts"><span class="ref life-1">planned</span> · <i>After</i> <span class="ref life-3">M8</span></span></div></li>
+                      <li><div class="ent"><span class="code">M15</span><span class="label">Admin console</span><span class="facts"><span class="ref life-1">planned</span> · <i>After</i> <span class="ref life-3">M8</span></span></div></li>
+                      <li><div class="ent"><span class="code">M16</span><span class="label">Maintenance</span><span class="facts"><span class="ref life-1">planned</span> · <i>After</i> <span class="ref life-3">M8</span></span></div></li>
+                      <li><div class="ent"><span class="code">M17</span><span class="label">Signals handling</span><span class="facts"><span class="ref life-1">planned</span> · <i>After</i> <span class="ref life-3">M8</span></span></div></li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- health -->
+        <div class="content" data-aw-view="health" hidden>
+          <dl class="tiles">
+            <div class="tile"><dt>Errors</dt><dd>0</dd></div>
+            <div class="tile"><dt>Warnings</dt><dd>0</dd></div>
+            <div class="tile"><dt>Unresolved references</dt><dd>1</dd><span class="sub warn">corpus/tasks.awawa</span></div>
+          </dl>
+          <div class="empty"><h3>No diagnostic: the corpus is clean</h3><p>awawa lint reports nothing on the 499 entities of the 7 files. Diagnostics show here by entity, the entities with the most errors first, then by file for those on no entity.</p></div>
+          <div class="callout t-you"><h3>1 reference does not resolve</h3><p>awawa status counts 1 reference to an entity the corpus does not define, in corpus/tasks.awawa, where lint reports no diagnostic. The plugin shows lint alone; the tab adds this count, which the inventory already carries.</p></div>
+        </div>
+      </div>
+    </div>
+    <aside class="notes">
+      <h2>Design notes · awawa tab</h2>
+      <h3>1. What it is for</h3>
+      <p>The awawa-ui plugin in the browser, for any project brigade serves at any ref: what is planned, what waits on what, what is broken in the specification. It replaces the Corpus view, which lists bare targets.</p>
+      <h3>2. Questions, in order</h3>
+      <ul>
+        <li><b>What stands where in its lifecycle?</b> Tree, grouped by status.</li>
+        <li><b>How is the work spread?</b> Board, by any field.</li>
+        <li><b>What waits on what?</b> Dependencies, and the pause mark.</li>
+        <li><b>Is the corpus sound?</b> Health.</li>
+      </ul>
+      <h3>3. Carried over from the plugin, unchanged</h3>
+      <ul>
+        <li>Code, label and up to four facts chosen from the resolved schema; names read as sentences; natural order.</li>
+        <li>Groups in lifecycle order, the last value collapsed, Schema apart; the six lifecycle colours, which are now the state colours of the whole dashboard.</li>
+        <li>Board columns in schema order or capped with "Others (k)"; the dependency tree with its cycle flags; Health by entity then by file.</li>
+        <li>Filter chips, one level through a reference; the search over label, name, facts, status and file.</li>
+      </ul>
+      <h3>4. What the web changes</h3>
+      <ul>
+        <li><b>Read at a ref</b> is the normal case: the banner chooses the branch, the SHA or the worktree.</li>
+        <li><b>Double click opens the editor</b> becomes a detail pane, the pane the plugin left out because the editor was one click away, with links to awawa-web and to the IDE.</li>
+        <li><b>Remembered state</b> lives in the address: view, type, field, filters, search. A view can be bookmarked and sent.</li>
+        <li><b>Clean</b> is left out: it deletes entities. Changing a colour and arranging columns are not ported in M18.</li>
+      </ul>
+      <h3>5. The addon</h3>
+      <ul>
+        <li><code>brigade serve</code> starts one child process when at least one registered project has a corpus: <code>awawa status --json &lt;path&gt;</code> counts <code>summary.files</code> above zero.</li>
+        <li>The page still talks to brigade alone: <code>/views/awawa/…</code> hands the request to the addon and renders its JSON answer in Python, escaped, as every view.</li>
+        <li>The addon keeps the answers of awawa per project and tree, and drops them when a .awawa file changes: a SHA never changes, a worktree is checked by the size and the date of its files.</li>
+        <li>A crash costs this tab alone.</li>
+      </ul>
+      <h3>Reads, through the addon</h3>
+      <ul>
+        <li><code>awawa status --json</code>: types, entities, references.</li>
+        <li><code>awawa context @TYPE.First --depth 0 --with-schema --json</code>: the resolved schema of a type.</li>
+        <li><code>awawa show @TYPE.Name --json</code>: one per entity of a type shown, in parallel.</li>
+        <li><code>awawa lint --json</code>: the diagnostics.</li>
+        <li>git on the project path, for the refs offered.</li>
+      </ul>
+      <h3>Why a process</h3>
+      <p>Measured here: the present Corpus view of the 226 tasks takes 3.09 s for one request, one <code>awawa show</code> of 21 ms per entity in sequence, where the page polls every 5 s.</p>
+    </aside>
+  </div>
+</section>
+
+<!-- ============================== FOUNDATION ============================== -->
+<section class="page" id="foundation" data-page hidden>
+  <header class="page-head">
+    <div>
+      <p class="crumbs">Mockup only · the base every page is built from</p>
+      <h1>Foundation</h1>
+      <p class="lede">The tokens, the shell and the components. Three rules hold everywhere: colour means state, a page opens on a sentence and on what needs you, and a figure says what it covers.</p>
+    </div>
+  </header>
+  <div class="content">
+    <section class="block">
+      <div class="block-head"><h2>State tones</h2><p>Seven tones and a neutral. Six are the lifecycle colours of the awawa-ui plugin, so a draft task and a parked wave share one amber.</p></div>
+      <div class="panel pad swatches">
+        <div class="swatch t-you"><i></i><b>you · amber</b><span class="mono">--you #b36b00 / #e0a04b</span><span class="muted">parked wave, task, study or order; a run stopped on a question; a paused project. Lifecycle position 1.</span></div>
+        <div class="swatch t-work"><i></i><b>work · blue</b><span class="mono">--work #2f6fdb / #6fa3f7</span><span class="muted">running, fixing. Position 2.</span></div>
+        <div class="swatch t-review"><i></i><b>review · teal</b><span class="mono">--review #138a8a / #4fc1c1</span><span class="muted">pr_open, verifying, changes_requested. Position 6.</span></div>
+        <div class="swatch t-done"><i></i><b>done · green</b><span class="mono">--done #2e8b3e / #6cc47a</span><span class="muted">merged, verified, done, closed, reached, active. Position 3.</span></div>
+        <div class="swatch t-limit"><i></i><b>limit · violet</b><span class="mono">--limit #8a3fc7 / #b58cf0</span><span class="muted">blocked on the quota, wall_limit, turn_limit, soft_limit: stopped by a limit, resumes alone. Position 5.</span></div>
+        <div class="swatch t-failed"><i></i><b>failed · red</b><span class="mono">--failed #c4372f / #f0796f</span><span class="muted">dead, failed, undeclared, a failed tick action. Outside the lifecycle palette.</span></div>
+        <div class="swatch t-off"><i></i><b>off · grey</b><span class="mono">--off #7a7a7a / #8c8c8c</span><span class="muted">cancelled, stopped, dismissed. Position 4.</span></div>
+        <div class="swatch t-wait"><i></i><b>wait · neutral</b><span class="mono">--faint</span><span class="muted">queued, handed_over: nothing to look at.</span></div>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="block-head"><h2>Status pill</h2><p>The state in a word, a tone and a shape: a pause for "your move", a diamond for a failure, a strike for what was called off.</p></div>
+      <div class="panel pad row">
+        <span class="pill t-wait">queued</span><span class="pill t-work">running</span><span class="pill t-work">fixing</span><span class="pill t-review">pr_open</span><span class="pill t-review">verifying</span><span class="pill t-review">changes_requested</span><span class="pill t-done">verified</span><span class="pill t-done">merged</span><span class="pill t-you">parked</span><span class="pill t-limit">blocked:quota</span><span class="pill t-limit">wall_limit</span><span class="pill t-wait">handed_over</span><span class="pill t-failed">dead</span><span class="pill t-failed">failed</span><span class="pill t-off">cancelled</span>
+      </div>
+    </section>
+
+    <div class="split">
+      <section class="block">
+        <div class="block-head"><h2>Type</h2><p>System faces only: the dashboard loads nothing.</p></div>
+        <div class="panel pad scale">
+          <p class="t26">Page title · 26 / 680</p>
+          <p class="t19">Status sentence · 19 / 650</p>
+          <p class="t16">Block heading · 16 / 650</p>
+          <p class="t14">Body · 14 / 400, lede 15</p>
+          <p class="t13">Table and notes · 13</p>
+          <p class="t11">Label · 11 upper, tracked</p>
+          <p class="mono">identifiers, commands, SHAs · ui-monospace</p>
+          <p class="num muted">Figures are tabular: 41.28 · 1,298 · 4 h 50 min</p>
+        </div>
+      </section>
+      <section class="block">
+        <div class="block-head"><h2>Spacing and surface</h2><p>One scale; a radius of 3 px; borders, no shadow.</p></div>
+        <div class="panel pad">
+          <div class="spacebar"><span><i class="w4"></i>4</span><span><i class="w8"></i>8</span><span><i class="w12"></i>12</span><span><i class="w16"></i>16</span><span><i class="w24"></i>24</span><span><i class="w32"></i>32</span><span><i class="w48"></i>48</span></div>
+        </div>
+        <div class="block-head"><h2>Neutrals</h2></div>
+        <div class="panel pad row mono">--bg · --surface · --sunken · --line · --line-strong · --text · --muted · --faint · --ink</div>
+      </section>
+    </div>
+
+    <section class="block">
+      <div class="block-head"><h2>Components</h2><p>Each is one Python function returning escaped HTML, tested like every renderer of brigade.</p></div>
+      <div class="split">
+        <div class="block">
+          <h3>Status sentence</h3>
+          <div class="verdict t-work"><p>Brigade is working: one wave is half done.</p><p>The first thing a page says. The dot takes the tone of the state.</p></div>
+          <h3>Stat tiles</h3>
+          <dl class="tiles"><div class="tile"><dt>Label</dt><dd>41.28 <small>USD</small></dd><span class="sub warn">a floor: 2 runs record none</span></div><div class="tile"><dt>Label</dt><dd>4 <small>of 4</small></dd><span class="sub">what it covers</span></div></dl>
+          <h3>Explainer</h3>
+          <details class="explainer"><summary>How to read this page</summary><div><p>What the thing is, how it behaves, when to come here. Open on a first visit, closed after.</p></div></details>
+          <h3>Callout</h3>
+          <div class="callout t-limit"><h3>A finding the page computed</h3><p>One fact, with its figure, in the tone of what it is about.</p></div>
+        </div>
+        <div class="block">
+          <h3>Needs you</h3>
+          <ul class="panel todo"><li class="t-you"><span class="mark">II</span><div><h3>What is stopped</h3><p>Why, since when, and what resuming does.</p></div><div class="act"><button class="btn btn-primary" type="button">The one action</button></div></li></ul>
+          <h3>Empty state</h3>
+          <div class="empty"><h3>Nothing here, and why</h3><p>What would make something appear, in one sentence.</p></div>
+          <h3>Bars, drawn by the server</h3>
+          <div class="panel pad block">
+            <svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="6 merged, 1 parked"><rect class="g-done" width="85" height="8"/><rect class="g-you" x="86" width="14" height="8"/></svg>
+            <svg class="bar" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="a share of 50 percent"><rect class="g-track" width="100" height="8"/><rect class="g-ink" width="50.4" height="8"/></svg>
+            <p><span class="segs"><i class="t-wait"></i><i class="t-wait"></i><i class="t-wait"></i><i class="t-done"></i></span> <span class="muted">the segments of a run</span></p>
+          </div>
+          <h3>Filter chips</h3>
+          <div class="chips"><a class="chip" href="#foundation" aria-current="true">All <b>57</b></a><a class="chip" href="#foundation">Open <b>0</b></a><a class="chip" href="#foundation">Task · Status: draft, todo ✕</a></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="block-head"><h2>The cap of a role over time <span class="new-tag">B229</span></h2><p>The step line B229 specifies, in this stylesheet. Specimen values: no <code>budget.applied</code> event exists on this machine.</p></div>
+      <div class="panel pad multiples">
+        <svg viewBox="0 0 320 96" role="img" aria-label="Specimen: a cap raised from 75 to 90, then lowered to 80">
+          <text class="g-label" x="0" y="12">ada · specimen</text>
+          <path class="s-work s-2" d="M4 62 H110 V26 H214 V50 H316"/>
+          <circle class="g-work" cx="110" cy="26" r="3.5"/><circle class="g-work" cx="214" cy="50" r="3.5"/>
+          <text class="g-text" x="4" y="76">75</text>
+          <text class="g-text" x="116" y="20">raised 75 → 90 · 11-20 02:15Z</text>
+          <text class="g-text" x="220" y="66">lowered 90 → 80</text><text class="g-text" x="220" y="80">11-27 14:40Z</text>
+        </svg>
+        <svg viewBox="0 0 320 96" role="img" aria-label="A role whose cap never changed: 40, stable">
+          <text class="g-label" x="0" y="12">prudence</text>
+          <line class="s-muted s-2" x1="4" y1="50" x2="316" y2="50"/>
+          <text class="g-text" x="4" y="70">40 · stable</text>
+        </svg>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="block-head"><h2>The shell</h2></div>
+      <ul class="panel lines">
+        <li><p><span class="tag">Rail</span>Always there: the project, the pages in two groups, the addons, and the heartbeat of the tick. A count in the rail is a count of things open now; amber when they wait for you.</p></li>
+        <li><p><span class="tag">Project</span>"All projects" or one. The choice travels in the address, so a page can be bookmarked for a project. It narrows waves, runs, inbox, reports and ledger.</p></li>
+        <li><p><span class="tag">Addons</span>An addon is a tab served by a process of its own. awawa shows when the project chosen has a corpus, or under "All projects" when any has one.</p></li>
+        <li><p><span class="tag">Page</span>Title and one sentence; the explainer; the status sentence or the tiles; what needs you; the blocks; raw detail folded last.</p></li>
+        <li><p><span class="tag">Polling</span>Every 5 s while the tab is visible, as today, but the page swaps a fragment only when it differs from the one shown, and an opened fold stays open.</p></li>
+        <li><p><span class="tag">Narrow</span>Under 900 px the rail becomes a wrapped bar on top; tables scroll inside their panel.</p></li>
+      </ul>
+    </section>
+
+    <section class="block">
+      <div class="block-head"><h2>Where the mockup stands against the constraints</h2></div>
+      <div class="panel scroll">
+        <table class="tbl">
+          <thead><tr><th>Constraint</th><th>In the mockup</th><th>Departure</th></tr></thead>
+          <tbody>
+            <tr><td>A view is a fragment the server renders from the JSON of a command</td><td>Every block is static HTML a Python function can return from a document; each note names the command.</td><td>The mockup changes page in the browser; brigade fetches <code>/views/&lt;route&gt;</code>.</td></tr>
+            <tr><td>Standard library only</td><td>No library, no web font, no icon set. Charts are inline SVG.</td><td>None.</td></tr>
+            <tr><td><code>Content-Security-Policy: default-src 'self'</code></td><td>No <code>style</code> attribute and no inline script in the pages: colour comes from classes, a bar is a <code>&lt;rect width&gt;</code>.</td><td>An Artifact is one file, so its stylesheet and script are inline; in brigade they are <code>/dashboard.css</code> and <code>/dashboard.js</code>.</td></tr>
+            <tr><td>No JavaScript test runtime</td><td>The page script keeps to swapping: skip an unchanged fragment, keep open folds and focus, post a form.</td><td>The switches marked "Mockup state" and this script exist only here.</td></tr>
+            <tr><td>Loopback host and token</td><td>Every button is one of the six POST routes of today: project pause and resume, wave resume, task requeue, inbox ratify and dismiss.</td><td>None. A parked study shows its command instead of a button.</td></tr>
+            <tr><td>No second corpus editor</td><td>The awawa tab reads. Clean is left out; editing links to awawa-web.</td><td>None.</td></tr>
+            <tr><td>Figures</td><td>Read on this machine on 2026-11-18. A line "n of m shown in the mockup" marks a list cut short.</td><td><span class="new-tag">B92</span> <span class="new-tag">B178</span> <span class="new-tag">B229</span> <span class="new-tag">B263</span> mark what M14 will carry; violet words in the notes mark fields no command returns yet.</td></tr>
+            <tr><td>Browser</td><td><code>color-mix()</code> and <code>text-wrap: balance</code>.</td><td>Both need a browser of 2023 or later.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</section>
+
+<!-- ============================== PLAN ============================== -->
+<section class="page" id="plan" data-page hidden>
+  <header class="page-head">
+    <div>
+      <p class="crumbs">Mockup only · from the design to the tasks of M18</p>
+      <h1>Plan and rulings</h1>
+      <p class="lede">Twelve tasks in delivery order, then the seven points that need your ruling before the drafts are written.</p>
+    </div>
+  </header>
+  <div class="content">
+    <section class="block">
+      <div class="block-head"><h2>Tasks, in delivery order</h2><p>After the foundation, the pages do not depend on one another. The awawa tab is a chain of three.</p></div>
+      <div class="panel scroll">
+        <table class="tbl">
+          <thead><tr><th class="num">#</th><th>Task</th><th class="wide">Delivers</th><th>Touches</th><th>After</th></tr></thead>
+          <tbody>
+            <tr><td class="num">1</td><td><b>Foundation</b></td><td>The stylesheet on tokens, the components, the shell with its rail, project selector and heartbeat, the page script, and one Python helper per component.</td><td class="mono">dashboard/data/*, dashboard/render_*.py (new helpers), render_html_table.py</td><td>–</td></tr>
+            <tr><td class="num">2</td><td><b>Reports list</b></td><td><code>report list --json</code> carries subject, statistics, verdict line, counts by field, <code>reported_at</code>. The Reports view with its explainer.</td><td class="mono">commands/report_*.py, reports/read_reports.py, render_reports_fragment.py</td><td>1</td></tr>
+            <tr><td class="num">3</td><td><b>Report page</b></td><td><code>report show --json</code> names the waves and the pull request. The report ordered by use, its prose sorted and linked.</td><td class="mono">commands/report_*.py, render_report_fragment.py, render_inbox_item.py</td><td>1</td></tr>
+            <tr><td class="num">4</td><td><b>Home</b></td><td><code>status --json</code> carries the tasks by state of open waves, the live runs, the pull requests waiting for the merge; <code>tick --dry-run --json</code> names its decisions. The Home view and the heartbeat.</td><td class="mono">commands/status.py, commands/tick.py, render_home.py, route_view.py</td><td>1</td></tr>
+            <tr><td class="num">5</td><td><b>Waves list</b></td><td><code>wave list --json</code> carries start, end, tasks with their state, most rounds, cost, halt. The Waves view, which today is the raw document.</td><td class="mono">commands/wave_list.py, render_waves_fragment.py (new), answer_dashboard_request.py</td><td>1</td></tr>
+            <tr><td class="num">6</td><td><b>Wave page</b></td><td>Tiles, halts, tasks with cost share, the timeline, events folded; the cause of a queued task when the document carries it.</td><td class="mono">render_wave.py, render_wave_timeline.py (new)</td><td>1</td></tr>
+            <tr><td class="num">7</td><td><b>Runs</b></td><td>The list with tiles, cost by procedure and filters; the run page with segments against the cap, progress by segment and the runs of the task. The B92 fields shown when carried.</td><td class="mono">render_runs_fragment.py, render_run_fragment.py, route_command.py, route_view.py</td><td>1</td></tr>
+            <tr><td class="num">8</td><td><b>Ledger</b></td><td><code>ledger budgets --json</code> carries segment p50 and p90 by role; <code>ledger --json</code> the failed actions by day and action. The Ledger view, with the place of the B229 charts under the caps table.</td><td class="mono">commands/ledger*.py, ledger/*, render_ledger_fragment.py</td><td>1</td></tr>
+            <tr><td class="num">9</td><td><b>Inbox</b></td><td><code>inbox list --json</code> carries the title and target of a pattern; <code>inbox show &lt;pattern&gt;</code>. The Inbox view: decide first, repeats folded, signals by source.</td><td class="mono">commands/inbox_list.py, inbox_show.py, render_inbox_view.py, render_inbox_item.py</td><td>1</td></tr>
+            <tr><td class="num">10</td><td><b>Corpus documents</b></td><td><code>brigade corpus --view tree|board|dependencies|health --json</code> with the rules of the plugin: label, code, facts, waiting, names as sentences, natural order, groups, capped columns, cycles, filters, search.</td><td class="mono">commands/corpus.py, corpus/describe_corpus_view.py and new modules</td><td>–</td></tr>
+            <tr><td class="num">11</td><td><b>awawa addon</b></td><td><code>brigade serve</code> starts one child process when a project has a corpus; it answers the documents of task 10 from a cache dropped when a .awawa file changes; a crash is contained and shown.</td><td class="mono">commands/serve.py, dashboard/start_dashboard.py, dashboard/awawa_addon/ (new), route_command.py</td><td>10</td></tr>
+            <tr><td class="num">12</td><td><b>awawa tab</b></td><td>The four views, the banner and its ref selector, the detail pane, the entry in the rail. The Corpus view is removed; <code>/api/corpus</code> stays for the plugin.</td><td class="mono">render_awawa_*.py (new), render_corpus_*.py (removed), route_view.py, data/index.html</td><td>1, 11</td></tr>
+          </tbody>
+        </table>
+        <p class="cap">Paths are under <span class="mono">brigade/</span>. Each task also touches its tests under <span class="mono">tests/unit/dashboard</span>, <span class="mono">tests/cli/test_serve.py</span> and its line of <span class="mono">wiki/Dashboard.md</span>.</p>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="block-head"><h2>Rulings needed</h2><p>Each with its options, the one recommended, and the fact it rests on.</p></div>
+      <ol class="panel steps">
+        <li><div><h3>How the page reaches the awawa addon</h3>
+          <p><b>A, recommended.</b> Through brigade's own routes: the dashboard hands the request to its child over a pipe and renders the answer. One origin, one port. <b>B.</b> The addon listens on a port of its own and brigade relays. <b>C.</b> The addon listens on its own port and the page frames or links it.</p>
+          <p class="muted">The dashboard sends <code>Content-Security-Policy: default-src 'self'</code>, <span class="mono">start_dashboard.py:12</span>: a frame or a fetch to another port is refused. A second listener would need the Host and token guards of the decision on the loopback host again.</p></div></li>
+        <li><div><h3>Who renders the awawa views</h3>
+          <p><b>A, recommended.</b> The addon answers the document <code>brigade corpus --view … --json</code> prints, kept warm; the dashboard renders it in Python. The decision "a view is rendered by the server from the JSON of a command" stands, and the command stays the reference of the tests. <b>B.</b> The addon renders the HTML: the decision is amended. <b>C.</b> The addon relays raw awawa answers and the dashboard computes: the cache sits in the wrong process.</p>
+          <p class="muted">One request of the present Corpus view of 226 tasks took 3.09 s here; the page polls every 5 s.</p></div></li>
+        <li><div><h3>Which state of the plugin the web tab keeps</h3>
+          <p><b>A, recommended.</b> What fits the address: view, type, field, filters, search; folds open by the plugin's defaults. No "Change Colour", no "Arrange Columns" in M18. <b>B.</b> Also colours, column order and folds, in the browser's storage, by a script no test covers. <b>C.</b> Also those, in a file brigade writes, by new POST routes.</p>
+          <p class="muted">The plugin keeps them in the project's workspace file, handbook §16; the dashboard holds no state today.</p></div></li>
+        <li><div><h3>A detail pane for an entity</h3>
+          <p><b>A, recommended.</b> A click shows the fields of the entity, what refers to it, and links to awawa-web and the IDE. <b>B.</b> As the plugin: rows only, the click leaves for the editor. <b>C.</b> A page per entity.</p>
+          <p class="muted">The plugin left the pane out because the editor was a double click away, handbook §18.2. On this machine <code>ide_link</code> is unset: under B a click leads nowhere unless awawa-web runs.</p></div></li>
+        <li><div><h3>How the report page sorts the narrative</h3>
+          <p><b>A, recommended for M18.</b> By the first words of each line, "went well", "went wrong", "next", with one plain list when none is found. <b>B.</b> The REPORT schema gains fields the reporting slot fills. Exact, but it changes the installed registry schema. <b>C.</b> No sort: one list.</p>
+          <p class="muted">Read on the 29 reports of this machine: 19 carry both "went well" and "went wrong" lines, 25 a "next" line, 25 open on "Verdict:"; the report of M8 carries none and would show as one list. Upgrading an installed schema is B197, a draft of M16.</p></div></li>
+        <li><div><h3>Who shows what M14 adds</h3>
+          <p><b>A, recommended.</b> The M18 views render the M14 fields when the document carries them, each proven on a document that holds them: the arguments, segments, duration and cost of B92, the halt and causes of B178, the state filter of B263. <b>B.</b> Each M14 task gains a line for its view. <b>C.</b> A new M14 task for the views.</p>
+          <p class="muted">B92, B178 and B263 specify commands and no view; only B229 specifies its chart, "under its table Turn cap by role", a place the new Ledger keeps.</p></div></li>
+        <li><div><h3>New actions in the dashboard</h3>
+          <p><b>A, recommended.</b> None in M18: the six POST routes of today, and the command to copy elsewhere. <b>B.</b> Add buttons to resume a parked study and to prune a dead run.</p>
+          <p class="muted">The routes are listed in <span class="mono">route_action.py</span> and <span class="mono">route_change.py</span>; M15 is named "Admin console".</p></div></li>
+      </ol>
+    </section>
+
+    <section class="block">
+      <div class="block-head"><h2>Not established</h2></div>
+      <ul class="panel lines">
+        <li><p>Why <code>awawa status</code> counts 1 unresolved reference at main where <code>awawa lint</code> reports no diagnostic.</p></li>
+        <li><p>What the two decisions of the next tick are: the dry-run document carries their project only.</p></li>
+        <li><p>Turns and cost of the runs before 2026-11-17: their events are skipped by the commands.</p></li>
+      </ul>
+    </section>
+  </div>
+</section>
+
+  </main>
+</div>
+
+<script>
+// Mockup only: page switching, the notes toggle and the "Mockup state" switches. The dashboard fetches fragments instead.
+(function () {
+  var pages = Array.prototype.slice.call(document.querySelectorAll("[data-page]"));
+  function show() {
+    var name = (location.hash || "#home").slice(1);
+    var target = document.getElementById(name);
+    if (!target || !target.hasAttribute("data-page")) { name = "home"; }
+    pages.forEach(function (page) { page.hidden = page.id !== name; });
+    document.querySelectorAll("[data-nav]").forEach(function (link) {
+      if (link.getAttribute("data-nav").split(" ").indexOf(name) >= 0) { link.setAttribute("aria-current", "page"); }
+      else { link.removeAttribute("aria-current"); }
+    });
+  }
+  var shown = null;
+  window.addEventListener("hashchange", function () {
+    var name = (location.hash || "#home").slice(1);
+    show();
+    if (name !== shown) { window.scrollTo(0, 0); }
+    shown = name;
+  });
+  show();
+  shown = (location.hash || "#home").slice(1);
+
+  function wire(buttonAttr, stateAttr, pressedAttr, after) {
+    var buttons = Array.prototype.slice.call(document.querySelectorAll("[" + buttonAttr + "]"));
+    buttons.forEach(function (button) {
+      button.addEventListener("click", function () {
+        var value = button.getAttribute(buttonAttr);
+        buttons.forEach(function (other) { other.setAttribute(pressedAttr, String(other === button)); });
+        document.querySelectorAll("[" + stateAttr + "]").forEach(function (block) { block.hidden = block.getAttribute(stateAttr) !== value; });
+        if (after) { after(value); }
+      });
+    });
+  }
+  wire("data-home", "data-home-state", "aria-pressed");
+  wire("data-aw", "data-aw-view", "aria-selected");
+  wire("data-addon", "data-addon-state", "aria-pressed", function (value) {
+    document.getElementById("addon-link").hidden = value === "none";
+    document.getElementById("addon-head").hidden = value === "none";
+  });
+
+  var toggle = document.getElementById("notes-toggle");
+  function setNotes(on) {
+    if (on) { document.body.removeAttribute("data-notes"); } else { document.body.setAttribute("data-notes", "off"); }
+    toggle.setAttribute("aria-pressed", String(on));
+  }
+  var stored = null;
+  try { stored = window.localStorage.getItem("m18-notes"); } catch (error) { stored = null; }
+  setNotes(stored !== "off");
+  toggle.addEventListener("click", function () {
+    var on = toggle.getAttribute("aria-pressed") !== "true";
+    setNotes(on);
+    try { window.localStorage.setItem("m18-notes", on ? "on" : "off"); } catch (error) { /* a private window keeps the default */ }
+  });
+  document.querySelectorAll(".app button.btn, .app .chip").forEach(function (control) {
+    if (control.tagName === "BUTTON") { control.addEventListener("click", function (event) { event.preventDefault(); }); }
+  });
+})();
+</script>
+
+</body></html>

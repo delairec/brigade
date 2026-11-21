@@ -1,6 +1,9 @@
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.captures.locate_task_captures import locate_task_captures
+from brigade.corpus.decode_entity import decode_entity
 from brigade.corpus.prepare_project_tree import prepare_project_tree
 from brigade.corpus.run_awawa import run_awawa
 from brigade.git.count_changed_lines import count_changed_lines
@@ -10,11 +13,16 @@ from brigade.runtime import Runtime
 from brigade.system.parse_configuration import Configuration
 from brigade.tasks.describe_command import describe_command
 from brigade.tasks.list_trigger_rules import list_trigger_rules
+from brigade.verify.describe_task_references import describe_task_references
+from brigade.verify.list_task_references import list_task_references
 from brigade.verify.read_previous_verdict import VerifiedPullRequest, read_previous_verdict
 from brigade.verify.read_repair_diff import RepairSpan, read_repair_diff
+from brigade.verify.read_task_goal import read_task_goal
 
 GRADES = ("critical", "high", "medium", "low")
 TREE_ROOT = "."
+TASK_SHOWN = 0
+NO_INTENT = {"goal": None, "references": []}
 
 
 @dataclass(frozen=True)
@@ -37,8 +45,7 @@ class TreeDemand:
     worktree: None = None
 
 
-def _read_task(runtime: Runtime, judged: JudgedTask) -> list[dict]:
-    tree = prepare_project_tree(TreeDemand(project=judged.project, ref=judged.head), judged.configuration, runtime).root
+def _read_task(runtime: Runtime, judged: JudgedTask, tree: Path) -> list[dict]:
     target = f"@TASK.{judged.task}"
     return [
         describe_command(run_awawa(runtime.run_process, tree, ("context", target, "--with-schema", TREE_ROOT))),
@@ -67,17 +74,31 @@ def _read_repair(runtime: Runtime, judged: JudgedTask, previous: dict | None) ->
     return describe_command(read_repair_diff(runtime.run_process, span))
 
 
+def _describe_task_intent(runtime: Runtime, judged: JudgedTask, tree: Path) -> dict:
+    shown = run_awawa(runtime.run_process, tree, ("show", f"@TASK.{judged.task}", "--json", str(tree)))
+    if shown.exit_code != TASK_SHOWN:
+        return NO_INTENT
+    shown_task = json.loads(shown.stdout)
+    captures = locate_task_captures(runtime.paths, judged.project, judged.task)
+    return {
+        "goal": read_task_goal(runtime.run_process, tree, decode_entity(judged.task, shown_task)),
+        "references": describe_task_references(list_task_references(shown_task), captures),
+    }
+
+
 def describe_judged_task(runtime: Runtime, judged: JudgedTask) -> dict:
     previous = read_previous_verdict(
         [entry.event for entry in read_ledger(runtime.paths.state_root).entries],
         VerifiedPullRequest(project=judged.project, task=judged.task, pr=judged.pr),
     )
+    tree = prepare_project_tree(TreeDemand(project=judged.project, ref=judged.head), judged.configuration, runtime).root
     return {
         "project": judged.project,
         "pr": judged.pr,
         "task": judged.task,
         "head": judged.head,
-        "context": _read_task(runtime, judged),
+        "context": _read_task(runtime, judged, tree),
+        **_describe_task_intent(runtime, judged, tree),
         "diff": describe_command(read_diff(runtime.run_process, judged.repository, judged.base, judged.head)),
         "previous": previous,
         "repair": _read_repair(runtime, judged, previous),

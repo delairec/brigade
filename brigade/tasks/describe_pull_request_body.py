@@ -14,11 +14,18 @@ class PullRequestBodyParts:
     specs: tuple[str, ...]
     check: dict
     attribution: tuple[str, ...]
+    captures: str
 
 
 def _describe_check(check: dict) -> str:
     result = OK if check["passed"] else FAILED
     return f"- {result} `{check['command']}` {check['duration_ms'] / MS_PER_S:.1f} s"
+
+
+def _describe_captures(captures: str) -> str:
+    if not captures:
+        return captures
+    return f"{captures}\n"
 
 
 def describe_pull_request_body(parts: PullRequestBodyParts) -> str:
@@ -27,5 +34,6 @@ def describe_pull_request_body(parts: PullRequestBodyParts) -> str:
         specs="\n".join(f"- {spec}" for spec in parts.specs),
         head=parts.check["head"],
         checks="\n".join(_describe_check(check) for check in parts.check["checks"]),
+        captures=_describe_captures(parts.captures),
         attribution="\n".join(parts.attribution),
     )

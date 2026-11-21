@@ -333,3 +333,89 @@ class AssembleVerifyContextTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(document["repair"]["command"], f"git range-diff 9999999..{JUDGED_HEAD} {BASE}..{HEAD}")
+
+    def test_should_print_the_goal_of_the_task_read_in_the_tree_of_the_head(self):
+        # Arrange
+        self.answers[("awawa", "show", "@TASK.B1", "--json", str(self.head_tree))] = ProcessAnswer(
+            stdout=json.dumps(
+                {
+                    "fields": [
+                        {"name": "TITLE", "atoms": ['"Empty the cart in one click"']},
+                        {"name": "MILESTONE", "atoms": ["@MILESTONE.M1"]},
+                    ]
+                }
+            )
+        )
+        self.answers[("awawa", "show", "@MILESTONE.M1", "--json", str(self.head_tree))] = ProcessAnswer(
+            stdout=json.dumps({"fields": [{"name": "TITLE", "atoms": ['"A cart a shopper empties at once"']}]})
+        )
+
+        # Act
+        document = self.assemble(Configuration())
+
+        # Assert
+        self.assertEqual(document["goal"]["milestone"]["title"], "A cart a shopper empties at once")
+
+    def test_should_print_the_reference_the_task_cites(self):
+        # Arrange
+        self.answers[("awawa", "show", "@TASK.B1", "--json", str(self.head_tree))] = ProcessAnswer(
+            stdout=json.dumps(
+                {
+                    "fields": [
+                        {
+                            "name": "REFERENCE",
+                            "atoms": ['"https://example.org/cart"'],
+                            "fields": [{"name": "COVERS", "atoms": ['"its page Cart"'], "fields": []}],
+                        }
+                    ]
+                }
+            )
+        )
+
+        # Act
+        document = self.assemble(Configuration())
+
+        # Assert
+        self.assertEqual(document["references"][0]["reference"], "https://example.org/cart")
+
+    def test_should_print_no_goal_and_no_reference_for_a_head_that_defines_no_task(self):
+        # Arrange
+        self.answers[("awawa", "show", "@TASK.B1", "--json", str(self.head_tree))] = ProcessAnswer(
+            exit_code=1, stderr="no entity @TASK.B1"
+        )
+
+        # Act
+        document = self.assemble(Configuration())
+
+        # Assert
+        self.assertIsNone(document["goal"])
+        self.assertEqual(document["references"], [])
+
+    def test_should_name_the_png_pair_captured_for_each_page_the_task_covers(self):
+        # Arrange
+        self.answers[("awawa", "show", "@TASK.B1", "--json", str(self.head_tree))] = ProcessAnswer(
+            stdout=json.dumps(
+                {
+                    "fields": [
+                        {
+                            "name": "REFERENCE",
+                            "atoms": ['"artifact/cart.html"'],
+                            "fields": [{"name": "COVERS", "atoms": ['"cart"'], "fields": []}],
+                        }
+                    ]
+                }
+            )
+        )
+        captures = self.paths.state_root / "captures" / "shop" / "B1"
+        captures.mkdir(parents=True)
+        (captures / "cart-delivered.png").write_bytes(b"png")
+        (captures / "cart-reference.png").write_bytes(b"png")
+
+        # Act
+        document = self.assemble(Configuration())
+
+        # Assert
+        self.assertEqual(
+            document["references"][0]["captures"],
+            {"delivered": str(captures / "cart-delivered.png"), "reference": str(captures / "cart-reference.png")},
+        )

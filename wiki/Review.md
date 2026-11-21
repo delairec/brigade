@@ -8,6 +8,54 @@ brigade review verdict <pr> --file <verdict.json>  # validate and record the ver
 
 Both run from the worktree of the task whose pull request they judge.
 
+## What the review judges
+
+The review run judges three things, and its `SPEC` lines are never the whole of it:
+
+| Against | Asks |
+|---|---|
+| each `SPEC` line | does a test, a command or a line of code prove the criterion holds? |
+| the goal the task serves | does the delivery reach the goal of its milestone, the user's intent, beyond its `SPEC` lines? |
+| the reference the task carries in its `REFERENCE` field, a repository path | does the delivery keep the reference itself, the section its `COVERS` names, and not only what the task transcribed from it? |
+
+A delivery that meets every `SPEC` line and misses its goal, or departs from its reference without a reason a `SPEC`,
+a `RATIONALE` or a decision states, gets a finding that asks for changes; a `pass` states the goal reached, on the second review too, where a challenge
+to a goal or a reference finding is judged against the goal or the reference. For a rendered output, the review reads
+the PNG pair `review context` names for each covered page, the delivered page and the reference page; a covered page
+with no pair is a finding, and so is a reference the review cannot open.
+
+A goal finding takes as `file` and `line` the corpus file and line of its milestone, or of the task when it has none; a
+reference finding the path of the reference and the line its section opens on.
+
+## A reference and its captures
+
+A `REFERENCE` is a path of the repository: the roles of the tick read files and run commands, and cannot open a URL. A
+reference held elsewhere, an Artifact or a page of a website, is copied into the repository first, its commit pinning
+its version: `artifact/m18-dashboard/index.html` holds the mockup of M18, whose `<section id>` each task names in its
+`COVERS`. The planner reports a URL as a question, and `review context` prints it refused.
+
+```
+brigade build capture <task>                      # the delivered page and the reference page, as PNG files
+brigade build capture <task> --directory <dir>   # the same, written to <dir>
+brigade page <page>                               # one page of the dashboard as a standalone HTML document
+```
+
+`brigade build capture` writes, for each page a `REFERENCE` of the task covers, one headless Firefox capture of the
+delivered page and one of the reference page, one after the other, under `captures/<project>/<task>` of the state
+directory, where `review context` names them. The home directory is shown as `~` in each page.
+
+| Page | How it renders |
+|---|---|
+| delivered | the recipe `capture` of the project, of command steps: each argv runs with `{page}` replaced by the page, and the output of the last step is the HTML of that page; brigade's own runs `brigade page {page}` |
+| reference | an HTML reference with only its section whose id `COVERS` names shown |
+
+A project with no recipe `capture`, a task with no `REFERENCE`, a reference that is a URL or no HTML page: no capture,
+and the output says which. `brigade build pr` runs the capture for a task that carries a `REFERENCE` and shows each pair
+in the body of its pull request, delivered beside reference. GitHub takes no image through its API, so the images go to
+a public gist of the build account.
+
+> **Watch out:** the captures of a public repository are public: the gist is public, as the pull request is.
+
 ## The verdict document
 
 ```
@@ -19,7 +67,7 @@ Both run from the worktree of the task whose pull request they judge.
 | `head` | the commit `review context` printed |
 | `verdict` | `pass` or `changes` |
 | `grade` | `critical`, `high`, `medium` or `low` |
-| `broken` | the `SPEC` or the rule the finding breaks |
+| `broken` | the `SPEC`, the milestone, the reference or the rule the finding breaks |
 | `summary` | what is wrong |
 
 `review verdict` records the ledger event `task.verdict` at that head.
@@ -34,6 +82,10 @@ Both run from the worktree of the task whose pull request they judge.
 
 - the head it judges;
 - the task with its `awawa context` and its closure;
+- a section `goal`: the title of the task, then the `TITLE`, `SUBJECT`, `DESC` and `SOURCE` of its milestone, read
+  in the tree of the head, or `no milestone: the title of the task is its goal`;
+- a section `reference`: each `REFERENCE` of the task with the page its `COVERS` names, then the PNG pair of that
+  page or that brigade build capture wrote none, a URL printed refused with why, or `none`;
 - the diff of the pull request against its base;
 - the findings of the preflight;
 - the rules of the path triggers of the files the diff touches, when `config.toml` names an instructions corpus;

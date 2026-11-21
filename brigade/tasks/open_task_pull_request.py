@@ -2,6 +2,8 @@ import dataclasses
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.captures.locate_task_captures import locate_task_captures
+from brigade.captures.publish_task_captures import CapturePublication, publish_task_captures
 from brigade.corpus.read_entity import Entity, read_entity
 from brigade.errors import BrigadeError
 from brigade.git.push_branch import BranchPush
@@ -10,6 +12,7 @@ from brigade.git.read_current_branch import read_current_branch
 from brigade.ledger.append_event import append_event
 from brigade.ledger.milestone_created import MilestoneCreated
 from brigade.ledger.task_pr_opened import TaskPrOpened
+from brigade.recipes.locate_recipes import locate_recipes
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.tasks.compose_pull_request_title import PullRequestTitleParts, compose_pull_request_title
@@ -83,14 +86,39 @@ class _TaskPullRequest:
     milestone: str | None
 
 
-def _compose_body(task: Entity, check: object, attribution: tuple[str, ...]) -> str:
+@dataclasses.dataclass(frozen=True)
+class _BodyParts:
+    task: Entity
+    check: object
+    attribution: tuple[str, ...]
+    captures: str
+
+
+def _compose_body(parts: _BodyParts) -> str:
     return describe_pull_request_body(
         PullRequestBodyParts(
-            title=read_project_field(task, "TITLE"),
-            specs=tuple(field.value for field in task.fields if field.name == "SPEC"),
-            check=check,
-            attribution=attribution,
+            title=read_project_field(parts.task, "TITLE"),
+            specs=tuple(field.value for field in parts.task.fields if field.name == "SPEC"),
+            check=parts.check,
+            attribution=parts.attribution,
+            captures=parts.captures,
         )
+    )
+
+
+def _publish_captures(runtime: Runtime, worktree: TaskWorktree, demand: TaskPullRequestDemand) -> str:
+    return publish_task_captures(
+        runtime,
+        CapturePublication(
+            worktree=worktree.path,
+            places=locate_recipes(worktree.path, worktree.project, runtime.paths),
+            task=worktree.task,
+            corpus=locate_task_corpus(worktree),
+            directory=locate_task_captures(runtime.paths, worktree.project.name, worktree.task),
+            forge=demand.forge,
+            environment=demand.environment,
+            home=str(runtime.paths.home),
+        ),
     )
 
 
@@ -143,6 +171,7 @@ def _describe_opening(session: ForgeSession, opened: _TaskPullRequest, pull_requ
 def open_task_pull_request(runtime: Runtime, demand: TaskPullRequestDemand) -> dict:
     worktree = locate_task_worktree(runtime, demand.path, demand.task)
     check = require_passing_check(runtime, worktree)
+    captures = _publish_captures(runtime, worktree, demand)
     task = read_entity(runtime.run_process, locate_task_corpus(worktree), "TASK", worktree.task)
     title = _compose_title(task, demand.subject)
     session = ForgeSession(worktree=worktree, forge=demand.forge, environment=demand.environment, login=demand.login)
@@ -153,9 +182,8 @@ def open_task_pull_request(runtime: Runtime, demand: TaskPullRequestDemand) -> d
     )
     if milestone is not NO_MILESTONE:
         _ensure_milestone(runtime, session, milestone)
-    opened = _TaskPullRequest(
-        branch=branch, title=title, body=_compose_body(task, check, demand.attribution), milestone=milestone
-    )
+    body = _compose_body(_BodyParts(task=task, check=check, attribution=demand.attribution, captures=captures))
+    opened = _TaskPullRequest(branch=branch, title=title, body=body, milestone=milestone)
     pull_request = _open_on_forge(runtime, session, opened)
     _record_opening(runtime, session, branch, pull_request["number"])
     return _describe_opening(session, opened, pull_request)

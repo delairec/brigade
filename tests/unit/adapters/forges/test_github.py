@@ -1,5 +1,7 @@
 import json
+import tempfile
 import unittest
+from pathlib import Path
 
 from brigade.adapters.forges.github import (
     BRANCH_CHECK_RUNS_QUERY,
@@ -12,6 +14,7 @@ from brigade.adapters.forges.github import (
     describe_account,
     edit_pull_request,
     find_pull_request,
+    host_images,
     list_check_runs,
     list_milestones,
     list_pull_requests,
@@ -1576,3 +1579,108 @@ class ReadJobStepsTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(answer, {"schema_version": 1, "steps": None})
+
+
+class HostImagesTest(unittest.TestCase):
+    def setUp(self):
+        self.directory = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        self.request = {
+            "repository": "/projects/shop",
+            "environment": BOT_ENVIRONMENT,
+            "files": [str(self.directory / "cart-delivered.png"), str(self.directory / "cart-reference.png")],
+            "description": "captures of @TASK.S3",
+        }
+
+    def test_should_answer_the_raw_address_of_each_image_in_the_gist_of_the_machine_account(self):
+        # Arrange
+        gh = create_gh("https://gist.github.com/octo-bot/abc123\n")
+        runtime = create_test_runtime(run_process=gh)
+
+        # Act
+        answer = host_images(self.request, runtime)
+
+        # Assert
+        self.assertEqual(
+            answer,
+            {
+                "schema_version": 1,
+                "urls": [
+                    "https://gist.githubusercontent.com/octo-bot/abc123/raw/cart-delivered.png",
+                    "https://gist.githubusercontent.com/octo-bot/abc123/raw/cart-reference.png",
+                ],
+            },
+        )
+
+    def test_should_push_the_images_to_a_public_gist_it_creates_and_clones(self):
+        # Arrange
+        runs = []
+
+        def record_and_answer(request, rank):
+            runs.append((request.argv, request.environment))
+            return 0, "https://gist.github.com/octo-bot/abc123\n"
+
+        runtime = create_test_runtime(run_process=GhDouble(record_and_answer))
+        clone = str(self.directory / "gist.git")
+        tree = ("--git-dir", clone, "--work-tree", str(self.directory))
+
+        # Act
+        host_images(self.request, runtime)
+
+        # Assert
+        self.assertEqual(
+            runs,
+            [
+                (
+                    (
+                        "gh",
+                        "gist",
+                        "create",
+                        "--public",
+                        "--desc",
+                        "captures of @TASK.S3",
+                        str(self.directory / "captures.md"),
+                    ),
+                    BOT_ENVIRONMENT,
+                ),
+                (("git", "clone", "--bare", "https://gist.github.com/abc123.git", clone), BOT_ENVIRONMENT),
+                (("git", *tree, "add", "captures.md", "cart-delivered.png", "cart-reference.png"), BOT_ENVIRONMENT),
+                (
+                    (
+                        "git",
+                        "-c",
+                        "user.name=octo-bot",
+                        "-c",
+                        "user.email=octo-bot@users.noreply.github.com",
+                        *tree,
+                        "commit",
+                        "--message",
+                        "captures of @TASK.S3",
+                    ),
+                    BOT_ENVIRONMENT,
+                ),
+                (
+                    (
+                        "git",
+                        "-c",
+                        "credential.helper=",
+                        "-c",
+                        "credential.helper=!gh auth git-credential",
+                        *tree,
+                        "push",
+                        "origin",
+                        "HEAD",
+                    ),
+                    BOT_ENVIRONMENT,
+                ),
+            ],
+        )
+
+    def test_should_describe_the_gist_in_the_file_it_creates_it_from(self):
+        # Arrange
+        runtime = create_test_runtime(run_process=create_gh("https://gist.github.com/octo-bot/abc123\n"))
+
+        # Act
+        host_images(self.request, runtime)
+
+        # Assert
+        self.assertEqual((self.directory / "captures.md").read_text(), "captures of @TASK.S3\n")

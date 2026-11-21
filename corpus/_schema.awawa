@@ -62,6 +62,13 @@ SCHEMA TASK
 		FIELD IMPL anchor
 			REPEATABLE
 			DESC "the test or the code where the criterion is proven; written at delivery"
+	FIELD REFERENCE string
+		REPEATABLE
+		DESC "the repository path of what the task is drawn from, its acceptance contract; never a"
+			+ "url"
+		FIELD COVERS string
+			REQUIRED
+			DESC "the id of the section of the reference the task delivers, its page"
 	FIELD MILESTONE @MILESTONE
 		REQUIRED
 		CONVERSE COMPRISES

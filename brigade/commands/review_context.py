@@ -51,6 +51,41 @@ def _render_previous(previous: dict) -> str:
     return f"head {previous['head']}\nverdict {previous['verdict']}\n{findings}"
 
 
+def _render_milestone(milestone: dict | None) -> str:
+    if milestone is None:
+        return "no milestone: the title of the task is its goal\n"
+    return (
+        f"milestone {milestone['name']}: {milestone['title']}\n"
+        f"  subject: {milestone['subject'] or ABSENT}\n"
+        + "".join(f"  desc: {desc}\n" for desc in milestone["desc"])
+        + "".join(f"  source: {source}\n" for source in milestone["source"])
+    )
+
+
+def _render_goal(goal: dict | None, task: str) -> str:
+    if goal is None:
+        return f"the head defines no @TASK.{task}: the preflight promotion says so\n"
+    return f"task {goal['task']}: {goal['title']}\n{_render_milestone(goal['milestone'])}"
+
+
+def _render_captures(reference: dict) -> str:
+    if reference["refusal"] is not None:
+        return f"  refused: {reference['refusal']}\n"
+    captures = reference["captures"]
+    if captures is None:
+        return "  captures: none, brigade build capture wrote no PNG pair for this page\n"
+    return f"  delivered: {captures['delivered']}\n  reference page: {captures['reference']}\n"
+
+
+def _render_references(references: list[dict]) -> str:
+    if not references:
+        return f"{ABSENT}\n"
+    return "".join(
+        f"{reference['reference']}\n  covers: {reference['covers'] or ABSENT}\n{_render_captures(reference)}"
+        for reference in references
+    )
+
+
 def _render_re_verification(document: dict) -> list[str]:
     if document["previous"] is None:
         return []
@@ -64,6 +99,8 @@ def _render_text(document: dict) -> str:
     sections = [
         f"# head\n{document['head']}\n",
         f"# task\n{_render_commands(document['context'])}",
+        f"# goal\n{_render_goal(document['goal'], document['task'])}",
+        f"# reference\n{_render_references(document['references'])}",
         f"# diff\n{_render_commands([document['diff']])}",
         *_render_re_verification(document),
         f"# preflight\n{_render_preflight(document['preflight'])}",
