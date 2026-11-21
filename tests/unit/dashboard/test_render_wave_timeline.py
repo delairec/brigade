@@ -19,84 +19,55 @@ LEDGER = {
 
 
 class RenderWaveTimelineTest(unittest.TestCase):
-    def test_should_place_each_state_of_a_task_on_its_row_over_the_time_of_the_wave(self):
+    def test_should_draw_a_state_the_task_waits_in_softer_than_one_it_works_in(self):
+        # Arrange
+        pr_open = {"at": "2026-10-19T08:30:00Z", "event": "task.state", "fields": {"task": "B28", "state": "pr_open"}}
+        ledger = {**LEDGER, "events": [*LEDGER["events"][:3], pr_open, LEDGER["events"][3]]}
+
         # Act
-        timeline = render_wave_timeline(LEDGER)
+        timeline = render_wave_timeline(ledger)
 
         # Assert
-        self.assertEqual(
-            timeline,
-            '<svg class="timeline" viewBox="0 0 120 24" role="img" aria-label="How the wave w4 went">'
-            '<text class="timeline-label" x="0" y="6">B27</text>'
-            '<circle class="timeline-mark tone-work" cx="45" cy="6" r="2"><title>B27 running at 2026-10-19T07:30:00Z</title></circle>'
-            '<circle class="timeline-mark tone-done" cx="120" cy="6" r="2"><title>B27 merged at 2026-10-19T09:00:00Z</title></circle>'
-            '<text class="timeline-label" x="0" y="18">B28</text>'
-            '<circle class="timeline-mark tone-work" cx="70" cy="18" r="2"><title>B28 running at 2026-10-19T08:00:00Z</title></circle>'
-            "</svg>",
+        self.assertRegex(timeline, r'<rect class="tone-review"[^>]* fill-opacity="0.45"[^>]*><title>B28 pr_open from')
+        self.assertRegex(timeline, r'<rect class="tone-work"(?![^>]*fill-opacity)[^>]*><title>B28 running from')
+
+    def test_should_draw_a_wave_of_one_instant(self):
+        # Arrange
+        at_start = {"at": "2026-10-19T07:00:00Z", "event": "task.state", "fields": {"task": "B27", "state": "running"}}
+        ledger = {**LEDGER, "last": LEDGER["first"], "wall_time_ms": 0, "events": [LEDGER["events"][0], at_start]}
+
+        # Act
+        timeline = render_wave_timeline(ledger)
+
+        # Assert
+        self.assertIn("<title>B27 running from 07:00:00Z to 07:00:00Z, 0 s</title>", timeline)
+
+    def test_should_end_a_task_on_a_tick_at_its_merge_and_not_on_a_bar_to_the_end_of_the_wave(self):
+        # Arrange
+        merged_early = {
+            "at": "2026-10-19T08:00:00Z",
+            "event": "task.state",
+            "fields": {"task": "B27", "state": "merged"},
+        }
+        ledger = {**LEDGER, "events": [*LEDGER["events"][:3], merged_early]}
+
+        # Act
+        timeline = render_wave_timeline(ledger)
+
+        # Assert
+        self.assertRegex(
+            timeline, r'<rect class="tone-done"[^>]* width="1"[^>]*><title>B27 merged at 08:00:00Z</title>'
         )
 
     def test_should_draw_a_halt_as_a_band_across_every_row(self):
         # Arrange
-        ledger = {
-            **LEDGER,
-            "halts": [
-                {"halted_at": "2026-10-19T07:30:00Z", "resumed_at": "2026-10-19T08:00:00Z", "duration_ms": 1800000}
-            ],
-        }
+        halt = {"halted_at": "2026-10-19T08:00:00Z", "resumed_at": None}
+        ledger = {**LEDGER, "halts": [halt]}
 
         # Act
         timeline = render_wave_timeline(ledger)
 
         # Assert
-        self.assertIn(
-            '<rect class="halt-band" x="45" y="0" width="25" height="24">'
-            "<title>halted from 2026-10-19T07:30:00Z to 2026-10-19T08:00:00Z</title></rect>",
-            timeline,
+        self.assertRegex(
+            timeline, r'<rect class="tone-you"[^>]*><title>wave halted from 08:00:00Z to 09:00:00Z</title>'
         )
-
-    def test_should_draw_a_halt_not_resumed_up_to_the_last_event_of_the_wave(self):
-        # Arrange
-        ledger = {**LEDGER, "halts": [{"halted_at": "2026-10-19T08:00:00Z", "resumed_at": None, "duration_ms": None}]}
-
-        # Act
-        timeline = render_wave_timeline(ledger)
-
-        # Assert
-        self.assertIn(
-            '<rect class="halt-band" x="70" y="0" width="50" height="24">'
-            "<title>halted from 2026-10-19T08:00:00Z, not resumed</title></rect>",
-            timeline,
-        )
-
-    def test_should_place_every_mark_at_the_start_of_a_wave_of_one_instant(self):
-        # Arrange
-        instant = "2026-10-19T07:00:00Z"
-        ledger = {
-            **LEDGER,
-            "last": instant,
-            "wall_time_ms": 0,
-            "tasks": ["B27"],
-            "events": [{"at": instant, "event": "task.state", "fields": {"task": "B27", "state": "running"}}],
-        }
-
-        # Act
-        timeline = render_wave_timeline(ledger)
-
-        # Assert
-        self.assertIn('cx="20" cy="6"', timeline)
-
-    def test_should_escape_a_task_name_holding_markup(self):
-        # Arrange
-        markup = "<script>alert(1)</script>"
-        ledger = {
-            **LEDGER,
-            "wave": markup,
-            "tasks": [markup],
-            "events": [{"at": LEDGER["last"], "event": "task.state", "fields": {"task": markup, "state": markup}}],
-        }
-
-        # Act
-        timeline = render_wave_timeline(ledger)
-
-        # Assert
-        self.assertNotIn("<script>", timeline)

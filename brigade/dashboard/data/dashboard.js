@@ -3,7 +3,6 @@ const FIRST_VIEW = "status";
 const TOKEN_HEADER = "X-Brigade-Token";
 const HEARTBEAT_REGION = "/views/heartbeat";
 const RAIL_REGION = "/views/rail";
-const MILLISECONDS_PER_SECOND = 1000;
 const PROJECT_PARAMETER = "project";
 const shownFragments = new Map();
 const HEARTBEAT_UNREAD = Symbol("heartbeat unread");
@@ -93,10 +92,14 @@ async function showHeartbeat(region, path) {
   followTheTick(region);
 }
 
+function readFirstSegment(address) {
+  return address.split(/[/?]/)[0];
+}
+
 function markCurrentView() {
-  const current = `#${selectView().split(/[/?]/)[0]}`;
+  const current = `#${readFirstSegment(selectView())}`;
   for (const link of document.querySelectorAll(".rail-group a")) {
-    if (link.getAttribute("href") === current) {
+    if (readFirstSegment(link.getAttribute("href")) === current) {
       link.setAttribute("aria-current", "page");
     } else {
       link.removeAttribute("aria-current");
@@ -107,8 +110,9 @@ function markCurrentView() {
 function stampReadTime(region) {
   const fresh = region.querySelector("[data-fresh]");
   if (fresh !== null) {
+    fresh.dataset.refreshes ??= fresh.textContent;
     const readAt = new Date().toISOString().slice(11, 19);
-    fresh.textContent = `read ${readAt}Z · refreshes every ${POLL_INTERVAL_MS / MILLISECONDS_PER_SECOND} s`;
+    fresh.textContent = `read ${readAt}Z · ${fresh.dataset.refreshes}`;
   }
 }
 
@@ -156,28 +160,18 @@ function showNotice(message) {
   notice.hidden = message === "";
 }
 
-function readActionAddress(button) {
-  const name = button.dataset.with;
-  if (name === undefined) {
-    return button.dataset.post;
-  }
-  const select = button.parentElement.querySelector(`select[name="${CSS.escape(name)}"]`);
-  const separator = button.dataset.post.includes("?") ? "&" : "?";
-  return `${button.dataset.post}${separator}${encodeURIComponent(name)}=${encodeURIComponent(select.value)}`;
-}
-
 async function postAction(event) {
   const button = event.target.closest("button[data-post]");
   if (button === null) {
     return;
   }
-  const response = await fetch(readActionAddress(button), { method: "POST", headers: { [TOKEN_HEADER]: readToken() } });
+  const response = await fetch(button.dataset.post, { method: "POST", headers: { [TOKEN_HEADER]: readToken() } });
   showNotice(response.ok ? "" : (await response.json()).error);
   showRegions();
 }
 
 function pollRegions() {
-  if (document.activeElement && document.activeElement.form) {
+  if (document.activeElement && document.activeElement.matches("input")) {
     return;
   }
   showRegions();
@@ -196,14 +190,15 @@ function submitView(event) {
 }
 
 function applySelection(event) {
-  const form = event.target.closest("select")?.form;
-  if (!form) {
+  const select = event.target.closest("select");
+  if (!select) {
     return;
   }
-  if (form.dataset.view !== undefined) {
-    window.location.hash = readViewAddress(form);
-  } else if (form.classList.contains("project-selector")) {
-    form.requestSubmit();
+  const leadsTo = select.selectedOptions[0]?.dataset.href;
+  if (leadsTo !== undefined) {
+    window.location.hash = leadsTo;
+  } else if (select.form?.classList.contains("project-selector")) {
+    select.form.requestSubmit();
   }
 }
 

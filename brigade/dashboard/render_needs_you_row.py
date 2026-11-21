@@ -3,6 +3,10 @@ from html import escape
 
 from brigade.dashboard.read_state_tone import read_state_tone
 
+YOU_TONE = "you"
+PRIMARY_BUTTON = "btn btn-primary"
+PLAIN_BUTTON = "btn"
+
 
 @dataclass(frozen=True)
 class NeedsYou:
@@ -19,7 +23,8 @@ def _render_act(row: NeedsYou) -> str:
     if row.link is None:
         return f'<code class="cmd">{escape(row.command)}</code>'
     label, href = row.link
-    return f'<a class="btn btn-primary" href="{escape(href)}">{escape(label)}</a>'
+    button = PRIMARY_BUTTON if read_state_tone(row.state) == YOU_TONE else PLAIN_BUTTON
+    return f'<a class="{button}" href="{escape(href)}">{escape(label)}</a>'
 
 
 def render_needs_you_row(row: NeedsYou) -> str:

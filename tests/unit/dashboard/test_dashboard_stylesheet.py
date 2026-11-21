@@ -149,3 +149,41 @@ class DashboardStylesheetTest(unittest.TestCase):
 
         # Assert
         self.assertIn("@media (max-width: 900px) {\n  body {\n    grid-template-columns: 1fr;", stylesheet)
+
+
+class DashboardStylesheetOfTheMockupComponentsTest(unittest.TestCase):
+    def test_should_give_each_component_of_the_mockup_a_rule(self):
+        # Arrange
+        selectors = [
+            ".crumbs",
+            ".block",
+            ".block-head",
+            ".block-head p",
+            ".panel",
+            ".pad",
+            "details.fold > summary",
+            "details.fold > summary span",
+            "details.fold",
+            ".kv",
+            ".kv dt",
+            "figure.chart",
+            ".legend",
+            ".legend span::before",
+            ".legend .soft::before",
+            ".lines li",
+            ".lines .tag",
+            ".steps",
+            ".steps li",
+            ".steps li::before",
+            ".field",
+            ".field select,\n.field input",
+            ".cmd",
+            ".filters",
+        ]
+        for selector in selectors:
+            with self.subTest(selector=selector):
+                # Act
+                rule = read_rule(selector)
+
+                # Assert
+                self.assertNotEqual(rule, {})

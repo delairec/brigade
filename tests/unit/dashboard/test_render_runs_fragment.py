@@ -49,28 +49,6 @@ def create_listing(runs: list[dict], skipped: list[dict]) -> dict:
 
 
 class RenderRunsFragmentTest(unittest.TestCase):
-    def test_should_open_on_a_sentence_and_an_explainer_saying_what_a_run_and_a_segment_are(self):
-        # Arrange
-        listing = create_listing([LIVE_RUN, DEAD_RUN, LIMIT_CUT_RUN, DONE_RUN], NOTHING_SKIPPED)
-
-        # Act
-        fragment = render_runs_fragment(listing, NO_FILTER)
-
-        # Assert
-        self.assertTrue(
-            fragment.startswith(
-                '<header class="page-head"><div><h1>Runs</h1>'
-                '<p class="lede">A run is one agent at work: a procedure, such as a build or a review,'
-                " played by a role on a task.</p></div>"
-                '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
-                '<div class="verdict"><p class="status-sentence">4 runs listed: 1 live, 2 finished, 1 dead.</p></div>'
-                '<aside class="explainer"><p class="explainer-what">A run is one procedure a role carries out'
-                " through a client, for a task of a wave or on its own. It runs in segments: a segment is one"
-                " session of the client, and a segment that reaches the cap of its role hands over to the next"
-                " through the progress of the run.</p>"
-            )
-        )
-
     def test_should_count_the_live_runs_the_finished_ones_by_outcome_and_the_dead_ones(self):
         # Arrange
         listing = create_listing([LIVE_RUN, DEAD_RUN, LIMIT_CUT_RUN, DONE_RUN], NOTHING_SKIPPED)
@@ -104,68 +82,6 @@ class RenderRunsFragmentTest(unittest.TestCase):
         # Assert
         self.assertIn('<p class="skipped">The list skipped 2 run directories it could not read.</p>', fragment)
 
-    def test_should_show_a_live_run_linked_with_its_task_and_its_wave_its_state_as_a_pill_and_its_start(self):
-        # Arrange
-        listing = create_listing([LIVE_RUN], NOTHING_SKIPPED)
-
-        # Act
-        fragment = render_runs_fragment(listing, NO_FILTER)
-
-        # Assert
-        self.assertIn(
-            "<section><h2>Runs</h2><table><thead><tr><th>run</th><th>procedure</th><th>task</th><th>wave</th>"
-            "<th>state</th><th>start</th></tr></thead><tbody>"
-            '<tr><td><a href="#runs/20261118T101500Z-a1b2c3">20261118T101500Z-a1b2c3</a></td><td>build-task</td>'
-            '<td><a href="#runs?task=B94">B94</a></td><td><a href="#waves/oak_w4">oak_w4</a></td>'
-            '<td><span class="pill"><span class="tone tone-work"><span class="tone-shape" aria-hidden="true">●'
-            "</span>running</span></span></td><td>2026-11-18T10:15:00Z</td></tr></tbody></table></section>",
-            fragment,
-        )
-
-    def test_should_name_a_dead_run_under_a_heading_of_its_own(self):
-        # Arrange
-        listing = create_listing([LIVE_RUN, DEAD_RUN], NOTHING_SKIPPED)
-
-        # Act
-        fragment = render_runs_fragment(listing, NO_FILTER)
-
-        # Assert
-        self.assertIn(
-            "<section><h2>Dead runs</h2><table><thead><tr><th>run</th><th>procedure</th><th>task</th><th>wave</th>"
-            "<th>state</th><th>start</th></tr></thead><tbody>"
-            '<tr><td><a href="#runs/20261118T090000Z-dead01">20261118T090000Z-dead01</a></td>',
-            fragment,
-        )
-
-    def test_should_name_a_run_a_limit_cut_under_a_heading_of_its_own_with_its_outcome_as_a_pill(self):
-        # Arrange
-        listing = create_listing([LIVE_RUN, LIMIT_CUT_RUN], NOTHING_SKIPPED)
-
-        # Act
-        fragment = render_runs_fragment(listing, NO_FILTER)
-
-        # Assert
-        self.assertIn(
-            "<section><h2>Runs cut by a limit</h2><table><thead><tr><th>run</th><th>procedure</th><th>task</th>"
-            "<th>wave</th><th>state</th><th>start</th></tr></thead><tbody>"
-            '<tr><td><a href="#runs/20261118T080000Z-c0ffee">20261118T080000Z-c0ffee</a></td><td>build-task</td>'
-            '<td><a href="#runs?task=B92">B92</a></td><td><a href="#waves/oak_w4">oak_w4</a></td>'
-            '<td><span class="pill"><span class="tone tone-limit"><span class="tone-shape" aria-hidden="true">■'
-            "</span>turn_limit</span></span></td>",
-            fragment,
-        )
-
-    def test_should_leave_out_the_heading_of_a_kind_of_run_the_list_holds_none_of(self):
-        # Arrange
-        listing = create_listing([LIVE_RUN], NOTHING_SKIPPED)
-
-        # Act
-        fragment = render_runs_fragment(listing, NO_FILTER)
-
-        # Assert
-        self.assertNotIn("<h2>Dead runs</h2>", fragment)
-        self.assertNotIn("<h2>Runs cut by a limit</h2>", fragment)
-
     def test_should_show_a_run_outside_a_wave_and_a_task_with_a_dash(self):
         # Arrange
         listing = create_listing([DONE_RUN], NOTHING_SKIPPED)
@@ -174,31 +90,7 @@ class RenderRunsFragmentTest(unittest.TestCase):
         fragment = render_runs_fragment(listing, NO_FILTER)
 
         # Assert
-        self.assertIn("<td>vibe</td><td>-</td><td>-</td>", fragment)
-
-    def test_should_offer_the_states_as_chips_and_the_wave_and_the_task_as_selectors_with_no_button(self):
-        # Arrange
-        listing = create_listing([LIVE_RUN, LIMIT_CUT_RUN], NOTHING_SKIPPED)
-        filters = RunFilters(state="running", wave="oak_w4", task=None)
-
-        # Act
-        fragment = render_runs_fragment(listing, filters)
-
-        # Assert
-        self.assertIn(
-            '<nav class="chips"><a class="chip" href="#runs?wave=oak_w4">every state</a>'
-            '<a class="chip" href="#runs?state=running&amp;wave=oak_w4" aria-current="true">running</a>'
-            '<a class="chip" href="#runs?state=finished&amp;wave=oak_w4">finished</a>'
-            '<a class="chip" href="#runs?state=dead&amp;wave=oak_w4">dead</a></nav>'
-            '<form class="filters" method="get" data-view="runs">'
-            '<input type="hidden" name="state" value="running">'
-            '<span class="field"><label for="runs-wave">Wave</label><select id="runs-wave" name="wave">'
-            '<option value="">any</option><option value="oak_w4" selected>oak_w4</option></select></span>'
-            '<span class="field"><label for="runs-task">Task</label><select id="runs-task" name="task">'
-            '<option value="">any</option><option value="B92">B92</option><option value="B94">B94</option>'
-            "</select></span></form>",
-            fragment,
-        )
+        self.assertIn("<td>vibe</td><td>ada</td><td>-</td>", fragment)
 
     def test_should_say_no_run_matches_when_the_list_is_empty(self):
         # Arrange
@@ -242,3 +134,83 @@ class RenderRunsFragmentHeadTest(unittest.TestCase):
             ),
             fragment[:300],
         )
+
+
+RUNNING_PILL = '<span class="pill"><span class="tone tone-work"><span class="tone-shape" aria-hidden="true">●</span>running</span></span>'
+
+
+class RenderRunsFragmentAsTheMockupTest(unittest.TestCase):
+    def test_should_say_how_to_read_the_page_in_an_explainer_folded_by_default(self):
+        # Act
+        fragment = render_runs_fragment(create_listing([LIVE_RUN], NOTHING_SKIPPED), NO_FILTER)
+
+        # Assert
+        self.assertIn('<details class="explainer"><summary>How to read this page</summary>', fragment)
+
+    def test_should_list_every_run_in_one_table_the_newest_first_by_its_short_start_and_short_id(self):
+        # Arrange
+        listing = create_listing([DONE_RUN, LIMIT_CUT_RUN, DEAD_RUN, LIVE_RUN], NOTHING_SKIPPED)
+
+        # Act
+        fragment = render_runs_fragment(listing, NO_FILTER)
+
+        # Assert
+        self.assertIn(
+            "<thead><tr><th>Started</th><th>Run</th><th>Procedure</th><th>Role</th><th>Task</th><th>Outcome</th>"
+            "</tr></thead><tbody>"
+            '<tr><td class="num">11-18 10:15Z</td><td><a class="mono" href="#runs/20261118T101500Z-a1b2c3"'
+            ' title="20261118T101500Z-a1b2c3">…101500Z-a1b2c3</a></td><td>build-task</td><td>ada</td>'
+            f'<td><a class="mono" href="#waves/oak_w4">B94</a></td><td>{RUNNING_PILL}</td></tr>'
+            '<tr><td class="num">11-18 09:00Z</td>',
+            fragment,
+        )
+        self.assertLess(fragment.index("…090000Z-dead01"), fragment.index("…080000Z-c0ffee"))
+        self.assertLess(fragment.index("…080000Z-c0ffee"), fragment.index("…070000Z-d0d0d0"))
+
+    def test_should_count_the_runs_of_each_state_on_its_chip(self):
+        # Arrange
+        listing = create_listing([LIVE_RUN, DEAD_RUN, LIMIT_CUT_RUN, DONE_RUN], NOTHING_SKIPPED)
+
+        # Act
+        fragment = render_runs_fragment(listing, NO_FILTER)
+
+        # Assert
+        self.assertIn(
+            '<nav class="chips"><a class="chip" href="#runs" aria-current="true">All <b>4</b></a>'
+            '<a class="chip" href="#runs?state=running">Running <b>1</b></a>'
+            '<a class="chip" href="#runs?state=finished">Finished <b>2</b></a>'
+            '<a class="chip" href="#runs?state=dead">Dead <b>1</b></a></nav>',
+            fragment,
+        )
+
+    def test_should_give_each_choice_of_a_selector_the_address_it_leads_to_keeping_the_other_choices(self):
+        # Arrange
+        listing = create_listing([LIVE_RUN, LIMIT_CUT_RUN], NOTHING_SKIPPED)
+        filters = RunFilters(state="running", wave=None, task="B94")
+
+        # Act
+        fragment = render_runs_fragment(listing, filters)
+
+        # Assert
+        self.assertIn(
+            '<div class="filters"><span class="field"><label for="runs-wave">Wave</label>'
+            '<select id="runs-wave" name="wave"><option value="" data-href="runs?state=running&amp;task=B94"'
+            ' selected>any</option><option value="oak_w4" data-href="runs?state=running&amp;wave=oak_w4&amp;task=B94">'
+            "oak_w4</option></select></span>"
+            '<span class="field"><label for="runs-task">Task</label><select id="runs-task" name="task">'
+            '<option value="" data-href="runs?state=running">any</option>'
+            '<option value="B92" data-href="runs?state=running&amp;task=B92">B92</option>'
+            '<option value="B94" data-href="runs?state=running&amp;task=B94" selected>B94</option>'
+            "</select></span></div>",
+            fragment,
+        )
+
+    def test_should_name_the_task_of_a_run_of_no_wave_without_a_link(self):
+        # Arrange
+        run_of_no_wave = {**DONE_RUN, "task": "B95"}
+
+        # Act
+        fragment = render_runs_fragment(create_listing([run_of_no_wave], NOTHING_SKIPPED), NO_FILTER)
+
+        # Assert
+        self.assertIn('<td><span class="mono">B95</span></td>', fragment)

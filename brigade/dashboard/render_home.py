@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from html import escape
 from shlex import quote as quote_argument
 from urllib.parse import quote
@@ -13,6 +14,7 @@ from brigade.dashboard.render_stat_tile import StatTile, render_stat_tile
 from brigade.dashboard.render_status_pill import render_status_pill
 from brigade.dashboard.render_verdict import Verdict, render_verdict
 from brigade.inbox.render_age import render_age
+from brigade.system.instant_formats import COMPACT_INSTANT_FORMAT
 
 HOME_HEAD = PageHead("Home", "Whether brigade is working, what waits for you, and what it will do next.")
 STOPPED = "brigade is stopped: the scheduler reports the tick stale."
@@ -34,12 +36,31 @@ STALE_MARK = "~"
 NO_COMMAND = ""
 INBOX_LINK = "#inbox"
 NOTHING = "\u2013"
+RUN_ID_SEPARATOR = "-"
+LAST_RUN_FORMAT = "%m-%d %H:%MZ"
+STUDY_RUN_COMMAND = "brigade study run <study>"
+
+
+@dataclass(frozen=True)
+class LastDayCount:
+    kind: str
+    one: str
+    many: str
+    view: str
+
+
 LAST_DAY_LINES = (
-    (("wave.started", "waves started"), ("wave.closed", "closed")),
-    (("task.pr_opened", "pull requests opened"), ("pr.merged", "merged")),
-    (("milestone.reported", "milestones reported"),),
-    (("run.finished", "run segments finished"),),
-    (("tick.action_failed", "failed tick actions"),),
+    (
+        LastDayCount("wave.started", "wave started", "waves started", "waves"),
+        LastDayCount("wave.closed", "closed", "closed", "waves"),
+    ),
+    (
+        LastDayCount("task.pr_opened", "pull request opened", "pull requests opened", "waves"),
+        LastDayCount("pr.merged", "merged", "merged", "waves"),
+    ),
+    (LastDayCount("milestone.reported", "milestone reported", "milestones reported", "reports"),),
+    (LastDayCount("run.finished", "run segment finished", "run segments finished", "runs"),),
+    (LastDayCount("tick.action_failed", "failed tick action", "failed tick actions", "ledger"),),
 )
 
 
@@ -100,13 +121,12 @@ def _list_scan_rows(scans: list[dict]) -> list[NeedsYou]:
     oldest = max(scan["oldest_age_s"] for scan in scans)
     return [
         NeedsYou(
-            f"{len(scans)} scans hold new signals: {studies}",
+            f"{len(scans)} scans are parked: {studies}",
             f"{signals} new signals, the oldest {render_age(oldest)}",
-            NO_COMMAND,
+            STUDY_RUN_COMMAND,
             oldest,
-            QUESTION_MARK,
+            HALTED_MARK,
             PARKED,
-            ("Read the inbox", INBOX_LINK),
         )
     ]
 
@@ -261,9 +281,13 @@ def _render_at_work(status: dict) -> str:
     return _render_section("At work", render_html_table(("wave", "state", "tasks", "live run"), rows, ""))
 
 
-def _render_last_day_line(events: dict, counts: tuple[tuple[str, str], ...]) -> str:
-    parts = ", ".join(f'<b class="num">{events.get(kind, 0)}</b> {label}' for kind, label in counts)
-    return f"<li>{parts}</li>"
+def _render_last_day_count(events: dict, count: LastDayCount) -> str:
+    number = events.get(count.kind, 0)
+    return f'<a href="#{count.view}">{number} {count.one if number == 1 else count.many}</a>'
+
+
+def _render_last_day_line(events: dict, counts: tuple[LastDayCount, ...]) -> str:
+    return f"<li>{', '.join(_render_last_day_count(events, count) for count in counts)}</li>"
 
 
 def _render_last_day(events: dict) -> str:
@@ -271,20 +295,48 @@ def _render_last_day(events: dict) -> str:
     return _render_section("Last 24 hours", f'<ul class="lines">{lines}</ul>')
 
 
+def _render_forge(project: dict) -> str:
+    if project["remote"] is None:
+        return escape(project["forge"])
+    return f'{escape(project["forge"])} · <span class="mono">{escape(project["remote"])}</span>'
+
+
+def _render_corpus(project: dict) -> str:
+    if not project["corpus"]:
+        return NOTHING
+    return f'<a href="#awawa/{escape(quote(project["name"], safe=""))}">corpus</a>'
+
+
 def _render_project_row(project: dict, waves: list[dict]) -> tuple[str, ...]:
     name = project["name"]
     open_waves = sum(1 for wave in waves if wave["project"] == name)
     state, action = (PAUSED, "resume") if project["paused"] else (ACTIVE, "pause")
-    return (escape(name), render_status_pill(state), str(open_waves), render_action(("projects", name, action), action))
+    return (
+        escape(name),
+        render_status_pill(state),
+        _render_forge(project),
+        str(open_waves),
+        _render_corpus(project),
+        render_action(("projects", name, action), action),
+    )
 
 
 def _render_projects(status: dict) -> str:
     rows = [_render_project_row(project, status["waves"]) for project in status["projects"]]
-    table = render_html_table(("project", "state", "open waves", ""), rows, "no project is registered")
+    table = render_html_table(
+        ("project", "state", "forge", "open waves", "corpus", ""), rows, "no project is registered"
+    )
     return _render_section("Projects", table)
 
 
-def _render_study_row(study: dict) -> tuple[str, ...]:
+def _format_last_run(run: str | None) -> str:
+    if run is None:
+        return NOTHING
+    started = datetime.strptime(run.split(RUN_ID_SEPARATOR)[0], COMPACT_INSTANT_FORMAT).replace(tzinfo=UTC)
+    return started.strftime(LAST_RUN_FORMAT)
+
+
+def _render_study_row(study: dict, signals: dict[str, int]) -> tuple[str, ...]:
     name = study["name"]
     outcome = study["outcome"]
     now = (
@@ -295,15 +347,18 @@ def _render_study_row(study: dict) -> tuple[str, ...]:
     return (
         escape(name),
         escape(study["every"]),
-        escape(study["last_run"] or NOTHING),
+        _format_last_run(study["last_run"]),
         NOTHING if outcome is None else render_status_pill(outcome),
         now,
+        str(signals[name]) if name in signals else NOTHING,
     )
 
 
-def _render_routine(studies: list[dict]) -> str:
-    rows = [_render_study_row(study) for study in studies]
-    table = render_html_table(("study", "every", "last run", "outcome", "now"), rows, "no study is registered")
+def _render_routine(status: dict) -> str:
+    signals = {scan["study"]: scan["signals"] for scan in status["inbox"]["scans"]}
+    rows = [_render_study_row(study, signals) for study in status["studies"]]
+    header = ("study", "every", "last run", "outcome", "now", "new signals")
+    table = render_html_table(header, rows, "no study is registered")
     return _render_section("Routine", table)
 
 
@@ -319,7 +374,7 @@ def render_home(home: HomeDocuments) -> str:
             _render_needs_you(status, needs_you),
             _render_at_work(status),
             _render_last_day(home.ledger["events"]),
+            _render_routine(status),
             _render_projects(status),
-            _render_routine(status["studies"]),
         ]
     )

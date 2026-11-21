@@ -23,7 +23,10 @@ OAK_W2_BLOCKED = {
 LIVE_RUN_OF_E1 = {"run": "20261019T080000Z-e1", "slot": "build", "project": "elm", "wave": "elm_w1", "task": "E1"}
 STATUS = {
     "schema_version": 1,
-    "projects": [{"name": "oak", "paused": False}, {"name": "elm", "paused": True}],
+    "projects": [
+        {"name": "oak", "paused": False, "forge": "github", "remote": "git@github.com:o/oak.git", "corpus": True},
+        {"name": "elm", "paused": True, "forge": "none", "remote": None, "corpus": False},
+    ],
     "waves": [ELM_W1],
     "live_runs": [],
     "awaiting_merge": [],
@@ -286,9 +289,9 @@ class RenderHomeNeedsYouTest(unittest.TestCase):
             "<div><h3>2 proposed patterns wait for a decision</h3>"
             "<p>the inbox proposes them for ratification</p></div>"
             '<div class="act"><a class="btn btn-primary" href="#inbox">Decide in the inbox</a></div></li>'
-            '<li class="needs-you tone-you"><span class="mark">?</span>'
-            "<div><h3>1 scans hold new signals: corpus_lint_oak</h3><p>1 new signals, the oldest 15m</p></div>"
-            '<div class="act"><a class="btn btn-primary" href="#inbox">Read the inbox</a></div></li>'
+            '<li class="needs-you tone-you"><span class="mark">II</span>'
+            "<div><h3>1 scans are parked: corpus_lint_oak</h3><p>1 new signals, the oldest 15m</p></div>"
+            '<div class="act"><code class="cmd">brigade study run &lt;study&gt;</code></div></li>'
             '<li class="needs-you tone-you"><span class="mark">?</span>'
             "<div><h3>Milestone M2 of oak waits for your merge</h3><p>pull request 31 is open</p></div>"
             '<div class="act"><code class="cmd">cd /srv/oak &amp;&amp; gh pr merge 31</code></div></li>'
@@ -337,7 +340,7 @@ class RenderHomeNeedsYouTest(unittest.TestCase):
         self.assertIn(
             '<li class="needs-you tone-faint"><span class="mark">~</span>'
             "<div><h3>1 stall signals name tasks that merged since</h3><p>E1 of elm_w1</p></div>"
-            '<div class="act"><a class="btn btn-primary" href="#inbox">Review</a></div></li></ul></section>',
+            '<div class="act"><a class="btn" href="#inbox">Review</a></div></li></ul></section>',
             fragment,
         )
 
@@ -417,11 +420,11 @@ class RenderHomeAtWorkTest(unittest.TestCase):
         # Assert
         self.assertIn(
             '<section><h2>Last 24 hours</h2><ul class="lines">'
-            '<li><b class="num">0</b> waves started, <b class="num">0</b> closed</li>'
-            '<li><b class="num">0</b> pull requests opened, <b class="num">0</b> merged</li>'
-            '<li><b class="num">0</b> milestones reported</li>'
-            '<li><b class="num">0</b> run segments finished</li>'
-            '<li><b class="num">3</b> failed tick actions</li></ul></section>',
+            '<li><a href="#waves">0 waves started</a>, <a href="#waves">0 closed</a></li>'
+            '<li><a href="#waves">0 pull requests opened</a>, <a href="#waves">0 merged</a></li>'
+            '<li><a href="#reports">0 milestones reported</a></li>'
+            '<li><a href="#runs">0 run segments finished</a></li>'
+            '<li><a href="#ledger">3 failed tick actions</a></li></ul></section>',
             fragment,
         )
 
@@ -431,11 +434,14 @@ class RenderHomeAtWorkTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            "<section><h2>Projects</h2><table><thead><tr><th>project</th><th>state</th><th>open waves</th>"
-            "<th></th></tr></thead><tbody>"
-            '<tr><td>oak</td><td><span class="pill"><span class="tone tone-faint"><span class="tone-shape" aria-hidden="true">·</span>active</span></span></td><td>0</td>'
+            "<section><h2>Projects</h2><table><thead><tr><th>project</th><th>state</th><th>forge</th>"
+            "<th>open waves</th><th>corpus</th><th></th></tr></thead><tbody>"
+            '<tr><td>oak</td><td><span class="pill"><span class="tone tone-faint"><span class="tone-shape" aria-hidden="true">·</span>active</span></span></td>'
+            '<td>github · <span class="mono">git@github.com:o/oak.git</span></td><td>0</td>'
+            '<td><a href="#awawa/oak">corpus</a></td>'
             '<td> <button type="button" data-post="/api/projects/oak/pause">pause</button></td></tr>'
-            '<tr><td>elm</td><td><span class="pill"><span class="tone tone-you"><span class="tone-shape" aria-hidden="true">▲</span>paused</span></span></td><td>1</td>'
+            '<tr><td>elm</td><td><span class="pill"><span class="tone tone-you"><span class="tone-shape" aria-hidden="true">▲</span>paused</span></span></td>'
+            "<td>none</td><td>1</td><td>\u2013</td>"
             '<td> <button type="button" data-post="/api/projects/elm/resume">resume</button></td></tr>'
             "</tbody></table></section>",
             fragment,
@@ -458,7 +464,7 @@ class RenderHomeAtWorkTest(unittest.TestCase):
                         "name": "debt",
                         "status": "active",
                         "every": "1d",
-                        "last_run": "r1",
+                        "last_run": "20261019T081500Z-d1",
                         "outcome": "parked",
                         "due": False,
                     },
@@ -483,11 +489,85 @@ class RenderHomeAtWorkTest(unittest.TestCase):
         # Assert
         self.assertIn(
             "<section><h2>Routine</h2><table><thead><tr><th>study</th><th>every</th><th>last run</th>"
-            "<th>outcome</th><th>now</th></tr></thead><tbody>"
-            "<tr><td>triage</td><td>24h</td><td>\u2013</td><td>\u2013</td><td>due, runs at the next tick</td></tr>"
-            '<tr><td>debt</td><td>1d</td><td>r1</td><td><span class="pill"><span class="tone tone-you"><span class="tone-shape" aria-hidden="true">▲</span>parked</span></span></td>'
-            '<td>waits for <code class="cmd">brigade study run debt</code></td></tr>'
+            "<th>outcome</th><th>now</th><th>new signals</th></tr></thead><tbody>"
+            "<tr><td>triage</td><td>24h</td><td>\u2013</td><td>\u2013</td><td>due, runs at the next tick</td>"
+            "<td>\u2013</td></tr>"
+            '<tr><td>debt</td><td>1d</td><td>10-19 08:15Z</td><td><span class="pill"><span class="tone tone-you"><span class="tone-shape" aria-hidden="true">▲</span>parked</span></span></td>'
+            '<td>waits for <code class="cmd">brigade study run debt</code></td><td>\u2013</td></tr>'
             "</tbody></table></section>",
             fragment,
         )
         self.assertNotIn("<h2>Orders</h2>", fragment)
+
+
+STALE_BRANCHES_SCAN = {"study": "stale_branches", "signals": 23, "oldest_age_s": 1468800}
+WORKTREES_SCAN = {"study": "worktrees", "signals": 8, "oldest_age_s": 1296000}
+STALE_BRANCHES_STUDY = {
+    "name": "stale_branches",
+    "every": "1d",
+    "last_run": "20261018T080000Z-5b1a2c",
+    "outcome": "done",
+    "due": False,
+}
+
+
+class RenderHomeAsTheMockupTest(unittest.TestCase):
+    def test_should_say_the_scans_holding_new_signals_are_parked_with_the_command_that_runs_one(self):
+        # Arrange
+        inbox = {"new_signals": 31, "scans": [STALE_BRANCHES_SCAN, WORKTREES_SCAN], "stalls": []}
+
+        # Act
+        fragment = render_home(create_home({"inbox": inbox}))
+
+        # Assert
+        self.assertIn(
+            "<h3>2 scans are parked: stale_branches, worktrees</h3><p>31 new signals, the oldest 17d</p></div>"
+            '<div class="act"><code class="cmd">brigade study run &lt;study&gt;</code></div>',
+            fragment,
+        )
+
+    def test_should_show_a_wave_blocked_on_the_quota_as_blocked(self):
+        # Act
+        fragment = render_home(create_home({"waves": [OAK_W2_BLOCKED]}))
+
+        # Assert
+        self.assertIn(
+            '<span class="pill"><span class="tone tone-you"><span class="tone-shape" aria-hidden="true">▲</span>blocked</span></span>',
+            fragment,
+        )
+
+    def test_should_set_the_routine_before_the_projects(self):
+        # Act
+        fragment = render_home(HOME)
+
+        # Assert
+        self.assertLess(fragment.index("<h2>Routine</h2>"), fragment.index("<h2>Projects</h2>"))
+
+    def test_should_give_each_study_its_new_signals_and_the_day_of_its_last_run(self):
+        # Arrange
+        inbox = {"new_signals": 23, "scans": [STALE_BRANCHES_SCAN], "stalls": []}
+
+        # Act
+        fragment = render_home(create_home({"inbox": inbox, "studies": [STALE_BRANCHES_STUDY]}))
+
+        # Assert
+        self.assertIn("<th>new signals</th>", fragment)
+        self.assertIn("<td>stale_branches</td><td>1d</td><td>10-18 08:00Z</td>", fragment)
+        self.assertIn("<td>23</td>", fragment)
+        self.assertNotIn("20261018T080000Z-5b1a2c", fragment)
+
+    def test_should_link_each_count_of_the_last_24_hours_to_its_view_in_words_of_its_number(self):
+        # Arrange
+        home = HomeDocuments(
+            status=STATUS,
+            scheduler=FRESH_SCHEDULER,
+            ledger={"view": "overview", "events": {"wave.started": 1, "milestone.reported": 1}},
+            inbox=EMPTY_INBOX,
+        )
+
+        # Act
+        fragment = render_home(home)
+
+        # Assert
+        self.assertIn('<a href="#waves">1 wave started</a>', fragment)
+        self.assertIn('<a href="#reports">1 milestone reported</a>', fragment)

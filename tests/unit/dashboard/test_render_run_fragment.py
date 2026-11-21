@@ -85,20 +85,6 @@ def create_live_page() -> RunPage:
 
 
 class RenderRunFragmentTest(unittest.TestCase):
-    def test_should_open_on_where_a_live_run_stands_and_the_last_next_entry_of_its_progress(self):
-        # Act
-        fragment = render_run_fragment(create_live_page())
-
-        # Assert
-        self.assertIn(
-            '<div class="verdict"><p class="status-sentence">build-task by ada is running, in its segment 2.</p></div>'
-            '<div class="callout tone-work"><p>Left for its next segment: 3. implement</p></div>',
-            fragment,
-        )
-        self.assertTrue(
-            fragment.startswith(f'<header class="page-head"><div><h1>Run <span class="mono">{RUN_ID}</span>')
-        )
-
     def test_should_show_five_tiles_outcome_segments_turns_run_time_and_cost(self):
         # Act
         fragment = render_run_fragment(create_live_page())
@@ -127,7 +113,8 @@ class RenderRunFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            "<section><h3>Segments</h3><table><thead><tr><th>segment</th><th>outcome</th><th>turns</th>"
+            '<section class="block"><div class="block-head"><h2>Segments</h2><p>Turns used against the cap of the role, 75 for ada.</p></div>'
+            "<table><thead><tr><th>segment</th><th>outcome</th><th>turns</th>"
             "<th>start</th><th>duration</th><th>cost</th></tr></thead><tbody>"
             '<tr><td>1</td><td><span class="pill"><span class="tone tone-faint"><span class="tone-shape"'
             ' aria-hidden="true">·</span>handed_over</span></span></td>'
@@ -172,9 +159,7 @@ class RenderRunFragmentTest(unittest.TestCase):
         fragment = render_run_fragment(RunPage(shown=shown, budgets=BUDGETS, task_runs=TASK_RUNS, wave=WAVE))
 
         # Assert
-        self.assertIn(
-            '<p class="status-sentence">build-task by ada died in its segment 1, without a result.</p>', fragment
-        )
+        self.assertIn('<p class="lede">build-task by ada died in its segment 1, without a result.</p>', fragment)
 
     def test_should_say_a_live_run_with_no_segment_yet_is_starting_its_first(self):
         # Arrange
@@ -185,9 +170,7 @@ class RenderRunFragmentTest(unittest.TestCase):
         fragment = render_run_fragment(RunPage(shown=shown, budgets=BUDGETS, task_runs=TASK_RUNS, wave=WAVE))
 
         # Assert
-        self.assertIn(
-            '<p class="status-sentence">build-task by ada is running, before its first segment started.</p>', fragment
-        )
+        self.assertIn('<p class="lede">build-task by ada is running, before its first segment started.</p>', fragment)
 
     def test_should_say_a_dead_run_with_no_segment_died_before_its_first(self):
         # Arrange
@@ -199,7 +182,7 @@ class RenderRunFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            '<p class="status-sentence">build-task by ada died before its first segment started, without a result.</p>',
+            '<p class="lede">build-task by ada died before its first segment started, without a result.</p>',
             fragment,
         )
 
@@ -213,7 +196,7 @@ class RenderRunFragmentTest(unittest.TestCase):
         fragment = render_run_fragment(RunPage(shown=shown, budgets=BUDGETS, task_runs=TASK_RUNS, wave=WAVE))
 
         # Assert
-        self.assertIn('<p class="status-sentence">build-task by ada finished on turn_limit.</p>', fragment)
+        self.assertIn('<p class="lede">build-task by ada finished on turn_limit.</p>', fragment)
         self.assertIn(
             '<div class="stat-tile"><span class="stat-value">turn_limit</span><span class="stat-label">outcome</span>'
             '<span class="stat-perimeter">cut at 75 turns</span></div>',
@@ -232,19 +215,6 @@ class RenderRunFragmentTest(unittest.TestCase):
         # Assert
         self.assertIn('<span class="stat-perimeter">no cost of a wave to share</span>', fragment)
 
-    def test_should_show_the_progress_cut_by_segment(self):
-        # Act
-        fragment = render_run_fragment(create_live_page())
-
-        # Assert
-        self.assertIn(
-            "<section><h3>Progress</h3>"
-            "<h4>Segment 1</h4><dl><dt>ENTRY e1</dt><dd>DONE: read the package</dd><dd>NEXT: 2. write the tests</dd>"
-            "<dt>HANDOVER h1</dt><dd>NEXT: 3. implement</dd></dl>"
-            "<h4>Segment 2</h4><dl><dt>ENTRY e2</dt><dd>DONE: wrote the tests</dd></dl></section>",
-            fragment,
-        )
-
     def test_should_show_a_markdown_progress_as_text_without_a_next_entry(self):
         # Arrange
         shown = create_shown(LIVE_RUN, [SEGMENT_OVER_ITS_CAP], MARKDOWN_PROGRESS, NO_NOTE)
@@ -254,7 +224,10 @@ class RenderRunFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            "<section><h3>Progress</h3><pre># Progress\n- read &lt;b&gt;it&lt;/b&gt;\n</pre></section>", fragment
+            '<section class="block"><div class="block-head"><h2>Progress</h2><p>What the run wrote in its progress file, by segment.'
+            " The last line is where it stands.</p></div>"
+            "<pre># Progress\n- read &lt;b&gt;it&lt;/b&gt;\n</pre></section>",
+            fragment,
         )
         self.assertNotIn("callout", fragment)
 
@@ -267,7 +240,7 @@ class RenderRunFragmentTest(unittest.TestCase):
         fragment = render_run_fragment(RunPage(shown=shown, budgets=BUDGETS, task_runs=TASK_RUNS, wave=WAVE))
 
         # Assert
-        self.assertNotIn("<h3>Progress</h3>", fragment)
+        self.assertNotIn("<h2>Progress</h2>", fragment)
 
     def test_should_say_no_note_was_handed_to_the_run(self):
         # Act
@@ -275,7 +248,7 @@ class RenderRunFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            '<section><h3>Notes</h3><div class="empty-state"><p class="empty-why">No note was handed to this run.</p>'
+            '<section class="block"><div class="block-head"><h2>Notes</h2></div><div class="empty-state"><p class="empty-why">No note was handed to this run.</p>'
             '<p class="empty-fill">brigade run note hands a note to the next segment of a run.</p></div></section>',
             fragment,
         )
@@ -293,7 +266,8 @@ class RenderRunFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            "<section><h3>Notes</h3><table><thead><tr><th>noted</th><th>carried by</th><th>note</th></tr></thead>"
+            '<section class="block"><div class="block-head"><h2>Notes</h2></div>'
+            "<table><thead><tr><th>noted</th><th>carried by</th><th>note</th></tr></thead>"
             "<tbody><tr><td>2026-11-18T10:30:00Z</td><td>segment 2</td><td>rebase first</td></tr>"
             "<tr><td>2026-11-18T10:40:00Z</td><td>pending</td><td>then push</td></tr></tbody></table></section>",
             fragment,
@@ -305,7 +279,8 @@ class RenderRunFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            "<section><h3>Other runs of task B94</h3><table><thead><tr><th>run</th><th>finished</th><th>slot</th>"
+            '<section class="block"><div class="block-head"><h2>Other runs of task B94</h2></div>'
+            "<table><thead><tr><th>run</th><th>finished</th><th>slot</th>"
             "<th>outcome</th><th>turns</th><th>duration</th><th>cost</th></tr></thead><tbody>"
             '<tr><td><a href="#runs/20261117T090000Z-0ld000">20261117T090000Z-0ld000</a></td>'
             '<td>2026-11-17T10:00:00Z</td><td>build</td><td><span class="pill"><span class="tone tone-limit">'
@@ -324,7 +299,8 @@ class RenderRunFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            '<section><h3>Other runs of task B94</h3><div class="empty-state">'
+            '<section class="block"><div class="block-head"><h2>Other runs of task B94</h2></div>'
+            '<div class="empty-state">'
             '<p class="empty-why">No other run of task B94 has finished.</p>'
             '<p class="empty-fill">A run of the task appears here once it finishes.</p></div></section>',
             fragment,
@@ -350,19 +326,113 @@ class RenderRunFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            "<section><h3>Arguments</h3><dl><dt>base</dt><dd>&lt;script&gt;alert(1)&lt;/script&gt;</dd></dl></section>",
+            '<div><dt>Arguments</dt><dd class="mono">base=&lt;script&gt;alert(1)&lt;/script&gt;</dd></div>',
             fragment,
         )
 
 
-class RenderRunFragmentHeadTest(unittest.TestCase):
-    def test_should_open_on_the_page_head_naming_the_run_and_its_state(self):
+DEAD_PILL = '<span class="pill"><span class="tone tone-failed"><span class="tone-shape" aria-hidden="true">✕</span>dead</span></span>'
+
+
+class RenderRunFragmentAsTheMockupTest(unittest.TestCase):
+    def test_should_name_the_run_by_what_it_does_under_the_way_back_to_its_wave_and_read_where_it_stands(self):
         # Act
         fragment = render_run_fragment(create_live_page())
 
         # Assert
-        self.assertTrue(fragment.startswith('<header class="page-head"><div><h1>Run <span class="mono">'))
+        self.assertTrue(
+            fragment.startswith(
+                '<header class="page-head"><div><p class="crumbs"><a href="#runs">Runs</a> /'
+                ' <a href="#waves/oak_w4">oak_w4</a> / B94</p><h1>Build of <span class="mono">B94</span>'
+                ' <span class="pill"><span class="tone tone-work"><span class="tone-shape" aria-hidden="true">●</span>'
+                'running</span></span></h1><p class="lede">build-task by ada is running, in its segment 2.</p></div>'
+            )
+        )
+        self.assertIn('<div class="callout tone-work"><p>Left for its next segment: 3. implement</p></div>', fragment)
+
+    def test_should_show_the_state_of_a_dead_run_in_its_head(self):
+        # Arrange
+        shown = create_shown({**LIVE_RUN, "state": "dead"}, [SEGMENT_OVER_ITS_CAP], AWAWA_PROGRESS, NO_NOTE)
+
+        # Act
+        fragment = render_run_fragment(RunPage(shown=shown, budgets=BUDGETS, task_runs=TASK_RUNS, wave=WAVE))
+
+        # Assert
+        self.assertIn(f'<h1>Build of <span class="mono">B94</span> {DEAD_PILL}</h1>', fragment)
+
+    def test_should_name_a_run_of_no_task_by_its_procedure_and_its_short_id(self):
+        # Arrange
+        run = {**LIVE_RUN, "procedure": "vibe", "slot": "study", "wave": None, "task": None}
+        shown = create_shown(run, [SEGMENT_OVER_ITS_CAP], None, NO_NOTE)
+
+        # Act
+        fragment = render_run_fragment(RunPage(shown=shown, budgets=BUDGETS, task_runs=None, wave=None))
+
+        # Assert
         self.assertIn(
-            '<p class="lede">One agent at work: its segments, its turns against the cap, and what it left for its next segment.</p>',
+            '<p class="crumbs"><a href="#runs">Runs</a></p><h1>Run of vibe <span class="mono">…101500Z-a1b2c3</span>',
             fragment,
         )
+
+    def test_should_lay_the_facts_of_the_run_in_one_panel_with_the_command_that_follows_its_log(self):
+        # Act
+        fragment = render_run_fragment(create_live_page())
+
+        # Assert
+        self.assertIn(
+            '<dl class="panel pad kv"><div><dt>Procedure</dt><dd>build-task</dd></div>'
+            "<div><dt>Role, slot</dt><dd>ada, build</dd></div>"
+            '<div><dt>Task</dt><dd><a class="mono" href="#waves/oak_w4">B94</a> of'
+            ' <a class="mono" href="#waves/oak_w4">oak_w4</a></dd></div>'
+            '<div><dt>Arguments</dt><dd class="mono">base=integration/oak task=@TASK.B94</dd></div>'
+            "<div><dt>Worktree</dt><dd>/srv/oak/B94</dd></div>"
+            '<div><dt>Follow its log</dt><dd><code class="cmd">brigade run show 20261118T101500Z-a1b2c3 --log</code>'
+            "</dd></div></dl>",
+            fragment,
+        )
+
+    def test_should_fold_the_progress_by_segment_as_numbered_steps_the_last_segment_unfolded(self):
+        # Act
+        fragment = render_run_fragment(create_live_page())
+
+        # Assert
+        self.assertIn(
+            '<section class="block"><div class="block-head"><h2>Progress</h2><p>What the run wrote in its progress'
+            ' file, by segment. The last line is where it stands.</p></div><div class="panel">'
+            '<details class="fold"><summary>Segment 1 <span>· 1 entry</span></summary><ol class="steps">'
+            "<li><p>read the package</p></li></ol></details>"
+            '<details class="fold" open><summary>Segment 2 <span>· 1 entry</span></summary><ol class="steps">'
+            "<li><p>wrote the tests</p></li></ol></details></div></section>",
+            fragment,
+        )
+
+    def test_should_head_each_section_of_the_run_with_a_second_level_heading(self):
+        # Act
+        fragment = render_run_fragment(create_live_page())
+
+        # Assert
+        self.assertNotIn("<h3>", fragment)
+        self.assertIn(
+            '<div class="block-head"><h2>Segments</h2><p>Turns used against the cap of the role, 75 for ada.</p></div>',
+            fragment,
+        )
+
+    def test_should_count_the_entries_of_a_segment_that_wrote_several(self):
+        # Arrange
+        progress = {
+            "text": "ENTRY e1\n",
+            "entities": [
+                {
+                    "type": "ENTRY",
+                    "name": "e1",
+                    "fields": [{"name": "DONE", "value": "read"}, {"name": "DONE", "value": "wrote"}],
+                }
+            ],
+        }
+        shown = create_shown(LIVE_RUN, [LIVE_SEGMENT], progress, NO_NOTE)
+
+        # Act
+        fragment = render_run_fragment(RunPage(shown=shown, budgets=BUDGETS, task_runs=TASK_RUNS, wave=WAVE))
+
+        # Assert
+        self.assertIn("<summary>Segment 1 <span>· 2 entries</span></summary>", fragment)

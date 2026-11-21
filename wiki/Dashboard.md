@@ -74,8 +74,8 @@ Its seven views:
   pill, a strip of its tasks by state with how many merged, and its live run; **Last 24 hours** counts the waves
   started and closed, the pull requests opened and merged, the milestones reported, the run segments finished and the
   failed tick actions; **Routine** is a table of the studies, their period, their last run, its outcome and what
-  comes next; **Projects** is a table of the projects with their state, their open waves and their pause or resume
-  button; a parked order is a row of Needs you.
+  comes next; **Projects** is a table of the projects with their state, their forge and its remote, their open waves,
+  the link to their corpus when they hold one and their pause or resume button; a parked order is a row of Needs you.
   **Next tick** shows the decisions of `brigade tick --dry-run --json` by action, read when the page loads, at each
   new tick and on its refresh button, never by the poll.
 - **Waves** — the waves of `brigade wave list`, opening on one sentence counting the waves open, parked and blocked,

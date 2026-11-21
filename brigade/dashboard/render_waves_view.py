@@ -3,6 +3,7 @@ from datetime import datetime
 from html import escape
 from urllib.parse import quote
 
+from brigade.dashboard.format_span import format_span
 from brigade.dashboard.render_answer import render_answer
 from brigade.dashboard.render_html_table import render_html_table
 from brigade.dashboard.render_page_head import PageHead, render_page_head
@@ -20,8 +21,7 @@ HEAD = PageHead(
     lede="A wave is a batch of ratified tasks brigade delivers unattended, one branch and one pull request per task.",
 )
 SHORT_DATE = "%m-%d %H:%MZ"
-SECONDS_PER_MINUTE = 60
-MINUTES_PER_HOUR = 60
+MILLISECONDS_PER_SECOND = 1000
 OPEN = "open"
 NO_WAVE = "no wave started"
 ABSENT = "-"
@@ -66,8 +66,7 @@ def _show_lasted(wave: dict) -> str:
     if wave["ended_at"] is None:
         return OPEN
     lasted = datetime.fromisoformat(wave["ended_at"]) - datetime.fromisoformat(wave["started_at"])
-    hours, minutes = divmod(int(lasted.total_seconds()) // SECONDS_PER_MINUTE, MINUTES_PER_HOUR)
-    return f"{hours} h {minutes:02d} min"
+    return format_span(round(lasted.total_seconds() * MILLISECONDS_PER_SECOND))
 
 
 def _show_cost(cost_usd: float | None) -> str:

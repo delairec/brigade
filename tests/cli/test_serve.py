@@ -227,7 +227,7 @@ class BrigadeServeTest(unittest.TestCase):
         # Assert
         self.assertEqual(status, 200)
         self.assertIn('<div class="callout tone-faint"><p>The measures cover 0 runs finished in an empty ledger;', body)
-        self.assertIn("<h3>Turn cap by role</h3>", body)
+        self.assertIn('<div class="block-head"><h2>Do the turn caps fit?</h2>', body)
 
     def write_finished_run(self) -> None:
         run_directory = self.machine.state_home / "brigade" / "runs" / RUN_ID
@@ -246,7 +246,9 @@ class BrigadeServeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(status, 200)
-        self.assertIn('<aside class="explainer"><p class="explainer-what">A run is one procedure', body)
+        self.assertIn(
+            '<details class="explainer"><summary>How to read this page</summary><div><p>A run is one procedure', body
+        )
 
     def test_should_answer_the_page_of_a_run_with_its_segments(self):
         # Arrange
@@ -272,13 +274,9 @@ class BrigadeServeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(status, 200)
-        self.assertRegex(
-            body,
-            r'^<header class="page-head">.*?</header>'
-            r'<section class="report-verdict"><h2>wave-report oak_w3</h2><p class="status-sentence">Verdict: delivered</p>',
-        )
+        self.assertIn('<p class="lede">delivered</p>', body)
 
-    def test_should_answer_the_reports_view_with_its_explainer_closed_and_the_verdict_of_each_report(self):
+    def test_should_answer_the_reports_view_with_its_explainer_open_and_the_verdict_of_each_report(self):
         # Arrange
         self.machine.install_awawa(self)
         self.machine.run_init()
@@ -290,13 +288,8 @@ class BrigadeServeTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(status, 200)
-        self.assertIn(
-            "<details><summary>A report is the account brigade writes once a delivery ends: a milestone"
-            " reached, a task of no milestone ready to merge, or, before the milestone reports, a wave"
-            " closed.</summary>",
-            body,
-        )
-        self.assertIn("<td>Verdict: M13 delivered three of its four tasks.</td>", body)
+        self.assertIn('<details class="explainer" open><summary>What a report is, and when to read one</summary>', body)
+        self.assertIn("<td>M13 delivered three of its four tasks.</td>", body)
 
 
 ADDON_SCHEMA = (
@@ -432,9 +425,9 @@ class BrigadeServeOfAWaveTest(WaveTickTestCase):
 
         # Assert
         self.assertEqual(status, 200, body)
-        self.assertIn('<p class="status-sentence">Wave shop_w1 of shop is running:', body)
+        self.assertIn('<h1>Wave <span class="mono">shop_w1</span>', body)
         self.assertIn('<div class="stat-tiles"><div class="stat-tile">', body)
-        self.assertIn("<details><summary>Events</summary><ol><li>", body)
+        self.assertIn('<details class="fold"><summary>Show the events <span>', body)
 
 
 class BrigadeServeHomeTest(BrigadeServeTestCase):

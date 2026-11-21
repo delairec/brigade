@@ -1,6 +1,6 @@
 import unittest
 
-from brigade.dashboard.render_page_head import PageHead, render_page_head
+from brigade.dashboard.render_page_head import Crumb, PageHead, render_page_head
 
 
 class RenderPageHeadTest(unittest.TestCase):
@@ -48,6 +48,28 @@ class RenderPageHeadTest(unittest.TestCase):
             '<header class="page-head"><div><h1>Wave <span class="mono">w&lt;57&gt;</span>'
             ' <span class="pill"><span class="tone tone-you"><span class="tone-shape" aria-hidden="true">▲</span>'
             "parked</span></span></h1>"
+            '<p class="lede">All 4 tasks merged.</p></div>'
+            '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>',
+        )
+
+    def test_should_lead_a_detail_page_back_to_the_list_it_belongs_to(self):
+        # Arrange
+        here = ""
+        head = PageHead(
+            title="Wave",
+            lede="All 4 tasks merged.",
+            name="w57",
+            crumbs=(Crumb(label="Waves", address="#waves"), Crumb(label="oak <&>", address=here)),
+        )
+
+        # Act
+        rendered = render_page_head(head)
+
+        # Assert
+        self.assertEqual(
+            rendered,
+            '<header class="page-head"><div><p class="crumbs"><a href="#waves">Waves</a> / oak &lt;&amp;&gt;</p>'
+            '<h1>Wave <span class="mono">w57</span></h1>'
             '<p class="lede">All 4 tasks merged.</p></div>'
             '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>',
         )

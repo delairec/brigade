@@ -31,11 +31,13 @@ REPORTS_VIEW = "reports"
 RUNS_VIEW = "runs"
 CORPUS_VIEW = "corpus"
 INBOX_VIEW = "inbox"
+KIND_PREFIX = "kind-"
 DOCUMENT = "document"
 PROJECT = "project"
 BUDGETS = "budgets"
 TASK_RUNS = "task_runs"
 WAVE = "wave"
+WAVE_RUNS = "wave_runs"
 WAVE_PREFIX = "wave "
 LEDGER_BUDGETS = CommandRoute(arguments=("ledger", "budgets", "--json"))
 WAVE_EVENTS = ("wave", "show", "--json", "--events")
@@ -127,8 +129,11 @@ def _follow_wave(answers: dict[str, CommandAnswer]) -> dict[str, CommandRoute]:
     shown = answers[DOCUMENT]
     if shown.status != OK:
         return {}
-    project = json.loads(shown.document)["project"]
-    return {PROJECT: CommandRoute(arguments=("project", "show", "--json", project))}
+    document = json.loads(shown.document)
+    return {
+        PROJECT: CommandRoute(arguments=("project", "show", "--json", document["project"])),
+        WAVE_RUNS: CommandRoute(arguments=("run", "list", "--json", f"--wave={document['wave']}")),
+    }
 
 
 def _read_answered(answers: dict[str, CommandAnswer], name: str) -> dict | None:
@@ -141,7 +146,9 @@ def _read_answered(answers: dict[str, CommandAnswer], name: str) -> dict | None:
 def _render_wave_page(answers: dict[str, CommandAnswer]) -> str:
     return render_answer(
         answers[DOCUMENT],
-        lambda shown: render_wave(WavePage(shown=shown, project=_read_answered(answers, PROJECT))),
+        lambda shown: render_wave(
+            WavePage(shown=shown, project=_read_answered(answers, PROJECT), runs=_read_answered(answers, WAVE_RUNS))
+        ),
     )
 
 
@@ -183,6 +190,13 @@ def _route_runs(route: CommandRoute, query: dict) -> ViewRoute:
     return ViewRoute(
         routes={DOCUMENT: route}, render=_render_with(lambda document: render_runs_fragment(document, filters))
     )
+
+
+def _route_inbox(route: CommandRoute, query: dict, render_inbox: Callable[[dict, dict], str]) -> ViewRoute:
+    kinds = {
+        name.removeprefix(KIND_PREFIX): values[0] for name, values in query.items() if name.startswith(KIND_PREFIX)
+    }
+    return ViewRoute(routes={DOCUMENT: route}, render=_render_with(lambda document: render_inbox(document, kinds)))
 
 
 def _route_ledger(query: dict) -> ViewRoute:
@@ -236,10 +250,10 @@ def _route_command_view(
         return ViewRoute(routes={DOCUMENT: shown}, render=_render_wave_page, follow=_follow_wave)
     if path == RUNS_VIEW:
         return _route_runs(route, query)
+    if path == INBOX_VIEW:
+        return _route_inbox(route, query, renderers[INBOX_VIEW])
     if path.startswith(f"{RUNS_VIEW}/"):
         return ViewRoute(routes={DOCUMENT: route}, render=_render_run, follow=_follow_run)
-    if path in renderers:
-        return ViewRoute(routes={DOCUMENT: route}, render=_render_with(renderers[path]))
     if path == REPORTS_VIEW:
         return ViewRoute(routes={DOCUMENT: route}, render=_render_reports)
     collection = path.split(PATH_SEPARATOR)[0]

@@ -9,6 +9,7 @@ SCHEMA_TYPES = ("SCHEMA", "FIELDSET", "SHAPE")
 FIRST_VIEW = "tree"
 SELECTED = ' aria-selected="true"'
 FIELD_LABELS = {"board": "By", "dependencies": "Follow"}
+NO_SELECTOR = ""
 
 
 def _render_tab(address: AwawaAddress, label: str, *, selected: bool) -> str:
@@ -29,10 +30,15 @@ def _render_views(document: dict, address: AwawaAddress) -> str:
 
 
 def _render_types(document: dict, address: AwawaAddress) -> str:
-    selector = AwawaSelector(name="type", label="Type", options=tuple(document["types"]), chosen=address.read("type"))
+    if document["view"] not in VIEWS_OF_A_TYPE:
+        return NO_SELECTOR
+    unfiltered = address.removing("filter")
+    selector = AwawaSelector(
+        name="type", label="Type", options=tuple(document["types"]), chosen=address.read("type"), address=unfiltered
+    )
     form = AwawaForm(
         css_class="awawa-type",
-        address=address.removing("filter"),
+        address=unfiltered,
         controls=selector.render(),
         replaced=("type",),
         button=None,
@@ -43,8 +49,10 @@ def _render_types(document: dict, address: AwawaAddress) -> str:
 def _render_field(document: dict, address: AwawaAddress) -> str:
     label = FIELD_LABELS.get(document["view"])
     if label is None:
-        return ""
-    selector = AwawaSelector(name="field", label=label, options=tuple(document["fields"]), chosen=document["field"])
+        return NO_SELECTOR
+    selector = AwawaSelector(
+        name="field", label=label, options=tuple(document["fields"]), chosen=document["field"], address=address
+    )
     form = AwawaForm(
         css_class="awawa-field", address=address, controls=selector.render(), replaced=("field",), button=None
     )

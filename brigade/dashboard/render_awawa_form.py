@@ -6,6 +6,7 @@ from brigade.dashboard.awawa_address import AwawaAddress
 
 TAB_VIEW = "awawa/"
 CHOSEN = " selected"
+HASH = "#"
 
 
 @dataclass(frozen=True)
@@ -14,13 +15,16 @@ class AwawaSelector:
     label: str
     options: tuple[str, ...]
     chosen: str | None
+    address: AwawaAddress
+
+    def _render_option(self, option: str) -> str:
+        leads_to = self.address.setting(self.name, option).link().removeprefix(HASH)
+        chosen = CHOSEN if option == self.chosen else ""
+        return f'<option value="{escape(option)}" data-href="{escape(leads_to)}"{chosen}>{escape(option)}</option>'
 
     def render(self) -> str:
         control = f"awawa-{escape(self.name)}"
-        options = "".join(
-            f'<option value="{escape(option)}"{CHOSEN if option == self.chosen else ""}>{escape(option)}</option>'
-            for option in self.options
-        )
+        options = "".join(self._render_option(option) for option in self.options)
         return (
             f'<span class="field"><label for="{control}">{escape(self.label)}</label>'
             f'<select id="{control}" name="{escape(self.name)}">{options}</select></span>'

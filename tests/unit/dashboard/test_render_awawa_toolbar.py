@@ -50,8 +50,10 @@ class RenderAwawaToolbarTest(unittest.TestCase):
             '<form class="awawa-type" method="get" data-view="awawa/oak">'
             '<input type="hidden" name="view" value="board">'
             '<span class="field"><label for="awawa-type">Type</label><select id="awawa-type" name="type">'
-            '<option value="SCHEMA">SCHEMA</option><option value="MILESTONE">MILESTONE</option>'
-            '<option value="TASK" selected>TASK</option></select></span></form>',
+            '<option value="SCHEMA" data-href="awawa/oak?view=board&amp;type=SCHEMA">SCHEMA</option>'
+            '<option value="MILESTONE" data-href="awawa/oak?view=board&amp;type=MILESTONE">MILESTONE</option>'
+            '<option value="TASK" data-href="awawa/oak?view=board&amp;type=TASK" selected>TASK</option>'
+            "</select></span></form>",
             fragment,
         )
 
@@ -65,8 +67,12 @@ class RenderAwawaToolbarTest(unittest.TestCase):
             '<input type="hidden" name="view" value="board"><input type="hidden" name="type" value="TASK">'
             '<input type="hidden" name="filter" value="STATUS=todo">'
             '<span class="field"><label for="awawa-field">By</label><select id="awawa-field" name="field">'
-            '<option value="TITLE">TITLE</option><option value="STATUS" selected>STATUS</option>'
-            '<option value="AFTER">AFTER</option></select></span></form>',
+            '<option value="TITLE" data-href="awawa/oak?view=board&amp;type=TASK&amp;filter=STATUS%3Dtodo&amp;field=TITLE">'
+            "TITLE</option>"
+            '<option value="STATUS" data-href="awawa/oak?view=board&amp;type=TASK&amp;filter=STATUS%3Dtodo&amp;field=STATUS"'
+            " selected>STATUS</option>"
+            '<option value="AFTER" data-href="awawa/oak?view=board&amp;type=TASK&amp;filter=STATUS%3Dtodo&amp;field=AFTER">'
+            "AFTER</option></select></span></form>",
             fragment,
         )
 
@@ -79,7 +85,8 @@ class RenderAwawaToolbarTest(unittest.TestCase):
             '<form class="awawa-field" method="get" data-view="awawa/oak">'
             '<input type="hidden" name="view" value="dependencies"><input type="hidden" name="type" value="TASK">'
             '<span class="field"><label for="awawa-field">Follow</label><select id="awawa-field" name="field">'
-            '<option value="AFTER" selected>AFTER</option></select></span></form>',
+            '<option value="AFTER" data-href="awawa/oak?view=dependencies&amp;type=TASK&amp;field=AFTER" selected>AFTER'
+            "</option></select></span></form>",
             fragment,
         )
 
@@ -99,4 +106,24 @@ class RenderAwawaToolbarTest(unittest.TestCase):
             '<label>Search <input type="search" name="search" value=""></label>'
             '<label>Filter <input name="filter" placeholder="FIELD=value"></label><button>Apply</button>',
             fragment,
+        )
+
+
+class RenderAwawaToolbarAsTheMockupTest(unittest.TestCase):
+    def test_should_offer_the_type_on_the_board_and_the_dependencies_alone(self):
+        # Act
+        toolbar = render_awawa_toolbar(TREE, TREE_OF_OAK)
+
+        # Assert
+        self.assertNotIn('name="type"', toolbar)
+
+    def test_should_give_each_choice_of_a_selector_the_address_it_leads_to(self):
+        # Act
+        toolbar = render_awawa_toolbar(BOARD, BOARD_OF_THE_TODO_TASKS)
+
+        # Assert
+        self.assertIn('<option value="MILESTONE" data-href="awawa/oak?view=board&amp;type=MILESTONE">', toolbar)
+        self.assertIn(
+            '<option value="AFTER" data-href="awawa/oak?view=board&amp;type=TASK&amp;filter=STATUS%3Dtodo&amp;field=AFTER">',
+            toolbar,
         )

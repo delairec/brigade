@@ -50,3 +50,19 @@ class RenderHeartbeatTest(unittest.TestCase):
             rendered,
             '<p class="heartbeat"><span><span class="dot tone-off"></span><b>No tick recorded yet</b></span></p>',
         )
+
+
+class RenderHeartbeatOfItsSchedulerTest(unittest.TestCase):
+    def test_should_name_the_scheduler_that_fires_the_tick_and_how_often(self):
+        # Arrange
+        document = {
+            "scheduler": "systemd",
+            "stale": False,
+            "last_tick": {"ts": "2026-11-21T00:20:00Z", "duration_ms": 36774, "actions_applied": 2},
+        }
+
+        # Act
+        heartbeat = render_heartbeat(document, datetime(2026, 11, 21, 0, 22, tzinfo=UTC))
+
+        # Assert
+        self.assertIn('<span class="faint">systemd timer, every 5 min</span></p>', heartbeat)

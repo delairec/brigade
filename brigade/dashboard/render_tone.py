@@ -14,7 +14,7 @@ TONE_SHAPES = {
 }
 
 
-def render_tone(state: str) -> str:
+def render_tone(state: str, label: str = "") -> str:
     tone = read_state_tone(state)
     shape = f'<span class="tone-shape" aria-hidden="true">{TONE_SHAPES[tone]}</span>'
-    return f'<span class="tone tone-{tone}">{shape}{escape(state)}</span>'
+    return f'<span class="tone tone-{tone}">{shape}{escape(label or state)}</span>'

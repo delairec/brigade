@@ -47,3 +47,15 @@ class RenderNeedsYouRowTest(unittest.TestCase):
             "<div><h3>B7 &lt;x&gt;</h3><p>parked on &#x27;q&#x27;</p></div>"
             '<div class="act"><code class="cmd">brigade wave requeue w1 B7 &amp;&amp; ls</code></div></li>',
         )
+
+
+class RenderNeedsYouRowOfAFaintRowTest(unittest.TestCase):
+    def test_should_keep_the_primary_button_for_what_waits_for_the_user_and_a_plain_one_for_a_faint_row(self):
+        # Arrange
+        faint = NeedsYou("2 stalls merged since", "nothing to do", "", state="queued", link=("Review", "#inbox"))
+
+        # Act
+        rendered = render_needs_you_row(faint)
+
+        # Assert
+        self.assertIn('<div class="act"><a class="btn" href="#inbox">Review</a></div>', rendered)

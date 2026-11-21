@@ -56,7 +56,7 @@ class RenderInboxViewTest(unittest.TestCase):
         }
 
         # Act
-        fragment = render_inbox_view(document)
+        fragment = render_inbox_view(document, {})
 
         # Assert
         self.assertTrue(
@@ -90,18 +90,18 @@ class RenderInboxViewTest(unittest.TestCase):
         document = {**EMPTY_INBOX, "signals": [NOTE], "patterns": [create_pattern("FlakyTests", None, [NOTE_ID])]}
 
         # Act
-        fragment = render_inbox_view(document)
+        fragment = render_inbox_view(document, {})
 
         # Assert
         self.assertIn(
-            "<section><h2>Decide first</h2>"
-            '<article class="pattern"><h3>the title of FlakyTests</h3>'
+            '<section><h2>Decide first</h2><ul class="panel todo"><li class="needs-you tone-you"><span class="mark">1\u00d7</span>'
+            "<div><h3>the title of FlakyTests</h3>"
             '<p class="pattern-name"><a href="#inbox/FlakyTests"><code>FlakyTests</code></a></p>'
             "<p>If ratified: a request on oak, planned into a wave</p>"
-            "<p>1 of the 1 signals it cites still new</p>"
-            '<button data-post="/api/inbox/ratify/FlakyTests">ratify</button>'
-            '<button data-post="/api/inbox/dismiss/FlakyTests">dismiss</button>'
-            "</article></section>",
+            "<p>1 of the 1 signals it cites still new</p></div>"
+            '<div class="act"><button class="btn btn-primary" type="button" data-post="/api/inbox/ratify/FlakyTests">'
+            'Ratify</button><button class="btn" type="button" data-post="/api/inbox/dismiss/FlakyTests">Dismiss</button>'
+            "</div></li></ul></section>",
             fragment,
         )
 
@@ -114,32 +114,10 @@ class RenderInboxViewTest(unittest.TestCase):
         }
 
         # Act
-        fragment = render_inbox_view(document)
+        fragment = render_inbox_view(document, {})
 
         # Assert
         self.assertIn("<p>1 of the 2 signals it cites still new</p>", fragment)
-
-    def test_should_offer_the_kind_of_a_constraint_as_a_selector_before_one_ratify_button(self):
-        # Arrange
-        pattern = {**create_pattern("FlakyTests", None, []), "action": "constraint"}
-        document = {**EMPTY_INBOX, "patterns": [pattern]}
-
-        # Act
-        fragment = render_inbox_view(document)
-
-        # Assert
-        self.assertIn(
-            "<p>If ratified: a constraint on oak of the kind chosen, and a request delivering it</p>"
-            "<p>0 of the 0 signals it cites still new</p>"
-            '<span class="field"><label for="kind-FlakyTests">as</label>'
-            '<select id="kind-FlakyTests" name="kind"><option value="rule">rule</option>'
-            '<option value="guard">guard</option><option value="lint">lint</option>'
-            '<option value="schema">schema</option><option value="skill">skill</option>'
-            '<option value="script">script</option></select></span>'
-            '<button data-post="/api/inbox/ratify/FlakyTests" data-with="kind">ratify</button>'
-            '<button data-post="/api/inbox/dismiss/FlakyTests">dismiss</button>',
-            fragment,
-        )
 
     def test_should_say_ratifying_starts_nothing_until_a_pattern_acting_on_a_target_names_one(self):
         for action in ("wave", "constraint", "order"):
@@ -149,7 +127,7 @@ class RenderInboxViewTest(unittest.TestCase):
                 document = {**EMPTY_INBOX, "patterns": [pattern]}
 
                 # Act
-                fragment = render_inbox_view(document)
+                fragment = render_inbox_view(document, {})
 
                 # Assert
                 self.assertIn("<p>If ratified: nothing until the pattern names a target</p>", fragment)
@@ -160,7 +138,7 @@ class RenderInboxViewTest(unittest.TestCase):
         document = {**EMPTY_INBOX, "patterns": [pattern]}
 
         # Act
-        fragment = render_inbox_view(document)
+        fragment = render_inbox_view(document, {})
 
         # Assert
         self.assertIn("<p>If ratified: nothing until the pattern names a recipe</p>", fragment)
@@ -171,7 +149,7 @@ class RenderInboxViewTest(unittest.TestCase):
         document = {**EMPTY_INBOX, "patterns": [pattern]}
 
         # Act
-        fragment = render_inbox_view(document)
+        fragment = render_inbox_view(document, {})
 
         # Assert
         self.assertIn("<p>If ratified: an order of the recipe clear-locks on oak</p>", fragment)
@@ -189,25 +167,21 @@ class RenderInboxViewTest(unittest.TestCase):
         }
 
         # Act
-        fragment = render_inbox_view(document)
+        fragment = render_inbox_view(document, {})
 
         # Assert
         self.assertIn(
-            '<button data-post="/api/inbox/dismiss/FlakyTests">dismiss</button>'
-            "<details><summary>2 repeats</summary>"
-            '<article class="pattern"><h3>the title of FlakyTestsAgain</h3>'
-            '<p class="pattern-name"><a href="#inbox/FlakyTestsAgain"><code>FlakyTestsAgain</code></a></p>'
-            "<p>If ratified: a request on oak, planned into a wave</p>"
             "<p>0 of the 0 signals it cites still new</p>"
-            '<button data-post="/api/inbox/ratify/FlakyTestsAgain">ratify</button>'
-            '<button data-post="/api/inbox/dismiss/FlakyTestsAgain">dismiss</button></article>'
-            '<article class="pattern"><h3>the title of FlakyTestsOnceMore</h3>'
-            '<p class="pattern-name"><a href="#inbox/FlakyTestsOnceMore"><code>FlakyTestsOnceMore</code></a></p>'
-            "<p>If ratified: a request on oak, planned into a wave</p>"
-            "<p>0 of the 0 signals it cites still new</p>"
-            '<button data-post="/api/inbox/ratify/FlakyTestsOnceMore">ratify</button>'
-            '<button data-post="/api/inbox/dismiss/FlakyTestsOnceMore">dismiss</button></article>'
-            "</details></article></section>",
+            '<details class="fold"><summary>2 repeats</summary><ul class="repeats">'
+            '<li><a href="#inbox/FlakyTestsAgain"><code>FlakyTestsAgain</code></a> the title of FlakyTestsAgain'
+            '<span class="act"><button class="btn" type="button" data-post="/api/inbox/ratify/FlakyTestsAgain">'
+            'Ratify</button><button class="btn" type="button" data-post="/api/inbox/dismiss/FlakyTestsAgain">'
+            "Dismiss</button></span></li>"
+            '<li><a href="#inbox/FlakyTestsOnceMore"><code>FlakyTestsOnceMore</code></a>'
+            " the title of FlakyTestsOnceMore"
+            '<span class="act"><button class="btn" type="button" data-post="/api/inbox/ratify/FlakyTestsOnceMore">'
+            'Ratify</button><button class="btn" type="button" data-post="/api/inbox/dismiss/FlakyTestsOnceMore">'
+            "Dismiss</button></span></li></ul></details></div>",
             fragment,
         )
 
@@ -217,12 +191,12 @@ class RenderInboxViewTest(unittest.TestCase):
         document = {**EMPTY_INBOX, "patterns": [create_pattern("FlakyTestsAgain", "FlakyTests", no_cited_signal)]}
 
         # Act
-        fragment = render_inbox_view(document)
+        fragment = render_inbox_view(document, {})
 
         # Assert
         self.assertIn(
-            "<section><h2>Decide first</h2>"
-            '<article class="pattern"><h3>the title of FlakyTestsAgain</h3>'
+            '<section><h2>Decide first</h2><ul class="panel todo"><li class="needs-you tone-you"><span class="mark">1\u00d7</span>'
+            "<div><h3>the title of FlakyTestsAgain</h3>"
             '<p class="pattern-name"><a href="#inbox/FlakyTestsAgain"><code>FlakyTestsAgain</code></a>'
             " repeats <code>FlakyTests</code></p>",
             fragment,
@@ -234,21 +208,28 @@ class RenderInboxViewTest(unittest.TestCase):
         document = {**EMPTY_INBOX, "signals": [NOTE, THREAD, other_note]}
 
         # Act
-        fragment = render_inbox_view(document)
+        fragment = render_inbox_view(document, {})
 
         # Assert
         self.assertIn(
             "<section><h2>New signals</h2>"
-            "<section><h3>note</h3><ul>"
-            f'<li><a href="#inbox/{NOTE_ID}"><code>a4a5f46</code></a> oak, 1 in 2d'
-            f' <button data-post="/api/inbox/dismiss/{NOTE_ID}">dismiss</button></li>'
-            f'<li><a href="#inbox/{DISMISSED_ID}"><code>0d1e2f3</code></a> elm, 1 in 2d'
-            f' <button data-post="/api/inbox/dismiss/{DISMISSED_ID}">dismiss</button></li>'
-            "</ul></section>"
-            "<section><h3>review_thread</h3><ul>"
-            f'<li><a href="#inbox/{THREAD_ID}"><code>19757dd</code></a> -, 3 in 1h'
-            f' <button data-post="/api/inbox/dismiss/{THREAD_ID}">dismiss</button></li>'
-            "</ul></section></section>",
+            '<details class="fold"><summary>note <span>· 2 signals</span></summary>'
+            '<div class="panel scroll"><table><thead><tr><th>Signal</th><th>What</th><th class="num">Seen</th>'
+            '<th class="num">First seen</th><th></th></tr></thead><tbody>'
+            f'<tr><td class="mono"><a href="#inbox/{NOTE_ID}">a4a5f46</a></td><td>oak</td><td class="num">once</td>'
+            f'<td class="num">2d ago</td><td class="num"><button class="btn" type="button"'
+            f' data-post="/api/inbox/dismiss/{NOTE_ID}">Dismiss</button></td></tr>'
+            f'<tr><td class="mono"><a href="#inbox/{DISMISSED_ID}">0d1e2f3</a></td><td>elm</td><td class="num">once</td>'
+            f'<td class="num">2d ago</td><td class="num"><button class="btn" type="button"'
+            f' data-post="/api/inbox/dismiss/{DISMISSED_ID}">Dismiss</button></td></tr>'
+            "</tbody></table></div></details>"
+            '<details class="fold"><summary>review_thread <span>· 1 signal</span></summary>'
+            '<div class="panel scroll"><table><thead><tr><th>Signal</th><th>What</th><th class="num">Seen</th>'
+            '<th class="num">First seen</th><th></th></tr></thead><tbody>'
+            f'<tr><td class="mono"><a href="#inbox/{THREAD_ID}">19757dd</a></td><td>-</td><td class="num">3 times</td>'
+            f'<td class="num">1h ago</td><td class="num"><button class="btn" type="button"'
+            f' data-post="/api/inbox/dismiss/{THREAD_ID}">Dismiss</button></td></tr>'
+            "</tbody></table></div></details></section>",
             fragment,
         )
 
@@ -267,19 +248,17 @@ class RenderInboxViewTest(unittest.TestCase):
         document = {**EMPTY_INBOX, "signals": [stall]}
 
         # Act
-        fragment = render_inbox_view(document)
+        fragment = render_inbox_view(document, {})
 
         # Assert
         self.assertIn(
-            f'<li><a href="#inbox/{STALL_ID}"><code>5c1e0d9</code></a> oak, 1 in 2h'
-            ' <span class="stale">stale: its task merged since</span>'
-            f' <button data-post="/api/inbox/dismiss/{STALL_ID}">dismiss</button></li>',
+            f'<a href="#inbox/{STALL_ID}">5c1e0d9</a></td><td>oak <span class="stale">stale: its task merged since</span></td>',
             fragment,
         )
 
     def test_should_say_why_each_region_is_empty(self):
         # Act
-        fragment = render_inbox_view(EMPTY_INBOX)
+        fragment = render_inbox_view(EMPTY_INBOX, {})
 
         # Assert
         self.assertIn(
@@ -301,7 +280,7 @@ class RenderInboxViewTest(unittest.TestCase):
         document = {**EMPTY_INBOX, "answers": [{"id": "disk_20261019T090000Z_b2", "study": "disk", "project": None}]}
 
         # Act
-        fragment = render_inbox_view(document)
+        fragment = render_inbox_view(document, {})
 
         # Assert
         self.assertIn(
@@ -354,7 +333,7 @@ class RenderInboxViewOfStringsHoldingMarkupTest(unittest.TestCase):
         }
 
         # Act
-        fragment = render_inbox_view(document)
+        fragment = render_inbox_view(document, {})
 
         # Assert
         self.assertNotIn("<img", fragment)
@@ -364,7 +343,7 @@ class RenderInboxViewOfStringsHoldingMarkupTest(unittest.TestCase):
 class RenderInboxViewHeadTest(unittest.TestCase):
     def test_should_open_on_the_page_head_naming_the_view_and_what_it_is_for(self):
         # Act
-        fragment = render_inbox_view(EMPTY_INBOX)
+        fragment = render_inbox_view(EMPTY_INBOX, {})
 
         # Assert
         self.assertTrue(
@@ -374,4 +353,100 @@ class RenderInboxViewHeadTest(unittest.TestCase):
                 '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
             ),
             fragment[:300],
+        )
+
+
+class RenderInboxViewAsTheMockupTest(unittest.TestCase):
+    def test_should_say_how_to_read_the_page_in_an_explainer(self):
+        # Act
+        fragment = render_inbox_view(EMPTY_INBOX, {})
+
+        # Assert
+        self.assertIn('<details class="explainer"><summary>How to read this page</summary>', fragment)
+
+    def test_should_lay_a_pattern_to_decide_as_a_row_counting_its_proposals_with_ratify_first_at_its_right(self):
+        # Arrange
+        pattern = create_pattern("Flaky", None, [NOTE_ID])
+        repeat = create_pattern("FlakyAgain", "Flaky", [NOTE_ID])
+        document = {**EMPTY_INBOX, "signals": [NOTE], "patterns": [pattern, repeat]}
+
+        # Act
+        fragment = render_inbox_view(document, {})
+
+        # Assert
+        self.assertIn(
+            '<ul class="panel todo"><li class="needs-you tone-you"><span class="mark">2\u00d7</span>', fragment
+        )
+        self.assertIn(
+            '<div class="act"><button class="btn btn-primary" type="button" data-post="/api/inbox/ratify/Flaky">'
+            'Ratify</button><button class="btn" type="button" data-post="/api/inbox/dismiss/Flaky">Dismiss</button>'
+            "</div>",
+            fragment,
+        )
+
+    def test_should_give_each_kind_of_a_constraint_the_address_choosing_it_leads_to_and_ratify_the_kind_chosen(self):
+        # Arrange
+        pattern = {**create_pattern("FlakyTests", None, []), "action": "constraint"}
+        document = {**EMPTY_INBOX, "patterns": [pattern]}
+
+        # Act
+        fragment = render_inbox_view(document, {"FlakyTests": "lint"})
+
+        # Assert
+        self.assertIn(
+            '<span class="field"><label for="kind-FlakyTests">as</label><select id="kind-FlakyTests" name="kind">'
+            '<option value="rule" data-href="inbox?kind-FlakyTests=rule">rule</option>'
+            '<option value="guard" data-href="inbox?kind-FlakyTests=guard">guard</option>'
+            '<option value="lint" data-href="inbox?kind-FlakyTests=lint" selected>lint</option>',
+            fragment,
+        )
+        self.assertIn(
+            '<button class="btn btn-primary" type="button" data-post="/api/inbox/ratify/FlakyTests?kind=lint">'
+            "Ratify</button>",
+            fragment,
+        )
+
+    def test_should_ratify_a_constraint_as_a_rule_until_another_kind_is_chosen(self):
+        # Arrange
+        pattern = {**create_pattern("FlakyTests", None, []), "action": "constraint"}
+        document = {**EMPTY_INBOX, "patterns": [pattern]}
+
+        # Act
+        fragment = render_inbox_view(document, {})
+
+        # Assert
+        self.assertIn('data-post="/api/inbox/ratify/FlakyTests?kind=rule">Ratify</button>', fragment)
+
+    def test_should_set_aside_in_a_table_the_patterns_whose_signals_are_no_longer_new(self):
+        # Arrange
+        settled = create_pattern("Settled", None, [DISMISSED_ID])
+        live = create_pattern("Live", None, [NOTE_ID])
+        document = {**EMPTY_INBOX, "signals": [NOTE], "patterns": [settled, live]}
+
+        # Act
+        fragment = render_inbox_view(document, {})
+
+        # Assert
+        other = fragment.index("<h2>Other proposals</h2>")
+        self.assertLess(fragment.index("the title of Live"), other)
+        self.assertGreater(fragment.index("the title of Settled"), other)
+        self.assertIn(
+            '<thead><tr><th>Finding</th><th class="num">Proposed</th><th>Action</th><th class="num">Signals cited</th>'
+            "<th></th></tr></thead>",
+            fragment,
+        )
+
+    def test_should_fold_the_new_signals_of_each_kind_in_a_table(self):
+        # Arrange
+        document = {**EMPTY_INBOX, "signals": [NOTE]}
+
+        # Act
+        fragment = render_inbox_view(document, {})
+
+        # Assert
+        self.assertIn('<details class="fold"><summary>note <span>· 1 signal', fragment)
+        self.assertIn(
+            '<thead><tr><th>Signal</th><th>What</th><th class="num">Seen</th><th class="num">First seen</th><th></th>'
+            "</tr></thead>",
+            fragment,
         )

@@ -7,7 +7,7 @@ class ReadLifecycleToneTest(unittest.TestCase):
     def test_should_give_each_status_of_a_corpus_the_tone_of_its_place_in_the_lifecycle(self):
         # Arrange
         rows = [
-            ("draft", "faint"),
+            ("draft", "you"),
             ("planned", "faint"),
             ("open", "you"),
             ("todo", "work"),
