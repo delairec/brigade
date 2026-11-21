@@ -659,7 +659,7 @@ class VerifyContextOfATaskWithoutAForgeCitingAReferenceTest(unittest.TestCase):
                     ("awawa", "show", "@TASK.T7", "--json", str(head_tree)): TASK_OF_NO_MILESTONE_CITING_THE_HARBOUR,
                     ("awawa", "status", "--json", str(self.worktree)): RECIPES_OF_THE_CORPUS,
                     ("awawa", "show", "@RECIPE.capture", "--json", str(self.worktree)): CAPTURE_RECIPE,
-                    ("tidepool", "render", "tides"): "<html><body>the tides as delivered</body></html>",
+                    ("tidepool", "render", "tides"): f"<html><body>{self.root}/home/tides</body></html>",
                 }.items()
             },
             fallback=_answer_as_the_machine_taking_screenshots,
@@ -690,3 +690,11 @@ class VerifyContextOfATaskWithoutAForgeCitingAReferenceTest(unittest.TestCase):
                 }
             ],
         )
+
+    def test_should_show_the_home_directory_as_a_tilde_in_the_page_it_captured(self):
+        # Act
+        COMMAND.run(Namespace(pr=self.no_pull_request), self.runtime)
+
+        # Assert
+        captures = self.paths.state_root / "captures" / "tidepool" / "T7" / TASK_HEAD
+        self.assertEqual((captures / "tides-delivered.html").read_text(), "<html><body>~/tides</body></html>")

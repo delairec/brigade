@@ -55,15 +55,12 @@ def publish_task_captures(runtime: Runtime, publication: CapturePublication) -> 
     if published.is_file():
         return published.read_text(encoding="utf-8")
     shown = read_awawa_document(runtime.run_process, publication.corpus, ("show", f"@TASK.{publication.task}"))
-    references = list_task_references(shown)
-    if not references:
-        return NO_SECTION
     captured = capture_task_pages(
         runtime,
         CaptureDemand(
             worktree=publication.worktree,
             places=publication.places,
-            references=references,
+            references=list_task_references(shown),
             directory=publication.directory,
             home=publication.home,
         ),

@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from argparse import Namespace
@@ -62,3 +63,71 @@ class BuildCaptureTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(document["directory"], expected_directory)
+
+
+class BuildCaptureOfATaskCitingAReferenceTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        self.paths = create_test_paths(self.root)
+        self.worktree = self.root / "tidepool-T7"
+        (self.worktree / "artifact").mkdir(parents=True)
+        (self.worktree / "artifact" / "harbour.html").write_text('<html><head></head><section id="tides"></section>')
+        self.captures = self.root / "captures"
+        task = {
+            "fields": [
+                {
+                    "name": "REFERENCE",
+                    "atoms": ['"artifact/harbour.html"'],
+                    "fields": [{"name": "COVERS", "atoms": ['"tides"'], "fields": []}],
+                }
+            ]
+        }
+        recipe = {
+            "name": "capture",
+            "fields": [
+                {"name": "SCHEMA_VERSION", "atoms": ['"1"'], "fields": []},
+                {
+                    "name": "STEP",
+                    "atoms": ['"command"'],
+                    "fields": [
+                        {"name": "ARGV", "atoms": ['"tidepool"'], "fields": []},
+                        {"name": "ARGV", "atoms": ['"{page}"'], "fields": []},
+                    ],
+                },
+            ],
+        }
+        outputs = {
+            **TASK_WORKTREE,
+            ("git", "rev-parse", "--show-toplevel"): f"{self.worktree}\n",
+            ("awawa", "show", "@TASK.T7", "--json", str(self.worktree)): json.dumps(task),
+            ("awawa", "status", "--json", str(self.worktree)): json.dumps(
+                {"entities": [{"type": "RECIPE", "name": "capture"}]}
+            ),
+            ("awawa", "show", "@RECIPE.capture", "--json", str(self.worktree)): json.dumps(recipe),
+            ("tidepool", "tides"): f"<html><body>{self.paths.home}/tides</body></html>",
+            ("firefox",): "",
+        }
+        self.runtime = create_test_runtime(self.paths, run_process=create_machine_double(TIDEPOOL, outputs))
+
+    def test_should_capture_each_page_the_reference_of_the_task_covers(self):
+        # Act
+        document = COMMAND.run(Namespace(task="T7", directory=str(self.captures)), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["pages"],
+            [
+                {
+                    "page": "tides",
+                    "delivered": str(self.captures / "tides-delivered.png"),
+                    "reference": str(self.captures / "tides-reference.png"),
+                }
+            ],
+        )
+
+    def test_should_show_the_home_directory_as_a_tilde_in_the_delivered_page(self):
+        # Act
+        COMMAND.run(Namespace(task="T7", directory=str(self.captures)), self.runtime)
+
+        # Assert
+        self.assertEqual((self.captures / "tides-delivered.html").read_text(), "<html><body>~/tides</body></html>")

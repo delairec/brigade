@@ -241,6 +241,98 @@ class OpenTaskPullRequestTest(OpenTaskPullRequestTestCase):
             forge.list_requests("open_pull_request")[0]["body"],
         )
 
+    def test_should_capture_the_checked_head_in_the_worktree_and_host_it_as_the_account_of_the_demand(self):
+        # Arrange
+        worktree = self.root / "oak-b12"
+        (worktree / "artifact").mkdir(parents=True)
+        (worktree / "artifact" / "parser.html").write_text('<html><head></head><section id="parser"></section></html>')
+        self.processes.answer(("git", "rev-parse", "--show-toplevel"), stdout=f"{worktree}\n")
+        self.processes.answer_entity(worktree, "MILESTONE", "F0", (("TITLE", "Parser"),))
+        reference = {
+            "name": "REFERENCE",
+            "atoms": ['"artifact/parser.html"'],
+            "fields": [{"name": "COVERS", "atoms": ['"parser"'], "fields": []}],
+        }
+        fields = [
+            {"name": "TYPE", "atoms": ['"feat"'], "fields": []},
+            {"name": "COMPONENT", "atoms": ['"the parser"'], "fields": []},
+            {"name": "TITLE", "atoms": ['"The parser"'], "fields": []},
+            {"name": "SPEC", "atoms": ['"parses a line"'], "fields": []},
+            {"name": "MILESTONE", "atoms": ['"@MILESTONE.F0"'], "fields": []},
+        ]
+        self.processes.answer_json(
+            ("awawa", "show", "@TASK.B12", "--json", str(worktree)), {"fields": [*fields, reference]}
+        )
+        self.processes.answer_json(
+            ("awawa", "status", "--json", str(worktree)), {"entities": [{"type": "RECIPE", "name": "capture"}]}
+        )
+        self.processes.answer_json(
+            ("awawa", "show", "@RECIPE.capture", "--json", str(worktree)),
+            {
+                "name": "capture",
+                "fields": [
+                    {"name": "SCHEMA_VERSION", "atoms": ['"1"'], "fields": []},
+                    {
+                        "name": "STEP",
+                        "atoms": ['"command"'],
+                        "fields": [
+                            {"name": "ARGV", "atoms": ['"oak"'], "fields": []},
+                            {"name": "ARGV", "atoms": ['"{page}"'], "fields": []},
+                        ],
+                    },
+                ],
+            },
+        )
+        self.processes.answer(("oak", "parser"), stdout=f"<html><body>{self.runtime.paths.home}/oak</body></html>")
+        captures = self.runtime.paths.state_root / "captures" / "oak" / "B12" / "c0ffee"
+        for side, address in (
+            ("delivered", (captures / "parser-delivered.html").as_uri()),
+            ("reference", f"{(captures / 'parser-reference.html').as_uri()}#parser"),
+        ):
+            self.processes.answer(
+                (
+                    "firefox",
+                    "--headless",
+                    "--no-remote",
+                    "--profile",
+                    str(captures / "profile"),
+                    "--window-size",
+                    "1440",
+                    "--screenshot",
+                    str(captures / f"parser-{side}.png"),
+                    address,
+                )
+            )
+        forge = ForgeDouble(
+            {
+                "list_milestones": lambda request: {"titles": ["Parser"]},
+                "open_pull_request": lambda request: OPENED_PULL_REQUEST,
+                "read_repository_visibility": lambda request: {"schema_version": 1, "public": True},
+                "host_images": lambda request: {
+                    "schema_version": 1,
+                    "urls": ["https://gist/d.png", "https://gist/r.png"],
+                },
+            }
+        )
+
+        # Act
+        open_task_pull_request(self.runtime, self.create_demand(forge))
+
+        # Assert
+        self.assertEqual(
+            forge.list_requests("host_images"),
+            [
+                {
+                    "repository": str(worktree),
+                    "environment": {"GH_TOKEN": "t0ken"},
+                    "files": [str(captures / "parser-delivered.png"), str(captures / "parser-reference.png")],
+                    "description": "captures of @TASK.B12",
+                }
+            ],
+        )
+        self.assertEqual((captures / "parser-delivered.html").read_text(), "<html><body>~/oak</body></html>")
+        self.assertIn("Each page the task covers at c0ffee", forge.list_requests("open_pull_request")[0]["body"])
+
     def test_should_record_the_opened_pull_request_in_the_ledger(self):
         # Arrange
         self.processes.answer_entity(Path("/srv/oak-b12"), "TASK", "B12", TASK_FIELDS)
