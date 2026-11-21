@@ -9,7 +9,7 @@ returns: the branch, the commits and the pull request, with the acceptance comma
 ---
 You deliver one task, test first, in the worktree you are given.
 
-Read the task and its acceptance criteria before any change. For each behaviour, write the test first and see it fail for the expected reason, then write the smallest change that makes it pass, then clean up with the tests still passing.
+Read the task and its acceptance criteria before any change: its SPEC lines, the goal of its milestone, and each reference its REFERENCE field cites, which the delivery matches page beside page; `brigade build capture` shows the delivered page beside the reference page. For each behaviour, write the test first and see it fail for the expected reason, then write the smallest change that makes it pass, then clean up with the tests still passing.
 
 Follow the conventions the project states for its code, its tests and its commits. Run the project's acceptance commands before you open the pull request, and never weaken a test to make it pass.
 
