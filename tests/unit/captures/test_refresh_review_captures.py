@@ -11,8 +11,14 @@ from tests.unit.scripted_processes import ScriptedProcesses
 
 HEAD = "4567def"
 RESOLVE_HEAD = ("git", "rev-parse", "--verify", "--quiet", "--end-of-options", "HEAD^{commit}")
-PUBLISHED_SECTION = "## Captures\n\nEach page the task covers at 4567def.\n"
-OLD_BODY = "The tide table\n\n## Captures\n\nEach page the task covers at 0123abc.\n\n## Checks\n\nok\n"
+PUBLISHED_SECTION = (
+    "## Captures\n\nEach page at 4567def.\n\n| Page | Delivered | Reference |\n|---|---|---|\n| tides | `d1` | `r1` |\n"
+)
+OLD_BODY = (
+    "The tide table\n\n## Checks of 0123abc\n\n- ok `make` 1.0 s\n\n"
+    "## Captures\n\nEach page at 0123abc.\n\n| Page | Delivered | Reference |\n|---|---|---|\n| tides | `d0` | `r0` |\n\n"
+    "Co-Authored-By: Fake Client <fake@example.org>\n"
+)
 TIDES_TO_CAPTURE = {"reference": "artifact/index.html", "covers": "tides", "refusal": None, "captures": None}
 
 
@@ -84,7 +90,9 @@ class RefreshReviewCapturesTest(unittest.TestCase):
                 {
                     "repository": str(self.worktree),
                     "number": 42,
-                    "body": "The tide table\n\n## Captures\n\nEach page the task covers at 4567def.\n\n## Checks\n\nok\n",
+                    "body": "The tide table\n\n## Checks of 0123abc\n\n- ok `make` 1.0 s\n\n"
+                    "## Captures\n\nEach page at 4567def.\n\n| Page | Delivered | Reference |\n|---|---|---|\n"
+                    "| tides | `d1` | `r1` |\n\nCo-Authored-By: Fake Client <fake@example.org>\n",
                     "environment": {"GH_TOKEN": "t0ken"},
                 }
             ],

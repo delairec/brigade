@@ -528,7 +528,9 @@ TASK_CITING_THE_HARBOUR = json.dumps(
 )
 TASK_OF_NO_MILESTONE_CITING_THE_HARBOUR = json.dumps({"fields": [HARBOUR_TIDES]})
 BODY_AT_THE_FIRST_HEAD = (
-    "Delivers @TASK.T7.\n\n## Captures\n\nEach page the task covers at efd5ed1.\n\n## Checks\n\nok\n"
+    "Delivers @TASK.T7.\n\n## Captures\n\nEach page the task covers at efd5ed1.\n\n"
+    "| Page | Delivered | Reference |\n|---|---|---|\n| tides | `d0` | `r0` |\n\n"
+    "Co-Authored-By: Fake Client <fake@example.org>\n"
 )
 
 
@@ -614,7 +616,7 @@ class VerifyContextOfAPullRequestCitingAReferenceTest(unittest.TestCase):
                     "| Page | Delivered | Reference |\n|---|---|---|\n"
                     "| tides | ![tides delivered](https://gist.example/delivered.png)"
                     " | ![tides reference](https://gist.example/reference.png) |\n"
-                    "\n## Checks\n\nok\n",
+                    "\nCo-Authored-By: Fake Client <fake@example.org>\n",
                 }
             ],
         )
