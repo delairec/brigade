@@ -131,6 +131,29 @@ class CheckPromotionTest(unittest.TestCase):
         self.assertEqual(check, {"name": "promotion", "result": "ok", "findings": []})
 
 
+class CheckPromotionOfAHeadWithoutTheTaskTest(unittest.TestCase):
+    def test_should_fail_on_a_task_the_head_does_not_define(self):
+        # Arrange
+        head_tree = Path("/srv/shop-head")
+        awawa = RecordingProcessRunner(
+            {
+                ("awawa", "show", "@TASK.B1", "--json", str(head_tree)): ProcessAnswer(
+                    exit_code=1, stderr="no entity @TASK.B1"
+                )
+            }
+        )
+
+        # Act
+        check = check_promotion(
+            awawa, PromotionFacts(head_tree=head_tree, repository_tree=head_tree, task="B1", pr=160)
+        )
+
+        # Assert
+        self.assertEqual(
+            check, {"name": "promotion", "result": "fail", "findings": ["@TASK.B1 is not defined at the head"]}
+        )
+
+
 class CheckPromotionOfAnAreaTest(unittest.TestCase):
     def setUp(self):
         self.repository_tree = Path(tempfile.mkdtemp())

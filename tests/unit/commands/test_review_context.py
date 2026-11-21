@@ -472,3 +472,13 @@ class VerifyContextOfAReferenceTest(unittest.TestCase):
             "  captures: none, brigade build capture wrote no PNG pair for this page\n\n",
             text,
         )
+
+    def test_should_say_under_the_goal_that_the_head_defines_no_task(self):
+        # Arrange
+        document = {**create_document(RULES), "goal": None, "references": []}
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertIn("# goal\nthe head defines no @TASK.T7: the preflight promotion says so\n\n", text)
