@@ -1,7 +1,5 @@
 import argparse
-import contextlib
 import json
-from collections.abc import Iterator
 from dataclasses import dataclass
 
 from brigade.command import Argument, Command
@@ -46,11 +44,6 @@ DETAIL_PAGES = {
 PAGES = ("home", "waves", "wave", "runs", "run", "ledger", "inbox", "reports", "report", AWAWA_PAGE)
 
 
-class _NoAddon:
-    def list_projects(self) -> frozenset[str]:
-        return frozenset()
-
-
 def _render_text(document: dict) -> str:
     return document["html"]
 
@@ -58,16 +51,7 @@ def _render_text(document: dict) -> str:
 def _select(target: str, project: str | None) -> str:
     if project is None:
         return target
-    return f"{target}{'&' if '?' in target else '?'}project={project}"
-
-
-@contextlib.contextmanager
-def _open_addon(page: str, runtime: Runtime) -> Iterator[object]:
-    if page != AWAWA_PAGE:
-        yield _NoAddon()
-        return
-    with start_awawa_addon(runtime) as addon:
-        yield addon
+    return f"{target}?project={project}"
 
 
 def _address(page: str, project: str | None, ask) -> str:
@@ -88,7 +72,7 @@ def _address(page: str, project: str | None, ask) -> str:
 def page(request: argparse.Namespace, runtime: Runtime) -> dict:
     if request.page not in PAGES:
         raise BrigadeError(f"no page {request.page}; the pages are {', '.join(PAGES)}")
-    with _open_addon(request.page, runtime) as addon:
+    with start_awawa_addon(runtime) as addon:
         dashboard = Dashboard(port=IN_PROCESS_PORT, token=NO_TOKEN, addon=addon)
 
         def respond(target: str) -> DashboardResponse:
@@ -106,7 +90,7 @@ def page(request: argparse.Namespace, runtime: Runtime) -> dict:
         def answer(target: str) -> str:
             return ask(target) if target == view else respond(_select(target, request.project)).body.decode()
 
-        html = render_dashboard_page(view.removeprefix(VIEWS_PREFIX), answer)
+        html = render_dashboard_page(request.page, view, answer)
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "page": request.page, "html": html}
 
 

@@ -70,15 +70,62 @@ class PageTest(unittest.TestCase):
         self.assertNotIn('<script src="/dashboard.js" defer></script>', document["html"])
         self.assertIn("proposed patterns to decide first", document["html"])
 
-    def test_should_offer_no_awawa_tab_on_a_page_of_brigade_itself(self):
+    def register_brigade_holding_a_corpus(self, documents: dict) -> BrigadeDouble:
+        self.paths.config_root.mkdir(parents=True)
+        self.paths.schema_file.write_text("SCHEMA PROJECT\n")
+        return BrigadeDouble(
+            {
+                ("awawa", "status", "PROJECT", "--json", str(self.paths.config_root)): ONE_PROJECT,
+                ("awawa", "show", "@PROJECT.brigade", "--json", str(self.paths.config_root)): BRIGADE_PROJECT,
+                ("awawa", "status", "--json", "/srv/brigade"): CORPUS_OF_BRIGADE,
+                **documents,
+            }
+        )
+
+    def test_should_offer_the_awawa_tab_of_each_project_holding_a_corpus_on_every_page(self):
         # Arrange
-        brigade = BrigadeDouble({("inbox", "list", "--json"): EMPTY_INBOX})
+        brigade = self.register_brigade_holding_a_corpus({("inbox", "list", "--json"): EMPTY_INBOX})
 
         # Act
-        document = self.render("inbox", brigade)
+        document = self.render("inbox", brigade, start_piped_process=lambda request: PipedChildDouble(dict))
 
         # Assert
-        self.assertNotIn("#awawa/", document["html"])
+        self.assertIn('<a href="#awawa/brigade">awawa · brigade</a>', document["html"])
+
+    def test_should_fill_the_regions_of_the_page_for_the_project_it_shows(self):
+        # Arrange
+        brigade = self.register_brigade_holding_a_corpus({("inbox", "list", "--json"): EMPTY_INBOX})
+
+        # Act
+        document = self.render(
+            "inbox", brigade, project="brigade", start_piped_process=lambda request: PipedChildDouble(dict)
+        )
+
+        # Assert
+        self.assertIn('<a href="#awawa/brigade">awawa</a>', document["html"])
+
+    def test_should_show_the_newest_dated_report_on_the_page_of_a_report(self):
+        # Arrange
+        brigade = BrigadeDouble(
+            {
+                ("report", "list", "--json"): {
+                    "schema_version": 1,
+                    "reports": [
+                        {"id": "B7", "reported_at": "2026-11-19T10:00:00Z"},
+                        {"id": "B9", "reported_at": None},
+                    ],
+                }
+            }
+        )
+
+        # Act
+        with self.assertRaises(BrigadeError) as raised:
+            self.render("report", brigade)
+
+        # Assert
+        self.assertEqual(
+            str(raised.exception), "/views/reports/B7 answered 500: <dl><dt>error</dt><dd>brigade is down</dd></dl>"
+        )
 
     def test_should_refuse_a_page_the_dashboard_does_not_have(self):
         # Arrange

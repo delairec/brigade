@@ -11,6 +11,8 @@ SHELL = (
     "<body>\n"
     '<div class="heartbeat-region" data-region="/views/heartbeat"></div>\n'
     '<main id="view"></main>\n'
+    '<section class="next-tick" hidden><h2>Next tick</h2>'
+    '<div class="next-tick-decisions" data-next-tick="/views/next-tick"></div></section>\n'
     "</body>\n"
 )
 
@@ -26,7 +28,7 @@ class RenderDashboardPageTest(unittest.TestCase):
         }
 
         # Act
-        page = render_dashboard_page("waves", answers.__getitem__)
+        page = render_dashboard_page("waves", "/views/waves", answers.__getitem__)
 
         # Assert
         self.assertEqual(
@@ -39,20 +41,27 @@ class RenderDashboardPageTest(unittest.TestCase):
             "<body>\n"
             '<div class="heartbeat-region" data-region="/views/heartbeat"><p>last tick</p></div>\n'
             '<main id="view"><p>the waves</p></main>\n'
+            '<section class="next-tick" hidden><h2>Next tick</h2>'
+            '<div class="next-tick-decisions" data-next-tick="/views/next-tick"></div></section>\n'
             "</body>\n",
         )
 
-    def test_should_show_the_status_view_as_the_page_home(self):
+    def test_should_show_the_next_tick_filled_on_the_page_home_as_its_user_meets_it(self):
         # Arrange
         answers = {
             "/": SHELL,
             "/dashboard.css": "",
-            "/views/status": "<p>the status</p>",
+            "/views/status?project=oak": "<p>the status</p>",
             "/views/heartbeat": "",
+            "/views/next-tick": "<p>launch T7</p>",
         }
 
         # Act
-        page = render_dashboard_page("home", answers.__getitem__)
+        page = render_dashboard_page("home", "/views/status?project=oak", answers.__getitem__)
 
         # Assert
-        self.assertIn('<main id="view"><p>the status</p></main>', page)
+        self.assertIn(
+            '<section class="next-tick"><h2>Next tick</h2>'
+            '<div class="next-tick-decisions" data-next-tick="/views/next-tick"><p>launch T7</p></div></section>',
+            page,
+        )

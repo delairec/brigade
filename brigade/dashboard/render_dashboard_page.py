@@ -6,19 +6,22 @@ STYLESHEET_PATH = "/dashboard.css"
 STYLESHEET_LINK = f'<link rel="stylesheet" href="{STYLESHEET_PATH}">'
 SCRIPT_TAG = '<script src="/dashboard.js" defer></script>'
 EMPTY_VIEW = '<main id="view"></main>'
-VIEWS_PREFIX = "/views/"
-PAGE_VIEWS = {"home": "status"}
+HOME_PAGE = "home"
+HIDDEN_NEXT_TICK = '<section class="next-tick" hidden>'
+SHOWN_NEXT_TICK = '<section class="next-tick">'
 EMPTY_REGION = re.compile(r'(<(\w+)\b[^>]*\bdata-region="([^"]+)"[^>]*>)(</\2>)')
+EMPTY_NEXT_TICK = re.compile(r'(<(\w+)\b[^>]*\bdata-next-tick="([^"]+)"[^>]*>)(</\2>)')
 
 
-def render_dashboard_page(page: str, answer: Callable[[str], str]) -> str:
+def render_dashboard_page(page: str, view: str, answer: Callable[[str], str]) -> str:
     def fill_region(region: re.Match) -> str:
         return f"{region.group(1)}{answer(region.group(3))}{region.group(4)}"
 
     shell = EMPTY_REGION.sub(fill_region, answer(PAGE_PATH))
-    view = answer(f"{VIEWS_PREFIX}{PAGE_VIEWS.get(page, page)}")
+    if page == HOME_PAGE:
+        shell = EMPTY_NEXT_TICK.sub(fill_region, shell.replace(HIDDEN_NEXT_TICK, SHOWN_NEXT_TICK))
     return (
         shell.replace(STYLESHEET_LINK, f"<style>{answer(STYLESHEET_PATH)}</style>")
         .replace(SCRIPT_TAG, "")
-        .replace(EMPTY_VIEW, f'<main id="view">{view}</main>')
+        .replace(EMPTY_VIEW, f'<main id="view">{answer(view)}</main>')
     )
