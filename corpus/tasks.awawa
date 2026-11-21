@@ -20117,6 +20117,7 @@ TASK B264
 		IMPL "wiki/Dashboard.md::## Tones"
 	REFERENCE "artifact/m18-dashboard/index.html"
 		COVERS "foundation"
+		READ "brigade/dashboard/data/dashboard.css"
 	RATIONALE "drawn in the mockup of the role max, the Artifact"
 		+ "https://claude.ai/artifact/QYoFsx8Kq7LnSQrnKUJ7Je, version 2, its page Foundation, built"
 		+ "on data read on this machine on 2026-11-18: the figures quoted from it are that day's"

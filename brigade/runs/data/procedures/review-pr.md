@@ -77,7 +77,10 @@ document, read with your read capability every PNG slice the package names for e
 numbers them, the delivered page then the reference page, and compare them: a capture taller than 2000 px is cut into
 slices of 2000 px so that each reads legibly, and skipping one leaves part of the page unjudged. The pull request
 body shows the whole pair side by side. A covered page
-with no PNG pair is a finding: the delivery is not proven against it. A reference you cannot open, a URL among them, is
+with no PNG pair is a finding: the delivery is not proven against it. An entry naming `read:` is a section no page
+renders: read that file in full and compare it with the section, which needs no PNG pair. An entry naming `revises:`
+is a reference the task delivers itself, as the planner ratified it at the base: judge the file the branch writes
+against the goal, the preflight promotion having checked that `REVISES` stands at the base. A reference you cannot open, a URL among them, is
 a finding. A task
 with no `REFERENCE` skips this step.
 

@@ -47,6 +47,11 @@ step needs and no command gives back (the path of the plan file, the ids you cho
 - A request drawn from a reference, a mockup, a page or a document, names it: each task drafted from it carries it in
   its `REFERENCE` field, a repository path you read with your read capability, with the id of the section the task
   covers, its page, in its `COVERS`, never in a `RATIONALE` alone.
+- A task that delivers the reference file itself, a mockup it draws, carries `REVISES` under that `REFERENCE`, why it
+  changes the file: you write it, at ratification, since the preflight reads it at the base of the task branch and a
+  branch that adds it waives nothing.
+- A section of the reference that no page renders, a stylesheet or a palette, carries `READ` under its `REFERENCE`:
+  the repository path of the file its delivery is judged by reading, in place of a capture.
 - The reference is the acceptance contract, never an example: nothing of the page or the section cited is lost in the
   transcription. Each element of it is a `SPEC` line, or a `RATIONALE` line saying why the task leaves it out.
 - Its forms and its interactions are kept as they are: a selector stays a selector, a form a form, a tab a tab, a

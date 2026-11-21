@@ -737,3 +737,58 @@ class VerifyContextOfATaskWithoutAForgeCitingAReferenceTest(unittest.TestCase):
         # Assert
         captures = self.paths.state_root / "captures" / "tidepool" / "T7" / TASK_HEAD
         self.assertEqual((captures / "tides-delivered.html").read_text(), "<html><body>~/tides</body></html>")
+
+
+LOCAL_AREA_PROJECT = (*LOCAL_PROJECT, ("MODE", "area"), ("CORPUS", "corpus"))
+
+
+def _answer_for_an_area_taking_screenshots(request) -> ProcessRecord:
+    if request.argv[0] == "firefox":
+        take_screenshot(request)
+        return answer(request, "")
+    return answer_from_corpus({"PROJECT": {"tidepool": LOCAL_AREA_PROJECT}, "POLICY": {}}, request)
+
+
+class VerifyContextOfATaskOfACorpusAreaCitingAReferenceTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
+        for ref in (TASK_HEAD, MERGE_BASE):
+            (self.root / "cache" / "refs" / "tidepool" / ref / "corpus").mkdir(parents=True)
+        head_area = self.root / "cache" / "refs" / "tidepool" / TASK_HEAD / "corpus"
+        write_ledger(self.root, [WAVE_STARTED])
+        self.worktree = self.root / "tidepool-T7"
+        (self.worktree / "artifact" / "harbour").mkdir(parents=True)
+        (self.worktree / "artifact" / "harbour" / "index.html").write_text(HARBOUR_REFERENCE)
+        area = self.worktree / "corpus"
+        outputs = {
+            **LOCAL_TASK_WORKTREE,
+            ("git", "rev-parse", "--show-toplevel"): f"{self.worktree}\n",
+            _resolve("HEAD"): f"{TASK_HEAD}\n",
+            ("awawa", "show", "@TASK.T7", "--json", str(area)): TASK_OF_NO_MILESTONE_CITING_THE_HARBOUR,
+            ("awawa", "show", "@TASK.T7", "--json", str(head_area)): TASK_OF_NO_MILESTONE_CITING_THE_HARBOUR,
+            ("awawa", "status", "--json", str(area)): RECIPES_OF_THE_CORPUS,
+            ("awawa", "show", "@RECIPE.capture", "--json", str(area)): CAPTURE_RECIPE,
+            ("tidepool", "render", "tides"): "<html><body>tides</body></html>",
+        }
+        self.paths = create_test_paths(self.root)
+        self.runtime = create_test_runtime(
+            self.paths,
+            run_process=create_outputs_double(outputs, _answer_for_an_area_taking_screenshots),
+            resolve_plugin=RefusingForgeResolverDouble(),
+        )
+
+    def test_should_capture_the_pages_the_task_of_the_area_covers(self):
+        # Act
+        document = COMMAND.run(Namespace(pr=None), self.runtime)
+
+        # Assert
+        captures = self.paths.state_root / "captures" / "tidepool" / "T7" / TASK_HEAD
+        self.assertEqual(
+            document["references"][0]["captures"],
+            {
+                "delivered": [str(captures / "tides-delivered-01.png")],
+                "reference": [str(captures / "tides-reference-01.png")],
+            },
+        )

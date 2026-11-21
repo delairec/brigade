@@ -54,6 +54,8 @@ SCHEMA TASK
 			DESC "the id of the section of the reference the task delivers, its page"
 		FIELD REVISES string
 			DESC "why the task changes the file it cites: it delivers the reference itself"
+		FIELD READ string
+			DESC "the repository path of the file a section no page renders is judged by reading, in place of a capture"
 	FIELD MILESTONE @MILESTONE
 		CONVERSE COMPRISES
 	FIELD COMPONENT string
