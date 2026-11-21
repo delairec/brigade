@@ -58,3 +58,5 @@ RECIPE capture
 		ARGV "bin/brigade"
 		ARGV "page"
 		ARGV "{page}"
+		ARGV "--project"
+		ARGV "brigade"

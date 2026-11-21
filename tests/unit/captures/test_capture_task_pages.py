@@ -181,3 +181,109 @@ class CaptureTaskPagesTest(unittest.TestCase):
                 "skipped": ["the project declares no recipe capture: no capture"],
             },
         )
+
+    def test_should_say_why_a_page_whose_recipe_fails_is_not_captured(self):
+        # Arrange
+        self.declare_the_recipe()
+        self.processes.answer(("harbour", "render", "tides"), exit_code=3, stderr="no view serves tides\n")
+
+        # Act
+        captured = self.capture([TIDES])
+
+        # Assert
+        self.assertEqual(
+            captured,
+            {
+                "schema_version": 1,
+                "directory": str(self.directory),
+                "pages": [],
+                "skipped": ["tides: the recipe capture failed with exit 3: no view serves tides"],
+            },
+        )
+
+    def test_should_run_no_screenshot_for_a_page_whose_recipe_fails(self):
+        # Arrange
+        self.declare_the_recipe()
+        self.processes.answer(("harbour", "render", "tides"), exit_code=3, stderr="no view serves tides\n")
+
+        # Act
+        self.capture([TIDES])
+
+        # Assert
+        self.assertEqual(self.firefox_runs, [])
+
+    def test_should_say_why_a_reference_it_cannot_read_or_a_section_it_cannot_find_is_not_captured(self):
+        # Arrange
+        rows = [
+            (
+                "a coverage naming no section of the reference",
+                {"reference": "artifact/harbour/index.html", "covers": "docks"},
+                "artifact/harbour/index.html: no section of the reference has the id docks",
+            ),
+            (
+                "a coverage that is no section id",
+                {"reference": "artifact/harbour/index.html", "covers": 'tides"],x'},
+                'artifact/harbour/index.html: the COVERS tides"],x is not a section id',
+            ),
+            (
+                "a reference climbing out of the repository",
+                {"reference": "../outside.html", "covers": "tides"},
+                "../outside.html: a REFERENCE is a path inside the repository",
+            ),
+            (
+                "an absolute reference",
+                {"reference": "/etc/harbour.html", "covers": "tides"},
+                "/etc/harbour.html: a REFERENCE is a path inside the repository",
+            ),
+            (
+                "a reference absent from the repository",
+                {"reference": "artifact/missing.html", "covers": "tides"},
+                "artifact/missing.html: no such file in the repository",
+            ),
+        ]
+        self.declare_the_recipe()
+        for case, reference, expected_reason in rows:
+            with self.subTest(case=case):
+                # Act
+                captured = self.capture([reference])
+
+                # Assert
+                self.assertEqual(captured["skipped"], [expected_reason])
+
+    def test_should_capture_the_page_the_last_step_of_the_recipe_prints(self):
+        # Arrange
+        self.places.project_directory.mkdir(parents=True)
+        (self.places.project_directory / "capture.toml").write_text(
+            'schema_version = 1\nname = "capture"\ndescription = "a page of the harbour as delivered"\n'
+            '[[steps]]\nkind = "command"\nargv = ["harbour", "build"]\n'
+            '[[steps]]\nkind = "command"\nargv = ["harbour", "render", "{page}"]\n'
+        )
+        self.processes.answer(("harbour", "build"), stdout="built")
+
+        # Act
+        self.capture([TIDES])
+
+        # Assert
+        self.assertEqual((self.directory / "tides-delivered.html").read_text(), "<html><body>Tides of ~</body></html>")
+
+    def test_should_run_the_recipe_in_the_worktree(self):
+        # Arrange
+        self.declare_the_recipe()
+
+        # Act
+        self.capture([TIDES])
+
+        # Assert
+        self.assertEqual(
+            [request.cwd for request in self.processes.requests if request.argv[0] == "harbour"], [str(self.worktree)]
+        )
+
+    def test_should_remove_the_firefox_profile_once_the_page_is_captured(self):
+        # Arrange
+        self.declare_the_recipe()
+
+        # Act
+        self.capture([TIDES])
+
+        # Assert
+        self.assertFalse((self.directory / "profile").exists())

@@ -1,15 +1,49 @@
 import argparse
+import contextlib
+import json
+from collections.abc import Iterator
+from dataclasses import dataclass
 
 from brigade.command import Argument, Command
 from brigade.dashboard.answer_dashboard_request import answer_dashboard_request
 from brigade.dashboard.dashboard_exchange import LOOPBACK_HOST, Dashboard, IncomingRequest
 from brigade.dashboard.render_dashboard_page import render_dashboard_page
+from brigade.dashboard.start_awawa_addon import start_awawa_addon
+from brigade.errors import BrigadeError
 from brigade.runtime import Runtime
 
 DOCUMENT_SCHEMA_VERSION = 1
 IN_PROCESS_PORT = 0
 NO_TOKEN = ""
 READING_METHOD = "GET"
+OK = 200
+VIEWS_PREFIX = "/views/"
+AWAWA_PAGE = "awawa"
+
+
+@dataclass(frozen=True)
+class _Detail:
+    listing: str
+    collection: str
+    identifier: str
+    newest_by: str
+    view: str
+
+
+LISTED_PAGES = {
+    "home": "status",
+    "waves": "waves",
+    "runs": "runs",
+    "ledger": "ledger",
+    "inbox": "inbox",
+    "reports": "reports",
+}
+DETAIL_PAGES = {
+    "wave": _Detail("/api/waves", "waves", "wave", "started_at", "waves"),
+    "run": _Detail("/api/runs", "runs", "run", "started_at", "runs"),
+    "report": _Detail("/api/reports", "reports", "id", "reported_at", "reports"),
+}
+PAGES = ("home", "waves", "wave", "runs", "run", "ledger", "inbox", "reports", "report", AWAWA_PAGE)
 
 
 class _NoAddon:
@@ -21,24 +55,68 @@ def _render_text(document: dict) -> str:
     return document["html"]
 
 
+def _select(target: str, project: str | None) -> str:
+    if project is None:
+        return target
+    return f"{target}{'&' if '?' in target else '?'}project={project}"
+
+
+@contextlib.contextmanager
+def _open_addon(page: str, runtime: Runtime) -> Iterator[object]:
+    if page != AWAWA_PAGE:
+        yield _NoAddon()
+        return
+    with start_awawa_addon(runtime) as addon:
+        yield addon
+
+
+def _address(page: str, project: str | None, ask) -> str:
+    if page in LISTED_PAGES:
+        return LISTED_PAGES[page]
+    if page == AWAWA_PAGE:
+        if project is None:
+            raise BrigadeError("the page awawa shows the corpus of one project: name it")
+        return f"awawa/{project}"
+    detail = DETAIL_PAGES[page]
+    entries = json.loads(ask(_select(detail.listing, project)))[detail.collection]
+    if not entries:
+        raise BrigadeError(f"the page {page} shows one of none: brigade lists none")
+    newest = max(entries, key=lambda entry: entry[detail.newest_by] or "")
+    return f"{detail.view}/{newest[detail.identifier]}"
+
+
 def page(request: argparse.Namespace, runtime: Runtime) -> dict:
-    dashboard = Dashboard(port=IN_PROCESS_PORT, token=NO_TOKEN, addon=_NoAddon())
+    if request.page not in PAGES:
+        raise BrigadeError(f"no page {request.page}; the pages are {', '.join(PAGES)}")
+    with _open_addon(request.page, runtime) as addon:
+        dashboard = Dashboard(port=IN_PROCESS_PORT, token=NO_TOKEN, addon=addon)
 
-    def answer(target: str) -> str:
-        incoming = IncomingRequest(method=READING_METHOD, target=target, host=f"{LOOPBACK_HOST}:{IN_PROCESS_PORT}")
-        return answer_dashboard_request(incoming, dashboard, runtime).body.decode()
+        def respond(target: str):
+            incoming = IncomingRequest(method=READING_METHOD, target=target, host=f"{LOOPBACK_HOST}:{IN_PROCESS_PORT}")
+            return answer_dashboard_request(incoming, dashboard, runtime)
 
-    return {
-        "schema_version": DOCUMENT_SCHEMA_VERSION,
-        "page": request.page,
-        "html": render_dashboard_page(request.page, answer),
-    }
+        def ask(target: str) -> str:
+            response = respond(target)
+            if response.status != OK:
+                raise BrigadeError(f"{target} answered {response.status}: {response.body.decode()}")
+            return response.body.decode()
+
+        view = _select(f"{VIEWS_PREFIX}{_address(request.page, request.project, ask)}", request.project)
+
+        def answer(target: str) -> str:
+            return ask(target) if target == view else respond(target).body.decode()
+
+        html = render_dashboard_page(view.removeprefix(VIEWS_PREFIX), answer)
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, "page": request.page, "html": html}
 
 
 COMMAND = Command(
     path=("page",),
     help="print one page of the dashboard as a standalone HTML document, its stylesheet inline and its regions filled",
-    arguments=(Argument(("page",), {"help": "the page, home, waves, runs, inbox, ledger or reports"}),),
+    arguments=(
+        Argument(("page",), {"help": f"the page, one of {', '.join(PAGES)}"}),
+        Argument(("--project",), {"help": "the project the page shows, every project by default"}),
+    ),
     run=page,
     render_text=_render_text,
 )
