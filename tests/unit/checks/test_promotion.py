@@ -5,21 +5,31 @@ from brigade.checks.promotion import check
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.recording_process_runner import ProcessAnswer, RecordingProcessRunner
 
-TASK_CITING_THE_HARBOUR = {
+HARBOUR_COVERS_TIDES = {"name": "COVERS", "atoms": ['"tides"'], "fields": []}
+TASK_AT_THE_BASE = {
+    "fields": [
+        {"name": "STATUS", "atoms": ["todo"], "fields": []},
+        {"name": "REFERENCE", "atoms": ['"artifact/harbour/index.html"'], "fields": [HARBOUR_COVERS_TIDES]},
+    ]
+}
+TASK_REVISING_ITS_OWN_REFERENCE_AT_THE_HEAD = {
     "fields": [
         {"name": "STATUS", "atoms": ["implemented"], "fields": []},
         {"name": "DELIVERED_BY", "atoms": ['"160"'], "fields": []},
         {
             "name": "REFERENCE",
             "atoms": ['"artifact/harbour/index.html"'],
-            "fields": [{"name": "COVERS", "atoms": ['"tides"'], "fields": []}],
+            "fields": [
+                {"name": "REVISES", "atoms": ['"the task draws the harbour page itself"'], "fields": []},
+                HARBOUR_COVERS_TIDES,
+            ],
         },
     ]
 }
 
 
 class PromotionCheckTest(unittest.TestCase):
-    def test_should_judge_the_task_against_the_files_its_pull_request_changes(self):
+    def test_should_judge_the_task_at_the_base_tree_of_its_pull_request_against_the_files_it_changes(self):
         # Arrange
         subject = {
             "schema_version": 1,
@@ -41,10 +51,10 @@ class PromotionCheckTest(unittest.TestCase):
         awawa = RecordingProcessRunner(
             {
                 ("awawa", "show", "@TASK.B1", "--json", "/cache/shop/1a2b3c4"): ProcessAnswer(
-                    stdout=json.dumps(TASK_CITING_THE_HARBOUR)
+                    stdout=json.dumps(TASK_REVISING_ITS_OWN_REFERENCE_AT_THE_HEAD)
                 ),
                 ("awawa", "show", "@TASK.B1", "--json", "/cache/shop/0f0f0f0"): ProcessAnswer(
-                    stdout=json.dumps(TASK_CITING_THE_HARBOUR)
+                    stdout=json.dumps(TASK_AT_THE_BASE)
                 ),
             }
         )
@@ -63,7 +73,11 @@ class PromotionCheckTest(unittest.TestCase):
                     (
                         "artifact/harbour/index.html is the REFERENCE @TASK.B1 is judged against, and its branch changes"
                         " it: a task delivering its reference says so with REVISES at the base of its branch"
-                    )
+                    ),
+                    (
+                        "the branch of @TASK.B1 adds or changes the REVISES or the READ under its REFERENCE"
+                        " artifact/harbour/index.html: the builder never does, the planner writes them at ratification"
+                    ),
                 ],
             },
         )

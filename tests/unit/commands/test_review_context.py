@@ -405,8 +405,8 @@ class VerifyContextOfATaskWithoutAForgeTest(unittest.TestCase):
         self.root = Path(directory.name)
         write_operational_corpus(self.root)
         (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
-        for ref in (TASK_HEAD, MERGE_BASE):
-            (self.root / "cache" / "refs" / "tidepool" / ref).mkdir(parents=True)
+        (self.root / "cache" / "refs" / "tidepool" / TASK_HEAD).mkdir(parents=True)
+        (self.root / "cache" / "refs" / "tidepool" / MERGE_BASE).mkdir(parents=True)
         write_ledger(self.root, [WAVE_STARTED])
         corpus = {"PROJECT": {"tidepool": LOCAL_PROJECT}, "TASK": {"T7": ()}, "POLICY": {}}
         self.runtime = create_test_runtime(
@@ -444,8 +444,8 @@ class VerifyContextFromTheDisposableWorktreeOfAReadingRunTest(unittest.TestCase)
         self.root = Path(directory.name)
         write_operational_corpus(self.root)
         (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
-        for ref in (TASK_HEAD, MERGE_BASE):
-            (self.root / "cache" / "refs" / "tidepool" / ref).mkdir(parents=True)
+        (self.root / "cache" / "refs" / "tidepool" / TASK_HEAD).mkdir(parents=True)
+        (self.root / "cache" / "refs" / "tidepool" / MERGE_BASE).mkdir(parents=True)
         write_ledger(self.root, [WAVE_STARTED])
         run_directory = self.root / "state" / "runs" / "20261111T090000Z-e10d04"
         run_directory.mkdir(parents=True)
@@ -588,9 +588,10 @@ class VerifyContextOfAPullRequestCitingAReferenceTest(unittest.TestCase):
             '[forge_accounts]\ncli = "octo-cli"\nbuild = "octo-bot"\n', encoding="utf-8"
         )
         write_ledger(self.root, [M4_BRANCH_CUT, WAVE_STARTED, TASK_PR_OPENED])
-        for ref in (TASK_HEAD, MERGE_BASE):
-            (self.root / "cache" / "refs" / "tidepool" / ref).mkdir(parents=True)
+        (self.root / "cache" / "refs" / "tidepool" / TASK_HEAD).mkdir(parents=True)
+        (self.root / "cache" / "refs" / "tidepool" / MERGE_BASE).mkdir(parents=True)
         self.head_tree = self.root / "cache" / "refs" / "tidepool" / TASK_HEAD
+        self.base_tree = self.root / "cache" / "refs" / "tidepool" / MERGE_BASE
         self.worktree = self.root / "tidepool-T7"
         (self.worktree / "artifact" / "harbour").mkdir(parents=True)
         (self.worktree / "artifact" / "harbour" / "index.html").write_text(HARBOUR_REFERENCE)
@@ -624,6 +625,7 @@ class VerifyContextOfAPullRequestCitingAReferenceTest(unittest.TestCase):
             ("git", "merge-base", "--end-of-options", MILESTONE_HEAD, TASK_HEAD): f"{MERGE_BASE}\n",
             ("awawa", "show", "@TASK.T7", "--json", str(self.worktree)): TASK_CITING_THE_HARBOUR,
             ("awawa", "show", "@TASK.T7", "--json", str(self.head_tree)): TASK_CITING_THE_HARBOUR,
+            ("awawa", "show", "@TASK.T7", "--json", str(self.base_tree)): TASK_CITING_THE_HARBOUR,
             ("awawa", "status", "--json", str(self.worktree)): RECIPES_OF_THE_CORPUS,
             ("awawa", "show", "@RECIPE.capture", "--json", str(self.worktree)): CAPTURE_RECIPE,
             ("tidepool", "render", "tides"): "<html><body>the tides as delivered</body></html>",
@@ -676,8 +678,8 @@ class VerifyContextOfATaskWithoutAForgeCitingAReferenceTest(unittest.TestCase):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(self.root)
         (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
-        for ref in (TASK_HEAD, MERGE_BASE):
-            (self.root / "cache" / "refs" / "tidepool" / ref).mkdir(parents=True)
+        (self.root / "cache" / "refs" / "tidepool" / TASK_HEAD).mkdir(parents=True)
+        (self.root / "cache" / "refs" / "tidepool" / MERGE_BASE).mkdir(parents=True)
         head_tree = self.root / "cache" / "refs" / "tidepool" / TASK_HEAD
         write_ledger(self.root, [WAVE_STARTED])
         self.worktree = self.root / "tidepool-T7"
@@ -739,6 +741,65 @@ class VerifyContextOfATaskWithoutAForgeCitingAReferenceTest(unittest.TestCase):
         self.assertEqual((captures / "tides-delivered.html").read_text(), "<html><body>~/tides</body></html>")
 
 
+TASK_OF_NO_MILESTONE_READING_A_FILE_FOR_THE_HARBOUR = json.dumps(
+    {
+        "fields": [
+            {
+                **HARBOUR_TIDES,
+                "fields": [*HARBOUR_TIDES["fields"], {"name": "READ", "atoms": ['"src/tides.css"'], "fields": []}],
+            }
+        ]
+    }
+)
+
+
+class VerifyContextOfATaskWhoseBranchWritesReadTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / TASK_HEAD).mkdir(parents=True)
+        (self.root / "cache" / "refs" / "tidepool" / MERGE_BASE).mkdir(parents=True)
+        head_tree = self.root / "cache" / "refs" / "tidepool" / TASK_HEAD
+        base_tree = self.root / "cache" / "refs" / "tidepool" / MERGE_BASE
+        write_ledger(self.root, [WAVE_STARTED])
+        worktree = self.root / "tidepool-T7"
+        (worktree / "artifact" / "harbour").mkdir(parents=True)
+        (worktree / "artifact" / "harbour" / "index.html").write_text(HARBOUR_REFERENCE)
+        outputs = {
+            **LOCAL_TASK_WORKTREE,
+            ("git", "rev-parse", "--show-toplevel"): f"{worktree}\n",
+            _resolve("HEAD"): f"{TASK_HEAD}\n",
+            ("awawa", "show", "@TASK.T7", "--json", str(worktree)): TASK_OF_NO_MILESTONE_READING_A_FILE_FOR_THE_HARBOUR,
+            (
+                "awawa",
+                "show",
+                "@TASK.T7",
+                "--json",
+                str(head_tree),
+            ): TASK_OF_NO_MILESTONE_READING_A_FILE_FOR_THE_HARBOUR,
+            ("awawa", "show", "@TASK.T7", "--json", str(base_tree)): TASK_OF_NO_MILESTONE_CITING_THE_HARBOUR,
+            ("awawa", "status", "--json", str(worktree)): RECIPES_OF_THE_CORPUS,
+            ("awawa", "show", "@RECIPE.capture", "--json", str(worktree)): CAPTURE_RECIPE,
+            ("tidepool", "render", "tides"): "<html><body>tides</body></html>",
+        }
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_outputs_double(outputs, _answer_as_the_machine_taking_screenshots),
+            resolve_plugin=RefusingForgeResolverDouble(),
+        )
+
+    def test_should_judge_the_task_against_its_reference_as_the_base_of_its_branch_ratified_it(self):
+        # Arrange
+        no_pull_request = None
+
+        # Act
+        document = COMMAND.run(Namespace(pr=no_pull_request), self.runtime)
+
+        # Assert
+        self.assertIsNone(document["references"][0]["reads"])
+
+
 LOCAL_AREA_PROJECT = (*LOCAL_PROJECT, ("MODE", "area"), ("CORPUS", "corpus"))
 
 
@@ -754,8 +815,8 @@ class VerifyContextOfATaskOfACorpusAreaCitingAReferenceTest(unittest.TestCase):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         write_operational_corpus(self.root)
         (self.root / "config" / "config.toml").write_text("", encoding="utf-8")
-        for ref in (TASK_HEAD, MERGE_BASE):
-            (self.root / "cache" / "refs" / "tidepool" / ref / "corpus").mkdir(parents=True)
+        (self.root / "cache" / "refs" / "tidepool" / TASK_HEAD / "corpus").mkdir(parents=True)
+        (self.root / "cache" / "refs" / "tidepool" / MERGE_BASE / "corpus").mkdir(parents=True)
         head_area = self.root / "cache" / "refs" / "tidepool" / TASK_HEAD / "corpus"
         write_ledger(self.root, [WAVE_STARTED])
         self.worktree = self.root / "tidepool-T7"

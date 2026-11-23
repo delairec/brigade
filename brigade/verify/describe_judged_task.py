@@ -74,13 +74,16 @@ def _read_repair(runtime: Runtime, judged: JudgedTask, previous: dict | None) ->
 
 
 def _describe_task_intent(runtime: Runtime, judged: JudgedTask, tree: Path) -> dict:
-    shown_task = read_entity_document(runtime.run_process, tree, f"@TASK.{judged.task}")
+    target = f"@TASK.{judged.task}"
+    shown_task = read_entity_document(runtime.run_process, tree, target)
     if shown_task is None:
         return NO_INTENT
+    base_tree = prepare_project_tree(TreeDemand(project=judged.project, ref=judged.base), judged.configuration, runtime)
+    based_task = read_entity_document(runtime.run_process, base_tree.root, target)
     captures = locate_task_captures(runtime.paths, judged.project, judged.task, judged.head)
     return {
         "goal": read_task_goal(runtime.run_process, tree, decode_entity(judged.task, shown_task)),
-        "references": describe_task_references(list_task_references(shown_task), captures),
+        "references": describe_task_references(list_task_references(based_task or shown_task), captures),
     }
 
 

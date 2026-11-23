@@ -7,13 +7,13 @@ from brigade.corpus.decode_atom import decode_atom
 from brigade.corpus.read_entity_document import read_entity_document
 from brigade.system.run_process import ProcessRecord, ProcessRequest
 from brigade.verify.judge_findings import judge_findings
+from brigade.verify.list_task_references import list_task_references
 
 NAME = "promotion"
 IMPLEMENTED = "implemented"
 ANCHOR_SEPARATOR = "::"
 NO_PULL_REQUEST = "no pull request"
-REFERENCE_FIELD = "REFERENCE"
-REVISES_FIELD = "REVISES"
+UNRATIFIED = (None, None)
 
 
 @dataclass(frozen=True)
@@ -45,15 +45,59 @@ def _resolves(repository_tree: Path, anchor: str) -> bool:
     )
 
 
-def _is_revised(reference: dict) -> bool:
-    return any(field["name"] == REVISES_FIELD for field in reference["fields"])
+def _list_changed_references(facts: PromotionFacts, target: str, judged: list[dict], based: list[dict]) -> list[str]:
+    revised = {reference["reference"] for reference in based if reference["revises"] is not None}
+    return [
+        f"{reference['reference']} is the REFERENCE {target} is judged against, and its branch changes it:"
+        " a task delivering its reference says so with REVISES at the base of its branch"
+        for reference in judged
+        if reference["reference"] in facts.changed and reference["reference"] not in revised
+    ]
 
 
-def _list_revised_references(run_process: Callable[[ProcessRequest], ProcessRecord], facts: PromotionFacts) -> set:
-    based = read_entity_document(run_process, facts.base_tree, f"@TASK.{facts.task}")
-    if based is None:
-        return set()
-    return {_read_atom(field) for field in based["fields"] if field["name"] == REFERENCE_FIELD and _is_revised(field)}
+def _list_removed_references(target: str, based: list[dict], shown: list[dict]) -> list[str]:
+    kept = {reference["reference"] for reference in shown}
+    return [
+        f"{reference['reference']} is a REFERENCE of {target} at the base of its branch, and its branch removes it:"
+        " the review judges the task against its REFERENCE at the base"
+        for reference in based
+        if reference["reference"] not in kept
+    ]
+
+
+def _list_waivers(target: str, based: list[dict], shown: list[dict]) -> list[str]:
+    ratified = {reference["reference"]: (reference["revises"], reference["reads"]) for reference in based}
+    return [
+        f"the branch of {target} adds or changes the REVISES or the READ under its REFERENCE {reference['reference']}:"
+        " the builder never does, the planner writes them at ratification"
+        for reference in shown
+        if (reference["revises"], reference["reads"]) != ratified.get(reference["reference"], UNRATIFIED)
+    ]
+
+
+def _list_unreadable_reads(facts: PromotionFacts, target: str, judged: list[dict]) -> list[str]:
+    return [
+        f"the READ {reference['reads']} under the REFERENCE {reference['reference']} of {target}"
+        " names no file of the repository: the review cannot read it"
+        for reference in judged
+        if reference["reads"] is not None and not _resolves(facts.repository_tree, reference["reads"])
+    ]
+
+
+def _judge_references(
+    run_process: Callable[[ProcessRequest], ProcessRecord], facts: PromotionFacts, shown: dict
+) -> list:
+    target = f"@TASK.{facts.task}"
+    at_head = list_task_references(shown)
+    based = read_entity_document(run_process, facts.base_tree, target)
+    at_base = [] if based is None else list_task_references(based)
+    judged = at_head if based is None else at_base
+    return [
+        *_list_changed_references(facts, target, judged, at_base),
+        *_list_removed_references(target, at_base, at_head),
+        *_list_waivers(target, at_base, at_head),
+        *_list_unreadable_reads(facts, target, judged),
+    ]
 
 
 def check_promotion(run_process: Callable[[ProcessRequest], ProcessRecord], facts: PromotionFacts) -> dict:
@@ -75,14 +119,5 @@ def check_promotion(run_process: Callable[[ProcessRequest], ProcessRecord], fact
     for rank, spec in enumerate(specs, start=1):
         if not any(_resolves(facts.repository_tree, anchor) for anchor in collect_anchors(spec["fields"])):
             findings.append(f"SPEC {rank} has no IMPL whose anchor resolves: {_read_atom(spec)}")
-    changed = [_read_atom(field) for field in fields if field["name"] == REFERENCE_FIELD]
-    changed = [path for path in changed if path in facts.changed]
-    if changed:
-        revised = _list_revised_references(run_process, facts)
-        findings.extend(
-            f"{path} is the REFERENCE {target} is judged against, and its branch changes it:"
-            " a task delivering its reference says so with REVISES at the base of its branch"
-            for path in changed
-            if path not in revised
-        )
+    findings.extend(_judge_references(run_process, facts, shown))
     return judge_findings(NAME, findings)

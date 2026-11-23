@@ -32,7 +32,10 @@ class CheckPromotionTest(unittest.TestCase):
             {
                 ("awawa", "show", "@TASK.B1", "--json", str(self.head_tree)): ProcessAnswer(
                     stdout=json.dumps({"fields": fields})
-                )
+                ),
+                ("awawa", "show", "@TASK.B1", "--json", str(BASE_TREE)): ProcessAnswer(
+                    stdout=json.dumps({"fields": fields})
+                ),
             }
         )
         return check_promotion(
@@ -120,18 +123,16 @@ class CheckPromotionTest(unittest.TestCase):
     def test_should_pass_a_task_implemented_and_anchored_without_a_pull_request_to_deliver_it(self):
         # Arrange
         no_pull_request = None
+        task = {
+            "fields": [
+                {"name": "STATUS", "atoms": ["implemented"], "fields": []},
+                create_spec("runs the command line", "brigade/cli.py::def main"),
+            ]
+        }
         awawa = RecordingProcessRunner(
             {
-                ("awawa", "show", "@TASK.B1", "--json", str(self.head_tree)): ProcessAnswer(
-                    stdout=json.dumps(
-                        {
-                            "fields": [
-                                {"name": "STATUS", "atoms": ["implemented"], "fields": []},
-                                create_spec("runs the command line", "brigade/cli.py::def main"),
-                            ]
-                        }
-                    )
-                )
+                ("awawa", "show", "@TASK.B1", "--json", str(self.head_tree)): ProcessAnswer(stdout=json.dumps(task)),
+                ("awawa", "show", "@TASK.B1", "--json", str(BASE_TREE)): ProcessAnswer(stdout=json.dumps(task)),
             }
         )
         facts = PromotionFacts(
@@ -192,18 +193,16 @@ class CheckPromotionOfAnAreaTest(unittest.TestCase):
         (self.area_tree / "notes.py").write_text("def only_in_the_area():\n")
 
     def check(self, anchor: str) -> dict:
+        task = {
+            "fields": [
+                {"name": "STATUS", "atoms": ["implemented"], "fields": []},
+                create_spec("adds an item", anchor),
+            ]
+        }
         awawa = RecordingProcessRunner(
             {
-                ("awawa", "show", "@TASK.B1", "--json", str(self.area_tree)): ProcessAnswer(
-                    stdout=json.dumps(
-                        {
-                            "fields": [
-                                {"name": "STATUS", "atoms": ["implemented"], "fields": []},
-                                create_spec("adds an item", anchor),
-                            ]
-                        }
-                    )
-                )
+                ("awawa", "show", "@TASK.B1", "--json", str(self.area_tree)): ProcessAnswer(stdout=json.dumps(task)),
+                ("awawa", "show", "@TASK.B1", "--json", str(BASE_TREE)): ProcessAnswer(stdout=json.dumps(task)),
             }
         )
         no_pull_request = None
@@ -322,11 +321,27 @@ HARBOUR_REVISED = {
         HARBOUR_COVERS_TIDES,
     ],
 }
+HARBOUR_READ = {
+    "name": "REFERENCE",
+    "atoms": ['"artifact/harbour/index.html"'],
+    "fields": [HARBOUR_COVERS_TIDES, {"name": "READ", "atoms": ['"brigade/tides.css"'], "fields": []}],
+}
+QUAY_UNREVISED = {"name": "REFERENCE", "atoms": ['"artifact/quay/index.html"'], "fields": [HARBOUR_COVERS_TIDES]}
+NO_REFERENCE: list[dict] = []
 UNDEFINED_AT_THE_BASE = ProcessAnswer(exit_code=1, stderr="awawa show: @TASK.B1 is not defined in the workspace\n")
 CHANGES_TO_THE_HARBOUR = ("brigade/tides.py", "artifact/harbour/index.html")
+CHANGES_TO_THE_CODE_ONLY = ("brigade/tides.py",)
 REFERENCE_FINDING = (
     "artifact/harbour/index.html is the REFERENCE @TASK.B1 is judged against, and its branch changes it:"
     " a task delivering its reference says so with REVISES at the base of its branch"
+)
+REMOVED_REFERENCE_FINDING = (
+    "artifact/harbour/index.html is a REFERENCE of @TASK.B1 at the base of its branch, and its branch removes it:"
+    " the review judges the task against its REFERENCE at the base"
+)
+WAIVER_FINDING = (
+    "the branch of @TASK.B1 adds or changes the REVISES or the READ under its REFERENCE artifact/harbour/index.html:"
+    " the builder never does, the planner writes them at ratification"
 )
 
 
@@ -335,48 +350,132 @@ def _show(fields: list[dict]) -> ProcessAnswer:
 
 
 class CheckPromotionOfATaskCitingAReferenceTest(unittest.TestCase):
-    def check(self, at_head: dict, changed: tuple[str, ...], at_base: ProcessAnswer | None = None) -> dict:
+    def check(self, at_head: list[dict], changed: tuple[str, ...], at_base: ProcessAnswer) -> dict:
         head_tree = Path("/srv/shop-head")
         answers = {
-            ("awawa", "show", "@TASK.B1", "--json", str(head_tree)): _show([*IMPLEMENTED_AND_DELIVERED, at_head])
+            ("awawa", "show", "@TASK.B1", "--json", str(head_tree)): _show([*IMPLEMENTED_AND_DELIVERED, *at_head]),
+            ("awawa", "show", "@TASK.B1", "--json", str(BASE_TREE)): at_base,
         }
-        base_answers = {} if at_base is None else {("awawa", "show", "@TASK.B1", "--json", str(BASE_TREE)): at_base}
         facts = PromotionFacts(
             base_tree=BASE_TREE, head_tree=head_tree, repository_tree=head_tree, task="B1", pr=160, changed=changed
         )
-        return check_promotion(RecordingProcessRunner({**answers, **base_answers}), facts)
+        return check_promotion(RecordingProcessRunner(answers), facts)
 
     def test_should_fail_a_branch_that_changes_the_reference_its_task_is_judged_against(self):
         # Act
-        check = self.check(HARBOUR_UNREVISED, CHANGES_TO_THE_HARBOUR, _show([HARBOUR_UNREVISED]))
+        check = self.check([HARBOUR_UNREVISED], CHANGES_TO_THE_HARBOUR, _show([HARBOUR_UNREVISED]))
 
         # Assert
         self.assertEqual(check, {"name": "promotion", "result": "fail", "findings": [REFERENCE_FINDING]})
 
-    def test_should_pass_a_branch_that_leaves_the_reference_of_its_task_unchanged_without_reading_the_base(self):
+    def test_should_pass_a_branch_that_leaves_the_reference_of_its_task_unchanged(self):
         # Act
-        check = self.check(HARBOUR_UNREVISED, ("brigade/tides.py",))
+        check = self.check([HARBOUR_UNREVISED], CHANGES_TO_THE_CODE_ONLY, _show([HARBOUR_UNREVISED]))
 
         # Assert
         self.assertEqual(check, {"name": "promotion", "result": "ok", "findings": []})
 
     def test_should_pass_a_branch_delivering_the_reference_its_task_says_it_revises_at_the_base(self):
         # Act
-        check = self.check(HARBOUR_REVISED, CHANGES_TO_THE_HARBOUR, _show([HARBOUR_REVISED]))
+        check = self.check([HARBOUR_REVISED], CHANGES_TO_THE_HARBOUR, _show([HARBOUR_REVISED]))
 
         # Assert
         self.assertEqual(check, {"name": "promotion", "result": "ok", "findings": []})
 
     def test_should_fail_a_branch_that_writes_revises_on_its_own_task_to_change_its_reference(self):
         # Act
-        check = self.check(HARBOUR_REVISED, CHANGES_TO_THE_HARBOUR, _show([HARBOUR_UNREVISED]))
+        check = self.check([HARBOUR_REVISED], CHANGES_TO_THE_HARBOUR, _show([HARBOUR_UNREVISED]))
 
         # Assert
-        self.assertEqual(check, {"name": "promotion", "result": "fail", "findings": [REFERENCE_FINDING]})
+        self.assertEqual(
+            check, {"name": "promotion", "result": "fail", "findings": [REFERENCE_FINDING, WAIVER_FINDING]}
+        )
 
     def test_should_fail_a_branch_changing_the_reference_of_a_task_its_base_does_not_define(self):
         # Act
-        check = self.check(HARBOUR_REVISED, CHANGES_TO_THE_HARBOUR, UNDEFINED_AT_THE_BASE)
+        check = self.check([HARBOUR_REVISED], CHANGES_TO_THE_HARBOUR, UNDEFINED_AT_THE_BASE)
 
         # Assert
-        self.assertEqual(check, {"name": "promotion", "result": "fail", "findings": [REFERENCE_FINDING]})
+        self.assertEqual(
+            check, {"name": "promotion", "result": "fail", "findings": [REFERENCE_FINDING, WAIVER_FINDING]}
+        )
+
+    def test_should_fail_a_branch_that_repoints_the_reference_of_its_task_to_change_it(self):
+        # Act
+        check = self.check([QUAY_UNREVISED], CHANGES_TO_THE_HARBOUR, _show([HARBOUR_UNREVISED]))
+
+        # Assert
+        self.assertEqual(
+            check, {"name": "promotion", "result": "fail", "findings": [REFERENCE_FINDING, REMOVED_REFERENCE_FINDING]}
+        )
+
+    def test_should_fail_a_branch_that_deletes_the_reference_of_its_task_to_change_it(self):
+        # Act
+        check = self.check(NO_REFERENCE, CHANGES_TO_THE_HARBOUR, _show([HARBOUR_UNREVISED]))
+
+        # Assert
+        self.assertEqual(
+            check, {"name": "promotion", "result": "fail", "findings": [REFERENCE_FINDING, REMOVED_REFERENCE_FINDING]}
+        )
+
+    def test_should_fail_a_branch_that_writes_read_on_its_own_task(self):
+        # Act
+        check = self.check([HARBOUR_READ], CHANGES_TO_THE_CODE_ONLY, _show([HARBOUR_UNREVISED]))
+
+        # Assert
+        self.assertEqual(check, {"name": "promotion", "result": "fail", "findings": [WAIVER_FINDING]})
+
+
+class CheckPromotionOfATaskReadingAFileTest(unittest.TestCase):
+    def setUp(self):
+        self.repository_tree = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (self.repository_tree / "brigade").mkdir()
+        (self.repository_tree / "brigade" / "tides.css").write_text("section#tides {}\n")
+
+    def check(self, read: str) -> dict:
+        harbour = {
+            "name": "REFERENCE",
+            "atoms": ['"artifact/harbour/index.html"'],
+            "fields": [HARBOUR_COVERS_TIDES, {"name": "READ", "atoms": [json.dumps(read)], "fields": []}],
+        }
+        task = _show([*IMPLEMENTED_AND_DELIVERED, harbour])
+        answers = {
+            ("awawa", "show", "@TASK.B1", "--json", str(self.repository_tree)): task,
+            ("awawa", "show", "@TASK.B1", "--json", str(BASE_TREE)): task,
+        }
+        facts = PromotionFacts(
+            base_tree=BASE_TREE,
+            head_tree=self.repository_tree,
+            repository_tree=self.repository_tree,
+            task="B1",
+            pr=160,
+            changed=CHANGES_TO_THE_CODE_ONLY,
+        )
+        return check_promotion(RecordingProcessRunner(answers), facts)
+
+    def test_should_pass_a_section_judged_by_reading_a_file_of_the_repository(self):
+        # Act
+        check = self.check("brigade/tides.css")
+
+        # Assert
+        self.assertEqual(check, {"name": "promotion", "result": "ok", "findings": []})
+
+    def test_should_fail_a_section_judged_by_reading_what_is_no_file_of_the_repository(self):
+        for case, read in [
+            ("a file absent from the repository", "brigade/absent.css"),
+            ("a URL", "https://example.org/tides.css"),
+        ]:
+            with self.subTest(case=case):
+                # Act
+                check = self.check(read)
+
+                # Assert
+                self.assertEqual(
+                    check["findings"],
+                    [
+                        (
+                            f"the READ {read} under the REFERENCE artifact/harbour/index.html of @TASK.B1"
+                            " names no file of the repository: the review cannot read it"
+                        )
+                    ],
+                )

@@ -164,6 +164,7 @@ class PreflightCommandTest(unittest.TestCase):
             ),
             (str(collector),): ProcessAnswer(stdout=json.dumps(pull_request)),
             ("awawa", "show", "@TASK.B1", "--json", str(head_tree)): ProcessAnswer(stdout=json.dumps(task)),
+            ("awawa", "show", "@TASK.B1", "--json", str(base_tree)): ProcessAnswer(stdout=json.dumps(task)),
             ("awawa", "show", "@PREFLIGHT.review_pull_request", "--json", str(project)): NOT_DEFINED,
             ("awawa", "show", "@PREFLIGHT.nightly", "--json", str(project)): NOT_DEFINED,
             ("awawa", "diff", str(base_tree), str(head_tree), "--json"): ProcessAnswer(
