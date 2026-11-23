@@ -162,6 +162,25 @@ class DashboardScriptTest(unittest.TestCase):
         )
         self.assertIn("  return showRegion(region, region.dataset.nextTick);\n", script)
 
+    def test_should_compare_the_four_days_picked_as_soon_as_a_change_leaves_them_all_valid(self):
+        # Act
+        script = SCRIPT.read_text(encoding="utf-8")
+
+        # Assert
+        self.assertIn(
+            "function submitRanges(event) {\n"
+            '  const form = event.target.closest("form[data-ranges]");\n'
+            '  if (form === null || event.target.type !== "date" || !form.checkValidity()) {\n'
+            "    return;\n"
+            "  }\n"
+            "  const day = (name) => form.elements[name].value;\n"
+            '  window.location.hash = `ledger?range=${day("before-start")}..${day("before-end")}'
+            '&range=${day("after-start")}..${day("after-end")}`;\n'
+            "}\n",
+            script,
+        )
+        self.assertIn('document.addEventListener("change", submitRanges);', script)
+
     def test_should_say_in_the_notice_a_region_the_server_did_not_answer(self):
         # Act
         script = SCRIPT.read_text(encoding="utf-8")

@@ -86,6 +86,17 @@ def create_page(listing: dict, filters: RunFilters) -> RunsPage:
 
 
 class RenderRunsFragmentTest(unittest.TestCase):
+    def test_should_set_the_state_chips_and_the_wave_and_task_selects_before_the_tiles_they_narrow(self):
+        # Arrange
+        listing = create_listing([LIVE_RUN, DONE_RUN], NOTHING_SKIPPED)
+
+        # Act
+        fragment = render_runs_fragment(create_page(listing, NO_FILTER))
+
+        # Assert
+        self.assertLess(fragment.index('<a class="chip"'), fragment.index('<select id="runs-wave"'))
+        self.assertLess(fragment.index('<select id="runs-task"'), fragment.index('<div class="stat-tiles">'))
+
     def test_should_count_the_live_runs_the_finished_ones_with_their_outcomes_and_the_dead_ones(self):
         # Arrange
         listing = create_listing([LIVE_RUN, DEAD_RUN, LIMIT_CUT_RUN, DONE_RUN], NOTHING_SKIPPED)

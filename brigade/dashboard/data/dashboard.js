@@ -247,6 +247,15 @@ function applySelection(event) {
   }
 }
 
+function submitRanges(event) {
+  const form = event.target.closest("form[data-ranges]");
+  if (form === null || event.target.type !== "date" || !form.checkValidity()) {
+    return;
+  }
+  const day = (name) => form.elements[name].value;
+  window.location.hash = `ledger?range=${day("before-start")}..${day("before-end")}&range=${day("after-start")}..${day("after-end")}`;
+}
+
 window.addEventListener("hashchange", showChosenView);
 window.addEventListener("hashchange", markCurrentView);
 document.addEventListener("visibilitychange", showRegions);
@@ -254,6 +263,7 @@ document.addEventListener("click", postAction);
 document.addEventListener("click", refreshNextTick);
 document.addEventListener("submit", submitView);
 document.addEventListener("change", applySelection);
+document.addEventListener("change", submitRanges);
 window.setInterval(pollRegions, POLL_INTERVAL_MS);
 showRegions();
 readNextTick();

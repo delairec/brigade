@@ -302,11 +302,11 @@ def render_runs_fragment(page: RunsPage) -> str:
         render_page_head(HEAD)
         + render_status_sentence(_describe_listing(runs))
         + _render_explainer(WHAT_A_RUN_IS)
+        + _render_chips(filters, runs)
+        + _render_selects(filters, page.every_run["runs"])
         + _render_tiles(runs)
         + _render_cost_by_procedure(runs)
         + _render_gone_wrong(runs)
         + f'<p class="skipped">The list skipped {skipped} run directories it could not read.</p>'
-        + _render_chips(filters, runs)
-        + _render_selects(filters, page.every_run["runs"])
         + _render_table(runs)
     )

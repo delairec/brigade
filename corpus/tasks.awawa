@@ -20392,7 +20392,7 @@ TASK B267
 		IMPL "tests/unit/dashboard/test_render_home.py::def"
 			+ "test_should_open_on_the_sentence_saying_whether_brigade_is_stopped_working_or_idle(self):"
 		IMPL "tests/unit/dashboard/test_dashboard_page.py::def"
-			+ "test_should_hold_the_next_tick_as_a_region_read_apart_from_the_poll_with_its_refresh_button(self):"
+			+ "test_should_hold_the_next_tick_above_the_view_read_apart_from_the_poll(self):"
 	SPEC "tests/cli/test_serve.py proves that GET /views/status answers 200 with the sentence, and"
 		+ "with a halted wave under Needs you once a wave is parked"
 		IMPL "tests/cli/test_serve.py::def"
@@ -20658,7 +20658,7 @@ TASK B270
 	SPEC "wiki/Dashboard.md says in its Runs bullet what the list and the page of a run show, and"
 		+ "wiki/Runs.md names the new keys"
 		IMPL "wiki/Dashboard.md::- **Runs** — the runs of `brigade run list`: a sentence and an"
-			+ "explainer saying what a run and a segment are, tiles"
+			+ "explainer saying what a run and a segment are, the"
 		IMPL "wiki/Runs.md::`started_at`, the `ts` of its `result.json` less its `duration_ms`, and"
 			+ "`cost_usd`, both `null` where the result of"
 	AFTER @TASK.B264

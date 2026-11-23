@@ -436,7 +436,7 @@ class RenderLedgerFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            "</button></form>"
+            "</span></form>"
             "<p>&lt;i&gt;2026-09-01&lt;/i&gt; to 2026-09-30 holds 4 runs, too small to compare:"
             " a percentile over fewer than 5 runs is an estimate.</p>"
             "<p>4 runs from &lt;i&gt;2026-09-01&lt;/i&gt; to 2026-09-30, 6 runs from 2026-10-01 to 2026-10-31</p>"
@@ -460,7 +460,7 @@ class RenderLedgerFragmentTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            "</button></form><dl><dt>error</dt><dd>no run finished from 2026-09-30 to 2026-09-30\n</dd></dl></section>",
+            "</span></form><dl><dt>error</dt><dd>no run finished from 2026-09-30 to 2026-09-30\n</dd></dl></section>",
             fragment,
         )
 
@@ -589,17 +589,108 @@ class RenderLedgerFragmentAsTheMockupTest(unittest.TestCase):
             fragment,
         )
 
-    def test_should_offer_two_ranges_of_days_to_compare_with_a_compare_button(self):
+    def test_should_offer_preset_periods_and_four_day_pickers_set_to_the_last_seven_days_against_the_seven_before(self):
         # Act
         fragment = render_overview_and_budgets()
 
         # Assert
         self.assertIn(
             '<section class="block"><div class="block-head"><h2>Compare two periods</h2><p>Runs finished in each'
-            ' range of days, UTC.</p></div><form class="filters" data-view="ledger">'
-            '<span class="field"><label for="ledger-before">Before</label><input id="ledger-before" name="range" data-pauses-poll'
-            ' placeholder="2026-11-15..2026-11-17"></span>'
-            '<span class="field"><label for="ledger-after">After</label><input id="ledger-after" name="range" data-pauses-poll'
-            ' placeholder="2026-11-18..2026-11-18"></span><button class="btn" type="submit">Compare</button></form>',
+            ' range of days, UTC.</p></div><form class="filters" data-ranges data-pauses-poll>'
+            '<span class="field"><label for="ledger-periods">Periods</label><select id="ledger-periods" name="periods">'
+            '<option value="">pick a preset or the days below</option>'
+            '<option value="last-7" data-href="ledger?range=2026-11-05..2026-11-11&amp;range=2026-11-12..2026-11-18">'
+            "the last 7 days against the 7 before</option>"
+            '<option value="last-30" data-href="ledger?range=2026-09-20..2026-10-19&amp;range=2026-10-20..2026-11-18">'
+            "the last 30 days against the 30 before</option></select></span>"
+            '<span class="field"><label for="ledger-before-start">Before, from</label>'
+            '<input type="date" id="ledger-before-start" name="before-start" value="2026-11-05" required></span>'
+            '<span class="field"><label for="ledger-before-end">Before, to</label>'
+            '<input type="date" id="ledger-before-end" name="before-end" value="2026-11-11" required></span>'
+            '<span class="field"><label for="ledger-after-start">After, from</label>'
+            '<input type="date" id="ledger-after-start" name="after-start" value="2026-11-12" required></span>'
+            '<span class="field"><label for="ledger-after-end">After, to</label>'
+            '<input type="date" id="ledger-after-end" name="after-end" value="2026-11-18" required></span></form>',
             fragment,
         )
+
+    def test_should_offer_for_each_month_after_the_first_day_of_the_ledger_its_comparison_with_the_days_before_it(self):
+        # Arrange
+        overview = {
+            **OVERVIEW,
+            "first": "2026-10-01T08:00:00Z",
+            "waves_started": {"2026-10": ["w1"], "2026-11": ["w2"]},
+        }
+
+        # Act
+        fragment = render_ledger_fragment({"overview": answer_with(overview), "budgets": answer_with(BUDGETS)})
+
+        # Assert
+        self.assertIn(
+            "the last 30 days against the 30 before</option>"
+            '<option value="before-2026-11-01" data-href="ledger?range=2026-10-01..2026-10-31&amp;range=2026-11-01..2026-11-18">'
+            "compare before 2026-11-01</option></select>",
+            fragment,
+        )
+
+    def test_should_select_the_preset_and_set_the_day_pickers_to_the_two_periods_compared(self):
+        # Arrange
+        comparison = {
+            "schema_version": 1,
+            "ranges": [
+                {
+                    "start": "2026-09-20",
+                    "end": "2026-10-19",
+                    "runs": 0,
+                    "segments": 0,
+                    "turns": None,
+                    "turns_to_first_edit": None,
+                    "oversized_output_turns": None,
+                },
+                {
+                    "start": "2026-10-20",
+                    "end": "2026-11-18",
+                    "runs": 0,
+                    "segments": 0,
+                    "turns": None,
+                    "turns_to_first_edit": None,
+                    "oversized_output_turns": None,
+                },
+            ],
+            "reference": {},
+        }
+        answers = {
+            "overview": answer_with(OVERVIEW),
+            "budgets": answer_with(BUDGETS),
+            "comparison": answer_with(comparison),
+        }
+
+        # Act
+        fragment = render_ledger_fragment(answers)
+
+        # Assert
+        self.assertIn(
+            '<option value="last-30" data-href="ledger?range=2026-09-20..2026-10-19&amp;range=2026-10-20..2026-11-18"'
+            " selected>the last 30 days against the 30 before</option></select></span>"
+            '<span class="field"><label for="ledger-before-start">Before, from</label>'
+            '<input type="date" id="ledger-before-start" name="before-start" value="2026-09-20" required></span>',
+            fragment,
+        )
+
+    def test_should_say_there_is_nothing_to_compare_while_the_ledger_holds_no_event(self):
+        # Act
+        fragment = render_ledger_fragment({"overview": answer_with(EMPTY_OVERVIEW), "budgets": answer_with(BUDGETS)})
+
+        # Assert
+        self.assertIn(
+            "<h2>Compare two periods</h2><p>Runs finished in each range of days, UTC.</p></div>"
+            "<p>Nothing to compare: the ledger holds no event yet.</p></section>",
+            fragment,
+        )
+
+    def test_should_set_the_comparison_of_two_periods_just_below_the_head_of_the_page(self):
+        # Act
+        fragment = render_overview_and_budgets()
+
+        # Assert
+        self.assertLess(fragment.index("<h2>Compare two periods</h2>"), fragment.index("Every event, a wave started"))

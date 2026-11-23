@@ -481,7 +481,7 @@ def render_home(home: HomeDocuments) -> str:
             _render_needs_you(status, needs_you),
             _render_at_work(status, home.dry_run),
             _render_last_day(home),
-            _render_routine(status),
             _render_projects(status),
+            _render_routine(status),
         ]
     )

@@ -29,7 +29,11 @@ The link of the view shown is marked as the current page. Every view opens on it
 what the page is for, and the time it was read.
 
 The page polls the view and each region of the rail every five seconds while its tab is visible, and swaps a fragment
-only when it changed, keeping the open `<details>` and the focus. A refused POST is shown in the notice above the view.
+only when it changed, keeping the open `<details>` and the focus. A refused POST, or a region the server did not
+answer, is shown in the notice above the view. A wait the user started shows itself once it lasts 300 ms: a button
+that posts stays disabled until its request and the refresh that follows end, the view dims under a spinner at the
+top right of the page while a chosen view or a post is read, and the Next tick section shows its spinner while its
+refresh button reads it; the poll never does.
 
 ## Tones
 
@@ -76,11 +80,12 @@ Its seven views:
   task the next tick does not launch with its cause, read from the `tasks_not_launched` of
   `brigade tick --dry-run --json`; **Last 24 hours** counts the waves
   started and closed, the pull requests opened and merged, the milestones reported with a link to the report of the
-  last one when it falls in the window, the run segments finished and the failed tick actions; **Routine** is a table of the studies, their period, their last run, its outcome and what
-  comes next; **Projects** is a table of the projects with their state, their forge and its remote, their open waves,
-  the link to their corpus when they hold one and their pause or resume button; a parked order is a row of Needs you.
-  **Next tick** shows the decisions of `brigade tick --dry-run --json` by action, read when the page loads, at each
-  new tick and on its refresh button, never by the poll.
+  last one when it falls in the window, the run segments finished and the failed tick actions; **Projects** is a
+  table of the projects with their state, their forge and its remote, their open waves, the link to their corpus when
+  they hold one and their pause or resume button; **Routine**, after it, is a table of the studies, their period, their
+  last run, its outcome and what comes next; a parked order is a row of Needs you.
+  **Next tick**, above the view of Home, shows the decisions of `brigade tick --dry-run --json` by action, read when
+  the page loads, at each new tick and on its refresh button, never by the poll.
 - **Waves** — the waves of `brigade wave list`, opening on one sentence counting the waves open, parked and blocked,
   and four tiles: the waves open now with the parked and the blocked, the waves started with their count by month
   from `brigade ledger`, the waves closed with the cancelled, and the tasks merged out of the tasks the last 12 waves
@@ -121,7 +126,13 @@ Its seven views:
   order of the columns are the defaults. The tab is read-only: its forms only change the address, it offers no Clean,
   no Change Colour and no Arrange Columns, and awawa-web stays the editor. On a project holding no corpus it says so,
   and with the addon stopped it says that the addon stopped, with its error.
-- **Ledger** — whether brigade is well tuned. It opens on a callout saying what its measures cover: the runs finished,
+- **Ledger** — whether brigade is well tuned. Below its head, *Compare two periods* sets two ranges of days side by
+  side with `brigade ledger compare`, saying when a range under five runs is too small to compare: a selector offers
+  the last 7 days against the 7 before, the last 30 days against the 30 before, and for each month the ledger started
+  waves in after its first day, *compare before* the first day of that month, from the first day of the ledger; four
+  day pickers, the start and the end of each period, show the periods compared, the last 7 days against the 7 before
+  when nothing is compared yet, and compare as soon as a change leaves all four valid; an empty ledger has nothing to
+  compare, and says so. Then a callout says what its measures cover: the runs finished,
   the range of the ledger they were read from and the lines of the ledger skipped. *Do the turn caps fit* sets the
   segment p90 of each role against its applied cap, the role overshooting most first, with a bar marking the cap and
   `estimate` under five measured segments; the table *Turn cap by role* follows it, then a chart per role drawing its
@@ -130,9 +141,7 @@ Its seven views:
   *What a run takes* gives the p50
   and p90 turns of each procedure, `estimate` under five runs; *What keeps failing* the failed tick actions by day,
   against the 288 ticks of a day, and by action with its most frequent error; *Volume* the counts of the overview as
-  tiles, with the waves started by month. A wave opens its turns by role and its halts, and *Compare two periods*
-  sets two ranges of days side by side with `brigade ledger compare`, saying when a range under five runs is too
-  small to compare.
+  tiles, with the waves started by month. A wave opens its turns by role and its halts.
 - **Reports** — the reports of `brigade report list`. The page of a report is ordered by use: its verdict, the
   narrative line opening on Verdict, with its date and its pull request; the tiles of the waves it names, tasks merged,
   runs and turns, cost, wall time with run time and files changed, a cost being a floor when a run records none and a
@@ -146,11 +155,14 @@ Its seven views:
   folded, follow in three blocks, then the results of the orders when one exists; each row names the subject, the
   project, the verdict, the first narrative of the report or no verdict recorded, the tasks merged out of its
   tasks and the date of the ledger event that recorded it.
-- **Runs** — the runs of `brigade run list`: a sentence and an explainer saying what a run and a segment are, tiles
+- **Runs** — the runs of `brigade run list`: a sentence and an explainer saying what a run and a segment are, the
+  filters, then tiles
   counting the live runs, the finished ones by outcome, the dead ones, the run time over the segments that ended and
   the cost, said a floor when a run records none, how many run directories the list skipped, and *Where the cost
-  went*, the runs and the cost of each procedure; the filters, carried by the address, `#runs?state=dead&wave=<wave>` and passed to `--state`, `--wave` and
-  `--task`, are chips for the state and selectors for the wave and the task, applied as soon as one is chosen; one table, the newest first, shows for each run its start, its short id linking its
+  went*, the runs and the cost of each procedure. The filters, carried by the address, `#runs?state=dead&wave=<wave>`
+  and passed to `--state`, `--wave` and `--task`, are chips for the state and selectors for the wave and the task,
+  above the tiles they narrow, applied as soon as one is chosen; one table, the newest first, shows for each run its
+  start, its short id linking its
   page, its procedure, its role, its task, its outcome as a pill, the strip of its segments, one square per segment in
   the tone of its outcome, its duration and its cost, each said a floor while a segment has not ended, and its
   arguments. The page of a run,

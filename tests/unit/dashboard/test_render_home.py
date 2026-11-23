@@ -668,12 +668,12 @@ class RenderHomeAsTheMockupTest(unittest.TestCase):
             fragment,
         )
 
-    def test_should_set_the_routine_before_the_projects(self):
+    def test_should_set_the_projects_and_their_pause_buttons_before_the_routine(self):
         # Act
         fragment = render_home(HOME)
 
         # Assert
-        self.assertLess(fragment.index("<h2>Routine</h2>"), fragment.index("<h2>Projects</h2>"))
+        self.assertLess(fragment.index("<h2>Projects</h2>"), fragment.index("<h2>Routine</h2>"))
 
     def test_should_give_each_study_its_new_signals_and_the_day_of_its_last_run(self):
         # Arrange

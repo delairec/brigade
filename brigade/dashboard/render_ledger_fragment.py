@@ -18,7 +18,7 @@ from brigade.dashboard.render_legend import LegendItem, render_legend
 from brigade.dashboard.render_page_head import PageHead, render_page_head
 from brigade.dashboard.render_stat_tile import StatTile, render_stat_tile
 from brigade.dashboard.render_svg_bar import SvgBar, render_svg_bar
-from brigade.dashboard.run_routed_command import CommandAnswer
+from brigade.dashboard.run_routed_command import OK, CommandAnswer
 
 ABSENT = "-"
 MILLISECONDS_PER_MINUTE = 60000
@@ -57,8 +57,16 @@ COMPARED_MEASURES = {
 }
 DAY_LENGTH = len("YYYY-MM-DD")
 PREVIOUS_DAY = timedelta(days=1)
-DAYS_BEFORE_THE_LAST = timedelta(days=3)
-RANGE_FORMAT = "YYYY-MM-DD..YYYY-MM-DD"
+PRESET_LENGTHS = (7, 30)
+FIRST_OF_THE_MONTH = "-01"
+NO_PERIOD_PICKED = "pick a preset or the days below"
+NOTHING_TO_COMPARE = "<p>Nothing to compare: the ledger holds no event yet.</p>"
+DAY_PICKERS = (
+    ("Before, from", "before-start", 0, 0),
+    ("Before, to", "before-end", 0, 1),
+    ("After, from", "after-start", 1, 0),
+    ("After, to", "after-end", 1, 1),
+)
 CHART_WIDTH = 720
 LABEL_WIDTH = 150
 TRACK_WIDTH = 500
@@ -398,27 +406,67 @@ def _render_comparison(document: dict) -> str:
     return f"{too_small}<p>{counts}</p>{render_html_table(header, rows, 'no measure')}"
 
 
-def _suggest_ranges(overview: CommandAnswer) -> tuple[str, str]:
-    last = json.loads(overview.document).get("last")
-    if last is None:
-        return (RANGE_FORMAT, RANGE_FORMAT)
-    last_day = date.fromisoformat(last[:DAY_LENGTH])
-    before = (last_day - DAYS_BEFORE_THE_LAST, last_day - PREVIOUS_DAY)
-    return (f"{before[0]}..{before[1]}", f"{last_day}..{last_day}")
+def _pair_last_days(last_day: date, length: int) -> tuple[tuple[str, str], tuple[str, str]]:
+    after_start = last_day - timedelta(days=length - 1)
+    before = (str(after_start - timedelta(days=length)), str(after_start - PREVIOUS_DAY))
+    return (before, (str(after_start), str(last_day)))
 
 
-def _render_range_input(label: str, name: str, placeholder: str) -> str:
-    control = f'<input id="{name}" name="range" data-pauses-poll placeholder="{escape(placeholder)}">'
-    return render_field(label, name, control)
+def _list_periods(document: dict) -> list[tuple[str, str, tuple]]:
+    first_day = date.fromisoformat(document["first"][:DAY_LENGTH])
+    last_day = date.fromisoformat(document["last"][:DAY_LENGTH])
+    presets = [
+        (f"last-{length}", f"the last {length} days against the {length} before", _pair_last_days(last_day, length))
+        for length in PRESET_LENGTHS
+    ]
+    month_days = [date.fromisoformat(month + FIRST_OF_THE_MONTH) for month in sorted(document["waves_started"])]
+    months = [
+        (
+            f"before-{month_day}",
+            f"compare before {month_day}",
+            ((str(first_day), str(month_day - PREVIOUS_DAY)), (str(month_day), str(last_day))),
+        )
+        for month_day in month_days
+        if month_day > first_day
+    ]
+    return presets + months
 
 
-def _render_compare_form(answers: dict[str, CommandAnswer]) -> str:
-    before, after = _suggest_ranges(answers["overview"])
+def _read_compared_pair(answers: dict[str, CommandAnswer]) -> tuple | None:
+    comparison = answers.get("comparison")
+    if comparison is None or comparison.status != OK:
+        return None
+    ranges = json.loads(comparison.document)["ranges"]
+    return tuple((day_range["start"], day_range["end"]) for day_range in ranges)
+
+
+def _render_period(value: str, label: str, pair: tuple, compared: tuple | None) -> str:
+    (before_start, before_end), (after_start, after_end) = pair
+    address = f"ledger?range={before_start}..{before_end}&range={after_start}..{after_end}"
+    selected = " selected" if pair == compared else ""
+    return f'<option value="{value}" data-href="{escape(address)}"{selected}>{escape(label)}</option>'
+
+
+def _render_day_picker(label: str, name: str, day: str) -> str:
+    control = f'<input type="date" id="ledger-{name}" name="{name}" value="{escape(day)}" required>'
+    return render_field(label, f"ledger-{name}", control)
+
+
+def _render_period_picker(answers: dict[str, CommandAnswer]) -> str:
+    document = json.loads(answers["overview"].document)
+    if document.get("last") is None:
+        return NOTHING_TO_COMPARE
+    periods = _list_periods(document)
+    compared = _read_compared_pair(answers)
+    shown = compared or periods[0][2]
+    options = "".join(_render_period(value, label, pair, compared) for value, label, pair in periods)
+    select = (
+        f'<select id="ledger-periods" name="periods"><option value="">{NO_PERIOD_PICKED}</option>{options}</select>'
+    )
+    days = "".join(_render_day_picker(label, name, shown[period][end]) for label, name, period, end in DAY_PICKERS)
     return (
-        '<form class="filters" data-view="ledger">'
-        f"{_render_range_input('Before', 'ledger-before', before)}"
-        f"{_render_range_input('After', 'ledger-after', after)}"
-        '<button class="btn" type="submit">Compare</button></form>'
+        '<form class="filters" data-ranges data-pauses-poll>'
+        f"{render_field('Periods', 'ledger-periods', select)}{days}</form>"
     )
 
 
@@ -428,7 +476,7 @@ def _render_compare(answers: dict[str, CommandAnswer]) -> str:
         Block(
             title="Compare two periods",
             lede="Runs finished in each range of days, UTC.",
-            body=_render_compare_form(answers) + compared,
+            body=_render_period_picker(answers) + compared,
         )
     )
 
@@ -451,6 +499,7 @@ def render_ledger_fragment(answers: dict[str, CommandAnswer]) -> str:
     overview = answers["overview"]
     return (
         render_page_head(HEAD)
+        + _render_compare(answers)
         + _render_explainer(WHAT_THE_LEDGER_IS)
         + render_answer(overview, _render_coverage)
         + _render_answered_block(budgets, "Do the turn caps fit?", _describe_caps, _render_caps)
@@ -462,6 +511,5 @@ def render_ledger_fragment(answers: dict[str, CommandAnswer]) -> str:
         )
         + _render_answered_block(overview, "What keeps failing", _describe_failures, _render_failures)
         + _render_answered_block(overview, "Volume", _describe_volume, _render_volume)
-        + _render_compare(answers)
         + _render_wave_section(answers)
     )
