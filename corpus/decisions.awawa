@@ -5944,8 +5944,9 @@ DECISION AResumeAfterTheQuotaResetEndsTheStopOfItsTaskAndRunsListNamesTheWaveAnd
 		+ "inventory of each type of its schema alone, so the brief of the resumed segment opens on"
 		+ "an empty progress, as the markdown plugin's empty file does"
 	DESC "brigade runs list prints the columns run, procedure, slot, role, project, wave, task,"
-		+ "state and outcome; --state running|finished|dead keeps the runs in that state, alone or"
-		+ "with --wave and --task"
+		+ "state, outcome, segments, duration, cost and arguments, as @TASK.B92 amends it; --state"
+		+ "running|finished|dead keeps the runs in that state, alone or with --wave and --task"
+		REF @TASK.B92
 	DESC "narrows DESC 3 of @DECISION.ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset, the"
 		+ "move to paused:quota, and the SPEC of @TASK.B06 on brigade runs list"
 		REF @DECISION.ARateLimitOfAnyRunPausesEveryRunningWaveUntilItsReset
@@ -8529,3 +8530,110 @@ DECISION ReportListDatesAReportByTheLastLedgerEventNamingItsIdAndKeepsItsStatist
 		+ "the whole list"
 	SOURCE "the build run of @TASK.B265"
 		REF @TASK.B265
+
+DECISION RunListReadsTheSegmentsOfEachRunThroughTheDescriberListRunsTakesAndTheDashboardMarksAPartialMeasureAtLeast
+	TITLE "brigade run list, and the Runs view it feeds, read the segments of each run through"
+		+ "summarize_run, the describer list_runs takes; the tick, status and wave cancel keep"
+		+ "describe_run; the dashboard marks a partial measure at least"
+	STATUS active
+	DESC "binds @TASK.B92"
+		REF @TASK.B92
+	DESC "a running or a dead run ends its segments on its state even when no folder of a segment"
+		+ "exists yet; a finished run without a segment prints -"
+	DESC "summarize_run reads the run before its segments, so a run whose result is refused is"
+		+ "skipped naming its result.json, as before"
+	DESC "the cost the Runs view totals, and each cost by procedure, is a floor once a run carries"
+		+ "no cost_usd or a segment of it carries none; a listing holding no run shows no cost by"
+		+ "procedure"
+	REJECTED "the segments read by describe_run: the tick reads every run at each tick through"
+		+ "list_runs, and would read the result of every segment of every run"
+	REJECTED "the word partial on the dashboard: the page of a run already marks a floor at least,"
+		+ "and the two pages would say it two ways"
+	SOURCE "the build run of @TASK.B92"
+		REF @TASK.B92
+
+DECISION TheCapHistoryOfARolePlacesItsChangesAtEqualStepsEachLabelledByItsTs
+	TITLE "the chart of the turn cap of a role in the Ledger view places its changes at equal steps"
+		+ "across its width, each labelled by its ts on a line of its own under the line; a raised"
+		+ "change is marked in the tone limit, a lowered one in the tone done, the line in the tone"
+		+ "work"
+	STATUS active
+	DESC "binds @TASK.B229"
+		REF @TASK.B229
+	REJECTED "a horizontal axis proportional to time: changes a few minutes apart would overlap"
+		+ "while one far change would flatten the rest, and a single change would leave no span"
+	REJECTED "the labels written beside their marks: two close changes would write over each other"
+	SOURCE "the build run of @TASK.B229"
+		REF @TASK.B229
+
+DECISION AnUndatedChangeToTheWorktreeOfASegmentNamesItsOwnReasonAndItsSamplesLeaveNoTrace
+	TITLE "a segment whose worktree changed with no dated tool call of the main transcript before"
+		+ "the change and no call of an edit tool on the worktree, its client naming edit tools,"
+		+ "leaves its first edit null with the reason no dated tool call of the main transcript"
+		+ "precedes the change to the worktree; the samples of the worktree run git with a"
+		+ "run_process that records no trace in the trail of the run"
+	STATUS active
+	DESC "binds @TASK.B239"
+		REF @TASK.B239
+	REJECTED "the reason the segment made no edit outside the progress file, which the task writes"
+		+ "for no segment whose worktree changed"
+	REJECTED "the samples traced as every other git call: two git calls at each poll would fill the"
+		+ "trail of the run, which the tests of tests/cli read whole"
+	SOURCE "the build run of @TASK.B239"
+		REF @TASK.B239
+
+DECISION ASampleOfTheWorktreeGitCannotReadIsNoChangeAndNoSample
+	TITLE "a sample of the worktree git cannot read, git failing or exceeding GIT_TIMEOUT_S, is no"
+		+ "change and stops no run: a segment whose launch sample or last sample git could not read"
+		+ "is not sampled and is measured by its calls of an edit tool alone, as a worktree that is"
+		+ "no git work tree"
+	STATUS active
+	DESC "binds @TASK.B239"
+		REF @TASK.B239
+	REJECTED "the failure raised out of the poll: a measurement would stop the client it measures"
+		+ "and leave its segment unrecorded"
+	REJECTED "an unreadable sample counted as differing from the launch sample: a git failure would"
+		+ "date a first edit no change made"
+	SOURCE "the review of #467"
+
+DECISION TheGateRowsOfAReportAppearOnceAPullRequestOfItsTasksPassedAndAVerdictWithoutItsPullRequestCountsTowardNone
+	TITLE "the rows rounds to pass and escapes of a milestone or task report are written only once"
+		+ "a pull request of its tasks passed the gate; a task.verdict recorded without its pr"
+		+ "counts toward no pull request; a pull request is keyed by its number within its project;"
+		+ "the Corrects lines are the first lines of the body, the title after them"
+	STATUS active
+	DESC "binds @TASK.B237"
+		REF @TASK.B237
+	REJECTED "escapes 0 of 0 on every report: a report with no passed pull request states no yield,"
+		+ "and the reports written before keep their rows"
+	REJECTED "a verdict with no pr attributed to the last pull request of its task: the ledger does"
+		+ "not record which pull request it judged"
+	SOURCE "the build run of @TASK.B237"
+		REF @TASK.B237
+
+DECISION ARelaunchedRunningTaskIsHeldOnlyByTheHaltOfItsWaveOrTheBuildSlots
+	TITLE "a running task the tick launches again, rebased by its last run or stopped by a login,"
+		+ "is held only by the halt of its wave or by the build slots of its project, never by an"
+		+ "AFTER nor a live blocker, and is never listed among the tasks not launched"
+	STATUS active
+	DESC "binds @TASK.B178: find_launch_hold reads AFTER and the blockers for a queued task alone"
+		REF @TASK.B178
+	REJECTED "every cause for every task the plan considers: a running task already passed AFTER"
+		+ "and its blockers at its first launch, and holding it now would strand a run half done"
+	SOURCE "the build run of @TASK.B178"
+		REF @TASK.B178
+
+DECISION HomeListsTheTasksTheNextTickDoesNotLaunchInASectionOfTheirOwnWithTheirProject
+	TITLE "Home lists the tasks the next tick does not launch under Tasks waiting, a section of"
+		+ "their own after At work, read from the tasks_not_launched of brigade tick --dry-run"
+		+ "--json, each row carrying its project so that the view of one project leaves out the"
+		+ "others"
+	STATUS active
+	DESC "binds @TASK.B178: Needs you keeps the halted waves, which wait for the user"
+		REF @TASK.B178
+	REJECTED "the waiting tasks under Needs you: a task held by AFTER or by the slots waits for the"
+		+ "tick, not for the user, and would raise the tile counting what needs the user"
+	REJECTED "the waiting tasks narrowed by the waves Home lists: a row without its project would"
+		+ "show in the view of every project"
+	SOURCE "the build run of @TASK.B178"
+		REF @TASK.B178

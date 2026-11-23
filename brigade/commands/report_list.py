@@ -10,6 +10,7 @@ from brigade.ledger.task_reported import TaskReported
 from brigade.ledger.wave_reported import WaveReported
 from brigade.reports.read_reports import REPORT_KINDS_BY_FIELD, WAVE_REPORT_KIND, read_reports
 from brigade.runtime import Runtime
+from brigade.studies.render_milestone_report import ROUNDS_STATISTIC
 from brigade.system.render_table import render_table
 
 DOCUMENT_SCHEMA_VERSION = 1
@@ -67,12 +68,17 @@ def _read_values(report: dict, names: tuple[str, ...]) -> list[str]:
     return [field["value"] for field in report["fields"] if field["name"] in names]
 
 
+def _split_statistic(value: str) -> tuple[str, str]:
+    name, _, figure = value.rpartition(" ") if value.startswith(f"{ROUNDS_STATISTIC} ") else value.partition(" ")
+    return name, figure
+
+
 def _describe(report: dict, reported_instants: dict[tuple[str, str], str]) -> dict:
-    statistics = [value.partition(" ") for value in _read_values(report, (STATISTIC_FIELD,))]
+    statistics = [_split_statistic(value) for value in _read_values(report, (STATISTIC_FIELD,))]
     return {
         **{column: report[column] for column in HEADER},
         "subject": next(iter(_read_values(report, SUBJECT_FIELDS)), NO_SUBJECT),
-        "statistics": {name: value for name, _, value in statistics},
+        "statistics": dict(statistics),
         "verdict": next(iter(_read_values(report, (VERDICT_FIELD,))), NO_VERDICT),
         "counts": dict(Counter(field["name"] for field in report["fields"])),
         "reported_at": reported_instants.get((report["kind"], report["id"]), UNDATED),

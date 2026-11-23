@@ -276,6 +276,9 @@ class TickOnAnEmptyMachineTest(unittest.TestCase):
                     "kept_branches": [],
                 },
                 "decisions": [],
+                "tasks_not_launched": [],
+                "halted_waves": [],
+                "waves_not_started": [],
             },
         )
 
@@ -456,7 +459,14 @@ class TickTextTest(unittest.TestCase):
             ("a loop", {"mode": "loop", "ticks_attempted": 3}, "tick --loop: 3 ticks attempted"),
             (
                 "a dry run planning nothing",
-                {"mode": "dry-run", "snapshot": {"schema_version": 1, "now": "2026-10-07T09:00:00Z"}, "decisions": []},
+                {
+                    "mode": "dry-run",
+                    "snapshot": {"schema_version": 1, "now": "2026-10-07T09:00:00Z"},
+                    "decisions": [],
+                    "tasks_not_launched": [],
+                    "halted_waves": [],
+                    "waves_not_started": [],
+                },
                 "snapshot\n  now  2026-10-07T09:00:00Z\ndecisions\n  no action",
             ),
             (
@@ -475,6 +485,9 @@ class TickTextTest(unittest.TestCase):
                         "milestones": [],
                     },
                     "decisions": [],
+                    "tasks_not_launched": [],
+                    "halted_waves": [],
+                    "waves_not_started": [],
                 },
                 (
                     "snapshot\n  now  2026-10-07T09:00:00Z\n  waves  []\n  projects  []\n  studies  []"
@@ -484,8 +497,39 @@ class TickTextTest(unittest.TestCase):
             ),
             (
                 "a dry run planning an action",
-                {"mode": "dry-run", "snapshot": {}, "decisions": [{"wave": "tidepool_w16"}]},
+                {
+                    "mode": "dry-run",
+                    "snapshot": {},
+                    "decisions": [{"wave": "tidepool_w16"}],
+                    "tasks_not_launched": [],
+                    "halted_waves": [],
+                    "waves_not_started": [],
+                },
                 "snapshot\ndecisions\n  {'wave': 'tidepool_w16'}",
+            ),
+            (
+                "a dry run naming what waits",
+                {
+                    "mode": "dry-run",
+                    "snapshot": {},
+                    "decisions": [],
+                    "tasks_not_launched": [{"wave": "tidepool_w16", "task": "T8", "cause": "after T7"}],
+                    "halted_waves": [
+                        {
+                            "wave": "tidepool_w15",
+                            "halt": "wave tidepool_w15 blocked until 2026-10-19T13:00:00Z: quota",
+                        }
+                    ],
+                    "waves_not_started": [
+                        {"project": "tidepool", "milestone": "M4", "cause": "the branch of M4 is cut in this round"}
+                    ],
+                },
+                (
+                    "snapshot\ndecisions\n  no action"
+                    "\ntasks not launched\n  tidepool_w16 T8  after T7"
+                    "\nhalted waves\n  wave tidepool_w15 blocked until 2026-10-19T13:00:00Z: quota"
+                    "\nwaves not started\n  @PROJECT.tidepool M4  the branch of M4 is cut in this round"
+                ),
             ),
         ]
         for case, document, expected_text in rows:
@@ -3732,6 +3776,26 @@ class TickStartingAndCuttingWavesTest(unittest.TestCase):
         self.assertEqual(
             document["decisions"],
             [{"action": "CutMilestoneBranch", "project": "tidepool", "milestone": "M4", "branch": "integration/tides"}],
+        )
+
+    def test_should_name_no_candidate_wave_it_starts_on_a_dry_run(self):
+        # Arrange
+        write_ledger(self.root, [CUT_OF_M4])
+
+        # Act
+        document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), self.runtime)
+
+        # Assert
+        self.assertEqual(document["waves_not_started"], [])
+
+    def test_should_name_the_candidate_wave_it_starts_not_while_its_milestone_branch_is_cut_on_a_dry_run(self):
+        # Act
+        document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["waves_not_started"],
+            [{"project": "tidepool", "milestone": "M4", "cause": "the branch of M4 is cut in this round"}],
         )
 
     def test_should_name_on_stderr_the_milestone_whose_unrecorded_branch_it_refuses_to_cut(self):
@@ -7939,3 +8003,56 @@ class TickEndingATaskOfAProjectWithoutAForgeTest(unittest.TestCase):
                 )
             ],
         )
+
+
+PARKED_T7 = {
+    "schema_version": 1,
+    "ts": "2026-10-19T08:00:00Z",
+    "event": "task.parked",
+    "wave": "tidepool_w16",
+    "task": "T7",
+    "reason": "its run ended blocked",
+    "blockers": [],
+}
+PARKED_WAVE_LINE = "wave tidepool_w16 parked: forge_account; it waits for brigade wave resume tidepool_w16"
+
+
+class TickDryRunOfAParkedWaveTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "config" / "config.toml").write_text(CLIENT_AND_DOCUMENT_CONFIGURATION, encoding="utf-8")
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        corpus = {
+            "STUDY": PAUSED_BUILT_IN_STUDIES,
+            "PROJECT": {"tidepool": (("PATH", str(self.root / "tidepool")), ("MAIN", "main"))},
+            "TASK": {"T7": TASK_TO_DELIVER},
+            "MILESTONE": {"M4": MILESTONE_M4},
+        }
+        machine = ScriptedProcessRunner(MACHINE_ANSWERS, fallback=create_corpus_double(corpus))
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=machine.run,
+            spawn_process=SpawnRecorderDouble().spawn,
+            resolve_plugin=create_plugin_resolution(
+                TURN_COUNTING_PROBE, create_forge(NO_PULL_REQUEST, NO_DETAILS_ASKED)
+            ),
+        )
+        write_ledger(self.root, [CUT_OF_M4, WAVE_STARTED_ON_T7_AS_ITS_RUN_READ, PARKED_T7, PAUSED_ON_THE_FORGE_ACCOUNT])
+
+    def test_should_name_the_task_its_parked_wave_holds_on_a_dry_run(self):
+        # Act
+        document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["tasks_not_launched"],
+            [{"project": "tidepool", "wave": "tidepool_w16", "task": "T7", "cause": PARKED_WAVE_LINE}],
+        )
+
+    def test_should_print_the_halt_of_the_parked_wave_on_a_dry_run(self):
+        # Act
+        document = COMMAND.run(Namespace(log_file=None, mode="dry-run"), self.runtime)
+
+        # Assert
+        self.assertEqual(document["halted_waves"], [{"wave": "tidepool_w16", "halt": PARKED_WAVE_LINE}])

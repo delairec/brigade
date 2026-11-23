@@ -32,6 +32,7 @@
 - [Trails](Trails.md)
 - [Dashboard](Dashboard.md)
 - [Project tree at a ref](Project-tree-at-a-ref.md)
+- [Proof of M6](Proof-of-M6.md)
 
 **Contributing**
 

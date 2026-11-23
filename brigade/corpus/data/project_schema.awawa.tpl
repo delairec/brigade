@@ -56,6 +56,9 @@ SCHEMA TASK
 		DESC "the task that must merge before this one"
 	FIELD DELIVERED_BY uint
 		DESC "the number of the pull request that delivers it; absent on a project with no forge"
+	FIELD CORRECTS uint
+		REPEATABLE
+		DESC "the number of a pull request the task corrects; required on a fix by brigade build pr"
 	WHEN STATUS draft
 		GATE suppressed
 	WHEN STATUS todo

@@ -314,9 +314,30 @@ class AnswerDashboardRequestOfAViewTest(unittest.TestCase):
                 b'<div class="stat-tile"><span class="stat-value">0 of 0</span>'
                 b'<span class="stat-label">tasks merged</span>'
                 b'<span class="stat-perimeter">over the last 12 waves, 0 merged nothing</span></div></div>'
-                b"<p>no wave started</p>",
+                b'<nav class="chips"><a class="chip" href="#waves" aria-current="true">every state</a>'
+                b'<a class="chip" href="#waves?state=open">open</a><a class="chip" href="#waves?state=blocked">blocked</a>'
+                b'<a class="chip" href="#waves?state=parked">parked</a><a class="chip" href="#waves?state=ended">ended</a>'
+                b"</nav><p>no wave started</p>",
             ),
         )
+
+    def test_should_narrow_the_waves_view_to_the_state_its_address_asks(self):
+        # Arrange
+        parked_list = (*WAVE_LIST, "--state=parked")
+        runner = ScriptedProcessRunner(
+            {
+                parked_list: ProcessAnswer(stdout=NO_WAVE),
+                WAVE_LIST: ProcessAnswer(stdout=NO_WAVE),
+                LEDGER_OVERVIEW: ProcessAnswer(stdout=NO_WAVE_STARTED),
+            }
+        )
+
+        # Act
+        response = answer_get("/views/waves?state=parked", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertEqual(runner.argvs, [parked_list, LEDGER_OVERVIEW, WAVE_LIST])
+        self.assertIn(b'<a class="chip" href="#waves?state=parked" aria-current="true">parked</a>', response.body)
 
     def test_should_render_the_error_of_a_failing_command_under_its_status(self):
         # Arrange
@@ -389,15 +410,17 @@ HOME_SCHEDULER = (PYTHON, ENTRY_POINT, "scheduler", "status", "--json")
 HOME_LEDGER = (PYTHON, ENTRY_POINT, "ledger", "--since", "1d", "--json")
 HOME_INBOX = (PYTHON, ENTRY_POINT, "inbox", "list", "--json")
 NEXT_TICK = (PYTHON, ENTRY_POINT, "tick", "--dry-run", "--json")
+NO_TASK_WAITING = '{"schema_version": 1, "mode": "dry-run", "tasks_not_launched": []}\n'
 
 
-def create_home_runner(status: str) -> ScriptedProcessRunner:
+def create_home_runner(status: str, dry_run: str = NO_TASK_WAITING) -> ScriptedProcessRunner:
     return ScriptedProcessRunner(
         {
             HOME_STATUS: ProcessAnswer(stdout=status),
             HOME_SCHEDULER: ProcessAnswer(stdout=FRESH_SCHEDULER),
             HOME_LEDGER: ProcessAnswer(stdout=QUIET_DAY),
             HOME_INBOX: ProcessAnswer(stdout=EMPTY_INBOX),
+            NEXT_TICK: ProcessAnswer(stdout=dry_run),
         }
     )
 
@@ -405,7 +428,8 @@ def create_home_runner(status: str) -> ScriptedProcessRunner:
 WAVE_W4_SHOWN = (
     '{"schema_version": 1, "wave": "w4", "project": "oak", "branch": "integration/w4", "started_at":'
     ' "2026-10-19T07:00:00Z", "last_event": "task.parked", "pull_request": null, "milestone": "M4",'
-    ' "milestone_report": null, "tasks": [{"task": "B28", "state": "parked", "pull_request": 235, "run": "r28",'
+    ' "milestone_report": null, "halt": null, "tasks": [{"task": "B28", "state": "parked", "pull_request": 235,'
+    ' "run": "r28",'
     ' "reason": "blocked"}], "ledger": {"view": "wave", "wave": "w4", "first": "2026-10-19T07:00:00Z",'
     ' "last": "2026-10-19T07:00:00Z", "wall_time_ms": 0, "tasks": [], "cost_usd": null, "by_task": [],'
     ' "halts": [], "halted_ms": 0, "rounds_by_task": {}, "turns_by_task": {"B28": 12}, "events":'
@@ -415,7 +439,7 @@ OAK_ON_GITHUB = (
     '{"schema_version": 1, "project": {"name": "oak", "fields": [{"name": "FORGE", "value": "github"},'
     ' {"name": "REMOTE", "value": "acme/oak"}]}}\n'
 )
-WAVE_W4_EVENTS = (PYTHON, ENTRY_POINT, "wave", "show", "--json", "--events", "w4")
+WAVE_W4_PAGE = (PYTHON, ENTRY_POINT, "wave", "show", "--json", "--events", "--plan", "w4")
 OAK_SHOW = (PYTHON, ENTRY_POINT, "project", "show", "--json", "oak")
 
 
@@ -831,7 +855,7 @@ class AnswerDashboardRequestOfTheWaveViewTest(unittest.TestCase):
     def test_should_link_the_pull_requests_of_the_wave_on_the_forge_project_show_names(self):
         # Arrange
         runner = ScriptedProcessRunner(
-            {WAVE_W4_EVENTS: ProcessAnswer(stdout=WAVE_W4_SHOWN), OAK_SHOW: ProcessAnswer(stdout=OAK_ON_GITHUB)}
+            {WAVE_W4_PAGE: ProcessAnswer(stdout=WAVE_W4_SHOWN), OAK_SHOW: ProcessAnswer(stdout=OAK_ON_GITHUB)}
         )
 
         # Act
@@ -845,7 +869,7 @@ class AnswerDashboardRequestOfTheWaveViewTest(unittest.TestCase):
         # Arrange
         runner = ScriptedProcessRunner(
             {
-                WAVE_W4_EVENTS: ProcessAnswer(stdout=WAVE_W4_SHOWN),
+                WAVE_W4_PAGE: ProcessAnswer(stdout=WAVE_W4_SHOWN),
                 OAK_SHOW: ProcessAnswer(exit_code=1, stderr="brigade project show: @PROJECT.oak is not registered\n"),
             }
         )
@@ -1157,6 +1181,27 @@ class AnswerDashboardRequestOfAViewOfOneProjectTest(unittest.TestCase):
         self.assertNotIn(b"elm", response.body)
         self.assertIn(b"blocking oak_w2", response.body)
 
+    def test_should_leave_out_of_home_the_tasks_waiting_in_the_waves_of_the_others(self):
+        # Arrange
+        dry_run = json.dumps(
+            {
+                "schema_version": 1,
+                "mode": "dry-run",
+                "tasks_not_launched": [
+                    {"project": "oak", "wave": "oak_w2", "task": "O4", "cause": "after O3"},
+                    {"project": "elm", "wave": "elm_w1", "task": "E3", "cause": "after E2"},
+                ],
+            }
+        )
+        runner = create_home_runner(HOME, dry_run)
+
+        # Act
+        response = answer_get("/views/status?project=oak", create_test_runtime(run_process=runner.run))
+
+        # Assert
+        self.assertIn(b"O4: after O3", response.body)
+        self.assertNotIn(b"E3", response.body)
+
     def test_should_render_the_rows_of_that_project_alone(self):
         # Arrange
         oak_wave = {
@@ -1164,6 +1209,7 @@ class AnswerDashboardRequestOfAViewOfOneProjectTest(unittest.TestCase):
             "project": "oak",
             "branch": "integration/w4",
             "last_event": "wave.started",
+            "state": "open",
             "tasks": 0,
             "started_at": "2026-11-02T08:00:00Z",
             "ended_at": None,

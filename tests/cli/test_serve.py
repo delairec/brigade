@@ -15,11 +15,29 @@ from tests.cli.wave_tick_test_case import WaveTickTestCase
 from tests.process_launcher import ProcessLauncher
 
 STOP_WAIT_S = 20.0
+SHOP_W1_PARKED = (
+    '{"schema_version": 1, "ts": "2026-10-13T11:00:00Z", "event": "wave.parked", "wave": "shop_w1",'
+    ' "reason": "forge_account"}\n'
+)
 PARKED_WAVE = (
     '{"schema_version": 2, "ts": "2026-11-18T09:00:00Z", "event": "wave.started", "wave": "shop_w1",'
     ' "project": "shop", "branch": "integration/M1-empty-cart", "tasks": ["S3"]}\n'
     '{"schema_version": 1, "ts": "2026-11-18T10:00:00Z", "event": "wave.parked", "wave": "shop_w1",'
     ' "reason": "forge_account"}\n'
+)
+CAP_CHANGED_LEDGER = (
+    '{"schema_version": 3, "ts": "2026-11-18T09:00:00Z", "event": "run.finished", "run": "20261118T083000Z-0a1b2c",'
+    ' "segment": 1, "procedure": "build-task", "slot": "build", "role": "ada", "client": "fake", "project": null,'
+    ' "session": null, "main_turns": 42, "total_turns": 42, "duration_ms": 900000, "usage": null, "outcome": "done",'
+    ' "error_class": null, "exit": 0, "wave": null, "task": null, "nulls": {"usage": "the client reported no usage"},'
+    ' "cost_usd": null, "shipped_budget": 75}\n'
+    '{"schema_version": 3, "ts": "2026-11-18T09:10:00Z", "event": "run.finished", "run": "20261118T084000Z-3d4e5f",'
+    ' "segment": 1, "procedure": "review", "slot": "verify", "role": "prudence", "client": "fake", "project": null,'
+    ' "session": null, "main_turns": 20, "total_turns": 20, "duration_ms": 600000, "usage": null, "outcome": "done",'
+    ' "error_class": null, "exit": 0, "wave": null, "task": null, "nulls": {"usage": "the client reported no usage"},'
+    ' "cost_usd": null, "shipped_budget": 40}\n'
+    '{"schema_version": 1, "ts": "2026-11-18T09:20:00Z", "event": "budget.applied", "role": "ada", "before": 75,'
+    ' "after": 90, "segments": 6, "restarts": 3, "growth": 2500.0, "restart_tokens": 40500.0}\n'
 )
 RUN_ID = "20261118T101500Z-a1b2c3"
 RUN_RECORD = {
@@ -37,7 +55,7 @@ RUN_RECORD = {
     "capabilities": ["read"],
     "budget": 40,
     "wall_limit_s": 1500.0,
-    "arguments": {},
+    "arguments": {"pr": "56"},
     "wave": None,
     "task": None,
     "brief": None,
@@ -84,6 +102,10 @@ PARKED_WAVE_LEDGER = (
     ' "project": "oak", "branch": "integration/oak_w4", "tasks": ["B4"]}\n'
     '{"schema_version": 1, "ts": "2026-11-02T09:00:00Z", "event": "wave.parked", "wave": "oak_w4",'
     ' "reason": "forge_account"}\n'
+)
+OPEN_WAVE_LEDGER = (
+    '{"schema_version": 2, "ts": "2026-11-02T10:00:00Z", "event": "wave.started", "wave": "oak_w5",'
+    ' "project": "oak", "branch": "integration/oak_w5", "tasks": ["B5"]}\n'
 )
 REPORT_OF_M13 = (
     "REPORT brigade_M13\n"
@@ -204,6 +226,22 @@ class BrigadeServeTest(unittest.TestCase):
             body,
         )
 
+    def test_should_answer_the_parked_waves_alone_in_the_waves_view_of_the_state_parked(self):
+        # Arrange
+        ledger = self.machine.state_home / "brigade" / "ledger" / "2026-11.jsonl"
+        ledger.parent.mkdir(parents=True, exist_ok=True)
+        ledger.write_text(PARKED_WAVE_LEDGER + OPEN_WAVE_LEDGER)
+        url = self.start_serving().stdout.readline().strip()
+
+        # Act
+        status, body = fetch(url, "/views/waves?state=parked")
+
+        # Assert
+        self.assertEqual(status, 200)
+        self.assertIn('<p class="status-sentence">Waves open: 2, parked: 1, blocked: 0.</p>', body)
+        self.assertIn('<a href="#waves/oak_w4">oak_w4</a>', body)
+        self.assertNotIn("oak_w5", body)
+
     def test_should_answer_the_ledger_view_with_its_callout_and_the_table_of_the_caps(self):
         # Arrange
         url = self.start_serving().stdout.readline().strip()
@@ -215,6 +253,32 @@ class BrigadeServeTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn('<div class="callout tone-faint"><p>The measures cover 0 runs finished in an empty ledger;', body)
         self.assertIn("<h3>Turn cap by role</h3>", body)
+
+    def test_should_answer_the_ledger_view_with_the_cap_history_of_each_role(self):
+        # Arrange
+        ledger = self.machine.state_home / "brigade" / "ledger" / "2026-11.jsonl"
+        ledger.parent.mkdir(parents=True, exist_ok=True)
+        ledger.write_text(CAP_CHANGED_LEDGER)
+        url = self.start_serving().stdout.readline().strip()
+
+        # Act
+        status, body = fetch(url, "/views/ledger")
+
+        # Assert
+        self.assertEqual(status, 200)
+        self.assertIn(
+            '<svg class="cap-history" viewBox="0 0 400 78" role="img" aria-label="turn cap of ada">'
+            '<text class="cap-role" x="0" y="12">ada</text>',
+            body,
+        )
+        self.assertIn('<text class="cap-label" x="0" y="74">raised at 2026-11-18T09:20:00Z: 75 to 90</text>', body)
+        self.assertIn(
+            '<svg class="cap-history" viewBox="0 0 400 78" role="img" aria-label="turn cap of prudence">'
+            '<text class="cap-role" x="0" y="12">prudence</text>'
+            '<path class="step-path tone-work" d="M0 20 H400"></path>'
+            '<text class="cap-label" x="0" y="74">stable at 40</text></svg>',
+            body,
+        )
 
     def write_finished_run(self) -> None:
         run_directory = self.machine.state_home / "brigade" / "runs" / RUN_ID
@@ -234,6 +298,23 @@ class BrigadeServeTest(unittest.TestCase):
         # Assert
         self.assertEqual(status, 200)
         self.assertIn('<aside class="explainer"><p class="explainer-what">A run is one procedure', body)
+
+    def test_should_answer_the_runs_view_with_the_strip_and_the_arguments_of_a_run(self):
+        # Arrange
+        self.write_finished_run()
+        url = self.start_serving().stdout.readline().strip()
+
+        # Act
+        status, body = fetch(url, "/views/runs")
+
+        # Assert
+        self.assertEqual(status, 200)
+        self.assertIn(
+            '<td><span class="segment-squares" role="img" aria-label="segments: done">'
+            '<span class="segment-square tone-done" title="done"></span></span></td>'
+            "<td>5m00s</td><td>$0.50</td><td>pr=56</td>",
+            body,
+        )
 
     def test_should_answer_the_page_of_a_run_with_its_segments(self):
         # Arrange
@@ -400,8 +481,7 @@ class BrigadeServeWithoutAProjectHoldingACorpusTest(BrigadeServeTestCase):
 
 
 class BrigadeServeOfAWaveTest(WaveTickTestCase):
-    def test_should_answer_the_page_of_a_wave_with_its_sentence_its_tiles_and_its_events_folded(self):
-        # Arrange
+    def start_serving(self) -> str:
         process = ProcessLauncher.start(
             [sys.executable, str(CLONE_ENTRY_POINT), "serve", "--port", "0"],
             stdout=subprocess.PIPE,
@@ -411,7 +491,28 @@ class BrigadeServeOfAWaveTest(WaveTickTestCase):
         )
         self.addCleanup(process.communicate, timeout=STOP_WAIT_S)
         self.addCleanup(process.terminate)
-        url = process.stdout.readline().strip()
+        return process.stdout.readline().strip()
+
+    def test_should_answer_the_callout_of_a_parked_wave_on_its_page(self):
+        # Arrange
+        ledger = self.state / "ledger" / "2026-10.jsonl"
+        ledger.write_text(ledger.read_text() + SHOP_W1_PARKED)
+        url = self.start_serving()
+
+        # Act
+        status, body = fetch(url, "/views/waves/shop_w1")
+
+        # Assert
+        self.assertEqual(status, 200, body)
+        self.assertIn(
+            '<div class="callout tone-you"><p>wave shop_w1 parked: forge_account;'
+            " it waits for brigade wave resume shop_w1</p></div>",
+            body,
+        )
+
+    def test_should_answer_the_page_of_a_wave_with_its_sentence_its_tiles_and_its_events_folded(self):
+        # Arrange
+        url = self.start_serving()
 
         # Act
         status, body = fetch(url, "/views/waves/shop_w1")

@@ -1,14 +1,19 @@
+import argparse
+import contextlib
+import io
 import tempfile
 import unittest
 from argparse import Namespace
 from pathlib import Path
 
+from brigade.add_command_parsers import add_command_parsers
 from brigade.commands.wave_list import COMMAND
 from tests.unit.commands.command_runtime import write_ledger
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
 EVERY_PROJECT = None
+EVERY_STATE = None
 TIDES_STARTED = {
     "schema_version": 2,
     "ts": "2026-09-30T22:00:00Z",
@@ -38,6 +43,7 @@ TIDES_ROW = {
     "project": "tidepool",
     "branch": "integration/tidepool_w16",
     "last_event": "wave.cancelled",
+    "state": "ended",
     "tasks": 2,
     "started_at": "2026-09-30T22:00:00Z",
     "ended_at": "2026-10-01T22:00:00Z",
@@ -52,6 +58,7 @@ GAUGES_ROW = {
     "project": "gauges",
     "branch": "integration/gauges_w1",
     "last_event": "wave.started",
+    "state": "open",
     "tasks": 1,
     "started_at": "2026-10-02T22:00:00Z",
     "ended_at": None,
@@ -102,7 +109,7 @@ def list_oak_wave(test: unittest.TestCase, events: list[dict]) -> dict:
     root = Path(test.enterContext(tempfile.TemporaryDirectory()))
     write_ledger(root, [OAK_STARTED, *events])
     runtime = create_test_runtime(create_test_paths(root))
-    return COMMAND.run(Namespace(project=EVERY_PROJECT), runtime)["waves"][0]
+    return COMMAND.run(Namespace(project=EVERY_PROJECT, state=EVERY_STATE), runtime)["waves"][0]
 
 
 class WaveListTextTest(unittest.TestCase):
@@ -116,9 +123,9 @@ class WaveListTextTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             text,
-            "wave          project   branch                    last event      tasks\n"
-            "gauges_w1     gauges    integration/gauges_w1     wave.started    1\n"
-            "tidepool_w16  tidepool  integration/tidepool_w16  wave.cancelled  2",
+            "wave          project   branch                    state  last event      tasks\n"
+            "gauges_w1     gauges    integration/gauges_w1     open   wave.started    1\n"
+            "tidepool_w16  tidepool  integration/tidepool_w16  ended  wave.cancelled  2",
         )
 
 
@@ -134,7 +141,7 @@ class WaveListExitCodeTest(unittest.TestCase):
 class WaveListRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = Namespace(project=None)
+        options = Namespace(project=None, state=None)
 
         # Act
         request = COMMAND.read_request(options)
@@ -156,7 +163,7 @@ class WaveListOfTheLedgerTest(unittest.TestCase):
         for case, project, expected_waves in rows:
             with self.subTest(case=case):
                 # Act
-                document = COMMAND.run(Namespace(project=project), runtime)
+                document = COMMAND.run(Namespace(project=project, state=EVERY_STATE), runtime)
 
                 # Assert
                 self.assertEqual(document, {"schema_version": 1, "waves": expected_waves})
@@ -167,7 +174,7 @@ class WaveListOfTheLedgerTest(unittest.TestCase):
         runtime = create_test_runtime(create_test_paths(root))
 
         # Act
-        document = COMMAND.run(Namespace(project=EVERY_PROJECT), runtime)
+        document = COMMAND.run(Namespace(project=EVERY_PROJECT, state=EVERY_STATE), runtime)
 
         # Assert
         self.assertEqual(document, {"schema_version": 1, "waves": []})
@@ -248,3 +255,150 @@ class WaveListOfTheDetailsOfAWaveTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(wave["cost_usd"], 1.75)
+
+    def test_should_derive_the_state_of_a_wave_from_its_events(self):
+        # Arrange
+        parked = oak_event("wave.parked", "2026-10-03T09:00:00Z", reason="forge_account")
+        blocked = oak_event("wave.blocked", "2026-10-03T09:30:00Z", reason="quota", resume_at="2026-10-03T14:00:00Z")
+        resumed = oak_event("wave.resumed", "2026-10-03T10:00:00Z", reason="user")
+        closed = oak_event("wave.closed", "2026-10-03T11:00:00Z")
+        cancelled = oak_event("wave.cancelled", "2026-10-03T11:00:00Z", reason="user")
+        rows = [
+            ("open", [], "open"),
+            ("blocked", [blocked], "blocked"),
+            ("parked", [parked], "parked"),
+            ("blocked after its park", [parked, blocked], "blocked"),
+            ("resumed", [parked, resumed], "open"),
+            ("closed", [closed], "ended"),
+            ("cancelled while parked", [parked, cancelled], "ended"),
+        ]
+        for case, events, expected_state in rows:
+            with self.subTest(case=case):
+                # Act
+                wave = list_oak_wave(self, events)
+
+                # Assert
+                self.assertEqual(wave["state"], expected_state)
+
+
+OPEN_ELM_STARTED = {**OAK_STARTED, "wave": "elm_w1", "project": "elm", "branch": "integration/elm_w1", "tasks": ["E1"]}
+PARKED_ELM_STARTED = {**OPEN_ELM_STARTED, "wave": "elm_w2", "branch": "integration/elm_w2"}
+PARKED_ELM = {
+    "schema_version": 1,
+    "ts": "2026-10-03T09:00:00Z",
+    "event": "wave.parked",
+    "wave": "elm_w2",
+    "reason": "quota",
+}
+STATED_WAVES = [
+    OPEN_ELM_STARTED,
+    PARKED_ELM_STARTED,
+    PARKED_ELM,
+    OAK_STARTED,
+    oak_event("wave.parked", "2026-10-03T09:00:00Z", reason="forge_account"),
+    GAUGES_STARTED,
+    {
+        **oak_event("wave.blocked", "2026-10-03T09:00:00Z", reason="quota", resume_at="2026-10-03T14:00:00Z"),
+        "wave": "gauges_w1",
+    },
+    TIDES_STARTED,
+    TIDES_CANCELLED,
+]
+OPEN_ELM_ROW = {
+    "wave": "elm_w1",
+    "project": "elm",
+    "branch": "integration/elm_w1",
+    "last_event": "wave.started",
+    "state": "open",
+    "tasks": 1,
+    "started_at": "2026-10-03T08:00:00Z",
+    "ended_at": None,
+    "ended_by": None,
+    "task_states": [{"task": "E1", "state": None}],
+    "halt": None,
+    "rounds": 0,
+    "cost_usd": None,
+}
+PARKED_ELM_ROW = {
+    "wave": "elm_w2",
+    "project": "elm",
+    "branch": "integration/elm_w2",
+    "last_event": "wave.parked",
+    "state": "parked",
+    "tasks": 1,
+    "started_at": "2026-10-03T08:00:00Z",
+    "ended_at": None,
+    "ended_by": None,
+    "task_states": [{"task": "E1", "state": None}],
+    "halt": {"reason": "quota", "resume_at": None},
+    "rounds": 0,
+    "cost_usd": None,
+}
+PARKED_OAK_ROW = {
+    "wave": "oak_w2",
+    "project": "oak",
+    "branch": "integration/oak_w2",
+    "last_event": "wave.parked",
+    "state": "parked",
+    "tasks": 2,
+    "started_at": "2026-10-03T08:00:00Z",
+    "ended_at": None,
+    "ended_by": None,
+    "task_states": [{"task": "B17", "state": None}, {"task": "B21", "state": None}],
+    "halt": {"reason": "forge_account", "resume_at": None},
+    "rounds": 0,
+    "cost_usd": None,
+}
+BLOCKED_GAUGES_ROW = {
+    "wave": "gauges_w1",
+    "project": "gauges",
+    "branch": "integration/gauges_w1",
+    "last_event": "wave.blocked",
+    "state": "blocked",
+    "tasks": 1,
+    "started_at": "2026-10-02T22:00:00Z",
+    "ended_at": None,
+    "ended_by": None,
+    "task_states": [{"task": "G1", "state": None}],
+    "halt": {"reason": "quota", "resume_at": "2026-10-03T14:00:00Z"},
+    "rounds": 0,
+    "cost_usd": None,
+}
+
+
+class WaveListOfAStateTest(unittest.TestCase):
+    def test_should_keep_the_waves_in_the_state_asked_alone_or_of_the_project_asked(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_ledger(root, STATED_WAVES)
+        runtime = create_test_runtime(create_test_paths(root))
+        rows = [
+            ("open", EVERY_PROJECT, "open", [OPEN_ELM_ROW]),
+            ("blocked", EVERY_PROJECT, "blocked", [BLOCKED_GAUGES_ROW]),
+            ("parked", EVERY_PROJECT, "parked", [PARKED_ELM_ROW, PARKED_OAK_ROW]),
+            ("ended", EVERY_PROJECT, "ended", [TIDES_ROW]),
+            ("parked of one project", "oak", "parked", [PARKED_OAK_ROW]),
+            ("open of a project holding none", "oak", "open", []),
+        ]
+        for case, project, state, expected_waves in rows:
+            with self.subTest(case=case):
+                # Act
+                document = COMMAND.run(Namespace(project=project, state=state), runtime)
+
+                # Assert
+                self.assertEqual(document, {"schema_version": 1, "waves": expected_waves})
+
+    def test_should_refuse_a_state_other_than_the_four_as_a_usage_error(self):
+        # Arrange
+        parser = argparse.ArgumentParser(prog="brigade")
+        add_command_parsers(parser, (COMMAND,), argparse.ArgumentParser(add_help=False))
+        errors = io.StringIO()
+
+        # Act
+        with self.assertRaises(SystemExit) as refusal, contextlib.redirect_stderr(errors):
+            parser.parse_args(["wave", "list", "--state", "running"])
+
+        # Assert
+        self.assertEqual(refusal.exception.code, 2)
+        self.assertIn("[--state {open,blocked,parked,ended}]", errors.getvalue())
+        self.assertIn("argument --state: invalid choice: 'running'", errors.getvalue())

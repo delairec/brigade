@@ -35,6 +35,10 @@ def _keep_no_trace(trace) -> None:
     pass
 
 
+def _read_no_worktree_state(worktree: Path, progress_file: Path) -> None:
+    return None
+
+
 def _answer_from_no_terminal(question: str) -> None:
     return None
 
@@ -52,6 +56,7 @@ def create_test_runtime(
     read_ledger=read_the_ledger,
     read_live_blockers=read_the_live_blockers,
     ask_on_terminal=_answer_from_no_terminal,
+    read_worktree_state=_read_no_worktree_state,
 ) -> Runtime:
     return Runtime(
         run_process=run_process,
@@ -69,4 +74,5 @@ def create_test_runtime(
         read_ledger=read_ledger,
         read_live_blockers=read_live_blockers,
         ask_on_terminal=ask_on_terminal,
+        read_worktree_state=read_worktree_state,
     )

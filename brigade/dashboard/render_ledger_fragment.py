@@ -5,6 +5,7 @@ from urllib.parse import quote
 from brigade.dashboard.render_answer import render_answer
 from brigade.dashboard.render_callout import render_callout
 from brigade.dashboard.render_cap_bar import CapBar, render_cap_bar
+from brigade.dashboard.render_cap_history import render_cap_history
 from brigade.dashboard.render_html_table import render_html_table
 from brigade.dashboard.render_stat_tile import StatTile, render_stat_tile
 from brigade.dashboard.render_svg_bar import SvgBar, render_svg_bar
@@ -88,10 +89,12 @@ def _render_caps(document: dict) -> str:
     by_overshoot = sorted(document["roles"].items(), key=lambda item: _measure_overshoot(item[1]), reverse=True)
     fits = [_render_cap_fit(role, budget) for role, budget in by_overshoot]
     roles = [_render_role_budget(role, budget) for role, budget in document["roles"].items()]
+    histories = "".join(render_cap_history(role, budget) for role, budget in document["roles"].items())
     return (
         render_html_table(CAPS_HEADER, fits, "no role measured")
         + "<h3>Turn cap by role</h3>"
         + render_html_table(ROLE_BUDGET_HEADER, roles, "no role measured")
+        + histories
     )
 
 

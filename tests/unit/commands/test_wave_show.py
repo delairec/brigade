@@ -1,3 +1,4 @@
+import os
 import tempfile
 import unittest
 from argparse import Namespace
@@ -5,8 +6,9 @@ from pathlib import Path
 
 from brigade.commands.wave_show import COMMAND
 from brigade.errors import BrigadeError
+from brigade.runs.record_run_pid import record_run_pid
 from tests.unit.commands.command_runtime import create_machine_double, write_ledger, write_operational_corpus
-from tests.unit.commands.run_directories import create_run_result
+from tests.unit.commands.run_directories import create_run_record, create_run_result, write_run
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 
@@ -55,6 +57,28 @@ T8_PARKED = {
     "blockers": ["OPEN_QUESTION.Undecided"],
 }
 
+WAVE_BLOCKED = {
+    "schema_version": 1,
+    "ts": "2026-10-02T08:00:00Z",
+    "event": "wave.blocked",
+    "wave": "tidepool_w16",
+    "reason": "quota",
+    "resume_at": "2026-10-02T13:00:00Z",
+}
+WAVE_PARKED = {
+    "schema_version": 1,
+    "ts": "2026-10-02T08:30:00Z",
+    "event": "wave.parked",
+    "wave": "tidepool_w16",
+    "reason": "forge_account",
+}
+WAVE_RESUMED = {
+    "schema_version": 1,
+    "ts": "2026-10-02T08:40:00Z",
+    "event": "wave.resumed",
+    "wave": "tidepool_w16",
+    "reason": "forge_account",
+}
 WAVE_PR_OPENED = {
     "schema_version": 1,
     "ts": "2026-10-02T09:00:00Z",
@@ -78,6 +102,7 @@ class WaveShowTextTest(unittest.TestCase):
             "merge_command": None,
             "task_merge_commands": [],
             "pull_request": 77,
+            "halt": None,
             "tasks": [
                 {"task": "T7", "state": "pr_open", "pull_request": 42, "run": "20261001T090000Z-a1", "reason": None},
                 {
@@ -116,7 +141,7 @@ class WaveShowExitCodeTest(unittest.TestCase):
 class WaveShowRequestTest(unittest.TestCase):
     def test_should_take_the_options_as_the_request(self):
         # Arrange
-        options = Namespace(wave="tidepool_w16", events=False)
+        options = Namespace(wave="tidepool_w16", events=False, plan=False)
 
         # Act
         request = COMMAND.read_request(options)
@@ -125,17 +150,29 @@ class WaveShowRequestTest(unittest.TestCase):
         self.assertIs(request, options)
 
 
+def read_no_live_blocker(run_process, root: Path, task: str) -> tuple[str, ...]:
+    return ()
+
+
 class WaveShowOfTheLedgerTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        self.runtime = create_test_runtime(create_test_paths(self.root))
+        write_operational_corpus(self.root)
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_machine_double(
+                CORPUS_OF_TWO_INDEPENDENT_TASKS, {**MACHINE_OUTPUTS, **NOTHING_IMPLEMENTED}
+            ),
+            read_live_blockers=read_no_live_blocker,
+        )
 
     def test_should_show_each_task_with_its_last_state_its_pull_request_and_its_run(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, T7_RUNNING, T7_PR_OPENED, T7_RUN_FINISHED, T7_PR_OPEN])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False), self.runtime)
+        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -150,6 +187,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
                 "pull_request": None,
                 "merge_command": None,
                 "task_merge_commands": [],
+                "halt": None,
                 "tasks": [
                     {
                         "task": "T7",
@@ -163,12 +201,56 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
             },
         )
 
+    def test_should_carry_the_halt_of_a_wave_blocked_or_parked_since_its_last_resume(self):
+        for case, events, expected in [
+            (
+                "blocked",
+                [WAVE_STARTED, WAVE_PARKED, WAVE_RESUMED, WAVE_BLOCKED],
+                {"reason": "quota", "resume_at": "2026-10-02T13:00:00Z"},
+            ),
+            ("parked", [WAVE_STARTED, WAVE_BLOCKED, WAVE_PARKED], {"reason": "forge_account", "resume_at": None}),
+            ("resumed", [WAVE_STARTED, WAVE_PARKED, WAVE_RESUMED], None),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                write_ledger(self.root, events)
+
+                # Act
+                document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), self.runtime)
+
+                # Assert
+                self.assertEqual(document["halt"], expected)
+
+    def test_should_print_the_line_of_a_halted_wave(self):
+        for case, events, expected_line in [
+            (
+                "blocked",
+                [WAVE_STARTED, WAVE_BLOCKED],
+                "wave tidepool_w16 blocked until 2026-10-02T13:00:00Z: quota",
+            ),
+            (
+                "parked",
+                [WAVE_STARTED, WAVE_PARKED],
+                "wave tidepool_w16 parked: forge_account; it waits for brigade wave resume tidepool_w16",
+            ),
+        ]:
+            with self.subTest(case=case):
+                # Arrange
+                write_ledger(self.root, events)
+                document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), self.runtime)
+
+                # Act
+                text = COMMAND.render_text(document)
+
+                # Assert
+                self.assertEqual(text.splitlines()[1], expected_line)
+
     def test_should_show_the_integration_pull_request_the_tick_opened(self):
         # Arrange
         write_ledger(self.root, [WAVE_STARTED, T7_PR_OPEN, WAVE_PR_OPENED])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False), self.runtime)
+        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), self.runtime)
 
         # Assert
         self.assertEqual(document["pull_request"], 77)
@@ -178,7 +260,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T8_QUEUED, T8_PARKED])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False), self.runtime)
+        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -189,13 +271,13 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
             ],
         )
 
-    def test_should_show_no_reason_for_a_task_queued_again_after_its_park(self):
+    def test_should_name_no_cause_for_a_queued_task_of_a_closed_wave(self):
         # Arrange
-        requeued = {**T8_QUEUED, "ts": "2026-10-01T11:00:00Z"}
-        write_ledger(self.root, [WAVE_STARTED, T8_QUEUED, T8_PARKED, requeued])
+        closed = {"schema_version": 1, "ts": "2026-10-03T09:00:00Z", "event": "wave.closed", "wave": "tidepool_w16"}
+        write_ledger(self.root, [WAVE_STARTED, T8_QUEUED, closed])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False), self.runtime)
+        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -212,7 +294,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T7_PR_OPEN, rebuilt])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False), self.runtime)
+        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -232,7 +314,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
         write_ledger(self.root, [WAVE_STARTED, T7_PR_OPEN, requeued])
 
         # Act
-        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False), self.runtime)
+        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), self.runtime)
 
         # Assert
         self.assertEqual(
@@ -245,7 +327,7 @@ class WaveShowOfTheLedgerTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            COMMAND.run(Namespace(wave="tidepool_w17", events=False), self.runtime)
+            COMMAND.run(Namespace(wave="tidepool_w17", events=False, plan=False), self.runtime)
 
         # Assert
         self.assertEqual(str(raised.exception), "no wave.started names the wave tidepool_w17")
@@ -358,12 +440,14 @@ class WaveShowOfAProjectWithoutAForgeTest(unittest.TestCase):
         write_operational_corpus(self.root)
         (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
         self.runtime = create_test_runtime(
-            create_test_paths(self.root), run_process=create_machine_double(CORPUS, MACHINE_OUTPUTS)
+            create_test_paths(self.root),
+            run_process=create_machine_double(CORPUS, MACHINE_OUTPUTS),
+            read_live_blockers=read_no_live_blocker,
         )
 
     def _show(self, events: list[dict]) -> dict:
         write_ledger(self.root, events)
-        return COMMAND.run(Namespace(wave="tidepool_w16", events=False, json=True), self.runtime)
+        return COMMAND.run(Namespace(wave="tidepool_w16", events=False, json=True, plan=False), self.runtime)
 
     def test_should_print_the_command_merging_the_milestone_of_the_wave_once_its_report_is_committed(self):
         # Act
@@ -380,6 +464,7 @@ class WaveShowOfAProjectWithoutAForgeTest(unittest.TestCase):
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double(CORPUS_WITH_A_TASK_OF_ANOTHER_MILESTONE, MACHINE_OUTPUTS),
+            read_live_blockers=read_no_live_blocker,
         )
 
         # Act
@@ -483,6 +568,7 @@ class WaveShowOfAProjectWithoutAForgeTest(unittest.TestCase):
         self.runtime = create_test_runtime(
             create_test_paths(self.root),
             run_process=create_machine_double(CORPUS_OF_A_TASK_OF_NO_MILESTONE, MACHINE_OUTPUTS),
+            read_live_blockers=read_no_live_blocker,
         )
 
         # Act
@@ -542,11 +628,13 @@ class WaveShowOfAProjectOnAForgeTest(unittest.TestCase):
             self.argvs.append(request.argv)
             return run_machine(request)
 
-        self.runtime = create_test_runtime(create_test_paths(self.root), run_process=run_process)
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root), run_process=run_process, read_live_blockers=read_no_live_blocker
+        )
 
     def _show_as_json(self) -> dict:
         write_ledger(self.root, [CUT, FORGELESS_WAVE_STARTED])
-        return COMMAND.run(Namespace(wave="tidepool_w16", events=False, json=True), self.runtime)
+        return COMMAND.run(Namespace(wave="tidepool_w16", events=False, json=True, plan=False), self.runtime)
 
     def test_should_name_the_milestone_of_the_wave_its_tasks_name_on_the_forge(self):
         # Act
@@ -568,3 +656,560 @@ class WaveShowOfAProjectOnAForgeTest(unittest.TestCase):
 
         # Assert
         self.assertNotIn(MILESTONE_FETCH, self.argvs)
+
+
+QUEUED_WAVE_STARTED = {**FORGELESS_WAVE_STARTED, "tasks": ["T7", "T8"]}
+T8_WAITING = {
+    "schema_version": 1,
+    "ts": "2026-10-18T09:10:00Z",
+    "event": "task.state",
+    "wave": "tidepool_w16",
+    "task": "T8",
+    "state": "queued",
+}
+T8_PARKED_ON_ITS_RUN = {
+    "schema_version": 1,
+    "ts": "2026-10-18T09:20:00Z",
+    "event": "task.parked",
+    "wave": "tidepool_w16",
+    "task": "T8",
+    "reason": "run r1 blocked: Which tide?",
+    "blockers": [],
+}
+T8_WAITING_AGAIN = {**T8_WAITING, "ts": "2026-10-18T09:30:00Z"}
+QUEUED_WAVE_BLOCKED = {
+    "schema_version": 1,
+    "ts": "2026-10-18T09:40:00Z",
+    "event": "wave.blocked",
+    "wave": "tidepool_w16",
+    "reason": "quota",
+    "resume_at": "2026-10-18T13:00:00Z",
+}
+TIDE_TABLE = (("TITLE", "Tide table"), ("TYPE", "feat"), ("MILESTONE", "@MILESTONE.M4"))
+TIDE_CLOCK = (("TITLE", "Tide clock"), ("TYPE", "feat"), ("MILESTONE", "@MILESTONE.M4"))
+TIDE_ALMANAC = (("TITLE", "Tide almanac"), ("TYPE", "feat"), ("MILESTONE", "@MILESTONE.M4"))
+T7_RUNNING_IN_THE_ROUND = {**T8_WAITING, "ts": "2026-10-18T09:01:00Z", "task": "T7", "state": "running"}
+CORPUS_OF_A_TASK_AFTER_ANOTHER = {
+    **CORPUS,
+    "TASK": {"T7": TIDE_TABLE, "T8": (*TIDE_CLOCK, ("AFTER", "@TASK.T7"))},
+}
+CORPUS_OF_TWO_INDEPENDENT_TASKS = {**CORPUS, "TASK": {"T7": TIDE_TABLE, "T8": TIDE_CLOCK}}
+CORPUS_OF_ONE_BUILD_SLOT = {
+    **CORPUS_OF_TWO_INDEPENDENT_TASKS,
+    "PROJECT": {"tidepool": (("PATH", REPOSITORY), ("MAIN", "main"), ("FORGE", "none"), ("SLOTS", "1"))},
+}
+CORPUS_OF_TWO_BUILD_SLOTS = {
+    **CORPUS_OF_TWO_INDEPENDENT_TASKS,
+    "PROJECT": {"tidepool": (("PATH", REPOSITORY), ("MAIN", "main"), ("FORGE", "none"), ("SLOTS", "2"))},
+}
+CORPUS_OF_AN_EARLIER_TASK = {
+    **CORPUS_OF_ONE_BUILD_SLOT,
+    "TASK": {**CORPUS_OF_ONE_BUILD_SLOT["TASK"], "T5": TIDE_ALMANAC},
+}
+EARLIER_WAVE_STARTED = {**FORGELESS_WAVE_STARTED, "ts": "2026-10-18T08:30:00Z", "wave": "tidepool_w15", "tasks": ["T5"]}
+T5_RUNNING = {**T8_WAITING, "ts": "2026-10-18T08:35:00Z", "wave": "tidepool_w15", "task": "T5", "state": "running"}
+T5_STOPPED_BY_LOGIN = {
+    **create_run_result("20261018T083500Z-a1b2c3", "error", "2026-10-18T08:50:00Z"),
+    "error_class": "authentication",
+    "wave": "tidepool_w15",
+    "task": "T5",
+}
+BUILD_RUN_AFTER_THE_REBASE = "20261018T090000Z-d4e5f6"
+NOTHING_IMPLEMENTED = {
+    ("awawa", "status", "TASK", "--where", "STATUS==implemented"): '{"entities": []}',
+}
+LIVE_BUILD_RUN = "20261018T091500Z-e1f2a3"
+FINISHED_BUILD_RUN = "20261018T080000Z-b4c5d6"
+LIVE_RUN_ELSEWHERE = "20261018T091600Z-f7a8b9"
+LIVE_REVIEW_RUN = "20261018T091700Z-c1d2e3"
+TIDEPOOL = {"project": "tidepool"}
+ELSEWHERE = {"project": "elsewhere"}
+REVIEW = {"project": "tidepool", "slot": "review"}
+FINISHED = create_run_result(FINISHED_BUILD_RUN, "done", "2026-10-18T08:30:00Z")
+
+
+def read_an_undecided_question(run_process, root: Path, task: str) -> tuple[str, ...]:
+    return {"T8": ("OPEN_QUESTION.Undecided",)}.get(task, ())
+
+
+class WaveShowOfAQueuedTaskTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+
+    def _show(
+        self,
+        corpus: dict,
+        events: list[dict],
+        implemented: dict = NOTHING_IMPLEMENTED,
+        read_live_blockers=read_no_live_blocker,
+    ) -> dict:
+        write_ledger(self.root, events)
+        runtime = create_test_runtime(
+            create_test_paths(self.root),
+            run_process=create_machine_double(corpus, {**MACHINE_OUTPUTS, **implemented}),
+            read_live_blockers=read_live_blockers,
+        )
+        return COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), runtime)
+
+    def test_should_name_the_earlier_task_a_queued_task_waits_after(self):
+        # Act
+        document = self._show(CORPUS_OF_A_TASK_AFTER_ANOTHER, [QUEUED_WAVE_STARTED, T8_WAITING])
+
+        # Assert
+        self.assertEqual(
+            document["tasks"][1],
+            {"task": "T8", "state": "queued", "pull_request": None, "run": None, "reason": "after T7"},
+        )
+
+    def test_should_name_the_earlier_task_a_task_never_launched_waits_after(self):
+        # Act
+        document = self._show(CORPUS_OF_A_TASK_AFTER_ANOTHER, [QUEUED_WAVE_STARTED])
+
+        # Assert
+        self.assertEqual(
+            document["tasks"][1],
+            {"task": "T8", "state": None, "pull_request": None, "run": None, "reason": "after T7"},
+        )
+
+    def test_should_name_no_cause_for_a_task_after_an_earlier_task_implemented_at_the_tree_of_its_wave(self):
+        # Arrange
+        t7_implemented = {
+            (
+                "awawa",
+                "status",
+                "TASK",
+                "--where",
+                "STATUS==implemented",
+            ): '{"entities": [{"type": "TASK", "name": "T7"}]}',
+        }
+
+        # Act
+        document = self._show(CORPUS_OF_A_TASK_AFTER_ANOTHER, [QUEUED_WAVE_STARTED, T8_WAITING], t7_implemented)
+
+        # Assert
+        self.assertEqual(
+            document["tasks"][1], {"task": "T8", "state": "queued", "pull_request": None, "run": None, "reason": None}
+        )
+
+    def test_should_name_the_live_blocker_holding_a_queued_task(self):
+        # Act
+        document = self._show(
+            CORPUS_OF_TWO_INDEPENDENT_TASKS,
+            [QUEUED_WAVE_STARTED, T8_WAITING],
+            read_live_blockers=read_an_undecided_question,
+        )
+
+        # Assert
+        self.assertEqual(document["tasks"][1]["reason"], "blocked by OPEN_QUESTION.Undecided")
+
+    def test_should_name_the_halt_of_its_wave_as_the_cause_a_queued_task_waits(self):
+        # Act
+        document = self._show(CORPUS_OF_TWO_INDEPENDENT_TASKS, [QUEUED_WAVE_STARTED, T8_WAITING, QUEUED_WAVE_BLOCKED])
+
+        # Assert
+        self.assertEqual(
+            document["tasks"][1]["reason"],
+            "wave tidepool_w16 blocked until 2026-10-18T13:00:00Z: quota",
+        )
+
+    def test_should_name_the_build_slots_all_used_as_the_cause_a_queued_task_waits(self):
+        # Arrange
+        state_root = self.root / "state"
+        record_run_pid(
+            write_run(state_root, create_run_record(LIVE_BUILD_RUN, "tidepool_w16", "T7") | TIDEPOOL, None), os.getpid()
+        )
+        write_run(state_root, create_run_record(FINISHED_BUILD_RUN, None, None) | TIDEPOOL, FINISHED)
+        record_run_pid(
+            write_run(state_root, create_run_record(LIVE_RUN_ELSEWHERE, None, None) | ELSEWHERE, None), os.getpid()
+        )
+        record_run_pid(
+            write_run(state_root, create_run_record(LIVE_REVIEW_RUN, None, None) | REVIEW, None), os.getpid()
+        )
+
+        # Act
+        document = self._show(CORPUS_OF_ONE_BUILD_SLOT, [QUEUED_WAVE_STARTED, T8_WAITING])
+
+        # Assert
+        self.assertEqual(document["tasks"][1]["reason"], "no free build slot: 1 used of SLOTS 1")
+
+    def test_should_name_the_build_slot_an_earlier_task_takes_in_the_round_as_the_cause_a_queued_task_waits(self):
+        # Act
+        document = self._show(CORPUS_OF_ONE_BUILD_SLOT, [QUEUED_WAVE_STARTED, T8_WAITING])
+
+        # Assert
+        self.assertEqual(
+            document["tasks"],
+            [
+                {"task": "T7", "state": None, "pull_request": None, "run": None, "reason": None},
+                {
+                    "task": "T8",
+                    "state": "queued",
+                    "pull_request": None,
+                    "run": None,
+                    "reason": "no free build slot: 1 used of SLOTS 1",
+                },
+            ],
+        )
+
+    def test_should_name_the_build_slot_a_task_of_an_earlier_open_wave_takes_as_the_cause_a_queued_task_waits(self):
+        # Act
+        document = self._show(CORPUS_OF_AN_EARLIER_TASK, [EARLIER_WAVE_STARTED, QUEUED_WAVE_STARTED, T8_WAITING])
+
+        # Assert
+        self.assertEqual(
+            document["tasks"],
+            [
+                {
+                    "task": "T7",
+                    "state": None,
+                    "pull_request": None,
+                    "run": None,
+                    "reason": "no free build slot: 1 used of SLOTS 1",
+                },
+                {
+                    "task": "T8",
+                    "state": "queued",
+                    "pull_request": None,
+                    "run": None,
+                    "reason": "no free build slot: 1 used of SLOTS 1",
+                },
+            ],
+        )
+
+    def test_should_take_no_build_slot_for_a_task_of_an_open_wave_of_another_project(self):
+        # Arrange
+        wave_elsewhere = {
+            **FORGELESS_WAVE_STARTED,
+            "ts": "2026-10-18T08:30:00Z",
+            "wave": "elsewhere_w3",
+            "project": "elsewhere",
+            "tasks": ["E1"],
+        }
+
+        # Act
+        document = self._show(CORPUS_OF_ONE_BUILD_SLOT, [wave_elsewhere, QUEUED_WAVE_STARTED, T8_WAITING])
+
+        # Assert
+        self.assertEqual(
+            document["tasks"],
+            [
+                {"task": "T7", "state": None, "pull_request": None, "run": None, "reason": None},
+                {
+                    "task": "T8",
+                    "state": "queued",
+                    "pull_request": None,
+                    "run": None,
+                    "reason": "no free build slot: 1 used of SLOTS 1",
+                },
+            ],
+        )
+
+    def test_should_name_the_build_slot_a_running_task_relaunched_after_its_rebase_takes_as_the_cause(self):
+        # Arrange
+        rebase = {"slot": "rebase"}
+        rebase_finished = {
+            **create_run_result(FINISHED_BUILD_RUN, "done", "2026-10-18T09:05:00Z"),
+            **rebase,
+            "wave": "tidepool_w16",
+            "task": "T7",
+        }
+        write_run(
+            self.root / "state",
+            create_run_record(FINISHED_BUILD_RUN, "tidepool_w16", "T7") | TIDEPOOL | rebase,
+            rebase_finished,
+        )
+
+        # Act
+        document = self._show(
+            CORPUS_OF_ONE_BUILD_SLOT, [QUEUED_WAVE_STARTED, T7_RUNNING_IN_THE_ROUND, rebase_finished, T8_WAITING]
+        )
+
+        # Assert
+        self.assertEqual(
+            document["tasks"],
+            [
+                {"task": "T7", "state": "running", "pull_request": None, "run": FINISHED_BUILD_RUN, "reason": None},
+                {
+                    "task": "T8",
+                    "state": "queued",
+                    "pull_request": None,
+                    "run": None,
+                    "reason": "no free build slot: 1 used of SLOTS 1",
+                },
+            ],
+        )
+
+    def test_should_name_the_build_slot_a_task_of_an_earlier_wave_relaunched_after_a_lost_login_takes(self):
+        # Act
+        document = self._show(
+            CORPUS_OF_AN_EARLIER_TASK,
+            [EARLIER_WAVE_STARTED, T5_RUNNING, T5_STOPPED_BY_LOGIN, QUEUED_WAVE_STARTED, T8_WAITING],
+        )
+
+        # Assert
+        self.assertEqual(
+            document["tasks"],
+            [
+                {
+                    "task": "T7",
+                    "state": None,
+                    "pull_request": None,
+                    "run": None,
+                    "reason": "no free build slot: 1 used of SLOTS 1",
+                },
+                {
+                    "task": "T8",
+                    "state": "queued",
+                    "pull_request": None,
+                    "run": None,
+                    "reason": "no free build slot: 1 used of SLOTS 1",
+                },
+            ],
+        )
+
+    def test_should_take_no_build_slot_for_a_task_of_an_earlier_closed_wave(self):
+        # Arrange
+        earlier_wave_closed = {
+            "schema_version": 1,
+            "ts": "2026-10-18T08:40:00Z",
+            "event": "wave.closed",
+            "wave": "tidepool_w15",
+        }
+
+        # Act
+        document = self._show(
+            CORPUS_OF_AN_EARLIER_TASK, [EARLIER_WAVE_STARTED, earlier_wave_closed, QUEUED_WAVE_STARTED, T8_WAITING]
+        )
+
+        # Assert
+        self.assertEqual(
+            document["tasks"],
+            [
+                {"task": "T7", "state": None, "pull_request": None, "run": None, "reason": None},
+                {
+                    "task": "T8",
+                    "state": "queued",
+                    "pull_request": None,
+                    "run": None,
+                    "reason": "no free build slot: 1 used of SLOTS 1",
+                },
+            ],
+        )
+
+    def test_should_take_no_build_slot_for_a_running_task_of_an_earlier_open_wave(self):
+        # Act
+        document = self._show(
+            CORPUS_OF_AN_EARLIER_TASK, [EARLIER_WAVE_STARTED, T5_RUNNING, QUEUED_WAVE_STARTED, T8_WAITING]
+        )
+
+        # Assert
+        self.assertEqual(
+            document["tasks"],
+            [
+                {"task": "T7", "state": None, "pull_request": None, "run": None, "reason": None},
+                {
+                    "task": "T8",
+                    "state": "queued",
+                    "pull_request": None,
+                    "run": None,
+                    "reason": "no free build slot: 1 used of SLOTS 1",
+                },
+            ],
+        )
+
+    def test_should_take_no_second_build_slot_for_a_task_stopped_by_a_lost_login_already_running_live(self):
+        # Arrange
+        t7_stopped_by_login = {**T5_STOPPED_BY_LOGIN, "wave": "tidepool_w16", "task": "T7"}
+        record_run_pid(
+            write_run(self.root / "state", create_run_record(LIVE_BUILD_RUN, "tidepool_w16", "T7") | TIDEPOOL, None),
+            os.getpid(),
+        )
+
+        # Act
+        document = self._show(
+            CORPUS_OF_TWO_BUILD_SLOTS,
+            [QUEUED_WAVE_STARTED, T7_RUNNING_IN_THE_ROUND, t7_stopped_by_login, T8_WAITING],
+        )
+
+        # Assert
+        self.assertEqual(
+            document["tasks"][1], {"task": "T8", "state": "queued", "pull_request": None, "run": None, "reason": None}
+        )
+
+    def test_should_take_no_build_slot_for_a_running_task_whose_last_run_follows_its_rebase(self):
+        # Arrange
+        rebase = {"slot": "rebase"}
+        rebase_finished = {
+            **create_run_result(FINISHED_BUILD_RUN, "done", "2026-10-18T08:30:00Z"),
+            **rebase,
+            "wave": "tidepool_w16",
+            "task": "T7",
+        }
+        build_finished = {
+            **create_run_result(BUILD_RUN_AFTER_THE_REBASE, "done", "2026-10-18T09:05:00Z"),
+            "wave": "tidepool_w16",
+            "task": "T7",
+        }
+        state_root = self.root / "state"
+        write_run(
+            state_root, create_run_record(FINISHED_BUILD_RUN, "tidepool_w16", "T7") | TIDEPOOL | rebase, rebase_finished
+        )
+        write_run(
+            state_root, create_run_record(BUILD_RUN_AFTER_THE_REBASE, "tidepool_w16", "T7") | TIDEPOOL, build_finished
+        )
+
+        # Act
+        document = self._show(
+            CORPUS_OF_ONE_BUILD_SLOT,
+            [QUEUED_WAVE_STARTED, T7_RUNNING_IN_THE_ROUND, rebase_finished, build_finished, T8_WAITING],
+        )
+
+        # Assert
+        self.assertEqual(
+            document["tasks"][1], {"task": "T8", "state": "queued", "pull_request": None, "run": None, "reason": None}
+        )
+
+    def test_should_show_no_reason_for_a_task_queued_again_after_its_park(self):
+        # Act
+        document = self._show(
+            CORPUS_OF_TWO_INDEPENDENT_TASKS, [QUEUED_WAVE_STARTED, T8_WAITING, T8_PARKED_ON_ITS_RUN, T8_WAITING_AGAIN]
+        )
+
+        # Assert
+        self.assertEqual(
+            document["tasks"][1], {"task": "T8", "state": "queued", "pull_request": None, "run": None, "reason": None}
+        )
+
+
+CORPUS_OF_A_PLAN = {
+    **CORPUS,
+    "TASK": {
+        "T7": (*TIDE_TABLE, ("SPEC", "the table lists the tides of the week"), ("SPEC", "the table names its port")),
+        "T8": (*TIDE_CLOCK, ("AFTER", "@TASK.T7"), ("AFTER", "@TASK.T5"), ("SPEC", "the clock shows the next tide")),
+    },
+}
+PLANNED_WAVE_STARTED = {**FORGELESS_WAVE_STARTED, "tasks": ["T7", "T8", "T9"]}
+PLANNED_WAVE_CLOSED = {
+    "schema_version": 1,
+    "ts": "2026-10-18T11:00:00Z",
+    "event": "wave.closed",
+    "wave": "tidepool_w16",
+}
+
+
+class WaveShowOfThePlanTest(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(self.root)
+        (self.root / "cache" / "refs" / "tidepool" / WAVE_HEAD).mkdir(parents=True)
+        write_ledger(self.root, [PLANNED_WAVE_STARTED, PLANNED_WAVE_CLOSED])
+        self.runtime = create_test_runtime(
+            create_test_paths(self.root), run_process=create_machine_double(CORPUS_OF_A_PLAN, MACHINE_OUTPUTS)
+        )
+
+    def test_should_carry_the_after_and_the_spec_of_each_task_the_tree_of_its_wave_holds(self):
+        # Act
+        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=True), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["tasks"],
+            [
+                {
+                    "task": "T7",
+                    "state": None,
+                    "pull_request": None,
+                    "run": None,
+                    "reason": None,
+                    "after": [],
+                    "spec": ["the table lists the tides of the week", "the table names its port"],
+                },
+                {
+                    "task": "T8",
+                    "state": None,
+                    "pull_request": None,
+                    "run": None,
+                    "reason": None,
+                    "after": ["T7", "T5"],
+                    "spec": ["the clock shows the next tide"],
+                },
+                {
+                    "task": "T9",
+                    "state": None,
+                    "pull_request": None,
+                    "run": None,
+                    "reason": None,
+                    "after": [],
+                    "spec": [],
+                },
+            ],
+        )
+
+    def test_should_carry_no_plan_without_the_option(self):
+        # Act
+        document = COMMAND.run(Namespace(wave="tidepool_w16", events=False, plan=False), self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["tasks"],
+            [
+                {"task": "T7", "state": None, "pull_request": None, "run": None, "reason": None},
+                {"task": "T8", "state": None, "pull_request": None, "run": None, "reason": None},
+                {"task": "T9", "state": None, "pull_request": None, "run": None, "reason": None},
+            ],
+        )
+
+    def test_should_print_under_each_task_its_after_on_one_line_and_its_spec_one_line_each(self):
+        # Arrange
+        document = {
+            "schema_version": 1,
+            "wave": "tidepool_w16",
+            "project": "tidepool",
+            "branch": "integration/tides",
+            "started_at": "2026-10-18T09:00:00Z",
+            "last_event": "wave.closed",
+            "merge_command": None,
+            "task_merge_commands": [],
+            "pull_request": None,
+            "halt": None,
+            "tasks": [
+                {
+                    "task": "T7",
+                    "state": "merged",
+                    "pull_request": 42,
+                    "run": None,
+                    "reason": None,
+                    "after": [],
+                    "spec": ["the table lists the tides of the week", "the table names its port"],
+                },
+                {
+                    "task": "T8",
+                    "state": "merged",
+                    "pull_request": 43,
+                    "run": None,
+                    "reason": None,
+                    "after": ["T7", "T5"],
+                    "spec": ["the clock shows the next tide"],
+                },
+            ],
+        }
+
+        # Act
+        text = COMMAND.render_text(document)
+
+        # Assert
+        self.assertEqual(
+            text,
+            "wave tidepool_w16 of @PROJECT.tidepool on integration/tides,"
+            " started 2026-10-18T09:00:00Z, last event wave.closed, pull request -\n"
+            "task  state   pull request  run  reason\n"
+            "T7    merged  42            -    -\n"
+            "  after: -\n"
+            "  spec: the table lists the tides of the week\n"
+            "  spec: the table names its port\n"
+            "T8    merged  43            -    -\n"
+            "  after: T7, T5\n"
+            "  spec: the clock shows the next tide",
+        )

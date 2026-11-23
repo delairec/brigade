@@ -43,6 +43,7 @@ from brigade.registry.find_project import find_project
 from brigade.registry.is_on_a_forge import is_on_a_forge
 from brigade.registry.read_policy_field import read_policy_field
 from brigade.registry.read_project_field import read_project_field
+from brigade.registry.read_project_slots import read_project_slots
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.roles.read_role_bindings import read_role_bindings
@@ -62,6 +63,7 @@ from brigade.system.read_study_runs import STUDY_RUNS_BY_DEFAULT
 from brigade.system.remember_process_records import remember_process_records
 from brigade.system.reset_hour import ResetHour
 from brigade.system.run_process import ProcessRecord, ProcessRequest
+from brigade.tasks.read_task_after import read_task_after
 from brigade.tasks.read_task_field import read_task_field
 from brigade.tick.decide_resume_at import decide_resume_at
 from brigade.tick.describe_study_facts import describe_study_facts
@@ -76,6 +78,7 @@ from brigade.tick.read_integration_branches import (
     read_integration_branches,
 )
 from brigade.tick.read_leftovers import LeftoverFacts, LeftoverReading, read_leftovers
+from brigade.tick.read_relaunch_facts import is_rebase_done, is_stopped_by_login
 from brigade.tick.study_facts import StudyFacts
 from brigade.waves.count_repair_rounds import count_repair_rounds
 from brigade.waves.describe_milestone_merge import describe_milestone_merge
@@ -89,6 +92,7 @@ from brigade.waves.locate_merge_worktree import locate_merge_worktree
 from brigade.waves.name_milestone_branch import name_milestone_branch
 from brigade.waves.prepare_wave_tree import WaveTreeReading, locate_wave_branch_base, prepare_wave_tree
 from brigade.waves.read_active_milestones import read_active_milestones
+from brigade.waves.read_parked_reason import read_parked_reason
 from brigade.waves.read_project_tasks import ProjectTasks, ProjectTasksReading, read_project_tasks
 from brigade.waves.read_served_milestones import read_served_milestones
 from brigade.waves.read_task_states import read_task_states
@@ -100,17 +104,13 @@ DOCUMENT_SCHEMA_VERSION = 1
 TASK_TYPE = "TASK"
 ORDER_ENTITY_TYPE = "ORDER"
 LIVE_RUN_STATE = "running"
-SLOTS_FIELD = "SLOTS"
 CHECK_RUNS_FIELD = "CHECK_RUNS"
 NO_CHECK_RUNS = "none"
-AFTER_FIELD = "AFTER"
-TASK_PREFIX = "@TASK."
 MILESTONE_FIELD = "MILESTONE"
 TITLE_FIELD = "TITLE"
 MILESTONE_PREFIX = "@MILESTONE."
 MILESTONE_TYPE = "MILESTONE"
 NO_MILESTONE = None
-PROJECT_SLOTS = 4
 QUEUED_STATE = "queued"
 SETTLED_STATES = ("merged", "parked")
 PATH_FIELD = "PATH"
@@ -226,6 +226,7 @@ class TaskFacts:
     merged_into_target: bool = False
     merge_worktree_to_open: str | None = None
     last_action: datetime | None = None
+    parked_reason: str | None = None
 
     def to_document(self) -> dict:
         return {
@@ -598,12 +599,7 @@ def _is_client_login_lost(entries: tuple[LedgerEntry, ...], wave: str) -> bool:
 
 
 def _note_login(task: TaskFacts, reading: WaveReading, wave: str) -> TaskFacts:
-    finished = [
-        event
-        for event in reading.events
-        if isinstance(event, RunFinished) and event.wave == wave and event.task == task.name
-    ]
-    return dataclasses.replace(task, stopped_by_login=bool(finished) and finished[-1].error_class == AUTHENTICATION)
+    return dataclasses.replace(task, stopped_by_login=is_stopped_by_login(reading.events, wave, task.name))
 
 
 def _read_state_before_pause(reading: WaveReading, wave: str, task: str) -> str | None:
@@ -665,11 +661,6 @@ def _read_blocked_rebase(reading: WaveReading, wave: str) -> BlockedRun | None:
     return _read_blocked_run(reading, run)
 
 
-def _is_rebase_done(reading: WaveReading, run: dict) -> bool:
-    finished = [event for event in reading.events if isinstance(event, RunFinished) and event.run == run["run"]]
-    return run["slot"] == REBASE_SLOT and bool(finished) and finished[-1].outcome == DONE_OUTCOME
-
-
 def _note_last_run(task: TaskFacts, reading: WaveReading, wave: str) -> TaskFacts:
     naming = [run for run in reading.runs if run["wave"] == wave and run["task"] == task.name]
     if not naming:
@@ -679,7 +670,7 @@ def _note_last_run(task: TaskFacts, reading: WaveReading, wave: str) -> TaskFact
         last_run=naming[-1]["run"],
         blocked_run=_read_blocked_run(reading, naming[-1]["run"]),
         handed_over_run=_read_handed_over_run(reading, naming[-1]["run"]),
-        rebased_by_last_run=_is_rebase_done(reading, naming[-1]),
+        rebased_by_last_run=is_rebase_done(reading.events, naming[-1]),
         last_run_is_a_rebase=naming[-1]["slot"] == REBASE_SLOT,
     )
 
@@ -855,9 +846,10 @@ def _read_task_facts(runtime: Runtime, reading: WaveReading, open_wave: _OpenWav
     return TaskFacts(
         name=task.name,
         branch=read_branch_of_task(reading.events, open_wave.started.project, task),
-        after=tuple(field.value.removeprefix(TASK_PREFIX) for field in task.fields if field.name == AFTER_FIELD),
+        after=read_task_after(task),
         blocked_by=runtime.read_live_blockers(runtime.run_process, open_wave.tree_root, task.name),
         milestone=_read_milestone(task),
+        parked_reason=read_parked_reason(reading.events, open_wave.started.wave, task.name),
     )
 
 
@@ -994,12 +986,11 @@ def _read_fallback_facts(configuration: Configuration) -> FallbackFacts | None:
 
 
 def _read_project_facts(runtime: Runtime, reading: WaveReading, project: Entity, runs: list[dict]) -> ProjectFacts:
-    slots = read_project_field(project, SLOTS_FIELD)
     policies = read_entities(runtime.run_process, runtime.paths.config_root, POLICY_TYPE)
     wave_making = _read_wave_making(runtime, reading, project)
     return ProjectFacts(
         name=project.name,
-        slots=PROJECT_SLOTS if slots is None else int(slots),
+        slots=read_project_slots(project),
         awaits_check_runs=read_project_field(project, CHECK_RUNS_FIELD) != NO_CHECK_RUNS,
         live_runs=tuple(
             LiveRun(run=run["run"], slot=run["slot"], worktree=run["worktree"], wave=run["wave"], task=run["task"])

@@ -108,6 +108,10 @@ RUN_RESULT_OF_SCHEMA_1 = {
 }
 
 
+def describe_by_name(run_directory: Path) -> dict:
+    return {"described": run_directory.name}
+
+
 class ListRunsTestCase(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
@@ -283,3 +287,15 @@ class ListRunsOfARefusedDocumentTest(ListRunsTestCase):
                         ],
                     },
                 )
+
+
+class ListRunsWithADescriberTest(ListRunsTestCase):
+    def test_should_describe_each_run_with_the_describer_it_is_given(self):
+        # Arrange
+        self.start_run()
+
+        # Act
+        runs = list_runs(self.state_root, describe_by_name)
+
+        # Assert
+        self.assertEqual(runs, {"runs": [{"described": RUN_ID}], "skipped": []})
