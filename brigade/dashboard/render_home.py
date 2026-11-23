@@ -42,7 +42,7 @@ RUN_ID_SEPARATOR = "-"
 LAST_RUN_FORMAT = "%m-%d %H:%MZ"
 NEEDS_YOU_LEDE = "What stays stopped until you act, most blocking first."
 AT_WORK_LEDE = "Open waves and live runs."
-ROUTINE_LEDE = "The studies that are due or stopped, and the scans holding new signals."
+STUDIES_LEDE = "The studies that are due or stopped, and the scans holding new signals."
 NO_LEDE = ""
 WAVE_STARTED_EVENT = "wave.started"
 RUN_FINISHED_EVENT = "run.finished"
@@ -451,12 +451,12 @@ def _render_study_row(study: dict, signals: dict[str, int]) -> tuple[str, ...]:
     )
 
 
-def _render_routine(status: dict) -> str:
+def _render_studies(status: dict) -> str:
     signals = {scan["study"]: scan["signals"] for scan in status["inbox"]["scans"]}
     rows = [_render_study_row(study, signals) for study in status["studies"]]
     header = ("study", "every", "last run", "outcome", "now", "new signals")
     table = render_html_table(header, rows, "no study is registered")
-    return _render_section("Routine", ROUTINE_LEDE, table)
+    return _render_section("Studies", STUDIES_LEDE, table)
 
 
 def render_home(home: HomeDocuments) -> str:
@@ -482,6 +482,6 @@ def render_home(home: HomeDocuments) -> str:
             _render_at_work(status, home.dry_run),
             _render_last_day(home),
             _render_projects(status),
-            _render_routine(status),
+            _render_studies(status),
         ]
     )

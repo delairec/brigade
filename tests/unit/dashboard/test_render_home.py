@@ -579,7 +579,7 @@ class RenderHomeAtWorkTest(unittest.TestCase):
             fragment,
         )
 
-    def test_should_lay_the_studies_in_a_routine_table_and_leave_the_parked_orders_to_needs_you(self):
+    def test_should_lay_the_studies_in_a_table_and_leave_the_parked_orders_to_needs_you(self):
         # Arrange
         home = create_home(
             {
@@ -620,7 +620,7 @@ class RenderHomeAtWorkTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            '<section class="block"><div class="block-head"><h2>Routine</h2><p>The studies that are due or stopped, and the scans holding new signals.</p></div><table><thead><tr><th>study</th><th>every</th><th>last run</th>'
+            '<section class="block"><div class="block-head"><h2>Studies</h2><p>The studies that are due or stopped, and the scans holding new signals.</p></div><table><thead><tr><th>study</th><th>every</th><th>last run</th>'
             "<th>outcome</th><th>now</th><th>new signals</th></tr></thead><tbody>"
             "<tr><td>triage</td><td>24h</td><td>\u2013</td><td>\u2013</td><td>due, runs at the next tick</td>"
             "<td>\u2013</td></tr>"
@@ -668,12 +668,12 @@ class RenderHomeAsTheMockupTest(unittest.TestCase):
             fragment,
         )
 
-    def test_should_set_the_projects_and_their_pause_buttons_before_the_routine(self):
+    def test_should_set_the_projects_and_their_pause_buttons_before_the_studies(self):
         # Act
         fragment = render_home(HOME)
 
         # Assert
-        self.assertLess(fragment.index("<h2>Projects</h2>"), fragment.index("<h2>Routine</h2>"))
+        self.assertLess(fragment.index("<h2>Projects</h2>"), fragment.index("<h2>Studies</h2>"))
 
     def test_should_give_each_study_its_new_signals_and_the_day_of_its_last_run(self):
         # Arrange

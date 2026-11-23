@@ -82,7 +82,7 @@ Its seven views:
   started and closed, the pull requests opened and merged, the milestones reported with a link to the report of the
   last one when it falls in the window, the run segments finished and the failed tick actions; **Projects** is a
   table of the projects with their state, their forge and its remote, their open waves, the link to their corpus when
-  they hold one and their pause or resume button; **Routine**, after it, is a table of the studies, their period, their
+  they hold one and their pause or resume button; **Studies**, after it, is a table of the studies, their period, their
   last run, its outcome and what comes next; a parked order is a row of Needs you.
   **Next tick**, above the view of Home, shows the decisions of `brigade tick --dry-run --json` by action, read when
   the page loads, at each new tick and on its refresh button, never by the poll.
