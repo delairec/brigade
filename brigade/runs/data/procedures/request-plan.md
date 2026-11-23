@@ -48,8 +48,8 @@ step needs and no command gives back (the path of the plan file, the ids you cho
   its `REFERENCE` field, a repository path you read with your read capability, with the id of the section the task
   covers, its page, in its `COVERS`, never in a `RATIONALE` alone.
 - A task that delivers the reference file itself, a mockup it draws, carries `REVISES` under that `REFERENCE`, why it
-  changes the file: you write it, at ratification, since the preflight reads it at the base of the task branch and a
-  branch that adds it waives nothing.
+  changes the file: you write it, at ratification, since the preflight reads it at the base of the task branch and
+  refuses a branch that adds it.
 - A section of the reference that no page renders, a stylesheet or a palette, carries `READ` under its `REFERENCE`:
   the repository path of the file its delivery is judged by reading, in place of a capture.
 - The reference is the acceptance contract, never an example: nothing of the page or the section cited is lost in the

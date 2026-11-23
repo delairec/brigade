@@ -78,10 +78,12 @@ numbers them, the delivered page then the reference page, and compare them: a ca
 slices of 2000 px so that each reads legibly, and skipping one leaves part of the page unjudged. The pull request
 body shows the whole pair side by side. A covered page
 with no PNG pair is a finding: the delivery is not proven against it. An entry naming `read:` is a section no page
-renders: read that file in full and compare it with the section, which needs no PNG pair. An entry naming `revises:`
-is a reference the task delivers itself, as the planner ratified it at the base: judge the file the branch writes
-against the goal, the preflight promotion having checked that `REVISES` stands at the base. A reference you cannot open, a URL among them, is
-a finding. A task
+renders: read that file in full and compare it with the section, which needs no PNG pair; a `read:` file you cannot
+open, a URL among them, is a finding. An entry naming `revises:` is a reference the task delivers itself, as the
+planner ratified it at the base: judge the file the branch writes against the goal. The package reads each
+`REFERENCE`, its `REVISES` and its `READ` at the base of the branch; ask whether the `READ` and the `REVISES` you are
+shown stand at the base, the preflight promotion failing a branch that adds or changes them, or that removes a
+`REFERENCE`. A reference you cannot open, a URL among them, is a finding. A task
 with no `REFERENCE` skips this step.
 
 ## 5. Look for defects

@@ -26,8 +26,8 @@ acceptance criteria are its `SPEC` lines, the goal it serves, printed with its m
 a repository path whose page its `COVERS` names: the delivery matches that page, and `brigade build capture <task>` shows
 the delivered page beside the reference page, the pair `brigade build pr` attaches to the pull request; a `REFERENCE`
 naming a file in `READ` is judged by reading that file instead. Never add or change the `REVISES` or the `READ` of
-your task: the planner writes them, and the preflight reads `REVISES` at the base of your branch, so a branch changing
-the file its `REFERENCE` names without one is refused. Its `RATIONALE`
+your task, nor remove or repoint its `REFERENCE`: the planner writes them, the preflight reads them at the base of
+your branch and refuses a branch that changes them, or that changes the file a `REFERENCE` names without `REVISES`. Its `RATIONALE`
 is the design already settled. A live `BLOCKED_BY` question means the task is not
 startable: stop and end blocked, naming it. Read a further entity with `awawa show @TYPE.Name .` when you need it.
 

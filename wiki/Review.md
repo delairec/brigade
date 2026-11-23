@@ -36,8 +36,10 @@ its version: `artifact/m18-dashboard/index.html` holds the mockup of M18, whose 
 
 A task branch that changes the file its own `REFERENCE` names is a finding of the preflight `promotion`: the delivery
 would be judged against a reference it rewrote. A task whose purpose is to deliver the reference itself says so with a
-`REVISES` line under that `REFERENCE`, the reason in its words, written by the planner at ratification: the preflight
-reads it at the base of the task branch, so a branch that adds it to its own task waives nothing.
+`REVISES` line under that `REFERENCE`, the reason in its words, written by the planner at ratification. The preflight
+reads each `REFERENCE`, its `REVISES` and its `READ` at the base of the task branch, at its head only when the base does
+not define the task, so a branch waives nothing by editing its own task: it fails when it removes or repoints a
+`REFERENCE`, adds or changes a `REVISES` or a `READ`, or cites in `READ` what is no file of the repository.
 
 ```
 REFERENCE "artifact/harbour/index.html"
@@ -131,7 +133,8 @@ image.
 - the task with its `awawa context` and its closure;
 - a section `goal`: the title of the task, then the `TITLE`, `SUBJECT`, `DESC` and `SOURCE` of its milestone, read
   in the tree of the head, or `no milestone: the title of the task is its goal`;
-- a section `reference`: each `REFERENCE` of the task with the page its `COVERS` names and its `REVISES`, then the
+- a section `reference`: each `REFERENCE` of the task, read at the base of the branch, with the page its `COVERS`
+  names and its `REVISES`, then the
   numbered PNG slices of that page, the file `READ` names, or that brigade build capture wrote none, a URL printed
   refused with why, or `none`;
 - the diff of the pull request against its base;
