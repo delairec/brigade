@@ -27,10 +27,16 @@ TIDES = {"reference": "artifact/harbour/index.html", "covers": "tides", "reads":
 
 ONE_GREY_PIXEL_ROW = b"\x00\x07\x07\x07\xff"
 PAGE_ONE_ROW_TALLER_THAN_A_SLICE = build_png(1, 2001, ONE_GREY_PIXEL_ROW * 2001)
+PAGE_AS_TALL_AS_A_SLICE = build_png(1, 2000, ONE_GREY_PIXEL_ROW * 2000)
 
 
 def _take_a_screenshot_one_row_taller_than_a_slice(request) -> tuple[int, str, str]:
     Path(request.argv[request.argv.index("--screenshot") + 1]).write_bytes(PAGE_ONE_ROW_TALLER_THAN_A_SLICE)
+    return 0, "", ""
+
+
+def _take_a_screenshot_as_tall_as_a_slice(request) -> tuple[int, str, str]:
+    Path(request.argv[request.argv.index("--screenshot") + 1]).write_bytes(PAGE_AS_TALL_AS_A_SLICE)
     return 0, "", ""
 
 
@@ -137,6 +143,17 @@ class CaptureTaskPagesTest(unittest.TestCase):
             captured["pages"][0]["delivered_slices"],
             [str(self.directory / "tides-delivered-01.png"), str(self.directory / "tides-delivered-02.png")],
         )
+
+    def test_should_keep_a_page_of_2000_px_whole_in_its_one_slice(self):
+        # Arrange
+        self.declare_the_recipe()
+        self.processes.answer_by(self.delivered_capture, _take_a_screenshot_as_tall_as_a_slice)
+
+        # Act
+        captured = self.capture([TIDES])
+
+        # Assert
+        self.assertEqual(captured["pages"][0]["delivered_slices"], [str(self.directory / "tides-delivered-01.png")])
 
     def test_should_render_the_delivered_page_with_the_recipe_the_home_directory_shown_as_a_tilde(self):
         # Arrange
@@ -379,6 +396,22 @@ class CaptureTaskPagesTest(unittest.TestCase):
         self.assertEqual(
             captured["skipped"],
             ["artifact/harbour/index.html: the section tides is judged by reading harbour/harbour.css: no capture"],
+        )
+
+    def test_should_judge_by_reading_a_section_its_reference_does_not_render(self):
+        # Arrange
+        self.declare_the_recipe()
+        (self.worktree / "harbour").mkdir()
+        (self.worktree / "harbour" / "docks.css").write_text("section#docks {}\n")
+        docks = {"reference": "artifact/harbour/index.html", "covers": "docks", "reads": "harbour/docks.css"}
+
+        # Act
+        captured = self.capture([docks])
+
+        # Assert
+        self.assertEqual(
+            captured["skipped"],
+            ["artifact/harbour/index.html: the section docks is judged by reading harbour/docks.css: no capture"],
         )
 
     def test_should_say_that_a_read_naming_no_file_of_the_repository_cannot_be_judged(self):

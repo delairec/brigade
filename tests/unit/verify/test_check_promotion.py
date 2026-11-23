@@ -370,6 +370,7 @@ class CheckPromotionOfATaskCitingAReferenceTest(unittest.TestCase):
             (self.head_tree / "artifact" / page / "index.html").write_text(f"<section id={page}></section>\n")
         (self.head_tree / "brigade").mkdir()
         (self.head_tree / "brigade" / "run.css").write_text("section#run {}\n")
+        (self.head_tree / "brigade" / "tides.css").write_text("section#tides {}\n")
 
     def check(self, at_head: list[dict], changed: tuple[str, ...], at_base: ProcessAnswer) -> dict:
         answers = {
@@ -449,6 +450,15 @@ class CheckPromotionOfATaskCitingAReferenceTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(check, {"name": "promotion", "result": "fail", "findings": [WAIVER_FINDING]})
+
+    def test_should_fail_a_branch_that_removes_the_revises_or_the_read_its_task_carries_at_the_base(self):
+        for case, at_base in [("a REVISES", HARBOUR_REVISED), ("a READ", HARBOUR_READ)]:
+            with self.subTest(case=case):
+                # Act
+                check = self.check([HARBOUR_UNREVISED], CHANGES_TO_THE_CODE_ONLY, _show([at_base]))
+
+                # Assert
+                self.assertEqual(check, {"name": "promotion", "result": "fail", "findings": [WAIVER_FINDING]})
 
     def test_should_pass_a_task_left_unchanged_with_two_references_on_one_path_one_judged_by_reading(self):
         # Act

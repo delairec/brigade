@@ -72,6 +72,18 @@ class SliceCaptureTest(unittest.TestCase):
         )
         self.assertEqual(_read_png(slices[2]), ((2, 1, 8, 6, 0, 0, 0), b"\x00\x06\x08\x09\x0b\x12\x15\x17\x1a"))
 
+    def test_should_predict_from_the_pixel_above_rather_than_the_one_above_left_when_both_are_as_close(self):
+        # Arrange
+        one_row = 1
+        above_then_predicted = b"\x00\x01\x01\x01\x01\x03\x03\x03\x03\x04\xff\xff\xff\xff\x00\x00\x00\x00"
+        self.capture.write_bytes(build_png(2, 2, above_then_predicted))
+
+        # Act
+        slices = slice_capture(self.capture, one_row)
+
+        # Assert
+        self.assertEqual(_read_png(slices[1]), ((2, 1, 8, 6, 0, 0, 0), b"\x00\x00\x00\x00\x00\x03\x03\x03\x03"))
+
     def test_should_answer_a_capture_no_taller_than_the_bound_as_its_one_slice(self):
         # Arrange
         self.capture.write_bytes(build_png(2, 2, NONE_UP))
