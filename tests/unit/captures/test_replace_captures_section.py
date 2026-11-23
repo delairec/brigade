@@ -13,11 +13,13 @@ SECTION_AT_4567DEF = (
     "| tides | `/c/4567def/tides-delivered.png` | `/c/4567def/tides-reference.png` |\n"
 )
 NO_CAPTURES = ""
+NO_CORRECTION = ()
 
 
 def _compose_body(captures: str) -> str:
     return describe_pull_request_body(
         PullRequestBodyParts(
+            corrections=NO_CORRECTION,
             title="Delivers @TASK.T7.",
             specs=("the tides of the week show on one page",),
             check={
