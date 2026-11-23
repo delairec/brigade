@@ -13,11 +13,15 @@ HEADER = struct.Struct(">IIBBBBB")
 HEADER_KIND = b"IHDR"
 DATA_KIND = b"IDAT"
 END_KIND = b"IEND"
-FIREFOX_FORMAT = (8, 6)
+FIREFOX_FORMAT = (8, 6, 0)
 PIXEL_BYTES = 4
 DECODED_ALONE = (0, 1)
 NO_FILTER = b"\x00"
 BYTE_MASK = 0xFF
+
+
+class CaptureNotSliced(BrigadeError):
+    pass
 
 
 def _read_chunks(png: bytes) -> list[tuple[bytes, bytes]]:
@@ -66,9 +70,11 @@ def _open_slice(rows: list[bytes], start: int) -> bytes:
 def slice_capture(png: Path, bound: int) -> list[Path]:
     chunks = _read_chunks(png.read_bytes())
     width, height, depth, colour, *methods = HEADER.unpack(chunks[0][1])
-    if (depth, colour) != FIREFOX_FORMAT:
-        raise BrigadeError(
-            f"{png} is a PNG of colour type {colour} at {depth} bits: brigade slices the 8-bit RGBA PNG Firefox writes"
+    interlace = methods[-1]
+    if (depth, colour, interlace) != FIREFOX_FORMAT:
+        raise CaptureNotSliced(
+            f"{png.name} is a PNG of colour type {colour} at {depth} bits, interlace method {interlace}:"
+            " brigade slices the 8-bit RGBA PNG Firefox writes, not interlaced"
         )
     stride = width * PIXEL_BYTES + 1
     scanlines = zlib.decompress(b"".join(body for kind, body in chunks if kind == DATA_KIND))

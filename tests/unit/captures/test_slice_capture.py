@@ -6,7 +6,7 @@ from pathlib import Path
 
 from brigade.captures.slice_capture import slice_capture
 from brigade.errors import BrigadeError
-from tests.unit.captures.build_png import GRAYSCALE, build_png
+from tests.unit.captures.build_png import GRAYSCALE, TRUECOLOUR_WITH_ALPHA, build_png
 
 TWO_ROWS = 2
 NONE_UP_PAETH_SUB_AVERAGE = (
@@ -95,16 +95,39 @@ class SliceCaptureTest(unittest.TestCase):
         self.assertEqual(slices, [self.directory / "home-delivered-01.png"])
         self.assertEqual(_read_png(slices[0]), ((2, 2, 8, 6, 0, 0, 0), NONE_UP))
 
-    def test_should_refuse_a_capture_firefox_does_not_write_as_8_bit_rgba(self):
-        # Arrange
-        self.capture.write_bytes(build_png(2, 1, b"\x00\x0a\x14", colour=GRAYSCALE))
+    def test_should_refuse_a_capture_firefox_does_not_write_as_8_bit_rgba_not_interlaced(self):
+        for case, png, expected_reason in [
+            (
+                "a grayscale capture",
+                build_png(2, 1, b"\x00\x0a\x14", colour=GRAYSCALE),
+                (
+                    "home-delivered.png is a PNG of colour type 0 at 8 bits, interlace method 0:"
+                    " brigade slices the 8-bit RGBA PNG Firefox writes, not interlaced"
+                ),
+            ),
+            (
+                "a 16-bit RGBA capture",
+                build_png(1, 1, b"\x00" + bytes(8), colour=TRUECOLOUR_WITH_ALPHA, depth=16),
+                (
+                    "home-delivered.png is a PNG of colour type 6 at 16 bits, interlace method 0:"
+                    " brigade slices the 8-bit RGBA PNG Firefox writes, not interlaced"
+                ),
+            ),
+            (
+                "an interlaced 8-bit RGBA capture",
+                build_png(1, 1, b"\x00\x07\x07\x07\xff", colour=TRUECOLOUR_WITH_ALPHA, interlace=1),
+                (
+                    "home-delivered.png is a PNG of colour type 6 at 8 bits, interlace method 1:"
+                    " brigade slices the 8-bit RGBA PNG Firefox writes, not interlaced"
+                ),
+            ),
+        ]:
+            with self.subTest(case=case):
+                self.capture.write_bytes(png)
 
-        # Act
-        with self.assertRaises(BrigadeError) as raised:
-            slice_capture(self.capture, TWO_ROWS)
+                # Act
+                with self.assertRaises(BrigadeError) as raised:
+                    slice_capture(self.capture, TWO_ROWS)
 
-        # Assert
-        self.assertEqual(
-            str(raised.exception),
-            f"{self.capture} is a PNG of colour type 0 at 8 bits: brigade slices the 8-bit RGBA PNG Firefox writes",
-        )
+                # Assert
+                self.assertEqual(str(raised.exception), expected_reason)

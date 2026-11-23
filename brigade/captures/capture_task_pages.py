@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from brigade.captures.slice_capture import slice_capture
+from brigade.captures.slice_capture import CaptureNotSliced, slice_capture
 from brigade.errors import ToolFailure
 from brigade.recipes.read_project_commands import read_project_commands
 from brigade.recipes.recipe_places import RecipePlaces
@@ -189,15 +189,15 @@ def _capture_page(runtime: Runtime, rendering: _Rendering, reference: dict) -> d
     write_text_file(shown, _render_reference(demand, reference["reference"], page))
     try:
         pngs = _take_screenshots(runtime, demand, _PageFiles(page, delivered, shown))
-    except _ScreenshotFailed as failure:
+        return {
+            "page": page,
+            "delivered": str(pngs["delivered"]),
+            "reference": str(pngs["reference"]),
+            "delivered_slices": [str(sliced) for sliced in slice_capture(pngs["delivered"], SLICE_HEIGHT)],
+            "reference_slices": [str(sliced) for sliced in slice_capture(pngs["reference"], SLICE_HEIGHT)],
+        }
+    except (_ScreenshotFailed, CaptureNotSliced) as failure:
         return f"{page}: {failure}"
-    return {
-        "page": page,
-        "delivered": str(pngs["delivered"]),
-        "reference": str(pngs["reference"]),
-        "delivered_slices": [str(sliced) for sliced in slice_capture(pngs["delivered"], SLICE_HEIGHT)],
-        "reference_slices": [str(sliced) for sliced in slice_capture(pngs["reference"], SLICE_HEIGHT)],
-    }
 
 
 def capture_task_pages(runtime: Runtime, demand: CaptureDemand) -> dict:

@@ -5,7 +5,7 @@ from pathlib import Path
 from brigade.captures.capture_task_pages import CaptureDemand, capture_task_pages
 from brigade.errors import ToolFailure
 from brigade.recipes.recipe_places import BUILT_IN_RECIPES, RecipePlaces
-from tests.unit.captures.build_png import build_png
+from tests.unit.captures.build_png import TRUECOLOUR, build_png
 from tests.unit.captures.take_screenshot import take_screenshot
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
@@ -37,6 +37,13 @@ def _take_a_screenshot_one_row_taller_than_a_slice(request) -> tuple[int, str, s
 
 def _take_a_screenshot_as_tall_as_a_slice(request) -> tuple[int, str, str]:
     Path(request.argv[request.argv.index("--screenshot") + 1]).write_bytes(PAGE_AS_TALL_AS_A_SLICE)
+    return 0, "", ""
+
+
+def _take_an_rgb_screenshot(request) -> tuple[int, str, str]:
+    Path(request.argv[request.argv.index("--screenshot") + 1]).write_bytes(
+        build_png(1, 1, b"\x00\x07\x07\x07", colour=TRUECOLOUR)
+    )
     return 0, "", ""
 
 
@@ -355,6 +362,14 @@ class CaptureTaskPagesTest(unittest.TestCase):
                 "a screenshot writing no image",
                 lambda request: (0, "", ""),
                 "tides: firefox wrote no tides-reference.png",
+            ),
+            (
+                "a screenshot in a PNG format brigade does not slice",
+                _take_an_rgb_screenshot,
+                (
+                    "tides: tides-reference.png is a PNG of colour type 2 at 8 bits, interlace method 0:"
+                    " brigade slices the 8-bit RGBA PNG Firefox writes, not interlaced"
+                ),
             ),
         ]
         self.declare_the_recipe()
