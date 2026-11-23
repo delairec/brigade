@@ -58,7 +58,7 @@ Every command of brigade, what it does in one line, and the page that documents 
 
 | Command | What it does | Page |
 |---|---|---|
-| `brigade status` | print the Home document: the projects, the open waves, the inbox and the scans holding new signals, the quota, the last tick and the studies | — |
+| `brigade status` | print the Home document: the projects, the open waves, the inbox and the scans holding new signals, the quota, the last tick, the studies, the parked orders, the last wave closed and the last milestone reported | — |
 | `brigade note <text>` | record a note in the inbox | [Inbox](Inbox.md) |
 | `brigade inbox list\|show\|dismiss` | list, show and dismiss the signals of the inbox and show its study answers | [Inbox](Inbox.md) |
 | `brigade inbox ratify` | ratify a pattern by its action | [Inbox](Inbox.md) |

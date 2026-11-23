@@ -55,9 +55,9 @@ class RenderAwawaCardTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            '<span class="awawa-facts"><span class="awawa-fact">MILESTONE'
+            '<span class="awawa-facts"><span class="awawa-fact">Milestone'
             ' <span class="dot tone-work" title="active"></span>Milestone one</span>'
-            '<span class="awawa-fact">ROLE ada, lex</span></span>',
+            '<span class="awawa-fact">Role ada, lex</span></span>',
             fragment,
         )
 

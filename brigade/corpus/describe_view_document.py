@@ -1,9 +1,11 @@
-from brigade.corpus.corpus_reader import STATUS_FIELD, CorpusReader
+from brigade.corpus.corpus_reader import STATUS_FIELD, CorpusReader, read_atoms
 from brigade.corpus.describe_board_view import describe_board_view
 from brigade.corpus.describe_dependencies_view import describe_dependencies_view
+from brigade.corpus.describe_entity_card import FACT_KINDS
 from brigade.corpus.describe_entity_detail import describe_entity_detail
 from brigade.corpus.describe_health_view import describe_health_view
 from brigade.corpus.describe_tree_view import describe_tree_view
+from brigade.corpus.rank_naturally import rank_naturally
 from brigade.corpus.select_view_cards import select_view_cards
 from brigade.corpus.view_request import ViewRequest
 from brigade.errors import BrigadeError
@@ -11,12 +13,14 @@ from brigade.errors import BrigadeError
 __all__ = ("ViewRequest", "describe_view_document")
 
 
-def _select_dependency_field(reader: CorpusReader, entity_type: str) -> str:
-    fields = reader.fields(entity_type)
-    field = next((field for field in fields if field.referred == (entity_type,)), None)
-    if field is None:
+def _name_dependency_fields(reader: CorpusReader, entity_type: str) -> list[str]:
+    return [field.name for field in reader.fields(entity_type) if field.referred == (entity_type,)]
+
+
+def _select_dependency_field(fields: list[str], entity_type: str) -> str:
+    if not fields:
         raise BrigadeError(f"{entity_type} has no field referring to entities of its own type")
-    return field.name
+    return fields[0]
 
 
 def _describe_view(reader: CorpusReader, request: ViewRequest) -> dict:
@@ -36,13 +40,33 @@ def _describe_view(reader: CorpusReader, request: ViewRequest) -> dict:
     rows = reader.rows_of(request.entity_type)
     cards = select_view_cards(reader, rows, request)
     if request.view == "board":
-        return describe_board_view(reader, cards, request.entity_type, request.field or STATUS_FIELD)
-    field = request.field or _select_dependency_field(reader, request.entity_type)
-    return describe_dependencies_view(reader, cards, field)
+        fields = [field.name for field in reader.fields(request.entity_type)]
+        board = describe_board_view(reader, cards, request.entity_type, request.field or STATUS_FIELD)
+        return board | {"fields": fields}
+    fields = _name_dependency_fields(reader, request.entity_type)
+    field = request.field or _select_dependency_field(fields, request.entity_type)
+    return describe_dependencies_view(reader, cards, field) | {"fields": fields}
+
+
+def _describe_filter_values(reader: CorpusReader, entity_type: str | None) -> dict[str, list[str]]:
+    if entity_type is None:
+        return {}
+    rows = reader.rows_of(entity_type)
+    written = {
+        field.name: {read_atoms(atoms) for row in rows for atoms in reader.values(row).get(field.name, [])}
+        for field in reader.fields(entity_type)
+        if FACT_KINDS.issuperset(field.kinds)
+    }
+    return {field: sorted(values, key=rank_naturally) for field, values in written.items() if values}
 
 
 def describe_view_document(reader: CorpusReader, request: ViewRequest) -> dict:
-    document = {"view": request.view, **_describe_view(reader, request)}
+    document = {
+        "view": request.view,
+        **_describe_view(reader, request),
+        "filter_values": _describe_filter_values(reader, request.entity_type),
+        "diagnostics": reader.status["diagnostics"]["errors"] + reader.status["diagnostics"]["warnings"],
+    }
     if request.entity is not None:
         document["detail"] = describe_entity_detail(reader, request.entity)
     return document

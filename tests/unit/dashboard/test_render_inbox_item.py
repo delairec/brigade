@@ -87,9 +87,12 @@ class RenderInboxItemTest(unittest.TestCase):
         # Assert
         self.assertEqual(
             fragment,
-            "<h2>the tests &lt;script&gt;are&lt;/script&gt; flaky</h2>"
-            '<p class="pattern-name"><code>FlakyTests</code></p>'
-            "<dl><dt>action</dt><dd>constraint</dd><dt>target</dt><dd>-</dd></dl>"
-            "<h3>Evidence</h3><ul><li>note:474fa40ae4db fix the &lt;b&gt;flaky&lt;/b&gt; test</li>"
-            "<li>rt:PRRT_kwDO</li></ul>",
+            '<header class="page-head"><div><p class="crumbs"><a href="#inbox">Inbox</a> / FlakyTests</p>'
+            "<h1>the tests &lt;script&gt;are&lt;/script&gt; flaky</h1>"
+            '<p class="lede">Proposed by the triage: ratify or dismiss it from the inbox.</p></div>'
+            '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
+            '<dl class="panel pad kv"><div><dt>Pattern</dt><dd><code>FlakyTests</code></dd></div>'
+            "<div><dt>Action</dt><dd>constraint</dd></div><div><dt>Target</dt><dd>-</dd></div></dl>"
+            '<section class="block"><div class="block-head"><h2>Evidence</h2></div>'
+            "<ul><li>note:474fa40ae4db fix the &lt;b&gt;flaky&lt;/b&gt; test</li><li>rt:PRRT_kwDO</li></ul></section>",
         )

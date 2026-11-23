@@ -146,7 +146,7 @@ row names a word the code or the corpus carries.
 | `brigade scheduler status` | command | report the scheduler installed, whether its tick is stale, the parked and blocked waves and the parked tasks | [Tick and scheduler](Tick-and-scheduler.md) | M0 | B07 |
 | `brigade serve` | command | serve the dashboard on the loopback address until SIGINT or SIGTERM | [Dashboard](Dashboard.md) | M3 | B27 |
 | `brigade awawa-addon` | command | answer the documents of the awawa tab over standard input and output, one JSON line each; brigade serve starts it | [Dashboard](Dashboard.md) | M18 | B274 |
-| `brigade status` | command | print the Home document: the projects, the open waves, the inbox and the scans holding new signals, the quota, the last tick and the studies | [Dashboard](Dashboard.md) | M3 | B28 |
+| `brigade status` | command | print the Home document: the projects, the open waves, the inbox and the scans holding new signals, the quota, the last tick, the studies, the parked orders, the last wave closed and the last milestone reported | [Dashboard](Dashboard.md) | M3 | B28 |
 | `brigade study answer` | command | validate the answer of a judging run against the schema of its type and record it | [Studies](Studies.md) | M1 | B48 |
 | `brigade study context` | command | print the context a judging run answers from, and write it to the run directory | [Studies](Studies.md) | M1 | B48 |
 | `brigade study list` | command | list every study with its schedule, its last run and its outcome | [Studies](Studies.md) | M1 | B147 |

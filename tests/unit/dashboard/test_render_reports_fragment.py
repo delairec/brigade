@@ -11,6 +11,7 @@ M13_REPORT = {
     "verdict": "Verdict: M13 delivered three of its four tasks.",
     "counts": {"MILESTONE": 1, "PROJECT": 1, "STATISTIC": 2, "NARRATIVE": 1},
     "reported_at": "2026-11-18T10:00:00Z",
+    "title": None,
 }
 B231_REPORT = {
     "id": "brigade_B231",
@@ -21,6 +22,7 @@ B231_REPORT = {
     "verdict": "B231 merged at its first review.",
     "counts": {"TASK": 1, "PROJECT": 1, "STATISTIC": 2, "NARRATIVE": 1},
     "reported_at": "2026-11-12T09:30:00Z",
+    "title": None,
 }
 OAK_W3_REPORT_WITHOUT_VERDICT = {
     "id": "oak_w3",
@@ -31,6 +33,7 @@ OAK_W3_REPORT_WITHOUT_VERDICT = {
     "verdict": None,
     "counts": {"WAVE": 1, "PROJECT": 1, "STATISTIC": 2},
     "reported_at": None,
+    "title": None,
 }
 OAK_W4_REPORT = {
     "id": "oak_w4",
@@ -41,6 +44,7 @@ OAK_W4_REPORT = {
     "verdict": "The wave merged both its tasks.",
     "counts": {"WAVE": 1, "PROJECT": 1, "STATISTIC": 2, "NARRATIVE": 1},
     "reported_at": "2026-10-05T07:15:00Z",
+    "title": None,
 }
 OAK_W5_REPORT_MERGING_NOTHING = {
     "id": "oak_w5",
@@ -51,6 +55,7 @@ OAK_W5_REPORT_MERGING_NOTHING = {
     "verdict": "The wave parked its three tasks.",
     "counts": {"WAVE": 1, "PROJECT": 1, "STATISTIC": 2, "NARRATIVE": 1},
     "reported_at": "2026-10-12T08:00:00Z",
+    "title": None,
 }
 DISK_ORDER_RESULT = {
     "id": "disk_r2",
@@ -61,6 +66,7 @@ DISK_ORDER_RESULT = {
     "verdict": "The disk holds 12 GB of runs.",
     "counts": {"ORDER": 1, "RUN": 1, "NARRATIVE": 1},
     "reported_at": None,
+    "title": None,
 }
 NO_REPORT = []
 
@@ -74,10 +80,10 @@ class RenderReportsFragmentTest(unittest.TestCase):
         fragment = render_reports_fragment({"schema_version": 1, "reports": reports})
 
         # Assert
-        self.assertEqual(
-            fragment.partition("</p>")[0],
-            '<p class="status-sentence">5 reports: 1 on a milestone, 1 on a task of no milestone,'
-            " 2 on a wave, 1 answering an order.",
+        self.assertIn(
+            '<div class="verdict"><p class="status-sentence">5 reports: 1 on a milestone, 1 on a task of no milestone,'
+            " 2 on a wave, 1 answering an order.</p></div>",
+            fragment,
         )
 
     def test_should_count_the_reports_of_each_kind_in_a_tile_and_the_waves_that_merged_nothing(self):
@@ -100,67 +106,6 @@ class RenderReportsFragmentTest(unittest.TestCase):
             '<span class="stat-label">wave reports</span>'
             '<span class="stat-perimeter">2 record a wave that merged nothing</span></div>'
             "</div>",
-            fragment,
-        )
-
-    def test_should_say_what_a_report_is_in_an_explainer_closed_on_its_summary_line(self):
-        # Act
-        fragment = render_reports_fragment({"schema_version": 1, "reports": NO_REPORT})
-
-        # Assert
-        self.assertIn(
-            "<details><summary>A report is the account brigade writes once a delivery ends: a milestone"
-            " reached, a task of no milestone ready to merge, or, before the milestone reports, a wave"
-            ' closed.</summary><aside class="explainer"><p class="explainer-what">It tells what was'
-            " delivered and what was not: the tasks merged and parked with their pull requests, the"
-            " runs, the lines changed, the manual tests to run, the questions left, and a verdict"
-            ' written on the evidence of the ledger.</p><p class="explainer-use">Read one before'
-            " merging the pull request of a milestone or of a task, whose body it is, or to learn why"
-            " a delivery went wrong: the verdict of each row says whether it is worth opening.</p>"
-            "</aside></details>",
-            fragment,
-        )
-
-    def test_should_list_the_reports_in_a_block_of_milestones_a_block_of_tasks_and_a_folded_block_of_waves(self):
-        # Arrange
-        reports = [OAK_W4_REPORT, M13_REPORT, B231_REPORT]
-
-        # Act
-        fragment = render_reports_fragment({"schema_version": 1, "reports": reports})
-
-        # Assert
-        self.assertIn(
-            "<section><h2>Milestone reports</h2><table><thead><tr><th>subject</th><th>project</th>"
-            "<th>verdict</th><th>tasks merged</th><th>reported</th></tr></thead><tbody>"
-            '<tr><td><a href="#reports/brigade_M13">M13</a></td><td>brigade</td>'
-            "<td>Verdict: M13 delivered three of its four tasks.</td><td>3 of 4</td>"
-            '<td><time datetime="2026-11-18T10:00:00Z">2026-11-18</time></td></tr>'
-            "</tbody></table></section>"
-            "<section><h2>Task reports</h2><table><thead><tr><th>subject</th><th>project</th>"
-            "<th>verdict</th><th>tasks merged</th><th>reported</th></tr></thead><tbody>"
-            '<tr><td><a href="#reports/brigade_B231">B231</a></td><td>brigade</td>'
-            "<td>B231 merged at its first review.</td><td>1 of 1</td>"
-            '<td><time datetime="2026-11-12T09:30:00Z">2026-11-12</time></td></tr>'
-            "</tbody></table></section>"
-            "<section><h2>Wave reports</h2><details><summary>the reports of the waves, written before"
-            " the milestone reports</summary><table><thead><tr><th>subject</th><th>project</th>"
-            "<th>verdict</th><th>tasks merged</th><th>reported</th></tr></thead><tbody>"
-            '<tr><td><a href="#reports/oak_w4">oak_w4</a></td><td>oak</td>'
-            "<td>The wave merged both its tasks.</td><td>2 of 2</td>"
-            '<td><time datetime="2026-10-05T07:15:00Z">2026-10-05</time></td></tr>'
-            "</tbody></table></details></section>",
-            fragment,
-        )
-
-    def test_should_read_a_report_without_narrative_as_carrying_no_verdict_and_no_date(self):
-        # Act
-        fragment = render_reports_fragment({"schema_version": 1, "reports": [OAK_W3_REPORT_WITHOUT_VERDICT]})
-
-        # Assert
-        self.assertIn(
-            '<tr><td><a href="#reports/oak_w3">oak_w3</a></td><td>oak</td>'
-            '<td><span class="no-verdict">no verdict recorded</span></td><td>0 of 1</td>'
-            '<td><span class="no-date">not dated by the ledger</span></td></tr>',
             fragment,
         )
 
@@ -199,16 +144,158 @@ class RenderReportsFragmentTest(unittest.TestCase):
         # Assert
         self.assertNotIn("Order results", fragment)
 
-    def test_should_escape_a_subject_and_a_verdict_holding_markup(self):
-        # Arrange
-        report = {**M13_REPORT, "id": "<i>x</i>", "subject": "<b>M13</b>", "verdict": "<script>alert(1)</script>"}
-
+    def test_should_open_on_the_page_head_naming_the_view_and_what_it_is_for(self):
         # Act
-        fragment = render_reports_fragment({"schema_version": 1, "reports": [report]})
+        fragment = render_reports_fragment({"schema_version": 1, "reports": []})
+
+        # Assert
+        self.assertTrue(
+            fragment.startswith(
+                '<header class="page-head"><div><h1>Reports</h1>'
+                '<p class="lede">A report is the written account of a delivery: what was merged, what it cost, what went wrong, and what to check by hand before you trust it.</p></div>'
+                '<p class="fresh num" data-fresh>refreshes every 5 s</p></header>'
+            ),
+            fragment[:300],
+        )
+
+
+def _bar(label: str, state: str, width: str) -> str:
+    return (
+        f'<svg class="bar" viewBox="0 0 100 8" role="img" aria-label="{label}">'
+        '<rect class="bar-track" width="100" height="8"></rect>'
+        f'<rect class="bar-fill tone-{state}" width="{width}" height="8"></rect></svg>'
+    )
+
+
+M8_REPORT = {
+    "id": "brigade_M8",
+    "kind": "milestone-report",
+    "project": "brigade",
+    "subject": "M8",
+    "statistics": {"tasks": "12", "merged": "12", "runs": "88"},
+    "verdict": "M8 is delivered, all 12 tasks merged.",
+    "counts": {"MILESTONE": 1, "REASON": 6, "TESTER_STEP": 24, "NARRATIVE": 9},
+    "reported_at": "2026-11-17T10:00:00Z",
+    "title": None,
+}
+M13_FULL_REPORT = {
+    "id": "brigade_M13",
+    "kind": "milestone-report",
+    "project": "brigade",
+    "subject": "M13",
+    "statistics": {"tasks": "4", "merged": "3", "runs": "22"},
+    "verdict": "Verdict: M13 delivered three of its four tasks.",
+    "counts": {"MILESTONE": 1, "REASON": 1, "TESTER_STEP": 1, "NARRATIVE": 3},
+    "reported_at": "2026-11-18T10:00:00Z",
+    "title": None,
+}
+W3_EMPTY = {
+    "id": "oak_w3",
+    "kind": "wave-report",
+    "project": "oak",
+    "subject": "oak_w3",
+    "statistics": {"tasks": "1", "merged": "0", "runs": "2"},
+    "verdict": "oak_w3 delivered nothing.",
+    "counts": {"WAVE": 1},
+    "reported_at": "2026-10-01T10:00:00Z",
+    "title": None,
+}
+W4_DELIVERED = {
+    "id": "oak_w4",
+    "kind": "wave-report",
+    "project": "oak",
+    "subject": "oak_w4",
+    "statistics": {"tasks": "2", "merged": "2"},
+    "verdict": "oak_w4 delivered its two tasks.",
+    "counts": {"WAVE": 1},
+    "reported_at": "2026-10-02T10:00:00Z",
+    "title": None,
+}
+
+
+class RenderReportsFragmentAsTheMockupTest(unittest.TestCase):
+    def test_should_open_on_what_a_report_is_and_when_to_read_one_unfolded(self):
+        # Act
+        fragment = render_reports_fragment({"reports": [M8_REPORT]})
 
         # Assert
         self.assertIn(
-            '<tr><td><a href="#reports/%3Ci%3Ex%3C%2Fi%3E">&lt;b&gt;M13&lt;/b&gt;</a></td><td>brigade</td>'
-            "<td>&lt;script&gt;alert(1)&lt;/script&gt;</td>",
+            '</header><details class="explainer" open><summary>What a report is, and when to read one</summary>'
+            "<div><p>When every task of a milestone is merged or parked, brigade writes its report. The <b>CLI fills"
+            " the facts</b>: the tasks and their pull requests, the statistics, the SPEC lines to test. A <b>reporting"
+            " agent writes the judgment</b>: the verdict, why a task was parked, what went well and wrong, the steps a"
+            " tester follows, the code worth reading by sampling.</p>"
+            "<p>The report is committed on the branch of the milestone and becomes the body of the pull request you"
+            " merge. <b>Read it before that merge</b>, and after any wave you did not watch. If you read three things:"
+            " the verdict, what went wrong, the tester steps.</p>"
+            "<p>A task that names no milestone gets a task report. Reports named after a wave were written before"
+            " milestone reports existed.</p></div></details>",
             fragment,
         )
+
+    def test_should_list_the_milestones_newest_first_with_their_verdict_their_tasks_their_runs_and_what_they_hold(self):
+        # Act
+        fragment = render_reports_fragment({"reports": [M8_REPORT, M13_FULL_REPORT]})
+
+        # Assert
+        self.assertIn(
+            '<section class="block"><div class="block-head"><h2>Milestones</h2><p>The newest first.</p></div>'
+            '<div class="panel scroll"><table><thead><tr><th>Milestone</th><th>Verdict</th><th>Tasks</th>'
+            '<th class="num">Runs</th><th>Inside</th></tr></thead><tbody>'
+            '<tr><td><a href="#reports/brigade_M13"><b class="mono">M13</b></a></td>'
+            "<td>M13 delivered three of its four tasks.</td>"
+            f'<td>{_bar("3 of 4 merged", "you", "75")}<span class="muted num">3 of 4 merged</span></td>'
+            '<td class="num">22</td><td class="num">1 reason · 1 tester step</td></tr>'
+            '<tr><td><a href="#reports/brigade_M8"><b class="mono">M8</b></a></td>'
+            "<td>M8 is delivered, all 12 tasks merged.</td>"
+            f'<td>{_bar("12 of 12 merged", "done", "100")}<span class="muted num">12 of 12 merged</span></td>'
+            '<td class="num">88</td><td class="num">6 reasons · 24 tester steps</td></tr>'
+            "</tbody></table></div></section>",
+            fragment,
+        )
+
+    def test_should_give_a_milestone_its_title_under_its_name(self):
+        # Act
+        fragment = render_reports_fragment({"reports": [{**M13_FULL_REPORT, "title": "Run resumption"}]})
+
+        # Assert
+        self.assertIn(
+            '<tr><td><a href="#reports/brigade_M13"><b class="mono">M13</b></a>'
+            '<br><span class="muted">Run resumption</span></td>',
+            fragment,
+        )
+
+    def test_should_fold_the_wave_reports_under_how_many_delivered_and_which_delivered_nothing(self):
+        # Act
+        fragment = render_reports_fragment({"reports": [W3_EMPTY, W4_DELIVERED]})
+
+        # Assert
+        self.assertIn(
+            '<section class="block"><div class="block-head"><h2>Waves, before milestone reports</h2>'
+            '<p>2 reports.</p></div><div class="panel"><details class="fold"><summary>Show the wave reports'
+            " <span>· 1 delivered at least one task · 1 delivered nothing: oak_w3</span></summary>"
+            '<div class="scroll"><table><thead><tr><th>Wave</th><th>Verdict</th><th>Tasks</th>'
+            '<th class="num">Runs</th></tr></thead><tbody>'
+            '<tr><td><a class="mono" href="#reports/oak_w4">oak_w4</a></td><td>oak_w4 delivered its two tasks.</td>'
+            f'<td>{_bar("2 of 2 merged", "done", "100")}<span class="muted num">2 of 2 merged</span></td>'
+            '<td class="num">-</td></tr>',
+            fragment,
+        )
+
+    def test_should_escape_a_subject_and_a_verdict_holding_markup(self):
+        # Arrange
+        report = {**M8_REPORT, "subject": "<b>M13</b>", "verdict": "<script>x</script>"}
+
+        # Act
+        fragment = render_reports_fragment({"reports": [report, {**W3_EMPTY, "verdict": None}]})
+
+        # Assert
+        self.assertNotIn("<script>", fragment)
+        self.assertIn("&lt;b&gt;M13&lt;/b&gt;", fragment)
+
+    def test_should_say_no_wave_delivered_nothing(self):
+        # Act
+        fragment = render_reports_fragment({"reports": [W4_DELIVERED]})
+
+        # Assert
+        self.assertIn("<span>· 1 delivered at least one task</span>", fragment)

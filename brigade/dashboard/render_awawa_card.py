@@ -17,7 +17,7 @@ def _render_facts(facts: list[dict]) -> str:
     if not facts:
         return ""
     rendered = "".join(
-        f'<span class="awawa-fact">{escape(fact["field"])} '
+        f'<span class="awawa-fact">{escape(fact["field"].replace("_", " ").capitalize())} '
         f"{VALUE_SEPARATOR.join(_render_value(value) for value in fact['values'])}</span>"
         for fact in facts
     )

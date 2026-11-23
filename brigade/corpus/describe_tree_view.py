@@ -29,9 +29,10 @@ def _describe_groups(reader: CorpusReader, entity_type: str, cards: list[dict]) 
 
 def _describe_type(reader: CorpusReader, entity_type: str, cards: list[dict]) -> dict:
     own = [card for card in cards if card["type"] == entity_type]
+    total = len(reader.rows_of(entity_type))
     if _is_grouped(reader, entity_type):
-        return {"type": entity_type, "groups": _describe_groups(reader, entity_type, own)}
-    return {"type": entity_type, "entities": own}
+        return {"type": entity_type, "total": total, "groups": _describe_groups(reader, entity_type, own)}
+    return {"type": entity_type, "total": total, "entities": own}
 
 
 def describe_tree_view(reader: CorpusReader, cards: list[dict]) -> dict:

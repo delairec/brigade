@@ -20,9 +20,13 @@ def _render_group(group: dict, address: AwawaAddress) -> str:
 def _render_type(described: dict, address: AwawaAddress) -> str:
     if "groups" in described:
         content = "".join(_render_group(group, address) for group in described["groups"])
+        kept = sum(len(group["entities"]) for group in described["groups"])
     else:
         content = render_awawa_cards(described["entities"], address)
-    return f'<section class="awawa-type"><h2>{escape(described["type"])}</h2>{content}</section>'
+        kept = len(described["entities"])
+    heading = described["type"].replace("_", " ").capitalize()
+    count = str(kept) if kept == described["total"] else f"{kept} of {described['total']}"
+    return f'<section class="awawa-type"><h2>{escape(heading)} <small>{count}</small></h2>{content}</section>'
 
 
 def render_awawa_tree(document: dict, address: AwawaAddress) -> str:

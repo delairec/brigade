@@ -149,6 +149,13 @@ class DescribeTreeViewTest(unittest.TestCase):
         # Assert
         self.assertEqual(str(raised.exception), "--filter reads the entities of --type")
 
+    def test_should_count_every_entity_the_corpus_holds_of_a_type_beside_those_kept(self):
+        # Act
+        document = describe(TREE_CORPUS, "tree", entity_type="TASK", filters=("STATUS=todo",))
+
+        # Assert
+        self.assertEqual(document["domain"][0]["total"], 7)
+
 
 SEARCH_CORPUS = FakeCorpus(
     entities=(
@@ -190,11 +197,34 @@ BOARD_CORPUS = FakeCorpus(
         FakeEntity("TASK", "B7", "draft", (("COMPONENT", ('"ledger"',)),)),
         FakeEntity("TASK", "B8", "draft", (("COMPONENT", ('"serve"',)),)),
         FakeEntity("TASK", "B9", "draft", (("COMPONENT", ('"git"',)),)),
-        FakeEntity("TASK", "B10", "draft"),
+        FakeEntity("TASK", "B10", "draft", (("MILESTONE", ("@MILESTONE.M9",)),)),
         FakeEntity("TASK", "B11", "draft", (("MILESTONE", ("@MILESTONE.M99",)),)),
     ),
     schemas=SCHEMAS,
 )
+
+
+class DescribeFilterValuesTest(unittest.TestCase):
+    def test_should_offer_the_values_the_entities_of_the_type_hold_in_each_field_but_free_text(self):
+        # Act
+        document = describe(BOARD_CORPUS, "board", entity_type="TASK", filters=("STATUS=todo",))
+
+        # Assert
+        self.assertEqual(
+            document["filter_values"],
+            {
+                "STATUS": ["draft", "implemented", "todo"],
+                "MILESTONE": ["@MILESTONE.M9", "@MILESTONE.M17", "@MILESTONE.M18", "@MILESTONE.M99"],
+                "ROLE": ["ada", "bilal", "lex"],
+            },
+        )
+
+    def test_should_offer_no_value_to_filter_by_when_no_type_is_read(self):
+        # Act
+        document = describe(TREE_CORPUS, "tree")
+
+        # Assert
+        self.assertEqual(document["filter_values"], {})
 
 
 class DescribeBoardViewTest(unittest.TestCase):
@@ -431,6 +461,13 @@ class DescribeHealthViewTest(unittest.TestCase):
         self.assertEqual(document["warnings"], 3)
         self.assertEqual(document["unresolved"], 1)
 
+    def test_should_count_the_lint_errors_and_warnings_in_the_document_of_any_view(self):
+        # Act
+        document = describe(HEALTH_CORPUS, "tree")
+
+        # Assert
+        self.assertEqual(document["diagnostics"], 5)
+
     def test_should_gather_the_diagnostics_per_entity_the_entities_with_the_most_errors_first(self):
         # Act
         document = describe(HEALTH_CORPUS, "health")
@@ -516,7 +553,7 @@ class DescribeEntityDetailTest(unittest.TestCase):
                     "type": "MILESTONE",
                     "name": "M18",
                     "target": "@MILESTONE.M18",
-                    "file": "/cache/refs/app/de446f3/corpus/m.awawa",
+                    "file": "corpus/m.awawa",
                     "line": 5,
                     "status": "active",
                     "fields": [
@@ -578,3 +615,19 @@ class ReadTheCorpusThroughAwawaTest(unittest.TestCase):
         self.assertIn(
             ("awawa", "context", "@TASK.B10", "--depth", "0", "--with-schema", "--json", str(ROOT)), runner.argvs
         )
+
+
+class DescribeViewDocumentFieldsTest(unittest.TestCase):
+    def test_should_name_the_fields_of_the_type_a_board_can_be_grouped_by(self):
+        # Act
+        document = describe(BOARD_CORPUS, "board", entity_type="TASK")
+
+        # Assert
+        self.assertEqual(document["fields"], ["TITLE", "STATUS", "MILESTONE", "ROLE", "COMPONENT", "AFTER"])
+
+    def test_should_name_the_fields_the_dependencies_of_a_type_can_follow(self):
+        # Act
+        document = describe(DEPENDENCIES_CORPUS, "dependencies", entity_type="TASK")
+
+        # Assert
+        self.assertEqual(document["fields"], ["AFTER"])

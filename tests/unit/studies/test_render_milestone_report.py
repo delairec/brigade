@@ -13,8 +13,22 @@ EVENTS = [
     },
     {"ts": "2026-10-04T08:05:00Z", "event": "task.state", "wave": "oak_w2", "task": "B17", "state": "running"},
     {"ts": "2026-10-04T08:05:00Z", "event": "task.state", "wave": "oak_w2", "task": "B21", "state": "running"},
-    {"ts": "2026-10-04T09:00:00Z", "event": "run.finished", "wave": "oak_w2", "task": "B17", "outcome": "done"},
-    {"ts": "2026-10-04T09:10:00Z", "event": "run.finished", "wave": "oak_w2", "task": "B21", "outcome": "failed"},
+    {
+        "ts": "2026-10-04T09:00:00Z",
+        "event": "run.finished",
+        "run": "r17",
+        "wave": "oak_w2",
+        "task": "B17",
+        "outcome": "done",
+    },
+    {
+        "ts": "2026-10-04T09:10:00Z",
+        "event": "run.finished",
+        "run": "r21",
+        "wave": "oak_w2",
+        "task": "B21",
+        "outcome": "failed",
+    },
     {
         "ts": "2026-10-04T09:20:00Z",
         "event": "task.parked",
@@ -24,11 +38,25 @@ EVENTS = [
         "blockers": ["@OPEN_QUESTION.Q4"],
     },
     {"ts": "2026-10-04T09:20:00Z", "event": "task.state", "wave": "oak_w2", "task": "B21", "state": "parked"},
-    {"ts": "2026-10-04T10:00:00Z", "event": "run.finished", "wave": "oak_w2", "task": "B17", "outcome": "done"},
+    {
+        "ts": "2026-10-04T10:00:00Z",
+        "event": "run.finished",
+        "run": "r17",
+        "wave": "oak_w2",
+        "task": "B17",
+        "outcome": "done",
+    },
     {"ts": "2026-10-04T10:30:00Z", "event": "task.state", "wave": "oak_w2", "task": "B17", "state": "merged"},
     {"ts": "2026-10-05T08:00:00Z", "event": "wave.started", "wave": "oak_w3", "project": "oak", "tasks": ["B22"]},
     {"ts": "2026-10-05T08:05:00Z", "event": "task.state", "wave": "oak_w3", "task": "B22", "state": "running"},
-    {"ts": "2026-10-05T09:00:00Z", "event": "run.finished", "wave": "oak_w3", "task": "B22", "outcome": "done"},
+    {
+        "ts": "2026-10-05T09:00:00Z",
+        "event": "run.finished",
+        "run": "r22",
+        "wave": "oak_w3",
+        "task": "B22",
+        "outcome": "done",
+    },
     {"ts": "2026-10-05T09:30:00Z", "event": "task.state", "wave": "oak_w3", "task": "B22", "state": "merged"},
 ]
 PULL_REQUESTS = [
@@ -227,7 +255,7 @@ class RenderMilestoneReportTest(unittest.TestCase):
             '\tSTATISTIC "tasks 3"\n'
             '\tSTATISTIC "merged 2"\n'
             '\tSTATISTIC "parked 1"\n'
-            '\tSTATISTIC "runs 4"\n'
+            '\tSTATISTIC "runs 3"\n'
             '\tSTATISTIC "files 2"\n'
             '\tSTATISTIC "insertions 13"\n'
             '\tSTATISTIC "deletions 1"\n'
@@ -277,7 +305,7 @@ class RenderMilestoneReportTest(unittest.TestCase):
             '\tSTATISTIC "tasks 3"\n'
             '\tSTATISTIC "merged 2"\n'
             '\tSTATISTIC "parked 1"\n'
-            '\tSTATISTIC "runs 4"\n'
+            '\tSTATISTIC "runs 3"\n'
             '\tSTATISTIC "files 2"\n'
             '\tSTATISTIC "insertions 13"\n'
             '\tSTATISTIC "deletions 1"\n'
@@ -328,7 +356,7 @@ class RenderMilestoneReportTest(unittest.TestCase):
             '\tSTATISTIC "tasks 3"\n'
             '\tSTATISTIC "merged 2"\n'
             '\tSTATISTIC "parked 1"\n'
-            '\tSTATISTIC "runs 4"\n'
+            '\tSTATISTIC "runs 3"\n'
             '\tSTATISTIC "files 2"\n'
             '\tSTATISTIC "insertions 13"\n'
             '\tSTATISTIC "deletions 1"\n'

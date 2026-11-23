@@ -9,8 +9,9 @@ def _render_option(name: str, chosen: str | None) -> str:
 
 
 def render_project_selector(document: dict, chosen: str | None) -> str:
-    options = "".join(_render_option(project["name"], chosen) for project in document["projects"])
+    projects = document["projects"]
+    options = "".join(_render_option(project["name"], chosen) for project in projects)
     return (
-        f'<label>Project <select name="project"><option value="">All projects</option>{options}</select></label>'
-        "<button>show</button>"
+        '<label for="project">Project</label><select id="project" name="project">'
+        f'<option value="">All projects ({len(projects)})</option>{options}</select>'
     )

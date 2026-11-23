@@ -68,3 +68,15 @@ class DashboardScriptTest(unittest.TestCase):
 
         # Assert
         self.assertIn("if (shownSummaries.has(summary.textContent))", script)
+
+    def test_should_poll_at_the_interval_the_server_writes_into_the_page(self):
+        # Act
+        script = SCRIPT.read_text(encoding="utf-8")
+
+        # Assert
+        self.assertIn(
+            "const POLL_INTERVAL_MS = Number("
+            "document.querySelector('meta[name=\"brigade-poll-interval-ms\"]').content);",
+            script,
+        )
+        self.assertNotIn("5000", script)

@@ -1,7 +1,8 @@
-const POLL_INTERVAL_MS = 5000;
+const POLL_INTERVAL_MS = Number(document.querySelector('meta[name="brigade-poll-interval-ms"]').content);
 const FIRST_VIEW = "status";
 const TOKEN_HEADER = "X-Brigade-Token";
 const HEARTBEAT_REGION = "/views/heartbeat";
+const RAIL_REGION = "/views/rail";
 const PROJECT_PARAMETER = "project";
 const shownFragments = new Map();
 const HEARTBEAT_UNREAD = Symbol("heartbeat unread");
@@ -91,6 +92,51 @@ async function showHeartbeat(region, path) {
   followTheTick(region);
 }
 
+function readFirstSegment(address) {
+  return address.split(/[/?]/)[0];
+}
+
+function markCurrentView() {
+  const current = readFirstSegment(selectView());
+  for (const link of document.querySelectorAll("[data-rail-view]")) {
+    if (link.dataset.railView === current) {
+      link.setAttribute("aria-current", "page");
+    } else {
+      link.removeAttribute("aria-current");
+    }
+  }
+}
+
+function stampReadTime(region) {
+  const fresh = region.querySelector("[data-fresh]");
+  if (fresh !== null) {
+    fresh.dataset.refreshes ??= fresh.textContent;
+    const readAt = new Date().toISOString().slice(11, 19);
+    fresh.textContent = `read ${readAt}Z · ${fresh.dataset.refreshes}`;
+  }
+}
+
+async function showView(region, path) {
+  await showRegion(region, path);
+  stampReadTime(region);
+  markCurrentView();
+}
+
+async function showRail(region, path) {
+  await showRegion(region, path);
+  markCurrentView();
+}
+
+function selectRegionShow(path) {
+  if (path === HEARTBEAT_REGION) {
+    return showHeartbeat;
+  }
+  if (path === RAIL_REGION) {
+    return showRail;
+  }
+  return showRegion;
+}
+
 function refreshNextTick(event) {
   if (event.target.closest("[data-refresh-next-tick]") !== null) {
     readNextTick();
@@ -102,10 +148,9 @@ function showRegions() {
     return;
   }
   document.querySelector(".next-tick").hidden = selectView() !== FIRST_VIEW;
-  showRegion(document.getElementById("view"), `/views/${selectView()}`);
+  showView(document.getElementById("view"), `/views/${selectView()}`);
   for (const region of document.querySelectorAll("[data-region]")) {
-    const show = region.dataset.region === HEARTBEAT_REGION ? showHeartbeat : showRegion;
-    show(region, region.dataset.region);
+    selectRegionShow(region.dataset.region)(region, region.dataset.region);
   }
 }
 
@@ -126,10 +171,14 @@ async function postAction(event) {
 }
 
 function pollRegions() {
-  if (document.activeElement && document.activeElement.form) {
+  if (document.activeElement?.closest("[data-pauses-poll]")) {
     return;
   }
   showRegions();
+}
+
+function readViewAddress(form) {
+  return `${form.dataset.view}?${new URLSearchParams(new FormData(form))}`;
 }
 
 function submitView(event) {
@@ -137,14 +186,29 @@ function submitView(event) {
     return;
   }
   event.preventDefault();
-  window.location.hash = `${event.target.dataset.view}?${new URLSearchParams(new FormData(event.target))}`;
+  window.location.hash = readViewAddress(event.target);
+}
+
+function applySelection(event) {
+  const select = event.target.closest("select");
+  if (!select) {
+    return;
+  }
+  const leadsTo = select.selectedOptions[0]?.dataset.href;
+  if (leadsTo !== undefined) {
+    window.location.hash = leadsTo;
+  } else if (select.form?.classList.contains("project-selector")) {
+    select.form.requestSubmit();
+  }
 }
 
 window.addEventListener("hashchange", showRegions);
+window.addEventListener("hashchange", markCurrentView);
 document.addEventListener("visibilitychange", showRegions);
 document.addEventListener("click", postAction);
 document.addEventListener("click", refreshNextTick);
 document.addEventListener("submit", submitView);
+document.addEventListener("change", applySelection);
 window.setInterval(pollRegions, POLL_INTERVAL_MS);
 showRegions();
 readNextTick();

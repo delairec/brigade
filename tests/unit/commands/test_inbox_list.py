@@ -44,6 +44,7 @@ class InboxListTest(unittest.TestCase):
                         "age_s": 172800,
                         "status": "new",
                         "stale": False,
+                        "last_action": None,
                     }
                 ],
                 "families": [
@@ -80,6 +81,7 @@ class InboxListTest(unittest.TestCase):
                         "age_s": 172800,
                         "status": "new",
                         "stale": False,
+                        "last_action": None,
                     },
                     {
                         "id": "19757dd92a2f6de337f3946640b43670c28549c4efa10b5438feb15d3106d66f",
@@ -90,6 +92,7 @@ class InboxListTest(unittest.TestCase):
                         "age_s": 3600,
                         "status": "dismissed",
                         "stale": False,
+                        "last_action": None,
                     },
                 ],
                 "families": [
@@ -209,6 +212,101 @@ class InboxListOfProposedPatternsTest(unittest.TestCase):
                     "repeats": "FlakyTests",
                     "signals": [],
                 }
+            ],
+        )
+
+    def test_should_read_the_pattern_a_pattern_repeats_from_its_name_when_it_names_none(self):
+        # Arrange
+        self.processes.answer_entities(
+            self.runtime.paths.config_root,
+            "PATTERN",
+            {
+                "merge_leaves_branch_and_worktree_behind": (
+                    ("TITLE", "the merge leaves its branch behind"),
+                    ("STATUS", "new"),
+                ),
+                "merge_leaves_branch_and_worktree_behind_recurs": (
+                    ("TITLE", "the merge still leaves its branch behind"),
+                    ("STATUS", "new"),
+                ),
+                "merge_leaves_branch_and_worktree_behind_recurs_on_prs_352_to_365": (
+                    ("TITLE", "the merge leaves 14 more branches behind"),
+                    ("STATUS", "new"),
+                ),
+                "closed_pull_request_branch_kept_with_worktree": (
+                    ("TITLE", "the branch of a closed pull request is kept"),
+                    ("STATUS", "new"),
+                ),
+                "closed_pull_request_branch_kept_recurs_on_pr_364": (
+                    ("TITLE", "the branch of PR 364 is kept"),
+                    ("STATUS", "new"),
+                ),
+                "refusal_recurs_after_refusals_recur_in_runs": (("TITLE", "a refusal recurs"), ("STATUS", "new")),
+            },
+        )
+        request = argparse.Namespace(all=False)
+
+        # Act
+        document = inbox_list(request, self.runtime)
+
+        # Assert
+        self.assertEqual(
+            document["patterns"],
+            [
+                {
+                    "name": "closed_pull_request_branch_kept_recurs_on_pr_364",
+                    "title": "the branch of PR 364 is kept",
+                    "action": None,
+                    "target": None,
+                    "recipe": None,
+                    "repeats": "closed_pull_request_branch_kept_with_worktree",
+                    "signals": [],
+                },
+                {
+                    "name": "closed_pull_request_branch_kept_with_worktree",
+                    "title": "the branch of a closed pull request is kept",
+                    "action": None,
+                    "target": None,
+                    "recipe": None,
+                    "repeats": None,
+                    "signals": [],
+                },
+                {
+                    "name": "merge_leaves_branch_and_worktree_behind",
+                    "title": "the merge leaves its branch behind",
+                    "action": None,
+                    "target": None,
+                    "recipe": None,
+                    "repeats": None,
+                    "signals": [],
+                },
+                {
+                    "name": "merge_leaves_branch_and_worktree_behind_recurs",
+                    "title": "the merge still leaves its branch behind",
+                    "action": None,
+                    "target": None,
+                    "recipe": None,
+                    "repeats": "merge_leaves_branch_and_worktree_behind",
+                    "signals": [],
+                },
+                {
+                    "name": "merge_leaves_branch_and_worktree_behind_recurs_on_prs_352_to_365",
+                    "title": "the merge leaves 14 more branches behind",
+                    "action": None,
+                    "target": None,
+                    "recipe": None,
+                    "repeats": "merge_leaves_branch_and_worktree_behind",
+                    "signals": [],
+                },
+                {
+                    "name": "refusal_recurs_after_refusals_recur_in_runs",
+                    "title": "a refusal recurs",
+                    "action": None,
+                    "target": None,
+                    "recipe": None,
+                    "repeats": None,
+                    "signals": [],
+                },
             ],
         )
 
@@ -431,7 +529,8 @@ class InboxListOfStudyAnswersTest(unittest.TestCase):
 
 STALL_RECORDED = (
     '{"schema_version": 1, "ts": "2026-10-19T07:00:00Z", "event": "recorded", "kind": "stall", "project": "oak",'
-    ' "fingerprint": "stall:oak:oak_w2:B17", "evidence": {"wave": "oak_w2", "task": "B17", "last_action": "running"}}\n'
+    ' "fingerprint": "stall:oak:oak_w2:B17", "evidence": {"wave": "oak_w2", "task": "B17",'
+    ' "last_action": "2026-10-19T06:00:00Z"}}\n'
 )
 
 
@@ -491,3 +590,13 @@ class InboxListOfStallsTest(unittest.TestCase):
 
         # Assert
         self.assertFalse(document["signals"][0]["stale"])
+
+    def test_should_carry_the_last_action_of_the_task_a_stall_names(self):
+        # Arrange
+        request = argparse.Namespace(all=False)
+
+        # Act
+        document = inbox_list(request, self.runtime)
+
+        # Assert
+        self.assertEqual(document["signals"][0]["last_action"], "2026-10-19T06:00:00Z")

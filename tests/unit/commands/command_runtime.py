@@ -61,6 +61,10 @@ def create_corpus_double(entities: dict):
     return lambda request: answer_from_corpus(entities, request)
 
 
+def create_corpora_double(corpora_by_root: dict):
+    return lambda request: answer_from_corpus(corpora_by_root[request.cwd], request)
+
+
 def create_machine_double(entities: dict, outputs: dict, failures: dict | None = None):
     answers = {prefix: ProcessAnswer(stdout=stdout) for prefix, stdout in outputs.items()}
     return ScriptedProcessRunner({**answers, **(failures or {})}, fallback=create_corpus_double(entities)).run

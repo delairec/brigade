@@ -21,7 +21,17 @@ def _route_dismissal(identifier: str, query: dict) -> CommandRoute:
     )
 
 
-ROUTES = {("inbox", "ratify"): _route_ratification, ("inbox", "dismiss"): _route_dismissal}
+def _route_dismissal_with_repeats(pattern: str, query: dict) -> CommandRoute:
+    return CommandRoute(
+        arguments=("inbox", "dismiss", "--with-repeats", "--json", pattern), identifier=pattern, listing=PATTERN_LISTING
+    )
+
+
+ROUTES = {
+    ("inbox", "ratify"): _route_ratification,
+    ("inbox", "dismiss"): _route_dismissal,
+    ("inbox", "dismiss-all"): _route_dismissal_with_repeats,
+}
 
 
 def route_change(target: str) -> CommandRoute | None:

@@ -1,7 +1,7 @@
 import unittest
 
 from brigade.dashboard.awawa_address import AwawaAddress
-from brigade.dashboard.render_awawa_form import AwawaForm, render_awawa_form
+from brigade.dashboard.render_awawa_form import AwawaForm, AwawaSelector, render_awawa_form
 
 FILTERED_BOARD = AwawaAddress(
     project="my oak",
@@ -48,3 +48,27 @@ class RenderAwawaFormTest(unittest.TestCase):
 
         # Assert
         self.assertIn('<input type="hidden" name="search" value="&quot;&gt;&lt;b&gt;">', fragment)
+
+
+class AwawaSelectorTest(unittest.TestCase):
+    def test_should_select_the_chosen_option_and_not_the_prompt(self):
+        # Arrange
+        selector = AwawaSelector(
+            name="type",
+            label="Type",
+            options=("TASK",),
+            chosen="TASK",
+            address=AwawaAddress(project="oak", parameters=(("type", "TASK"),)),
+            prompt="Every type",
+        )
+
+        # Act
+        fragment = selector.render()
+
+        # Assert
+        self.assertEqual(
+            fragment,
+            '<span class="field"><label for="awawa-type">Type</label><select id="awawa-type" name="type">'
+            '<option value="" data-href="awawa/oak">Every type</option>'
+            '<option value="TASK" data-href="awawa/oak?type=TASK" selected>TASK</option></select></span>',
+        )

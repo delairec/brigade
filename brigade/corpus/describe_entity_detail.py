@@ -16,8 +16,9 @@ def describe_entity_detail(reader: CorpusReader, target: str) -> dict:
     references = _read_targets(context["frontier"])
     referring_back = [other for other in references if target in _read_targets(reader.read_context(other)["frontier"])]
     referencing = [*_read_targets(context["referenced_by"]), *referring_back]
+    entity = reader.show(target)
     return {
-        "entity": reader.show(target),
+        "entity": {**entity, "file": reader.relative_file(entity["file"])},
         "references": [_describe_neighbour(reader, other) for other in references],
         "referenced_by": [_describe_neighbour(reader, other) for other in dict.fromkeys(referencing)],
         "ide_link": reader.link(reader.row(target)),

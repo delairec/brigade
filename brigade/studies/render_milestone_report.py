@@ -3,6 +3,7 @@ from datetime import datetime
 
 from brigade.corpus.decode_atom import decode_atom
 from brigade.corpus.quote_awawa_string import quote_awawa_string
+from brigade.ledger.count_runs import count_runs
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.list_passed_pull_requests import list_passed_pull_requests
 from brigade.ledger.task_pr_opened import TaskPrOpened
@@ -78,7 +79,7 @@ def _count_statistics(evidence: ReportEvidence, wave_tasks: list, states: dict, 
         "tasks": len(wave_tasks),
         "merged": len(merged),
         "parked": sum(states.get(task) == PARKED_STATE for task in wave_tasks),
-        "runs": sum(event["event"] == RUN_FINISHED for event in evidence.events),
+        "runs": count_runs(event for event in evidence.events if event["event"] == RUN_FINISHED).runs,
         "files": len(evidence.changes),
         "insertions": sum(change["insertions"] for change in evidence.changes),
         "deletions": sum(change["deletions"] for change in evidence.changes),
