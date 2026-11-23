@@ -317,3 +317,35 @@ MILESTONE M19
 	SOURCE "the user's words of 2026-11-18 before it: « faut que ça soit compatible sur toutes les"
 		+ "machines, pas seulement la nôtre, donc il faut éviter le spécifique », and « oui brigade"
 		+ "», the concern being brigade's own and no general rule"
+
+MILESTONE M20
+	TITLE "Vocabulary"
+	STATUS planned
+	DESC "brigade is simpler and its words are true to the kitchen brigade it is named after: what"
+		+ "@DECISION.BrigadeKeepsItsClearerWordsRenamesScanParkedAndLedgerMergesPreflightIntoRecipeAndNamesItsUserNowhere"
+		+ "rules is delivered, preflight merged into recipe, three words renamed and one section of"
+		+ "Home retitled"
+		REF @DECISION.BrigadeKeepsItsClearerWordsRenamesScanParkedAndLedgerMergesPreflightIntoRecipeAndNamesItsUserNowhere
+	DESC "planned: the tick serves it never until the user sets it active, as"
+		+ "@DECISION.AMilestoneIsServedByItsStatusAndOrderedByItsAfter rules; it names no AFTER,"
+		+ "its place among the planned milestones being the user's to give at its activation"
+		REF @DECISION.AMilestoneIsServedByItsStatusAndOrderedByItsAfter
+	DESC "its tasks, @TASK.B284 to @TASK.B288, are drafts with no AFTER between them, to refine"
+		+ "before their ratification: @TASK.B284 from the analysis of the merge of preflight into"
+		+ "recipe, @TASK.B287 after the analysis of the waiting states"
+		REF @TASK.B284
+		REF @TASK.B285
+		REF @TASK.B286
+		REF @TASK.B287
+		REF @TASK.B288
+	DESC "holds no task for what the review left unruled on 2026-11-24: the merges of study and of"
+		+ "request into order, and the waiting states as one state; they await an analysis and the"
+		+ "user's ruling"
+	SOURCE "the user's instruction, relayed on 2026-11-24 to the run that wrote this milestone: «"
+		+ "ce qui est acté, on le met déjà sur une branche (création de la milestone, target main,"
+		+ "avec les tâches en drafts). […] S'il y a des questions, on les mets de côté, il faudra"
+		+ "me les présenter en tableau à mon retour. »"
+	SOURCE "the user's goal in the vocabulary review of 2026-11-23 and 2026-11-24: « je voudrais"
+		+ "aussi qu'on évalue la possibilité de faire en sorte que le vocabulaire employé par"
+		+ "brigade se rapporte à ce qu'il était à l'origine: une brigade de cuisine. », and « je"
+		+ "veux vraiment qu'on arrive à simplifier notre bouzin »"
