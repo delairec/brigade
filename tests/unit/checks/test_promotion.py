@@ -1,5 +1,7 @@
 import json
+import tempfile
 import unittest
+from pathlib import Path
 
 from brigade.checks.promotion import check
 from tests.unit.create_test_runtime import create_test_runtime
@@ -31,6 +33,9 @@ TASK_REVISING_ITS_OWN_REFERENCE_AT_THE_HEAD = {
 class PromotionCheckTest(unittest.TestCase):
     def test_should_judge_the_task_at_the_base_tree_of_its_pull_request_against_the_files_it_changes(self):
         # Arrange
+        checkout = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (checkout / "artifact" / "harbour").mkdir(parents=True)
+        (checkout / "artifact" / "harbour" / "index.html").write_text("<section id=tides></section>\n")
         subject = {
             "schema_version": 1,
             "project": "/srv/shop",
@@ -40,7 +45,7 @@ class PromotionCheckTest(unittest.TestCase):
                     "summary": {
                         "base_tree": "/cache/shop/0f0f0f0",
                         "head_tree": "/cache/shop/1a2b3c4",
-                        "checkout": "/srv/shop",
+                        "checkout": str(checkout),
                         "task": "B1",
                         "pr": 160,
                         "changed": [{"path": "artifact/harbour/index.html", "insertions": 2, "deletions": 1}],

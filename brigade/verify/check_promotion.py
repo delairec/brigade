@@ -92,6 +92,15 @@ def _list_unreadable_reads(facts: PromotionFacts, target: str, judged: list[dict
     ]
 
 
+def _list_unreadable_references(facts: PromotionFacts, target: str, judged: list[dict]) -> list[str]:
+    return [
+        f"the REFERENCE {_name_entry(reference)}, of {target} names no file of the repository:"
+        " the review cannot open it, and its branch cannot repoint it: a plan pull request fixes it at the base"
+        for reference in judged
+        if not _resolves(facts.repository_tree, reference["reference"])
+    ]
+
+
 def _judge_references(
     run_process: Callable[[ProcessRequest], ProcessRecord], facts: PromotionFacts, shown: dict
 ) -> list:
@@ -105,6 +114,7 @@ def _judge_references(
         *_list_removed_references(target, at_base, at_head),
         *_list_waivers(target, at_base, at_head),
         *_list_unreadable_reads(facts, target, judged),
+        *_list_unreadable_references(facts, target, judged),
     ]
 
 

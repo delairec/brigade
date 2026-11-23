@@ -460,6 +460,33 @@ class CheckPromotionOfATaskCitingAReferenceTest(unittest.TestCase):
                 # Assert
                 self.assertEqual(check, {"name": "promotion", "result": "fail", "findings": [WAIVER_FINDING]})
 
+    def test_should_fail_a_task_whose_reference_names_no_file_of_the_repository_until_a_plan_fixes_it(self):
+        for case, path in [
+            ("a file absent from the repository", "artifact/absent/index.html"),
+            ("a URL", "https://example.org/harbour"),
+        ]:
+            with self.subTest(case=case):
+                reference = {"name": "REFERENCE", "atoms": [json.dumps(path)], "fields": [HARBOUR_COVERS_TIDES]}
+
+                # Act
+                check = self.check([reference], CHANGES_TO_THE_CODE_ONLY, _show([reference]))
+
+                # Assert
+                self.assertEqual(
+                    check,
+                    {
+                        "name": "promotion",
+                        "result": "fail",
+                        "findings": [
+                            (
+                                f"the REFERENCE {path}, COVERS tides, of @TASK.B1 names no file of the repository:"
+                                " the review cannot open it, and its branch cannot repoint it: a plan pull request"
+                                " fixes it at the base"
+                            )
+                        ],
+                    },
+                )
+
     def test_should_pass_a_task_left_unchanged_with_two_references_on_one_path_one_judged_by_reading(self):
         # Act
         check = self.check(
@@ -495,6 +522,8 @@ class CheckPromotionOfATaskReadingAFileTest(unittest.TestCase):
         self.repository_tree = Path(self.enterContext(tempfile.TemporaryDirectory()))
         (self.repository_tree / "brigade").mkdir()
         (self.repository_tree / "brigade" / "tides.css").write_text("section#tides {}\n")
+        (self.repository_tree / "artifact" / "harbour").mkdir(parents=True)
+        (self.repository_tree / "artifact" / "harbour" / "index.html").write_text("<section id=tides></section>\n")
 
     def check(self, read: str) -> dict:
         harbour = {
