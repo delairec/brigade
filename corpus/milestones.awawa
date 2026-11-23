@@ -323,19 +323,17 @@ MILESTONE M20
 	STATUS planned
 	DESC "brigade is simpler and its words are true to the kitchen brigade it is named after: what"
 		+ "@DECISION.BrigadeKeepsItsClearerWordsRenamesScanParkedAndLedgerMergesPreflightIntoRecipeAndNamesItsUserNowhere"
-		+ "rules is delivered, preflight merged into recipe, three words renamed and one section of"
-		+ "Home retitled"
+		+ "rules is delivered, preflight merged into recipe and three words renamed"
 		REF @DECISION.BrigadeKeepsItsClearerWordsRenamesScanParkedAndLedgerMergesPreflightIntoRecipeAndNamesItsUserNowhere
 	DESC "planned: the tick serves it never until the user sets it active, as"
 		+ "@DECISION.AMilestoneIsServedByItsStatusAndOrderedByItsAfter rules; it names no AFTER,"
 		+ "its place among the planned milestones being the user's to give at its activation"
 		REF @DECISION.AMilestoneIsServedByItsStatusAndOrderedByItsAfter
-	DESC "its tasks, @TASK.B284 to @TASK.B288, are drafts with no AFTER between them, to refine"
-		+ "before their ratification: @TASK.B284 from the analysis of the merge of preflight into"
-		+ "recipe, @TASK.B287 after the analysis of the waiting states"
+	DESC "its tasks, @TASK.B284, @TASK.B285, @TASK.B287 and @TASK.B288, are drafts with no AFTER"
+		+ "between them, to refine before their ratification: @TASK.B284 from the analysis of the"
+		+ "merge of preflight into recipe, @TASK.B287 after the analysis of the waiting states"
 		REF @TASK.B284
 		REF @TASK.B285
-		REF @TASK.B286
 		REF @TASK.B287
 		REF @TASK.B288
 	DESC "holds no task for what the review left unruled on 2026-11-24: the merges of study and of"

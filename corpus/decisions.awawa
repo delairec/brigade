@@ -8812,8 +8812,7 @@ DECISION BrigadeKeepsItsClearerWordsRenamesScanParkedAndLedgerMergesPreflightInt
 		+ "this decision does not rule; delivered by @TASK.B284"
 		REF @TASK.B284
 	DESC "the section of Home that lists the studies is titled Studies, never Routine, the name"
-		+ "study replaced; delivered by @TASK.B286"
-		REF @TASK.B286
+		+ "study replaced"
 	DESC "no word names the user in brigade's output: no command, message, page of the dashboard or"
 		+ "page of the wiki gives the one who decides a name, of the kitchen brigade or any other;"
 		+ "the section Needs you of Home keeps its title"
@@ -8834,6 +8833,10 @@ DECISION BrigadeKeepsItsClearerWordsRenamesScanParkedAndLedgerMergesPreflightInt
 	REJECTED "refire for remediate: « remediate c'est plus clair »"
 	REJECTED "log for the ledger: log names the record of what a run printed, so the user ruled"
 		+ "history, « ok pour history »"
+	REJECTED "mise en place for setup: setup is the field PROJECT.SETUP, the shell lines run in"
+		+ "each new task worktree, and no kind of work; the user answered « ok » to keeping it"
+	REJECTED "ticket for brief: it would be confused with order, the order ticket of the kitchen;"
+		+ "the user ruled « brief c'est ok »"
 	RATIONALE "the review asked which words go back to the kitchen brigade of"
 		+ "@DECISION.TheToolIsNamedBrigade; the user kept the word brigade has wherever it reads"
 		+ "clearer than the kitchen's, and took another where it reads clearer or where two things"
@@ -8855,6 +8858,9 @@ DECISION BrigadeKeepsItsClearerWordsRenamesScanParkedAndLedgerMergesPreflightInt
 		+ "on 2026-11-24 at main 8618b73f the word is in no file of brigade/, of wiki/ nor in"
 		+ "README.md, grep -rniw chef printing nothing"
 		REF @DECISION.TheToolIsNamedBrigade
+	RATIONALE "no task delivers the title Studies: on 2026-11-24 the section is titled Studies at"
+		+ "main 8618b73f, and Routine stands only at the head 1a6ff819 of the open pull request"
+		+ "#472, where it is corrected before its merge"
 	RATIONALE "not ruled here: the states paused, blocked, deferred and stopped, whether every"
 		+ "waiting state becomes one state whose fields say who stops it and who releases it, and"
 		+ "the merges of study and of request into order; they await an analysis and the user's"

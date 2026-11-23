@@ -21828,46 +21828,6 @@ TASK B285
 		+ "DESC 1"
 		REF @DECISION.BrigadeKeepsItsClearerWordsRenamesScanParkedAndLedgerMergesPreflightIntoRecipeAndNamesItsUserNowhere
 
-TASK B286
-	TITLE "The section of Home that lists the studies is titled Studies, and the word Routine is on"
-		+ "no page of brigade"
-	STATUS draft
-	TYPE fix
-	MILESTONE @MILESTONE.M20
-	COMPONENT "dashboard"
-	ROLE ada
-	DESC "left to the refinement: whether anything is left to deliver; at main 8618b73f the section"
-		+ "is titled Studies, and pull request #472, open on 2026-11-24 at head 1a6ff819, retitles"
-		+ "it Routine after the mockup of @MILESTONE.M18; corrected in that pull request before its"
-		+ "merge, this task delivers nothing and is archived"
-		REF @MILESTONE.M18
-	DESC "departs from the mockup of @MILESTONE.M18 on the title of that section alone: its table,"
-		+ "its columns and its place on the page stay as the mockup draws them"
-		REF @MILESTONE.M18
-	SPEC "the Home view of brigade serve titles Studies the section that lists the studies, their"
-		+ "period, their last run, its outcome and what comes next"
-	SPEC "the word Routine is on no page of the dashboard and in no name of brigade/dashboard: the"
-		+ "section, its lede and the function that renders it are named after the studies"
-	SPEC "wiki/Dashboard.md names the section Studies"
-	SPEC "tests/unit/dashboard/test_render_home.py proves the title, and git grep -i -w routine"
-		+ "finds nothing under brigade/, tests/ and wiki/"
-	RATIONALE "Routine is the name study replaced: HANDOFF.md, the record of the planning run,"
-		+ "lists ROUTINE among the entities of the brigade corpus, which the schema of the registry"
-		+ "declares as STUDY"
-	RATIONALE "read on 2026-11-24: at main 8618b73f and outside corpus/, grep -rIni routine finds"
-		+ "the word in HANDOFF.md, artifact/blueprint/ and artifact/use-cases/ alone, and"
-		+ "brigade/dashboard/render_home.py titles the section Studies; at the head 1a6ff819 of"
-		+ "pull request #472, _render_routine of that module titles it Routine under ROUTINE_LEDE,"
-		+ "and wiki/Dashboard.md names the section Routine"
-	RATIONALE "no command, no stored document and no row of wiki/Glossary.md carries the word: the"
-		+ "task changes a title, its names in the code, its test and one page of the wiki"
-	SOURCE "the user's word in the vocabulary review of 2026-11-23 and 2026-11-24, on the row V18,"
-		+ "Routine, the old name merged into study and still the title of a Home section, proposed"
-		+ "renamed Studies: « ok »"
-	SOURCE "@DECISION.BrigadeKeepsItsClearerWordsRenamesScanParkedAndLedgerMergesPreflightIntoRecipeAndNamesItsUserNowhere,"
-		+ "DESC 5"
-		REF @DECISION.BrigadeKeepsItsClearerWordsRenamesScanParkedAndLedgerMergesPreflightIntoRecipeAndNamesItsUserNowhere
-
 TASK B287
 	TITLE "What brigade stops on a question that awaits the user is on hold, in every state, event,"
 		+ "command, page and name of brigade, and the word parked leaves it"
