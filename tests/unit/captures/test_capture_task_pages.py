@@ -5,6 +5,7 @@ from pathlib import Path
 from brigade.captures.capture_task_pages import CaptureDemand, capture_task_pages
 from brigade.errors import ToolFailure
 from brigade.recipes.recipe_places import BUILT_IN_RECIPES, RecipePlaces
+from tests.unit.captures.build_png import build_png
 from tests.unit.captures.take_screenshot import take_screenshot
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.scripted_processes import ScriptedProcesses
@@ -22,6 +23,15 @@ REFERENCE_PAGE = (
 )
 DELIVERED_PAGE = "<html><body>Tides of /home/sailor</body></html>"
 TIDES = {"reference": "artifact/harbour/index.html", "covers": "tides", "reads": None}
+
+
+ONE_GREY_PIXEL_ROW = b"\x00\x07\x07\x07\xff"
+PAGE_ONE_ROW_TALLER_THAN_A_SLICE = build_png(1, 2001, ONE_GREY_PIXEL_ROW * 2001)
+
+
+def _take_a_screenshot_one_row_taller_than_a_slice(request) -> tuple[int, str, str]:
+    Path(request.argv[request.argv.index("--screenshot") + 1]).write_bytes(PAGE_ONE_ROW_TALLER_THAN_A_SLICE)
+    return 0, "", ""
 
 
 def _time_out(request) -> tuple[int, str, str]:
@@ -112,6 +122,20 @@ class CaptureTaskPagesTest(unittest.TestCase):
                 ],
                 "skipped": [],
             },
+        )
+
+    def test_should_cut_a_page_taller_than_2000_px_into_slices_of_2000_px(self):
+        # Arrange
+        self.declare_the_recipe()
+        self.processes.answer_by(self.delivered_capture, _take_a_screenshot_one_row_taller_than_a_slice)
+
+        # Act
+        captured = self.capture([TIDES])
+
+        # Assert
+        self.assertEqual(
+            captured["pages"][0]["delivered_slices"],
+            [str(self.directory / "tides-delivered-01.png"), str(self.directory / "tides-delivered-02.png")],
         )
 
     def test_should_render_the_delivered_page_with_the_recipe_the_home_directory_shown_as_a_tilde(self):
@@ -344,6 +368,8 @@ class CaptureTaskPagesTest(unittest.TestCase):
     def test_should_capture_no_section_its_task_judges_by_reading_a_file(self):
         # Arrange
         self.declare_the_recipe()
+        (self.worktree / "harbour").mkdir()
+        (self.worktree / "harbour" / "harbour.css").write_text("section#tides {}\n")
         foundation = {"reference": "artifact/harbour/index.html", "covers": "tides", "reads": "harbour/harbour.css"}
 
         # Act
@@ -354,6 +380,28 @@ class CaptureTaskPagesTest(unittest.TestCase):
             captured["skipped"],
             ["artifact/harbour/index.html: the section tides is judged by reading harbour/harbour.css: no capture"],
         )
+
+    def test_should_say_that_a_read_naming_no_file_of_the_repository_cannot_be_judged(self):
+        # Arrange
+        self.declare_the_recipe()
+        (self.worktree.parent / f"{self.worktree.name}-outside.css").write_text("section#tides {}\n")
+        self.addCleanup((self.worktree.parent / f"{self.worktree.name}-outside.css").unlink)
+        for case, read in [
+            ("a file absent from the repository", "harbour/absent.css"),
+            ("a URL", "https://example.org/harbour.css"),
+            ("a file outside the repository", f"../{self.worktree.name}-outside.css"),
+        ]:
+            with self.subTest(case=case):
+                foundation = {"reference": "artifact/harbour/index.html", "covers": "tides", "reads": read}
+
+                # Act
+                captured = self.capture([foundation])
+
+                # Assert
+                self.assertEqual(
+                    captured["skipped"],
+                    [f"artifact/harbour/index.html: the READ {read} names no file of the repository: no capture"],
+                )
 
     def test_should_run_every_step_of_the_recipe_in_its_order(self):
         # Arrange

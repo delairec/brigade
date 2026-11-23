@@ -58,9 +58,12 @@ def _find_section(page: str) -> re.Pattern:
     return re.compile(rf'<section\b[^>]*\bid="{re.escape(page)}"[^>]*>')
 
 
-def _skip_read(reference: dict) -> str | None:
+def _skip_read(worktree: Path, reference: dict) -> str | None:
     if reference["reads"] is None:
         return None
+    read = (worktree / reference["reads"]).resolve()
+    if not (read.is_relative_to(worktree.resolve()) and read.is_file()):
+        return f"{reference['reference']}: the READ {reference['reads']} names no file of the repository: no capture"
     return f"{reference['reference']}: the section {reference['covers']} is judged by reading {reference['reads']}: no capture"
 
 
@@ -205,7 +208,7 @@ def capture_task_pages(runtime: Runtime, demand: CaptureDemand) -> dict:
         return _describe_captures(demand, [], [NO_RECIPE])
     rendering = _Rendering(demand=demand, commands=commands)
     outcomes = [
-        _skip_read(reference)
+        _skip_read(demand.worktree, reference)
         or _refuse(demand.worktree, reference["reference"], reference["covers"])
         or _capture_page(runtime, rendering, reference)
         for reference in demand.references
