@@ -118,7 +118,8 @@ class PreflightTaskBranchTest(unittest.TestCase):
                     ),
                     (
                         "the branch of @TASK.B1 adds or changes the REVISES or the READ under its REFERENCE"
-                        " brigade/cart.py: the builder never does, the planner writes them at ratification"
+                        " brigade/cart.py, COVERS cart: the builder never does, the planner writes them at"
+                        " ratification"
                     ),
                 ],
             },

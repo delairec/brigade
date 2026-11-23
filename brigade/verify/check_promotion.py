@@ -55,23 +55,31 @@ def _list_changed_references(facts: PromotionFacts, target: str, judged: list[di
     ]
 
 
+def _identify(reference: dict) -> tuple[str, str | None]:
+    return reference["reference"], reference["covers"]
+
+
+def _name_entry(reference: dict) -> str:
+    return f"{reference['reference']}, COVERS {reference['covers']}"
+
+
 def _list_removed_references(target: str, based: list[dict], shown: list[dict]) -> list[str]:
-    kept = {reference["reference"] for reference in shown}
+    kept = {_identify(reference) for reference in shown}
     return [
-        f"{reference['reference']} is a REFERENCE of {target} at the base of its branch, and its branch removes it:"
+        f"{_name_entry(reference)}, is a REFERENCE of {target} at the base of its branch, and its branch removes it:"
         " the review judges the task against its REFERENCE at the base"
         for reference in based
-        if reference["reference"] not in kept
+        if _identify(reference) not in kept
     ]
 
 
 def _list_waivers(target: str, based: list[dict], shown: list[dict]) -> list[str]:
-    ratified = {reference["reference"]: (reference["revises"], reference["reads"]) for reference in based}
+    ratified = {_identify(reference): (reference["revises"], reference["reads"]) for reference in based}
     return [
-        f"the branch of {target} adds or changes the REVISES or the READ under its REFERENCE {reference['reference']}:"
+        f"the branch of {target} adds or changes the REVISES or the READ under its REFERENCE {_name_entry(reference)}:"
         " the builder never does, the planner writes them at ratification"
         for reference in shown
-        if (reference["revises"], reference["reads"]) != ratified.get(reference["reference"], UNRATIFIED)
+        if (reference["revises"], reference["reads"]) != ratified.get(_identify(reference), UNRATIFIED)
     ]
 
 

@@ -327,6 +327,19 @@ HARBOUR_READ = {
     "fields": [HARBOUR_COVERS_TIDES, {"name": "READ", "atoms": ['"brigade/tides.css"'], "fields": []}],
 }
 QUAY_UNREVISED = {"name": "REFERENCE", "atoms": ['"artifact/quay/index.html"'], "fields": [HARBOUR_COVERS_TIDES]}
+DASHBOARD_RUNS = {
+    "name": "REFERENCE",
+    "atoms": ['"artifact/dashboard/index.html"'],
+    "fields": [{"name": "COVERS", "atoms": ['"runs"'], "fields": []}],
+}
+DASHBOARD_RUN_READ = {
+    "name": "REFERENCE",
+    "atoms": ['"artifact/dashboard/index.html"'],
+    "fields": [
+        {"name": "COVERS", "atoms": ['"run"'], "fields": []},
+        {"name": "READ", "atoms": ['"brigade/run.css"'], "fields": []},
+    ],
+}
 NO_REFERENCE: list[dict] = []
 UNDEFINED_AT_THE_BASE = ProcessAnswer(exit_code=1, stderr="awawa show: @TASK.B1 is not defined in the workspace\n")
 CHANGES_TO_THE_HARBOUR = ("brigade/tides.py", "artifact/harbour/index.html")
@@ -336,12 +349,12 @@ REFERENCE_FINDING = (
     " a task delivering its reference says so with REVISES at the base of its branch"
 )
 REMOVED_REFERENCE_FINDING = (
-    "artifact/harbour/index.html is a REFERENCE of @TASK.B1 at the base of its branch, and its branch removes it:"
-    " the review judges the task against its REFERENCE at the base"
+    "artifact/harbour/index.html, COVERS tides, is a REFERENCE of @TASK.B1 at the base of its branch, and its branch"
+    " removes it: the review judges the task against its REFERENCE at the base"
 )
 WAIVER_FINDING = (
-    "the branch of @TASK.B1 adds or changes the REVISES or the READ under its REFERENCE artifact/harbour/index.html:"
-    " the builder never does, the planner writes them at ratification"
+    "the branch of @TASK.B1 adds or changes the REVISES or the READ under its REFERENCE artifact/harbour/index.html,"
+    " COVERS tides: the builder never does, the planner writes them at ratification"
 )
 
 
@@ -350,14 +363,26 @@ def _show(fields: list[dict]) -> ProcessAnswer:
 
 
 class CheckPromotionOfATaskCitingAReferenceTest(unittest.TestCase):
+    def setUp(self):
+        self.head_tree = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        for page in ("harbour", "quay", "dashboard"):
+            (self.head_tree / "artifact" / page).mkdir(parents=True)
+            (self.head_tree / "artifact" / page / "index.html").write_text(f"<section id={page}></section>\n")
+        (self.head_tree / "brigade").mkdir()
+        (self.head_tree / "brigade" / "run.css").write_text("section#run {}\n")
+
     def check(self, at_head: list[dict], changed: tuple[str, ...], at_base: ProcessAnswer) -> dict:
-        head_tree = Path("/srv/shop-head")
         answers = {
-            ("awawa", "show", "@TASK.B1", "--json", str(head_tree)): _show([*IMPLEMENTED_AND_DELIVERED, *at_head]),
+            ("awawa", "show", "@TASK.B1", "--json", str(self.head_tree)): _show([*IMPLEMENTED_AND_DELIVERED, *at_head]),
             ("awawa", "show", "@TASK.B1", "--json", str(BASE_TREE)): at_base,
         }
         facts = PromotionFacts(
-            base_tree=BASE_TREE, head_tree=head_tree, repository_tree=head_tree, task="B1", pr=160, changed=changed
+            base_tree=BASE_TREE,
+            head_tree=self.head_tree,
+            repository_tree=self.head_tree,
+            task="B1",
+            pr=160,
+            changed=changed,
         )
         return check_promotion(RecordingProcessRunner(answers), facts)
 
@@ -424,6 +449,35 @@ class CheckPromotionOfATaskCitingAReferenceTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(check, {"name": "promotion", "result": "fail", "findings": [WAIVER_FINDING]})
+
+    def test_should_pass_a_task_left_unchanged_with_two_references_on_one_path_one_judged_by_reading(self):
+        # Act
+        check = self.check(
+            [DASHBOARD_RUNS, DASHBOARD_RUN_READ], CHANGES_TO_THE_CODE_ONLY, _show([DASHBOARD_RUNS, DASHBOARD_RUN_READ])
+        )
+
+        # Assert
+        self.assertEqual(check, {"name": "promotion", "result": "ok", "findings": []})
+
+    def test_should_fail_a_branch_that_removes_one_of_two_references_on_one_path(self):
+        # Act
+        check = self.check([DASHBOARD_RUNS], CHANGES_TO_THE_CODE_ONLY, _show([DASHBOARD_RUNS, DASHBOARD_RUN_READ]))
+
+        # Assert
+        self.assertEqual(
+            check,
+            {
+                "name": "promotion",
+                "result": "fail",
+                "findings": [
+                    (
+                        "artifact/dashboard/index.html, COVERS run, is a REFERENCE of @TASK.B1 at the base of its"
+                        " branch, and its branch removes it: the review judges the task against its REFERENCE at the"
+                        " base"
+                    )
+                ],
+            },
+        )
 
 
 class CheckPromotionOfATaskReadingAFileTest(unittest.TestCase):
