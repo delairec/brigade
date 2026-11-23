@@ -215,3 +215,52 @@ class PageTest(unittest.TestCase):
 
         # Assert
         self.assertEqual(asked[0]["project"], "brigade")
+
+
+class PageHomeTest(unittest.TestCase):
+    def test_should_show_the_next_tick_on_the_page_home_as_its_user_meets_it(self):
+        # Arrange
+        paths = create_test_paths(Path(self.enterContext(tempfile.TemporaryDirectory())))
+        quiet_home = {
+            "schema_version": 1,
+            "projects": [],
+            "waves": [],
+            "live_runs": [],
+            "awaiting_merge": [],
+            "inbox": {"new_signals": 0, "scans": [], "stalls": []},
+            "quota": {
+                "window_hours": 5,
+                "usage": {
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                    "cache_creation_input_tokens": 0,
+                    "cache_read_input_tokens": 0,
+                },
+                "runs_without_usage": 0,
+                "blocked_waves": [],
+            },
+            "last_tick": None,
+            "studies": [],
+            "orders": [],
+        }
+        brigade = BrigadeDouble(
+            {
+                ("status", "--json"): quiet_home,
+                ("scheduler", "status", "--json"): {"schema_version": 1, "stale": False, "last_tick": None},
+                ("tick", "--dry-run", "--json"): {
+                    "schema_version": 1,
+                    "mode": "dry-run",
+                    "decisions": [],
+                    "tasks_not_launched": [],
+                },
+                ("ledger", "--since", "1d", "--json"): {"schema_version": 1, "view": "overview", "events": {}},
+                ("inbox", "list", "--json"): EMPTY_INBOX,
+            }
+        )
+        runtime = create_test_runtime(paths, run_process=brigade)
+
+        # Act
+        document = COMMAND.run(Namespace(page="home", project=None), runtime)
+
+        # Assert
+        self.assertIn('<section class="next-tick"><h2>Next tick</h2>', document["html"])

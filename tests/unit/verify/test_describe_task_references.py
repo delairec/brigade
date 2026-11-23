@@ -45,17 +45,24 @@ class DescribeTaskReferencesTest(unittest.TestCase):
         )
 
     def test_should_name_no_pair_for_a_page_brigade_build_capture_did_not_capture_whole(self):
-        # Arrange
-        (self.captures / "tides-delivered-01.png").write_bytes(b"png")
+        for side, sliced in [
+            ("the delivered page alone", "tides-delivered-01.png"),
+            ("the reference page alone", "tides-reference-01.png"),
+        ]:
+            with self.subTest(side=side):
+                # Arrange
+                captures = self.captures / side
+                captures.mkdir()
+                (captures / sliced).write_bytes(b"png")
 
-        # Act
-        described = describe_task_references(
-            [{"reference": "artifact/harbour/index.html", "covers": "tides", "revises": None, "reads": None}],
-            self.captures,
-        )
+                # Act
+                described = describe_task_references(
+                    [{"reference": "artifact/harbour/index.html", "covers": "tides", "revises": None, "reads": None}],
+                    captures,
+                )
 
-        # Assert
-        self.assertIsNone(described[0]["captures"])
+                # Assert
+                self.assertIsNone(described[0]["captures"])
 
     def test_should_refuse_a_reference_that_is_a_url_and_say_why(self):
         # Act

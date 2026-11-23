@@ -96,6 +96,39 @@ class RefreshReviewCapturesTest(unittest.TestCase):
             ],
         )
 
+    def test_should_keep_what_each_reference_revises_and_reads_once_the_captures_are_taken(self):
+        # Arrange
+        tides_revised = {**TIDES_TO_CAPTURE, "revises": "the task redraws the tides"}
+
+        # Act
+        document = self.refresh({"head": HEAD, "references": [tides_revised, FOUNDATION_READ]})
+
+        # Assert
+        self.assertEqual(
+            document["references"],
+            [
+                {
+                    "reference": "artifact/index.html",
+                    "covers": "tides",
+                    "revises": "the task redraws the tides",
+                    "reads": None,
+                    "refusal": None,
+                    "captures": {
+                        "delivered": [str(self.published / "tides-delivered-01.png")],
+                        "reference": [str(self.published / "tides-reference-01.png")],
+                    },
+                },
+                {
+                    "reference": "artifact/index.html",
+                    "covers": "foundation",
+                    "revises": None,
+                    "reads": "harbour/harbour.css",
+                    "refusal": None,
+                    "captures": None,
+                },
+            ],
+        )
+
     def test_should_put_the_captures_of_the_head_under_review_in_the_body_of_its_pull_request(self):
         # Act
         self.refresh({"head": HEAD, "references": [TIDES_TO_CAPTURE]})

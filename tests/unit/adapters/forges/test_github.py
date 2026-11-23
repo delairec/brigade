@@ -1733,6 +1733,12 @@ class ReadRepositoryVisibilityTest(unittest.TestCase):
         )
 
 
+def _clone_into_an_empty_destination_only(request: ProcessRequest, rank: int) -> tuple[int, str]:
+    if "clone" in request.argv and Path(request.argv[-1]).exists():
+        raise CommandFailed(request.argv, 128, f"destination path '{request.argv[-1]}' already exists")
+    return 0, "https://gist.github.com/octo-bot/abc123\n"
+
+
 class HostImagesTwiceTest(unittest.TestCase):
     def test_should_remove_the_clone_of_the_gist_an_earlier_hosting_left(self):
         # Arrange
@@ -1745,13 +1751,19 @@ class HostImagesTwiceTest(unittest.TestCase):
             "files": [str(directory / "cart-delivered.png")],
             "description": "captures of @TASK.S3",
         }
-        runtime = create_test_runtime(run_process=create_gh("https://gist.github.com/octo-bot/abc123\n"))
+        runtime = create_test_runtime(run_process=GhDouble(_clone_into_an_empty_destination_only))
 
         # Act
-        host_images(request, runtime)
+        hosted = host_images(request, runtime)
 
         # Assert
-        self.assertFalse((directory / "gist.git").exists())
+        self.assertEqual(
+            hosted,
+            {
+                "schema_version": 1,
+                "urls": ["https://gist.githubusercontent.com/octo-bot/abc123/raw/cart-delivered.png"],
+            },
+        )
 
 
 def _clone_then_answer(push_exit_code: int):
