@@ -179,6 +179,9 @@ class DashboardStylesheetOfTheMockupComponentsTest(unittest.TestCase):
             ".field select,\n.field input",
             ".cmd",
             ".filters",
+            '#view[aria-busy="true"]::before',
+            '.next-tick[aria-busy="true"] h2::after',
+            "button:disabled",
         ]
         for selector in selectors:
             with self.subTest(selector=selector):
@@ -187,3 +190,12 @@ class DashboardStylesheetOfTheMockupComponentsTest(unittest.TestCase):
 
                 # Assert
                 self.assertNotEqual(rule, {})
+
+
+class DashboardStylesheetOfTheBusyStateTest(unittest.TestCase):
+    def test_should_show_the_progress_cursor_over_whatever_is_busy(self):
+        # Act
+        rule = read_rule('[aria-busy="true"]')
+
+        # Assert
+        self.assertEqual(rule, {"cursor": "progress"})

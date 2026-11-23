@@ -80,3 +80,101 @@ class DashboardScriptTest(unittest.TestCase):
             script,
         )
         self.assertNotIn("5000", script)
+
+    def test_should_mark_a_wait_busy_only_once_it_lasts_300_ms_and_clear_it_when_the_wait_ends(self):
+        # Act
+        script = SCRIPT.read_text(encoding="utf-8")
+
+        # Assert
+        self.assertIn("const BUSY_DELAY_MS = 300;\n", script)
+        self.assertIn(
+            "async function waitVisibly(element, wait) {\n"
+            '  const shown = window.setTimeout(() => element.setAttribute("aria-busy", "true"), BUSY_DELAY_MS);\n'
+            "  try {\n"
+            "    return await wait;\n"
+            "  } finally {\n"
+            "    window.clearTimeout(shown);\n"
+            '    element.removeAttribute("aria-busy");\n'
+            "  }\n"
+            "}\n",
+            script,
+        )
+
+    def test_should_show_the_view_busy_on_a_navigation_the_user_chose_and_never_on_the_poll(self):
+        # Act
+        script = SCRIPT.read_text(encoding="utf-8")
+
+        # Assert
+        self.assertIn(
+            'function showChosenView() {\n  return waitVisibly(document.getElementById("view"), showRegions());\n}\n',
+            script,
+        )
+        self.assertIn('window.addEventListener("hashchange", showChosenView);', script)
+        self.assertIn("    return;\n  }\n  showRegions();\n}\n", script)
+
+    def test_should_hold_every_post_button_of_an_address_disabled_until_its_request_and_the_refresh_end(self):
+        # Act
+        script = SCRIPT.read_text(encoding="utf-8")
+
+        # Assert
+        self.assertIn(
+            "function markPendingPosts() {\n"
+            '  for (const button of document.querySelectorAll("button[data-post]")) {\n'
+            "    button.disabled = pendingPosts.has(button.dataset.post);\n"
+            "  }\n"
+            "}\n",
+            script,
+        )
+        self.assertIn(
+            "  pendingPosts.add(address);\n"
+            "  markPendingPosts();\n"
+            "  try {\n"
+            '    const response = await fetch(address, { method: "POST", headers: { [TOKEN_HEADER]: readToken() } });\n'
+            '    showNotice(response.ok ? "" : (await response.json()).error);\n'
+            "    await showRegions();\n"
+            "  } catch {\n"
+            "    showNotice(`The dashboard server did not answer ${address}.`);\n"
+            "  } finally {\n"
+            "    pendingPosts.delete(address);\n"
+            "    markPendingPosts();\n"
+            "  }\n",
+            script,
+        )
+        self.assertIn('  await waitVisibly(document.getElementById("view"), sendPost(button.dataset.post));\n', script)
+
+    def test_should_keep_a_pending_post_button_disabled_across_a_swap(self):
+        # Act
+        script = SCRIPT.read_text(encoding="utf-8")
+
+        # Assert
+        self.assertIn("  shownFragments.set(region, fragment);\n  markPendingPosts();\n", script)
+
+    def test_should_hold_the_refresh_button_of_the_next_tick_disabled_and_its_section_busy_while_it_reads(self):
+        # Act
+        script = SCRIPT.read_text(encoding="utf-8")
+
+        # Assert
+        self.assertIn(
+            "  button.disabled = true;\n"
+            '  await waitVisibly(button.closest(".next-tick"), readNextTick());\n'
+            "  button.disabled = false;\n",
+            script,
+        )
+        self.assertIn("  return showRegion(region, region.dataset.nextTick);\n", script)
+
+    def test_should_say_in_the_notice_a_region_the_server_did_not_answer(self):
+        # Act
+        script = SCRIPT.read_text(encoding="utf-8")
+
+        # Assert
+        self.assertIn(
+            "async function showRegion(region, path) {\n"
+            "  try {\n"
+            "    const response = await fetch(addProject(path));\n"
+            "    swapFragment(region, await response.text());\n"
+            "  } catch {\n"
+            "    showNotice(`The dashboard server did not answer ${path}.`);\n"
+            "  }\n"
+            "}\n",
+            script,
+        )

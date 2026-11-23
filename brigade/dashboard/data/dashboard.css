@@ -226,6 +226,62 @@ button:hover,
   border-color: var(--text);
 }
 
+button:disabled {
+  border-color: var(--line-strong);
+  opacity: 0.6;
+  cursor: progress;
+}
+
+[aria-busy="true"] {
+  cursor: progress;
+}
+
+#view[aria-busy="true"] > * {
+  opacity: 0.55;
+  transition: opacity 0.12s;
+}
+
+#view[aria-busy="true"]::before {
+  content: "";
+  position: fixed;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 2px solid var(--line);
+  border-top-color: var(--work);
+  border-radius: 50%;
+  animation: busy-spin 0.8s linear infinite;
+}
+
+.next-tick[aria-busy="true"] h2::after {
+  content: "";
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  margin-left: var(--space-2);
+  border: 2px solid var(--line);
+  border-top-color: var(--work);
+  border-radius: 50%;
+  vertical-align: middle;
+  animation: busy-spin 0.8s linear infinite;
+}
+
+@keyframes busy-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #view[aria-busy="true"]::before,
+  .next-tick[aria-busy="true"] h2::after {
+    animation: none;
+  }
+}
+
 .btn-primary {
   border-color: var(--ink);
   background: var(--ink);

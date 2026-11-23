@@ -4,6 +4,8 @@ const TOKEN_HEADER = "X-Brigade-Token";
 const HEARTBEAT_REGION = "/views/heartbeat";
 const RAIL_REGION = "/views/rail";
 const PROJECT_PARAMETER = "project";
+const BUSY_DELAY_MS = 300;
+const pendingPosts = new Set();
 const shownFragments = new Map();
 const HEARTBEAT_UNREAD = Symbol("heartbeat unread");
 let lastTickSeen = HEARTBEAT_UNREAD;
@@ -23,6 +25,22 @@ function addProject(path) {
     address.searchParams.set(PROJECT_PARAMETER, project);
   }
   return address;
+}
+
+async function waitVisibly(element, wait) {
+  const shown = window.setTimeout(() => element.setAttribute("aria-busy", "true"), BUSY_DELAY_MS);
+  try {
+    return await wait;
+  } finally {
+    window.clearTimeout(shown);
+    element.removeAttribute("aria-busy");
+  }
+}
+
+function markPendingPosts() {
+  for (const button of document.querySelectorAll("button[data-post]")) {
+    button.disabled = pendingPosts.has(button.dataset.post);
+  }
 }
 
 function readOpenSummaries(region) {
@@ -60,6 +78,7 @@ function swapFragment(region, fragment) {
   const focusedName = readFocusedName(region);
   region.innerHTML = fragment;
   shownFragments.set(region, fragment);
+  markPendingPosts();
   for (const summary of region.querySelectorAll("details > summary")) {
     if (shownSummaries.has(summary.textContent)) {
       summary.parentElement.open = openSummaries.has(summary.textContent);
@@ -69,13 +88,17 @@ function swapFragment(region, fragment) {
 }
 
 async function showRegion(region, path) {
-  const response = await fetch(addProject(path));
-  swapFragment(region, await response.text());
+  try {
+    const response = await fetch(addProject(path));
+    swapFragment(region, await response.text());
+  } catch {
+    showNotice(`The dashboard server did not answer ${path}.`);
+  }
 }
 
 function readNextTick() {
   const region = document.querySelector("[data-next-tick]");
-  showRegion(region, region.dataset.nextTick);
+  return showRegion(region, region.dataset.nextTick);
 }
 
 function followTheTick(region) {
@@ -137,21 +160,30 @@ function selectRegionShow(path) {
   return showRegion;
 }
 
-function refreshNextTick(event) {
-  if (event.target.closest("[data-refresh-next-tick]") !== null) {
-    readNextTick();
+async function refreshNextTick(event) {
+  const button = event.target.closest("[data-refresh-next-tick]");
+  if (button === null) {
+    return;
   }
+  button.disabled = true;
+  await waitVisibly(button.closest(".next-tick"), readNextTick());
+  button.disabled = false;
 }
 
 function showRegions() {
   if (document.visibilityState !== "visible") {
-    return;
+    return Promise.resolve();
   }
   document.querySelector(".next-tick").hidden = selectView() !== FIRST_VIEW;
-  showView(document.getElementById("view"), `/views/${selectView()}`);
+  const shown = showView(document.getElementById("view"), `/views/${selectView()}`);
   for (const region of document.querySelectorAll("[data-region]")) {
     selectRegionShow(region.dataset.region)(region, region.dataset.region);
   }
+  return shown;
+}
+
+function showChosenView() {
+  return waitVisibly(document.getElementById("view"), showRegions());
 }
 
 function showNotice(message) {
@@ -165,9 +197,22 @@ async function postAction(event) {
   if (button === null) {
     return;
   }
-  const response = await fetch(button.dataset.post, { method: "POST", headers: { [TOKEN_HEADER]: readToken() } });
-  showNotice(response.ok ? "" : (await response.json()).error);
-  showRegions();
+  await waitVisibly(document.getElementById("view"), sendPost(button.dataset.post));
+}
+
+async function sendPost(address) {
+  pendingPosts.add(address);
+  markPendingPosts();
+  try {
+    const response = await fetch(address, { method: "POST", headers: { [TOKEN_HEADER]: readToken() } });
+    showNotice(response.ok ? "" : (await response.json()).error);
+    await showRegions();
+  } catch {
+    showNotice(`The dashboard server did not answer ${address}.`);
+  } finally {
+    pendingPosts.delete(address);
+    markPendingPosts();
+  }
 }
 
 function pollRegions() {
@@ -202,7 +247,7 @@ function applySelection(event) {
   }
 }
 
-window.addEventListener("hashchange", showRegions);
+window.addEventListener("hashchange", showChosenView);
 window.addEventListener("hashchange", markCurrentView);
 document.addEventListener("visibilitychange", showRegions);
 document.addEventListener("click", postAction);
