@@ -487,6 +487,29 @@ class CheckPromotionOfATaskCitingAReferenceTest(unittest.TestCase):
                     },
                 )
 
+    def test_should_judge_at_the_base_a_reference_naming_no_file_its_branch_repoints(self):
+        # Arrange
+        moved = {"name": "REFERENCE", "atoms": ['"artifact/moved/index.html"'], "fields": [HARBOUR_COVERS_TIDES]}
+
+        # Act
+        check = self.check([HARBOUR_UNREVISED], CHANGES_TO_THE_CODE_ONLY, _show([moved]))
+
+        # Assert
+        self.assertEqual(
+            check["findings"],
+            [
+                (
+                    "artifact/moved/index.html, COVERS tides, is a REFERENCE of @TASK.B1 at the base of its branch,"
+                    " and its branch removes it: the review judges the task against its REFERENCE at the base"
+                ),
+                (
+                    "the REFERENCE artifact/moved/index.html, COVERS tides, of @TASK.B1 names no file of the"
+                    " repository: the review cannot open it, and its branch cannot repoint it: a plan pull request"
+                    " fixes it at the base"
+                ),
+            ],
+        )
+
     def test_should_pass_a_task_left_unchanged_with_two_references_on_one_path_one_judged_by_reading(self):
         # Act
         check = self.check(
