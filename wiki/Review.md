@@ -39,7 +39,9 @@ would be judged against a reference it rewrote. A task whose purpose is to deliv
 `REVISES` line under that `REFERENCE`, the reason in its words, written by the planner at ratification. The preflight
 reads each `REFERENCE`, its `REVISES` and its `READ` at the base of the task branch, at its head only when the base does
 not define the task, so a branch waives nothing by editing its own task: it fails when it removes or repoints a
-`REFERENCE`, adds or changes a `REVISES` or a `READ`, or cites in `READ` what is no file of the repository.
+`REFERENCE`, adds, changes or removes a `REVISES` or a `READ`, or cites in `READ` what is no file of the repository. Each
+`REFERENCE` is told by its path and its `COVERS`, so a task may carry two on one path. A `REFERENCE` naming no file of
+the repository fails too; the branch cannot repoint it, so a plan pull request fixes it at the base.
 
 ```
 REFERENCE "artifact/harbour/index.html"
@@ -83,8 +85,8 @@ claude-code `Read` of a PNG shows legibly at 1440 px of width; `review context` 
 
 A page is not captured, and the output says why, when the project has no recipe `capture`, the task no `REFERENCE`,
 the `REFERENCE` carries `READ`, the reference is a URL, no HTML page, outside the repository or absent from it, `COVERS`
-names no section of it, a step of the recipe exits non-zero, or a screenshot exits non-zero, times out or writes no
-image.
+names no section of it, a step of the recipe exits non-zero, or a screenshot exits non-zero, times out, writes no
+image or writes a PNG other than the 8-bit RGBA, non-interlaced one Firefox writes, which brigade does not slice.
 
 ### Each head has its captures
 

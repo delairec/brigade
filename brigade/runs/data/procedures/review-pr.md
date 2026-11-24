@@ -82,7 +82,7 @@ renders: read that file in full and compare it with the section, which needs no 
 open, a URL among them, is a finding. An entry naming `revises:` is a reference the task delivers itself, as the
 planner ratified it at the base: judge the file the branch writes against the goal. The package reads each
 `REFERENCE`, its `REVISES` and its `READ` at the base of the branch; ask whether the `READ` and the `REVISES` you are
-shown stand at the base, the preflight promotion failing a branch that adds or changes them, or that removes a
+shown stand at the base, the preflight promotion failing a branch that adds, changes or removes them, or that removes a
 `REFERENCE`. A reference you cannot open, a URL among them, is a finding. A task
 with no `REFERENCE` skips this step.
 
