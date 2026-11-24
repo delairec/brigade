@@ -9,9 +9,11 @@ from brigade.verify.check_promotion import PromotionFacts, check_promotion
 def check(subject: dict, runtime: Runtime) -> dict:
     facts = read_pull_request(subject)
     promotion = PromotionFacts(
+        base_tree=Path(facts["base_tree"]),
         head_tree=Path(facts["head_tree"]),
         repository_tree=Path(facts["checkout"]),
         task=facts["task"],
         pr=facts["pr"],
+        changed=tuple(changed_file["path"] for changed_file in facts["changed"]),
     )
     return {"schema_version": CHECK_DOCUMENT_SCHEMA_VERSION, **check_promotion(runtime.run_process, promotion)}

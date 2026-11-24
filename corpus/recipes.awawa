@@ -49,3 +49,14 @@ RECIPE acceptance
 		ARGV "coverage==7.17.0"
 		ARGV "coverage"
 		ARGV "report"
+
+RECIPE capture
+	SCHEMA_VERSION 1
+	MAX_WALL 5
+	STEP command
+		ARGV "python3"
+		ARGV "bin/brigade"
+		ARGV "page"
+		ARGV "{page}"
+		ARGV "--project"
+		ARGV "brigade"

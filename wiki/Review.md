@@ -8,6 +8,105 @@ brigade review verdict <pr> --file <verdict.json>  # validate and record the ver
 
 Both run from the worktree of the task whose pull request they judge.
 
+## What the review judges
+
+The review run judges three things, and its `SPEC` lines are never the whole of it:
+
+| Against | Asks |
+|---|---|
+| each `SPEC` line | does a test, a command or a line of code prove the criterion holds? |
+| the goal the task serves | does the delivery reach the goal of its milestone, the user's intent, beyond its `SPEC` lines? |
+| the reference the task carries in its `REFERENCE` field, a repository path | does the delivery keep the reference itself, the section its `COVERS` names, and not only what the task transcribed from it? |
+
+A delivery that meets every `SPEC` line and misses its goal, or departs from its reference without a reason a `SPEC`,
+a `RATIONALE` or a decision states, gets a finding that asks for changes; a `pass` states the goal reached, on the second review too, where a challenge
+to a goal or a reference finding is judged against the goal or the reference. For a rendered output, the review reads
+every PNG slice `review context` names for each covered page, in order, the delivered page then the reference page; a
+covered page with no pair is a finding, and so is a reference the review cannot open.
+
+A goal finding takes as `file` and `line` the corpus file and line of its milestone, or of the task when it has none; a
+reference finding the path of the reference and the line its section opens on.
+
+## A reference and its captures
+
+A `REFERENCE` is a path of the repository: the roles of the tick read files and run commands, and cannot open a URL. A
+reference held elsewhere, an Artifact or a page of a website, is copied into the repository first, its commit pinning
+its version: `artifact/m18-dashboard/index.html` holds the mockup of M18, whose `<section id>` each task names in its
+`COVERS`. The planner reports a URL as a question, and `review context` prints it refused.
+
+A task branch that changes the file its own `REFERENCE` names is a finding of the preflight `promotion`: the delivery
+would be judged against a reference it rewrote. A task whose purpose is to deliver the reference itself says so with a
+`REVISES` line under that `REFERENCE`, the reason in its words, written by the planner at ratification. The preflight
+reads each `REFERENCE`, its `REVISES` and its `READ` at the base of the task branch, at its head only when the base does
+not define the task, so a branch waives nothing by editing its own task: it fails when it removes or repoints a
+`REFERENCE`, adds, changes or removes a `REVISES` or a `READ`, or cites in `READ` what is no file of the repository. Each
+`REFERENCE` is told by its path and its `COVERS`, so a task may carry two on one path. A `REFERENCE` naming no file of
+the repository fails too; the branch cannot repoint it, so a plan pull request fixes it at the base.
+
+```
+REFERENCE "artifact/harbour/index.html"
+	COVERS "tides"
+	REVISES "the task draws the tide page of the mockup"
+```
+
+```
+brigade build capture <task>                      # the delivered page and the reference page of HEAD, as PNG files
+brigade build capture <task> --directory <dir>   # the same, written to <dir>
+brigade page <page> --project <name>             # one page of the dashboard as a standalone HTML document
+```
+
+`brigade build capture` writes, for each page a `REFERENCE` of the task covers, one headless Firefox capture of the
+delivered page and one of the reference page, one after the other, under `captures/<project>/<task>/<head>` of the
+state directory. The home directory is shown as `~` in each page, and the Firefox profile is removed once the page is
+captured.
+
+| Page | How it renders |
+|---|---|
+| delivered | the recipe `capture` of the project, of command steps run in the worktree: each argv runs with `{page}` replaced by the `COVERS`, and the output of the last step is the HTML of that page; brigade's own runs `brigade page {page} --project brigade` |
+| reference | an HTML reference with only its section whose id `COVERS` names shown |
+
+`brigade page` serves `home`, `waves`, `runs`, `ledger`, `inbox`, `reports` and `awawa`, and `wave`, `run` and
+`report` as the newest of the project. It fails on any other page and on a view that answers an error, so the capture
+of that page fails too. The page holds what the served page shows at load: every region, the next tick of Home and the
+addons of the rail included.
+
+A section that no page renders, a stylesheet specimen, carries `READ` under its `REFERENCE`, the file its delivery is
+judged by reading: `build capture` captures nothing for it, and `review context` prints the file under `read:` in place
+of a PNG pair.
+
+```
+REFERENCE "artifact/m18-dashboard/index.html"
+	COVERS "foundation"
+	READ "brigade/dashboard/data/dashboard.css"
+```
+
+A capture taller than 2000 px is cut into ordered slices of 2000 px, `<page>-delivered-01.png` and on, the height a
+claude-code `Read` of a PNG shows legibly at 1440 px of width; `review context` names every slice, numbered.
+
+A page is not captured, and the output says why, when the project has no recipe `capture`, the task no `REFERENCE`,
+the `REFERENCE` carries `READ`, the reference is a URL, no HTML page, outside the repository or absent from it, `COVERS`
+names no section of it, a step of the recipe exits non-zero, or a screenshot exits non-zero, times out, writes no
+image or writes a PNG other than the 8-bit RGBA, non-interlaced one Firefox writes, which brigade does not slice.
+
+### Each head has its captures
+
+- `brigade build pr` captures the checked head and shows each pair in the `## Captures` section of the body, which
+  names that head.
+- `brigade review context` names the pair of the head under review only. When that pair is missing and the worktree
+  stands at that head, it captures it, then rewrites the `## Captures` section of the body: a head repaired after a
+  review, or rebased, is judged against its own captures. Only that section is replaced, the attribution after it kept.
+- A head is captured and hosted once: the section published for it is reused.
+
+### Where the captures go
+
+| Repository | Captures |
+|---|---|
+| public, as the forge says | hosted in a public gist of the build account, shown as images in the body |
+| private, or its visibility unreadable | hosted nowhere: the body names the files in the state directory, where the review reads them |
+
+> **Watch out:** the captures of a public repository are public, as the pull request is. Nothing of a private project
+> leaves the machine.
+
 ## The verdict document
 
 ```
@@ -19,7 +118,7 @@ Both run from the worktree of the task whose pull request they judge.
 | `head` | the commit `review context` printed |
 | `verdict` | `pass` or `changes` |
 | `grade` | `critical`, `high`, `medium` or `low` |
-| `broken` | the `SPEC` or the rule the finding breaks |
+| `broken` | the `SPEC`, the milestone, the reference or the rule the finding breaks |
 | `summary` | what is wrong |
 
 `review verdict` records the ledger event `task.verdict` at that head.
@@ -34,6 +133,12 @@ Both run from the worktree of the task whose pull request they judge.
 
 - the head it judges;
 - the task with its `awawa context` and its closure;
+- a section `goal`: the title of the task, then the `TITLE`, `SUBJECT`, `DESC` and `SOURCE` of its milestone, read
+  in the tree of the head, or `no milestone: the title of the task is its goal`;
+- a section `reference`: each `REFERENCE` of the task, read at the base of the branch, with the page its `COVERS`
+  names and its `REVISES`, then the
+  numbered PNG slices of that page, the file `READ` names, or that brigade build capture wrote none, a URL printed
+  refused with why, or `none`;
 - the diff of the pull request against its base;
 - the findings of the preflight;
 - the rules of the path triggers of the files the diff touches, when `config.toml` names an instructions corpus;

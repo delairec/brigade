@@ -59,6 +59,9 @@ class PreflightPullRequestOfAnAreaTest(unittest.TestCase):
         answers[("awawa", "show", "@TASK.B1", "--json", str(head_area))] = answers[
             ("awawa", "show", "@TASK.B1", "--json", str(self.head_tree))
         ]
+        answers[("awawa", "show", "@TASK.B1", "--json", str(base_area))] = answers[
+            ("awawa", "show", "@TASK.B1", "--json", str(self.base_tree))
+        ]
         answers[("awawa", "diff", str(base_area), str(head_area), "--json")] = ProcessAnswer(
             stdout=json.dumps({"added": [], "changed": [{"file": "tasks.awawa"}], "removed": []})
         )
@@ -159,6 +162,7 @@ class PreflightPullRequestTest(unittest.TestCase):
                 stdout="1\t0\tbrigade/cart.py\n"
             ),
             ("awawa", "show", "@TASK.B1", "--json", str(self.head_tree)): ProcessAnswer(stdout=json.dumps(task)),
+            ("awawa", "show", "@TASK.B1", "--json", str(self.base_tree)): ProcessAnswer(stdout=json.dumps(task)),
             ("awawa", "diff", str(self.base_tree), str(self.head_tree), "--json"): ProcessAnswer(
                 stdout=json.dumps({"added": [], "changed": [], "removed": []})
             ),

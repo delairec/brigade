@@ -2,6 +2,8 @@ import dataclasses
 from dataclasses import dataclass
 from pathlib import Path
 
+from brigade.captures.locate_task_captures import locate_task_captures
+from brigade.captures.publish_task_captures import CapturePublication, publish_task_captures
 from brigade.corpus.read_entity import Entity, read_entity
 from brigade.errors import BrigadeError
 from brigade.git.push_branch import BranchPush
@@ -11,6 +13,7 @@ from brigade.ledger.append_event import append_event
 from brigade.ledger.milestone_created import MilestoneCreated
 from brigade.ledger.read_ledger import read_ledger
 from brigade.ledger.task_pr_opened import TaskPrOpened
+from brigade.recipes.locate_recipes import locate_recipes
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.tasks.compose_pull_request_title import PullRequestTitleParts, compose_pull_request_title
@@ -109,6 +112,7 @@ class _BodySources:
     corrections: tuple[Correction, ...]
     check: object
     attribution: tuple[str, ...]
+    captures: str
 
 
 def _compose_body(sources: _BodySources) -> str:
@@ -120,7 +124,25 @@ def _compose_body(sources: _BodySources) -> str:
             specs=tuple(field.value for field in task.fields if field.name == "SPEC"),
             check=sources.check,
             attribution=sources.attribution,
+            captures=sources.captures,
         )
+    )
+
+
+def _publish_captures(runtime: Runtime, worktree: TaskWorktree, demand: TaskPullRequestDemand, head: str) -> str:
+    return publish_task_captures(
+        runtime,
+        CapturePublication(
+            worktree=worktree.path,
+            places=locate_recipes(worktree.path, worktree.project, runtime.paths),
+            task=worktree.task,
+            corpus=locate_task_corpus(worktree),
+            directory=locate_task_captures(runtime.paths, worktree.project.name, worktree.task, head),
+            forge=demand.forge,
+            environment=demand.environment,
+            home=str(runtime.paths.home),
+            head=head,
+        ),
     )
 
 
@@ -174,6 +196,7 @@ def _describe_opening(session: ForgeSession, opened: _TaskPullRequest, pull_requ
 def open_task_pull_request(runtime: Runtime, demand: TaskPullRequestDemand) -> dict:
     worktree = locate_task_worktree(runtime, demand.path, demand.task)
     check = require_passing_check(runtime, worktree)
+    captures = _publish_captures(runtime, worktree, demand, check["head"])
     task = read_entity(runtime.run_process, locate_task_corpus(worktree), "TASK", worktree.task)
     title = _compose_title(task, demand.subject)
     corrects = _read_corrects(task)
@@ -189,7 +212,7 @@ def open_task_pull_request(runtime: Runtime, demand: TaskPullRequestDemand) -> d
     opened = _TaskPullRequest(
         branch=branch,
         title=title,
-        body=_compose_body(_BodySources(task, corrections, check, demand.attribution)),
+        body=_compose_body(_BodySources(task, corrections, check, demand.attribution, captures)),
         milestone=milestone,
         corrects=corrects,
     )

@@ -53,6 +53,9 @@ class AssembleLocalVerifyContextTest(unittest.TestCase):
                 ("awawa", "show", "@TASK.B1", "--json", str(head_tree)): ProcessAnswer(
                     stdout=json.dumps({"fields": []})
                 ),
+                ("awawa", "show", "@TASK.B1", "--json", str(base_tree)): ProcessAnswer(
+                    exit_code=1, stderr="awawa show: @TASK.B1 is not defined in the workspace\n"
+                ),
                 ("awawa", "diff", str(base_tree), str(head_tree), "--json"): ProcessAnswer(
                     stdout=json.dumps({"added": [], "changed": [], "removed": []})
                 ),

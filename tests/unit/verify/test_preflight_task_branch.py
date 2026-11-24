@@ -37,7 +37,9 @@ class PreflightTaskBranchTest(unittest.TestCase):
         (self.head_tree / "brigade" / "cart.py").write_text("def empty_cart():\n")
         self.base_tree.mkdir(parents=True)
 
-    def create_runner(self, unit_tests: ProcessAnswer) -> RecordingProcessRunner:
+    def create_runner(
+        self, unit_tests: ProcessAnswer, references: tuple[dict, ...] = (), base_references: tuple[dict, ...] = ()
+    ) -> RecordingProcessRunner:
         task = {
             "fields": [
                 {"name": "STATUS", "atoms": ["implemented"], "fields": []},
@@ -46,6 +48,7 @@ class PreflightTaskBranchTest(unittest.TestCase):
                     "atoms": ['"empties the cart"'],
                     "fields": [{"name": "IMPL", "atoms": ['"brigade/cart.py::def empty_cart"'], "fields": []}],
                 },
+                *references,
             ]
         }
         return RecordingProcessRunner(
@@ -61,6 +64,11 @@ class PreflightTaskBranchTest(unittest.TestCase):
                     stdout="1\t0\tbrigade/cart.py\n"
                 ),
                 ("awawa", "show", "@TASK.B1", "--json", str(self.head_tree)): ProcessAnswer(stdout=json.dumps(task)),
+                ("awawa", "show", "@TASK.B1", "--json", str(self.base_tree)): ProcessAnswer(
+                    stdout=json.dumps(
+                        {"fields": [{"name": "STATUS", "atoms": ["todo"], "fields": []}, *base_references]}
+                    )
+                ),
                 ("awawa", "diff", str(self.base_tree), str(self.head_tree), "--json"): ProcessAnswer(
                     stdout=json.dumps({"added": [], "changed": [], "removed": []})
                 ),
@@ -81,6 +89,41 @@ class PreflightTaskBranchTest(unittest.TestCase):
             task_branch=TASK_BRANCH,
             base_branch=MILESTONE_BRANCH,
             configuration=Configuration(),
+        )
+
+    def test_should_judge_the_task_at_the_merge_base_against_the_files_its_branch_changes(self):
+        # Arrange
+        cart_covers = {"name": "COVERS", "atoms": ['"cart"'], "fields": []}
+        cart_reference = {"name": "REFERENCE", "atoms": ['"brigade/cart.py"'], "fields": [cart_covers]}
+        cart_revised = {
+            "name": "REFERENCE",
+            "atoms": ['"brigade/cart.py"'],
+            "fields": [{"name": "REVISES", "atoms": ['"the task writes the cart"'], "fields": []}, cart_covers],
+        }
+        runner = self.create_runner(ProcessAnswer(), (cart_revised,), (cart_reference,))
+        runtime = create_test_runtime(self.paths, run_process=runner)
+
+        # Act
+        document = preflight_task_branch(runtime, self.create_demand())
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "promotion",
+                "result": "fail",
+                "findings": [
+                    (
+                        "brigade/cart.py is the REFERENCE @TASK.B1 is judged against, and its branch changes it:"
+                        " a task delivering its reference says so with REVISES at the base of its branch"
+                    ),
+                    (
+                        "the branch of @TASK.B1 adds or changes the REVISES or the READ under its REFERENCE"
+                        " brigade/cart.py, COVERS cart: the builder never does, the planner writes them at"
+                        " ratification"
+                    ),
+                ],
+            },
+            document["checks"],
         )
 
     def test_should_run_the_acceptance_commands_on_the_head_of_the_task_branch_in_place_of_the_check_runs(self):
@@ -187,6 +230,9 @@ class PreflightTaskBranchOfAnAreaTest(unittest.TestCase):
                     stdout=numstat
                 ),
                 ("awawa", "show", "@TASK.B1", "--json", str(head_area)): ProcessAnswer(
+                    stdout=json.dumps({"fields": task_fields})
+                ),
+                ("awawa", "show", "@TASK.B1", "--json", str(self.base_tree / "brigade")): ProcessAnswer(
                     stdout=json.dumps({"fields": task_fields})
                 ),
                 ("awawa", "diff", str(self.base_tree / "brigade"), str(head_area), "--json"): ProcessAnswer(

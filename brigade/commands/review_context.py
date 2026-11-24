@@ -1,13 +1,20 @@
 import argparse
+import functools
+from dataclasses import dataclass, replace
 from pathlib import Path
 
+from brigade.captures.refresh_review_captures import ReviewCaptureRefresh, refresh_review_captures
 from brigade.command import Argument, Command
 from brigade.commands._equip_preflight import equip_preflight
 from brigade.commands._equip_registered_collector import equip_registered_collector
+from brigade.commands._read_forge_environment import BUILD_SLOT, FORGE_KIND, ForgeSlot, read_forge_environment
+from brigade.corpus.read_entities import Entity
 from brigade.errors import BrigadeError
 from brigade.git.locate_main_checkout import locate_main_checkout
 from brigade.git.locate_worktree_root import locate_worktree_root
 from brigade.git.read_current_branch import read_current_branch
+from brigade.recipes.locate_recipes import locate_recipes
+from brigade.registry.read_corpus_workspace import read_corpus_workspace
 from brigade.registry.read_project_forge import NO_FORGE, read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_project_at import require_project_at
@@ -51,6 +58,54 @@ def _render_previous(previous: dict) -> str:
     return f"head {previous['head']}\nverdict {previous['verdict']}\n{findings}"
 
 
+def _render_milestone(milestone: dict | None) -> str:
+    if milestone is None:
+        return "no milestone: the title of the task is its goal\n"
+    return (
+        f"milestone {milestone['name']}: {milestone['title']}\n"
+        f"  subject: {milestone['subject'] or ABSENT}\n"
+        + "".join(f"  desc: {desc}\n" for desc in milestone["desc"])
+        + "".join(f"  source: {source}\n" for source in milestone["source"])
+    )
+
+
+def _render_goal(goal: dict | None, task: str) -> str:
+    if goal is None:
+        return f"the head defines no @TASK.{task}: the preflight promotion says so\n"
+    return f"task {goal['task']}: {goal['title']}\n{_render_milestone(goal['milestone'])}"
+
+
+def _render_slices(side: str, slices: list[str]) -> str:
+    return "".join(f"  {side} {rank}/{len(slices)}: {sliced}\n" for rank, sliced in enumerate(slices, start=1))
+
+
+def _render_captures(reference: dict) -> str:
+    if reference["refusal"] is not None:
+        return f"  refused: {reference['refusal']}\n"
+    if reference["reads"] is not None:
+        return f"  read: {reference['reads']}, the section judged by reading this file, no PNG pair\n"
+    captures = reference["captures"]
+    if captures is None:
+        return "  captures: none at this head, brigade build capture wrote no PNG pair for this page\n"
+    return _render_slices("delivered", captures["delivered"]) + _render_slices("reference page", captures["reference"])
+
+
+def _render_revises(reference: dict) -> str:
+    if reference["revises"] is None:
+        return ""
+    return f"  revises: {reference['revises']}\n"
+
+
+def _render_references(references: list[dict]) -> str:
+    if not references:
+        return f"{ABSENT}\n"
+    return "".join(
+        f"{reference['reference']}\n  covers: {reference['covers'] or ABSENT}\n"
+        f"{_render_revises(reference)}{_render_captures(reference)}"
+        for reference in references
+    )
+
+
 def _render_re_verification(document: dict) -> list[str]:
     if document["previous"] is None:
         return []
@@ -64,6 +119,8 @@ def _render_text(document: dict) -> str:
     sections = [
         f"# head\n{document['head']}\n",
         f"# task\n{_render_commands(document['context'])}",
+        f"# goal\n{_render_goal(document['goal'], document['task'])}",
+        f"# reference\n{_render_references(document['references'])}",
         f"# diff\n{_render_commands([document['diff']])}",
         *_render_re_verification(document),
         f"# preflight\n{_render_preflight(document['preflight'])}",
@@ -71,6 +128,45 @@ def _render_text(document: dict) -> str:
         "# grades\n" + "".join(f"{grade}\n" for grade in document["grades"]),
     ]
     return "\n".join(sections).removesuffix("\n")
+
+
+def _locate_refresh(runtime: Runtime, checkout: "_Checkout", task: str) -> ReviewCaptureRefresh:
+    return ReviewCaptureRefresh(
+        project=checkout.project.name,
+        task=task,
+        worktree=checkout.worktree,
+        places=locate_recipes(checkout.worktree, checkout.project, runtime.paths),
+        corpus=checkout.worktree / read_corpus_workspace(checkout.project),
+        pr=None,
+        forge=None,
+        environment={},
+    )
+
+
+@dataclass(frozen=True)
+class _Checkout:
+    worktree: Path
+    project: Entity
+
+
+@dataclass(frozen=True)
+class _OpenedPullRequest:
+    checkout: _Checkout
+    task: str
+    pr: int
+    forge_name: str
+
+
+def _equip_pull_request_refresh(
+    runtime: Runtime, configuration: Configuration, opened: _OpenedPullRequest
+) -> ReviewCaptureRefresh:
+    forge_slot = ForgeSlot(opened.forge_name, BUILD_SLOT)
+    return replace(
+        _locate_refresh(runtime, opened.checkout, opened.task),
+        pr=opened.pr,
+        forge=runtime.resolve_plugin(FORGE_KIND, opened.forge_name),
+        environment=read_forge_environment(configuration, forge_slot, runtime),
+    )
 
 
 def _assemble_task_branch_context(runtime: Runtime, configuration: Configuration, worktree: Path) -> dict:
@@ -82,7 +178,29 @@ def _assemble_task_branch_context(runtime: Runtime, configuration: Configuration
         base_branch=located.base,
         configuration=configuration,
     )
-    return {"schema_version": DOCUMENT_SCHEMA_VERSION, **assemble_local_verify_context(runtime, branch_demand)}
+    document = assemble_local_verify_context(runtime, branch_demand)
+    refresh = _locate_refresh(runtime, _Checkout(located.path, located.project), located.task)
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, **refresh_review_captures(runtime, document, lambda: refresh)}
+
+
+def _assemble_pull_request_context(
+    runtime: Runtime, configuration: Configuration, checkout: _Checkout, pr: int
+) -> dict:
+    project = checkout.project
+    forge_name = read_project_forge(project)
+    found = find_opened_task(runtime, project.name, pr)
+    demand = PreflightDemand(
+        project=project,
+        task=found.opened.task,
+        base_branch=find_task_base(runtime, checkout.worktree, project, found.opened.task),
+        pr=pr,
+        equipment=equip_registered_collector(project, configuration, runtime),
+        plugins=equip_preflight(runtime),
+    )
+    opened = _OpenedPullRequest(checkout=checkout, task=found.opened.task, pr=pr, forge_name=forge_name)
+    equip = functools.partial(_equip_pull_request_refresh, runtime, configuration, opened)
+    document = refresh_review_captures(runtime, assemble_verify_context(runtime, demand), equip)
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, **document}
 
 
 def review_context(request: argparse.Namespace, runtime: Runtime) -> dict:
@@ -97,16 +215,7 @@ def review_context(request: argparse.Namespace, runtime: Runtime) -> dict:
         raise BrigadeError(
             f"@PROJECT.{project.name} acts through the forge {forge_name}: the context names its pull request"
         )
-    found = find_opened_task(runtime, project.name, request.pr)
-    demand = PreflightDemand(
-        project=project,
-        task=found.opened.task,
-        base_branch=find_task_base(runtime, worktree, project, found.opened.task),
-        pr=request.pr,
-        equipment=equip_registered_collector(project, configuration, runtime),
-        plugins=equip_preflight(runtime),
-    )
-    return {"schema_version": DOCUMENT_SCHEMA_VERSION, **assemble_verify_context(runtime, demand)}
+    return _assemble_pull_request_context(runtime, configuration, _Checkout(worktree, project), request.pr)
 
 
 COMMAND = Command(

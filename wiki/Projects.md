@@ -99,6 +99,11 @@ checkout of the project is left as it is.
 
 Once the branch is merged, `brigade plan context` and `brigade plan record` accept the project.
 
+> **Watch out:** the schema `--init-corpus` commits is the project's from then on: no command upgrades it. A corpus
+> given its schema before the field `REFERENCE` of TASK keeps a schema without it, and its planner reports a reference
+> as a question. Copy the block `FIELD REFERENCE`, with `COVERS`, `REVISES` and `READ` nested under it, from `brigade/corpus/data/project_schema.awawa.tpl`
+> under `SCHEMA TASK` of its `_schema.awawa`, in a pull request of the project.
+
 > **Watch out:** a repository already tracking a `.awawa` file exits 1 naming it, and so does a branch
 > `brigade/init-corpus` that already exists.
 

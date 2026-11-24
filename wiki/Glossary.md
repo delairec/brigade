@@ -26,7 +26,7 @@ row names a word the code or the corpus carries.
 | check | concept | one deterministic judgment of a preflight, answering a result with its findings; a check run of the forge keeps the forge's sense | [Preflight](Preflight.md) | M8 | B255 |
 | result | concept | `ok` or `fail`, what a check of a preflight answers | [Preflight](Preflight.md) | M8 | B255 |
 | prerequisite | concept | one item `brigade doctor` inspects on the machine | [Install](Install.md) | M8 | B255 |
-| review | concept | the judgment of the pull request of a task, by a review run of brigade or on the forge | [Review](Review.md) | M8 | B255 |
+| review | concept | the judgment of the pull request of a task against its `SPEC` lines, its goal and its reference, by a review run of brigade or on the forge | [Review](Review.md) | M8 | B255 |
 | verdict | concept | `pass` or `changes`, the judgment of a review run, recorded as `task.verdict` | [Review](Review.md) | M8 | B255 |
 | finding | concept | one defect a review or a check names, which a remediation run answers | [Review answers](Review-answers.md) | M8 | B255 |
 | round | concept | one repair round of a task: a review and the remediation that answers it | [Review answers](Review-answers.md) | M8 | B255 |
@@ -76,6 +76,7 @@ row names a word the code or the corpus carries.
 | `brigade adapter probe` | command | answer probe, the request read on stdin | [Client adapters](Client-adapters.md) | F0 | B82 |
 | `brigade adapter resume-argv` | command | answer resume-argv, the request read on stdin | [Client adapters](Client-adapters.md) | F0 | B82 |
 | `brigade adapter transcripts` | command | answer transcripts, the request read on stdin | [Client adapters](Client-adapters.md) | F0 | B82 |
+| `brigade build capture` | command | capture each page the REFERENCE of a task covers, as delivered and as the reference shows it, in PNG files | [Review](Review.md) | M8 | B255 |
 | `brigade build check` | command | run the acceptance commands and the checks of the corpus in the worktree of a task | [Tasks](Tasks.md) | M8 | B255 |
 | `brigade build context` | command | print the starting context of a build run in the worktree of its task | [Tasks](Tasks.md) | M8 | B255 |
 | `brigade build pr` | command | push the branch of a checked task and open its pull request on the branch of its wave | [Tasks](Tasks.md) | M8 | B255 |
@@ -104,6 +105,7 @@ row names a word the code or the corpus carries.
 | `brigade order resume` | command | resume a paused order, which the tick runs again when due, and relaunch its parked run at its first undone step | [Recipes](Recipes.md) | M8 | B51 |
 | `brigade order run` | command | run an order: the steps of its recipe; resume it at its first undone step where it parked | [Recipes](Recipes.md) | M8 | B51 |
 | `brigade order show` | command | print one order with its runs | [Recipes](Recipes.md) | M8 | B51 |
+| `brigade page` | command | print one page of the dashboard as a standalone HTML document, its stylesheet inline and its regions filled | [Review](Review.md) | M8 | B255 |
 | `brigade plan context` | command | print the context a planner reads to plan a request | [Waves](Waves.md) | M1 | B10 |
 | `brigade plan record` | command | record the plan of a request, one MILESTONE and its tasks, on plan/<request> and deliver it to the main branch | [Waves](Waves.md) | M1 | B139 |
 | `brigade preflight` | command | run the collectors and the checks of a named preflight; key=value pairs are their parameters | [Preflight](Preflight.md) | M8 | B98 |

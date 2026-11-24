@@ -1314,7 +1314,7 @@ class DoctorProjectsTest(DoctorTestCase):
     def test_should_find_a_step_of_a_project_recipe_whose_program_is_no_executable(self):
         # Arrange
         self.register()
-        for recipe in ["setup", "acceptance", "heavy"]:
+        for recipe in ["setup", "acceptance", "heavy", "capture"]:
             with self.subTest(recipe=recipe):
                 self.answers.update(create_recipe_answers(self.project, {recipe: (("ghost", "--check"),)}))
 
@@ -1332,6 +1332,69 @@ class DoctorProjectsTest(DoctorTestCase):
                     },
                     document["items"],
                 )
+
+    def test_should_find_firefox_missing_for_a_project_declaring_a_capture_recipe(self):
+        # Arrange
+        self.register()
+        self.answers.update(create_recipe_answers(self.project, {"capture": (("make", "page", "{page}"),)}))
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertIn(
+            {
+                "name": "project",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": "@PROJECT.app: recipe capture, the screenshots: no executable firefox",
+                "fallback": None,
+            },
+            document["items"],
+        )
+
+    def test_should_not_find_firefox_missing_once_it_is_on_path(self):
+        # Arrange
+        self.register()
+        self.answers.update(create_recipe_answers(self.project, {"capture": (("make", "page", "{page}"),)}))
+        firefox = Path(self.runtime.paths.executable_search_path) / "firefox"
+        firefox.write_text("#!/bin/sh\n")
+        firefox.chmod(EXECUTABLE)
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertNotIn(
+            {
+                "name": "project",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": "@PROJECT.app: recipe capture, the screenshots: no executable firefox",
+                "fallback": None,
+            },
+            document["items"],
+        )
+
+    def test_should_not_look_for_firefox_for_a_project_declaring_no_capture_recipe(self):
+        # Arrange
+        self.register()
+        self.answers.update(create_recipe_answers(self.project, {"acceptance": (("make", "check"),)}))
+
+        # Act
+        document = doctor(self.no_option, self.runtime)
+
+        # Assert
+        self.assertNotIn(
+            {
+                "name": "project",
+                "kind": "prerequisite",
+                "state": "finding",
+                "detail": "@PROJECT.app: recipe capture, the screenshots: no executable firefox",
+                "fallback": None,
+            },
+            document["items"],
+        )
 
     def test_should_not_find_a_step_of_a_project_recipe_whose_program_is_an_executable_on_path(self):
         # Arrange

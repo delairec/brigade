@@ -46,6 +46,10 @@ is 1; a missing optional item is a warning, reported with its fallback.
 | the instructions corpus `config.toml` names, `awawa lint --strict` clean or not | no |
 | an installed `_schema.awawa` identical to the shipped one | no |
 
+`brigade build capture`, and `brigade review context` on a task citing a `REFERENCE`, run `firefox --headless`: Firefox
+is needed on the machine of the tick for those captures only. `brigade doctor` names a registered project that declares
+a recipe `capture` while `firefox` is not on `PATH`.
+
 An installed `_schema.awawa` that differs from the shipped one is a warning naming `brigade init`, which upgrades it:
 it writes the shipped schema in its place, every entity of the registry kept as it is, and checks the registry with
 `awawa lint --strict`. When lint passes, it commits `_schema.awawa` alone and reports the schema `upgraded`; when lint

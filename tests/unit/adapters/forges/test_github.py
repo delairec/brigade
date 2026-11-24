@@ -1,5 +1,7 @@
 import json
+import tempfile
 import unittest
+from pathlib import Path
 
 from brigade.adapters.forges.github import (
     BRANCH_CHECK_RUNS_QUERY,
@@ -12,6 +14,7 @@ from brigade.adapters.forges.github import (
     describe_account,
     edit_pull_request,
     find_pull_request,
+    host_images,
     list_check_runs,
     list_milestones,
     list_pull_requests,
@@ -24,6 +27,7 @@ from brigade.adapters.forges.github import (
     read_job_steps,
     read_login_environment,
     read_pull_request,
+    read_repository_visibility,
     reply_review_thread,
     rewrite_pull_request_body,
 )
@@ -1576,3 +1580,230 @@ class ReadJobStepsTest(unittest.TestCase):
 
                 # Assert
                 self.assertEqual(answer, {"schema_version": 1, "steps": None})
+
+
+class HostImagesTest(unittest.TestCase):
+    def setUp(self):
+        self.directory = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        self.request = {
+            "repository": "/projects/shop",
+            "environment": BOT_ENVIRONMENT,
+            "files": [str(self.directory / "cart-delivered.png"), str(self.directory / "cart-reference.png")],
+            "description": "captures of @TASK.S3",
+        }
+
+    def test_should_answer_the_raw_address_of_each_image_in_the_gist_of_the_machine_account(self):
+        # Arrange
+        gh = create_gh("https://gist.github.com/octo-bot/abc123\n")
+        runtime = create_test_runtime(run_process=gh)
+
+        # Act
+        answer = host_images(self.request, runtime)
+
+        # Assert
+        self.assertEqual(
+            answer,
+            {
+                "schema_version": 1,
+                "urls": [
+                    "https://gist.githubusercontent.com/octo-bot/abc123/raw/cart-delivered.png",
+                    "https://gist.githubusercontent.com/octo-bot/abc123/raw/cart-reference.png",
+                ],
+            },
+        )
+
+    def test_should_push_the_images_to_a_public_gist_it_creates_and_clones(self):
+        # Arrange
+        runs = []
+
+        def record_and_answer(request, rank):
+            runs.append((request.argv, request.environment))
+            return 0, "https://gist.github.com/octo-bot/abc123\n"
+
+        runtime = create_test_runtime(run_process=GhDouble(record_and_answer))
+        clone = str(self.directory / "gist.git")
+        tree = ("--git-dir", clone, "--work-tree", str(self.directory))
+
+        # Act
+        host_images(self.request, runtime)
+
+        # Assert
+        self.assertEqual(
+            runs,
+            [
+                (
+                    (
+                        "gh",
+                        "gist",
+                        "create",
+                        "--public",
+                        "--desc",
+                        "captures of @TASK.S3",
+                        str(self.directory / "captures.md"),
+                    ),
+                    BOT_ENVIRONMENT,
+                ),
+                (("git", "clone", "--bare", "https://gist.github.com/abc123.git", clone), BOT_ENVIRONMENT),
+                (("git", *tree, "add", "captures.md", "cart-delivered.png", "cart-reference.png"), BOT_ENVIRONMENT),
+                (
+                    (
+                        "git",
+                        "-c",
+                        "user.name=octo-bot",
+                        "-c",
+                        "user.email=octo-bot@users.noreply.github.com",
+                        *tree,
+                        "commit",
+                        "--message",
+                        "captures of @TASK.S3",
+                    ),
+                    BOT_ENVIRONMENT,
+                ),
+                (
+                    (
+                        "git",
+                        "-c",
+                        "credential.helper=",
+                        "-c",
+                        "credential.helper=!gh auth git-credential",
+                        *tree,
+                        "push",
+                        "origin",
+                        "HEAD",
+                    ),
+                    BOT_ENVIRONMENT,
+                ),
+            ],
+        )
+
+    def test_should_describe_the_gist_in_the_file_it_creates_it_from(self):
+        # Arrange
+        runtime = create_test_runtime(run_process=create_gh("https://gist.github.com/octo-bot/abc123\n"))
+
+        # Act
+        host_images(self.request, runtime)
+
+        # Assert
+        self.assertEqual((self.directory / "captures.md").read_text(), "captures of @TASK.S3\n")
+
+
+class ReadRepositoryVisibilityTest(unittest.TestCase):
+    def test_should_say_a_repository_is_public_only_when_the_forge_says_so(self):
+        # Arrange
+        rows = [
+            ("a public repository", 0, "PUBLIC\n", True),
+            ("a private repository", 0, "PRIVATE\n", False),
+            ("an internal repository", 0, "INTERNAL\n", False),
+            ("a visibility the forge does not answer", 1, "", False),
+            ("a failed answer that still prints public", 1, "PUBLIC\n", False),
+        ]
+        for case, exit_code, stdout, expected_public in rows:
+            with self.subTest(case=case):
+                runtime = create_test_runtime(run_process=create_gh(stdout, exit_code))
+
+                # Act
+                answer = read_repository_visibility({"repository": "/projects/shop", "environment": {}}, runtime)
+
+                # Assert
+                self.assertEqual(answer, {"schema_version": 1, "public": expected_public})
+
+    def test_should_ask_the_visibility_of_the_repository_as_the_forge_account(self):
+        # Arrange
+        asked = []
+
+        def record(request, rank):
+            asked.append((request.argv, request.cwd, request.environment))
+            return 0, "PUBLIC\n"
+
+        runtime = create_test_runtime(run_process=GhDouble(record))
+
+        # Act
+        read_repository_visibility({"repository": "/projects/shop", "environment": BOT_ENVIRONMENT}, runtime)
+
+        # Assert
+        self.assertEqual(
+            asked,
+            [
+                (
+                    ("gh", "repo", "view", "--json", "visibility", "--jq", ".visibility"),
+                    "/projects/shop",
+                    BOT_ENVIRONMENT,
+                )
+            ],
+        )
+
+
+def _clone_into_an_empty_destination_only(request: ProcessRequest, rank: int) -> tuple[int, str]:
+    if "clone" in request.argv and Path(request.argv[-1]).exists():
+        raise CommandFailed(request.argv, 128, f"destination path '{request.argv[-1]}' already exists")
+    return 0, "https://gist.github.com/octo-bot/abc123\n"
+
+
+class HostImagesTwiceTest(unittest.TestCase):
+    def test_should_remove_the_clone_of_the_gist_an_earlier_hosting_left(self):
+        # Arrange
+        directory = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (directory / "gist.git").mkdir()
+        (directory / "gist.git" / "HEAD").write_text("ref: refs/heads/main\n")
+        request = {
+            "repository": "/projects/shop",
+            "environment": BOT_ENVIRONMENT,
+            "files": [str(directory / "cart-delivered.png")],
+            "description": "captures of @TASK.S3",
+        }
+        runtime = create_test_runtime(run_process=GhDouble(_clone_into_an_empty_destination_only))
+
+        # Act
+        hosted = host_images(request, runtime)
+
+        # Assert
+        self.assertEqual(
+            hosted,
+            {
+                "schema_version": 1,
+                "urls": ["https://gist.githubusercontent.com/octo-bot/abc123/raw/cart-delivered.png"],
+            },
+        )
+
+
+def _clone_then_answer(push_exit_code: int):
+    def answer(request: ProcessRequest, rank: int) -> tuple[int, str]:
+        if "clone" in request.argv:
+            Path(request.argv[-1]).mkdir()
+        if "push" in request.argv and push_exit_code not in request.acceptable_exit_codes:
+            raise CommandFailed(request.argv, push_exit_code, "the gist refused the push")
+        return 0, "https://gist.github.com/octo-bot/abc123\n"
+
+    return answer
+
+
+class HostImagesCloneTest(unittest.TestCase):
+    def setUp(self):
+        self.directory = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        self.request = {
+            "repository": "/projects/shop",
+            "environment": BOT_ENVIRONMENT,
+            "files": [str(self.directory / "cart-delivered.png")],
+            "description": "captures of @TASK.S3",
+        }
+
+    def test_should_remove_the_clone_of_the_gist_once_its_images_are_pushed(self):
+        # Arrange
+        runtime = create_test_runtime(run_process=GhDouble(_clone_then_answer(0)))
+
+        # Act
+        host_images(self.request, runtime)
+
+        # Assert
+        self.assertFalse((self.directory / "gist.git").exists())
+
+    def test_should_remove_the_clone_of_the_gist_when_its_push_fails(self):
+        # Arrange
+        runtime = create_test_runtime(run_process=GhDouble(_clone_then_answer(1)))
+
+        # Act
+        with self.assertRaises(CommandFailed):
+            host_images(self.request, runtime)
+
+        # Assert
+        self.assertFalse((self.directory / "gist.git").exists())

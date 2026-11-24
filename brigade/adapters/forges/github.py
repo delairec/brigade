@@ -1,11 +1,15 @@
 import json
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from urllib.parse import urlsplit
 
 from brigade.errors import CommandFailed, PullRequestCompareFailed
+from brigade.git.push_files_to_remote import FilesPush, push_files_to_remote
 from brigade.runtime import Runtime
+from brigade.system.delete_path import delete_path
 from brigade.system.run_process import EVERY_EXIT_CODE, ProcessRequest
+from brigade.system.write_text_file import write_text_file
 
 HOST = "github.com"
 PROBE_DIRECTORY = "/"
@@ -14,6 +18,7 @@ DOCUMENT_SCHEMA_VERSION = 1
 AUTHENTICATION_VARIABLE = "GH_TOKEN"
 PUBLICATION_TIMEOUT_S = 60.0
 BODY_FROM_STDIN = "-"
+PUBLIC_VISIBILITY = "PUBLIC"
 URL_SEPARATOR = "/"
 MILESTONES_PATH = "repos/{owner}/{repo}/milestones"
 MILESTONES_OF_EVERY_STATE = f"{MILESTONES_PATH}?state=all"
@@ -70,6 +75,12 @@ BRANCH_CHECK_RUNS_QUERY = f"""query($owner: String!, $name: String!, $branch: St
   }}
 }}"""
 BRANCH_REF_PREFIX = "refs/heads/"
+GIST_HOST = "https://gist.github.com"
+RAW_GIST_HOST = "https://gist.githubusercontent.com"
+GIST_DESCRIPTION_FILE = "captures.md"
+GIST_CLONE = "gist.git"
+NO_REPLY_EMAIL_DOMAIN = "users.noreply.github.com"
+GH_CREDENTIAL_HELPER = "!gh auth git-credential"
 THREAD_REPLY_MUTATION = """mutation($thread: ID!, $body: String!) {
   addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: $thread, body: $body}) { comment { id } }
 }"""
@@ -149,6 +160,54 @@ def open_pull_request(request: dict, runtime: Runtime) -> dict:
         request["environment"],
     )
     return {"schema_version": DOCUMENT_SCHEMA_VERSION, "url": url, "number": int(url.rsplit(URL_SEPARATOR, 1)[1])}
+
+
+def _create_gist(request: dict, runtime: Runtime, description: Path) -> list[str]:
+    record = runtime.run_process(
+        ProcessRequest(
+            argv=("gh", "gist", "create", "--public", "--desc", request["description"], str(description)),
+            cwd=str(description.parent),
+            timeout_s=PUBLICATION_TIMEOUT_S,
+            environment=request["environment"],
+        )
+    )
+    return urlsplit(record.stdout.strip()).path.strip(URL_SEPARATOR).split(URL_SEPARATOR)
+
+
+def _remove_clone(clone: Path) -> None:
+    if clone.exists():
+        delete_path(clone)
+
+
+def host_images(request: dict, runtime: Runtime) -> dict:
+    images = [Path(file) for file in request["files"]]
+    directory = images[0].parent
+    description = directory / GIST_DESCRIPTION_FILE
+    write_text_file(description, f"{request['description']}\n")
+    login, gist = _create_gist(request, runtime, description)
+    clone = directory / GIST_CLONE
+    _remove_clone(clone)
+    try:
+        push_files_to_remote(
+            runtime.run_process,
+            FilesPush(
+                remote=f"{GIST_HOST}/{gist}.git",
+                clone=clone,
+                tree=directory,
+                files=(GIST_DESCRIPTION_FILE, *(image.name for image in images)),
+                message=request["description"],
+                author_name=login,
+                author_email=f"{login}@{NO_REPLY_EMAIL_DOMAIN}",
+                credential_helper=GH_CREDENTIAL_HELPER,
+                environment=request["environment"],
+            ),
+        )
+    finally:
+        _remove_clone(clone)
+    return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
+        "urls": [f"{RAW_GIST_HOST}/{login}/{gist}/raw/{image.name}" for image in images],
+    }
 
 
 def open_issue(request: dict, runtime: Runtime) -> dict:
@@ -580,3 +639,17 @@ def read_job_steps(request: dict, runtime: Runtime) -> dict:
 def edit_pull_request(request: dict, runtime: Runtime) -> dict:
     _ask_gh(request, runtime, ("pr", "edit", str(request["number"]), "--title", request["title"]))
     return {"schema_version": DOCUMENT_SCHEMA_VERSION}
+
+
+def read_repository_visibility(request: dict, runtime: Runtime) -> dict:
+    record = runtime.run_process(
+        ProcessRequest(
+            argv=("gh", "repo", "view", "--json", "visibility", "--jq", ".visibility"),
+            cwd=request["repository"],
+            timeout_s=PUBLICATION_TIMEOUT_S,
+            acceptable_exit_codes=EVERY_EXIT_CODE,
+            environment=request["environment"],
+        )
+    )
+    public = record.exit_code == 0 and record.stdout.strip() == PUBLIC_VISIBILITY
+    return {"schema_version": DOCUMENT_SCHEMA_VERSION, "public": public}
