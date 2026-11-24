@@ -90,7 +90,7 @@ class PageTest(unittest.TestCase):
         document = self.render("inbox", brigade, start_piped_process=lambda request: PipedChildDouble(dict))
 
         # Assert
-        self.assertIn('<a href="#awawa/brigade">awawa · brigade</a>', document["html"])
+        self.assertIn('<a href="#awawa/brigade" data-rail-view="awawa">awawa · brigade</a>', document["html"])
 
     def test_should_fill_the_regions_of_the_page_for_the_project_it_shows(self):
         # Arrange
@@ -102,7 +102,7 @@ class PageTest(unittest.TestCase):
         )
 
         # Assert
-        self.assertIn('<a href="#awawa/brigade">awawa</a>', document["html"])
+        self.assertIn('<a href="#awawa/brigade" data-rail-view="awawa">awawa</a>', document["html"])
 
     def test_should_show_the_newest_dated_report_on_the_page_of_a_report(self):
         # Arrange
@@ -242,6 +242,8 @@ class PageHomeTest(unittest.TestCase):
             "last_tick": None,
             "studies": [],
             "orders": [],
+            "last_closed_wave": None,
+            "last_milestone_reported": None,
         }
         brigade = BrigadeDouble(
             {
@@ -253,8 +255,16 @@ class PageHomeTest(unittest.TestCase):
                     "decisions": [],
                     "tasks_not_launched": [],
                 },
-                ("ledger", "--since", "1d", "--json"): {"schema_version": 1, "view": "overview", "events": {}},
+                ("ledger", "--since", "1d", "--json"): {
+                    "schema_version": 1,
+                    "view": "overview",
+                    "events": {},
+                    "segments": {"outcomes": {}, "error_classes": {}},
+                    "waves_started": {},
+                    "since": "2026-11-19T10:00:00Z",
+                },
                 ("inbox", "list", "--json"): EMPTY_INBOX,
+                ("report", "list", "--json"): {"schema_version": 1, "reports": []},
             }
         )
         runtime = create_test_runtime(paths, run_process=brigade)
