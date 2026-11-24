@@ -13,15 +13,16 @@ TREE = {
     "domain": [
         {
             "type": "TASK",
+            "total": 28,
             "groups": [
                 {"status": "todo", "collapsed": False, "entities": [B1]},
                 {"status": "implemented", "collapsed": True, "entities": [B2]},
                 {"status": None, "collapsed": False, "entities": [B1 | {"status": None}]},
             ],
         },
-        {"type": "PROJECT", "entities": [PROJECT_OAK]},
+        {"type": "PROJECT", "total": 1, "entities": [PROJECT_OAK]},
     ],
-    "schema": [{"type": "SCHEMA", "entities": [SCHEMA_TASK]}],
+    "schema": [{"type": "SCHEMA", "total": 1, "entities": [SCHEMA_TASK]}],
 }
 
 
@@ -32,7 +33,7 @@ class RenderAwawaTreeTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            '<section class="awawa-type"><h2>TASK</h2><details class="awawa-group" open>'
+            '<section class="awawa-type"><h2>Task <small>3 of 28</small></h2><details class="awawa-group" open>'
             '<summary>todo <span class="awawa-count">1</span></summary><ul class="awawa-cards"><li>'
             '<div class="awawa-card">',
             fragment,
@@ -48,6 +49,20 @@ class RenderAwawaTreeTest(unittest.TestCase):
             fragment,
         )
 
+    def test_should_count_the_entities_kept_of_a_type_out_of_all_it_holds(self):
+        # Act
+        fragment = render_awawa_tree(TREE, TREE_OF_OAK)
+
+        # Assert
+        self.assertIn("<h2>Task <small>3 of 28</small></h2>", fragment)
+
+    def test_should_count_once_the_entities_of_a_type_kept_whole(self):
+        # Act
+        fragment = render_awawa_tree(TREE, TREE_OF_OAK)
+
+        # Assert
+        self.assertIn("<h2>Project <small>1</small></h2>", fragment)
+
     def test_should_name_the_group_of_the_entities_without_status(self):
         # Act
         fragment = render_awawa_tree(TREE, TREE_OF_OAK)
@@ -61,7 +76,7 @@ class RenderAwawaTreeTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            '<section class="awawa-type"><h2>PROJECT</h2><ul class="awawa-cards"><li><div class="awawa-card">',
+            '<section class="awawa-type"><h2>Project <small>1</small></h2><ul class="awawa-cards"><li><div class="awawa-card">',
             fragment,
         )
 
@@ -71,7 +86,7 @@ class RenderAwawaTreeTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            '<details class="awawa-schema"><summary>Schema</summary><section class="awawa-type"><h2>SCHEMA</h2>',
+            '<details class="awawa-schema"><summary>Schema</summary><section class="awawa-type"><h2>Schema <small>1</small></h2>',
             fragment,
         )
 

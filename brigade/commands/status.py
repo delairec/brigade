@@ -6,6 +6,7 @@ from brigade.command import Command
 from brigade.corpus.read_entities import Entity, read_entities
 from brigade.inbox.read_inbox import NEW_STATUS, Signal, read_inbox
 from brigade.inbox.render_age import render_age
+from brigade.ledger.describe_last_milestone_reported import describe_last_milestone_reported
 from brigade.ledger.ledger_entry import LedgerEntry
 from brigade.ledger.milestone_closed import MilestoneClosed
 from brigade.ledger.milestone_pr_opened import MilestonePrOpened
@@ -17,6 +18,7 @@ from brigade.ledger.wave_parked import WaveParked
 from brigade.orders.convert_order import convert_order
 from brigade.orders.read_order_facts import ORDER_EVENTS
 from brigade.registry.read_project_field import read_project_field
+from brigade.registry.read_project_forge import read_project_forge
 from brigade.registry.read_projects import read_projects
 from brigade.registry.require_operational_corpus import require_operational_corpus
 from brigade.runs.list_runs import list_runs
@@ -33,6 +35,7 @@ from brigade.tick.describe_study_facts import describe_study_facts
 from brigade.tick.is_study_due import is_study_due
 from brigade.tick.read_heartbeat import read_heartbeat
 from brigade.tick.record_stall import SIGNAL_KIND as STALL_KIND
+from brigade.waves.describe_last_closed_wave import describe_last_closed_wave
 from brigade.waves.read_task_states import read_task_states
 from brigade.waves.read_wave_pause import read_wave_pause
 from brigade.waves.summarize_waves import summarize_waves
@@ -51,6 +54,16 @@ LIVE_RUN_STATE = "running"
 
 def _is_paused(project: Entity) -> bool:
     return any(field.name == "STATUS" and field.value == PAUSED_STATUS for field in project.fields)
+
+
+def _describe_project(project: Entity) -> dict:
+    return {
+        "name": project.name,
+        "paused": _is_paused(project),
+        "forge": read_project_forge(project),
+        "remote": read_project_field(project, "REMOTE"),
+        "corpus": read_project_field(project, "CORPUS") is not None,
+    }
 
 
 def _measure_age(instant: datetime, now: datetime) -> int:
@@ -249,7 +262,7 @@ def status(request: argparse.Namespace, runtime: Runtime) -> dict:
     ]
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
-        "projects": [{"name": project.name, "paused": _is_paused(project)} for project in read_projects(runtime)],
+        "projects": [_describe_project(project) for project in read_projects(runtime)],
         "waves": waves,
         "live_runs": _list_live_runs(runtime),
         "awaiting_merge": _list_awaiting_merge(runtime, entries),
@@ -262,12 +275,14 @@ def status(request: argparse.Namespace, runtime: Runtime) -> dict:
         "last_tick": describe_heartbeat(read_heartbeat(runtime.paths.heartbeat_file)),
         "studies": _list_studies_to_watch(runtime),
         "orders": _list_parked_orders(runtime, entries),
+        "last_closed_wave": describe_last_closed_wave(entries),
+        "last_milestone_reported": describe_last_milestone_reported(entries),
     }
 
 
 COMMAND = Command(
     path=("status",),
-    help="print the Home document: the projects, the open waves, the inbox and the scans holding new signals, the quota, the last tick and the studies",
+    help="print the Home document: the projects, the open waves, the inbox and the scans holding new signals, the quota, the last tick, the studies, the parked orders, the last wave closed and the last milestone reported",
     run=status,
     render_text=_render_text,
 )

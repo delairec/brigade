@@ -33,7 +33,7 @@ class InboxDismissTest(unittest.TestCase):
 
     def test_should_dismiss_the_signal_the_id_names(self):
         # Arrange
-        request = argparse.Namespace(id="a4a5f46")
+        request = argparse.Namespace(id="a4a5f46", with_repeats=False)
 
         # Act
         inbox_dismiss(request, self.runtime)
@@ -55,7 +55,7 @@ class InboxDismissTest(unittest.TestCase):
 
     def test_should_answer_the_signal_it_dismissed(self):
         # Arrange
-        request = argparse.Namespace(id="a4a5f46")
+        request = argparse.Namespace(id="a4a5f46", with_repeats=False)
 
         # Act
         document = inbox_dismiss(request, self.runtime)
@@ -73,7 +73,7 @@ class InboxDismissTest(unittest.TestCase):
 
     def test_should_leave_a_signal_already_dismissed_as_it_is(self):
         # Arrange
-        request = argparse.Namespace(id="1975")
+        request = argparse.Namespace(id="1975", with_repeats=False)
 
         # Act
         inbox_dismiss(request, self.runtime)
@@ -152,10 +152,10 @@ class InboxDismissPatternTest(unittest.TestCase):
         runtime = self._create_runtime("new")
 
         # Act
-        document = inbox_dismiss(argparse.Namespace(id="CartTimeouts"), runtime)
+        document = inbox_dismiss(argparse.Namespace(id="CartTimeouts", with_repeats=False), runtime)
 
         # Assert
-        self.assertEqual(document, {"schema_version": 1, "pattern": "CartTimeouts"})
+        self.assertEqual(document, {"schema_version": 1, "pattern": "CartTimeouts", "repeats": []})
         self.assertEqual(
             self.patterns.read_text(encoding="utf-8"),
             (
@@ -173,7 +173,7 @@ class InboxDismissPatternTest(unittest.TestCase):
         runtime = self._create_runtime("new")
 
         # Act
-        inbox_dismiss(argparse.Namespace(id="CartTimeouts"), runtime)
+        inbox_dismiss(argparse.Namespace(id="CartTimeouts", with_repeats=False), runtime)
 
         # Assert
         self.assertEqual(
@@ -196,7 +196,7 @@ class InboxDismissPatternTest(unittest.TestCase):
         runtime = self._create_runtime("new")
 
         # Act
-        inbox_dismiss(argparse.Namespace(id="CartTimeouts"), runtime)
+        inbox_dismiss(argparse.Namespace(id="CartTimeouts", with_repeats=False), runtime)
 
         # Assert
         self.assertEqual(self.signals.read_text(encoding="utf-8"), NOTE_ON_OAK_RECORDED + NOTE_ON_OAK_DISMISSED)
@@ -207,7 +207,7 @@ class InboxDismissPatternTest(unittest.TestCase):
 
         # Act
         with self.assertRaises(BrigadeError) as raised:
-            inbox_dismiss(argparse.Namespace(id="CartTimeouts"), runtime)
+            inbox_dismiss(argparse.Namespace(id="CartTimeouts", with_repeats=False), runtime)
 
         # Assert
         self.assertEqual(
@@ -218,7 +218,69 @@ class InboxDismissPatternTest(unittest.TestCase):
 
     def test_should_name_the_pattern_it_dismissed(self):
         # Act
-        text = COMMAND.render_text({"schema_version": 1, "pattern": "CartTimeouts"})
+        text = COMMAND.render_text({"schema_version": 1, "pattern": "CartTimeouts", "repeats": []})
 
         # Assert
         self.assertEqual(text, "dismissed @PATTERN.CartTimeouts")
+
+
+REPEATED_PATTERN_TEXT = (
+    "PATTERN CartTimeouts\n"
+    '\tTITLE "the cart tests fail on a timeout"\n'
+    "\tSTATUS new\n"
+    "\n"
+    "PATTERN CartTimeouts_recurs\n"
+    '\tTITLE "the cart tests still fail on a timeout"\n'
+    "\tSTATUS new\n"
+    "\n"
+    "PATTERN ShopOutage\n"
+    '\tTITLE "the shop is down"\n'
+    "\tSTATUS new\n"
+)
+
+
+class InboxDismissPatternWithItsRepeatsTest(unittest.TestCase):
+    def setUp(self):
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(root)
+        self.patterns = root / "config" / "patterns.awawa"
+        self.patterns.write_text(REPEATED_PATTERN_TEXT, encoding="utf-8")
+        corpus = {
+            "PATTERN": {
+                "CartTimeouts": (("TITLE", "the cart tests fail on a timeout"), ("STATUS", "new")),
+                "CartTimeouts_recurs": (("TITLE", "the cart tests still fail on a timeout"), ("STATUS", "new")),
+                "ShopOutage": (("TITLE", "the shop is down"), ("STATUS", "new")),
+            }
+        }
+        runner = ScriptedProcessRunner(CORPUS_CHANGE_OUTPUTS, fallback=create_corpus_double(corpus))
+        self.runtime = create_test_runtime(create_test_paths(root), run_process=runner.run)
+
+    def test_should_dismiss_the_pattern_and_every_proposed_pattern_repeating_it(self):
+        # Act
+        document = inbox_dismiss(argparse.Namespace(id="CartTimeouts", with_repeats=True), self.runtime)
+
+        # Assert
+        self.assertEqual(document, {"schema_version": 1, "pattern": "CartTimeouts", "repeats": ["CartTimeouts_recurs"]})
+        self.assertEqual(
+            self.patterns.read_text(encoding="utf-8"),
+            (
+                "PATTERN CartTimeouts\n"
+                '\tTITLE "the cart tests fail on a timeout"\n'
+                "\tSTATUS dismissed\n"
+                "\n"
+                "PATTERN CartTimeouts_recurs\n"
+                '\tTITLE "the cart tests still fail on a timeout"\n'
+                "\tSTATUS dismissed\n"
+                "\n"
+                "PATTERN ShopOutage\n"
+                '\tTITLE "the shop is down"\n'
+                "\tSTATUS new\n"
+            ),
+        )
+
+    def test_should_name_the_pattern_and_the_repeats_it_dismissed(self):
+        # Act
+        text = COMMAND.render_text({"schema_version": 1, "pattern": "CartTimeouts", "repeats": ["CartTimeouts_recurs"]})
+
+        # Assert
+        self.assertEqual(text, "dismissed @PATTERN.CartTimeouts @PATTERN.CartTimeouts_recurs")

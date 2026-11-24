@@ -7,6 +7,13 @@ from brigade.dashboard.render_empty_state import render_empty_state
 SEVERITY_TONES = {"error": "failed", "warning": "you"}
 NEUTRAL_TONE = "faint"
 COUNTS = (("Errors", "errors"), ("Warnings", "warnings"), ("Unresolved references", "unresolved"))
+HEALTHY_FILL = "A lint error or warning would be listed here."
+
+
+def _judge_health(document: dict) -> str:
+    if document["unresolved"]:
+        return "No entity or file raises a lint error or warning."
+    return "The corpus raises no diagnostic."
 
 
 def _render_diagnostics(diagnostics: list[dict]) -> str:
@@ -38,9 +45,5 @@ def render_awawa_health(document: dict, address: AwawaAddress) -> str:
     counts = "".join(f"<div><dt>{label}</dt><dd>{document[key]}</dd></div>" for label, key in COUNTS)
     entities = _render_entities(document["entities"], address) if document["entities"] else ""
     files = _render_files(document["files"]) if document["files"] else ""
-    healthy = (
-        ""
-        if entities or files
-        else render_empty_state("The corpus raises no diagnostic.", "A lint error or warning would be listed here.")
-    )
+    healthy = "" if entities or files else render_empty_state(_judge_health(document), HEALTHY_FILL)
     return f'<div class="awawa-health"><dl class="awawa-counts">{counts}</dl>{healthy}{entities}{files}</div>'

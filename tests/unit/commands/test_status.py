@@ -11,6 +11,7 @@ from brigade.commands.status import COMMAND
 from brigade.ledger.append_event import append_event
 from brigade.ledger.milestone_closed import MilestoneClosed
 from brigade.ledger.milestone_pr_opened import MilestonePrOpened
+from brigade.ledger.milestone_reported import MilestoneReported
 from brigade.ledger.order_parked import OrderParked
 from brigade.ledger.order_started import OrderStarted
 from brigade.ledger.task_parked import TaskParked
@@ -29,7 +30,13 @@ from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
 from tests.unit.ledger.create_run_finished import create_run_finished
 
-OAK = (("PATH", "/srv/oak"), ("STATUS", "active"))
+OAK = (
+    ("PATH", "/srv/oak"),
+    ("STATUS", "active"),
+    ("FORGE", "github"),
+    ("REMOTE", "git@github.com:o/oak.git"),
+    ("CORPUS", "corpus"),
+)
 ELM = (("PATH", "/srv/elm"), ("STATUS", "paused"))
 DEBT_STUDY = (
     ("TITLE", "the debt of the code"),
@@ -65,7 +72,10 @@ PARKED_NIGHTLY = {
 }
 HOME = {
     "schema_version": 1,
-    "projects": [{"name": "elm", "paused": True}, {"name": "oak", "paused": False}],
+    "projects": [
+        {"name": "elm", "paused": True, "forge": "none", "remote": None, "corpus": False},
+        {"name": "oak", "paused": False, "forge": "github", "remote": "git@github.com:o/oak.git", "corpus": True},
+    ],
     "waves": [
         {
             "wave": "oak_w2",
@@ -203,6 +213,14 @@ HOME = {
         },
     ],
     "orders": [],
+    "last_closed_wave": {
+        "wave": "oak_w1",
+        "project": "oak",
+        "closed_at": "2026-10-19T01:30:00Z",
+        "tasks": 1,
+        "merged": 0,
+    },
+    "last_milestone_reported": None,
 }
 
 
@@ -340,6 +358,28 @@ class StatusOfTheMachineTest(unittest.TestCase):
         self.assertEqual(
             document["awaiting_merge"],
             [{"project": "oak", "repository": "/srv/oak", "milestone": "M2", "pr": 31, "age_s": 1800}],
+        )
+
+    def test_should_name_the_milestone_reported_last_and_when_it_reached_main(self):
+        # Arrange
+        self.write_machine()
+        append_event(self.paths, at(8, 20), MilestoneReported(project="oak", milestone="M1", run="r", login=None))
+        append_event(self.paths, at(8, 25), MilestoneClosed(project="oak", milestone="M1", pr=30))
+        runtime = create_test_runtime(self.paths, run_process=create_corpus_double(CORPUS))
+
+        # Act
+        document = COMMAND.run(Namespace(), runtime)
+
+        # Assert
+        self.assertEqual(
+            document["last_milestone_reported"],
+            {
+                "project": "oak",
+                "milestone": "M1",
+                "report": "oak_M1",
+                "reported_at": "2026-10-19T08:20:00Z",
+                "reached_main_at": "2026-10-19T08:25:00Z",
+            },
         )
 
     def test_should_list_each_new_stall_signal_saying_whether_its_task_merged_since(self):

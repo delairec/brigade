@@ -1,5 +1,6 @@
 NEUTRAL_TONE = "faint"
 LIFECYCLE_TONES = {
+    "draft": "you",
     "open": "you",
     "todo": "work",
     "active": "work",

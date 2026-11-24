@@ -4,7 +4,12 @@ from argparse import Namespace
 from pathlib import Path
 
 from brigade.commands.report_list import COMMAND
-from tests.unit.commands.command_runtime import create_corpus_double, write_ledger, write_operational_corpus
+from tests.unit.commands.command_runtime import (
+    create_corpora_double,
+    create_corpus_double,
+    write_ledger,
+    write_operational_corpus,
+)
 from tests.unit.commands.create_plugin_resolver import create_plugin_resolver
 from tests.unit.create_test_paths import create_test_paths
 from tests.unit.create_test_runtime import create_test_runtime
@@ -171,6 +176,7 @@ class ReportsListOfTheOperationalCorpusTest(unittest.TestCase):
                     "verdict": "Verdict: M13 delivered three of its four tasks.",
                     "counts": {"MILESTONE": 1, "PROJECT": 1, "STATISTIC": 2, "NARRATIVE": 2},
                     "reported_at": "2026-10-17T08:00:00Z",
+                    "title": None,
                 }
             ],
         )
@@ -257,3 +263,26 @@ class ReportsListOfTheOperationalCorpusTest(unittest.TestCase):
 
         # Assert
         self.assertIsNone(reports[0]["reported_at"])
+
+
+class ReportsListOfAMilestoneOfARegisteredProjectTest(unittest.TestCase):
+    def test_should_title_the_report_by_the_milestone_of_the_corpus_of_its_project(self):
+        # Arrange
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        write_operational_corpus(root)
+        (root / "config" / "reports.awawa").write_text("", encoding="utf-8")
+        write_ledger(root, NOTHING_REPORTED)
+        plugin = DocumentPluginDouble({str(root / "config" / "reports.awawa"): [MILESTONE_REPORT_WITH_NARRATIVE]})
+        registry = {"PROJECT": {"brigade": (("PATH", "/projects/brigade"), ("MODE", "control"))}}
+        project_corpus = {"MILESTONE": {"M13": (("TITLE", "Run resumption"),)}}
+        runtime = create_test_runtime(
+            create_test_paths(root),
+            run_process=create_corpora_double({str(root / "config"): registry, "/projects/brigade": project_corpus}),
+            resolve_plugin=create_plugin_resolver({("progress_form", "awawa"): plugin}),
+        )
+
+        # Act
+        reports = COMMAND.run(Namespace(), runtime)["reports"]
+
+        # Assert
+        self.assertEqual(reports[0]["title"], "Run resumption")

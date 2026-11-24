@@ -26,15 +26,15 @@ class DashboardStylesheetTest(unittest.TestCase):
                 "--limit": "#8a3fc7",
                 "--failed": "#c4372f",
                 "--off": "#7a7a7a",
-                "--bg": "#f7f7f5",
+                "--bg": "#f4f6f8",
                 "--surface": "#ffffff",
-                "--sunken": "#efefec",
-                "--line": "#e3e3de",
-                "--line-strong": "#c8c8c1",
-                "--text": "#1d1d1b",
-                "--muted": "#5c5c57",
-                "--faint": "#8f8f89",
-                "--ink": "#1d1d1b",
+                "--sunken": "#eceff3",
+                "--line": "#d9dee5",
+                "--line-strong": "#b8c0cb",
+                "--text": "#171c22",
+                "--muted": "#5a6573",
+                "--faint": "#8893a1",
+                "--ink": "#1d2733",
                 "--on-ink": "#ffffff",
                 "--space-1": "4px",
                 "--space-2": "8px",
@@ -44,8 +44,8 @@ class DashboardStylesheetTest(unittest.TestCase):
                 "--space-6": "32px",
                 "--space-7": "48px",
                 "--radius": "3px",
-                "--font-sans": 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-                "--font-mono": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+                "--font-sans": 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                "--font-mono": 'ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace',
                 "--size-1": "26px",
                 "--size-2": "19px",
                 "--size-3": "16px",
@@ -70,16 +70,16 @@ class DashboardStylesheetTest(unittest.TestCase):
                 "--limit": "#b58cf0",
                 "--failed": "#f0796f",
                 "--off": "#8c8c8c",
-                "--bg": "#141413",
-                "--surface": "#1c1c1a",
-                "--sunken": "#10100f",
-                "--line": "#2d2d2a",
-                "--line-strong": "#3f3f3a",
-                "--text": "#ecece8",
-                "--muted": "#a3a39c",
-                "--faint": "#77776f",
-                "--ink": "#ecece8",
-                "--on-ink": "#141413",
+                "--bg": "#0e1216",
+                "--surface": "#161b21",
+                "--sunken": "#1c232b",
+                "--line": "#29313b",
+                "--line-strong": "#3b4653",
+                "--text": "#e7ebf0",
+                "--muted": "#9ca8b6",
+                "--faint": "#6f7b89",
+                "--ink": "#e7ebf0",
+                "--on-ink": "#10151a",
             },
         )
 
@@ -118,14 +118,22 @@ class DashboardStylesheetTest(unittest.TestCase):
         self.assertNotIn("@font-face", stylesheet)
         self.assertIn("font-variant-numeric: tabular-nums;", stylesheet)
 
-    def test_should_lay_the_stat_tiles_of_a_view_in_a_row_that_wraps_above_its_table(self):
+    def test_should_lay_the_stat_tiles_of_a_view_in_one_ruled_band_of_cells(self):
         # Act
         rule = read_rule(".stat-tiles")
 
         # Assert
         self.assertEqual(
             rule,
-            {"display": "flex", "flex-wrap": "wrap", "gap": "var(--space-3)", "margin": "var(--space-4) 0"},
+            {
+                "display": "grid",
+                "grid-template-columns": "repeat(auto-fit, minmax(150px, 1fr))",
+                "gap": "1px",
+                "background": "var(--line)",
+                "border": "1px solid var(--line)",
+                "border-radius": "var(--radius)",
+                "overflow": "hidden",
+            },
         )
 
     def test_should_draw_a_missing_verdict_and_a_missing_date_in_the_faint_neutral(self):
@@ -141,3 +149,53 @@ class DashboardStylesheetTest(unittest.TestCase):
 
         # Assert
         self.assertIn("@media (max-width: 900px) {\n  body {\n    grid-template-columns: 1fr;", stylesheet)
+
+
+class DashboardStylesheetOfTheMockupComponentsTest(unittest.TestCase):
+    def test_should_give_each_component_of_the_mockup_a_rule(self):
+        # Arrange
+        selectors = [
+            ".crumbs",
+            ".block",
+            ".block-head",
+            ".block-head p",
+            ".panel",
+            ".pad",
+            "details.fold > summary",
+            "details.fold > summary span",
+            "details.fold",
+            ".kv",
+            ".kv dt",
+            "figure.chart",
+            ".legend",
+            ".legend span::before",
+            ".legend .soft::before",
+            ".lines li",
+            ".lines .tag",
+            ".steps",
+            ".steps li",
+            ".steps li::before",
+            ".field",
+            ".field select,\n.field input",
+            ".cmd",
+            ".filters",
+            '#view[aria-busy="true"]::before',
+            '.next-tick[aria-busy="true"] h2::after',
+            "button:disabled",
+        ]
+        for selector in selectors:
+            with self.subTest(selector=selector):
+                # Act
+                rule = read_rule(selector)
+
+                # Assert
+                self.assertNotEqual(rule, {})
+
+
+class DashboardStylesheetOfTheBusyStateTest(unittest.TestCase):
+    def test_should_show_the_progress_cursor_over_whatever_is_busy(self):
+        # Act
+        rule = read_rule('[aria-busy="true"]')
+
+        # Assert
+        self.assertEqual(rule, {"cursor": "progress"})

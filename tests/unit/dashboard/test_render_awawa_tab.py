@@ -11,12 +11,15 @@ from tests.unit.dashboard.test_render_awawa_detail import DOCUMENT
 BOARD_OF_THE_TASKS = AwawaAddress(project="oak", parameters=(("view", "board"), ("type", "TASK")))
 ROOT_B1 = B1 | {"in_cycle": False, "already_above": False, "dependents": []}
 BOARD_OF_OAK = BOARD | {
+    "fields": ["STATUS"],
     "project": "oak",
     "ref": "main",
     "sha": "de446f3",
     "refs": ["main"],
     "types": ["TASK"],
     "awawa_web": None,
+    "filter_values": {},
+    "diagnostics": 0,
 }
 
 
@@ -26,18 +29,34 @@ class RenderAwawaTabTest(unittest.TestCase):
         fragment = render_awawa_tab(AddonAnswer(status=200, document=BOARD_OF_OAK), BOARD_OF_THE_TASKS)
 
         # Assert
-        self.assertTrue(fragment.startswith('<header class="awawa-banner">'), fragment)
+        self.assertIn('</header><header class="awawa-banner">', fragment)
         self.assertIn('</header><div class="awawa-toolbar">', fragment)
         self.assertIn('<div class="awawa-body"><div class="awawa-view"><div class="awawa-board">', fragment)
 
     def test_should_draw_the_view_named_by_the_document(self):
         # Arrange
         rows = [
-            ("tree", {"view": "tree", "domain": [], "schema": []}, '<div class="awawa-view"><div class="empty-state">'),
-            ("dependencies", {"view": "dependencies", "field": "AFTER", "roots": [ROOT_B1]}, "awawa-dependencies"),
+            (
+                "tree",
+                {"view": "tree", "filter_values": {}, "domain": [], "schema": []},
+                '<div class="awawa-view"><div class="empty-state">',
+            ),
+            (
+                "dependencies",
+                {"view": "dependencies", "filter_values": {}, "field": "AFTER", "roots": [ROOT_B1]},
+                "awawa-dependencies",
+            ),
             (
                 "health",
-                {"view": "health", "errors": 0, "warnings": 0, "unresolved": 0, "entities": [], "files": []},
+                {
+                    "view": "health",
+                    "filter_values": {},
+                    "errors": 0,
+                    "warnings": 0,
+                    "unresolved": 0,
+                    "entities": [],
+                    "files": [],
+                },
                 "awawa-health",
             ),
         ]
@@ -78,7 +97,7 @@ class RenderAwawaTabTest(unittest.TestCase):
 
         # Assert
         forms.feed(fragment)
-        self.assertEqual(forms.methods, ["get", "get", "get"])
+        self.assertEqual(forms.methods, ["get", "get", "get", "get"])
         self.assertEqual(forms.writing_attributes, [])
         self.assertNotIn("data-post", fragment)
         self.assertNotIn("Clean", fragment)
@@ -125,4 +144,18 @@ class RenderAwawaTabTest(unittest.TestCase):
             fragment,
             '<div class="empty-state"><p class="empty-why">The corpus could not be read at this address.</p>'
             '<p class="empty-fill">--view board reads the entities of --type</p></div>',
+        )
+
+
+class RenderAwawaTabHeadTest(unittest.TestCase):
+    def test_should_open_on_the_page_head_of_the_tab_before_its_banner(self):
+        # Act
+        fragment = render_awawa_tab(AddonAnswer(status=200, document=BOARD_OF_OAK), BOARD_OF_THE_TASKS)
+
+        # Assert
+        self.assertTrue(
+            fragment.startswith(
+                '<header class="page-head"><div><h1>awawa</h1><p class="lede">The specification of the project, read-only: its entities as a tree, a board and a dependency tree, and what awawa lint finds.</p></div>'
+                '<p class="fresh num" data-fresh>refreshes every 5 s</p></header><header class="awawa-banner">'
+            )
         )

@@ -8,13 +8,13 @@ from brigade.inbox.is_signal_cited import is_signal_cited
 from brigade.inbox.is_stall_stale import is_stall_stale
 from brigade.inbox.read_inbox import NEW_STATUS, Signal, read_inbox
 from brigade.inbox.read_proposed_patterns import read_proposed_patterns
+from brigade.inbox.read_repeated_pattern import read_repeated_pattern
 from brigade.inbox.read_study_answers import read_study_answers
 from brigade.inbox.render_age import render_age
 from brigade.ledger.read_ledger import read_ledger
 from brigade.registry.read_project_field import read_project_field
 from brigade.runtime import Runtime
 from brigade.system.render_table import render_table
-from brigade.triage.read_new_pattern import PATTERN_TYPE
 
 DOCUMENT_SCHEMA_VERSION = 1
 DOCUMENT_KIND = "progress_form"
@@ -27,7 +27,7 @@ HEADER = ("id", "kind", "project", "count", "age", "status")
 PATTERN_HEADER = ("pattern", "action", "signals")
 ANSWER_HEADER = ("answer", "study", "project")
 EVIDENCE_FIELD = "EVIDENCE"
-PATTERN_REFERENCE_PREFIX = f"@{PATTERN_TYPE}."
+LAST_ACTION_EVIDENCE = "last_action"
 SECTION_SEPARATOR = "\n\n"
 
 
@@ -67,12 +67,7 @@ def _render_text(document: dict) -> str:
     return SECTION_SEPARATOR.join(sections)
 
 
-def _read_repeated_name(pattern: Entity) -> str | None:
-    repeated = read_project_field(pattern, "REPEATS")
-    return None if repeated is None else repeated.removeprefix(PATTERN_REFERENCE_PREFIX)
-
-
-def _describe_pattern(pattern: Entity, signals: tuple[Signal, ...]) -> dict:
+def _describe_pattern(pattern: Entity, signals: tuple[Signal, ...], names: list[str]) -> dict:
     evidence = [field.value for field in pattern.fields if field.name == EVIDENCE_FIELD]
     return {
         "name": pattern.name,
@@ -80,7 +75,7 @@ def _describe_pattern(pattern: Entity, signals: tuple[Signal, ...]) -> dict:
         "action": read_project_field(pattern, "ACTION"),
         "target": read_project_field(pattern, "TARGET"),
         "recipe": read_project_field(pattern, "RECIPE"),
-        "repeats": _read_repeated_name(pattern),
+        "repeats": read_repeated_pattern(pattern, names),
         "signals": [
             signal.id for signal in signals if any(is_signal_cited(cited, signal.fingerprint) for cited in evidence)
         ],
@@ -97,6 +92,7 @@ def _describe_signal(signal: Signal, events: tuple) -> dict:
         "age_s": signal.age_s,
         "status": signal.status,
         "stale": is_stall_stale(signal, events),
+        "last_action": signal.evidence.get(LAST_ACTION_EVIDENCE),
     }
 
 
@@ -104,6 +100,8 @@ def inbox_list(request: argparse.Namespace, runtime: Runtime) -> dict:
     signals = read_inbox(runtime.paths.state_root, runtime.now)
     listed = [signal for signal in signals if request.all or signal.status == NEW_STATUS]
     events = tuple(entry.event for entry in read_ledger(runtime.paths.state_root).entries)
+    patterns = read_proposed_patterns(runtime)
+    names = sorted(pattern.name for pattern in patterns)
     return {
         "schema_version": DOCUMENT_SCHEMA_VERSION,
         "signals": [_describe_signal(signal, events) for signal in listed],
@@ -111,7 +109,7 @@ def inbox_list(request: argparse.Namespace, runtime: Runtime) -> dict:
             {"by": family.by, "key": family.key, "signals": [signal.id for signal in family.signals]}
             for family in group_signals(listed)
         ],
-        "patterns": [_describe_pattern(pattern, signals) for pattern in read_proposed_patterns(runtime)],
+        "patterns": [_describe_pattern(pattern, signals, names) for pattern in patterns],
         "answers": [
             {"id": answer["id"], "study": answer["study"], "project": answer["project"]}
             for answer in read_study_answers(

@@ -77,3 +77,15 @@ class RenderAwawaHealthTest(unittest.TestCase):
             '<p class="empty-fill">A lint error or warning would be listed here.</p></div>',
             fragment,
         )
+
+
+class RenderAwawaHealthUnresolvedTest(unittest.TestCase):
+    def test_should_not_call_a_corpus_holding_unresolved_references_free_of_diagnostics(self):
+        # Arrange
+        unresolved = HEALTH | {"errors": 0, "warnings": 0, "unresolved": 1, "entities": NO_AILING, "files": NO_AILING}
+
+        # Act
+        fragment = render_awawa_health(unresolved, HEALTH_OF_OAK)
+
+        # Assert
+        self.assertIn('<p class="empty-why">No entity or file raises a lint error or warning.</p>', fragment)

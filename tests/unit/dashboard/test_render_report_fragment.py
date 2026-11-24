@@ -20,20 +20,21 @@ def create_document(fields: list[dict]) -> dict:
         "waves": ["oak_w5"],
         "pull_request": 57,
         "reported_at": "2026-10-03T08:00:00Z",
+        "title": None,
     }
 
 
-def create_run_finished(task: str, cost_usd: float | None) -> dict:
+def create_run_finished(run: str, cost_usd: float | None) -> dict:
     recorded_cost = {} if cost_usd is None else {"cost_usd": cost_usd}
     return {
         "at": "2026-10-01T09:30:00Z",
         "event": "run.finished",
-        "fields": {"slot": "build", "wave": "oak_w5", "task": task, "main_turns": 52, **recorded_cost},
+        "fields": {"run": run, "slot": "build", "wave": "oak_w5", "task": "OK8", "main_turns": 52, **recorded_cost},
     }
 
 
 def create_wave(
-    costless_runs: int = 0, states: tuple[str, str] = ("merged", "merged"), unmeasured_runs: int = 0
+    costless_runs: tuple[dict, ...] = (), states: tuple[str, str] = ("merged", "merged"), unmeasured_runs: int = 0
 ) -> dict:
     return {
         "wave": "oak_w5",
@@ -56,9 +57,10 @@ def create_wave(
             },
             "turns_by_task": {"OK7": 104, "OK8": 23},
             "events": [
-                create_run_finished("OK7", 6.85),
-                create_run_finished("OK8", 1.15),
-                *(create_run_finished("OK8", None),) * costless_runs,
+                create_run_finished("r1", 6.85),
+                create_run_finished("r2", 1.15),
+                create_run_finished("r2", 0.0),
+                *costless_runs,
             ],
         },
     }
@@ -84,176 +86,46 @@ def render(fields: list[dict], waves: list[dict] = NO_WAVE, address: str | None 
     return render_report_fragment(ReportReading(create_document(fields), waves, address))
 
 
-class RenderReportFragmentOrderTest(unittest.TestCase):
-    def test_should_open_on_the_verdict_and_order_the_blocks_by_use_whatever_the_order_written(self):
-        # Arrange
-        fields = [
-            {"name": "MILESTONE", "value": "M4"},
-            {"name": "SAMPLING", "value": "OK7, oak/bark.py: the guard"},
-            {"name": "NARRATIVE", "value": "next: split OK9 first"},
-            {"name": "REASON", "value": "OK9 waits for a ruling"},
-            {"name": "NARRATIVE", "value": "Went well: one round of review"},
-            {"name": "TESTER_STEP", "value": "OK7: run oak bark"},
-            {"name": "NARRATIVE", "value": "M4 delivered two tasks"},
-            {"name": "TASK_ROW", "value": "OK7 merged #52"},
-            {"name": "NARRATIVE", "value": "went wrong: a rebase conflicted"},
-            {"name": "NARRATIVE", "value": "VERDICT: delivered"},
-        ]
-
-        # Act
-        fragment = render(fields, [create_wave()])
-
-        # Assert
-        self.assertRegex(
-            fragment,
-            r"(?s)^<section class=\"report-verdict\"><h2>milestone-report oak_M4</h2>"
-            r"<p class=\"status-sentence\">VERDICT: delivered</p>.*"
-            r"<div class=\"tiles\">.*<h3>Went wrong</h3><ul><li>went wrong: a rebase conflicted</li></ul>"
-            r"<h3>Went well</h3><ul><li>Went well: one round of review</li></ul>"
-            r"<h3>For the next wave</h3><ul><li>next: split OK9 first</li></ul>"
-            r"<ul><li>M4 delivered two tasks</li></ul>"
-            r"<h3>Tasks</h3>.*<h3>Test it by hand</h3>.*<h3>Why a task was held</h3>.*"
-            r"<h3>Worth reading in the code</h3>.*"
-            r"<details><summary>The full account</summary><dl><dt>MILESTONE</dt><dd>M4</dd></dl></details>$",
-        )
+MERGED_2_OF_2 = (
+    '<span class="pill"><span class="tone tone-done"><span class="tone-shape" aria-hidden="true">✓</span>'
+    "2 of 2 merged</span></span>"
+)
+REPORT_FIELDS = [
+    {"name": "MILESTONE", "value": "M4"},
+    {"name": "PROJECT", "value": "oak"},
+    {"name": "TASK_ROW", "value": "OK7 merged #52 #41"},
+    {"name": "TASK_ROW", "value": "OK8 merged #53"},
+    {"name": "STATISTIC", "value": "tasks 2"},
+    {"name": "STATISTIC", "value": "merged 2"},
+    {"name": "GRAPH", "value": "OK8 after OK7"},
+    {"name": "MANUAL_TEST", "value": "OK7: the command prints its table"},
+    {"name": "NARRATIVE", "value": "M4 delivered its two tasks in oak_w5, none parked."},
+    {"name": "NARRATIVE", "value": "Cost read from run.finished: 8.00 USD."},
+    {"name": "NARRATIVE", "value": "What went wrong: OK7 needed three rounds."},
+    {"name": "NARRATIVE", "value": "What went well: OK8 passed at once."},
+    {"name": "NARRATIVE", "value": "Next milestone should change: review the rebase first."},
+    {"name": "REASON", "value": "No task of M4 was parked."},
+    {"name": "TESTER_STEP", "value": "OK7: run the command and read its table"},
+    {"name": "TESTER_STEP", "value": "OK7: run it again"},
+    {"name": "TESTER_STEP", "value": "run the unit tests"},
+    {"name": "SAMPLING", "value": "oak/table.py (OK7, #52): read the widths"},
+    {"name": "INSTRUCTIONS_CHANGE", "value": "corpus/tasks.awawa +3 -0"},
+]
 
 
-class RenderReportFragmentOfANarrativeOpeningOnNoLeadingWordTest(unittest.TestCase):
-    def test_should_show_the_narrative_as_one_list_in_the_order_written(self):
-        # Arrange
-        fields = [
-            {"name": "NARRATIVE", "value": "M8 delivered three tasks"},
-            {"name": "NARRATIVE", "value": "two waves were needed"},
-        ]
-
-        # Act
-        fragment = render(fields)
-
-        # Assert
-        self.assertEqual(
-            fragment,
-            '<section class="report-verdict"><h2>milestone-report oak_M4</h2>'
-            '<p class="report-delivery">reported 2026-10-03T08:00:00Z, pull request #57</p></section>'
-            "<ul><li>M8 delivered three tasks</li><li>two waves were needed</li></ul>",
-        )
+def create_ledgered_wave() -> dict:
+    wave = create_wave()
+    return {
+        **wave,
+        "ledger": {
+            **wave["ledger"],
+            "pull_requests": [{"task": "OK7", "pr": 52, "rounds": 3}],
+            "rounds_by_task": {"OK8": 1},
+        },
+    }
 
 
-class RenderReportFragmentDeliveryTest(unittest.TestCase):
-    def test_should_give_the_instant_alone_when_no_pull_request_is_recorded(self):
-        # Arrange
-        document = {**create_document([]), "pull_request": None}
-
-        # Act
-        fragment = render_report_fragment(ReportReading(document, NO_WAVE, NO_FORGE))
-
-        # Assert
-        self.assertEqual(
-            fragment,
-            '<section class="report-verdict"><h2>milestone-report oak_M4</h2>'
-            '<p class="report-delivery">reported 2026-10-03T08:00:00Z</p></section>',
-        )
-
-    def test_should_give_no_delivery_line_when_the_ledger_records_neither_the_instant_nor_the_pull_request(self):
-        # Arrange
-        document = {**create_document([]), "pull_request": None, "reported_at": None}
-
-        # Act
-        fragment = render_report_fragment(ReportReading(document, NO_WAVE, NO_FORGE))
-
-        # Assert
-        self.assertEqual(fragment, '<section class="report-verdict"><h2>milestone-report oak_M4</h2></section>')
-
-
-class RenderReportFragmentGroupingTest(unittest.TestCase):
-    def test_should_list_a_step_naming_no_task_under_no_task_heading(self):
-        # Arrange
-        fields = [
-            {"name": "TESTER_STEP", "value": "open the dashboard"},
-            {"name": "TESTER_STEP", "value": "OK7: run oak bark"},
-        ]
-
-        # Act
-        fragment = render(fields)
-
-        # Assert
-        self.assertIn(
-            "<h3>Test it by hand</h3><ol><li>open the dashboard</li></ol><h4>OK7</h4><ol><li>OK7: run oak bark</li></ol>",
-            fragment,
-        )
-
-    def test_should_group_the_steps_to_test_by_hand_and_the_samples_by_the_task_they_name(self):
-        # Arrange
-        fields = [
-            {"name": "TESTER_STEP", "value": "OK8: open the page"},
-            {"name": "MANUAL_TEST", "value": "OK7: the bark is listed"},
-            {"name": "TESTER_STEP", "value": "OK7: run oak bark"},
-            {"name": "TESTER_STEP", "value": "OK8: close the page"},
-            {"name": "SAMPLING", "value": "OK8, oak/page.py: the swap"},
-        ]
-
-        # Act
-        fragment = render(fields)
-
-        # Assert
-        self.assertIn(
-            "<h3>Test it by hand</h3>"
-            "<h4>OK8</h4><ol><li>OK8: open the page</li><li>OK8: close the page</li></ol>"
-            "<h4>OK7</h4><ol><li>OK7: run oak bark</li></ol><ul><li>OK7: the bark is listed</li></ul>"
-            "<h3>Worth reading in the code</h3><h4>OK8</h4><ul><li>OK8, oak/page.py: the swap</li></ul>",
-            fragment,
-        )
-
-
-class RenderReportFragmentTablesTest(unittest.TestCase):
-    def test_should_draw_the_task_rows_and_the_graph_as_tables(self):
-        # Arrange
-        fields = [
-            {"name": "TASK_ROW", "value": "OK7 merged #52"},
-            {"name": "TASK_ROW", "value": "OK8 parked"},
-            {"name": "GRAPH", "value": "OK8 after OK7"},
-        ]
-
-        # Act
-        fragment = render(fields)
-
-        # Assert
-        self.assertIn(
-            "<h3>Tasks</h3>"
-            "<table><thead><tr><th>task</th></tr></thead>"
-            "<tbody><tr><td>OK7 merged #52</td></tr><tr><td>OK8 parked</td></tr></tbody></table>"
-            "<table><thead><tr><th>dependency</th></tr></thead>"
-            "<tbody><tr><td>OK8 after OK7</td></tr></tbody></table>",
-            fragment,
-        )
-
-
-class RenderReportFragmentLinksTest(unittest.TestCase):
-    def test_should_link_the_wave_of_a_task_the_pull_request_on_the_forge_and_the_page_of_a_run(self):
-        # Arrange
-        fields = [{"name": "REASON", "value": "OK8 #53 stopped in 20261001T100000Z-b2, M4 is open"}]
-
-        # Act
-        fragment = render(fields, [create_wave()], "https://forge.example/oak/pull/")
-
-        # Assert
-        self.assertIn(
-            '<li><a href="#waves/oak_w5">OK8</a> <a href="https://forge.example/oak/pull/53">#53</a> stopped in '
-            '<a href="#runs/20261001T100000Z-b2">20261001T100000Z-b2</a>, M4 is open</li>',
-            fragment,
-        )
-
-    def test_should_leave_a_pull_request_unlinked_when_the_project_names_no_forge(self):
-        # Arrange
-        fields = [{"name": "REASON", "value": "#53 was closed"}]
-
-        # Act
-        fragment = render(fields, [create_wave()])
-
-        # Assert
-        self.assertIn("<li>#53 was closed</li>", fragment)
-
-
-class RenderReportFragmentTilesTest(unittest.TestCase):
+class TilesTest(unittest.TestCase):
     def test_should_give_the_measures_of_the_waves_named(self):
         # Arrange
         fields = [{"name": "STATISTIC", "value": "files 12"}]
@@ -266,7 +138,7 @@ class RenderReportFragmentTilesTest(unittest.TestCase):
             '<div class="tiles">'
             '<div class="stat-tile"><span class="stat-value">2 of 2</span><span class="stat-label">tasks merged</span>'
             '<span class="stat-perimeter">the waves oak_w5</span></div>'
-            '<div class="stat-tile"><span class="stat-value">7 runs, 127 turns</span><span class="stat-label">runs</span>'
+            '<div class="stat-tile"><span class="stat-value">2 runs, 127 turns</span><span class="stat-label">runs</span>'
             '<span class="stat-perimeter">the waves oak_w5</span></div>'
             '<div class="stat-tile"><span class="stat-value">41.28 USD</span><span class="stat-label">cost</span>'
             '<span class="stat-perimeter">the waves oak_w5</span></div>'
@@ -283,7 +155,9 @@ class RenderReportFragmentTilesTest(unittest.TestCase):
         fields = [{"name": "STATISTIC", "value": "files 12"}]
 
         # Act
-        fragment = render(fields, [create_wave(costless_runs=2)])
+        fragment = render(
+            fields, [create_wave(costless_runs=(create_run_finished("r3", None), create_run_finished("r4", None)))]
+        )
 
         # Assert
         self.assertIn(
@@ -367,23 +241,206 @@ class RenderReportFragmentTilesTest(unittest.TestCase):
         )
 
 
-class RenderReportFragmentEscapingTest(unittest.TestCase):
-    def test_should_escape_a_value_holding_markup(self):
+class MockupTest(unittest.TestCase):
+    def test_should_name_the_milestone_with_how_much_it_merged_and_read_its_verdict_as_the_lede(self):
+        # Act
+        fragment = render(REPORT_FIELDS, [create_ledgered_wave()], "https://github.com/acme/oak/pull/")
+
+        # Assert
+        self.assertTrue(
+            fragment.startswith(
+                '<header class="page-head"><div><p class="crumbs"><a href="#reports">Reports</a> / oak /'
+                f' milestone report</p><h1>Milestone <span class="mono">M4</span> {MERGED_2_OF_2}</h1>'
+                '<p class="lede">M4 delivered its two tasks in oak_w5, none parked.</p></div>'
+                '<p class="fresh">body of <a href="https://github.com/acme/oak/pull/57">pull request #57</a>,'
+                " reported 2026-10-03</p></header>"
+            )
+        )
+
+    def test_should_give_the_milestone_its_title_after_its_name(self):
+        # Arrange
+        document = {**create_document(REPORT_FIELDS), "title": "Checkout"}
+
+        # Act
+        fragment = render_report_fragment(ReportReading(document, [create_ledgered_wave()], NO_FORGE))
+
+        # Assert
+        self.assertIn(f'<h1>Milestone <span class="mono">M4</span> · Checkout {MERGED_2_OF_2}</h1>', fragment)
+
+    def test_should_take_the_verdict_a_line_names_as_such_without_its_label(self):
         # Arrange
         fields = [
-            {"name": "NARRATIVE", "value": "Verdict: <script>alert(1)</script>"},
-            {"name": "<i>WAVE</i>", "value": "<b>oak_w3</b>"},
+            {"name": "NARRATIVE", "value": "Cost: 8 USD."},
+            {"name": "NARRATIVE", "value": "Verdict: M4 is delivered."},
         ]
 
         # Act
         fragment = render(fields)
 
         # Assert
-        self.assertEqual(
+        self.assertIn('<p class="lede">M4 is delivered.</p>', fragment)
+
+    def test_should_set_what_went_wrong_beside_what_went_well_and_what_to_change_each_without_its_label(self):
+        # Act
+        fragment = render(REPORT_FIELDS, [create_ledgered_wave()])
+
+        # Assert
+        self.assertIn(
+            '<div class="split"><section class="block"><div class="block-head"><h2>Went wrong</h2><p>1 line</p></div>'
+            '<ul class="panel lines"><li><p><a href="#waves/oak_w5">OK7</a> needed three rounds.</p></li></ul>'
+            '</section><div class="block"><section class="block"><div class="block-head"><h2>Went well</h2>'
+            '<p>1 line</p></div><ul class="panel lines"><li><p><a href="#waves/oak_w5">OK8</a> passed at once.</p></li>'
+            '</ul></section><section class="block"><div class="block-head"><h2>For the next wave</h2><p>1 line</p>'
+            '</div><ul class="panel lines"><li><p>review the rebase first.</p></li></ul></section></div></div>',
             fragment,
-            '<section class="report-verdict"><h2>milestone-report oak_M4</h2>'
-            '<p class="status-sentence">Verdict: &lt;script&gt;alert(1)&lt;/script&gt;</p>'
-            '<p class="report-delivery">reported 2026-10-03T08:00:00Z, pull request #57</p></section>'
-            "<details><summary>The full account</summary>"
-            "<dl><dt>&lt;i&gt;WAVE&lt;/i&gt;</dt><dd>&lt;b&gt;oak_w3&lt;/b&gt;</dd></dl></details>",
         )
+
+    def test_should_draw_one_table_of_the_tasks_with_their_pull_requests_what_they_follow_their_rounds_and_cost(self):
+        # Act
+        fragment = render(REPORT_FIELDS, [create_ledgered_wave()], "https://github.com/acme/oak/pull/")
+
+        # Assert
+        self.assertIn(
+            '<section class="block"><div class="block-head"><h2>Tasks</h2><p>What the milestone delivered, and in'
+            ' what order.</p></div><div class="panel scroll"><table><thead><tr><th>Task</th><th>State</th>'
+            '<th>Pull requests</th><th>Comes after</th><th class="num">Review rounds</th><th class="num">Cost</th>'
+            "</tr></thead><tbody>"
+            '<tr><td><a class="mono" href="#waves/oak_w5">OK7</a></td><td><span class="pill"><span class="tone'
+            ' tone-done"><span class="tone-shape" aria-hidden="true">✓</span>merged</span></span></td>'
+            '<td><a href="https://github.com/acme/oak/pull/52">#52</a> <span class="muted">· #41</span></td>'
+            '<td class="muted">-</td><td class="num flag">3</td><td class="num">6.85</td></tr>'
+            '<tr><td><a class="mono" href="#waves/oak_w5">OK8</a></td><td><span class="pill"><span class="tone'
+            ' tone-done"><span class="tone-shape" aria-hidden="true">✓</span>merged</span></span></td>'
+            '<td><a href="https://github.com/acme/oak/pull/53">#53</a></td>'
+            '<td class="mono">OK7</td><td class="num">1</td><td class="num">1.15</td></tr>'
+            '</tbody></table><p class="cap">Rounds and cost come from the ledger of the waves oak_w5.</p></div></section>',
+            fragment,
+        )
+
+    def test_should_fold_the_tester_steps_by_task_as_numbered_steps(self):
+        # Act
+        fragment = render(REPORT_FIELDS, [create_ledgered_wave()])
+
+        # Assert
+        self.assertIn(
+            '<section class="block"><div class="block-head"><h2>Test it by hand</h2><p>3 steps in a tester\'s words,'
+            ' by task. Do these before you trust the merge.</p></div><div class="panel">'
+            '<details class="fold"><summary>OK7 <span>· 2 steps</span></summary><ol class="steps">'
+            "<li><p>run the command and read its table</p></li><li><p>run it again</p></li></ol></details>"
+            '<details class="fold"><summary>Every task <span>· 1 step</span></summary><ol class="steps">'
+            "<li><p>run the unit tests</p></li></ol></details></div></section>",
+            fragment,
+        )
+
+    def test_should_list_why_a_task_was_held_and_the_code_worth_reading_tagged_by_task(self):
+        # Act
+        fragment = render(REPORT_FIELDS, [create_ledgered_wave()])
+
+        # Assert
+        self.assertIn(
+            '<section class="block"><div class="block-head"><h2>Why a task was held</h2><p>1 reason.</p></div>'
+            '<ul class="panel lines"><li><p>No task of M4 was parked.</p></li></ul></section>'
+            '<section class="block"><div class="block-head"><h2>Worth reading in the code</h2><p>1 place the'
+            ' reporter picked for a review by sampling.</p></div><ul class="panel lines"><li><p><span class="tag">'
+            'OK7</span>oak/table.py (<a href="#waves/oak_w5">OK7</a>, #52): read the widths</p></li></ul></section>',
+            fragment,
+        )
+
+    def test_should_fold_everything_else_the_report_holds_in_the_full_account(self):
+        # Act
+        fragment = render(REPORT_FIELDS, [create_ledgered_wave()])
+
+        # Assert
+        self.assertIn(
+            '<section class="block"><div class="block-head"><h2>The full account</h2><p>Everything else the report'
+            ' holds, as written.</p></div><div class="panel">'
+            '<details class="fold"><summary>What happened <span>· 1 narrative line</span></summary>'
+            '<ul class="lines"><li><p>Cost read from run.finished: 8.00 USD.</p></li></ul></details>'
+            '<details class="fold"><summary>The SPEC lines to test <span>· 1 line</span></summary>'
+            '<ul class="lines"><li><p><a href="#waves/oak_w5">OK7</a>: the command prints its table</p></li></ul></details>'
+            '<details class="fold"><summary>Statistics as the CLI filled them <span>· tasks 2 · merged 2</span>'
+            "</summary></details>"
+            '<details class="fold"><summary>Other fields <span>· INSTRUCTIONS_CHANGE</span></summary>'
+            '<dl class="panel pad kv"><div><dt>INSTRUCTIONS_CHANGE</dt><dd>corpus/tasks.awawa +3 -0</dd></div></dl>'
+            "</details></div></section>",
+            fragment,
+        )
+
+    def test_should_name_a_report_of_no_milestone_by_its_id(self):
+        # Arrange
+        document = create_document([])
+        document["report"]["kind"] = "wave-report"
+        document["report"]["id"] = "oak_w3"
+
+        # Act
+        fragment = render_report_fragment(ReportReading(document, NO_WAVE, NO_FORGE))
+
+        # Assert
+        self.assertIn(
+            '<p class="crumbs"><a href="#reports">Reports</a> / oak / wave report</p><h1>Report <span class="mono">'
+            "oak_w3</span></h1>",
+            fragment,
+        )
+
+
+class LedgerLacksTest(unittest.TestCase):
+    def test_should_say_the_report_is_the_body_of_no_pull_request_when_none_is_recorded(self):
+        # Arrange
+        document = {**create_document(REPORT_FIELDS), "pull_request": None}
+
+        # Act
+        fragment = render_report_fragment(ReportReading(document, NO_WAVE, NO_FORGE))
+
+        # Assert
+        self.assertIn('<p class="fresh">reported 2026-10-03</p></header>', fragment)
+
+    def test_should_give_no_rounds_and_no_cost_to_a_task_of_no_wave_read(self):
+        # Act
+        fragment = render(REPORT_FIELDS, NO_WAVE)
+
+        # Assert
+        self.assertIn('<td class="muted">-</td><td class="num">-</td><td class="num">-</td></tr>', fragment)
+
+    def test_should_link_a_run_and_leave_a_pull_request_unlinked_off_a_forge_in_a_line_of_the_report(self):
+        # Arrange
+        fields = [{"name": "REASON", "value": "OK7 stopped in 20261001T090000Z-a1, see #52"}]
+
+        # Act
+        fragment = render(fields, [create_ledgered_wave()])
+
+        # Assert
+        self.assertIn(
+            '<li><p><a href="#waves/oak_w5">OK7</a> stopped in <a href="#runs/20261001T090000Z-a1">'
+            "20261001T090000Z-a1</a>, see #52</p></li>",
+            fragment,
+        )
+
+    def test_should_escape_a_value_holding_markup(self):
+        # Arrange
+        markup = "<script>alert(1)</script>"
+        fields = [
+            {"name": "NARRATIVE", "value": markup},
+            {"name": "TASK_ROW", "value": markup},
+            {"name": "REASON", "value": markup},
+            {"name": "TESTER_STEP", "value": markup},
+            {"name": "SAMPLING", "value": markup},
+            {"name": "OTHER", "value": markup},
+        ]
+
+        # Act
+        fragment = render(fields, [create_ledgered_wave()])
+
+        # Assert
+        self.assertNotIn("<script>", fragment)
+
+    def test_should_leave_out_a_block_the_report_holds_nothing_for(self):
+        # Arrange
+        fields = [{"name": "NARRATIVE", "value": "Verdict: delivered."}]
+
+        # Act
+        fragment = render(fields)
+
+        # Assert
+        self.assertNotIn("<h2>Went wrong</h2>", fragment)
+        self.assertNotIn("<h2>Tasks</h2>", fragment)
+        self.assertNotIn("<h2>Test it by hand</h2>", fragment)

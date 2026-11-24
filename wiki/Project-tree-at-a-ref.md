@@ -46,12 +46,14 @@ brigade corpus <project> --ref main -- status .
 ## Views of the corpus
 
 `--view` prints the document of one view of the corpus, by the rules of the IntelliJ plugin awawa-ui, beside `project`,
-`ref`, `sha`, `kind`, `root`, `types` and `awawa_web`; as text, the same document indented. Without `--view` the
+`ref`, `sha`, `kind`, `root`, `types`, `awawa_web`, `filter_values`, for the type read the values its entities hold
+in each field but free text, naturally ordered, `{}` when no type is read, and `diagnostics`, the lint errors and
+warnings `awawa status` counts; as text, the same document indented. Without `--view` the
 command prints what the sections above describe.
 
 | `--view` | The document holds |
 |---|---|
-| `tree` | `domain`, the types using the most statuses first, and `schema`, `SCHEMA`, `FIELDSET` and `SHAPE` apart; a type whose entities stand at a status for at least half of them holds `groups`, one per status in the order of its lifecycle, `null` for the entities at no status, the last value of the lifecycle `collapsed`; any other type holds its `entities` |
+| `tree` | `domain`, the types using the most statuses first, and `schema`, `SCHEMA`, `FIELDSET` and `SHAPE` apart; a type whose entities stand at a status for at least half of them holds `groups`, one per status in the order of its lifecycle, `null` for the entities at no status, the last value of the lifecycle `collapsed`; any other type holds its `entities`; each type carries `total`, the entities the corpus holds of it, filters and search aside |
 | `board` | with `--type`, `field`, `STATUS` unless `--field` names another, and `columns`: for a field of literals one per value the schema admits, in schema order; for any other field one per each of its 5 most frequent values, then `Others (k)`, whose entities carry their `value`; `(none)` last for the entities leaving the field empty |
 | `dependencies` | with `--type`, `field`, the first field referring to entities of the type unless `--field` names one, and `roots`, the entities waiting on nothing, each with its `dependents`; `in_cycle` flags an entity in a cycle, `already_above` one met again along its own path, which goes no deeper; a cycle no root reaches gets a root of its own |
 | `health` | `errors`, `warnings` and `unresolved` as `awawa status` counts them, `entities`, the diagnostics of `awawa lint` gathered per entity, the most errors first, and `files`, the diagnostics on no entity under their file |

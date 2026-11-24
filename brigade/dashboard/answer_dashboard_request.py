@@ -5,6 +5,7 @@ from string import Template
 from urllib.parse import parse_qs, urlsplit
 
 from brigade.dashboard.dashboard_exchange import LOOPBACK_HOST, Dashboard, DashboardResponse, IncomingRequest
+from brigade.dashboard.poll_interval import POLL_INTERVAL_MS
 from brigade.dashboard.read_awawa_address import read_awawa_address
 from brigade.dashboard.render_addons_rail import render_addons_rail
 from brigade.dashboard.render_awawa_tab import render_awawa_tab
@@ -66,7 +67,9 @@ def _refuse(incoming: IncomingRequest, dashboard: Dashboard) -> DashboardRespons
 
 
 def _answer_page(dashboard: Dashboard) -> DashboardResponse:
-    page = Template((PAGE_DATA / PAGE_FILE).read_text(encoding="utf-8")).substitute(token=dashboard.token)
+    page = Template((PAGE_DATA / PAGE_FILE).read_text(encoding="utf-8")).substitute(
+        token=dashboard.token, poll_interval_ms=POLL_INTERVAL_MS
+    )
     return DashboardResponse(status=OK, content_type=HTML, body=page.encode())
 
 

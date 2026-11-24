@@ -9,6 +9,7 @@ brigade inbox list [--all]          # the new signals, --all adding the dismisse
 brigade inbox show <id>             # a signal with its evidence, or a study answer
 brigade inbox show <pattern>        # a proposed pattern, its title, action, target and evidence lines
 brigade inbox dismiss <id>          # a signal, or a pattern with the signals it cites
+brigade inbox dismiss --with-repeats <pattern>  # the pattern and the proposed patterns that repeat it
 brigade inbox ratify <pattern> [--kind rule|guard|lint|schema|skill|script]
 ```
 
@@ -56,13 +57,15 @@ the fingerprint, the kind and the project.
   by rule cited, file and check name. Each pattern of `--json` carries `title`, `target` and `recipe`, its `TITLE`,
   its `TARGET` and its `RECIPE`, null when it records none, and `repeats`, the name of the pattern its `REPEATS`
   names, null when it records none; each signal
-  carries `stale`, true for a stall whose task the ledger last records merged.
+  carries `stale`, true for a stall whose task the ledger last records merged, and `last_action`, the last action of
+  the task a stall names, null for a signal whose evidence records none.
 - `inbox show` takes the id of a study answer as well, and prints the answer rendered from its entity; given the
   name of a proposed pattern, `inbox show <pattern>` prints its title, its action, its target and its evidence lines.
 - A triage proposing a pattern that repeats one the registry holds names it in `REPEATS`, where the installed
   schema declares the field; its answer is refused when `REPEATS` names no pattern the registry holds.
 - `inbox dismiss` leaves a dismissed signal as it is. Given the name of a `PATTERN`, it sets the pattern `dismissed` and
-  dismisses every signal the pattern cites.
+  dismisses every signal the pattern cites. With `--with-repeats`, it dismisses as well each proposed pattern that
+  repeats it, by `REPEATS` or by a name cut at `_recurs`; its document lists them under `repeats`.
 - `inbox ratify` ratifies a `new` pattern by its `ACTION`, for the registered project its `TARGET` names: `wave`
   records a request and launches its planner; `constraint` proposes a `CONSTRAINT` of the kind `--kind` names and
   records a request the same way; `order` records an `ORDER` of its `RECIPE`, active. A pattern whose action is

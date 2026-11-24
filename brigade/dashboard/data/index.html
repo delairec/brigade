@@ -4,36 +4,26 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="brigade-token" content="$token">
+<meta name="brigade-poll-interval-ms" content="$poll_interval_ms">
 <title>brigade</title>
 <link rel="stylesheet" href="/dashboard.css">
 <script src="/dashboard.js" defer></script>
 </head>
 <body>
 <nav class="rail">
-<p class="rail-brand">brigade</p>
+<a class="brand" href="#status" aria-label="brigade, home"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6l7-3 7 3M3 11l7-3 7 3M3 16l7-3 7 3"/></svg>brigade</a>
 <form class="project-selector" method="get" action="/" data-region="/views/selector"></form>
-<div class="heartbeat-region" data-region="/views/heartbeat"></div>
-<section class="rail-group">
-<h2>Operate</h2>
-<a href="#status">Home</a>
-<a href="#waves">Waves</a>
-<a href="#runs">Runs</a>
-<a href="#inbox">Inbox</a>
-</section>
-<section class="rail-group">
-<h2>Understand</h2>
-<a href="#ledger">Ledger</a>
-<a href="#reports">Reports</a>
-</section>
+<div class="rail-views" data-region="/views/rail"></div>
 <section class="rail-group">
 <h2>Addons</h2>
 <div class="addons-region" data-region="/views/addons"></div>
 </section>
+<div class="heartbeat-region" data-region="/views/heartbeat"></div>
 </nav>
 <div class="page">
 <p id="notice" class="notice" role="alert" hidden></p>
-<main id="view"></main>
 <section class="next-tick" hidden><h2>Next tick</h2><button type="button" data-refresh-next-tick>refresh</button><div class="next-tick-decisions" data-next-tick="/views/next-tick"></div></section>
+<main id="view"></main>
 </div>
 </body>
 </html>

@@ -11,7 +11,7 @@ DOCUMENT = {
         "entity": {
             "type": "TASK",
             "name": "B1",
-            "file": "./corpus/tasks.awawa",
+            "file": "corpus/tasks.awawa",
             "line": 3,
             "status": "todo",
             "fields": [
@@ -38,24 +38,46 @@ class RenderAwawaDetailTest(unittest.TestCase):
 
         # Assert
         self.assertIn(
-            '<aside class="awawa-detail"><header class="awawa-detail-head"><h2>'
-            '<span class="dot tone-work" title="todo"></span>TASK B1</h2>'
-            '<a class="awawa-close" href="#awawa/oak?view=tree">Close</a></header>'
-            '<p class="awawa-place">./corpus/tasks.awawa:3</p>',
+            '<aside class="awawa-detail"><header class="awawa-detail-head"><div><p class="eyebrow">Task · todo</p>'
+            '<h2><span class="dot tone-work" title="todo"></span><span class="mono">B1</span> Read &lt;the&gt; corpus</h2>'
+            '</div><a class="awawa-close" href="#awawa/oak?view=tree">Close</a></header>',
             fragment,
         )
 
-    def test_should_show_the_fields_as_awawa_show_answers_them_escaped(self):
+    def test_should_show_the_key_facts_and_where_the_entity_is_written_in_the_corpus(self):
         # Act
         fragment = render_awawa_detail(DOCUMENT, DETAIL_OF_B1)
 
         # Assert
         self.assertIn(
-            '<dl class="awawa-fields"><dt>TITLE</dt><dd>Read &lt;the&gt; corpus</dd><dt>SPEC</dt>'
-            '<dd>one<dl class="awawa-fields"><dt>IMPL</dt><dd>tests/a.py::x</dd></dl></dd>'
-            "<dt>AFTER</dt><dd>@TASK.B0</dd></dl>",
+            '<dl class="awawa-fields"><dt>AFTER</dt><dd>@TASK.B0</dd>'
+            '<dt>written at</dt><dd class="mono">corpus/tasks.awawa:3</dd></dl>',
             fragment,
         )
+
+    def test_should_fold_the_text_fields_escaped_with_what_they_hold(self):
+        # Act
+        fragment = render_awawa_detail(DOCUMENT, DETAIL_OF_B1)
+
+        # Assert
+        self.assertIn(
+            '<details class="fold"><summary>SPEC <span>· the text fields</span></summary>'
+            '<dl class="awawa-fields"><dt>SPEC</dt><dd>one<dl class="awawa-fields"><dt>IMPL</dt>'
+            "<dd>tests/a.py::x</dd></dl></dd></dl></details>",
+            fragment,
+        )
+
+    def test_should_fold_nothing_for_an_entity_without_text_fields(self):
+        # Arrange
+        title_only = [{"name": "TITLE", "atoms": ['"Read the corpus"'], "fields": NO_FIELD}]
+        entity = {**DOCUMENT["detail"]["entity"], "fields": title_only}
+        document = {**DOCUMENT, "detail": {**DOCUMENT["detail"], "entity": entity}}
+
+        # Act
+        fragment = render_awawa_detail(document, DETAIL_OF_B1)
+
+        # Assert
+        self.assertNotIn('<details class="fold">', fragment)
 
     def test_should_link_the_entities_it_refers_to(self):
         # Act
@@ -76,7 +98,7 @@ class RenderAwawaDetailTest(unittest.TestCase):
         # Assert
         self.assertIn(
             '<h3>Referred to by</h3><ul class="awawa-neighbours"><li>'
-            '<a href="#awawa/oak?view=tree&amp;entity=%40TASK.B2"><span class="dot tone-faint" title="draft"></span>',
+            '<a href="#awawa/oak?view=tree&amp;entity=%40TASK.B2"><span class="dot tone-you" title="draft"></span>',
             fragment,
         )
 
