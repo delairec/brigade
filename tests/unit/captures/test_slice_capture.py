@@ -96,6 +96,7 @@ class SliceCaptureTest(unittest.TestCase):
         self.assertEqual(_read_png(slices[0]), ((2, 2, 8, 6, 0, 0, 0), NONE_UP))
 
     def test_should_refuse_a_capture_firefox_does_not_write_as_8_bit_rgba_not_interlaced(self):
+        # Arrange
         for case, png, expected_reason in [
             (
                 "a grayscale capture",

@@ -461,6 +461,7 @@ class CheckPromotionOfATaskCitingAReferenceTest(unittest.TestCase):
                 self.assertEqual(check, {"name": "promotion", "result": "fail", "findings": [WAIVER_FINDING]})
 
     def test_should_fail_a_task_whose_reference_names_no_file_of_the_repository_until_a_plan_fixes_it(self):
+        # Arrange
         for case, path in [
             ("a file absent from the repository", "artifact/absent/index.html"),
             ("a URL", "https://example.org/harbour"),
