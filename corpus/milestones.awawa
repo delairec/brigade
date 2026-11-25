@@ -198,6 +198,7 @@ MILESTONE M15
 	TITLE "Admin console"
 	STATUS planned
 	AFTER @MILESTONE.M8
+	AFTER @MILESTONE.M20
 	DESC "post-MVP: every setting of brigade is read and changed through a command, no file edited"
 		+ "by hand"
 	DESC "split out of the milestone post-mvp, ADD0, by"
@@ -208,6 +209,7 @@ MILESTONE M16
 	TITLE "Maintenance"
 	STATUS planned
 	AFTER @MILESTONE.M8
+	AFTER @MILESTONE.M20
 	DESC "post-MVP: brigade installs, upgrades and cleans itself"
 	DESC "split out of the milestone post-mvp, ADD0, by"
 		+ "@DECISION.ThePostMvpMilestoneAdd0IsSplitIntoFourMilestonesByThemeAndATaskOfNoThemeNamesNoMilestone"
@@ -217,6 +219,7 @@ MILESTONE M17
 	TITLE "Signals handling"
 	STATUS planned
 	AFTER @MILESTONE.M8
+	AFTER @MILESTONE.M20
 	DESC "closes the loop of"
 		+ "@DECISION.ASignalIsClosedOnceItsDefectIsCorrectedAndReopensWhenItComesBack: a signal is"
 		+ "closed once its defect is corrected, and its return reopens it and the pattern whose"
@@ -295,6 +298,7 @@ MILESTONE M19
 	TITLE "Portability"
 	STATUS planned
 	AFTER @MILESTONE.M8
+	AFTER @MILESTONE.M20
 	DESC "post-MVP: brigade runs on Linux, on macOS and on Windows, each checked by a CI job that"
 		+ "runs on that platform, as"
 		+ "@DECISION.BrigadeSupportsLinuxMacOsAndWindowsEachCheckedByACiJobOnThatPlatform rules"
@@ -317,3 +321,53 @@ MILESTONE M19
 	SOURCE "the user's words of 2026-11-18 before it: « faut que ça soit compatible sur toutes les"
 		+ "machines, pas seulement la nôtre, donc il faut éviter le spécifique », and « oui brigade"
 		+ "», the concern being brigade's own and no general rule"
+
+MILESTONE M20
+	TITLE "Vocabulary"
+	STATUS planned
+	DESC "brigade is simpler and its words are true to the kitchen brigade it is named after: what"
+		+ "@DECISION.BrigadeKeepsItsClearerWordsRenamesScanParkedAndLedgerMergesPreflightIntoRecipeAndNamesItsUserNowhere"
+		+ "rules is delivered, preflight merged into recipe, every stop made one state and three"
+		+ "words renamed"
+		REF @DECISION.BrigadeKeepsItsClearerWordsRenamesScanParkedAndLedgerMergesPreflightIntoRecipeAndNamesItsUserNowhere
+	DESC "planned: the tick serves it never until the user sets it active, as"
+		+ "@DECISION.AMilestoneIsServedByItsStatusAndOrderedByItsAfter rules; it is set active"
+		+ "alone, and merged while no wave is open"
+		REF @DECISION.AMilestoneIsServedByItsStatusAndOrderedByItsAfter
+	DESC "before @MILESTONE.M15, @MILESTONE.M16, @MILESTONE.M17 and @MILESTONE.M19, each naming it"
+		+ "in AFTER: their drafts are refined in the new words"
+		REF @MILESTONE.M15
+		REF @MILESTONE.M16
+		REF @MILESTONE.M17
+		REF @MILESTONE.M19
+	DESC "its tasks are drafts chained by AFTER, @TASK.B285, then @TASK.B284, then @TASK.B287, then"
+		+ "@TASK.B288, to refine before their ratification: on 2026-11-24, 56 files of brigade/"
+		+ "carry two or more of its four words, and a wave starting the four together would rebase"
+		+ "each on the three others"
+		REF @TASK.B285
+		REF @TASK.B284
+		REF @TASK.B287
+		REF @TASK.B288
+	DESC "holds no task for what the user ruled outside it on 2026-11-24: the merge of study into"
+		+ "order of"
+		+ "@DECISION.StudyAndAnswerMergeIntoOrderAndResultInTwoStagesAfterM20AndAResultIsListedByItsOutputStep,"
+		+ "for the milestone that follows; the step kinds of"
+		+ "@DECISION.TheStepKindsOrderCorpusAndOpLeaveRecipeLintAndTheSchemaUntilARecipeNeedsOne, a"
+		+ "fix pull request of its own; the one declaration of the checks of the head of a task of"
+		+ "@DECISION.APreflightBecomesARecipeOfCollectAndCheckStepsRunAtOnceByRecipeRunAndItsOldFormsAreRefused,"
+		+ "a task that follows @TASK.B284"
+		REF @DECISION.StudyAndAnswerMergeIntoOrderAndResultInTwoStagesAfterM20AndAResultIsListedByItsOutputStep
+		REF @DECISION.TheStepKindsOrderCorpusAndOpLeaveRecipeLintAndTheSchemaUntilARecipeNeedsOne
+		REF @DECISION.APreflightBecomesARecipeOfCollectAndCheckStepsRunAtOnceByRecipeRunAndItsOldFormsAreRefused
+		REF @TASK.B284
+	SOURCE "the user's instruction, relayed on 2026-11-24 to the run that wrote this milestone: «"
+		+ "ce qui est acté, on le met déjà sur une branche (création de la milestone, target main,"
+		+ "avec les tâches en drafts). […] S'il y a des questions, on les mets de côté, il faudra"
+		+ "me les présenter en tableau à mon retour. »"
+	SOURCE "the user's goal in the vocabulary review of 2026-11-23 and 2026-11-24: « je voudrais"
+		+ "aussi qu'on évalue la possibilité de faire en sorte que le vocabulaire employé par"
+		+ "brigade se rapporte à ce qu'il était à l'origine: une brigade de cuisine. », and « je"
+		+ "veux vraiment qu'on arrive à simplifier notre bouzin »"
+	SOURCE "the user's ruling of 2026-11-24 on its place among the planned milestones, on the chain"
+		+ "of its tasks and on its activation, a question of pull request #478 of the brigade"
+		+ "repository presented with a recommendation: « pour tout le reste, on suit la reco »"
